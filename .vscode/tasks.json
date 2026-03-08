@@ -1,0 +1,211 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "tests: unit",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"-Stage",
+				"unit",
+				"-PesterOutput",
+				"None"
+			],
+			"group": "test",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": true,
+				"close": true
+			}
+		},
+		{
+			"label": "tests: integration",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"-Stage",
+				"integration",
+				"-PesterOutput",
+				"None"
+			],
+			"group": "test",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": true,
+				"close": true
+			}
+		},
+		{
+			"label": "tests: e2e",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"-Stage",
+				"e2e",
+				"-PesterOutput",
+				"None"
+			],
+			"group": "test",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": true,
+				"close": true
+			}
+		},
+		{
+			"label": "tests: all",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"-Stage",
+				"all",
+				"-PesterOutput",
+				"None"
+			],
+			"group": "test",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": true,
+				"close": true
+			}
+		},
+		{
+			"label": "tests: coverage",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"-Stage",
+				"all",
+				"-PesterOutput",
+				"None",
+				"-Coverage",
+				"-CoverageTarget",
+				"34"
+			],
+			"group": "test",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": true,
+				"close": true
+			}
+		},
+		{
+			"label": "tests: benchmark gate",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"-Stage",
+				"e2e",
+				"-PesterOutput",
+				"None",
+				"-BenchmarkGate"
+			],
+			"group": "test",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": true,
+				"close": true
+			}
+		},
+		{
+			"label": "tests: benchmark nightly",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"-Stage",
+				"e2e",
+				"-PesterOutput",
+				"None",
+				"-BenchmarkGateNightly"
+			],
+			"group": "test",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": true,
+				"close": true
+			}
+		},
+		{
+			"label": "tests: smoke-wpf",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Invoke-Pester -Path './dev/tests/integration/WpfSmoke.Tests.ps1' -Output Detailed"
+			],
+			"group": "test"
+		},
+		{
+			"label": "tests: smoke-wpf",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"& { Invoke-Pester -Path './dev/tests/integration/WpfSmoke.Tests.ps1' -Output Detailed }"
+			],
+			"group": "test"
+		},
+		{
+			"label": "tests: smoke-wpf",
+			"type": "shell",
+			"command": "Invoke-Pester",
+			"args": [
+				"-Path",
+				"./dev/tests/integration/WpfSmoke.Tests.ps1",
+				"-Output",
+				"Detailed"
+			],
+			"group": "test"
+		},
+		{
+			"label": "tests: smoke wpf quick",
+			"type": "shell",
+			"command": "Invoke-Pester -Path \"./dev/tests/integration/WpfSmoke.Tests.ps1\" -Output Detailed",
+			"group": "test"
+		}
+	]
+}

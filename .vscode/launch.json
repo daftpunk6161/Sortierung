@@ -1,0 +1,53 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "name": "Run: simple_sort GUI (STA)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-STA",
+                "-File",
+                "${workspaceFolder}\\simple_sort.ps1"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Run: Current PowerShell File",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "${file}"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Run: simple_sort GUI (pwsh)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "pwsh.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-STA",
+                "-File",
+                "${workspaceFolder}\\simple_sort.ps1"
+            ],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

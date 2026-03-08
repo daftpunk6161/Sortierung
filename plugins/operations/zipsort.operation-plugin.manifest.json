@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "plugin-manifest-v1",
+  "id": "zipsort-operation",
+  "version": "1.0.0",
+  "name": "ZIP Sort Plugin",
+  "description": "Sorts multi-disc ZIP archives for PS1/PS2 games into matching folders.",
+  "author": "ROM Cleanup Team",
+  "phase": "zip-sort",
+  "trusted": true,
+  "requireValidSignature": false,
+  "capabilities": [],
+  "dependencies": [],
+  "sha256": ""
+}

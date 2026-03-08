@@ -1,0 +1,45 @@
+{
+    "files.watcherExclude": {
+        "**/reports/**": true,
+        "**/audit-logs/archive/**": true,
+        "**/PBP/**": true,
+        "**/coverage.xml": true
+    },
+    "files.exclude": {
+        "**/reports/**": true,
+        "**/audit-logs/archive/**": true
+    },
+    "search.exclude": {
+        "**/reports/**": true,
+        "**/audit-logs/archive/**": true
+    },
+    "chat.agent.maxRequests": 150,
+    "pester.runTestsInNewProcess": true,
+    "pester.autoDebugOnSave": false,
+    "pester.autoRunOnSave": false,
+    "pester.autoDiscoverOnOpen": false,
+    "pester.testFilePath": [],
+    "pester.suppressCodeLensNotice": true,
+    "pester.codeLens": false,
+    "terminal.integrated.scrollback": 2000,
+    "powershell.scriptAnalysis.settingsPath": "",
+    "powershell.enableReferencesCodeLens": false,
+    "github.copilot.chat.agent.autoFix": true,
+    "github.copilot.chat.anthropic.tools.websearch.enabled": true,
+    "github.copilot.chat.anthropic.tools.websearch.maxUses": 20,
+    "github.copilot.chat.codesearch.enabled": true,
+    "github.copilot.chat.copilotMemory.enabled": true,
+    "github.copilot.chat.languageContext.typescript.includeDocumentation": true,
+    "github.copilot.chat.localeOverride": "de",
+    "github.copilot.chat.notebook.enhancedNextEditSuggestions.enabled": false,
+    "github.copilot.chat.switchAgent.enabled": false,
+    "github.copilot.enable": {
+        "powershell": true,
+        "markdown": true
+    },
+    "chat.agentSessionProjection.enabled": true,
+    "chat.requestQueuing.defaultAction": "queue",
+    "chat.tips.enabled": true,
+    "chat.useClaudeHooks": true,
+    "chat.viewProgressBadge.enabled": true
+}

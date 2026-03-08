@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "plugin-manifest-v1",
+  "id": "untrusted-demo",
+  "version": "0.1.0",
+  "name": "Untrusted Demo Plugin",
+  "description": "Minimal untrusted plugin used to verify the trust-mode gate.",
+  "author": "ROM Cleanup Team",
+  "phase": "post-run",
+  "trusted": false,
+  "requireValidSignature": false,
+  "capabilities": [],
+  "dependencies": [],
+  "sha256": ""
+}

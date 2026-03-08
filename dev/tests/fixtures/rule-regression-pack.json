@@ -1,0 +1,42 @@
+[
+  {
+    "Name": "Mega Game (Europe)",
+    "ExpectedRegion": "EU",
+    "ExpectedKeyContains": "mega game"
+  },
+  {
+    "Name": "Space Hero (USA)",
+    "ExpectedRegion": "US",
+    "ExpectedKeyContains": "space hero"
+  },
+  {
+    "Name": "Ninja Quest (Japan)",
+    "ExpectedRegion": "JP",
+    "ExpectedKeyContains": "ninja quest"
+  },
+  {
+    "Name": "Puzzle World (World)",
+    "ExpectedRegion": "WORLD",
+    "ExpectedKeyContains": "puzzle world"
+  },
+  {
+    "Name": "Racer Pro (Uk,En,Proto)",
+    "ExpectedRegion": "EU",
+    "ExpectedKeyContains": "racer pro"
+  },
+  {
+    "Name": "Mystery Title (En,Fr,De)",
+    "ExpectedRegion": "UNKNOWN",
+    "ExpectedKeyContains": "mystery title"
+  },
+  {
+    "Name": "Arcade Gold (USA, Europe)",
+    "ExpectedRegion": "WORLD",
+    "ExpectedKeyContains": "arcade gold"
+  },
+  {
+    "Name": "Adventure Plus (Australia)",
+    "ExpectedRegion": "AU",
+    "ExpectedKeyContains": "adventure plus"
+  }
+]

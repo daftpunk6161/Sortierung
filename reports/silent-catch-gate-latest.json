@@ -1,0 +1,1519 @@
+{
+  "Timestamp": "2026-03-03T07:28:56",
+  "FilesScanned": 64,
+  "ViolationCount": 252,
+  "Violations": [
+    {
+      "File": "ApiServer.ps1",
+      "Line": 236,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ApiServer.ps1",
+      "Line": 279,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ApiServer.ps1",
+      "Line": 683,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ApiServer.ps1",
+      "Line": 761,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ApiServer.ps1",
+      "Line": 846,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ApiServer.ps1",
+      "Line": 985,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ApiServer.ps1",
+      "Line": 988,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "BackgroundOps.ps1",
+      "Line": 39,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "BackgroundOps.ps1",
+      "Line": 84,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "BackgroundOps.ps1",
+      "Line": 194,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "BackgroundOps.ps1",
+      "Line": 219,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Classification.ps1",
+      "Line": 175,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Classification.ps1",
+      "Line": 255,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Classification.ps1",
+      "Line": 487,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Classification.ps1",
+      "Line": 585,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Compatibility.ps1",
+      "Line": 63,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Compatibility.ps1",
+      "Line": 91,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Compatibility.ps1",
+      "Line": 93,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Compatibility.ps1",
+      "Line": 136,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Compatibility.ps1",
+      "Line": 146,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Compatibility.ps1",
+      "Line": 155,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Compatibility.ps1",
+      "Line": 173,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Compatibility.ps1",
+      "Line": 224,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ConsolePlugins.ps1",
+      "Line": 74,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ConsoleSort.ps1",
+      "Line": 89,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ConsoleSort.ps1",
+      "Line": 207,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 393,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 399,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 433,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 593,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 610,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 762,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 836,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 865,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 878,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 915,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 948,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 1045,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 1082,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Convert.ps1",
+      "Line": 1151,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Core.ps1",
+      "Line": 407,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Core.ps1",
+      "Line": 637,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Core.ps1",
+      "Line": 641,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 66,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 187,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 248,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 367,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 385,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 402,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 457,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 520,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 530,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 603,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 629,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 716,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 733,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 779,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 822,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 866,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 998,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 1000,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 1056,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dat.ps1",
+      "Line": 1126,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DataContracts.ps1",
+      "Line": 14,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DataContracts.ps1",
+      "Line": 38,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 34,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 93,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 243,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 259,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 276,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 449,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 468,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 484,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 496,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 527,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 581,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "DatSources.ps1",
+      "Line": 640,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 116,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 246,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 257,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 295,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 298,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 405,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 520,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 739,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 861,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1055,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1290,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1299,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1306,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1329,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1408,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1430,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1432,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1447,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1529,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1532,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1578,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1604,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1626,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1628,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Dedupe.ps1",
+      "Line": 1644,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "EventBus.ps1",
+      "Line": 142,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 17,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 150,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 183,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 210,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 213,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 320,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 339,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 347,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 349,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 388,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 411,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 452,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 510,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 522,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 576,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 613,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 686,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 697,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 721,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 782,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 794,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 804,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 842,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "FileOps.ps1",
+      "Line": 894,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Localization.ps1",
+      "Line": 51,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Localization.ps1",
+      "Line": 84,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Logging.ps1",
+      "Line": 133,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Logging.ps1",
+      "Line": 178,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Logging.ps1",
+      "Line": 260,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Logging.ps1",
+      "Line": 312,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Logging.ps1",
+      "Line": 319,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Notifications.ps1",
+      "Line": 49,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Notifications.ps1",
+      "Line": 50,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Notifications.ps1",
+      "Line": 112,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Notifications.ps1",
+      "Line": 183,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Notifications.ps1",
+      "Line": 231,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Notifications.ps1",
+      "Line": 242,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Ps3Dedupe.ps1",
+      "Line": 139,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Ps3Dedupe.ps1",
+      "Line": 176,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Report.ps1",
+      "Line": 398,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ReportBuilder.ps1",
+      "Line": 86,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ReportBuilder.ps1",
+      "Line": 198,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ReportBuilder.ps1",
+      "Line": 316,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Audit.ps1",
+      "Line": 178,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Audit.ps1",
+      "Line": 220,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Audit.ps1",
+      "Line": 332,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 233,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 331,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 347,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 367,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 385,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 502,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 504,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 549,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 581,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 605,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 657,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 670,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 751,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 753,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 768,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 776,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 815,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 829,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Execution.ps1",
+      "Line": 844,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 263,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 277,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 318,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 410,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 476,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 482,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 534,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 544,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 548,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 552,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 569,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 584,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 620,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 677,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 762,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 838,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.Insights.ps1",
+      "Line": 912,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.SettingsLegacy.ps1",
+      "Line": 18,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunHelpers.SettingsLegacy.ps1",
+      "Line": 23,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunIndex.ps1",
+      "Line": 33,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunIndex.ps1",
+      "Line": 70,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "RunspaceLifecycle.ps1",
+      "Line": 10,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SafetyToolsService.ps1",
+      "Line": 264,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SafetyToolsService.ps1",
+      "Line": 314,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SecurityEventStream.ps1",
+      "Line": 27,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SecurityEventStream.ps1",
+      "Line": 40,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SecurityEventStream.ps1",
+      "Line": 48,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SecurityEventStream.ps1",
+      "Line": 157,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SecurityEventStream.ps1",
+      "Line": 173,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SetParsing.ps1",
+      "Line": 82,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SetParsing.ps1",
+      "Line": 222,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SetParsing.ps1",
+      "Line": 272,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Sets.ps1",
+      "Line": 15,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 20,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 79,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 88,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 105,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 120,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 128,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 136,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 147,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 154,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 161,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 213,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 249,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 254,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 518,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 689,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Settings.ps1",
+      "Line": 825,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 20,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 26,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 31,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 40,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 46,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 55,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 67,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 71,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 74,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 115,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 139,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 161,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "SimpleSort.WpfMain.ps1",
+      "Line": 215,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 37,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 147,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 238,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 239,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 306,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 320,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 336,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 338,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 340,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 509,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 550,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 634,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 763,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "Tools.ps1",
+      "Line": 837,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "UiTelemetry.ps1",
+      "Line": 65,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "UpdateCheck.ps1",
+      "Line": 54,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ZipSort.ps1",
+      "Line": 48,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ZipSort.ps1",
+      "Line": 65,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ZipSort.ps1",
+      "Line": 118,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ZipSort.ps1",
+      "Line": 128,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ZipSort.ps1",
+      "Line": 136,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    },
+    {
+      "File": "ZipSort.ps1",
+      "Line": 171,
+      "Rule": "NoSilentCatchCorePaths",
+      "Detail": "Catch block without explicit logging/throw or approved best-effort marker."
+    }
+  ]
+}

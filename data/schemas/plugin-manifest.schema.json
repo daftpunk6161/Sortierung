@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://romcleanup.local/schemas/plugin-manifest.schema.json",
+  "type": "object",
+  "required": ["id", "schemaVersion", "version", "capabilities"],
+  "properties": {
+    "id": { "type": "string" },
+    "schemaVersion": { "type": "string" },
+    "version": { "type": "string" },
+    "capabilities": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

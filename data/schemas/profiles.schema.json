@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://romcleanup.local/schemas/profiles.schema.json",
+  "type": "object",
+  "required": ["schemaVersion", "profiles"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "profiles": { "type": "object" }
+  },
+  "additionalProperties": false
+}

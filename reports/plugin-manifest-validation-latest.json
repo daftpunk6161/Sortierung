@@ -1,0 +1,15 @@
+{
+  "Timestamp": "2026-02-23 23:36:32",
+  "PluginsRoot": "C:\\Code\\Sortierung\\plugins",
+  "Files": [
+    {
+      "File": "C:\\Code\\Sortierung\\plugins\\consoles\\example.console-plugin.json",
+      "Status": "Invalid",
+      "Errors": [
+        "The property 'version' cannot be found on this object. Verify that the property exists."
+      ]
+    }
+  ],
+  "Valid": 0,
+  "Invalid": 1
+}

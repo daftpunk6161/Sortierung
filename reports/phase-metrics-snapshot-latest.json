@@ -1,0 +1,18 @@
+{
+  "Timestamp": "2026-02-23 23:36:38",
+  "Available": true,
+  "Metrics": {
+    "FilesPerSecond": 0,
+    "HashPerSecond": 0,
+    "QueueLatencyMs": 0,
+    "Note": "Scaffold metrics in place; wire runtime counters for live values."
+  },
+  "Stages": [
+    {
+      "Stage": "unit",
+      "DurationSeconds": 0.0,
+      "Passed": true,
+      "Files": 0
+    }
+  ]
+}

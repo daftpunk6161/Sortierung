@@ -1,0 +1,142 @@
+name: test-pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'simple_sort.ps1'
+      - 'dev/modules/**'
+      - 'dev/tests/**'
+      - 'dev/tools/pipeline/Invoke-TestPipeline.ps1'
+      - '.github/workflows/test-pipeline.yml'
+  pull_request:
+    paths:
+      - 'simple_sort.ps1'
+      - 'dev/modules/**'
+      - 'dev/tests/**'
+      - 'dev/tools/pipeline/Invoke-TestPipeline.ps1'
+      - '.github/workflows/test-pipeline.yml'
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -Force -SkipPublisherCheck -Scope CurrentUser
+
+      - name: Unit + Coverage Gate
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./dev/tools/pipeline/Invoke-TestPipeline.ps1 -Stage unit -Coverage -CoverageTarget 50 -PesterOutput Normal
+
+      - name: Run Integration Stage
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./dev/tools/pipeline/Invoke-TestPipeline.ps1 -Stage integration -PesterOutput Normal
+
+      - name: Run E2E Stage
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./dev/tools/pipeline/Invoke-TestPipeline.ps1 -Stage e2e -PesterOutput Normal
+
+      - name: Upload test snapshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-pipeline-reports
+          path: reports/test-pipeline-*.json
+
+  analyzer:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -Force -SkipPublisherCheck -Scope CurrentUser
+
+      - name: Run PSScriptAnalyzer gate
+        shell: pwsh
+        run: |
+          $files = @(
+            Get-ChildItem -Path ./dev/modules -Filter *.ps1 -File -Recurse | Select-Object -ExpandProperty FullName
+          ) + @(
+            (Resolve-Path ./simple_sort.ps1).Path,
+            (Resolve-Path ./Invoke-RomCleanup.ps1).Path
+          )
+          $issues = Invoke-ScriptAnalyzer -Path $files -Settings ./PSScriptAnalyzerSettings.psd1 -Severity Warning,Error
+          if ($issues) {
+            $issues | Format-Table -AutoSize | Out-String | Write-Host
+            throw ("PSScriptAnalyzer issues: {0}" -f $issues.Count)
+          }
+
+      - name: Run Governance Gate (complexity/module boundaries)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./dev/tools/Invoke-GovernanceGate.ps1 -WarnOnly
+
+      - name: Run Catch Compliance Gate (TD-002)
+        shell: pwsh
+        run: |
+          . ./dev/modules/CatchGuard.ps1
+          $files = @(Get-ChildItem -Path ./dev/modules -Filter *.ps1 -File | Select-Object -ExpandProperty FullName)
+          $result = Test-CatchCompliance -Path $files -WarnOnly
+          Write-Host ("Catch Compliance: {0} violations in {1} files" -f $result.ViolationCount, $result.TotalFiles)
+
+  mutation:
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -Force -SkipPublisherCheck -Scope CurrentUser
+
+      - name: Run mutation-light (reporting only)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./dev/tools/Invoke-MutationLight.ps1
+
+      - name: Upload mutation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-reports
+          path: dev/tools/mutation-report-*.json
+
+  benchmark-gate:
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -Force -SkipPublisherCheck -Scope CurrentUser
+
+      - name: Run benchmark gate (perf regression check)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./dev/tools/pipeline/Invoke-TestPipeline.ps1 -Stage unit -BenchmarkGate -PesterOutput None
+
+      - name: Upload benchmark reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-reports
+          path: reports/test-pipeline-*.json

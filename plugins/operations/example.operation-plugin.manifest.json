@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "plugin-manifest-v1",
+  "id": "example-operation",
+  "version": "1.0.0",
+  "name": "Example Operation Plugin",
+  "description": "Demonstrates the operation-plugin contract with a post-run summary.",
+  "author": "ROM Cleanup Team",
+  "phase": "post-run",
+  "trusted": true,
+  "requireValidSignature": false,
+  "capabilities": [],
+  "dependencies": [],
+  "sha256": ""
+}

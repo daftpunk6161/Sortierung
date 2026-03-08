@@ -1,0 +1,14 @@
+{
+  "name": "Example Console Plugin",
+  "folderMap": {
+    "atari jaguar cd": "JAGCD",
+    "sega sg-1000": "SG1K"
+  },
+  "extMap": {
+    ".sg": "SG1K",
+    ".j64": "JAG"
+  },
+  "regexMap": {
+    "SG1K": "sg-?1000|\bsg1k\b"
+  }
+}

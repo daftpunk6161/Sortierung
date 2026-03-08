@@ -1,0 +1,26 @@
+{
+  "Timestamp": "2026-02-23 23:07:42",
+  "LookbackDays": 30,
+  "Data": {
+    "ReportCount": 247,
+    "TelemetryFiles": 0,
+    "TelemetryEvents": 0,
+    "RunIntents": 0,
+    "RunCompletions": 0
+  },
+  "Kpi": {
+    "TimeToFirstSuccessfulDryRunMinutes": 0.01,
+    "TimeToFirstSuccessfulDryRunSource": "synthetic-probe",
+    "TimeToFirstSuccessfulDryRunTargetMinutes": 3.0,
+    "TimeToFirstSuccessfulDryRunPassed": true,
+    "SetupAbortRatePercent": 0.0,
+    "SetupAbortRateTargetPercent": 15.0,
+    "SetupAbortRatePassed": true,
+    "PreRunMisconfigurationRatePercent": 0.0,
+    "PreRunMisconfigurationRateTargetPercent": 10.0,
+    "PreRunMisconfigurationRatePassed": true,
+    "RollbackAfterMoveRatePercent": 0.0,
+    "RollbackAfterMoveRateTargetPercent": 2.0,
+    "RollbackAfterMoveRatePassed": true
+  }
+}

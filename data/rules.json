@@ -1,0 +1,247 @@
+{
+  "LangPattern": "\\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja)(?:,\\s*(?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja))*\\)",
+  "RegionOrdered": [
+    {
+      "Key": "EU",
+      "Pattern": "\\((europe|eu|eur|pal)\\)"
+    },
+    {
+      "Key": "US",
+      "Pattern": "\\((usa|us|u\\.s\\.a\\.|u\\.s\\.)(,\\s*\\w+)*\\)"
+    },
+    {
+      "Key": "JP",
+      "Pattern": "\\((japan|jp|jpn)\\)"
+    },
+    {
+      "Key": "WORLD",
+      "Pattern": "\\((world|export)\\)"
+    },
+    {
+      "Key": "AU",
+      "Pattern": "\\((australia|au|aus)\\)"
+    },
+    {
+      "Key": "ASIA",
+      "Pattern": "\\((asia|as)\\)"
+    },
+    {
+      "Key": "SCAN",
+      "Pattern": "\\((scandinavia)\\)"
+    },
+    {
+      "Key": "KR",
+      "Pattern": "\\((korea|kor)\\)"
+    },
+    {
+      "Key": "CN",
+      "Pattern": "\\((china|chn)\\)"
+    },
+    {
+      "Key": "BR",
+      "Pattern": "\\((brazil|bra)\\)"
+    },
+    {
+      "Key": "FR",
+      "Pattern": "\\((france|fra)\\)"
+    },
+    {
+      "Key": "DE",
+      "Pattern": "\\((germany|deu)\\)"
+    },
+    {
+      "Key": "ES",
+      "Pattern": "\\((spain|esp)\\)"
+    },
+    {
+      "Key": "IT",
+      "Pattern": "\\((italy|ita)\\)"
+    },
+    {
+      "Key": "NL",
+      "Pattern": "\\((netherlands|nld)\\)"
+    },
+    {
+      "Key": "SE",
+      "Pattern": "\\((sweden|swe)\\)"
+    },
+    {
+      "Key": "EU",
+      "Pattern": "\\((uk|united\\s*kingdom|great\\s*britain|england|belgium|austria|portugal|switzerland|denmark|finland|norway|czech|hungary)\\)"
+    },
+    {
+      "Key": "ASIA",
+      "Pattern": "\\((taiwan|hong\\s*kong|india)\\)"
+    }
+  ],
+  "VerifiedPattern": "\\[!\\]",
+  "FallbackEU": "\\b(europe|pal)\\b",
+  "JunkTags": "\\((alpha\\s*\\d*|beta\\s*\\d*|proto(?:type)?\\s*\\d*|sample|sampler|demo|preview|pre[\\s-]*release|promo|kiosk|debug|trial|taikenban|location\\s*test|test\\s*program)\\)|\\((program|application|utility|enhancement\\s*chip|test\\s*program|test\\s*cartridge)\\)|\\((competition\\s*cart|service\\s*disc|diagnostic|check\\s*program)\\)|\\((hack|pirate|bootleg|homebrew|aftermarket|translated|translation)\\)|\\((unl|unlicensed)\\)|\\((not\\s*for\\s*resale|nfr)\\)|\\[(b\\d*|h\\d*|p\\d*|t\\d*|f\\d*|o\\d*)\\]|\\[(cr|tr|m)\\s",
+  "GameKeyPatterns": [
+    "\\s*\\((europe|eu|eur|pal|usa|us|u\\.s\\.a\\.|u\\.s\\.|japan|jp|jpn|world|export|asia|as|korea|kr|kor|china|cn|chn|brazil|br|bra|australia|au|aus|france|fr|fra|germany|de|deu|spain|es|esp|italy|it|ita|netherlands|nl|nld|sweden|se|swe|scandinavia|canada|ca|russia|ru|rus|poland|pl|pol|uk|united\\s*kingdom|great\\s*britain|england|belgium|be|austria|at|portugal|pt|switzerland|ch|denmark|dk|finland|fi|norway|no|czech|cz|hungary|hu|taiwan|tw|hong\\s*kong|hk|india|in)(,\\s*(europe|eu|eur|pal|usa|us|japan|jp|jpn|world|asia|as|korea|kr|china|cn|brazil|br|australia|au|france|fr|germany|de|spain|es|italy|it|netherlands|nl|sweden|se|scandinavia|canada|ca|russia|ru|rus|poland|pl|pol|uk|united\\s*kingdom|great\\s*britain|england|belgium|be|austria|at|portugal|pt|switzerland|ch|denmark|dk|finland|fi|norway|no|czech|cz|hungary|hu|taiwan|tw|hong\\s*kong|hk|india|in))*\\)\\s*",
+    "\\s*\\((headered|headerless)\\)\\s*",
+    "\\s*\\((rev\\s*[a-z0-9.]+|revision\\s*[a-z0-9.]+)\\)\\s*",
+    "\\s*\\((v\\s*[0-9][0-9.]*[a-z]?)\\)\\s*",
+    "\\s*\\((alpha\\s*\\d*|beta\\s*\\d*|proto(?:type)?\\s*\\d*|sample|demo|preview|pre[\\s-]*release|promo|kiosk|debug|trial|taikenban|location\\s*test)\\)\\s*",
+    "\\s*\\((program|application|utility|enhancement\\s*chip|test\\s*program|test\\s*cartridge)\\)\\s*",
+    "\\s*\\((hack|pirate|bootleg|homebrew|aftermarket|translated|translation)\\)\\s*",
+    "\\s*\\((unl|unlicensed|competition\\s*cart|service\\s*disc|diagnostic)\\)\\s*",
+    "\\s*\\((bios|firmware)\\)\\s*",
+    "\\s*\\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt)(,\\s*(en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt))*\\)\\s*",
+    "\\s*\\[(\\!|b\\d*|h\\d*|o\\d*|p\\d*|t\\d*|f\\d*|a\\d*|cr[^\\]]*|tr[^\\]]*|m\\s[^\\]]*)\\]\\s*",
+    "\\s*\\((not\\s*for\\s*resale|nfr)\\)\\s*",
+    "\\s*\\((virtual\\s*console|switch\\s*online|classic\\s*mini|wii\\s*u|gamecube)\\)\\s*",
+    "\\s*\\((reprint|rerelease|rerip|alt|alt\\s*\\d*|collection)\\)\\s*",
+    "\\s*\\(([^\\)]*\\b(collection|classics?|anniversary|antholog(?:y|ies)|archives?|museum|evercade|retro-?bit(?:\\s*generations)?)\\b[^\\)]*)\\)\\s*",
+    "\\s*\\((edc|no\\s*edc|libcrypt|sbi|subchannel)\\)\\s*",
+    "\\s*\\((\\d+S(?:,\\s*\\d+S)*)\\)\\s*",
+    "\\s*\\((Made\\s+in\\s+\\w+)\\)\\s*"
+  ],
+  "JunkWordsAggressive": "\\b(work\\s*in\\s*progress|wip|playtest|test\\s*build|dev\\s*build|qa\\s*build|review\\s*build|internal\\s*build|preview\\s*build|not\\s*for\\s*distribution)\\b",
+  "MultiRegionPattern": "\\([^)]*(?:europe|usa|japan|world)[^)]*(?:europe|usa|japan|world)[^)]*\\)",
+  "AlwaysAliasMap": {
+    "akumajou dracula": "castlevania",
+    "akumajou densetsu": "castlevania iii - dracula's curse",
+    "akumajou special - boku dracula-kun": "kid dracula",
+    "rockman 2": "mega man 2",
+    "rockman iii": "mega man 3",
+    "rockman iv": "mega man 4",
+    "rockman v": "mega man 5",
+    "rockman vi": "mega man 6",
+    "rockman 2 (rockman 123)": "mega man 2",
+    "rockman iii (rockman 123)": "mega man 3",
+    "rockman iv (rockman 123)": "mega man 4",
+    "rockman v (rockman 123)": "mega man 5",
+    "rockman vi (rockman 123)": "mega man 6",
+    "8 eyes (digital)": "8 eyes",
+    "8 eyes (pixel heart)": "8 eyes",
+    "battletoads (iam8bit)": "battletoads",
+    "ghosts'n goblins (capcom town)": "ghosts'n goblins",
+    "mega man (capcom town)": "mega man",
+    "mega man 2 (capcom town)": "mega man 2",
+    "mega man 2 (iam8bit)": "mega man 2",
+    "castlevania iii - dracula's curse (usa wii virtual console, wii u virtual console)": "castlevania iii - dracula's curse"
+  },
+  "FallbackUS": "\\busa\\b",
+  "FallbackJP": "\\b(japan|jpn)\\b",
+  "StoreTagPattern": "\\s*\\((evercade|castlevania\\s*anniversary\\s*collection|contra\\s*anniversary\\s*collection|the\\s*disney\\s*afternoon\\s*collection|the\\s*cowabunga\\s*collection|konami\\s*collector's\\s*series|namco\\s*museum\\s*archives\\s*vol\\s*[12]|namcot\\s*collection(?:,\\s*namco\\s*museum\\s*archives\\s*vol\\s*[12])?|virtual\\s*console(?:,\\s*switch\\s*online)?|switch\\s*online|wii\\s*virtual\\s*console|wii\\s*u\\s*virtual\\s*console|ndsi\\s*enhanced)\\)\\s*",
+  "Region2Letter": [
+    {
+      "Key": "KR",
+      "Pattern": "\\((kr)\\)"
+    },
+    {
+      "Key": "CN",
+      "Pattern": "\\((cn)\\)"
+    },
+    {
+      "Key": "BR",
+      "Pattern": "\\((br)\\)"
+    },
+    {
+      "Key": "FR",
+      "Pattern": "\\((fr)\\)"
+    },
+    {
+      "Key": "DE",
+      "Pattern": "\\((de)\\)"
+    },
+    {
+      "Key": "ES",
+      "Pattern": "\\((es)\\)"
+    },
+    {
+      "Key": "IT",
+      "Pattern": "\\((it)\\)"
+    },
+    {
+      "Key": "NL",
+      "Pattern": "\\((nl)\\)"
+    },
+    {
+      "Key": "SE",
+      "Pattern": "\\((se)\\)"
+    },
+    {
+      "Key": "AU",
+      "Pattern": "\\((au)\\)"
+    },
+    {
+      "Key": "ASIA",
+      "Pattern": "\\((as)\\)"
+    }
+  ],
+  "AliasTagPatterns": [
+    "aga",
+    "amiga\\s*\\+\\s*pc",
+    "budget(?:\\s*-\\s*[^\\)]*)?",
+    "compilation(?:\\s*-\\s*[^\\)]*)?",
+    "classics?",
+    "hits?",
+    "retro-?bit(?:\\s*generations)?",
+    "pixel\\s*heart",
+    "digital",
+    "famicombox",
+    "evercade",
+    "castlevania\\s*anniversary\\s*collection",
+    "contra\\s*anniversary\\s*collection",
+    "mega\\s*man\\s*legacy\\s*collection",
+    "the\\s*disney\\s*afternoon\\s*collection",
+    "the\\s*cowabunga\\s*collection",
+    "konami\\s*collector's\\s*series",
+    "namcot\\s*collection(?:,\\s*namco\\s*museum\\s*archives\\s*vol\\s*[12])?",
+    "namco\\s*museum\\s*archives\\s*vol\\s*[12]",
+    "animal\\s*crossing",
+    "e-reader",
+    "datach",
+    "limited\\s*run\\s*games",
+    "wii\\s*virtual\\s*console",
+    "wii\\s*u\\s*virtual\\s*console",
+    "wii\\s*and\\s*wii\\s*u\\s*virtual\\s*console",
+    "virtual\\s*console(?:,\\s*switch\\s*online)?",
+    "switch\\b",
+    "3ds\\s*virtual\\s*console",
+    "famicom\\s*3d\\s*system",
+    "ninja\\s*jajamaru\\s*retro\\s*collection",
+    "capcom\\s*town",
+    "snk\\s*40th\\s*anniversary\\s*collection",
+    "qubyte\\s*classics",
+    "red\\s*art\\s*games",
+    "metal\\s*gear\\s*solid\\s*collection",
+    "zelda\\s*collection",
+    "8-bit\\s*adventure\\s*anthology\\s*-\\s*volume\\s*i",
+    "iam8bit",
+    "capcom\\s*classics\\s*mini\\s*mix",
+    "disney\\s*classic\\s*games",
+    "steam",
+    "sunsoft",
+    "columbus\\s*circle",
+    "tengen",
+    "broke\\s*studio",
+    "victor",
+    "acclaim",
+    "kemco",
+    "namco",
+    "rockman\\s*123",
+    "possible\\s*proto",
+    "early\\s*proto",
+    "menu\\s*cart",
+    "jou",
+    "taiwan",
+    "ndsi\\s*enhanced",
+    "[^\\)]*\\b(collection|classics?|anniversary|antholog(?:y|ies)|archives?|museum)\\b[^\\)]*"
+  ],
+  "VersionPattern": "\\(v\\s*(\\d+)\\.?(\\d*)\\)",
+  "RevisionPattern": "\\(rev\\s*([a-z0-9.]+)\\)",
+  "BaseAliasMap": {
+    "abandoned places - a time for heroes": "abandoned places",
+    "abandoned places - zeit für helden": "abandoned places",
+    "abandoned places - zeit fur helden": "abandoned places",
+    "abandoned places - zeit fuer helden": "abandoned places"
+  },
+  "BiosPattern": "\\((bios|firmware)\\)|\\[bios\\]|^\\s*bios\\b",
+  "Cleanup2": "\\s{2,}",
+  "Cleanup1": "[\\._]+",
+  "JunkWords": "\\b(demo|sample\\s*version|trial\\s*version|trial|pre[\\s-]*release|not\\s*for\\s*resale|sampler|bootleg\\s*sampler)\\b",
+  "JunkTagsAggressive": "\\((wip|work\\s*in\\s*progress|playtest|test\\s*build|dev\\s*build|qa\\s*build|review\\s*build|internal\\s*build|preview\\s*build|prototype\\s*build|not\\s*for\\s*distribution)\\)"
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://romcleanup.local/schemas/profile.schema.json",
+  "type": "object",
+  "required": ["schemaVersion", "name", "settings"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "name": { "type": "string" },
+    "settings": { "type": "object" },
+    "exportedUtc": { "type": "string" }
+  },
+  "additionalProperties": false
+}

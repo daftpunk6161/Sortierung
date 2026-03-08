@@ -1,0 +1,221 @@
+openapi: 3.0.3
+info:
+  title: ROM Cleanup API
+  version: 1.0.0
+  description: |
+    Lokale REST-API für ROM Cleanup (localhost-only), API-Key geschützt.
+servers:
+  - url: http://127.0.0.1:7878
+security:
+  - ApiKeyAuth: []
+paths:
+  /health:
+    options:
+      summary: CORS Preflight
+      responses:
+        '200':
+          description: OK
+    get:
+      summary: Health-Status
+      responses:
+        '200':
+          description: Health payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  serverRunning:
+                    type: boolean
+                  activeRunId:
+                    type: string
+                    nullable: true
+                  utc:
+                    type: string
+                    format: date-time
+        '401':
+          description: Unauthorized
+        '429':
+          description: Too many requests
+  /runs:
+    options:
+      summary: CORS Preflight
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Startet einen Lauf
+      parameters:
+        - in: query
+          name: wait
+          schema:
+            type: boolean
+          description: Wenn true, blockiert bis Lauf fertig.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRunRequest'
+      responses:
+        '200':
+          description: Lauf fertig (wait=true)
+        '202':
+          description: Lauf gestartet
+        '400':
+          description: Ungültige Payload
+        '401':
+          description: Unauthorized
+        '409':
+          description: Lauf bereits aktiv
+        '429':
+          description: Too many requests
+  /runs/{runId}:
+    get:
+      summary: Laufstatus
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Laufstatus
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run:
+                    $ref: '#/components/schemas/RunStatus'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Run not found
+        '429':
+          description: Too many requests
+  /runs/{runId}/result:
+    get:
+      summary: Laufergebnis
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Run-Resultat
+        '401':
+          description: Unauthorized
+        '404':
+          description: Run not found
+        '409':
+          description: Run still running
+        '429':
+          description: Too many requests
+  /runs/{runId}/cancel:
+    options:
+      summary: CORS Preflight
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Lauf abbrechen
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Abgebrochen
+        '401':
+          description: Unauthorized
+        '404':
+          description: Run not found
+        '409':
+          description: Run not running
+        '429':
+          description: Too many requests
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+  schemas:
+    CreateRunRequest:
+      type: object
+      required: [roots]
+      properties:
+        mode:
+          type: string
+          enum: [DryRun, Move]
+          default: DryRun
+        roots:
+          type: array
+          items:
+            type: string
+        prefer:
+          type: array
+          items:
+            type: string
+        extensions:
+          type: array
+          items:
+            type: string
+        sortConsole:
+          type: boolean
+        useDat:
+          type: boolean
+        datFallback:
+          type: boolean
+        convert:
+          type: boolean
+        removeJunk:
+          type: boolean
+        aggressiveJunk:
+          type: boolean
+        aliasEditionKeying:
+          type: boolean
+        separateBios:
+          type: boolean
+        use1g1r:
+          type: boolean
+        datRoot:
+          type: string
+        datHashType:
+          type: string
+          enum: [SHA1, MD5, CRC32]
+        auditRoot:
+          type: string
+        trashRoot:
+          type: string
+        notifyAfterRun:
+          type: boolean
+    RunStatus:
+      type: object
+      properties:
+        runId:
+          type: string
+        status:
+          type: string
+          enum: [running, completed, failed, cancelled]
+        startedUtc:
+          type: string
+          format: date-time
+        completedUtc:
+          type: string
+          format: date-time
+          nullable: true
+        processId:
+          type: integer
+        error:
+          type: string
+          nullable: true

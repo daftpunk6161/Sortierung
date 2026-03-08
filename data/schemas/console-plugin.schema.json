@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://romcleanup.local/schemas/console-plugin.schema.json",
+  "type": "object",
+  "required": ["name"],
+  "properties": {
+    "name": { "type": "string" },
+    "folderMap": { "type": "object" },
+    "extMap": { "type": "object" },
+    "regexMap": { "type": "object" }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,714 @@
+[
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/3do/",
+    "System": "3DO Interactive Multiplayer",
+    "Id": "redump-3do",
+    "ConsoleKey": "3DO",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/acd/",
+    "System": "Acorn - Archimedes CD",
+    "Id": "redump-acd",
+    "ConsoleKey": "ACD",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/cd32/",
+    "System": "Commodore - Amiga CD32",
+    "Id": "redump-cd32",
+    "ConsoleKey": "CD32",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/cdtv/",
+    "System": "Commodore - Amiga CDTV",
+    "Id": "redump-cdtv",
+    "ConsoleKey": "CDTV",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/cdi/",
+    "System": "Philips - CD-i",
+    "Id": "redump-cdi",
+    "ConsoleKey": "CDI",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/chihiro/",
+    "System": "Sega - Chihiro",
+    "Id": "redump-chihiro",
+    "ConsoleKey": "CHI",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/dc/",
+    "System": "Sega - Dreamcast",
+    "Id": "redump-dc",
+    "ConsoleKey": "DC",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/fmt/",
+    "System": "Fujitsu - FM Towns",
+    "Id": "redump-fmt",
+    "ConsoleKey": "FMT",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/gc/",
+    "System": "Nintendo - GameCube",
+    "Id": "redump-gc",
+    "ConsoleKey": "GC",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/hs/",
+    "System": "Matsushita - Video Now Color",
+    "Id": "redump-hs",
+    "ConsoleKey": "HS",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/ksite/",
+    "System": "Konami - e-Amusement",
+    "Id": "redump-ksite",
+    "ConsoleKey": "KSITE",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/lindbergh/",
+    "System": "Sega - Lindbergh",
+    "Id": "redump-lindbergh",
+    "ConsoleKey": "LIND",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/mac/",
+    "System": "Apple - Macintosh",
+    "Id": "redump-mac",
+    "ConsoleKey": "MAC",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/mcd/",
+    "System": "Sega - Mega CD & Sega CD",
+    "Id": "redump-mcd",
+    "ConsoleKey": "MCD",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/naomi/",
+    "System": "Sega - Naomi",
+    "Id": "redump-naomi",
+    "ConsoleKey": "NAOMI",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/naomi2/",
+    "System": "Sega - Naomi 2",
+    "Id": "redump-naomi2",
+    "ConsoleKey": "NAO2",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/ngcd/",
+    "System": "SNK - Neo Geo CD",
+    "Id": "redump-ngcd",
+    "ConsoleKey": "NEOCD",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/nuon/",
+    "System": "VM Labs - NUON",
+    "Id": "redump-nuon",
+    "ConsoleKey": "NUON",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/palm/",
+    "System": "Palm",
+    "Id": "redump-palm",
+    "ConsoleKey": "PALM",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/pc/",
+    "System": "IBM - PC compatible",
+    "Id": "redump-pc",
+    "ConsoleKey": "IBMPC",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/pc-88/",
+    "System": "NEC - PC-88 series",
+    "Id": "redump-pc88",
+    "ConsoleKey": "PC88",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/pc-98/",
+    "System": "NEC - PC-98 series",
+    "Id": "redump-pc98",
+    "ConsoleKey": "PC98",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/pce/",
+    "System": "NEC - PC Engine CD & TurboGrafx CD",
+    "Id": "redump-pce-cd",
+    "ConsoleKey": "PCECD",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/pc-fx/",
+    "System": "NEC - PC-FX & PC-FXGA",
+    "Id": "redump-pcfx",
+    "ConsoleKey": "PCFX",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/photo-cd/",
+    "System": "Photo CD",
+    "Id": "redump-photo-cd",
+    "ConsoleKey": "PCD",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/pippin/",
+    "System": "Apple - Bandai Pippin",
+    "Id": "redump-pippin",
+    "ConsoleKey": "PIPPIN",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/psx/",
+    "System": "Sony - PlayStation",
+    "Id": "redump-ps1",
+    "ConsoleKey": "PSX",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/ps2/",
+    "System": "Sony - PlayStation 2",
+    "Id": "redump-ps2",
+    "ConsoleKey": "PS2",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/ps3/",
+    "System": "Sony - PlayStation 3",
+    "Id": "redump-ps3",
+    "ConsoleKey": "PS3",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/psp/",
+    "System": "Sony - PlayStation Portable",
+    "Id": "redump-psp",
+    "ConsoleKey": "PSP",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/ss/",
+    "System": "Sega - Saturn",
+    "Id": "redump-ss",
+    "ConsoleKey": "SAT",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/vflash/",
+    "System": "VTech - V.Flash & V.Smile Pro",
+    "Id": "redump-vflash",
+    "ConsoleKey": "VFLASH",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/wii/",
+    "System": "Nintendo - Wii",
+    "Id": "redump-wii",
+    "ConsoleKey": "WII",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/xbox/",
+    "System": "Microsoft - Xbox",
+    "Id": "redump-xbox",
+    "ConsoleKey": "XBOX",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/xbox360/",
+    "System": "Microsoft - Xbox 360",
+    "Id": "redump-xbox360",
+    "ConsoleKey": "X360",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/ajcd/",
+    "System": "Atari - Jaguar CD",
+    "Id": "redump-ajcd",
+    "ConsoleKey": "AJCD",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/gamewave/",
+    "System": "ZAPiT - Game Wave",
+    "Id": "redump-gamewave",
+    "ConsoleKey": "GW",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/ite/",
+    "System": "Incredible Technologies - Eagle",
+    "Id": "redump-ite",
+    "ConsoleKey": "ITE",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/ixl/",
+    "System": "Mattel - Fisher-Price iXL",
+    "Id": "redump-ixl",
+    "ConsoleKey": "IXL",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/ppc/",
+    "System": "Pocket PC",
+    "Id": "redump-ppc",
+    "ConsoleKey": "PPC",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/quizard/",
+    "System": "TAB-Austria - Quizard",
+    "Id": "redump-quizard",
+    "ConsoleKey": "QUIZ",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/vis/",
+    "System": "Memorex - Visual Information System",
+    "Id": "redump-vis",
+    "ConsoleKey": "VIS",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "Redump",
+    "Url": "http://redump.org/datfile/x68k/",
+    "System": "Sharp - X68000",
+    "Id": "redump-x68k",
+    "ConsoleKey": "X68K",
+    "Format": "zip-dat"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Nintendo - Nintendo Entertainment System (Headered)*",
+    "Url": "",
+    "System": "Nintendo - NES",
+    "Id": "nointro-nes",
+    "ConsoleKey": "NES",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Nintendo - Super Nintendo Entertainment System*",
+    "Url": "",
+    "System": "Nintendo - SNES",
+    "Id": "nointro-snes",
+    "ConsoleKey": "SNES",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Nintendo - Nintendo 64 (BigEndian)*",
+    "Url": "",
+    "System": "Nintendo - N64",
+    "Id": "nointro-n64",
+    "ConsoleKey": "N64",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Nintendo - Game Boy Advance (Private)*",
+    "Url": "",
+    "System": "Nintendo - Game Boy Advance",
+    "Id": "nointro-gba",
+    "ConsoleKey": "GBA",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Nintendo - Game Boy (Private)*",
+    "Url": "",
+    "System": "Nintendo - Game Boy",
+    "Id": "nointro-gb",
+    "ConsoleKey": "GB",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Nintendo - Game Boy Color*",
+    "Url": "",
+    "System": "Nintendo - Game Boy Color",
+    "Id": "nointro-gbc",
+    "ConsoleKey": "GBC",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Nintendo - Nintendo DS (Decrypted)*",
+    "Url": "",
+    "System": "Nintendo - DS",
+    "Id": "nointro-nds",
+    "ConsoleKey": "NDS",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Sega - Mega Drive - Genesis*",
+    "Url": "",
+    "System": "Sega - Mega Drive / Genesis",
+    "Id": "nointro-md",
+    "ConsoleKey": "MD",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Sega - Master System - Mark III*",
+    "Url": "",
+    "System": "Sega - Master System",
+    "Id": "nointro-sms",
+    "ConsoleKey": "SMS",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "NEC - PC Engine - TurboGrafx-16*",
+    "Url": "",
+    "System": "NEC - PC Engine / TurboGrafx-16",
+    "Id": "nointro-pce",
+    "ConsoleKey": "PCE",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Nintendo - Nintendo Switch (20*",
+    "Url": "",
+    "System": "Nintendo - Switch",
+    "Id": "nointro-switch",
+    "ConsoleKey": "NSW",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Nintendo - Virtual Boy*",
+    "Url": "",
+    "System": "Nintendo - Virtual Boy",
+    "Id": "nointro-vb",
+    "ConsoleKey": "VB",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Atari - Atari 2600*",
+    "Url": "",
+    "System": "Atari - 2600",
+    "Id": "nointro-a2600",
+    "ConsoleKey": "A26",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Atari - Atari 7800 (A78)*",
+    "Url": "",
+    "System": "Atari - 7800",
+    "Id": "nointro-a7800",
+    "ConsoleKey": "A78",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Atari - Atari Lynx (LNX)*",
+    "Url": "",
+    "System": "Atari - Lynx",
+    "Id": "nointro-lynx",
+    "ConsoleKey": "LYNX",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Coleco - ColecoVision*",
+    "Url": "",
+    "System": "Coleco - ColecoVision",
+    "Id": "nointro-coleco",
+    "ConsoleKey": "COLECO",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "GCE - Vectrex*",
+    "Url": "",
+    "System": "GCE - Vectrex",
+    "Id": "nointro-vectrex",
+    "ConsoleKey": "VEC",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Mattel - Intellivision*",
+    "Url": "",
+    "System": "Mattel - Intellivision",
+    "Id": "nointro-intv",
+    "ConsoleKey": "INTV",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Atari - Atari Jaguar (J64)*",
+    "Url": "",
+    "System": "Atari - Jaguar",
+    "Id": "nointro-jaguar",
+    "ConsoleKey": "JAG",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Watara - Supervision*",
+    "Url": "",
+    "System": "Watara - Supervision",
+    "Id": "nointro-supervision",
+    "ConsoleKey": "SVISION",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "No-Intro",
+    "PackMatch": "Analogue - Analogue Pocket*",
+    "Url": "",
+    "System": "Analogue - Pocket",
+    "Id": "nointro-pocket",
+    "ConsoleKey": "POCKET",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "Non-Redump",
+    "PackMatch": "Non-Redump - Nintendo - Nintendo GameCube*",
+    "Url": "",
+    "System": "Nintendo - GameCube (Non-Redump)",
+    "Id": "nonredump-gc",
+    "ConsoleKey": "GC",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "Non-Redump",
+    "PackMatch": "Non-Redump - Sega - Dreamcast*",
+    "Url": "",
+    "System": "Sega - Dreamcast (Non-Redump)",
+    "Id": "nonredump-dc",
+    "ConsoleKey": "DC",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "Non-Redump",
+    "PackMatch": "Non-Redump - Sony - PlayStation 5*",
+    "Url": "",
+    "System": "Sony - PlayStation 5 (Non-Redump)",
+    "Id": "nonredump-ps5",
+    "ConsoleKey": "PS5",
+    "Format": "nointro-pack"
+  },
+  {
+    "Group": "MAME",
+    "Url": "https://www.progettosnaps.net/dats/MAME/packs/MAME_Dats_284.7z",
+    "System": "MAME Full Set",
+    "Id": "mame",
+    "ConsoleKey": "MAME",
+    "Format": "7z-dat"
+  },
+  {
+    "Group": "Libretro",
+    "Url": "https://raw.githubusercontent.com/libretro/libretro-database/master/dat/Atomiswave.dat",
+    "System": "Sammy - Atomiswave",
+    "Id": "libretro-atomiswave",
+    "ConsoleKey": "AWAVE",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20Arcade%20only).dat",
+    "System": "FinalBurn Neo - Arcade Games",
+    "Id": "fbneo-arcade",
+    "ConsoleKey": "ARCADE",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20Megadrive%20only).dat",
+    "System": "FinalBurn Neo - Megadrive Games",
+    "Id": "fbneo-megadrive",
+    "ConsoleKey": "MD",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20PC-Engine%20only).dat",
+    "System": "FinalBurn Neo - PC Engine Games",
+    "Id": "fbneo-pce",
+    "ConsoleKey": "PCE",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20Master%20System%20only).dat",
+    "System": "FinalBurn Neo - Master System Games",
+    "Id": "fbneo-sms",
+    "ConsoleKey": "SMS",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20NES%20Games%20only).dat",
+    "System": "FinalBurn Neo - NES Games",
+    "Id": "fbneo-nes",
+    "ConsoleKey": "NES",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20ColecoVision%20only).dat",
+    "System": "FinalBurn Neo - ColecoVision Games",
+    "Id": "fbneo-coleco",
+    "ConsoleKey": "COLECO",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20Game%20Gear%20only).dat",
+    "System": "FinalBurn Neo - Game Gear Games",
+    "Id": "fbneo-gg",
+    "ConsoleKey": "GG",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20SNES%20Games%20only).dat",
+    "System": "FinalBurn Neo - SNES Games",
+    "Id": "fbneo-snes",
+    "ConsoleKey": "SNES",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20Sega%20SG-1000%20only).dat",
+    "System": "FinalBurn Neo - Sega SG-1000 Games",
+    "Id": "fbneo-sg1000",
+    "ConsoleKey": "SG1K",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20TurboGrafx16%20only).dat",
+    "System": "FinalBurn Neo - TurboGrafx-16 Games",
+    "Id": "fbneo-tg16",
+    "ConsoleKey": "TG16",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20Neogeo%20only).dat",
+    "System": "FinalBurn Neo - Neo Geo Games",
+    "Id": "fbneo-neogeo",
+    "ConsoleKey": "NEO",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20FDS%20Games%20only).dat",
+    "System": "FinalBurn Neo - FDS Games",
+    "Id": "fbneo-fds",
+    "ConsoleKey": "FDS",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20ZX%20Spectrum%20Games%20only).dat",
+    "System": "FinalBurn Neo - ZX Spectrum Games",
+    "Id": "fbneo-spectrum",
+    "ConsoleKey": "ZX",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20MSX%201%20Games%20only).dat",
+    "System": "FinalBurn Neo - MSX 1 Games",
+    "Id": "fbneo-msx",
+    "ConsoleKey": "MSX",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20NeoGeo%20Pocket%20Games%20only).dat",
+    "System": "FinalBurn Neo - Neo Geo Pocket Games",
+    "Id": "fbneo-ngp",
+    "ConsoleKey": "NGP",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20SuprGrafx%20only).dat",
+    "System": "FinalBurn Neo - SuprGrafx Games",
+    "Id": "fbneo-sg",
+    "ConsoleKey": "SGX",
+    "Format": "raw-dat"
+  },
+  {
+    "Group": "FBNEO",
+    "Url": "https://raw.githubusercontent.com/libretro/FBNeo/master/dats/FinalBurn%20Neo%20(ClrMame%20Pro%20XML%2C%20Fairchild%20Channel%20F%20Games%20only).dat",
+    "System": "FinalBurn Neo - Fairchild Channel F Games",
+    "Id": "fbneo-cv",
+    "ConsoleKey": "VF",
+    "Format": "raw-dat"
+  }
+]

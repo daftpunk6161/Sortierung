@@ -1,0 +1,714 @@
+{
+  "ConsoleFolderMap": {
+    "game boy color": "GBC",
+    "neo-geo cd": "NEOCD",
+    "ngc": "GC",
+    "msdos": "DOS",
+    "game gear": "GG",
+    "mame": "ARCADE",
+    "sega cd": "SCD",
+    "ds": "NDS",
+    "nintendo 3ds": "3DS",
+    "gameboy": "GB",
+    "mega drive": "MD",
+    "turbografx-16": "PCE",
+    "wiiu": "WIIU",
+    "gamegear": "GG",
+    "dreamcast": "DC",
+    "ms-dos": "DOS",
+    "nintendo ds": "NDS",
+    "mega-cd": "SCD",
+    "ibm pc": "DOS",
+    "ps1": "PS1",
+    "switch": "SWITCH",
+    "sfc": "SNES",
+    "playstation2": "PS2",
+    "gc": "GC",
+    "n64": "N64",
+    "neo-geo": "NEOGEO",
+    "gamecube": "GC",
+    "megacd": "SCD",
+    "jaguar cd": "JAGCD",
+    "3ds": "3DS",
+    "gameboy advance": "GBA",
+    "ps3": "PS3",
+    "master system": "SMS",
+    "ps2": "PS2",
+    "arcade": "ARCADE",
+    "neogeo": "NEOGEO",
+    "megadrive": "MD",
+    "nintendo gamecube": "GC",
+    "n3ds": "3DS",
+    "nintendo": "NES",
+    "nds": "NDS",
+    "nx": "SWITCH",
+    "sms": "SMS",
+    "jaguar": "JAG",
+    "dc": "DC",
+    "famicom": "NES",
+    "saturn": "SAT",
+    "gbc": "GBC",
+    "sega saturn": "SAT",
+    "pcecd": "PCECD",
+    "fbneo": "ARCADE",
+    "nintendo switch": "SWITCH",
+    "gen": "MD",
+    "wii u": "WIIU",
+    "3do": "3DO",
+    "pc dos": "DOS",
+    "gba": "GBA",
+    "nes": "NES",
+    "turbografx-cd": "PCECD",
+    "psx": "PS1",
+    "md": "MD",
+    "super nintendo": "SNES",
+    "snes": "SNES",
+    "genesis": "MD",
+    "gb": "GB",
+    "jaguarcd": "JAGCD",
+    "playstation": "PS1",
+    "pcenginecd": "PCECD",
+    "pc engine cd": "PCECD",
+    "turbografx": "PCE",
+    "game boy": "GB",
+    "ngcd": "NEOCD",
+    "super famicom": "SNES",
+    "playstation 3": "PS3",
+    "playstation portable": "PSP",
+    "nintendo64": "N64",
+    "pc engine": "PCE",
+    "neo geo cd": "NEOCD",
+    "neogeocd": "NEOCD",
+    "neo geo": "NEOGEO",
+    "pce": "PCE",
+    "mega cd": "SCD",
+    "fba": "ARCADE",
+    "wii": "WII",
+    "mastersystem": "SMS",
+    "nintendo 64": "N64",
+    "ng": "NEOGEO",
+    "playstation1": "PS1",
+    "playstation3": "PS3",
+    "gameboy color": "GBC",
+    "fc": "NES",
+    "dos": "DOS",
+    "pcengine": "PCE",
+    "game boy advance": "GBA",
+    "segacd": "SCD",
+    "gg": "GG",
+    "playstation 2": "PS2",
+    "psp": "PSP",
+    "ss": "SAT",
+
+    "32x": "32X",
+    "sega 32x": "32X",
+    "sega32x": "32X",
+    "super 32x": "32X",
+    "sg-1000": "SG1000",
+    "sg1000": "SG1000",
+
+    "atari 2600": "A26",
+    "a26": "A26",
+    "vcs": "A26",
+    "atari 5200": "A52",
+    "a52": "A52",
+    "atari 7800": "A78",
+    "a78": "A78",
+    "atari lynx": "LYNX",
+    "lynx": "LYNX",
+    "atari st": "ATARIST",
+    "atarist": "ATARIST",
+    "atari jaguar": "JAG",
+
+    "colecovision": "COLECO",
+    "coleco": "COLECO",
+    "intellivision": "INTV",
+    "intv": "INTV",
+
+    "virtual boy": "VB",
+    "virtualboy": "VB",
+    "vb": "VB",
+    "pokemini": "POKEMINI",
+    "pokemon mini": "POKEMINI",
+
+    "vectrex": "VECTREX",
+
+    "neo geo pocket": "NGP",
+    "neogeo pocket": "NGP",
+    "ngp": "NGP",
+    "neo geo pocket color": "NGPC",
+    "neogeo pocket color": "NGPC",
+    "ngpc": "NGPC",
+
+    "wonderswan": "WS",
+    "wonder swan": "WS",
+    "ws": "WS",
+    "wonderswan color": "WSC",
+    "wonderswancolor": "WSC",
+    "wsc": "WSC",
+
+    "msx": "MSX",
+    "msx2": "MSX",
+
+    "pc-fx": "PCFX",
+    "pcfx": "PCFX",
+
+    "cd-i": "CDI",
+    "cdi": "CDI",
+    "philips cd-i": "CDI",
+    "philips cdi": "CDI",
+
+    "psvita": "VITA",
+    "ps vita": "VITA",
+    "vita": "VITA",
+    "playstation vita": "VITA",
+
+    "amiga": "AMIGA",
+    "commodore amiga": "AMIGA",
+    "c64": "C64",
+    "commodore 64": "C64",
+
+    "zx spectrum": "ZX",
+    "zxspectrum": "ZX",
+    "spectrum": "ZX",
+    "amstrad cpc": "CPC",
+    "cpc": "CPC",
+
+    "pc-98": "PC98",
+    "pc98": "PC98",
+    "x68000": "X68K",
+    "x68k": "X68K",
+    "sharp x68000": "X68K",
+
+    "xbox": "XBOX",
+    "xbox360": "X360",
+    "xbox 360": "X360",
+    "x360": "X360",
+
+    "supervision": "SUPERVISION",
+    "watara": "SUPERVISION",
+    "channelf": "CHANNELF",
+    "channel f": "CHANNELF",
+    "fairchild": "CHANNELF",
+    "odyssey2": "ODYSSEY2",
+    "odyssey 2": "ODYSSEY2",
+    "videopac": "ODYSSEY2",
+
+    "fm towns": "FMTOWNS",
+    "fmtowns": "FMTOWNS",
+    "fm-towns": "FMTOWNS",
+    "fm towns marty": "FMTOWNS",
+    "marty": "FMTOWNS",
+
+    "cd32": "CD32",
+    "amiga cd32": "CD32",
+    "commodore cd32": "CD32"
+  },
+  "ConsoleExtMap": {
+    ".sms": "SMS",
+    ".xci": "SWITCH",
+    ".nds": "NDS",
+    ".smc": "SNES",
+    ".pce": "PCE",
+    ".md": "MD",
+    ".gen": "MD",
+    ".gba": "GBA",
+    ".nes": "NES",
+    ".z64": "N64",
+    ".cso": "PSP",
+    ".cia": "3DS",
+    ".gb": "GB",
+    ".3ds": "3DS",
+    ".gbc": "GBC",
+    ".v64": "N64",
+    ".sfc": "SNES",
+    ".nsp": "SWITCH",
+    ".gg": "GG",
+    ".n64": "N64",
+    ".wbfs": "WII",
+    ".wad": "WII",
+    ".wux": "WIIU",
+    ".rpx": "WIIU",
+    ".vpk": "VITA",
+
+    ".32x": "32X",
+    ".sg": "SG1000",
+    ".sc": "SG1000",
+
+    ".a26": "A26",
+    ".a52": "A52",
+    ".a78": "A78",
+    ".lnx": "LYNX",
+    ".st": "ATARIST",
+    ".stx": "ATARIST",
+    ".j64": "JAG",
+
+    ".col": "COLECO",
+    ".int": "INTV",
+
+    ".vb": "VB",
+    ".min": "POKEMINI",
+    ".vec": "VECTREX",
+
+    ".ngp": "NGP",
+    ".ws": "WS",
+    ".wsc": "WSC",
+    ".pcecd": "PCECD",
+    ".pcfx": "PCFX",
+    ".cdi": "CDI",
+
+    ".mx1": "MSX",
+    ".mx2": "MSX",
+
+    ".adf": "AMIGA",
+    ".d64": "C64",
+    ".t64": "C64",
+    ".tzx": "ZX",
+
+    ".o2": "ODYSSEY2"
+  },
+  "ConsoleRxMapBase": [
+    {
+      "Key": "PSP",
+      "Rx": "playstation\\s*portable|\\bpsp\\b"
+    },
+    {
+      "Key": "PS2",
+      "Rx": "playstation\\s*2|\\bps2\\b"
+    },
+    {
+      "Key": "PS3",
+      "Rx": "playstation\\s*3|\\bps3\\b"
+    },
+    {
+      "Key": "PS1",
+      "Rx": "playstation(?!\\s*[2-9]|\\s*p|\\s*v)|\\bps1\\b|\\bpsx\\b"
+    },
+    {
+      "Key": "VITA",
+      "Rx": "\\bvita\\b|\\bpsvita\\b|playstation\\s*vita"
+    },
+    {
+      "Key": "DC",
+      "Rx": "dreamcast|\\bdc\\b"
+    },
+    {
+      "Key": "SAT",
+      "Rx": "saturn|sega\\s*saturn|\\bss\\b"
+    },
+    {
+      "Key": "SCD",
+      "Rx": "sega\\s*cd|mega-?cd|segacd"
+    },
+    {
+      "Key": "32X",
+      "Rx": "\\b32x\\b|sega\\s*32x|super\\s*32x"
+    },
+    {
+      "Key": "SG1000",
+      "Rx": "\\bsg-?1000\\b"
+    },
+    {
+      "Key": "GC",
+      "Rx": "gamecube|\\bgc\\b|\\bngc\\b"
+    },
+    {
+      "Key": "WII",
+      "Rx": "\\bwii\\b(?!\\s*u)"
+    },
+    {
+      "Key": "WIIU",
+      "Rx": "wii\\s*u|\\bwiiu\\b"
+    },
+    {
+      "Key": "SWITCH",
+      "Rx": "switch|\\bnx\\b"
+    },
+    {
+      "Key": "NDS",
+      "Rx": "nintendo\\s*ds|\\bnds\\b"
+    },
+    {
+      "Key": "3DS",
+      "Rx": "nintendo\\s*3ds|\\b3ds\\b"
+    },
+    {
+      "Key": "GBA",
+      "Rx": "game\\s*boy\\s*advance|\\bgba\\b"
+    },
+    {
+      "Key": "GBC",
+      "Rx": "game\\s*boy\\s*color|\\bgbc\\b"
+    },
+    {
+      "Key": "GB",
+      "Rx": "game\\s*boy(?!\\s*a|\\s*c)|\\bgb\\b"
+    },
+    {
+      "Key": "VB",
+      "Rx": "virtual\\s*boy|\\bvb\\b"
+    },
+    {
+      "Key": "POKEMINI",
+      "Rx": "\\bpokemini\\b|pokemon\\s*mini"
+    },
+    {
+      "Key": "SNES",
+      "Rx": "super\\s*nintendo|super\\s*famicom|\\bsnes\\b|\\bsfc\\b"
+    },
+    {
+      "Key": "NES",
+      "Rx": "famicom(?!.*disk)|\\bnes\\b"
+    },
+    {
+      "Key": "N64",
+      "Rx": "nintendo\\s*64|\\bn64\\b"
+    },
+    {
+      "Key": "MD",
+      "Rx": "megadrive|mega\\s*drive|genesis|\\bmd\\b"
+    },
+    {
+      "Key": "SMS",
+      "Rx": "master\\s*system|\\bsms\\b"
+    },
+    {
+      "Key": "GG",
+      "Rx": "game\\s*gear|\\bgg\\b"
+    },
+    {
+      "Key": "PCE",
+      "Rx": "pc\\s*engine(?!\\s*cd)|\\bpce\\b(?!cd)|turbografx(?!-?cd)"
+    },
+    {
+      "Key": "PCECD",
+      "Rx": "pc\\s*engine\\s*cd|turbografx-?cd|\\bpcecd\\b"
+    },
+    {
+      "Key": "PCFX",
+      "Rx": "\\bpc-?fx\\b"
+    },
+    {
+      "Key": "NEOGEO",
+      "Rx": "neogeo(?!\\s*cd|\\s*pocket)|neo\\s*geo(?!\\s*cd|\\s*pocket)|neo-?geo(?!\\s*cd|\\s*pocket)"
+    },
+    {
+      "Key": "NEOCD",
+      "Rx": "neogeo\\s*cd|neo\\s*geo\\s*cd|neo-?geo\\s*cd|\\bngcd\\b"
+    },
+    {
+      "Key": "NGPC",
+      "Rx": "neo\\s*geo\\s*pocket\\s*color|\\bngpc\\b"
+    },
+    {
+      "Key": "NGP",
+      "Rx": "neo\\s*geo\\s*pocket|\\bngp\\b"
+    },
+    {
+      "Key": "WS",
+      "Rx": "wonderswan(?!\\s*color)|\\bws\\b(?!c)"
+    },
+    {
+      "Key": "WSC",
+      "Rx": "wonderswan\\s*color|\\bwsc\\b"
+    },
+    {
+      "Key": "3DO",
+      "Rx": "\\b3do\\b"
+    },
+    {
+      "Key": "CDI",
+      "Rx": "\\bcd-?i\\b|philips\\s*cd"
+    },
+    {
+      "Key": "JAG",
+      "Rx": "jaguar(?!\\s*cd)"
+    },
+    {
+      "Key": "JAGCD",
+      "Rx": "jaguar\\s*cd|\\bjagcd\\b"
+    },
+    {
+      "Key": "A26",
+      "Rx": "atari\\s*2600|\\ba26\\b|\\bvcs\\b"
+    },
+    {
+      "Key": "A52",
+      "Rx": "atari\\s*5200|\\ba52\\b"
+    },
+    {
+      "Key": "A78",
+      "Rx": "atari\\s*7800|\\ba78\\b"
+    },
+    {
+      "Key": "LYNX",
+      "Rx": "\\blynx\\b|atari\\s*lynx"
+    },
+    {
+      "Key": "ATARIST",
+      "Rx": "atari\\s*st\\b"
+    },
+    {
+      "Key": "COLECO",
+      "Rx": "colecovision|\\bcoleco\\b"
+    },
+    {
+      "Key": "INTV",
+      "Rx": "intellivision|\\bintv\\b"
+    },
+    {
+      "Key": "VECTREX",
+      "Rx": "\\bvectrex\\b"
+    },
+    {
+      "Key": "MSX",
+      "Rx": "\\bmsx2?\\b"
+    },
+    {
+      "Key": "AMIGA",
+      "Rx": "\\bamiga(?!\\s*cd)|\\bcommodore\\s*amiga\\b"
+    },
+    {
+      "Key": "CD32",
+      "Rx": "\\bcd32\\b|amiga\\s*cd\\s*32|commodore\\s*cd\\s*32"
+    },
+    {
+      "Key": "FMTOWNS",
+      "Rx": "\\bfm.?towns\\b|\\bmarty\\b"
+    },
+    {
+      "Key": "C64",
+      "Rx": "\\bc64\\b|commodore\\s*64"
+    },
+    {
+      "Key": "ZX",
+      "Rx": "zx\\s*spectrum|\\bspectrum\\b"
+    },
+    {
+      "Key": "CPC",
+      "Rx": "amstrad\\s*cpc|\\bcpc\\b"
+    },
+    {
+      "Key": "PC98",
+      "Rx": "\\bpc-?98\\b|nec\\s*pc-?98"
+    },
+    {
+      "Key": "X68K",
+      "Rx": "\\bx68000\\b|\\bx68k\\b|sharp\\s*x68"
+    },
+    {
+      "Key": "XBOX",
+      "Rx": "\\bxbox(?!\\s*360|\\s*one|\\s*series)\\b"
+    },
+    {
+      "Key": "X360",
+      "Rx": "xbox\\s*360|\\bx360\\b"
+    },
+    {
+      "Key": "ODYSSEY2",
+      "Rx": "odyssey\\s*2|\\bodyssey2\\b|\\bvideopac\\b"
+    },
+    {
+      "Key": "CHANNELF",
+      "Rx": "channel\\s*f|\\bchannelf\\b|fairchild"
+    },
+    {
+      "Key": "SUPERVISION",
+      "Rx": "\\bsupervision\\b|\\bwatara\\b"
+    },
+    {
+      "Key": "DOS",
+      "Rx": "\\bms-?dos\\b|\\bpc\\s*dos\\b|\\bibm\\s*pc\\b|\\bdos\\b"
+    },
+    {
+      "Key": "ARCADE",
+      "Rx": "arcade|mame|fbneo|fba"
+    }
+  ],
+  "DatConsoleRxMap": [
+    {
+      "Key": "PSP",
+      "Rx": "playstation\\s*portable|\\bpsp\\b"
+    },
+    {
+      "Key": "PS2",
+      "Rx": "playstation\\s*2|\\bps2\\b"
+    },
+    {
+      "Key": "PS1",
+      "Rx": "playstation(?!\\s*[2-9]|\\s*p|\\s*v)|\\bps1\\b|\\bpsx\\b"
+    },
+    {
+      "Key": "VITA",
+      "Rx": "\\bvita\\b|\\bpsvita\\b|playstation\\s*vita"
+    },
+    {
+      "Key": "DC",
+      "Rx": "dreamcast|\\bdc\\b"
+    },
+    {
+      "Key": "SAT",
+      "Rx": "saturn|sega\\s*saturn|\\bss\\b"
+    },
+    {
+      "Key": "SCD",
+      "Rx": "sega\\s*cd|mega-?cd|segacd"
+    },
+    {
+      "Key": "32X",
+      "Rx": "\\b32x\\b|sega\\s*32x|super\\s*32x"
+    },
+    {
+      "Key": "SG1000",
+      "Rx": "\\bsg-?1000\\b"
+    },
+    {
+      "Key": "GC",
+      "Rx": "gamecube|\\bgc\\b|\\bngc\\b"
+    },
+    {
+      "Key": "WII",
+      "Rx": "\\bwii\\b(?!\\s*u)"
+    },
+    {
+      "Key": "NDS",
+      "Rx": "nintendo\\s*ds|\\bnds\\b"
+    },
+    {
+      "Key": "3DS",
+      "Rx": "nintendo\\s*3ds|\\b3ds\\b"
+    },
+    {
+      "Key": "GBA",
+      "Rx": "game\\s*boy\\s*advance|\\bgba\\b"
+    },
+    {
+      "Key": "GBC",
+      "Rx": "game\\s*boy\\s*color|\\bgbc\\b"
+    },
+    {
+      "Key": "GB",
+      "Rx": "game\\s*boy(?!\\s*a|\\s*c)|\\bgb\\b"
+    },
+    {
+      "Key": "VB",
+      "Rx": "virtual\\s*boy|\\bvb\\b"
+    },
+    {
+      "Key": "SNES",
+      "Rx": "super\\s*nintendo|super\\s*famicom|\\bsnes\\b|\\bsfc\\b"
+    },
+    {
+      "Key": "NES",
+      "Rx": "famicom|\\bnes\\b"
+    },
+    {
+      "Key": "N64",
+      "Rx": "nintendo\\s*64|\\bn64\\b"
+    },
+    {
+      "Key": "MD",
+      "Rx": "megadrive|mega\\s*drive|genesis|\\bmd\\b"
+    },
+    {
+      "Key": "SMS",
+      "Rx": "master\\s*system|\\bsms\\b"
+    },
+    {
+      "Key": "GG",
+      "Rx": "game\\s*gear|\\bgg\\b"
+    },
+    {
+      "Key": "PCE",
+      "Rx": "pc\\s*engine(?!\\s*cd)|\\bpce\\b(?!cd)|turbografx(?!-?cd)"
+    },
+    {
+      "Key": "PCECD",
+      "Rx": "pc\\s*engine\\s*cd|turbografx-?cd|\\bpcecd\\b"
+    },
+    {
+      "Key": "PCFX",
+      "Rx": "\\bpc-?fx\\b"
+    },
+    {
+      "Key": "NEOGEO",
+      "Rx": "neogeo(?!\\s*cd|\\s*pocket)|neo\\s*geo(?!\\s*cd|\\s*pocket)|neo-?geo(?!\\s*cd|\\s*pocket)"
+    },
+    {
+      "Key": "NEOCD",
+      "Rx": "neogeo\\s*cd|neo\\s*geo\\s*cd|neo-?geo\\s*cd|\\bngcd\\b"
+    },
+    {
+      "Key": "NGPC",
+      "Rx": "neo\\s*geo\\s*pocket\\s*color|\\bngpc\\b"
+    },
+    {
+      "Key": "NGP",
+      "Rx": "neo\\s*geo\\s*pocket|\\bngp\\b"
+    },
+    {
+      "Key": "WS",
+      "Rx": "wonderswan(?!\\s*color)|\\bws\\b(?!c)"
+    },
+    {
+      "Key": "WSC",
+      "Rx": "wonderswan\\s*color|\\bwsc\\b"
+    },
+    {
+      "Key": "3DO",
+      "Rx": "\\b3do\\b"
+    },
+    {
+      "Key": "CDI",
+      "Rx": "\\bcd-?i\\b|philips\\s*cd"
+    },
+    {
+      "Key": "JAGCD",
+      "Rx": "jaguar\\s*cd|\\bjagcd\\b"
+    },
+    {
+      "Key": "A26",
+      "Rx": "atari\\s*2600|\\ba26\\b|\\bvcs\\b"
+    },
+    {
+      "Key": "A52",
+      "Rx": "atari\\s*5200|\\ba52\\b"
+    },
+    {
+      "Key": "A78",
+      "Rx": "atari\\s*7800|\\ba78\\b"
+    },
+    {
+      "Key": "LYNX",
+      "Rx": "\\blynx\\b|atari\\s*lynx"
+    },
+    {
+      "Key": "COLECO",
+      "Rx": "colecovision|\\bcoleco\\b"
+    },
+    {
+      "Key": "INTV",
+      "Rx": "intellivision|\\bintv\\b"
+    },
+    {
+      "Key": "VECTREX",
+      "Rx": "\\bvectrex\\b"
+    },
+    {
+      "Key": "MSX",
+      "Rx": "\\bmsx2?\\b"
+    },
+    {
+      "Key": "ARCADE",
+      "Rx": "arcade|mame|fbneo|fba"
+    },
+    {
+      "Key": "FMTOWNS",
+      "Rx": "\\bfm.?towns\\b|\\bmarty\\b"
+    },
+    {
+      "Key": "CD32",
+      "Rx": "\\bcd32\\b|amiga\\s*cd\\s*32|commodore\\s*cd\\s*32"
+    }
+  ]
+}

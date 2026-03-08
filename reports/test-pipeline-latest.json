@@ -1,0 +1,16 @@
+{
+  "Timestamp": "2026-03-07 10:55:23",
+  "Stage": "unit",
+  "FailedStages": [],
+  "Summary": [
+    {
+      "Stage": "unit",
+      "Total": 360,
+      "Passed": 357,
+      "Failed": 0,
+      "Skipped": 3,
+      "DurationMs": 32628.64
+    }
+  ],
+  "FailureDetails": []
+}

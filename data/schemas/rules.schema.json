@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://romcleanup.local/schemas/rules.schema.json",
+  "type": "object",
+  "required": ["RegionOrdered"],
+  "properties": {
+    "LangPattern": { "type": "string" },
+    "RegionOrdered": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["Key", "Pattern"],
+        "properties": {
+          "Key": { "type": "string" },
+          "Pattern": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "JunkPatterns": { "type": "array", "items": { "type": "string" } },
+    "AggressiveJunkPatterns": { "type": "array", "items": { "type": "string" } },
+    "BiosPatterns": { "type": "array", "items": { "type": "string" } },
+    "VersionPatterns": { "type": "array", "items": { "type": "string" } },
+    "VersionScoring": { "type": "object" },
+    "FormatScoring": { "type": "object" }
+  },
+  "additionalProperties": true
+}

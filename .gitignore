@@ -1,0 +1,32 @@
+# ── Generated Test & Coverage Artifacts ──
+coverage.xml
+test-err.txt
+test-out.txt
+_test_results.txt
+test-output.txt
+
+# ── Reports: keep only *-latest*, ignore timestamped ──
+reports/*
+!reports/*-latest.*
+
+# ── Audit-Logs: runtime-generated, never commit ──
+audit-logs/
+dev/audit-logs/
+
+# ── Dev reports: generated output ──
+dev/reports/
+
+# ── Generated docs ──
+docs/openapi.generated.json
+docs/implementation/archive/
+
+# ── Editor / OS ──
+.vs/
+*.suo
+*.user
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ── PowerShell module output ──
+*.nupkg

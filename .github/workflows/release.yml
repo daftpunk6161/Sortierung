@@ -1,0 +1,30 @@
+name: release-zip
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build release archive
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF -like 'refs/tags/*') { $env:GITHUB_REF.Replace('refs/tags/','') } else { 'manual-' + (Get-Date -Format 'yyyyMMdd-HHmmss') }
+          $outDir = Join-Path $PWD 'dist'
+          New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+          $zipPath = Join-Path $outDir ("rom-cleanup-$version.zip")
+          Compress-Archive -Path .\simple_sort.ps1, .\dev, .\src -DestinationPath $zipPath -Force
+          Write-Host "Created $zipPath"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rom-cleanup-release
+          path: dist/*.zip

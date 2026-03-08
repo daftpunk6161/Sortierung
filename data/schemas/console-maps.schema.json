@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://romcleanup.local/schemas/console-maps.schema.json",
+  "type": "object",
+  "required": ["ConsoleFolderMap"],
+  "properties": {
+    "ConsoleFolderMap": { "type": "object" },
+    "ConsoleExtMap": { "type": "object" },
+    "ConsoleRegexMap": { "type": "object" },
+    "DatConsoleKeyMap": { "type": "object" }
+  },
+  "additionalProperties": true
+}
