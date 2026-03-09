@@ -77,10 +77,17 @@ function Test-DownloadedDatSignature {
   $shaUrl = ('{0}.sha256' -f $SourceUrl)
   try {
     $shaText = (Invoke-WebRequest -Uri $shaUrl -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop).Content
-    if ([string]::IsNullOrWhiteSpace([string]$shaText)) { return $true }
+    # BUG DATSRC-002 FIX: Fail-closed — missing or unparseable sidecar = verification failure
+    if ([string]::IsNullOrWhiteSpace([string]$shaText)) {
+      if ($Log) { & $Log ('DAT-Signatur: sha256-Sidecar leer fuer {0}' -f $SourceUrl) }
+      return $false
+    }
 
     $match = [regex]::Match([string]$shaText, '(?i)\b([a-f0-9]{64})\b')
-    if (-not $match.Success) { return $true }
+    if (-not $match.Success) {
+      if ($Log) { & $Log ('DAT-Signatur: sha256-Sidecar kein gueltiger Hash fuer {0}' -f $SourceUrl) }
+      return $false
+    }
 
     $expected = [string]$match.Groups[1].Value.ToLowerInvariant()
     $actual = [string](Get-FileHash -LiteralPath $LocalPath -Algorithm SHA256).Hash
@@ -91,7 +98,9 @@ function Test-DownloadedDatSignature {
     }
     return $true
   } catch {
-    return $true
+    # BUG DATSRC-002 FIX: Fail-closed — network error = verification failure
+    if ($Log) { & $Log ('DAT-Signatur: sha256-Sidecar Download fehlgeschlagen fuer {0}: {1}' -f $SourceUrl, $_.Exception.Message) }
+    return $false
   }
 }
 
@@ -121,49 +130,49 @@ function Get-BuiltinDatCatalog {
 
   return @(
     # ----- Redump (public .zip downloads → each contains one .dat) -----------
-    @{ Id='redump-3do';        Group='Redump'; System='3DO Interactive Multiplayer';              Url='http://redump.org/datfile/3do/';        Format='zip-dat'; ConsoleKey='3DO'   }
-    @{ Id='redump-acd';        Group='Redump'; System='Acorn - Archimedes CD';                   Url='http://redump.org/datfile/acd/';        Format='zip-dat'; ConsoleKey='ACD'   }
-    @{ Id='redump-cd32';       Group='Redump'; System='Commodore - Amiga CD32';                  Url='http://redump.org/datfile/cd32/';       Format='zip-dat'; ConsoleKey='CD32'  }
-    @{ Id='redump-cdtv';       Group='Redump'; System='Commodore - Amiga CDTV';                  Url='http://redump.org/datfile/cdtv/';       Format='zip-dat'; ConsoleKey='CDTV'  }
-    @{ Id='redump-cdi';        Group='Redump'; System='Philips - CD-i';                          Url='http://redump.org/datfile/cdi/';        Format='zip-dat'; ConsoleKey='CDI'   }
-    @{ Id='redump-chihiro';    Group='Redump'; System='Sega - Chihiro';                          Url='http://redump.org/datfile/chihiro/';    Format='zip-dat'; ConsoleKey='CHI'   }
-    @{ Id='redump-dc';         Group='Redump'; System='Sega - Dreamcast';                        Url='http://redump.org/datfile/dc/';         Format='zip-dat'; ConsoleKey='DC'    }
-    @{ Id='redump-fmt';        Group='Redump'; System='Fujitsu - FM Towns';                      Url='http://redump.org/datfile/fmt/';        Format='zip-dat'; ConsoleKey='FMT'   }
-    @{ Id='redump-gc';         Group='Redump'; System='Nintendo - GameCube';                     Url='http://redump.org/datfile/gc/';         Format='zip-dat'; ConsoleKey='GC'    }
-    @{ Id='redump-hs';         Group='Redump'; System='Matsushita - Video Now Color';            Url='http://redump.org/datfile/hs/';         Format='zip-dat'; ConsoleKey='HS'    }
-    @{ Id='redump-ksite';      Group='Redump'; System='Konami - e-Amusement';                    Url='http://redump.org/datfile/ksite/';      Format='zip-dat'; ConsoleKey='KSITE' }
-    @{ Id='redump-lindbergh';  Group='Redump'; System='Sega - Lindbergh';                        Url='http://redump.org/datfile/lindbergh/';  Format='zip-dat'; ConsoleKey='LIND'  }
-    @{ Id='redump-mac';        Group='Redump'; System='Apple - Macintosh';                       Url='http://redump.org/datfile/mac/';        Format='zip-dat'; ConsoleKey='MAC'   }
-    @{ Id='redump-mcd';        Group='Redump'; System='Sega - Mega CD & Sega CD';                Url='http://redump.org/datfile/mcd/';        Format='zip-dat'; ConsoleKey='MCD'   }
-    @{ Id='redump-naomi';      Group='Redump'; System='Sega - Naomi';                            Url='http://redump.org/datfile/naomi/';      Format='zip-dat'; ConsoleKey='NAOMI' }
-    @{ Id='redump-naomi2';     Group='Redump'; System='Sega - Naomi 2';                          Url='http://redump.org/datfile/naomi2/';     Format='zip-dat'; ConsoleKey='NAO2'  }
-    @{ Id='redump-ngcd';       Group='Redump'; System='SNK - Neo Geo CD';                        Url='http://redump.org/datfile/ngcd/';       Format='zip-dat'; ConsoleKey='NEOCD' }
-    @{ Id='redump-nuon';       Group='Redump'; System='VM Labs - NUON';                          Url='http://redump.org/datfile/nuon/';       Format='zip-dat'; ConsoleKey='NUON'  }
-    @{ Id='redump-palm';       Group='Redump'; System='Palm';                                    Url='http://redump.org/datfile/palm/';       Format='zip-dat'; ConsoleKey='PALM'  }
-    @{ Id='redump-pc';         Group='Redump'; System='IBM - PC compatible';                     Url='http://redump.org/datfile/pc/';         Format='zip-dat'; ConsoleKey='IBMPC' }
-    @{ Id='redump-pc88';       Group='Redump'; System='NEC - PC-88 series';                      Url='http://redump.org/datfile/pc-88/';      Format='zip-dat'; ConsoleKey='PC88'  }
-    @{ Id='redump-pc98';       Group='Redump'; System='NEC - PC-98 series';                      Url='http://redump.org/datfile/pc-98/';      Format='zip-dat'; ConsoleKey='PC98'  }
-    @{ Id='redump-pce-cd';     Group='Redump'; System='NEC - PC Engine CD & TurboGrafx CD';      Url='http://redump.org/datfile/pce/';        Format='zip-dat'; ConsoleKey='PCECD' }
-    @{ Id='redump-pcfx';       Group='Redump'; System='NEC - PC-FX & PC-FXGA';                   Url='http://redump.org/datfile/pc-fx/';      Format='zip-dat'; ConsoleKey='PCFX'  }
-    @{ Id='redump-photo-cd';   Group='Redump'; System='Photo CD';                                Url='http://redump.org/datfile/photo-cd/';   Format='zip-dat'; ConsoleKey='PCD'   }
-    @{ Id='redump-pippin';     Group='Redump'; System='Apple - Bandai Pippin';                   Url='http://redump.org/datfile/pippin/';     Format='zip-dat'; ConsoleKey='PIPPIN'}
-    @{ Id='redump-ps1';        Group='Redump'; System='Sony - PlayStation';                      Url='http://redump.org/datfile/psx/';        Format='zip-dat'; ConsoleKey='PSX'   }
-    @{ Id='redump-ps2';        Group='Redump'; System='Sony - PlayStation 2';                    Url='http://redump.org/datfile/ps2/';        Format='zip-dat'; ConsoleKey='PS2'   }
-    @{ Id='redump-ps3';        Group='Redump'; System='Sony - PlayStation 3';                    Url='http://redump.org/datfile/ps3/';        Format='zip-dat'; ConsoleKey='PS3'   }
-    @{ Id='redump-psp';        Group='Redump'; System='Sony - PlayStation Portable';             Url='http://redump.org/datfile/psp/';        Format='zip-dat'; ConsoleKey='PSP'   }
-    @{ Id='redump-ss';         Group='Redump'; System='Sega - Saturn';                           Url='http://redump.org/datfile/ss/';         Format='zip-dat'; ConsoleKey='SAT'   }
-    @{ Id='redump-vflash';     Group='Redump'; System='VTech - V.Flash & V.Smile Pro';           Url='http://redump.org/datfile/vflash/';     Format='zip-dat'; ConsoleKey='VFLASH'}
-    @{ Id='redump-wii';        Group='Redump'; System='Nintendo - Wii';                          Url='http://redump.org/datfile/wii/';        Format='zip-dat'; ConsoleKey='WII'   }
-    @{ Id='redump-xbox';       Group='Redump'; System='Microsoft - Xbox';                        Url='http://redump.org/datfile/xbox/';       Format='zip-dat'; ConsoleKey='XBOX'  }
-    @{ Id='redump-xbox360';    Group='Redump'; System='Microsoft - Xbox 360';                    Url='http://redump.org/datfile/xbox360/';    Format='zip-dat'; ConsoleKey='X360'  }
-    @{ Id='redump-ajcd';       Group='Redump'; System='Atari - Jaguar CD';                        Url='http://redump.org/datfile/ajcd/';       Format='zip-dat'; ConsoleKey='AJCD'  }
-    @{ Id='redump-gamewave';   Group='Redump'; System='ZAPiT - Game Wave';                        Url='http://redump.org/datfile/gamewave/';   Format='zip-dat'; ConsoleKey='GW'    }
-    @{ Id='redump-ite';        Group='Redump'; System='Incredible Technologies - Eagle';           Url='http://redump.org/datfile/ite/';        Format='zip-dat'; ConsoleKey='ITE'   }
-    @{ Id='redump-ixl';        Group='Redump'; System='Mattel - Fisher-Price iXL';                Url='http://redump.org/datfile/ixl/';        Format='zip-dat'; ConsoleKey='IXL'   }
-    @{ Id='redump-ppc';        Group='Redump'; System='Pocket PC';                                Url='http://redump.org/datfile/ppc/';        Format='zip-dat'; ConsoleKey='PPC'   }
-    @{ Id='redump-quizard';    Group='Redump'; System='TAB-Austria - Quizard';                    Url='http://redump.org/datfile/quizard/';    Format='zip-dat'; ConsoleKey='QUIZ'  }
-    @{ Id='redump-vis';        Group='Redump'; System='Memorex - Visual Information System';      Url='http://redump.org/datfile/vis/';        Format='zip-dat'; ConsoleKey='VIS'   }
-    @{ Id='redump-x68k';       Group='Redump'; System='Sharp - X68000';                           Url='http://redump.org/datfile/x68k/';       Format='zip-dat'; ConsoleKey='X68K'  }
+    @{ Id='redump-3do';        Group='Redump'; System='3DO Interactive Multiplayer';              Url='https://redump.org/datfile/3do/';        Format='zip-dat'; ConsoleKey='3DO'   }
+    @{ Id='redump-acd';        Group='Redump'; System='Acorn - Archimedes CD';                   Url='https://redump.org/datfile/acd/';        Format='zip-dat'; ConsoleKey='ACD'   }
+    @{ Id='redump-cd32';       Group='Redump'; System='Commodore - Amiga CD32';                  Url='https://redump.org/datfile/cd32/';       Format='zip-dat'; ConsoleKey='CD32'  }
+    @{ Id='redump-cdtv';       Group='Redump'; System='Commodore - Amiga CDTV';                  Url='https://redump.org/datfile/cdtv/';       Format='zip-dat'; ConsoleKey='CDTV'  }
+    @{ Id='redump-cdi';        Group='Redump'; System='Philips - CD-i';                          Url='https://redump.org/datfile/cdi/';        Format='zip-dat'; ConsoleKey='CDI'   }
+    @{ Id='redump-chihiro';    Group='Redump'; System='Sega - Chihiro';                          Url='https://redump.org/datfile/chihiro/';    Format='zip-dat'; ConsoleKey='CHI'   }
+    @{ Id='redump-dc';         Group='Redump'; System='Sega - Dreamcast';                        Url='https://redump.org/datfile/dc/';         Format='zip-dat'; ConsoleKey='DC'    }
+    @{ Id='redump-fmt';        Group='Redump'; System='Fujitsu - FM Towns';                      Url='https://redump.org/datfile/fmt/';        Format='zip-dat'; ConsoleKey='FMT'   }
+    @{ Id='redump-gc';         Group='Redump'; System='Nintendo - GameCube';                     Url='https://redump.org/datfile/gc/';         Format='zip-dat'; ConsoleKey='GC'    }
+    @{ Id='redump-hs';         Group='Redump'; System='Matsushita - Video Now Color';            Url='https://redump.org/datfile/hs/';         Format='zip-dat'; ConsoleKey='HS'    }
+    @{ Id='redump-ksite';      Group='Redump'; System='Konami - e-Amusement';                    Url='https://redump.org/datfile/ksite/';      Format='zip-dat'; ConsoleKey='KSITE' }
+    @{ Id='redump-lindbergh';  Group='Redump'; System='Sega - Lindbergh';                        Url='https://redump.org/datfile/lindbergh/';  Format='zip-dat'; ConsoleKey='LIND'  }
+    @{ Id='redump-mac';        Group='Redump'; System='Apple - Macintosh';                       Url='https://redump.org/datfile/mac/';        Format='zip-dat'; ConsoleKey='MAC'   }
+    @{ Id='redump-mcd';        Group='Redump'; System='Sega - Mega CD & Sega CD';                Url='https://redump.org/datfile/mcd/';        Format='zip-dat'; ConsoleKey='MCD'   }
+    @{ Id='redump-naomi';      Group='Redump'; System='Sega - Naomi';                            Url='https://redump.org/datfile/naomi/';      Format='zip-dat'; ConsoleKey='NAOMI' }
+    @{ Id='redump-naomi2';     Group='Redump'; System='Sega - Naomi 2';                          Url='https://redump.org/datfile/naomi2/';     Format='zip-dat'; ConsoleKey='NAO2'  }
+    @{ Id='redump-ngcd';       Group='Redump'; System='SNK - Neo Geo CD';                        Url='https://redump.org/datfile/ngcd/';       Format='zip-dat'; ConsoleKey='NEOCD' }
+    @{ Id='redump-nuon';       Group='Redump'; System='VM Labs - NUON';                          Url='https://redump.org/datfile/nuon/';       Format='zip-dat'; ConsoleKey='NUON'  }
+    @{ Id='redump-palm';       Group='Redump'; System='Palm';                                    Url='https://redump.org/datfile/palm/';       Format='zip-dat'; ConsoleKey='PALM'  }
+    @{ Id='redump-pc';         Group='Redump'; System='IBM - PC compatible';                     Url='https://redump.org/datfile/pc/';         Format='zip-dat'; ConsoleKey='IBMPC' }
+    @{ Id='redump-pc88';       Group='Redump'; System='NEC - PC-88 series';                      Url='https://redump.org/datfile/pc-88/';      Format='zip-dat'; ConsoleKey='PC88'  }
+    @{ Id='redump-pc98';       Group='Redump'; System='NEC - PC-98 series';                      Url='https://redump.org/datfile/pc-98/';      Format='zip-dat'; ConsoleKey='PC98'  }
+    @{ Id='redump-pce-cd';     Group='Redump'; System='NEC - PC Engine CD & TurboGrafx CD';      Url='https://redump.org/datfile/pce/';        Format='zip-dat'; ConsoleKey='PCECD' }
+    @{ Id='redump-pcfx';       Group='Redump'; System='NEC - PC-FX & PC-FXGA';                   Url='https://redump.org/datfile/pc-fx/';      Format='zip-dat'; ConsoleKey='PCFX'  }
+    @{ Id='redump-photo-cd';   Group='Redump'; System='Photo CD';                                Url='https://redump.org/datfile/photo-cd/';   Format='zip-dat'; ConsoleKey='PCD'   }
+    @{ Id='redump-pippin';     Group='Redump'; System='Apple - Bandai Pippin';                   Url='https://redump.org/datfile/pippin/';     Format='zip-dat'; ConsoleKey='PIPPIN'}
+    @{ Id='redump-ps1';        Group='Redump'; System='Sony - PlayStation';                      Url='https://redump.org/datfile/psx/';        Format='zip-dat'; ConsoleKey='PSX'   }
+    @{ Id='redump-ps2';        Group='Redump'; System='Sony - PlayStation 2';                    Url='https://redump.org/datfile/ps2/';        Format='zip-dat'; ConsoleKey='PS2'   }
+    @{ Id='redump-ps3';        Group='Redump'; System='Sony - PlayStation 3';                    Url='https://redump.org/datfile/ps3/';        Format='zip-dat'; ConsoleKey='PS3'   }
+    @{ Id='redump-psp';        Group='Redump'; System='Sony - PlayStation Portable';             Url='https://redump.org/datfile/psp/';        Format='zip-dat'; ConsoleKey='PSP'   }
+    @{ Id='redump-ss';         Group='Redump'; System='Sega - Saturn';                           Url='https://redump.org/datfile/ss/';         Format='zip-dat'; ConsoleKey='SAT'   }
+    @{ Id='redump-vflash';     Group='Redump'; System='VTech - V.Flash & V.Smile Pro';           Url='https://redump.org/datfile/vflash/';     Format='zip-dat'; ConsoleKey='VFLASH'}
+    @{ Id='redump-wii';        Group='Redump'; System='Nintendo - Wii';                          Url='https://redump.org/datfile/wii/';        Format='zip-dat'; ConsoleKey='WII'   }
+    @{ Id='redump-xbox';       Group='Redump'; System='Microsoft - Xbox';                        Url='https://redump.org/datfile/xbox/';       Format='zip-dat'; ConsoleKey='XBOX'  }
+    @{ Id='redump-xbox360';    Group='Redump'; System='Microsoft - Xbox 360';                    Url='https://redump.org/datfile/xbox360/';    Format='zip-dat'; ConsoleKey='X360'  }
+    @{ Id='redump-ajcd';       Group='Redump'; System='Atari - Jaguar CD';                        Url='https://redump.org/datfile/ajcd/';       Format='zip-dat'; ConsoleKey='AJCD'  }
+    @{ Id='redump-gamewave';   Group='Redump'; System='ZAPiT - Game Wave';                        Url='https://redump.org/datfile/gamewave/';   Format='zip-dat'; ConsoleKey='GW'    }
+    @{ Id='redump-ite';        Group='Redump'; System='Incredible Technologies - Eagle';           Url='https://redump.org/datfile/ite/';        Format='zip-dat'; ConsoleKey='ITE'   }
+    @{ Id='redump-ixl';        Group='Redump'; System='Mattel - Fisher-Price iXL';                Url='https://redump.org/datfile/ixl/';        Format='zip-dat'; ConsoleKey='IXL'   }
+    @{ Id='redump-ppc';        Group='Redump'; System='Pocket PC';                                Url='https://redump.org/datfile/ppc/';        Format='zip-dat'; ConsoleKey='PPC'   }
+    @{ Id='redump-quizard';    Group='Redump'; System='TAB-Austria - Quizard';                    Url='https://redump.org/datfile/quizard/';    Format='zip-dat'; ConsoleKey='QUIZ'  }
+    @{ Id='redump-vis';        Group='Redump'; System='Memorex - Visual Information System';      Url='https://redump.org/datfile/vis/';        Format='zip-dat'; ConsoleKey='VIS'   }
+    @{ Id='redump-x68k';       Group='Redump'; System='Sharp - X68000';                           Url='https://redump.org/datfile/x68k/';       Format='zip-dat'; ConsoleKey='X68K'  }
 
     # ----- No-Intro (Love Pack via archive.org) -------------------------------
     # Format 'nointro-pack': downloads the shared Love Pack zip once, then
@@ -453,6 +462,13 @@ function Invoke-DatDownload {
 
   if ([string]::IsNullOrWhiteSpace($Url) -and $Format -ne 'nointro-pack') {
     $result.Error = 'Keine URL angegeben.'
+    return $result
+  }
+
+  # BUG DATSRC-001 FIX: Only allow HTTPS URLs to prevent SSRF via file:// or http://
+  if (-not [string]::IsNullOrWhiteSpace($Url) -and -not $Url.StartsWith('https://', [StringComparison]::OrdinalIgnoreCase)) {
+    $result.Error = ('Nur HTTPS-URLs erlaubt. Abgelehnt: {0}' -f $Url)
+    if ($Log) { & $Log ('[DATSRC] SSRF-Guard: URL abgelehnt: {0}' -f $Url) }
     return $result
   }
 

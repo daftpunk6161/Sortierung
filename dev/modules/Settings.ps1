@@ -35,27 +35,33 @@ function Copy-ObjectDeep {
   <# Creates a deep copy of any PS value (hashtable, pscustomobject, array, scalar).
      Canonical deep-copy helper - replaces the former Copy-ObjectDeep
      and ConvertTo-PlainObjectDeep duplicates. #>
-  param([object]$Value)
+  param([object]$Value, [int]$Depth = 0)
 
+  if ($Depth -gt 20) { Write-Warning '[Settings] Copy-ObjectDeep: max depth exceeded'; return $Value }
   if ($null -eq $Value) { return $null }
   if ($Value -is [System.Collections.IDictionary]) {
-    $copy = [ordered]@{}
+    $copy = @{}
     foreach ($entry in ([System.Collections.IDictionary]$Value).GetEnumerator()) {
-      $copy[[string]$entry.Key] = Copy-ObjectDeep -Value $entry.Value
+      $copy[[string]$entry.Key] = Copy-ObjectDeep -Value $entry.Value -Depth ($Depth + 1)
     }
     return $copy
   }
+  # BUG SET-002: In PS 7, [pscustomobject] is an alias for [PSObject] — scalars
+  # like [int], [bool], [string] also match.  Check for scalars FIRST.
+  if ($Value -is [System.ValueType] -or $Value -is [string]) {
+    return $Value
+  }
   if ($Value -is [pscustomobject]) {
-    $copy = [ordered]@{}
+    $copy = @{}
     foreach ($prop in $Value.PSObject.Properties) {
-      $copy[[string]$prop.Name] = Copy-ObjectDeep -Value $prop.Value
+      $copy[[string]$prop.Name] = Copy-ObjectDeep -Value $prop.Value -Depth ($Depth + 1)
     }
     return $copy
   }
   if ($Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string])) {
     $rows = New-Object System.Collections.Generic.List[object]
     foreach ($item in $Value) {
-      [void]$rows.Add((Copy-ObjectDeep -Value $item))
+      [void]$rows.Add((Copy-ObjectDeep -Value $item -Depth ($Depth + 1)))
     }
     return $rows.ToArray()
   }
@@ -93,23 +99,27 @@ function Get-UserSettings {
         Write-Warning ('Settings-Migration fehlgeschlagen: {0}' -f $_.Exception.Message)
       }
     }
-    if (-not ($s -is [pscustomobject] -or $s -is [hashtable])) {
+    if (-not ($s -is [pscustomobject] -or $s -is [hashtable] -or $s -is [System.Collections.IDictionary])) {
       $warnMsg = ('Settings-Datei ungueltig (kein Objekt): {0}' -f $SettingsPath)
       Write-SettingsWarning $warnMsg
       return $null
     }
     try {
-      if ($s.PSObject.Properties['toolPaths'] -and
-          -not ($s.toolPaths -is [pscustomobject] -or $s.toolPaths -is [hashtable])) {
-        $s.toolPaths = $null
-      }
-      if ($s.PSObject.Properties['dat'] -and
-          -not ($s.dat -is [pscustomobject] -or $s.dat -is [hashtable])) {
-        $s.dat = $null
-      }
-      if ($s.PSObject.Properties['general'] -and
-          -not ($s.general -is [pscustomobject] -or $s.general -is [hashtable])) {
-        $s.general = $null
+      if ($s -is [System.Collections.IDictionary]) {
+        # After migration $s is an OrderedDictionary — sub-objects are also IDictionary, skip PSObject checks
+      } else {
+        if ($s.PSObject.Properties['toolPaths'] -and
+            -not ($s.toolPaths -is [pscustomobject] -or $s.toolPaths -is [hashtable] -or $s.toolPaths -is [System.Collections.IDictionary])) {
+          $s.toolPaths = $null
+        }
+        if ($s.PSObject.Properties['dat'] -and
+            -not ($s.dat -is [pscustomobject] -or $s.dat -is [hashtable] -or $s.dat -is [System.Collections.IDictionary])) {
+          $s.dat = $null
+        }
+        if ($s.PSObject.Properties['general'] -and
+            -not ($s.general -is [pscustomobject] -or $s.general -is [hashtable] -or $s.general -is [System.Collections.IDictionary])) {
+          $s.general = $null
+        }
       }
     } catch {
       return $null
@@ -174,10 +184,19 @@ function Invoke-SettingsMigration {
 
   if (-not $Settings) { return $Settings }
 
-  $migrated = if ($Settings -is [hashtable]) {
+  # Guard: only migrate dictionary-like objects — arrays, scalars etc. pass through unchanged
+  if (-not ($Settings -is [hashtable] -or $Settings -is [System.Collections.IDictionary] -or $Settings -is [pscustomobject])) {
+    return $Settings
+  }
+  # Extra guard: in PS 7, arrays also match [pscustomobject]; reject IEnumerable that isn't a dict
+  if ($Settings -is [System.Collections.IEnumerable] -and -not ($Settings -is [System.Collections.IDictionary]) -and -not ($Settings -is [string])) {
+    return $Settings
+  }
+
+  $migrated = if ($Settings -is [hashtable] -or $Settings -is [System.Collections.IDictionary]) {
     Copy-ObjectDeep -Value $Settings
   } else {
-    $tmp = [ordered]@{}
+    $tmp = @{}
     foreach ($prop in $Settings.PSObject.Properties) { $tmp[[string]$prop.Name] = $prop.Value }
     $tmp
   }
@@ -187,12 +206,12 @@ function Invoke-SettingsMigration {
   }
 
   if ($migrated.ContainsKey('dat') -and $migrated.dat -and -not ($migrated.dat -is [hashtable])) {
-    $datObj = [ordered]@{}
+    $datObj = @{}
     foreach ($prop in $migrated.dat.PSObject.Properties) { $datObj[[string]$prop.Name] = $prop.Value }
     $migrated.dat = $datObj
   }
   if ($migrated.ContainsKey('general') -and $migrated.general -and -not ($migrated.general -is [hashtable])) {
-    $generalObj = [ordered]@{}
+    $generalObj = @{}
     foreach ($prop in $migrated.general.PSObject.Properties) { $generalObj[[string]$prop.Name] = $prop.Value }
     $migrated.general = $generalObj
   }

@@ -44,8 +44,10 @@ function ConvertTo-SafeOutputValue {
     }
     default {
       if ([string]::IsNullOrEmpty($Value)) { return $Value }
-      $trimmed = $Value.TrimStart([char[]]@(' ', "`t", "`r", "`n", [char]0))
-      # BUG-033 FIX: Removed redundant tab check — TrimStart already strips tabs
+      # REPORT-006 FIX: Strip embedded control characters (tabs, newlines, null bytes)
+      # to prevent CSV-injection bypass via embedded newlines/tabs (BUG-008)
+      $Value = $Value -replace "[\t\r\n\x00]", ''
+      $trimmed = $Value.TrimStart(' ')
       if ($trimmed -match '^[=+\-@\|]') {
         return "'" + $Value
       }
@@ -159,6 +161,13 @@ function ConvertTo-HtmlReport {
     [hashtable]$DatArchiveStats = $null
   )
 
+  # REPORT-002 FIX: Path traversal validation — ensure HtmlPath stays within the working directory
+  $resolvedHtmlPath = [System.IO.Path]::GetFullPath($HtmlPath)
+  $expectedBase = [System.IO.Path]::GetFullPath((Get-Location).Path)
+  if (-not $resolvedHtmlPath.StartsWith($expectedBase, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "REPORT-002: HtmlPath '$HtmlPath' resolves to '$resolvedHtmlPath' which is outside the working directory '$expectedBase'. Possible path traversal."
+  }
+
   $savedMB  = [math]::Round($SavedBytes / 1MB, 1)
   $junkMB   = [math]::Round($JunkBytes  / 1MB, 1)
   $sortedReport = $Report | Sort-Object Category, GameKey, Action, Region
@@ -230,13 +239,27 @@ function ConvertTo-HtmlReport {
 
   $useStreamingWrite = ($sortedReport.Count -ge $streamingThresholdRows)
   if ($useStreamingWrite -and (Test-Path -LiteralPath $HtmlPath -PathType Leaf)) {
-    Remove-Item -LiteralPath $HtmlPath -Force -ErrorAction SilentlyContinue
+    # REPORT-008 FIX: Fail early if the file is locked instead of producing corrupt HTML
+    try {
+      Remove-Item -LiteralPath $HtmlPath -Force -ErrorAction Stop
+    } catch {
+      throw "REPORT-008: Cannot write HTML report — file is locked or in use: $HtmlPath. Close any application using this file and retry. Error: $($_.Exception.Message)"
+    }
   }
   $cspTag = ''
+  $cspNonce = ''
   if (Get-Command Get-HtmlReportSecurityHeaders -ErrorAction SilentlyContinue) {
-    $cspTag = Get-HtmlReportSecurityHeaders
+    $cspResult = Get-HtmlReportSecurityHeaders
+    if ($cspResult -is [string]) {
+      $cspTag = $cspResult
+    } else {
+      $cspTag = $cspResult.CspTag
+      $cspNonce = $cspResult.Nonce
+    }
   } else {
     Write-Warning 'SEC-03: SecurityEventStream nicht geladen — HTML-Report hat keinen CSP-Header.'
+    # REPORT-003 FIX: Fallback basic CSP meta tag when SecurityEventStream module isn't loaded
+    $cspTag = '<meta http-equiv="Content-Security-Policy" content="default-src ''none''; style-src ''unsafe-inline''; script-src ''unsafe-inline''; img-src data:;">'
   }
   $header = @"
 <!DOCTYPE html><html lang="de"><head><meta charset="utf-8">
@@ -386,7 +409,8 @@ tr:hover td{background:#45475a}
   }
 
   try {
-    $deltaPath = Join-Path (Join-Path (Get-Location).Path 'reports') 'dryrun-delta-latest.json'
+    # REPORT-009 FIX: Use the report output directory instead of non-deterministic Get-Location
+    $deltaPath = Join-Path (Split-Path -Parent $resolvedHtmlPath) 'dryrun-delta-latest.json'
     if (Test-Path -LiteralPath $deltaPath -PathType Leaf) {
       $delta = Get-Content -LiteralPath $deltaPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
       if ($delta) {
@@ -476,26 +500,26 @@ tr:hover td{background:#45475a}
     [void]$sb.AppendLine('</tbody></table></div>')
   }
 
-  # Filter bar
+  # Filter bar (BUG REPORT-010: inline handlers removed; event delegation in script block)
   [void]$sb.AppendLine('<div class="filter-bar">')
-  [void]$sb.AppendLine('<input type="text" id="search" placeholder="Suchen... (Name, Pfad, Region)" oninput="applyFilters()">')
+  [void]$sb.AppendLine('<input type="text" id="search" placeholder="Suchen... (Name, Pfad, Region)">')
   [void]$sb.AppendLine('<span>')
   foreach ($a in @('ALL','KEEP','MOVE','JUNK','BIOS')) {
     $cls = if ($a -eq 'ALL') { 'btn active' } else { 'btn' }
-    [void]$sb.AppendLine(('<button class="{0}" data-filter="{1}" onclick="toggleFilter(this)">{1}</button>' -f $cls, $a))
+    [void]$sb.AppendLine(('<button class="{0}" data-filter="{1}">{1}</button>' -f $cls, $a))
   }
   [void]$sb.AppendLine('</span>')
   [void]$sb.AppendLine('<span>')
   foreach ($a in @('DAT-ALL','DAT-YES','DAT-NO')) {
     $cls = if ($a -eq 'DAT-ALL') { 'btn active' } else { 'btn' }
-    [void]$sb.AppendLine(('<button class="{0}" data-dat="{1}" onclick="toggleDatFilter(this)">{1}</button>' -f $cls, $a))
+    [void]$sb.AppendLine(('<button class="{0}" data-dat="{1}">{1}</button>' -f $cls, $a))
   }
   [void]$sb.AppendLine('</span></div>')
 
   # Table
   [void]$sb.AppendLine('<table id="reportTable"><thead><tr>')
   foreach ($h in @('#','GameKey','Action','Category','Region','WinnerRegion','VersionScore','FormatScore','Type','DatMatch','Size','MainPath')) {
-    [void]$sb.AppendLine(('<th onclick="sortTable(this)">{0}</th>' -f $h))
+    [void]$sb.AppendLine(('<th>{0}</th>' -f $h))
   }
   [void]$sb.AppendLine('</tr></thead><tbody>')
 
@@ -528,8 +552,9 @@ tr:hover td{background:#45475a}
     [void]$sb.AppendLine(('<td>{0} {1}</td>' -f $catIcon, $catEsc))
     [void]$sb.AppendLine(('<td>{0}</td>' -f $regionEsc))
     [void]$sb.AppendLine(('<td>{0}</td>' -f $winnerEsc))
-    [void]$sb.AppendLine(('<td class="sz">{0}</td>' -f $r.VersionScore))
-    [void]$sb.AppendLine(('<td class="sz">{0}</td>' -f $r.FormatScore))
+    # REPORT-004 FIX: HTML-encode score values for defense-in-depth
+    [void]$sb.AppendLine(('<td class="sz">{0}</td>' -f (& $htmlSafe ([string]$r.VersionScore))))
+    [void]$sb.AppendLine(('<td class="sz">{0}</td>' -f (& $htmlSafe ([string]$r.FormatScore))))
     [void]$sb.AppendLine(('<td>{0}</td>' -f $typeEsc))
     [void]$sb.AppendLine(('<td>{0}</td>' -f $datFlag))
     [void]$sb.AppendLine(('<td class="sz">{0} MB</td>' -f $sizeMB))
@@ -537,33 +562,48 @@ tr:hover td{background:#45475a}
     [void]$sb.AppendLine('</tr>')
 
     if ($useStreamingWrite -and ($rowIdx % $flushEveryRows -eq 0) -and $sb.Length -gt 0) {
-      $sb.ToString() | Out-File -LiteralPath $HtmlPath -Encoding utf8 -Append
+      try {
+        $sb.ToString() | Out-File -LiteralPath $HtmlPath -Encoding utf8 -Append
+      } catch {
+        throw "REPORT-008: Failed to write HTML report chunk (row $rowIdx). File may be locked: $HtmlPath. Error: $($_.Exception.Message)"
+      }
       [void]$sb.Clear()
     }
   }
 
   [void]$sb.AppendLine('</tbody></table>')
 
-  # Scripts
-  $scriptBlock = @'
-<script>
+  # Scripts (BUG REPORT-010 FIX: nonce-based CSP; event delegation replaces inline handlers)
+  $nonceAttr = if ($cspNonce) { ' nonce="{0}"' -f $cspNonce } else { '' }
+  $scriptBlock = @"
+<script${nonceAttr}>
 var activeFilter="ALL";var datFilter="DAT-ALL";
 function removeActive(selector){var buttons=document.querySelectorAll(selector);for(var i=0;i<buttons.length;i++){buttons[i].classList.remove("active");}}
 function toggleFilter(el){removeActive(".filter-bar .btn[data-filter]");el.classList.add("active");activeFilter=el.getAttribute("data-filter");applyFilters();}
 function toggleDatFilter(el){removeActive(".filter-bar .btn[data-dat]");el.classList.add("active");datFilter=el.getAttribute("data-dat");applyFilters();}
 function applyFilters(){var searchEl=document.getElementById("search");var q=(searchEl&&searchEl.value?searchEl.value:"").toLowerCase();var rows=document.querySelectorAll("#reportTable tbody tr");for(var i=0;i<rows.length;i++){var r=rows[i];var act=r.getAttribute("data-action");var dat=r.getAttribute("data-dat");var txt=(r.textContent||r.innerText||"").toLowerCase();var matchAct=activeFilter==="ALL"||act===activeFilter||(activeFilter==="MOVE"&&(act==="MOVE"||act==="SKIP_DRYRUN"))||(activeFilter==="JUNK"&&(act==="JUNK"||act==="DRYRUN-JUNK"))||(activeFilter==="BIOS"&&(act==="BIOS-MOVE"||act==="DRYRUN-BIOS"));var matchDat=datFilter==="DAT-ALL"||dat===(datFilter==="DAT-YES"?"yes":"no");var matchTxt=!q||txt.indexOf(q)!==-1;r.style.display=matchAct&&matchDat&&matchTxt?"":"none";}}
 var sortDir={};function sortTable(th){var idx=0;var ths=th.parentNode.children;for(var i=0;i<ths.length;i++){if(ths[i]===th){idx=i;break;}}var tb=document.querySelector("#reportTable tbody");if(!tb){return;}var rows=[];for(var r=0;r<tb.rows.length;r++){rows.push(tb.rows[r]);}sortDir[idx]=!sortDir[idx];rows.sort(function(a,b){var va=(a.cells[idx].textContent||a.cells[idx].innerText||"").trim();var vb=(b.cells[idx].textContent||b.cells[idx].innerText||"").trim();var na=parseFloat(va),nb=parseFloat(vb);if(!isNaN(na)&&!isNaN(nb)){va=na;vb=nb;}if(va<vb){return sortDir[idx]?-1:1;}if(va>vb){return sortDir[idx]?1:-1;}return 0;});for(var j=0;j<rows.length;j++){tb.appendChild(rows[j]);}}
+document.addEventListener("click",function(e){var t=e.target;if(t.getAttribute&&t.getAttribute("data-filter")){toggleFilter(t);}else if(t.getAttribute&&t.getAttribute("data-dat")){toggleDatFilter(t);}else if(t.tagName==="TH"&&t.closest&&t.closest("#reportTable")){sortTable(t);}});var se=document.getElementById("search");if(se){se.addEventListener("input",function(){applyFilters();});}
 </script>
 </body></html>
-'@
+"@
   [void]$sb.AppendLine($scriptBlock)
 
   if ($useStreamingWrite) {
     if ($sb.Length -gt 0) {
-      $sb.ToString() | Out-File -LiteralPath $HtmlPath -Encoding utf8 -Append
+      try {
+        $sb.ToString() | Out-File -LiteralPath $HtmlPath -Encoding utf8 -Append
+      } catch {
+        throw "REPORT-008: Failed to write final HTML report chunk. File may be locked: $HtmlPath. Error: $($_.Exception.Message)"
+      }
     }
   } else {
-    $sb.ToString() | Out-File -FilePath $HtmlPath -Encoding utf8 -Force
+    # REPORT-001 FIX: Use -LiteralPath to handle paths with brackets (e.g. [USA])
+    try {
+      $sb.ToString() | Out-File -LiteralPath $HtmlPath -Encoding utf8 -Force
+    } catch {
+      throw "REPORT-008: Failed to write HTML report. File may be locked: $HtmlPath. Error: $($_.Exception.Message)"
+    }
   }
 }
 
@@ -582,7 +622,8 @@ function Add-AuditLinksToHtml {
   [void]$links.AppendLine('<ul>')
   foreach ($p in $AuditPaths) {
     if (-not (Test-Path -LiteralPath $p)) { continue }
-    $uri = (New-Object System.Uri($p)).AbsoluteUri
+    # REPORT-005 FIX: HTML-entity-encode the URI for safe use in href attribute
+    $uri = [System.Net.WebUtility]::HtmlEncode((New-Object System.Uri($p)).AbsoluteUri)
     $name = [System.Net.WebUtility]::HtmlEncode([IO.Path]::GetFileName($p))
     [void]$links.AppendLine(('<li><a href="{0}">{1}</a></li>' -f $uri, $name))
   }
@@ -591,7 +632,8 @@ function Add-AuditLinksToHtml {
   $html = Get-Content -LiteralPath $HtmlPath -Raw -ErrorAction SilentlyContinue
   if (-not $html) { return }
   if ($html -match '</body>') {
-    $html = $html -replace '</body>', ($links.ToString() + '</body>')
+    # REPORT-007 FIX: Use String.Replace() to avoid $N backreference corruption in -replace
+    $html = $html.Replace('</body>', ($links.ToString() + '</body>'))
   } else {
     $html += $links.ToString()
   }

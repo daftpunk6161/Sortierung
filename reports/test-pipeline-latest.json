@@ -1,15 +1,31 @@
 {
-  "Timestamp": "2026-03-07 10:55:23",
-  "Stage": "unit",
+  "Timestamp": "2026-03-09 22:10:52",
+  "Stage": "all",
   "FailedStages": [],
   "Summary": [
     {
       "Stage": "unit",
-      "Total": 360,
-      "Passed": 357,
+      "Total": 442,
+      "Passed": 439,
       "Failed": 0,
       "Skipped": 3,
-      "DurationMs": 32628.64
+      "DurationMs": 34407.96
+    },
+    {
+      "Stage": "integration",
+      "Total": 327,
+      "Passed": 325,
+      "Failed": 0,
+      "Skipped": 2,
+      "DurationMs": 190056.51
+    },
+    {
+      "Stage": "e2e",
+      "Total": 14,
+      "Passed": 7,
+      "Failed": 0,
+      "Skipped": 7,
+      "DurationMs": 2980.49
     }
   ],
   "FailureDetails": []

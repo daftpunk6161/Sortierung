@@ -1,4 +1,6 @@
-﻿function Get-RomCleanupVersion {
+﻿$script:_UiPumpDeprecationWarned = $false
+
+function Get-RomCleanupVersion {
   <# Returns the project version from a single source of truth. #>
   return '1.0.0'
 }

@@ -208,7 +208,7 @@ Describe 'Invoke-DatDownload' {
   }
 
   It 'returns error for unknown format' {
-    $result = Invoke-DatDownload -Id 'test' -Url 'http://example.com' -Format 'unknown' -TargetDir $env:TEMP -System 'Test'
+    $result = Invoke-DatDownload -Id 'test' -Url 'https://example.com' -Format 'unknown' -TargetDir $env:TEMP -System 'Test'
     $result.Success | Should -Be $false
     $result.Error | Should -Match 'Unbekanntes Format'
   }

@@ -66,7 +66,7 @@
   if ($category -eq 'GAME' -and -not [string]::IsNullOrWhiteSpace($region) -and $region -ne 'UNKNOWN') {
     if ($PreferredRegionKeys -and -not $PreferredRegionKeys.ContainsKey($region)) {
       if ($region -eq 'JP') {
-        if ($JpOnlyForSelectedConsoles -and $JpKeepKeys -and -not $JpKeepKeys.ContainsKey($console)) {
+        if ($JpOnlyForSelectedConsoles -and $JpKeepKeys -and -not ([string]::IsNullOrWhiteSpace($console) -or $console -eq 'UNKNOWN') -and -not $JpKeepKeys.ContainsKey($console)) {
           $category = 'JUNK'
         }
       } else {
@@ -197,7 +197,7 @@ function Initialize-RegionDedupeContext {
     if ($preferredRegionKeepSet.Contains($Region)) { return $CurrentCategory }
 
     if ($Region -eq 'JP') {
-      if ($JpOnlyForSelectedConsoles -and -not $jpKeepSet.Contains($Console)) {
+      if ($JpOnlyForSelectedConsoles -and -not ([string]::IsNullOrWhiteSpace($Console) -or $Console -eq 'UNKNOWN') -and -not $jpKeepSet.Contains($Console)) {
         return 'JUNK'
       }
       return $CurrentCategory
@@ -232,10 +232,14 @@ function Initialize-RegionDedupeContext {
   $datHashUpdate = $null
   if ($UseDat -and $OnDatHash) {
     $progressCallback = $OnDatHash
+    # BUG DEDUPE-001 FIX: Use mutable single-element arrays so .GetNewClosure()
+    # captures a reference that stays in sync with the actual values.
+    $datHashCountRef = @(0)
+    $datHashTotalRef = @(0)
     $datHashUpdate = {
       param([string]$path)
-      $datHashCount++
-      & $progressCallback $datHashCount $datHashTotal $path
+      $datHashCountRef[0]++
+      & $progressCallback $datHashCountRef[0] $datHashTotalRef[0] $path
     }.GetNewClosure()
   }
   if ($UseDat -and -not [string]::IsNullOrWhiteSpace($DatRoot)) {
@@ -321,8 +325,10 @@ function Initialize-RegionDedupeContext {
     UseExtFilter           = $useExtFilter
     AddItem                = $addItem
     DatHashUpdate          = $datHashUpdate
+    DatHashTotalRef        = if ($datHashUpdate) { $datHashTotalRef } else { @(0) }
+    DatHashCountRef        = if ($datHashUpdate) { $datHashCountRef } else { @(0) }
     DatHashTotal           = $datHashTotal
-    DatHashCount           = $datHashCount
+    # BUG DEDUPE-002 FIX: Removed stale DatHashCount scalar — use DatHashCountRef[0] instead
     DatHashSkipExts        = $datHashSkipExts
     Stopwatch              = $sw
     PreviousAggressiveJunk = $previousAggressiveJunk
@@ -394,7 +400,9 @@ function Invoke-RegionDedupeScanRoot {
 
   if ($Context.UseDat -and $OnDatHash) {
     $Context.DatHashTotal += $datHashCandidatesInRoot
-    & $OnDatHash $Context.DatHashCount $Context.DatHashTotal $null
+    # BUG DEDUPE-001 FIX: Keep the mutable ref arrays in sync for the closure
+    if ($Context.DatHashTotalRef) { $Context.DatHashTotalRef[0] = $Context.DatHashTotal }
+    & $OnDatHash $Context.DatHashCountRef[0] $Context.DatHashTotal $null
   }
 
   & $Log ('  -> {0} Dateien gefunden (inkl. Set-Steuerdateien)' -f $files.Count)
@@ -450,10 +458,11 @@ function Invoke-RegionDedupeScanRoot {
        GetMissing = { param($path,$rootPath) Get-MdsMissingFiles -MdsPath $path -RootPath $rootPath } }
   )
   foreach ($fmt in $setFormats) {
-    $setFiles = @()
+    # BUG DEDUPE-004 FIX: Use List instead of @() += to avoid O(n^2) array append
+    $setFiles = [System.Collections.Generic.List[System.IO.FileInfo]]::new()
     if ($filesByExt.ContainsKey($fmt.Ext)) {
       foreach ($f in $filesByExt[$fmt.Ext]) {
-        if (-not $setMemberPaths.Contains($f.FullName)) { $setFiles += $f }
+        if (-not $setMemberPaths.Contains($f.FullName)) { [void]$setFiles.Add($f) }
       }
     }
     Add-SetItemsFromFiles -Root $Root -Files $setFiles -Type $fmt.Type -PreferOrder $Context.PreferOrder `
@@ -768,10 +777,12 @@ function Invoke-RegionDedupeSelectPhase {
     if ($ManualWinnerOverrides -and $ManualWinnerOverrides.ContainsKey([string]$g.Name)) {
       $overridePath = [string]$ManualWinnerOverrides[[string]$g.Name]
       if (-not [string]::IsNullOrWhiteSpace($overridePath)) {
-        $candidate = @($items | Where-Object { [string]$_.MainPath -eq $overridePath } | Select-Object -First 1)
+        $candidate = @($items | Where-Object { [string]::Equals([string]$_.MainPath, $overridePath, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1)
         if ($candidate.Count -gt 0) {
           $winner = $candidate[0]
           & $Log ('MANUAL-OVERRIDE: {0} -> {1}' -f [string]$g.Name, [string]$winner.MainPath)
+        } else {
+          if ($Log) { & $Log ('WARNUNG: Manual-Override Pfad nicht gefunden: {0} (GameKey: {1})' -f $overridePath, [string]$g.Name) }
         }
       }
     }
@@ -892,7 +903,7 @@ function Invoke-RegionDedupeReportPhase {
   $reportRows = @($Selection.Report)
   $reportResult = Write-Reports -Report $reportRows -DupeGroups $Selection.DupeGroups -TotalDupes $Selection.TotalDupes `
     -SavedBytes $Selection.SavedBytes -JunkCount $JunkItems.Count -JunkBytes $junkSum `
-    -BiosCount $BiosItems.Count -UniqueGames $groupsCount -TotalScanned $AllItems.Count `
+    -BiosCount $BiosItems.Count -UniqueGames $groupsCount -TotalScanned ($AllItems.Count + $JunkItems.Count + $BiosItems.Count) `
     -Mode $Mode -UseDat $UseDat -DatIndex $DatIndex -ConsoleSortUnknownReasons $ConsoleSortUnknownReasons `
     -GenerateReports $generateReports -Log $Log
   $csvPath = $reportResult.CsvPath
@@ -900,9 +911,18 @@ function Invoke-RegionDedupeReportPhase {
   $jsonPath = $reportResult.JsonPath
 
   $itemByMain = [hashtable]::new($AllItems.Count + $JunkItems.Count + $BiosItems.Count, [StringComparer]::OrdinalIgnoreCase)
-  foreach ($it in $JunkItems) { if ($it.MainPath) { $itemByMain[$it.MainPath] = $it } }
-  foreach ($it in $AllItems)  { if ($it.MainPath) { $itemByMain[$it.MainPath] = $it } }
-  foreach ($it in $BiosItems) { if ($it.MainPath) { $itemByMain[$it.MainPath] = $it } }
+  foreach ($it in $JunkItems) { if ($it.MainPath) {
+    if ($itemByMain.ContainsKey($it.MainPath)) { & $Log ('WARN: itemByMain Kollision (Junk): {0}' -f $it.MainPath) }
+    $itemByMain[$it.MainPath] = $it
+  } }
+  foreach ($it in $AllItems)  { if ($it.MainPath) {
+    if ($itemByMain.ContainsKey($it.MainPath)) { & $Log ('WARN: itemByMain Kollision (Game): {0}' -f $it.MainPath) }
+    $itemByMain[$it.MainPath] = $it
+  } }
+  foreach ($it in $BiosItems) { if ($it.MainPath) {
+    if ($itemByMain.ContainsKey($it.MainPath)) { & $Log ('WARN: itemByMain Kollision (BIOS): {0}' -f $it.MainPath) }
+    $itemByMain[$it.MainPath] = $it
+  } }
 
   if ($Mode -eq 'Move') {
     $moveResult = Invoke-MovePhase -Report $reportRows -JunkItems $JunkItems -BiosItems $BiosItems -AllItems $AllItems `
@@ -1093,16 +1113,31 @@ function Add-MsDosFolderItems {
 
   if ($selectedDirs.Count -eq 0) { return 0 }
 
+  # BUG DEDUPE-010 FIX: Pre-build parent-directory -> file lookup to avoid O(N*M) scan.
+  # Groups files by their parent directory for O(1) lookup per unique dir instead of
+  # iterating all files per selected directory.
+  $filesByParentDir = [hashtable]::new([StringComparer]::OrdinalIgnoreCase)
+  foreach ($f in $AllFiles) {
+    $parentDir = [IO.Path]::GetDirectoryName($f.FullName)
+    if ($null -eq $parentDir) { continue }
+    if (-not $filesByParentDir.ContainsKey($parentDir)) {
+      $filesByParentDir[$parentDir] = [System.Collections.Generic.List[string]]::new()
+    }
+    [void]$filesByParentDir[$parentDir].Add($f.FullName)
+  }
+
   $added = 0
   foreach ($dirPath in $selectedDirs) {
     Test-CancelRequested
 
     $dirWithSlash = Resolve-RootPath -Path $dirPath -WithTrailingSlash
-    $related = @(
-      foreach ($f in $AllFiles) {
-        if ($f.FullName.StartsWith($dirWithSlash, [StringComparison]::OrdinalIgnoreCase)) { $f.FullName }
+    $related = [System.Collections.Generic.List[string]]::new()
+    foreach ($parentDir in $filesByParentDir.Keys) {
+      if ($parentDir.Equals($dirPath, [StringComparison]::OrdinalIgnoreCase) -or
+          $parentDir.StartsWith($dirWithSlash, [StringComparison]::OrdinalIgnoreCase)) {
+        $related.AddRange($filesByParentDir[$parentDir])
       }
-    )
+    }
     if ($related.Count -eq 0) { continue }
     foreach ($r in $related) { [void]$SetMemberPaths.Add($r) }
 
@@ -1452,7 +1487,8 @@ function Invoke-ClassifyFilesParallel {
     [hashtable]$HashCache
   )
 
-  $maxParallel = [math]::Min(8, [math]::Max(2, [Environment]::ProcessorCount - 1))
+  # BUG DEDUPE-005 FIX: Use Get-AdaptiveWorkerCount to respect NAS/UNC worker limit
+  $maxParallel = Get-AdaptiveWorkerCount -Task 'Classify' -Roots @($Root) -ItemCount $Files.Count
   $logQueue    = [System.Collections.Concurrent.ConcurrentQueue[string]]::new()
   $cancelEvent = [System.Threading.ManualResetEventSlim]::new($false)
   $pool        = $null
@@ -1532,7 +1568,10 @@ function Invoke-ClassifyFilesParallel {
           -PreferredRegionKeys $PreferredRegionKeys -JpOnlyForSelectedConsoles $JpOnlyForSelectedConsoles -JpKeepKeys $JpKeepKeys `
           -ParentCloneParentMap $ParentCloneParentMap -ConsoleFilterKeys $ConsoleFilterKeys
         if (-not $clf) { continue }
-        if ($clf.IsCorrupt) { $corruptCount++ }
+        if ($clf.IsCorrupt) {
+          $corruptCount++
+          & $logCb ('WARN: CRC32 Verify fehlgeschlagen, markiere als JUNK: {0} ({1})' -f $path, $clf.CrcErrorMessage)
+        }
 
         $item = New-FileItem -Root $Root -MainPath $path -Category $clf.Category -Region $clf.Region `
           -PreferOrder $PreferOrder -VersionScore $clf.VersionScore -GameKey $clf.GameKey `

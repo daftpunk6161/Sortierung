@@ -99,7 +99,7 @@ Describe 'ApiServer integration' {
 
     It 'accepts OPTIONS preflight without API key and returns CORS headers' {
         $response = Invoke-WebRequest -Uri "$($script:baseUri)/runs" -Method Options -ErrorAction Stop
-        [int]$response.StatusCode | Should -Be 200
+        [int]$response.StatusCode | Should -Be 204
         [string]$response.Headers['Access-Control-Allow-Origin'] | Should -Not -BeNullOrEmpty
         [string]$response.Headers['Access-Control-Allow-Headers'] | Should -Match 'X-Api-Key'
     }

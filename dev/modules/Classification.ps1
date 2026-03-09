@@ -1539,12 +1539,14 @@ function Get-ConsoleType {
   }
 
   # 2. Ordnernamen durchsuchen (NUR relative Pfad-Teile innerhalb Root)
-  foreach ($part in $parts) {
-    $key = $part.Trim().ToLowerInvariant()
-    if ($script:CONSOLE_FOLDER_MAP.ContainsKey($key)) {
-      $result = $script:CONSOLE_FOLDER_MAP[$key]
-      $script:LAST_CONSOLE_TYPE_SOURCE = @{ Confidence = 50; Reason = 'Folder-Map Match'; Evidence = $key; Source = 'FOLDER' }
-      break
+  if (-not $result) {
+    foreach ($part in $parts) {
+      $key = $part.Trim().ToLowerInvariant()
+      if ($script:CONSOLE_FOLDER_MAP.ContainsKey($key)) {
+        $result = $script:CONSOLE_FOLDER_MAP[$key]
+        $script:LAST_CONSOLE_TYPE_SOURCE = @{ Confidence = 50; Reason = 'Folder-Map Match'; Evidence = $key; Source = 'FOLDER' }
+        break
+      }
     }
   }
 

@@ -165,10 +165,12 @@ function Invoke-PS3FolderDedupe {
     } else {
       Join-Path $DupeRoot (Split-Path -Leaf $root)
     }
+    # BUG FOLDERDEDUPE-007 FIX: Normalize dupeBase path to match FullName format from Get-ChildItem
+    $dupeBase = [System.IO.Path]::GetFullPath($dupeBase)
     Initialize-Directory $dupeBase
 
     $folders = @(Get-ChildItem -LiteralPath $root -Directory -ErrorAction SilentlyContinue |
-      Where-Object { $_.FullName -ne $dupeBase })
+      Where-Object { [System.IO.Path]::GetFullPath($_.FullName) -ne $dupeBase })
 
     if ($Log) { & $Log ("PS3 Scan: {0} Ordner in {1}" -f $folders.Count, $root) }
 
@@ -187,9 +189,22 @@ function Invoke-PS3FolderDedupe {
       }
       if ($hashes.ContainsKey($hash)) {
         $dupes++
-        $dest = Join-Path $dupeBase $folder.Name
+        # BUG FOLDERDEDUPE-005 FIX: Quality comparison instead of first-seen-wins.
+        # Prefer folder with more files, then alphabetically for determinism.
+        $existingPath = $hashes[$hash]
+        $existingCount = @(Get-ChildItem -LiteralPath $existingPath -Recurse -File -ErrorAction SilentlyContinue).Count
+        $newCount      = @(Get-ChildItem -LiteralPath $folder.FullName -Recurse -File -ErrorAction SilentlyContinue).Count
+        $loserPath = $folder.FullName
+        if ($newCount -gt $existingCount -or
+           ($newCount -eq $existingCount -and [string]::Compare($folder.FullName, $existingPath, [StringComparison]::OrdinalIgnoreCase) -lt 0)) {
+          # New folder wins — swap: move the previous winner to dupes
+          $loserPath = $existingPath
+          $hashes[$hash] = $folder.FullName
+        }
+        $loserName = Split-Path -Leaf $loserPath
+        $dest = Join-Path $dupeBase $loserName
         try {
-          $final = Invoke-RootSafeMove -Source $folder.FullName -Dest $dest -SourceRoot $root -DestRoot $dupeBase
+          $final = Invoke-RootSafeMove -Source $loserPath -Dest $dest -SourceRoot $root -DestRoot $dupeBase
           if ($final) { $moved++ }
           if ($Log) { & $Log ("    DUP -> {0}" -f $final) }
         } catch {
@@ -231,7 +246,12 @@ function Invoke-Ps3Dedupe {
 function Get-FolderBaseKey {
   <# Normalise a folder name into a grouping key for deduplication.
      Strips parenthetical suffixes, bracket tags, version numbers,
-     and collapses whitespace.  Returns lower-case invariant string. #>
+     and collapses whitespace.  Returns lower-case invariant string.
+
+     BUG FOLDERDEDUPE-002 FIX: Preserves disk/disc/side markers so
+     multi-disk games are NOT grouped as duplicates.
+     BUG FOLDERDEDUPE-003 FIX: Preserves platform-variant tags
+     (AGA/ECS/OCS/NTSC/PAL) so distinct chipset versions are kept. #>
   param(
     [Parameter(Mandatory=$true)]
     [string]$FolderName
@@ -241,11 +261,39 @@ function Get-FolderBaseKey {
 
   $base = [string]$FolderName
 
-  # Strip trailing parenthetical groups: "Game (v1.1)" -> "Game"
-  $base = $base -replace '\s*\([^)]*\)\s*$', ''
+  # BUG FOLDERDEDUPE-006 FIX: Unicode normalization — fold accented characters
+  # (e.g. e vs e, u vs u) so equivalent folder names produce the same key.
+  if (Get-Command ConvertTo-AsciiFold -ErrorAction SilentlyContinue) {
+    $base = ConvertTo-AsciiFold -Text $base
+  } else {
+    $base = $base.Normalize([System.Text.NormalizationForm]::FormC)
+  }
 
-  # Strip trailing bracket groups: "Game [USA]" -> "Game"
-  $base = $base -replace '\s*\[[^\]]*\]\s*$', ''
+  # Tags that must be PRESERVED in the key (not stripped):
+  # - Disk/Disc/CD/Side markers (multi-disk games)
+  # - Platform variants (AGA/ECS/OCS for Amiga, NTSC/PAL video standards)
+  # Regex: match parenthetical content that does NOT contain a preserve-worthy token
+  $preservePattern = '(?:Disk|Disc|CD|Side)\s*[\dA-Z]|AGA|ECS|OCS|NTSC|PAL|WHDLoad|ADF'
+
+  # BUG FOLDERDEDUPE-001 FIX: Strip ALL parenthetical groups that are NOT preserve-worthy.
+  # Previous code used a trailing-only while loop with $ anchor that stopped at the first
+  # preserved tag, leaving non-preserved tags before it.  Now uses a single-pass approach:
+  # collect preserved tags, strip all parens, re-append preserved ones.
+  $preservedTags = [System.Collections.Generic.List[string]]::new()
+  foreach ($m in [regex]::Matches($base, '\([^)]*\)')) {
+    if ($m.Value -match $preservePattern) {
+      [void]$preservedTags.Add($m.Value)
+    }
+  }
+  $base = [regex]::Replace($base, '\s*\([^)]*\)', '')
+  if ($preservedTags.Count -gt 0) {
+    $base = $base.TrimEnd() + ' ' + ($preservedTags -join ' ')
+  }
+
+  # Strip ALL trailing bracket groups iteratively
+  while ($base -match '\s*\[[^\]]*\]\s*$') {
+    $base = $base -replace '\s*\[[^\]]*\]\s*$', ''
+  }
 
   # Strip common version-like suffixes: "Game v1.2", "Game 1.0"
   $base = $base -replace '\s+v?\d+(\.\d+)+\s*$', ''
@@ -393,9 +441,11 @@ function Invoke-FolderDedupeByBaseName {
         })
       }
 
-      # Winner: most recent file first, then most files, then shortest name (tie-break)
+      # Winner: populated folders beat empty ones (FOLDERDEDUPE-004), then most recent file,
+      # then most files, then shortest name (tie-break)
       $sorted = $candidates |
-        Sort-Object @{Expression='Newest';Descending=$true},
+        Sort-Object @{Expression={ if ($_.FileCount -gt 0) {1} else {0} };Descending=$true},
+                    @{Expression='Newest';Descending=$true},
                     @{Expression='FileCount';Descending=$true},
                     @{Expression={ $_.Dir.Name.Length };Descending=$false},
                     @{Expression={ $_.Dir.FullName };Descending=$false}

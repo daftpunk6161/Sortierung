@@ -193,9 +193,16 @@ function Get-SecurityEventLog {
 # ================================================================
 
 function Get-HtmlReportSecurityHeaders {
-  <# Returns a Content-Security-Policy meta tag string for HTML reports.
-     Prevents inline script injection in generated HTML reports.
-     SEC-04: script-src 'unsafe-inline' erlaubt das eingebettete Filter/Sort-Script. #>
-  return '<meta http-equiv="Content-Security-Policy" content="default-src ''none''; style-src ''unsafe-inline''; script-src ''unsafe-inline''; img-src data:; font-src data:;">'
+  <# Returns a Content-Security-Policy meta tag and nonce for HTML reports.
+     BUG REPORT-010 FIX: Replaced 'unsafe-inline' with nonce-based script-src.
+     Returns a PSCustomObject with CspTag and Nonce properties. #>
+  $nonceBytes = [byte[]]::new(16)
+  $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::new()
+  try { $rng.GetBytes($nonceBytes) } finally { $rng.Dispose() }
+  $nonce = [Convert]::ToBase64String($nonceBytes)
+  return [pscustomobject]@{
+    CspTag = ('<meta http-equiv="Content-Security-Policy" content="default-src ''none''; style-src ''unsafe-inline''; script-src ''nonce-{0}''; img-src data:; font-src data:;">' -f $nonce)
+    Nonce  = $nonce
+  }
 }
 

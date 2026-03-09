@@ -302,7 +302,8 @@ function Resolve-RegionTagFromTokens {
       @{ K='japan'; V='JP' }, @{ K='jpn'; V='JP' }, @{ K='jp'; V='JP' },
       @{ K='australia'; V='AU' }, @{ K='au'; V='AU' },
       @{ K='asia'; V='ASIA' }, @{ K='taiwan'; V='ASIA' }, @{ K='hong kong'; V='ASIA' }, @{ K='india'; V='ASIA' },
-      @{ K='france'; V='FR' }
+      # BUG-016 FIX: Add 'fr' to regionTokens so token-parser is consistent with Region2Letter regex fallback
+      @{ K='france'; V='FR' }, @{ K='fr'; V='FR' }, @{ K='fra'; V='FR' }
     )) {
     $regionTokens[$entry.K] = $entry.V
   }
@@ -317,10 +318,12 @@ function Resolve-RegionTagFromTokens {
     foreach ($part in $parts) {
       $token = $part.Trim().ToLowerInvariant()
       if ([string]::IsNullOrWhiteSpace($token)) { continue }
-      if ($languageTokens.Contains($token)) { continue }
+      # BUG CORE-001 FIX: Check region tokens FIRST — ambiguous tokens (fr/de/es) should count as regions
       if ($regionTokens.ContainsKey($token)) {
         [void]$foundRegions.Add([string]$regionTokens[$token])
+        continue
       }
+      if ($languageTokens.Contains($token)) { continue }
     }
   }
 
@@ -544,7 +547,9 @@ function Get-VersionScore {
     }
   }
 
-  $m = $script:RX_LANG.Match($BaseName)
+  # BUG CORE-003 FIX: Honour language regex override if set via Set-RegionRulesOverride
+  $langRx = if ($script:RX_LANG_OVERRIDE) { $script:RX_LANG_OVERRIDE } else { $script:RX_LANG }
+  $m = $langRx.Match($BaseName)
   if ($m.Success) {
     $langs = $m.Value.ToLowerInvariant()
     if ($langs -match '\ben\b') {
@@ -577,6 +582,7 @@ function Select-Winner {
       @{Expression='VersionScore';Descending=$true},
       @{Expression='FormatScore';Descending=$true},
       @{Expression={if ($_.PSObject.Properties['SizeTieBreakScore']) { $_.SizeTieBreakScore } else { -1 * [long]$_.SizeBytes }};Descending=$true},
+      # BUG-011 FIX: Alphabetical tiebreaker on MainPath ensures deterministic winner selection
       @{Expression='MainPath';Descending=$false} |
     Select-Object -First 1
 }
@@ -723,8 +729,9 @@ function ConvertTo-CustomAliasMap {
     $target = [string]$pair[1]
     if ([string]::IsNullOrWhiteSpace($source) -or [string]::IsNullOrWhiteSpace($target)) { continue }
 
-    $sourceKey = (ConvertTo-AsciiFold -Text $source).Trim().ToLowerInvariant()
-    $targetKey = (ConvertTo-AsciiFold -Text $target).Trim().ToLowerInvariant()
+    # BUG CORE-005 FIX: Normalize whitespace identical to ConvertTo-GameKey (collapse all spaces)
+    $sourceKey = [regex]::Replace((ConvertTo-AsciiFold -Text $source).Trim().ToLowerInvariant(), '\s+', '')
+    $targetKey = [regex]::Replace((ConvertTo-AsciiFold -Text $target).Trim().ToLowerInvariant(), '\s+', '')
     if ([string]::IsNullOrWhiteSpace($sourceKey) -or [string]::IsNullOrWhiteSpace($targetKey)) { continue }
     $result[$sourceKey] = $targetKey
   }

@@ -2,6 +2,10 @@
   <# Return distinct extensions of files inside a ZIP. #>
   param([Parameter(Mandatory=$true)][string]$ZipPath)
 
+  # BUG ZIPSORT-004 FIX: Ensure System.IO.Compression assemblies are loaded (required for PS 5.1)
+  Add-Type -AssemblyName System.IO.Compression    -ErrorAction SilentlyContinue
+  Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
+
   $exts = New-Object System.Collections.Generic.HashSet[string] ([StringComparer]::OrdinalIgnoreCase)
   $zip = $null
   try {
@@ -33,13 +37,18 @@ function New-ZipFromFolder {
     if ($SevenZipPath -and (Test-Path -LiteralPath $SevenZipPath -PathType Leaf)) {
       $parent = Split-Path -Parent $SourceFolder
       $leaf = Split-Path -Leaf $SourceFolder
-      $toolArgs = @('a', '-tzip', '-mx=5', $tempZip, $leaf)
+      # BUG-010 FIX: Pre-quote path args — Invoke-ExternalToolProcess no longer re-quotes
+      $toolArgs = @('a', '-tzip', '-mx=5', (ConvertTo-QuotedArg $tempZip), (ConvertTo-QuotedArg $leaf))
       $tempFiles = [System.Collections.Generic.List[string]]::new()
       $procResult = Invoke-ExternalToolProcess -ToolPath $SevenZipPath -ToolArgs $toolArgs -WorkingDirectory $parent -TempFiles $tempFiles -Log $Log -ErrorLabel '7z'
       if ($procResult.Success -and (Test-Path -LiteralPath $tempZip -PathType Leaf)) {
         $zipCreated = $true
       } else {
-        if ($Log) { & $Log '  WARNUNG: 7z fehlgeschlagen, versuche .NET ZipFile Fallback.' }
+        # ZIPSORT-002 FIX: Include 7z error details so users can diagnose issues
+        $errDetail = ''
+        if ($procResult.ExitCode) { $errDetail += " ExitCode=$($procResult.ExitCode)" }
+        if ($procResult.ErrorText) { $errDetail += " Stderr=$($procResult.ErrorText.Trim())" }
+        if ($Log) { & $Log ("  WARNUNG: 7z fehlgeschlagen ({0}), versuche .NET ZipFile Fallback." -f $errDetail.Trim()) }
         if ($tempZip -and (Test-Path -LiteralPath $tempZip)) { Remove-Item -LiteralPath $tempZip -Force -ErrorAction SilentlyContinue }
       }
     }
@@ -50,17 +59,37 @@ function New-ZipFromFolder {
       $zipCreated = (Test-Path -LiteralPath $tempZip -PathType Leaf)
     }
 
+    # ZIPSORT-001: Zip integrity check — verify the archive is not empty or corrupt
+    if ($zipCreated) {
+      try {
+        $checkZip = [System.IO.Compression.ZipFile]::OpenRead($tempZip)
+        try {
+          if ($checkZip.Entries.Count -eq 0) {
+            $zipCreated = $false
+            if ($Log) { & $Log '  WARNUNG: Erstelltes ZIP ist leer, verwerfe.' }
+          }
+        } finally {
+          $checkZip.Dispose()
+        }
+      } catch {
+        $zipCreated = $false
+        if ($Log) { & $Log ("  WARNUNG: ZIP-Integritaetspruefung fehlgeschlagen: {0}" -f $_.Exception.Message) }
+      }
+    }
+
     if (-not $zipCreated) {
       if ($tempZip -and (Test-Path -LiteralPath $tempZip)) { Remove-Item -LiteralPath $tempZip -Force -ErrorAction SilentlyContinue }
       return $false
     }
 
-    if (Test-Path -LiteralPath $ZipPath) {
-      Remove-Item -LiteralPath $tempZip -Force -ErrorAction SilentlyContinue
+    # ZIPSORT-003 FIX: Atomic move without TOCTOU race — let Move-Item fail if destination exists
+    try {
+      Move-Item -LiteralPath $tempZip -Destination $ZipPath -ErrorAction Stop
+    } catch {
+      # Destination appeared between creation and move (race), or already existed
+      if ($tempZip -and (Test-Path -LiteralPath $tempZip)) { Remove-Item -LiteralPath $tempZip -Force -ErrorAction SilentlyContinue }
       return $false
     }
-
-    Move-Item -LiteralPath $tempZip -Destination $ZipPath -Force
     return $true
   } catch {
     if ($tempZip -and (Test-Path -LiteralPath $tempZip)) { Remove-Item -LiteralPath $tempZip -Force -ErrorAction SilentlyContinue }

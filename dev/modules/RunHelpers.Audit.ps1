@@ -1,15 +1,34 @@
 ﻿# NOTE:
 # Extracted from RunHelpers.ps1 for audit signing and rollback responsibilities.
 
+# Use AppDomain data for process-global HMAC key caching. This is immune to
+# PowerShell scope isolation issues in dot-sourced modules and Pester tests.
+# AppDomain.CurrentDomain.GetData/SetData persist across all scope boundaries.
+
 function Get-AuditSigningKeyBytes {
+  # BUG-015 FIX: Prefer in-memory session key over environment variable.
+  # Environment variables are readable by all processes in the same user context.
+  $cached = [AppDomain]::CurrentDomain.GetData('_RomCleanup_AuditHmacKeyBytes')
+  if ($cached) { return $cached }
+
   $rawKey = [string]$env:ROMCLEANUP_AUDIT_HMAC_KEY
-  if ([string]::IsNullOrWhiteSpace($rawKey)) { return $null }
+  if ([string]::IsNullOrWhiteSpace($rawKey)) {
+    # Generate a session-scoped random key (32 bytes / 256 bit) if not configured
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    $keyBytes = [byte[]]::new(32)
+    $rng.GetBytes($keyBytes)
+    $rng.Dispose()
+    [AppDomain]::CurrentDomain.SetData('_RomCleanup_AuditHmacKeyBytes', $keyBytes)
+    return $keyBytes
+  }
   # BUG-041 FIX: Enforce minimum key length (32 bytes) for HMAC security
   if ($rawKey.Length -lt 32) {
     Write-Warning '[SEC] ROMCLEANUP_AUDIT_HMAC_KEY ist zu kurz (< 32 Zeichen). Audit-Signierung deaktiviert. Bitte einen Key mit mindestens 32 Zeichen setzen.'
     return $null
   }
-  return [System.Text.Encoding]::UTF8.GetBytes($rawKey)
+  $keyBytes = [System.Text.Encoding]::UTF8.GetBytes($rawKey)
+  [AppDomain]::CurrentDomain.SetData('_RomCleanup_AuditHmacKeyBytes', $keyBytes)
+  return $keyBytes
 }
 
 function Get-FileSha256Hex {
@@ -128,6 +147,14 @@ function Test-AuditMetadataSidecar {
   $metaRaw = Get-Content -LiteralPath $metaPath -Raw -Encoding UTF8 -ErrorAction Stop
   $meta = $metaRaw | ConvertFrom-Json
 
+  # ConvertFrom-Json auto-converts ISO 8601 strings to DateTime objects.
+  # When cast back to [string], the locale format differs from the original ISO 8601.
+  # Extract the original CreatedUtc string directly from the raw JSON to preserve it.
+  $createdUtcOriginal = [string]$meta.CreatedUtc
+  if ($metaRaw -match '"CreatedUtc"\s*:\s*"([^"]+)"') {
+    $createdUtcOriginal = $Matches[1]
+  }
+
   $currentCsvSha = Get-FileSha256Hex -Path $AuditCsvPath
   if ([string]::IsNullOrWhiteSpace([string]$meta.CsvSha256) -or $currentCsvSha -ne [string]$meta.CsvSha256) {
     throw ("Audit-Verifikation fehlgeschlagen: CSV-Hash stimmt nicht ({0})" -f $AuditCsvPath)
@@ -148,7 +175,7 @@ function Test-AuditMetadataSidecar {
   }
 
   $payload = Get-AuditSignaturePayload -AuditFileName ([string]$meta.AuditFile) -CsvSha256 ([string]$meta.CsvSha256) `
-    -RowCount ([int]$meta.RowCount) -CreatedUtc ([string]$meta.CreatedUtc)
+    -RowCount ([int]$meta.RowCount) -CreatedUtc $createdUtcOriginal
   $expected = Get-HmacSha256Hex -Key $keyBytes -Text $payload
   if ([string]::IsNullOrWhiteSpace([string]$meta.Signature) -or $expected -ne [string]$meta.Signature) {
     throw ("Audit-Verifikation fehlgeschlagen: Signatur ungueltig ({0})" -f $metaPath)

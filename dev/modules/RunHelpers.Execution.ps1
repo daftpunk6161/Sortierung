@@ -527,6 +527,22 @@ function Invoke-MovePhase {
     $auditByRoot = [hashtable]::new([StringComparer]::OrdinalIgnoreCase)
     $auditPaths = New-Object System.Collections.Generic.List[string]
     $unknownRootAuditWarned = $false
+
+    # BUG RUN-001 FIX: Determine audit root early so incremental flushes can write there
+    $auditRootPathResolved = $AuditRoot
+    if ([string]::IsNullOrWhiteSpace($auditRootPathResolved)) {
+      $auditRootPathResolved = Join-Path (Get-Location) 'audit-logs'
+    }
+    if (-not (Test-Path -LiteralPath $auditRootPathResolved)) {
+      try { Assert-DirectoryExists -Path $auditRootPathResolved } catch {}
+    }
+    if (-not (Test-Path -LiteralPath $auditRootPathResolved)) {
+      $auditRootPathResolved = Get-Location
+    }
+    # Track partial audit file paths per root for incremental flush
+    $auditPartialPaths = [hashtable]::new([StringComparer]::OrdinalIgnoreCase)
+    $auditFlushedCounts = [hashtable]::new([StringComparer]::OrdinalIgnoreCase)
+
     $addAudit = {
       param([string]$rootPath, [string]$action, [string]$source, [string]$dest)
       $key = $rootPath
@@ -553,6 +569,44 @@ function Invoke-MovePhase {
         Dest      = $dest
         SizeBytes = $size
       })
+
+      # BUG RUN-001 FIX: Incremental flush every 50 entries to prevent data loss on crash
+      $totalInRoot = $auditByRoot[$key].Count
+      $flushed = if ($auditFlushedCounts.ContainsKey($key)) { $auditFlushedCounts[$key] } else { 0 }
+      $unflushed = $totalInRoot - $flushed
+      if ($unflushed -ge 50) {
+        try {
+          $rootLeaf = if ([string]::IsNullOrWhiteSpace($key) -or $key -eq '__UNKNOWN_ROOT__') { 'unknown-root' } else { Split-Path -Leaf $key }
+          # BUG RUN-013 FIX: Append hash of full root path to avoid filename collisions
+          $rootHash = [Math]::Abs(([string]$key).GetHashCode()).ToString('X8')
+          $rootName = ConvertTo-SafeFileName -Name ('{0}-{1}' -f $rootLeaf, $rootHash)
+          $partialPath = Join-Path $auditRootPathResolved ("rom-move-audit-{0}-{1}.partial.csv" -f $timestamp, $rootName)
+          $auditPartialPaths[$key] = $partialPath
+          $newRows = @($auditByRoot[$key])[$flushed..($totalInRoot - 1)]
+          if ($flushed -eq 0) {
+            # First flush: write with header
+            $newRows |
+              Select-Object Time, Action,
+                            @{N='Source';E={ConvertTo-SafeCsvValue $_.Source}},
+                            @{N='Dest';E={ConvertTo-SafeCsvValue $_.Dest}},
+                            SizeBytes |
+              Export-Csv -NoTypeInformation -Encoding UTF8 -Path $partialPath
+          } else {
+            # Append without header
+            $newRows |
+              Select-Object Time, Action,
+                            @{N='Source';E={ConvertTo-SafeCsvValue $_.Source}},
+                            @{N='Dest';E={ConvertTo-SafeCsvValue $_.Dest}},
+                            SizeBytes |
+              ConvertTo-Csv -NoTypeInformation |
+              Select-Object -Skip 1 |
+              Add-Content -Path $partialPath -Encoding UTF8
+          }
+          $auditFlushedCounts[$key] = $totalInRoot
+        } catch {
+          # Incremental flush is best-effort; final write will still happen
+        }
+      }
     }
 
     $toTrash = @($Report | Where-Object { $_.Action -in @("MOVE","JUNK") })
@@ -782,12 +836,12 @@ function Invoke-MovePhase {
       $moveBlocklist = @(Get-MovePathBlocklist)
     }
 
+    $moveCount = 0
     if ($toTrash.Count -gt 0) {
       if ($Log) {
         & $Log ""
         & $Log ("Verschiebe {0} Eintraege nach _TRASH..." -f $toTrash.Count)
       }
-      $moveCount = 0
 
       foreach ($row in $toTrash) {
         Test-CancelRequested
@@ -805,6 +859,10 @@ function Invoke-MovePhase {
         if ($row.Category -eq "JUNK") {
           $trashBase = Join-Path $trashBase "_JUNK"
         }
+
+        # BUG RUN-002+010 FIX: Track moved files per set for atomic rollback on partial failure
+        $setMovedPairs = [System.Collections.Generic.List[pscustomobject]]::new()
+        $setFailed = $false
 
         foreach ($p in (& $getMovePaths -Item $it -FallbackMainPath ([string]$row.MainPath))) {
           if (-not (Test-Path -LiteralPath $p)) { continue }
@@ -832,10 +890,26 @@ function Invoke-MovePhase {
           }
           try {
             $final = Invoke-RootSafeMove -Source $p -Dest $dest -SourceRoot $root -DestRoot $trashBase
+            [void]$setMovedPairs.Add([pscustomobject]@{ Source = $p; Dest = $final })
             & $addAudit $root $row.Action $p $final
           } catch {
+            $setFailed = $true
             if ($Log) { & $Log ("FEHLER: Move fehlgeschlagen: {0} ({1})" -f $p, $_.Exception.Message) }
             Add-RunError -Category 'Move' -Message ('{0} ({1})' -f $p, $_.Exception.Message)
+          }
+        }
+
+        # BUG RUN-010 FIX: Rollback previously moved files if any file in the set failed
+        if ($setFailed -and $setMovedPairs.Count -gt 0) {
+          if ($Log) { & $Log ('  Rollback: {0} Dateien im Set zurueckverschieben.' -f $setMovedPairs.Count) }
+          foreach ($pair in $setMovedPairs) {
+            try {
+              if (Test-Path -LiteralPath $pair.Dest) {
+                Move-Item -LiteralPath $pair.Dest -Destination $pair.Source -Force -ErrorAction Stop
+              }
+            } catch {
+              if ($Log) { & $Log ("  WARNUNG: Rollback fehlgeschlagen: {0} ({1})" -f $pair.Dest, $_.Exception.Message) }
+            }
           }
         }
 
@@ -905,24 +979,17 @@ function Invoke-MovePhase {
     }
 
     if ($auditByRoot.Count -gt 0) {
-      $auditRootPath = $AuditRoot
-      if ([string]::IsNullOrWhiteSpace($auditRootPath)) {
-        $auditRootPath = Join-Path (Get-Location) 'audit-logs'
-      }
-      if (-not (Test-Path -LiteralPath $auditRootPath)) {
-        try { Assert-DirectoryExists -Path $auditRootPath } catch {}
-      }
-      if (-not (Test-Path -LiteralPath $auditRootPath)) {
-        $auditRootPath = Get-Location
-      }
+      # BUG RUN-001 FIX: Use the already-resolved audit root (determined at start for incremental flush)
       foreach ($rootKey in $auditByRoot.Keys) {
         $rootLeaf = if ([string]::IsNullOrWhiteSpace($rootKey) -or $rootKey -eq '__UNKNOWN_ROOT__') {
           'unknown-root'
         } else {
           Split-Path -Leaf $rootKey
         }
-        $rootName = ConvertTo-SafeFileName -Name $rootLeaf
-        $auditPath = Join-Path $auditRootPath ("rom-move-audit-{0}-{1}.csv" -f $timestamp, $rootName)
+        # BUG RUN-013 FIX: Append hash of full root path to avoid filename collisions
+        $rootHash = [Math]::Abs(([string]$rootKey).GetHashCode()).ToString('X8')
+        $rootName = ConvertTo-SafeFileName -Name ('{0}-{1}' -f $rootLeaf, $rootHash)
+        $auditPath = Join-Path $auditRootPathResolved ("rom-move-audit-{0}-{1}.csv" -f $timestamp, $rootName)
 
         $auditRows = @($auditByRoot[$rootKey])
         $metricRows = New-Object System.Collections.Generic.List[psobject]
@@ -971,6 +1038,14 @@ function Invoke-MovePhase {
         [void](Write-AuditMetadataSidecar -AuditCsvPath $auditPath -Rows $auditRowsWithMetrics -Log $Log)
         [void]$auditPaths.Add($auditPath)
         if ($Log) { & $Log ("Audit: {0}" -f $auditPath) }
+
+        # BUG RUN-001 FIX: Remove the incremental partial file now that the final signed CSV exists
+        if ($auditPartialPaths.ContainsKey($rootKey)) {
+          $partialFile = $auditPartialPaths[$rootKey]
+          if ($partialFile -and (Test-Path -LiteralPath $partialFile)) {
+            Remove-Item -LiteralPath $partialFile -Force -ErrorAction SilentlyContinue
+          }
+        }
       }
 
       Add-AuditLinksToHtml -HtmlPath $HtmlPath -AuditPaths $auditPaths
@@ -985,5 +1060,5 @@ function Invoke-MovePhase {
     if ($Log) { & $Log ("{0:N1}s Move-Zeit" -f $moveSw.Elapsed.TotalSeconds) }
   }
 
-  return (New-OperationResult -Status 'continue' -Reason 'move-finished' -Value $null -Meta @{ Phase = 'Move' })
+  return (New-OperationResult -Status 'continue' -Reason 'move-finished' -Value @{ CsvPath = $CsvPath; MoveCount = $moveCount } -Meta @{ Phase = 'Move' })
 }

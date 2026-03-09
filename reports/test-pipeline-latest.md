@@ -1,11 +1,13 @@
 # Test Pipeline Snapshot
 
-Timestamp: 2026-03-07 10:55:23
-Stage: unit
+Timestamp: 2026-03-09 22:10:52
+Stage: all
 
 | Stage | Total | Passed | Failed | Skipped | Duration (ms) |
 |---|---:|---:|---:|---:|---:|
-| unit | 360 | 357 | 0 | 3 | 32628.64 |
+| unit | 442 | 439 | 0 | 3 | 34407.96 |
+| integration | 327 | 325 | 0 | 2 | 190056.51 |
+| e2e | 14 | 7 | 0 | 7 | 2980.49 |
 
-JSON: C:\Code\Sortierung\reports\test-pipeline-20260307-105523.json
-MD: C:\Code\Sortierung\reports\test-pipeline-20260307-105523.md
+JSON: C:\Code\Sortierung\reports\test-pipeline-20260309-221052.json
+MD: C:\Code\Sortierung\reports\test-pipeline-20260309-221052.md

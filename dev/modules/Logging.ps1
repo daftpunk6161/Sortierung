@@ -236,11 +236,25 @@ function Write-OperationJsonlLog {
         message = (ConvertTo-LogMessageText $MessageText)
       }
       $json = ($record | ConvertTo-Json -Compress -Depth 3)
-      Add-Content -LiteralPath $script:OperationJsonlPath -Value $json -Encoding utf8 -ErrorAction Stop
+      # BUG LOG-001 FIX: Retry up to 3 times with backoff before disabling logging
+      $writeOk = $false
+      for ($attempt = 1; $attempt -le 3; $attempt++) {
+        try {
+          Add-Content -LiteralPath $script:OperationJsonlPath -Value $json -Encoding utf8 -ErrorAction Stop
+          $writeOk = $true
+          break
+        } catch {
+          if ($attempt -lt 3) {
+            Start-Sleep -Milliseconds (100 * $attempt)
+          } else {
+            Write-Warning ('Write-OperationJsonlLog fehlgeschlagen nach 3 Versuchen [{0}]: {1}' -f $script:OperationJsonlPath, $_.Exception.Message)
+            $script:OperationJsonlPath = $null
+            [void](Set-AppStateValue -Key 'OperationJsonlPath' -Value $null)
+          }
+        }
+      }
     } catch {
       # F-05 FIX: JSONL log write failure is no longer silently swallowed.
-      # Write-Warning surfaces to the host/test runner without disrupting the operation.
-      # The path is reset to null so subsequent writes fail fast instead of looping.
       Write-Warning ('Write-OperationJsonlLog fehlgeschlagen [{0}]: {1}' -f $script:OperationJsonlPath, $_.Exception.Message)
       $script:OperationJsonlPath = $null
       [void](Set-AppStateValue -Key 'OperationJsonlPath' -Value $null)

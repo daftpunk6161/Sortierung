@@ -194,7 +194,14 @@ function Stop-ExternalProcessTree {
 
   try {
     if (-not $Process.HasExited) {
-      try { $Process.Kill($true) } catch { $Process.Kill() }
+      # TOOLS-008 FIX: Kill($true) (kill process tree) is only available in .NET Core+.
+      # On .NET Framework (PS 5.1), use taskkill /T for tree-kill, then fall back to Kill().
+      if ($PSVersionTable.PSVersion.Major -ge 7) {
+        try { $Process.Kill($true) } catch { $Process.Kill() }
+      } else {
+        try { & taskkill /PID $Process.Id /T /F 2>$null | Out-Null } catch { }
+        try { $Process.Kill() } catch { }
+      }
     }
   } catch { }
   try { Stop-Process -Id $Process.Id -Force -ErrorAction SilentlyContinue } catch { }
@@ -306,7 +313,13 @@ function Invoke-ExternalToolProcess {
     return [pscustomobject]@{ Success = $false; ExitCode = -1; ErrorText = 'tool-hash-mismatch' }
   }
 
-  $argLine = ConvertTo-ArgString -ArgList $ToolArgs
+  # BUG-010 FIX: Avoid dual-quoting — callers are expected to pre-quote path arguments
+  # via ConvertTo-QuotedArg. Join directly instead of re-quoting through ConvertTo-ArgString
+  # which would apply ConvertTo-QuotedArg a second time, risking malformed command lines
+  # for paths containing embedded quotes or trailing backslashes.
+  $argLine = if ($ToolArgs -and $ToolArgs.Count -gt 0) {
+    ($ToolArgs | ForEach-Object { [string]$_ }) -join ' '
+  } else { $null }
   $nativeArgs = @{ ExePath = $ToolPath; TempFiles = $TempFiles }
   if (-not [string]::IsNullOrWhiteSpace($argLine)) { $nativeArgs['ArgumentList'] = @($argLine) }
   if (-not [string]::IsNullOrWhiteSpace($WorkingDirectory)) { $nativeArgs['WorkingDirectory'] = $WorkingDirectory }
@@ -384,22 +397,21 @@ function Find-ConversionTool {
   $found = Get-Command $ToolName -ErrorAction SilentlyContinue
   if ($found) { return $found.Source }
 
+  # BUG TOOLS-001 FIX: Only search in non-user-writable locations to prevent binary planting.
+  # User-writable paths (Downloads, LOCALAPPDATA, USERPROFILE) removed.
+  # Hash verification via Test-ToolBinaryHash provides defense-in-depth.
   $candidates = switch ($ToolName) {
     'chdman' {
       @(
         "$env:ProgramFiles\MAME\chdman.exe",
         "${env:ProgramFiles(x86)}\MAME\chdman.exe",
-        "$env:USERPROFILE\MAME\chdman.exe",
-        "C:\MAME\chdman.exe",
-        "$env:USERPROFILE\Downloads\chdman.exe"
+        "C:\MAME\chdman.exe"
       )
     }
     'dolphintool' {
       @(
         "$env:ProgramFiles\Dolphin\DolphinTool.exe",
-        "${env:ProgramFiles(x86)}\Dolphin\DolphinTool.exe",
-        "$env:LOCALAPPDATA\Dolphin\DolphinTool.exe",
-        "$env:USERPROFILE\Downloads\DolphinTool.exe"
+        "${env:ProgramFiles(x86)}\Dolphin\DolphinTool.exe"
       )
     }
     '7z' {
@@ -410,16 +422,12 @@ function Find-ConversionTool {
     }
     'psxtract' {
       @(
-        "C:\tools\conversion\psxtract.exe",
-        "$env:USERPROFILE\Downloads\psxtract.exe",
-        "$env:LOCALAPPDATA\psxtract\psxtract.exe"
+        "C:\tools\conversion\psxtract.exe"
       )
     }
     'ciso' {
       @(
-        "C:\tools\conversion\ciso.exe",
-        "$env:USERPROFILE\Downloads\ciso.exe",
-        "$env:LOCALAPPDATA\ciso\ciso.exe"
+        "C:\tools\conversion\ciso.exe"
       )
     }
     default { @() }
@@ -436,9 +444,10 @@ function ConvertTo-QuotedArg {
   <# Quote paths for native tools; preserve existing quotes. #>
   param([string]$Value)
 
-  if ($null -eq $Value) { return '' }
+  # BUG-004 FIX: Return empty quoted string for null/empty input instead of bare empty string
+  if ($null -eq $Value) { return '""' }
   $s = [string]$Value
-  if ($s -eq '') { return '' }
+  if ($s -eq '') { return '""' }
   if ($s.Length -ge 2 -and $s.StartsWith('"') -and $s.EndsWith('"')) { return $s }
   if ($s -notmatch '[\s"]' -and -not $s.StartsWith('-')) { return $s }
 
@@ -484,6 +493,12 @@ function Invoke-7z {
     [Parameter(Mandatory=$true)][string[]]$Arguments,
     [System.Collections.Generic.List[string]]$TempFiles
   )
+
+  # BUG TOOLS-003 FIX: Verify binary hash before execution
+  if (-not (Test-ToolBinaryHash -ToolPath $SevenZipPath)) {
+    Write-Warning ('[SEC] 7z binary hash verification failed: {0}' -f $SevenZipPath)
+    return [pscustomobject]@{ ExitCode = -1; StdOut = ''; StdErr = 'Hash verification failed' }
+  }
 
   return (Invoke-NativeProcess -ExePath $SevenZipPath -ArgumentList $Arguments -TempFiles $TempFiles)
 }
@@ -669,6 +684,12 @@ function Invoke-DolphinToolInfoLines {
   if (-not $ToolPath -or -not (Test-Path -LiteralPath $ToolPath)) { return $null }
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
 
+  # BUG TOOLS-005 FIX: Verify binary hash before execution
+  if (-not (Test-ToolBinaryHash -ToolPath $ToolPath)) {
+    Write-Warning ('[SEC] DolphinTool binary hash verification failed: {0}' -f $ToolPath)
+    return $null
+  }
+
   try {
     $toolArgs = @('info', '-i', (ConvertTo-QuotedArg $Path))
     $run = Invoke-NativeProcess -ExePath $ToolPath -ArgumentList $toolArgs
@@ -766,6 +787,12 @@ function Get-ArchiveDiscHeaderConsole {
 
   if (-not $SevenZipPath -or -not (Test-Path -LiteralPath $SevenZipPath)) { return $null }
   if (-not (Test-Path -LiteralPath $ArchivePath -PathType Leaf)) { return $null }
+
+  # BUG TOOLS-004 FIX: Verify binary hash before execution
+  if (-not (Test-ToolBinaryHash -ToolPath $SevenZipPath)) {
+    Write-Warning ('[SEC] 7z binary hash verification failed (ArchiveDiscHeader): {0}' -f $SevenZipPath)
+    return $null
+  }
 
   $entryPaths = @(Get-ArchiveEntryPaths -ArchivePath $ArchivePath -SevenZipPath $SevenZipPath -TempFiles $null)
   if (-not $entryPaths -or $entryPaths.Count -eq 0) { return $null }
@@ -905,7 +932,8 @@ function Expand-ArchiveToTemp {
       } catch { }
     }
 
-    $outArg = "-o{0}" -f ([System.IO.Path]::GetFullPath($tempDir))
+    # TOOLS-007 FIX: Quote the output path to handle spaces in TEMP path
+    $outArg = '-o"{0}"' -f ([System.IO.Path]::GetFullPath($tempDir))
     $toolArgs = @('x', '-y', $outArg, (ConvertTo-QuotedArg $ArchivePath))
     $run = Invoke-7z -SevenZipPath $SevenZipPath -Arguments $toolArgs -TempFiles $tempFiles
     $exitCode = $run.ExitCode

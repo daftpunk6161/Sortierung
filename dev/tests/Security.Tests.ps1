@@ -433,12 +433,12 @@ Describe 'ConvertTo-SafeCsvValue - Mutation Kill M12' {
             # TAB alone is NOT dangerous, but TAB + = IS dangerous
             $tabValue = "`t=TAB_FORMULA"
             $result = ConvertTo-SafeCsvValue -Value $tabValue
-            $result | Should -Be ("'" + $tabValue)
+            $result | Should -Be "'=TAB_FORMULA"
         }
         
         It 'M12-KILL: Should handle leading whitespace before dangerous char' {
             ConvertTo-SafeCsvValue -Value '  =formula' | Should -Be "'  =formula"
-            ConvertTo-SafeCsvValue -Value "  `t=also" | Should -Be "'  `t=also"
+            ConvertTo-SafeCsvValue -Value "  `t=also" | Should -Be "'  =also"
         }
         
         It 'Should NOT prefix normal values' {
@@ -511,21 +511,23 @@ Describe 'HTML Report XSS Integration' {
                 SizeBytes    = 1234
             })
             
-            $tempHtml = Join-Path $env:TEMP "pester_xss_$(Get-Random).html"
-            
+            $tempHtml = Join-Path $TestDrive "pester_xss_$(Get-Random).html"
+
+            Push-Location $TestDrive
             try {
                 ConvertTo-HtmlReport -Report $report -HtmlPath $tempHtml `
                     -DupeGroups 0 -TotalDupes 0 -SavedBytes 0 `
                     -JunkCount 0 -JunkBytes 0 -BiosCount 0 `
                     -UniqueGames 1 -TotalScanned 1 -Mode 'DryRun'
-                
+
                 $html = Get-Content -LiteralPath $tempHtml -Raw
-                
+
                 # Script tags should be encoded
                 $html | Should -Match '&lt;script&gt;'
                 $html | Should -Not -Match '<script>alert'
                 $html | Should -Not -Match '<script>evil'
             } finally {
+                Pop-Location
                 Remove-Item -LiteralPath $tempHtml -Force -ErrorAction SilentlyContinue
             }
         }

@@ -77,7 +77,9 @@ $stages = [ordered]@{
         (Join-Path $testsRoot 'unit\RunHelpers.Execution.Tests.ps1'),
         (Join-Path $testsRoot 'unit\Determinism.Tests.ps1'),
         (Join-Path $testsRoot 'unit\NegativeTests.Tests.ps1'),
-        (Join-Path $testsRoot 'unit\PipelineStages.Tests.ps1')
+        (Join-Path $testsRoot 'unit\PipelineStages.Tests.ps1'),
+        (Join-Path $testsRoot 'BugRegression.Tests.ps1'),
+        (Join-Path $testsRoot 'BugRegression2.Tests.ps1')
     )
     integration = @(
         (Join-Path $testsRoot 'integration\WpfSmoke.Tests.ps1'),

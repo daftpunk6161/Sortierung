@@ -126,7 +126,8 @@ param(
 
     [string]$AuditRoot,
 
-    [switch]$RemoveJunk,
+    # BUG ENTRY-008 FIX: Default $true to match documented behavior
+    [bool]$RemoveJunk = $true,
 
     [switch]$AggressiveJunk,
 
@@ -145,7 +146,8 @@ param(
     [ValidateSet('SHA1', 'MD5', 'CRC32')]
     [string]$DatHashType = 'SHA1',
 
-    [switch]$DatFallback,
+    # BUG ENTRY-008 FIX: Default $true to match documented behavior
+    [bool]$DatFallback = $true,
 
     [hashtable]$DatMap = @{},
 
@@ -155,7 +157,8 @@ param(
 
     [switch]$Use1G1R,
 
-    [switch]$GenerateReports,
+    # BUG ENTRY-008 FIX: Default $true to match documented behavior
+    [bool]$GenerateReports = $true,
 
     [switch]$SkipConfirm,
 
@@ -165,10 +168,13 @@ param(
 
     [switch]$Quiet,
 
+    # Emit a desktop toast notification when the run completes (requires BurntToast or similar)
     [switch]$NotifyAfterRun,
 
+    # Write a JSON summary file at the end of the run (for programmatic consumption / API mode)
     [switch]$EmitJsonSummary,
 
+    # Path for the JSON summary file; defaults to reports\session-summary.json if not specified
     [string]$SummaryJsonPath,
 
     [hashtable]$Ports = @{}
@@ -201,10 +207,14 @@ if (-not (Test-Path -LiteralPath $_loaderPath -PathType Leaf)) {
 }
 
 $script:_RomCleanupModuleRoot = $_moduleDir
-. $_loaderPath
-
-# Initialize application state (required by many module functions)
-Initialize-AppState
+try {
+    . $_loaderPath
+    # Initialize application state (required by many module functions)
+    Initialize-AppState
+} catch {
+    Write-Error ("Failed to load modules or initialize app state: {0}" -f $_.Exception.Message)
+    exit 3
+}
 
 try {
     if (Get-Command Import-ConsolePlugins -ErrorAction SilentlyContinue) {
@@ -425,6 +435,43 @@ function Invoke-CliPreflight {
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 try {
+    # --- ENTRY-005 FIX: Root path security validation ---
+    # Reject drive roots, system paths, and UNC roots to prevent catastrophic operations.
+    $blockedPathPatterns = @(
+        # Drive roots (e.g. C:\, D:\)
+        '^[A-Za-z]:\\?$',
+        # UNC roots (e.g. \\server, \\server\share)
+        '^\\\\[^\\]+\\?$',
+        '^\\\\[^\\]+\\[^\\]+\\?$'
+    )
+    $blockedSystemPaths = @(
+        (Join-Path $env:SystemRoot ''),           # C:\Windows
+        (Join-Path $env:ProgramFiles ''),          # C:\Program Files
+        "${env:ProgramFiles(x86)}",                # C:\Program Files (x86)
+        (Join-Path $env:SystemDrive 'ProgramData') # C:\ProgramData
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object {
+        try { [System.IO.Path]::GetFullPath($_).TrimEnd('\','/') } catch { $_ }
+    }
+
+    foreach ($rootEntry in $Roots) {
+        $normalizedRoot = $null
+        try { $normalizedRoot = [System.IO.Path]::GetFullPath($rootEntry).TrimEnd('\','/') } catch { $normalizedRoot = $rootEntry }
+        foreach ($pattern in $blockedPathPatterns) {
+            if ($normalizedRoot -match $pattern) {
+                Write-Error ("Security: Root path '{0}' is a drive or UNC root and is not allowed." -f $rootEntry)
+                exit $EXIT_VALIDATION
+                return
+            }
+        }
+        foreach ($sysPath in $blockedSystemPaths) {
+            if ($normalizedRoot -ieq $sysPath) {
+                Write-Error ("Security: Root path '{0}' is a protected system directory and is not allowed." -f $rootEntry)
+                exit $EXIT_VALIDATION
+                return
+            }
+        }
+    }
+
     # --- Banner ---
     if (-not $Quiet) {
         Write-Output ""
@@ -488,7 +535,10 @@ try {
     }
 
     # --- Initialize run ---
-    Reset-RunErrors
+    # ENTRY-010 FIX: Guard module function calls with existence checks
+    if (Get-Command Reset-RunErrors -ErrorAction SilentlyContinue) {
+        Reset-RunErrors
+    }
 
     if (-not $Quiet) {
         & $LogFn "Starting $Mode run..."
@@ -541,6 +591,12 @@ try {
     if ($AuditRoot)  { $dedupeParams['AuditRoot']  = $AuditRoot }
     if ($DatRoot)    { $dedupeParams['DatRoot']     = $DatRoot }
     if ($DatMap -and $DatMap.Count -gt 0) { $dedupeParams['DatMap'] = $DatMap }
+    # ENTRY-010 FIX: Guard Invoke-CliRunAdapter with existence check
+    if (-not (Get-Command Invoke-CliRunAdapter -ErrorAction SilentlyContinue)) {
+        Write-Error "Required module function 'Invoke-CliRunAdapter' is not available. Check module loading."
+        exit $EXIT_ERROR
+        return
+    }
     $result = Invoke-CliRunAdapter `
         -SortConsole ([bool]$SortConsole) `
         -Mode $Mode `
@@ -557,7 +613,10 @@ try {
         -Ports $Ports
 
     # --- Error summary ---
-    Write-RunErrorSummary -Log $LogFn
+    # ENTRY-010 FIX: Guard Write-RunErrorSummary with existence check
+    if (Get-Command Write-RunErrorSummary -ErrorAction SilentlyContinue) {
+        Write-RunErrorSummary -Log $LogFn
+    }
 
     # --- Summary ---
     if (-not $Quiet) {
@@ -575,7 +634,8 @@ try {
         Write-Output "================================================================"
     }
 
-    $errCount = Get-RunErrorCount
+    # ENTRY-010 FIX: Guard Get-RunErrorCount with existence check
+    $errCount = if (Get-Command Get-RunErrorCount -ErrorAction SilentlyContinue) { Get-RunErrorCount } else { 0 }
     if ($errCount -gt 0) {
         Invoke-CliScheduledNotification -Result $result -RunErrorCount $errCount
         Write-CliJsonSummary -Status 'completed_with_errors' -ExitCode $EXIT_ERROR -Result $result -RunErrorCount $errCount

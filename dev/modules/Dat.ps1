@@ -395,10 +395,11 @@ function Get-DatIndex {
           }
         }
       }
-
-      $reader.Close()
     } catch {
       if ($Log) { & $Log ("DAT: Fehler beim Streaming {0}: {1}" -f (Split-Path -Leaf $Path), $_.Exception.Message) }
+    } finally {
+      # BUG DAT-001 FIX: Ensure XmlReader is disposed even if an exception occurs
+      if ($reader) { $reader.Dispose() }
     }
   }
 
@@ -1013,8 +1014,11 @@ function Get-DatParentCloneIndex {
     $games = @()
     $df = $Xml.datafile
     if ($df) {
-      $gp = $df.PSObject.Properties['game']
-      if ($gp -and $gp.Value) { $games += @($gp.Value) }
+      # BUG DAT-004 FIX: Also collect <machine> and <software> elements for parent/clone
+      foreach ($tagName in @('game','machine','software')) {
+        $gp = $df.PSObject.Properties[$tagName]
+        if ($gp -and $gp.Value) { $games += @($gp.Value) }
+      }
     }
 
     foreach ($g in $games) {
@@ -1057,7 +1061,8 @@ function Get-DatParentCloneIndex {
       $reader = [System.Xml.XmlReader]::Create($Path, $XmlSettings)
 
       while ($reader.Read()) {
-        if ($reader.NodeType -eq [System.Xml.XmlNodeType]::Element -and $reader.Name -eq 'game') {
+        # BUG DAT-004 FIX: Also handle <machine> and <software> elements which use the same cloneof attribute
+        if ($reader.NodeType -eq [System.Xml.XmlNodeType]::Element -and $reader.Name -in @('game','machine','software')) {
           $gameName = $reader.GetAttribute('name')
           $cloneOf  = $reader.GetAttribute('cloneof')
 
@@ -1078,10 +1083,11 @@ function Get-DatParentCloneIndex {
           }
         }
       }
-
-      $reader.Close()
     } catch {
       if ($Log) { & $Log ("1G1R: Fehler beim Streaming {0}: {1}" -f (Split-Path -Leaf $Path), $_.Exception.Message) }
+    } finally {
+      # BUG DAT-002 FIX: Ensure XmlReader is disposed even if an exception occurs
+      if ($reader) { $reader.Dispose() }
     }
   }
 

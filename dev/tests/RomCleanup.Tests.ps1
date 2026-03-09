@@ -212,29 +212,30 @@ Describe 'HTML Report Consistency' {
                 SizeBytes    = 1048576
             })
             
-            $tempHtml = Join-Path $env:TEMP "pester_report_$(Get-Random).html"
-            
+            $tempHtml = Join-Path $TestDrive "pester_report_$(Get-Random).html"
+
+            Push-Location $TestDrive
             try {
                 ConvertTo-HtmlReport -Report $report -HtmlPath $tempHtml `
                     -DupeGroups 0 -TotalDupes 0 -SavedBytes 0 `
                     -JunkCount 0 -JunkBytes 0 -BiosCount 0 `
                     -UniqueGames 1 -TotalScanned 1 -Mode 'DryRun'
-                
+
                 $htmlContent = Get-Content -LiteralPath $tempHtml -Raw
-                
+
                 # Extract reportTable section specifically (it has id="reportTable")
                 $reportTableMatch = [regex]::Match($htmlContent, '<table id="reportTable">(.*?)</table>', ([System.Text.RegularExpressions.RegexOptions]::Singleline))
                 $reportTableMatch.Success | Should -BeTrue -Because "reportTable should exist in HTML"
-                
+
                 $tableHtml = $reportTableMatch.Groups[1].Value
-                
+
                 # Count <th> in thead
                 $theadMatch = [regex]::Match($tableHtml, '<thead><tr>(.*?)</tr></thead>', ([System.Text.RegularExpressions.RegexOptions]::Singleline))
                 $thCount = 0
                 if ($theadMatch.Success) {
                     $thCount = ([regex]::Matches($theadMatch.Groups[1].Value, '<th[^>]*>')).Count
                 }
-                
+
                 # Count <td> in first data row of tbody
                 $tbodyMatch = [regex]::Match($tableHtml, '<tbody>(.*?)</tbody>', ([System.Text.RegularExpressions.RegexOptions]::Singleline))
                 $tdCount = 0
@@ -244,11 +245,12 @@ Describe 'HTML Report Consistency' {
                         $tdCount = ([regex]::Matches($firstRowMatch.Groups[1].Value, '<td[^>]*>')).Count
                     }
                 }
-                
+
                 $thCount | Should -BeGreaterThan 0 -Because "Should have at least one header"
                 $tdCount | Should -BeGreaterThan 0 -Because "Should have at least one data cell"
                 $thCount | Should -Be $tdCount -Because "reportTable should have matching th ($thCount) and td ($tdCount) counts"
             } finally {
+                Pop-Location
                 Remove-Item -LiteralPath $tempHtml -Force -ErrorAction SilentlyContinue
             }
         }
@@ -270,7 +272,8 @@ Describe 'HTML Report Consistency' {
                 SizeBytes    = 1048576
             })
 
-            $tempHtml = Join-Path $env:TEMP "pester_mode_encode_$(Get-Random).html"
+            $tempHtml = Join-Path $TestDrive "pester_mode_encode_$(Get-Random).html"
+            Push-Location $TestDrive
             try {
                 ConvertTo-HtmlReport -Report $report -HtmlPath $tempHtml `
                     -DupeGroups 0 -TotalDupes 0 -SavedBytes 0 `
@@ -281,6 +284,7 @@ Describe 'HTML Report Consistency' {
                 $htmlContent | Should -Match '&lt;script&gt;alert\(1\)&lt;/script&gt;'
                 $htmlContent | Should -Not -Match 'Modus:\s*<strong><script>alert\(1\)</script></strong>'
             } finally {
+                Pop-Location
                 Remove-Item -LiteralPath $tempHtml -Force -ErrorAction SilentlyContinue
             }
         }
@@ -309,7 +313,8 @@ Describe 'HTML Report Consistency' {
             $datIndex['PS2'] = [hashtable]::new([StringComparer]::OrdinalIgnoreCase)
             $datIndex['PS2']['h3'] = 'game-c'
 
-            $tempHtml = Join-Path $env:TEMP "pester_dat_completeness_$(Get-Random).html"
+            $tempHtml = Join-Path $TestDrive "pester_dat_completeness_$(Get-Random).html"
+            Push-Location $TestDrive
             try {
                 ConvertTo-HtmlReport -Report $report -HtmlPath $tempHtml `
                     -DupeGroups 0 -TotalDupes 0 -SavedBytes 0 `
@@ -323,6 +328,7 @@ Describe 'HTML Report Consistency' {
                 $htmlContent | Should -Match '<td>PS1</td><td class="sz">1</td><td class="sz">2</td><td class="sz">1</td>'
                 $htmlContent | Should -Match '<td>PS2</td><td class="sz">0</td><td class="sz">1</td><td class="sz">1</td>'
             } finally {
+                Pop-Location
                 Remove-Item -LiteralPath $tempHtml -Force -ErrorAction SilentlyContinue
             }
         }
@@ -1276,8 +1282,8 @@ Describe 'Start-Process ArgumentList Quoting' {
         }
         
         It 'ConvertTo-QuotedArg should handle null/empty gracefully' {
-            ConvertTo-QuotedArg -Value $null | Should -Be ''
-            ConvertTo-QuotedArg -Value '' | Should -Be ''
+            ConvertTo-QuotedArg -Value $null | Should -Be '""'
+            ConvertTo-QuotedArg -Value '' | Should -Be '""'
         }
         
         # Bug it would catch: Unicode characters in paths
@@ -1353,7 +1359,8 @@ Describe 'Security - HTML XSS' {
                     SizeBytes    = 1234
                 })
 
-                $tempHtml = Join-Path $env:TEMP "pester_xss_$(Get-Random).html"
+                $tempHtml = Join-Path $TestDrive "pester_xss_$(Get-Random).html"
+                Push-Location $TestDrive
                 ConvertTo-HtmlReport -Report $report -HtmlPath $tempHtml `
                     -DupeGroups 0 -TotalDupes 0 -SavedBytes 0 `
                     -JunkCount 0 -JunkBytes 0 -BiosCount 0 `
@@ -1363,6 +1370,7 @@ Describe 'Security - HTML XSS' {
                 $htmlContent | Should -Match '&lt;script&gt;alert\(1\)&lt;/script&gt;'
                 $htmlContent | Should -Not -Match '<script>alert\(1\)</script>'
             } finally {
+                Pop-Location
                 if ($tempHtml -and (Test-Path -LiteralPath $tempHtml)) {
                     Remove-Item -LiteralPath $tempHtml -Force -ErrorAction SilentlyContinue
                 }
@@ -1870,12 +1878,11 @@ Describe 'Region Detection' {
             Get-RegionTag -Name 'Game (World)' | Should -Be 'WORLD'
         }
         
-        # Bug it would catch: Language tags misidentified as regions
-        It 'Should not confuse language tags with region codes' {
-            # (Fr) alone is typically a language tag in No-Intro, not France region
-            # The script has special handling for this
+        # BUG-016: (Fr) is now a valid region token (France), so (Europe)+(Fr) = multi-region = WORLD
+        It 'Should detect (Europe) + (Fr) as multi-region WORLD after BUG-016 fr token fix' {
+            # With BUG-016 fix, fr maps to FR region, so two distinct regions produce WORLD
             $result = Get-RegionTag -Name 'Game (Europe) (Fr)'
-            $result | Should -Be 'EU' -Because 'Europe should take precedence over Fr language tag'
+            $result | Should -Be 'WORLD' -Because '(Europe)=EU and (Fr)=FR are two distinct regions, producing WORLD'
         }
         
         It 'Should detect multi-region as WORLD' {
@@ -2374,7 +2381,7 @@ Describe 'Review Strategy Additional Tests' {
     }
 
     It 'T21: ConvertTo-QuotedArg should handle null and path with spaces' {
-        (ConvertTo-QuotedArg $null) | Should -Be ''
+        (ConvertTo-QuotedArg $null) | Should -Be '""'
         (ConvertTo-QuotedArg 'C:\My Path\file.exe') | Should -Match '^".*"$'
     }
 
@@ -2605,15 +2612,15 @@ Describe 'Error Handling - Negative Tests' {
             $result | Should -Be 'GBA'
         }
 
-        It 'Console precedence matrix: folder should win over name/header/extension' {
+        It 'Console precedence matrix: disc header should win over folder/name/extension' {
             Mock -CommandName Get-DiscHeaderConsole -MockWith { return 'WII' }
             $script:CONSOLE_FOLDER_TYPE_CACHE = [hashtable]::new([StringComparer]::OrdinalIgnoreCase)
             $script:CONSOLE_TYPE_CACHE = [hashtable]::new([StringComparer]::OrdinalIgnoreCase)
 
-            # BUG-09 fix: root path is NOT used for folder detection.
-            # PS1 must be a relative subfolder within root.
+            # REF-DET-01: disc header (binary evidence) is stronger than folder name.
+            # Disc header returns WII, which takes priority over folder PS1.
             $result = Get-ConsoleType -RootPath 'C:\ROMs' -FilePath 'C:\ROMs\PS1\wii_game.iso' -Extension '.iso'
-            $result | Should -Be 'PS1'
+            $result | Should -Be 'WII'
         }
 
         It 'Console precedence matrix: disc header should win over filename when folder is neutral' {
@@ -2662,7 +2669,7 @@ Describe 'Error Handling - Negative Tests' {
         }
 
         It 'ConvertTo-HtmlReport should render UNKNOWN reason code and label columns' {
-            $tempHtml = Join-Path $env:TEMP "pester_unknown_reason_report_$(Get-Random).html"
+            $tempHtml = Join-Path $TestDrive "pester_unknown_reason_report_$(Get-Random).html"
             $reportRows = [System.Collections.Generic.List[psobject]]::new()
             $reportRows.Add([pscustomobject]@{
                 GameKey      = 'x'
@@ -2679,6 +2686,7 @@ Describe 'Error Handling - Negative Tests' {
                 SizeBytes    = 1
             })
 
+            Push-Location $TestDrive
             try {
                 ConvertTo-HtmlReport -Report $reportRows -HtmlPath $tempHtml `
                     -DupeGroups 0 -TotalDupes 0 -SavedBytes 0 `
@@ -2691,6 +2699,7 @@ Describe 'Error Handling - Negative Tests' {
                 $html | Should -Match 'ARCHIVE_TOOL_MISSING'
                 $html | Should -Match 'Archive: 7z nicht verfuegbar'
             } finally {
+                Pop-Location
                 if (Test-Path -LiteralPath $tempHtml) {
                     Remove-Item -LiteralPath $tempHtml -Force -ErrorAction SilentlyContinue
                 }

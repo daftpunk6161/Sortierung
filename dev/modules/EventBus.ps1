@@ -166,9 +166,7 @@ function Publish-RomEvent {
             $delivered++
         } catch {
             [void]$errors.Add([string]$_.Exception.Message)
-            if (-not $ContinueOnError) {
-                throw
-            }
+            # BUG EVBUS-002 FIX: Always continue to remaining subscribers (never abort the loop)
         }
     }
 

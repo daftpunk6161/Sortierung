@@ -183,7 +183,10 @@ function Assert-DirectoryExists {
   <# Ensures a directory exists, creating it (and parents) if needed. #>
   param([Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$Path)
   if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
-    [void](New-Item -ItemType Directory -Path $Path -Force)
+    # BUG FILEOPS-001 FIX: New-Item has no -LiteralPath in PS 5.1.
+    # Escape wildcard characters ([, ], *, ?) so -Path treats them literally.
+    $escapedPath = [WildcardPattern]::Escape($Path)
+    [void](New-Item -ItemType Directory -Path $escapedPath -Force)
   }
 }
 
@@ -207,7 +210,9 @@ function Write-JsonFile {
     [Parameter(Mandatory=$true)]$Data,
     [int]$Depth = 8
   )
-  $Data | ConvertTo-Json -Depth $Depth | Out-File -LiteralPath $Path -Encoding utf8 -Force
+  $tmpPath = $Path + '.tmp_write'
+  $Data | ConvertTo-Json -Depth $Depth | Out-File -LiteralPath $tmpPath -Encoding utf8 -Force
+  Move-Item -LiteralPath $tmpPath -Destination $Path -Force
 }
 
 function Get-DirectoriesSafe {
@@ -301,6 +306,7 @@ function Initialize-FileScanWatcher {
   $watcher = $null
   try {
     $watcher = New-Object System.IO.FileSystemWatcher
+    $watcher.InternalBufferSize = 65536
     $watcher.Path = $normalizedRoot
     $watcher.IncludeSubdirectories = $true
     $watcher.NotifyFilter = [IO.NotifyFilters]'FileName, DirectoryName, LastWrite, Size'
@@ -309,46 +315,55 @@ function Initialize-FileScanWatcher {
     $hash = [Math]::Abs(([string]$normalizedRoot).GetHashCode())
     $identifierPrefix = ('RomCleanup.ScanWatcher.{0}' -f $hash)
 
+    # BUG FILEOPS-004 FIX: Pass state dictionaries via -MessageData so event handlers
+    # (which run in an isolated scope) can access them via $Event.MessageData.
+    $messageData = @{
+      RootVersion  = $script:FILE_SCAN_ROOT_VERSION
+      ChangedPaths = $script:FILE_SCAN_CHANGED_PATHS
+    }
+
     $watchAction = {
       param($sender, $eventArgs)
 
       try {
+        $data = $Event.MessageData
         $rootPath = Resolve-RootPath -Path ([string]$sender.Path)
         if ([string]::IsNullOrWhiteSpace($rootPath)) { return }
-        if (-not $script:FILE_SCAN_ROOT_VERSION.ContainsKey($rootPath)) {
-          $script:FILE_SCAN_ROOT_VERSION[$rootPath] = 0
+        if (-not $data.RootVersion.ContainsKey($rootPath)) {
+          $data.RootVersion[$rootPath] = 0
         }
-        $script:FILE_SCAN_ROOT_VERSION[$rootPath] = [int]$script:FILE_SCAN_ROOT_VERSION[$rootPath] + 1
+        $data.RootVersion[$rootPath] = [int]$data.RootVersion[$rootPath] + 1
 
-        if (-not $script:FILE_SCAN_CHANGED_PATHS.ContainsKey($rootPath)) {
-          $script:FILE_SCAN_CHANGED_PATHS[$rootPath] = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        if (-not $data.ChangedPaths.ContainsKey($rootPath)) {
+          $data.ChangedPaths[$rootPath] = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
         }
 
         if ($eventArgs -and ($eventArgs.PSObject.Properties.Name -contains 'FullPath') -and -not [string]::IsNullOrWhiteSpace([string]$eventArgs.FullPath)) {
-          [void]$script:FILE_SCAN_CHANGED_PATHS[$rootPath].Add([string]$eventArgs.FullPath)
+          [void]$data.ChangedPaths[$rootPath].Add([string]$eventArgs.FullPath)
         }
         if ($eventArgs -and ($eventArgs.PSObject.Properties.Name -contains 'OldFullPath') -and -not [string]::IsNullOrWhiteSpace([string]$eventArgs.OldFullPath)) {
-          [void]$script:FILE_SCAN_CHANGED_PATHS[$rootPath].Add([string]$eventArgs.OldFullPath)
+          [void]$data.ChangedPaths[$rootPath].Add([string]$eventArgs.OldFullPath)
         }
       } catch { }
     }
 
-    Register-ObjectEvent -InputObject $watcher -EventName Changed -SourceIdentifier ($identifierPrefix + '.Changed') -Action $watchAction | Out-Null
-    Register-ObjectEvent -InputObject $watcher -EventName Created -SourceIdentifier ($identifierPrefix + '.Created') -Action $watchAction | Out-Null
-    Register-ObjectEvent -InputObject $watcher -EventName Deleted -SourceIdentifier ($identifierPrefix + '.Deleted') -Action $watchAction | Out-Null
-    Register-ObjectEvent -InputObject $watcher -EventName Renamed -SourceIdentifier ($identifierPrefix + '.Renamed') -Action $watchAction | Out-Null
+    Register-ObjectEvent -InputObject $watcher -EventName Changed -SourceIdentifier ($identifierPrefix + '.Changed') -Action $watchAction -MessageData $messageData | Out-Null
+    Register-ObjectEvent -InputObject $watcher -EventName Created -SourceIdentifier ($identifierPrefix + '.Created') -Action $watchAction -MessageData $messageData | Out-Null
+    Register-ObjectEvent -InputObject $watcher -EventName Deleted -SourceIdentifier ($identifierPrefix + '.Deleted') -Action $watchAction -MessageData $messageData | Out-Null
+    Register-ObjectEvent -InputObject $watcher -EventName Renamed -SourceIdentifier ($identifierPrefix + '.Renamed') -Action $watchAction -MessageData $messageData | Out-Null
 
     $errorAction = {
       param($sender, $eventArgs)
       try {
+        $data = $Event.MessageData
         $rootPath = Resolve-RootPath -Path ([string]$sender.Path)
-        if (-not [string]::IsNullOrWhiteSpace($rootPath) -and $script:FILE_SCAN_ROOT_VERSION.ContainsKey($rootPath)) {
-          $script:FILE_SCAN_ROOT_VERSION[$rootPath] = [int]$script:FILE_SCAN_ROOT_VERSION[$rootPath] + 1
+        if (-not [string]::IsNullOrWhiteSpace($rootPath) -and $data.RootVersion.ContainsKey($rootPath)) {
+          $data.RootVersion[$rootPath] = [int]$data.RootVersion[$rootPath] + 1
         }
         Write-Warning ('[FileScanWatcher] Buffer Overflow fuer Root: {0}' -f $rootPath)
       } catch { }
     }
-    Register-ObjectEvent -InputObject $watcher -EventName Error -SourceIdentifier ($identifierPrefix + '.Error') -Action $errorAction | Out-Null
+    Register-ObjectEvent -InputObject $watcher -EventName Error -SourceIdentifier ($identifierPrefix + '.Error') -Action $errorAction -MessageData $messageData | Out-Null
 
     $script:FILE_SCAN_WATCHERS[$normalizedRoot] = [pscustomobject]@{
       Watcher = $watcher
@@ -396,7 +411,11 @@ function Save-SqliteFileScanIndex {
       try {
         $fi = [System.IO.FileInfo]::new([string]$path)
         if (-not $fi.Exists) { continue }
-        $escapedPath = ([string]$fi.FullName).Replace('"', '""')
+        # BUG-013 FIX: Reject paths containing newline characters — they would corrupt
+        # the CSV format and break SQLite .import (each newline becomes a new CSV row).
+        $fullPath = [string]$fi.FullName
+        if ($fullPath.Contains("`n") -or $fullPath.Contains("`r")) { continue }
+        $escapedPath = $fullPath.Replace('"', '""')
         $escapedExt = ([string]$fi.Extension).Replace('"', '""')
         $line = ('"{0}",{1},{2},"{3}"' -f $escapedPath, [int64]$fi.Length, [int64]$fi.LastWriteTimeUtc.Ticks, $escapedExt)
         [void]$csvLines.Add($line)
@@ -805,10 +824,15 @@ function Move-ItemSafely {
   # BUG-042 FIX: Pre-check path length to avoid PathTooLongException crash
   $srcLen = ([string]$Source).Length
   $dstLen = ([string]$Dest).Length
-  if ($srcLen -gt 240 -or $dstLen -gt 240) {
+  $maxPathLen = 240
+  try {
+    $longPathEnabled = (Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled' -ErrorAction SilentlyContinue).LongPathsEnabled
+    if ($longPathEnabled -eq 1) { $maxPathLen = 32000 }
+  } catch { }
+  if ($srcLen -gt $maxPathLen -or $dstLen -gt $maxPathLen) {
     $maxLen = [Math]::Max($srcLen, $dstLen)
-    Write-Warning ('[FileOps] Move-ItemSafely: Pfad zu lang ({0} Zeichen, max 240): {1}' -f $maxLen, [IO.Path]::GetFileName($Source))
-    throw ('Move-ItemSafely: Path too long ({0} chars). Source or destination exceeds 240 character limit: {1}' -f $maxLen, [IO.Path]::GetFileName($Source))
+    Write-Warning ('[FileOps] Move-ItemSafely: Pfad zu lang ({0} Zeichen, max {1}): {2}' -f $maxLen, $maxPathLen, [IO.Path]::GetFileName($Source))
+    throw ('Move-ItemSafely: Path too long ({0} chars). Source or destination exceeds {1} character limit: {2}' -f $maxLen, $maxPathLen, [IO.Path]::GetFileName($Source))
   }
 
   try {

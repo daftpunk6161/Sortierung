@@ -63,14 +63,14 @@ if (Test-Path -LiteralPath $moduleListPath -PathType Leaf) {
 }
 
 $_moduleFiles = if (Get-Command Get-RomCleanupModuleFiles -ErrorAction SilentlyContinue) {
-    $profile = [string]$env:ROMCLEANUP_MODULE_PROFILE
-    if ([string]::IsNullOrWhiteSpace($profile) -and (Get-Variable -Scope Script -Name ROMCLEANUP_MODULE_PROFILE -ErrorAction SilentlyContinue)) {
-        $profile = [string]$script:ROMCLEANUP_MODULE_PROFILE
+    $_loaderProfile = [string]$env:ROMCLEANUP_MODULE_PROFILE
+    if ([string]::IsNullOrWhiteSpace($_loaderProfile) -and (Get-Variable -Scope Script -Name ROMCLEANUP_MODULE_PROFILE -ErrorAction SilentlyContinue)) {
+        $_loaderProfile = [string]$script:ROMCLEANUP_MODULE_PROFILE
     }
-    if ([string]::IsNullOrWhiteSpace($profile)) {
-        $profile = 'all'
+    if ([string]::IsNullOrWhiteSpace($_loaderProfile)) {
+        $_loaderProfile = 'all'
     }
-    @(Get-RomCleanupModuleFiles -Profile $profile)
+    @(Get-RomCleanupModuleFiles -Profile $_loaderProfile)
 } else {
     throw 'ModuleFileList.ps1 fehlt oder Get-RomCleanupModuleFiles ist nicht verfügbar.'
 }
@@ -86,9 +86,20 @@ if (-not (Get-Variable -Name RomCleanupLoadedModules -Scope Script -ErrorAction 
 foreach ($_mf in $_moduleFiles) {
     if ($script:RomCleanupLoadedModules.Contains([string]$_mf)) { continue }
     $_mfPath = Join-Path $script:RomCleanupModuleRoot $_mf
-    if (Test-Path -LiteralPath $_mfPath -PathType Leaf) {
-        . $_mfPath
-        [void]$script:RomCleanupLoadedModules.Add([string]$_mf)
+    # BUG LOADER-003 FIX: Validate resolved path stays within module root (prevent path traversal)
+    $_mfResolved = try { [System.IO.Path]::GetFullPath($_mfPath) } catch { '' }
+    if (-not $_mfResolved -or -not $_mfResolved.StartsWith($script:RomCleanupModuleRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        Write-Warning ('[Loader] Modul-Pfad ausserhalb Root ignoriert: {0}' -f $_mf)
+        continue
+    }
+    if (Test-Path -LiteralPath $_mfResolved -PathType Leaf) {
+        # LOADER-004 FIX: Per-file error handling so one broken module doesn't block all others
+        try {
+            . $_mfResolved
+            [void]$script:RomCleanupLoadedModules.Add([string]$_mf)
+        } catch {
+            Write-Warning ('[Loader] Modul konnte nicht geladen werden: {0} — {1}' -f $_mf, $_.Exception.Message)
+        }
     }
 }
 
@@ -99,7 +110,10 @@ foreach ($_mf in $_moduleFiles) {
 # via & from VSCode terminal) are invisible.  This promotion is idempotent and
 # harmless when the script scope already IS the global scope.
 # Skip during automated tests to preserve Pester mock isolation.
-if (-not $env:ROMCLEANUP_TESTMODE) {
+# BUG LOADER-002 FIX: Parse TESTMODE consistently — only 1/true/yes/on = active
+$_testModeFlag = [string]$env:ROMCLEANUP_TESTMODE
+$_isTestMode = (-not [string]::IsNullOrWhiteSpace($_testModeFlag)) -and (@('1','true','yes','on') -contains $_testModeFlag.Trim().ToLowerInvariant())
+if (-not $_isTestMode) {
     foreach ($_fn in (Get-ChildItem Function:)) {
         if ($_fn.ScriptBlock -and $_fn.ScriptBlock.File -and
             $_fn.ScriptBlock.File.StartsWith($script:RomCleanupModuleRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -131,7 +145,10 @@ function Import-RomCleanupFeatureModules {
         }
     }
     # Promote newly loaded functions to global scope (same rationale as main load loop above)
-    if (-not $env:ROMCLEANUP_TESTMODE) {
+    # BUG LOADER-002 FIX: Parse TESTMODE consistently — only 1/true/yes/on = active
+    $_tmFlag = [string]$env:ROMCLEANUP_TESTMODE
+    $_isTM = (-not [string]::IsNullOrWhiteSpace($_tmFlag)) -and (@('1','true','yes','on') -contains $_tmFlag.Trim().ToLowerInvariant())
+    if (-not $_isTM) {
         foreach ($fn in (Get-ChildItem Function:)) {
             if ($fn.ScriptBlock -and $fn.ScriptBlock.File -and
                 $fn.ScriptBlock.File.StartsWith($script:RomCleanupModuleRoot, [System.StringComparison]::OrdinalIgnoreCase) -and
@@ -143,4 +160,5 @@ function Import-RomCleanupFeatureModules {
     return @($loadedNow)
 }
 
-Remove-Variable -Name moduleListPath, _moduleFiles, _mf, _mfPath -ErrorAction SilentlyContinue
+# LOADER-005 FIX: Include $_loaderProfile and $_mfResolved in variable cleanup
+Remove-Variable -Name moduleListPath, _moduleFiles, _mf, _mfPath, _mfResolved, _loaderProfile, _testModeFlag, _isTestMode -ErrorAction SilentlyContinue

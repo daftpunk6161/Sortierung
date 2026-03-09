@@ -108,6 +108,12 @@ function Invoke-CsoToIso {
     }
   }
 
+  # BUG-014 FIX: Clean up partial output file after all retry attempts have failed,
+  # so we don't leave a zero-byte or corrupt file from the last attempt on disk.
+  if (Test-Path -LiteralPath $OutputPath) {
+    Remove-Item -LiteralPath $OutputPath -Force -ErrorAction SilentlyContinue
+  }
+
   return $false
 }
 
@@ -488,30 +494,30 @@ function Invoke-ConvertItem {
     }
 
     if ($sourceExt -eq '.cso') {
-    $cisoPath = $null
-    if ($script:TOOL_CACHE.ContainsKey('ciso')) {
-      $cachedCiso = [string]$script:TOOL_CACHE['ciso']
-      if ($cachedCiso -and (Test-Path -LiteralPath $cachedCiso)) { $cisoPath = $cachedCiso }
-    }
-    if (-not $cisoPath) {
-      $cisoPath = Find-ConversionTool -ToolName 'ciso'
-      if ($cisoPath) { $script:TOOL_CACHE['ciso'] = $cisoPath }
-    }
-    if (-not $cisoPath) {
-      if ($Log) { & $Log ('  SKIP (ciso fehlt): {0}' -f $mainPath) }
-      return (& $newOutcome 'SKIP' $null 'missing-ciso')
-    }
+      $cisoPath = $null
+      if ($script:TOOL_CACHE.ContainsKey('ciso')) {
+        $cachedCiso = [string]$script:TOOL_CACHE['ciso']
+        if ($cachedCiso -and (Test-Path -LiteralPath $cachedCiso)) { $cisoPath = $cachedCiso }
+      }
+      if (-not $cisoPath) {
+        $cisoPath = Find-ConversionTool -ToolName 'ciso'
+        if ($cisoPath) { $script:TOOL_CACHE['ciso'] = $cisoPath }
+      }
+      if (-not $cisoPath) {
+        if ($Log) { & $Log ('  SKIP (ciso fehlt): {0}' -f $mainPath) }
+        return (& $newOutcome 'SKIP' $null 'missing-ciso')
+      }
 
-    $tempIsoPath = Join-Path $env:TEMP ('rom_cso_unpack_' + [guid]::NewGuid().ToString('N') + '.iso')
-    [void]$tempFiles.Add($tempIsoPath)
+      $tempIsoPath = Join-Path $env:TEMP ('rom_cso_unpack_' + [guid]::NewGuid().ToString('N') + '.iso')
+      [void]$tempFiles.Add($tempIsoPath)
       if (-not (Invoke-CsoToIso -ToolPath $cisoPath -InputPath $sourcePath -OutputPath $tempIsoPath -TempFiles $tempFiles -Log $Log)) {
-      if (Test-Path -LiteralPath $tempIsoPath) { Remove-Item -LiteralPath $tempIsoPath -Force -ErrorAction SilentlyContinue }
-      return (& $newOutcome 'ERROR' $null 'ciso-failed' @{ Tool = 'ciso'; Source = $mainPath })
-    }
+        if (Test-Path -LiteralPath $tempIsoPath) { Remove-Item -LiteralPath $tempIsoPath -Force -ErrorAction SilentlyContinue }
+        return (& $newOutcome 'ERROR' $null 'ciso-failed' @{ Tool = 'ciso'; Source = $mainPath })
+      }
 
-    $sourcePath = $tempIsoPath
-    $sourceExt = '.iso'
-    $rootForMissing = $null
+      $sourcePath = $tempIsoPath
+      $sourceExt = '.iso'
+      $rootForMissing = $null
     }
 
     if ($sourceExt -eq '.cue') {
@@ -597,8 +603,8 @@ function Invoke-ConvertItem {
             $backupPath = Move-ConvertedSourceToBackup -Path $p -RetentionDays $backupSettings.RetentionDays -Log $Log
             if ($Log -and $backupPath) { & $Log ('  Backup: {0} -> {1}' -f $p, $backupPath) }
           } catch {
-            if ($Log) { & $Log ('  WARN: Backup fehlgeschlagen, lösche Quelle stattdessen: {0} ({1})' -f $p, $_.Exception.Message) }
-            Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+            # BUG CONV-005 FIX: Do NOT delete source when backup fails — preserve the original file
+            if ($Log) { & $Log ('  WARN: Backup fehlgeschlagen, Quelldatei wird beibehalten: {0} ({1})' -f $p, $_.Exception.Message) }
           }
         } else {
           Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
@@ -714,8 +720,12 @@ function New-ConversionRunspacePool {
     'Invoke-ConvertStrategyDolphinTool', 'Invoke-ConvertStrategy7z',
     'Invoke-CsoToIso', 'Test-ConvertedOutputVerified',
     'Get-ConversionBackupSettings', 'Move-ConvertedSourceToBackup',
+    # Convert.ps1 — BUG CONV-001/002/003/004 FIX: transitively called functions
+    'Invoke-ChdmanProcess', 'Get-TargetFormat',
+    'Format-ConversionErrorDetail', 'New-ConversionAuditRow',
     # Tools.ps1
-    'ConvertTo-QuotedArg', 'Find-ConversionTool', 'Invoke-NativeProcess', 'Invoke-7z',
+    'ConvertTo-QuotedArg', 'ConvertTo-ArgString', 'Test-ToolBinaryHash',
+    'Find-ConversionTool', 'Invoke-NativeProcess', 'Invoke-7z',
     'Test-ArchiveEntryPathsSafe', 'Get-ArchiveEntryPaths',
     'Get-ConsoleFromDolphinTool', 'Test-WbfsAccurateFromDolphinTool',
     'Expand-ArchiveToTemp', 'Find-DiscImageInDir',
@@ -947,6 +957,11 @@ function Invoke-ConvertBatchParallel {
 
         if ($OnProgress) { & $OnProgress $completedCount $Candidates.Count $job.Item.MainPath }
         $lastProgress.Restart()
+
+        # BUG CONV-006 FIX: Abort parallel batch if error rate exceeds 80% (systemic ISS failure)
+        if ($completedCount -ge 3 -and $errorCount -gt ($completedCount * 0.8)) {
+          throw ('Paralleler Modus: {0}/{1} Jobs fehlgeschlagen (>80%) — Fallback auf sequentiell.' -f $errorCount, $completedCount)
+        }
       }
 
       if ($completedCount -lt $jobs.Count -and $lastProgress.ElapsedMilliseconds -ge $maxNoProgressMs) {

@@ -50,7 +50,7 @@ function Get-SetReferencedFiles {
   }
 
   try {
-    $lines = Get-Content -LiteralPath $SetPath -ErrorAction Stop
+    $lines = Get-Content -LiteralPath $SetPath -Encoding UTF8 -ErrorAction Stop
     foreach ($line in $lines) {
       $reference = $null
       switch ($Format) {
@@ -85,7 +85,9 @@ function Get-SetReferencedFiles {
         }
       }
     }
-  } catch { }
+  } catch {
+    Write-Warning ('[SetParsing] Fehler: {0}' -f $_.Exception.Message)
+  }
 
   return $result
 }
@@ -251,7 +253,7 @@ function Get-M3URelatedFiles {
   if ($seen.Add($M3UPath)) { [void]$related.Add($M3UPath) }
 
   try {
-    $lines = Get-Content -LiteralPath $M3UPath -ErrorAction Stop
+    $lines = Get-Content -LiteralPath $M3UPath -Encoding UTF8 -ErrorAction Stop
     foreach ($l in $lines) {
       $l = $l.Trim()
       if ($l -eq '' -or $l.StartsWith('#')) { continue }
@@ -276,7 +278,9 @@ function Get-M3URelatedFiles {
         if ($seen.Add($sf)) { [void]$related.Add($sf) }
       }
     }
-  } catch { }
+  } catch {
+    Write-Warning ('[SetParsing] Fehler: {0}' -f $_.Exception.Message)
+  }
 
   return $related
 }
@@ -307,7 +311,7 @@ function Get-M3UMissingFiles {
   $missing = New-Object System.Collections.Generic.List[string]
 
   try {
-    $lines = Get-Content -LiteralPath $M3UPath -ErrorAction Stop
+    $lines = Get-Content -LiteralPath $M3UPath -Encoding UTF8 -ErrorAction Stop
     foreach ($l in $lines) {
       $l = $l.Trim()
       if ($l -eq '' -or $l.StartsWith('#')) { continue }
@@ -334,7 +338,7 @@ function Get-M3UMissingFiles {
       }
       foreach ($m in $subMissing) { [void]$missing.Add($m) }
     }
-  } catch { }
+  } catch { Write-Warning ('[SetParsing] Fehler: {0}' -f $_.Exception.Message) }
 
   return $missing
 }

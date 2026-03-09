@@ -3,6 +3,7 @@
 # ================================================================
 
 $script:AppState = $null
+$script:_AppStatePublishing = $false
 
 function Initialize-AppState {
   if ($script:AppState -is [hashtable]) { return }
@@ -91,15 +92,28 @@ function Set-AppStateValue {
     }
   }
 
+  $blockedKeys = @('AppState','AppStoreHistory','ErrorActionPreference','SETTINGS_PATH','_AppStatePublishing')
+  if ($blockedKeys -contains $Key) {
+    Write-Warning ('[AppState] Blocked key rejected: {0}' -f $Key)
+    return
+  }
+
   $script:AppState[$Key] = $Value
   Set-Variable -Scope Script -Name $Key -Value $Value -Force
 
   # Observer-Pattern: Publish AppState-Änderung über EventBus
-  if (Get-Command Publish-RomEvent -ErrorAction SilentlyContinue) {
+  if (-not $script:_AppStatePublishing) {
+    $script:_AppStatePublishing = $true
     try {
-      Publish-RomEvent -Topic 'AppState.Changed' -Data @{ Key = $Key; Value = $Value; Reason = $Reason } -Source 'AppState' -ContinueOnError
-    } catch {
-      Write-Verbose ('[AppState] EventBus publish failed for key ''{0}'': {1}' -f $Key, $_.Exception.Message)
+      if (Get-Command Publish-RomEvent -ErrorAction SilentlyContinue) {
+        try {
+          Publish-RomEvent -Topic 'AppState.Changed' -Data @{ Key = $Key; Value = $Value; Reason = $Reason } -Source 'AppState' -ContinueOnError
+        } catch {
+          Write-Verbose ('[AppState] EventBus publish failed for key ''{0}'': {1}' -f $Key, $_.Exception.Message)
+        }
+      }
+    } finally {
+      $script:_AppStatePublishing = $false
     }
   }
 
@@ -236,7 +250,9 @@ function Save-AppStoreRecovery {
     state = Get-AppStore
   }
 
-  Write-JsonFile -Path $Path -Data $payload -Depth 12
+  $tmpPath = $Path + '.tmp'
+  Write-JsonFile -Path $tmpPath -Data $payload -Depth 12
+  Move-Item -LiteralPath $tmpPath -Destination $Path -Force
   return $Path
 }
 

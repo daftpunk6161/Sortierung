@@ -12,6 +12,10 @@
     if ($script:WpfCancelToken) {
       try { $script:WpfCancelToken.Cancel() } catch { }
     }
+    # BUG GUI-001 FIX: Signal the background runspace's ManualResetEventSlim
+    if ($Ctx.ContainsKey('_activeBackgroundJob') -and $Ctx['_activeBackgroundJob'] -and $Ctx['_activeBackgroundJob'].CancelEvent) {
+      try { $Ctx['_activeBackgroundJob'].CancelEvent.Set() } catch { }
+    }
     if (Get-Command Set-AppRunState -ErrorAction SilentlyContinue) {
       try { [void](Set-AppRunState -State 'Canceling') } catch { }
     }

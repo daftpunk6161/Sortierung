@@ -144,6 +144,13 @@ function Test-ApiRunPayload {
     } catch {
       return ('Root path is invalid: {0}' -f $rootStr)
     }
+    # BUG API-007 FIX: Block UNC paths and drive roots
+    if ($normalized.StartsWith('\\')) {
+      return ('UNC/network paths are not allowed: {0}' -f $rootStr)
+    }
+    if ($normalized.Length -le 3 -and $normalized -match '^[A-Za-z]:\\?$') {
+      return ('Drive root paths are not allowed: {0}' -f $rootStr)
+    }
     if (-not (Test-Path -LiteralPath $normalized -PathType Container)) {
       return ('Root path does not exist or is not a directory: {0}' -f $rootStr)
     }
@@ -401,6 +408,9 @@ function Set-ApiCorsHeaders {
   $Response.Headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Api-Key'
   $Response.Headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
   $Response.Headers['Access-Control-Max-Age'] = '600'
+  # BUG-005 FIX: Remove headers that leak server information
+  $Response.Headers.Remove('Server')
+  $Response.Headers.Remove('X-Powered-By')
   if ($origin -ne '*') {
     $Response.Headers['Vary'] = 'Origin'
   }
@@ -430,12 +440,7 @@ function Resolve-ApiCorsOrigin {
 function Get-ApiClientIdentifier {
   param([Parameter(Mandatory=$true)]$Request)
 
-  $forwarded = [string]$Request.Headers['X-Forwarded-For']
-  if (-not [string]::IsNullOrWhiteSpace($forwarded)) {
-    $first = ([string]$forwarded).Split(',')[0].Trim()
-    if (-not [string]::IsNullOrWhiteSpace($first)) { return $first }
-  }
-
+  # BUG API-001 FIX: Always use RemoteEndPoint — X-Forwarded-For is spoofable
   if ($Request.RemoteEndPoint -and $Request.RemoteEndPoint.Address) {
     return [string]$Request.RemoteEndPoint.Address.ToString()
   }
@@ -506,10 +511,15 @@ function Read-ApiJsonBody {
 
   if (-not $Request.HasEntityBody) { return $null }
 
+  # BUG API-002 FIX: Enforce body size limit (1 MB) to prevent DoS
+  $maxBodyBytes = 1048576
+  if ($Request.ContentLength64 -gt $maxBodyBytes) { return $null }
+
   $reader = New-Object System.IO.StreamReader($Request.InputStream, $Request.ContentEncoding)
   try {
     $raw = $reader.ReadToEnd()
     if ([string]::IsNullOrWhiteSpace($raw)) { return $null }
+    if ($raw.Length -gt $maxBodyBytes) { return $null }
     return ($raw | ConvertFrom-Json -ErrorAction Stop)
   } finally {
     $reader.Dispose()
@@ -605,70 +615,72 @@ function ConvertTo-ApiCliArgumentList {
     [Parameter(Mandatory=$true)][string]$SummaryJsonPath
   )
 
-  $args = New-Object System.Collections.Generic.List[string]
-  [void]$args.Add('-NoProfile')
-  [void]$args.Add('-File')
-  [void]$args.Add((Join-Path (Get-RomCleanupRepoRoot) 'Invoke-RomCleanup.ps1'))
+  $cliArgs = New-Object System.Collections.Generic.List[string]
+  [void]$cliArgs.Add('-NoProfile')
+  [void]$cliArgs.Add('-File')
+  [void]$cliArgs.Add((Join-Path (Get-RomCleanupRepoRoot) 'Invoke-RomCleanup.ps1'))
 
-  [void]$args.Add('-Mode')
+  [void]$cliArgs.Add('-Mode')
   $mode = if ($Payload.PSObject.Properties.Name -contains 'mode' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.mode)) { [string]$Payload.mode } else { 'DryRun' }
-  [void]$args.Add($mode)
+  [void]$cliArgs.Add($mode)
 
   foreach ($root in @($Payload.roots | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })) {
-    [void]$args.Add('-Roots')
-    [void]$args.Add([string]$root)
+    [void]$cliArgs.Add('-Roots')
+    [void]$cliArgs.Add([string]$root)
   }
 
   if ($Payload.PSObject.Properties.Name -contains 'prefer') {
     foreach ($p in @($Payload.prefer)) {
       if ([string]::IsNullOrWhiteSpace([string]$p)) { continue }
-      [void]$args.Add('-Prefer')
-      [void]$args.Add([string]$p)
+      [void]$cliArgs.Add('-Prefer')
+      [void]$cliArgs.Add([string]$p)
     }
   }
 
   if ($Payload.PSObject.Properties.Name -contains 'extensions') {
     foreach ($ext in @($Payload.extensions)) {
       if ([string]::IsNullOrWhiteSpace([string]$ext)) { continue }
-      [void]$args.Add('-Extensions')
-      [void]$args.Add([string]$ext)
+      [void]$cliArgs.Add('-Extensions')
+      [void]$cliArgs.Add([string]$ext)
     }
   }
 
-  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'sortConsole' -Default $false)) { [void]$args.Add('-SortConsole') }
-  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'useDat' -Default $false)) { [void]$args.Add('-UseDat') }
-  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'datFallback' -Default $true) -Default $true) { [void]$args.Add('-DatFallback') }
-  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'convert' -Default $false)) { [void]$args.Add('-Convert') }
-  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'removeJunk' -Default $true) -Default $true) { [void]$args.Add('-RemoveJunk') }
-  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'aggressiveJunk' -Default $false)) { [void]$args.Add('-AggressiveJunk') }
-  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'aliasEditionKeying' -Default $false)) { [void]$args.Add('-AliasEditionKeying') }
-  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'separateBios' -Default $false)) { [void]$args.Add('-SeparateBios') }
-  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'use1g1r' -Default $false)) { [void]$args.Add('-Use1G1R') }
+  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'sortConsole' -Default $false)) { [void]$cliArgs.Add('-SortConsole') }
+  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'useDat' -Default $false)) { [void]$cliArgs.Add('-UseDat') }
+  # DatFallback and RemoveJunk are [bool] params with default $true.
+  # pwsh -File cannot pass bool values - omit to use default ($true),
+  # or skip entirely since -File mode can't set them to $false.
+  # These params should ideally be [switch] in the CLI; for now, always use defaults.
+  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'convert' -Default $false)) { [void]$cliArgs.Add('-Convert') }
+  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'aggressiveJunk' -Default $false)) { [void]$cliArgs.Add('-AggressiveJunk') }
+  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'aliasEditionKeying' -Default $false)) { [void]$cliArgs.Add('-AliasEditionKeying') }
+  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'separateBios' -Default $false)) { [void]$cliArgs.Add('-SeparateBios') }
+  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'use1g1r' -Default $false)) { [void]$cliArgs.Add('-Use1G1R') }
 
   if ($Payload.PSObject.Properties.Name -contains 'datRoot' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.datRoot)) {
-    [void]$args.Add('-DatRoot')
-    [void]$args.Add([string]$Payload.datRoot)
+    [void]$cliArgs.Add('-DatRoot')
+    [void]$cliArgs.Add([string]$Payload.datRoot)
   }
   if ($Payload.PSObject.Properties.Name -contains 'datHashType' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.datHashType)) {
-    [void]$args.Add('-DatHashType')
-    [void]$args.Add([string]$Payload.datHashType)
+    [void]$cliArgs.Add('-DatHashType')
+    [void]$cliArgs.Add([string]$Payload.datHashType)
   }
   if ($Payload.PSObject.Properties.Name -contains 'auditRoot' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.auditRoot)) {
-    [void]$args.Add('-AuditRoot')
-    [void]$args.Add([string]$Payload.auditRoot)
+    [void]$cliArgs.Add('-AuditRoot')
+    [void]$cliArgs.Add([string]$Payload.auditRoot)
   }
   if ($Payload.PSObject.Properties.Name -contains 'trashRoot' -and -not [string]::IsNullOrWhiteSpace([string]$Payload.trashRoot)) {
-    [void]$args.Add('-TrashRoot')
-    [void]$args.Add([string]$Payload.trashRoot)
+    [void]$cliArgs.Add('-TrashRoot')
+    [void]$cliArgs.Add([string]$Payload.trashRoot)
   }
 
-  [void]$args.Add('-SkipConfirm')
-  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'notifyAfterRun' -Default $false)) { [void]$args.Add('-NotifyAfterRun') }
-  [void]$args.Add('-EmitJsonSummary')
-  [void]$args.Add('-SummaryJsonPath')
-  [void]$args.Add($SummaryJsonPath)
+  [void]$cliArgs.Add('-SkipConfirm')
+  if (ConvertTo-ApiBoolean -Value (Get-ApiPayloadValue -Payload $Payload -Name 'notifyAfterRun' -Default $false)) { [void]$cliArgs.Add('-NotifyAfterRun') }
+  [void]$cliArgs.Add('-EmitJsonSummary')
+  [void]$cliArgs.Add('-SummaryJsonPath')
+  [void]$cliArgs.Add($SummaryJsonPath)
 
-  return @($args)
+  return @($cliArgs)
 }
 
 function New-ApiRunRecord {
@@ -739,7 +751,7 @@ function Start-ApiRun {
 
   $state = Get-ApiServerState
   # BUG-040 FIX: Synchronize check-and-set of ActiveRunId to prevent TOCTOU race
-  if (-not $state.ContainsKey('_SyncRoot')) { $state['_SyncRoot'] = [object]::new() }
+  if (-not $state.Contains('_SyncRoot')) { $state['_SyncRoot'] = [object]::new() }
   [System.Threading.Monitor]::Enter($state['_SyncRoot'])
   try {
     if ($state.ActiveRunId) {
@@ -753,7 +765,7 @@ function Start-ApiRun {
   $runId = [guid]::NewGuid().ToString('N')
   $summaryPath = Join-Path ([System.IO.Path]::GetTempPath()) ("romcleanup-api-run-{0}.json" -f $runId)
 
-  $args = ConvertTo-ApiCliArgumentList -Payload $Payload -SummaryJsonPath $summaryPath
+  $cliArgs = ConvertTo-ApiCliArgumentList -Payload $Payload -SummaryJsonPath $summaryPath
 
   $engine = Get-Command pwsh -ErrorAction SilentlyContinue
   if (-not $engine) { $engine = Get-Command powershell.exe -ErrorAction SilentlyContinue }
@@ -766,7 +778,7 @@ function Start-ApiRun {
   $psi.RedirectStandardError = $false
   $psi.UseShellExecute = $false
   $psi.CreateNoWindow = $true
-  $psi.Arguments = (($args | ForEach-Object { ConvertTo-QuotedArg ([string]$_) }) -join ' ')
+  $psi.Arguments = (($cliArgs | ForEach-Object { ConvertTo-QuotedArg ([string]$_) }) -join ' ')
 
   $proc = New-Object System.Diagnostics.Process
   $proc.StartInfo = $psi
@@ -829,7 +841,12 @@ function Invoke-RomCleanupApiRequest {
   $request = $Context.Request
 
   if ([string]::Equals([string]$request.HttpMethod, 'OPTIONS', [System.StringComparison]::OrdinalIgnoreCase)) {
-    Write-ApiJsonResponse -Context $Context -StatusCode 200 -Body ([ordered]@{ status = 'ok' })
+    # BUG-005 FIX: Return minimal CORS preflight response (204 No Content, no body)
+    $response = $Context.Response
+    $response.StatusCode = 204
+    Set-ApiCorsHeaders -Response $response
+    $response.ContentLength64 = 0
+    $response.OutputStream.Close()
     return
   }
 

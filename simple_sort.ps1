@@ -94,6 +94,25 @@ function Test-RomCleanupAutomatedTestMode {
 
 # ── Headless delegation ─────────────────────────────────────────────────────
 if ($Headless) {
+    # ENTRY-006 FIX: Enforce safety invariant M11 — TrashDir/BiosDir must not be a Root
+    foreach ($rootPath in @($Roots)) {
+        if ([string]::IsNullOrWhiteSpace($rootPath)) { continue }
+        $normalizedRootM11 = $null
+        try { $normalizedRootM11 = [System.IO.Path]::GetFullPath($rootPath).TrimEnd('\','/') } catch { $normalizedRootM11 = $rootPath }
+        $rootLeaf = [System.IO.Path]::GetFileName($normalizedRootM11)
+        if ($rootLeaf -ieq '_TRASH' -or $rootLeaf -ieq '_BIOS') {
+            Write-Warning ("Safety invariant M11 violated: Root path '{0}' uses reserved name '{1}'. Aborting." -f $rootPath, $rootLeaf)
+            exit 3
+        }
+        if (-not [string]::IsNullOrWhiteSpace($TrashRoot)) {
+            $normalizedTrash = $null
+            try { $normalizedTrash = [System.IO.Path]::GetFullPath($TrashRoot).TrimEnd('\','/') } catch { $normalizedTrash = $TrashRoot }
+            if ($normalizedTrash -ieq $normalizedRootM11) {
+                Write-Warning ("Safety invariant M11 violated: TrashRoot '{0}' is the same as Root '{1}'. Aborting." -f $TrashRoot, $rootPath)
+                exit 3
+            }
+        }
+    }
     $cliScript = Join-Path $PSScriptRoot 'Invoke-RomCleanup.ps1'
     if (-not (Test-Path -LiteralPath $cliScript -PathType Leaf)) {
         Write-Error "Invoke-RomCleanup.ps1 not found at: $cliScript"
@@ -114,7 +133,8 @@ if ($Headless) {
     if ($SkipConfirm)   { $fwd['SkipConfirm']   = $true }
     if ($Quiet)         { $fwd['Quiet']         = $true }
     & $cliScript @fwd
-    exit $LASTEXITCODE
+    $exitCode = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } else { if ($?) { 0 } else { 1 } }
+    exit $exitCode
 }
 
 # GUI-BLOCK-BEGIN – stripped by TestScriptLoader for unit tests
@@ -299,15 +319,17 @@ try {
     [void](Set-AppStateValue -Key 'ConsolePluginResult' -Value $pluginResult)
   }
 } catch {
-  [void](Set-AppStateValue -Key 'ConsolePluginError' -Value $_.Exception.Message)
+  if (Get-Command Set-AppStateValue -ErrorAction SilentlyContinue) {
+    [void](Set-AppStateValue -Key 'ConsolePluginError' -Value $_.Exception.Message)
+  }
 }
 
 # --- Load persisted theme preference -----------------------------------------
 $startupSettings = $null
 try {
   $startupSettings = Get-UserSettings
-  if ($startupSettings -and $startupSettings.general -and $startupSettings.general.theme) {
-    $savedTheme = [string]$startupSettings.general.theme
+  if ($startupSettings -and $startupSettings['general'] -and $startupSettings['general'] -is [hashtable] -and $startupSettings['general'].ContainsKey('theme') -and $startupSettings['general']['theme']) {
+    $savedTheme = [string]$startupSettings['general']['theme']
     if (($savedTheme -eq 'Dark' -or $savedTheme -eq 'Light') -and (Get-Command Initialize-DesignSystem -ErrorAction SilentlyContinue)) {
       [void](Initialize-DesignSystem -Theme $savedTheme)
     }
@@ -318,8 +340,8 @@ try {
 
 try {
   $updateRepo = $null
-  if ($startupSettings -and $startupSettings.general -and $startupSettings.general.updateRepo) {
-    $updateRepo = [string]$startupSettings.general.updateRepo
+  if ($startupSettings -and $startupSettings['general'] -and $startupSettings['general'] -is [hashtable] -and $startupSettings['general'].ContainsKey('updateRepo') -and $startupSettings['general']['updateRepo']) {
+    $updateRepo = [string]$startupSettings['general']['updateRepo']
   }
   if ([string]::IsNullOrWhiteSpace($updateRepo) -and $env:ROMCLEANUP_UPDATE_REPO) {
     $updateRepo = [string]$env:ROMCLEANUP_UPDATE_REPO
@@ -330,7 +352,9 @@ try {
     [void](Set-AppStateValue -Key 'UpdateCheckResult' -Value $updateResult)
   }
 } catch {
-  [void](Set-AppStateValue -Key 'UpdateCheckError' -Value $_.Exception.Message)
+  if (Get-Command Set-AppStateValue -ErrorAction SilentlyContinue) {
+    [void](Set-AppStateValue -Key 'UpdateCheckError' -Value $_.Exception.Message)
+  }
 }
 
 function Test-RequiredModuleFunctions {
@@ -461,6 +485,9 @@ function Start-StaProcess {
   try {
     # pwsh.exe (PS7) does not support -STA; only add it for powershell.exe
     $isPwsh = [System.IO.Path]::GetFileNameWithoutExtension($exe) -ieq 'pwsh'
+    # ENTRY-004: -ExecutionPolicy Bypass is required because the script is unsigned and
+    # users may have restrictive default policies. This is intentional for usability.
+    # The child process runs our own script, so the risk is limited to the same trust boundary.
     $argsList = @('-NoProfile', '-ExecutionPolicy', 'Bypass')
     if (-not $isPwsh) { $argsList += '-STA' }
     $argsList += @('-File', $ScriptPath) + $ExtraArgs
@@ -469,8 +496,16 @@ function Start-StaProcess {
       # Start-Process -WindowStyle Hidden is unreliable for console applications.
       $psi = New-Object System.Diagnostics.ProcessStartInfo
       $psi.FileName = $exe
+      # ENTRY-003 FIX: Use proper argument quoting to prevent injection.
+      # Escape embedded double quotes and wrap arguments containing spaces or special chars.
       $psi.Arguments = ($argsList | ForEach-Object {
-        if ($_ -match '\s') { '"{0}"' -f $_ } else { $_ }
+        $arg = [string]$_
+        if ($arg -eq '') { return '""' }
+        if ($arg -match '[\s"&|<>^]') {
+          # Escape embedded double quotes by doubling them, then wrap in double quotes
+          return '"{0}"' -f ($arg -replace '"', '\"')
+        }
+        return $arg
       }) -join ' '
       $psi.WorkingDirectory = $PSScriptRoot
       $psi.CreateNoWindow = $true

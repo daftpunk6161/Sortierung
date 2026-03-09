@@ -26,7 +26,7 @@
   },
   {
     "Name": "Mystery Title (En,Fr,De)",
-    "ExpectedRegion": "UNKNOWN",
+    "ExpectedRegion": "WORLD",
     "ExpectedKeyContains": "mystery title"
   },
   {

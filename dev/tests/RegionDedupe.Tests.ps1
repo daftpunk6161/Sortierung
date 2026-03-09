@@ -141,33 +141,37 @@ Describe 'Get-RegionTag - Mutation Kill M5, M6' {
     }
     
     Context 'Language vs Region Disambiguation (M6)' {
-        
-        It 'M6-KILL: (Fr) alone should NOT be detected as France when its a language tag' {
-            # No-Intro convention: (Fr) alone = French language, not France region
-            # The script checks RX_LANG to avoid this
+
+        It 'M6-KILL: (Europe) + (Fr) yields WORLD because fr is now a region token (BUG-016)' {
+            # BUG-016 FIX: fr is now a region token mapping to FR
+            # So (Europe)=EU + (Fr)=FR = two distinct regions = WORLD
             $result = Get-RegionTag -Name 'Game (Europe) (Fr)'
-            $result | Should -Be 'EU' -Because 'Europe takes precedence over Fr language'
+            $result | Should -Be 'WORLD' -Because '(Europe)=EU and (Fr)=FR are two distinct regions after BUG-016'
         }
-        
-        It 'M6-KILL: Language-only names should return UNKNOWN not country code' {
-            # If RX_LANG check is removed, (Fr) would match France
+
+        It 'M6-KILL: (En,Fr,De) yields WORLD because fr and de are region tokens (BUG-016)' {
+            # BUG-016 FIX: fr→FR and de→DE are region tokens, en is language-only
+            # Two distinct regions found = WORLD
             $result = Get-RegionTag -Name 'Game (En,Fr,De)'
-            $result | Should -Be 'UNKNOWN' -Because 'These are language tags, not regions'
+            $result | Should -Be 'WORLD' -Because 'fr→FR and de→DE are region tokens after BUG-016, multi-region = WORLD'
         }
-        
+
         It 'M6-KILL: Full country name should be detected even with language' {
             $result = Get-RegionTag -Name 'Game (France)'
             $result | Should -Be 'FR' -Because 'Full name France is a region'
         }
-        
-        It 'Should handle complex multi-language correctly' {
+
+        It 'Should handle complex multi-language correctly as WORLD (BUG-016)' {
+            # BUG-016: (Europe)=EU, (Fr)=FR, (De)=DE, (Es)=ES, (It)=IT = 5 regions = WORLD
             $result = Get-RegionTag -Name 'Game (Europe) (En,Fr,De,Es,It)'
-            $result | Should -Be 'EU' -Because 'Europe region with multiple languages'
+            $result | Should -Be 'WORLD' -Because 'Europe + multiple country-code region tokens = multi-region WORLD'
         }
 
-        It 'Language tags with non-region metadata should still be UNKNOWN' {
+        It 'Mixed language/region tokens with non-region metadata should return WORLD (BUG-016)' {
+            # BUG-016: fr→FR and de→DE are region tokens, en is language-only, Proto is ignored
+            # Two distinct regions = WORLD
             $result = Get-RegionTag -Name 'Game (En,Fr,De) (Proto)'
-            $result | Should -Be 'UNKNOWN'
+            $result | Should -Be 'WORLD' -Because 'fr→FR and de→DE are region tokens after BUG-016, multi-region = WORLD'
         }
     }
     

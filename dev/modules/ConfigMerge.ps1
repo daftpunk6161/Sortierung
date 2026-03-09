@@ -69,6 +69,15 @@ function Get-ConfigurationBaselineDefaults {
   }
 }
 
+function script:Test-ObjHasKey {
+  <# Helper: checks whether a key exists on a hashtable or PSCustomObject. #>
+  param($Obj, [string]$Key)
+  if ($Obj -is [System.Collections.IDictionary]) {
+    return $Obj.ContainsKey($Key)
+  }
+  return [bool]($Obj.PSObject.Properties[$Key])
+}
+
 function Get-MergedConfiguration {
   <#
   .SYNOPSIS
@@ -97,20 +106,28 @@ function Get-MergedConfiguration {
   # 2) User Settings
   $userSettings = Get-UserSettings
   if ($userSettings) {
-    if ($userSettings.PSObject.Properties.Name -contains 'general' -and $userSettings.general) {
-      $gen = $userSettings.general
-      foreach ($prop in $gen.PSObject.Properties) {
-        if ($merged.Contains($prop.Name)) {
-          $merged[$prop.Name] = $prop.Value
+    if ((script:Test-ObjHasKey $userSettings 'general') -and $userSettings['general']) {
+      $gen = $userSettings['general']
+      if ($gen -is [System.Collections.IDictionary]) {
+        foreach ($entry in $gen.GetEnumerator()) {
+          if ($merged.Contains($entry.Key)) {
+            $merged[$entry.Key] = $entry.Value
+          }
+        }
+      } else {
+        foreach ($prop in $gen.PSObject.Properties) {
+          if ($merged.Contains($prop.Name)) {
+            $merged[$prop.Name] = $prop.Value
+          }
         }
       }
     }
-    if ($userSettings.PSObject.Properties.Name -contains 'dat' -and $userSettings.dat) {
-      $dat = $userSettings.dat
-      if ($dat.PSObject.Properties.Name -contains 'datRoot' -and -not [string]::IsNullOrWhiteSpace([string]$dat.datRoot)) {
-        $merged['datRoot'] = [string]$dat.datRoot
-      } elseif ($dat.PSObject.Properties.Name -contains 'root' -and -not [string]::IsNullOrWhiteSpace([string]$dat.root)) {
-        $merged['datRoot'] = [string]$dat.root
+    if ((script:Test-ObjHasKey $userSettings 'dat') -and $userSettings['dat']) {
+      $dat = $userSettings['dat']
+      if ((script:Test-ObjHasKey $dat 'datRoot') -and -not [string]::IsNullOrWhiteSpace([string]$dat['datRoot'])) {
+        $merged['datRoot'] = [string]$dat['datRoot']
+      } elseif ((script:Test-ObjHasKey $dat 'root') -and -not [string]::IsNullOrWhiteSpace([string]$dat['root'])) {
+        $merged['datRoot'] = [string]$dat['root']
       }
     }
   }

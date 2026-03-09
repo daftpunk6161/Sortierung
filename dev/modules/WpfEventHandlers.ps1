@@ -1714,8 +1714,8 @@ function Initialize-WpfFromSettings {
     if (-not $s) { return }
 
     # Tool paths (data-driven)
-    if ($s.toolPaths) {
-      $tp = $s.toolPaths
+    if ($s['toolPaths']) {
+      $tp = $s['toolPaths']
       $toolMap = @(
         @{ Prop = 'chdman';      Ctrl = 'txtChdman';   VM = 'ToolChdman' }
         @{ Prop = 'dolphintool'; Ctrl = 'txtDolphin';  VM = 'ToolDolphin' }
@@ -1724,7 +1724,7 @@ function Initialize-WpfFromSettings {
         @{ Prop = 'ciso';        Ctrl = 'txtCiso';     VM = 'ToolCiso' }
       )
       foreach ($entry in $toolMap) {
-        $val = $tp.($entry.Prop)
+        $val = $tp[$entry.Prop]
         if ($val) {
           if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name $entry.VM -Value ([string]$val))) {
             $Ctx[$entry.Ctrl].Text = [string]$val
@@ -1734,13 +1734,13 @@ function Initialize-WpfFromSettings {
     }
 
     # DAT settings
-    if ($s.dat) {
-      $d = $s.dat
+    if ($s['dat']) {
+      $d = $s['dat']
       $loadedDatRoot = ''
-      if ($d.PSObject.Properties.Name -contains 'root' -and -not [string]::IsNullOrWhiteSpace([string]$d.root)) {
-        $loadedDatRoot = [string]$d.root
-      } elseif ($d.PSObject.Properties.Name -contains 'datRoot' -and -not [string]::IsNullOrWhiteSpace([string]$d.datRoot)) {
-        $loadedDatRoot = [string]$d.datRoot
+      if ($d.ContainsKey('root') -and -not [string]::IsNullOrWhiteSpace([string]$d['root'])) {
+        $loadedDatRoot = [string]$d['root']
+      } elseif ($d.ContainsKey('datRoot') -and -not [string]::IsNullOrWhiteSpace([string]$d['datRoot'])) {
+        $loadedDatRoot = [string]$d['datRoot']
       }
       if (-not [string]::IsNullOrWhiteSpace($loadedDatRoot)) {
         if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'DatRoot' -Value ([string]$loadedDatRoot))) {
@@ -1749,10 +1749,10 @@ function Initialize-WpfFromSettings {
       }
 
       $loadedDatHash = ''
-      if ($d.PSObject.Properties.Name -contains 'hashType' -and -not [string]::IsNullOrWhiteSpace([string]$d.hashType)) {
-        $loadedDatHash = [string]$d.hashType
-      } elseif ($d.PSObject.Properties.Name -contains 'hash' -and -not [string]::IsNullOrWhiteSpace([string]$d.hash)) {
-        $loadedDatHash = [string]$d.hash
+      if ($d.ContainsKey('hashType') -and -not [string]::IsNullOrWhiteSpace([string]$d['hashType'])) {
+        $loadedDatHash = [string]$d['hashType']
+      } elseif ($d.ContainsKey('hash') -and -not [string]::IsNullOrWhiteSpace([string]$d['hash'])) {
+        $loadedDatHash = [string]$d['hash']
       }
       if (-not [string]::IsNullOrWhiteSpace($loadedDatHash)) {
         $normalizedDatHash = $loadedDatHash.Trim().ToLowerInvariant()
@@ -1774,41 +1774,41 @@ function Initialize-WpfFromSettings {
           }
         }
       }
-      $datEnabled = ConvertTo-SafeBool $d.enabled
+      $datEnabled = ConvertTo-SafeBool $d['enabled']
       if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'UseDat' -Value $datEnabled)) {
         $Ctx['chkDatUse'].IsChecked = $datEnabled
       }
-      $datFallback = ConvertTo-SafeBool $d.fallback
+      $datFallback = ConvertTo-SafeBool $d['fallback']
       if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'DatFallback' -Value $datFallback)) {
         $Ctx['chkDatFallback'].IsChecked = $datFallback
       }
 
-      if ($d.PSObject.Properties.Name -contains 'map') {
-        Set-WpfDatMapFromSettings -Ctx $Ctx -DatMapEntries @($d.map)
+      if ($d.ContainsKey('map')) {
+        Set-WpfDatMapFromSettings -Ctx $Ctx -DatMapEntries @($d['map'])
       }
     }
 
     # General
-    if ($s.general) {
-      $g = $s.general
+    if ($s['general']) {
+      $g = $s['general']
       $selectionConfig = Get-WpfAdvancedSelectionConfig
-      if ($g.logLevel) {
+      if ($g['logLevel']) {
         foreach ($item in $Ctx['cmbLogLevel'].Items) {
-          if ([string]$item.Content -eq [string]$g.logLevel) {
+          if ([string]$item.Content -eq [string]$g['logLevel']) {
             $Ctx['cmbLogLevel'].SelectedItem = $item
             break
           }
         }
       }
-      if ($g.auditRoot)     { if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'AuditRoot' -Value ([string]$g.auditRoot))) { $Ctx['txtAuditRoot'].Text = [string]$g.auditRoot } }
-      if ($g.ps3DupesRoot)  { if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'Ps3DupesRoot' -Value ([string]$g.ps3DupesRoot))) { $Ctx['txtPs3Dupes'].Text = [string]$g.ps3DupesRoot } }
-      if ($g.PSObject.Properties.Name -contains 'trashRoot' -and -not [string]::IsNullOrWhiteSpace([string]$g.trashRoot)) {
-        if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'TrashRoot' -Value ([string]$g.trashRoot))) {
-          if ($Ctx.ContainsKey('txtTrash') -and $Ctx['txtTrash']) { $Ctx['txtTrash'].Text = [string]$g.trashRoot }
+      if ($g['auditRoot'])     { if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'AuditRoot' -Value ([string]$g['auditRoot']))) { $Ctx['txtAuditRoot'].Text = [string]$g['auditRoot'] } }
+      if ($g['ps3DupesRoot'])  { if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'Ps3DupesRoot' -Value ([string]$g['ps3DupesRoot']))) { $Ctx['txtPs3Dupes'].Text = [string]$g['ps3DupesRoot'] } }
+      if ($g.ContainsKey('trashRoot') -and -not [string]::IsNullOrWhiteSpace([string]$g['trashRoot'])) {
+        if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'TrashRoot' -Value ([string]$g['trashRoot']))) {
+          if ($Ctx.ContainsKey('txtTrash') -and $Ctx['txtTrash']) { $Ctx['txtTrash'].Text = [string]$g['trashRoot'] }
         }
       }
 
-      $preferValues = if ($g.PSObject.Properties.Name -contains 'prefer') { @(ConvertTo-WpfStringList -Value $g.prefer) } else { @() }
+      $preferValues = if ($g.ContainsKey('prefer')) { @(ConvertTo-WpfStringList -Value $g['prefer']) } else { @() }
       if ($preferValues.Count -eq 0) {
         # Auto-detect region from system locale when no saved preference exists
         $localeRegionMap = @{
@@ -1831,18 +1831,18 @@ function Initialize-WpfFromSettings {
       }
       Set-WpfCheckedValues -Ctx $Ctx -ControlMap $selectionConfig.PreferMap -Values $preferValues
 
-      if ($g.PSObject.Properties.Name -contains 'extensions' -and $selectionConfig.Contains('ExtensionsMap')) {
-        $extValues = @(ConvertTo-WpfStringList -Value $g.extensions)
+      if ($g.ContainsKey('extensions') -and $selectionConfig.Contains('ExtensionsMap')) {
+        $extValues = @(ConvertTo-WpfStringList -Value $g['extensions'])
         Set-WpfCheckedValues -Ctx $Ctx -ControlMap $selectionConfig.ExtensionsMap -Values $extValues
       }
 
-      if ($g.PSObject.Properties.Name -contains 'consolefilter' -and $selectionConfig.Contains('ConsoleMap')) {
-        $consoleValues = @(ConvertTo-WpfStringList -Value $g.consolefilter)
+      if ($g.ContainsKey('consolefilter') -and $selectionConfig.Contains('ConsoleMap')) {
+        $consoleValues = @(ConvertTo-WpfStringList -Value $g['consolefilter'])
         Set-WpfCheckedValues -Ctx $Ctx -ControlMap $selectionConfig.ConsoleMap -Values $consoleValues
       }
 
-      if ($g.PSObject.Properties.Name -contains 'jpkeepconsoles' -and $Ctx.ContainsKey('txtJpKeepConsoles') -and $Ctx['txtJpKeepConsoles']) {
-        $jpKeepValue = (@(ConvertTo-WpfStringList -Value $g.jpkeepconsoles) -join ',')
+      if ($g.ContainsKey('jpkeepconsoles') -and $Ctx.ContainsKey('txtJpKeepConsoles') -and $Ctx['txtJpKeepConsoles']) {
+        $jpKeepValue = (@(ConvertTo-WpfStringList -Value $g['jpkeepconsoles']) -join ',')
         if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'JpKeepConsoles' -Value $jpKeepValue)) {
           $Ctx['txtJpKeepConsoles'].Text = $jpKeepValue
         }
@@ -1861,10 +1861,10 @@ function Initialize-WpfFromSettings {
       foreach ($entry in $boolSettingsMap) {
         $propName = $entry.Prop
         $value = $null
-        if ($g.PSObject.Properties.Name -contains $propName) {
-          $value = ConvertTo-SafeBool $g.$propName
-        } elseif ($entry.Alt -and $g.PSObject.Properties.Name -contains $entry.Alt) {
-          $value = ConvertTo-SafeBool $g.($entry.Alt)
+        if ($g.ContainsKey($propName)) {
+          $value = ConvertTo-SafeBool $g[$propName]
+        } elseif ($entry.Alt -and $g.ContainsKey($entry.Alt)) {
+          $value = ConvertTo-SafeBool $g[$entry.Alt]
         }
         if ($null -ne $value -and $Ctx.ContainsKey($entry.Ctrl) -and $Ctx[$entry.Ctrl]) {
           if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name $entry.VM -Value $value)) {
@@ -1873,25 +1873,25 @@ function Initialize-WpfFromSettings {
         }
       }
       # ── CRC verify settings ─────────────────────────────────────────
-      if ($g.PSObject.Properties.Name -contains 'crcverifyscan' -and $Ctx.ContainsKey('chkCrcVerifyScan') -and $Ctx['chkCrcVerifyScan']) {
-        $crcScanVal = ConvertTo-SafeBool $g.crcverifyscan
+      if ($g.ContainsKey('crcverifyscan') -and $Ctx.ContainsKey('chkCrcVerifyScan') -and $Ctx['chkCrcVerifyScan']) {
+        $crcScanVal = ConvertTo-SafeBool $g['crcverifyscan']
         if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'CrcVerifyScan' -Value $crcScanVal)) {
           $Ctx['chkCrcVerifyScan'].IsChecked = $crcScanVal
         }
       }
-      if ($g.PSObject.Properties.Name -contains 'crcverifydat' -and $Ctx.ContainsKey('chkCrcVerifyDat') -and $Ctx['chkCrcVerifyDat']) {
-        $crcDatVal = ConvertTo-SafeBool $g.crcverifydat
+      if ($g.ContainsKey('crcverifydat') -and $Ctx.ContainsKey('chkCrcVerifyDat') -and $Ctx['chkCrcVerifyDat']) {
+        $crcDatVal = ConvertTo-SafeBool $g['crcverifydat']
         if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'CrcVerifyDat' -Value $crcDatVal)) {
           $Ctx['chkCrcVerifyDat'].IsChecked = $crcDatVal
         }
       }
-      if ($g.PSObject.Properties.Name -contains 'protectedpaths' -and $Ctx.ContainsKey('txtSafetyScope') -and $Ctx['txtSafetyScope']) {
-        if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'ProtectedPaths' -Value ([string]$g.protectedpaths))) {
-          $Ctx['txtSafetyScope'].Text = [string]$g.protectedpaths
+      if ($g.ContainsKey('protectedpaths') -and $Ctx.ContainsKey('txtSafetyScope') -and $Ctx['txtSafetyScope']) {
+        if (-not (Set-WpfViewModelProperty -Ctx $Ctx -Name 'ProtectedPaths' -Value ([string]$g['protectedpaths']))) {
+          $Ctx['txtSafetyScope'].Text = [string]$g['protectedpaths']
         }
       }
-      if ($g.PSObject.Properties.Name -contains 'locale' -and $Ctx.ContainsKey('cmbLocale') -and $Ctx['cmbLocale']) {
-        $targetLocale = [string]$g.locale
+      if ($g.ContainsKey('locale') -and $Ctx.ContainsKey('cmbLocale') -and $Ctx['cmbLocale']) {
+        $targetLocale = [string]$g['locale']
         foreach ($item in $Ctx['cmbLocale'].Items) {
           if ([string]$item.Content -eq $targetLocale) {
             $Ctx['cmbLocale'].SelectedItem = $item
@@ -1899,15 +1899,15 @@ function Initialize-WpfFromSettings {
           }
         }
       }
-      if ($g.PSObject.Properties.Name -contains 'theme') {
-        $themeValue = [string]$g.theme
+      if ($g.ContainsKey('theme')) {
+        $themeValue = [string]$g['theme']
         if ($themeValue -in @('dark','light') -and (Get-Command Set-AppStateValue -ErrorAction SilentlyContinue)) {
           try { [void](Set-AppStateValue -Key 'UITheme' -Value $themeValue) } catch { }
         }
       }
       # Restore expert mode toggle
-      if ($g.PSObject.Properties.Name -contains 'expertmode') {
-        $savedExpert = ConvertTo-SafeBool $g.expertmode
+      if ($g.ContainsKey('expertmode')) {
+        $savedExpert = ConvertTo-SafeBool $g['expertmode']
         if ($Ctx.ContainsKey('rbModeExperte') -and $Ctx['rbModeExperte']) {
           $Ctx['rbModeExperte'].IsChecked = $savedExpert
           if ($Ctx.ContainsKey('rbModeEinfach') -and $Ctx['rbModeEinfach']) {
@@ -2631,6 +2631,8 @@ function Start-WpfOperationAsync {
   try {
     if (Get-Command Start-BackgroundDedupe -ErrorAction SilentlyContinue) {
       $job = Start-BackgroundDedupe -DedupeParams $params
+      # BUG GUI-001 FIX: Store job in Ctx so $requestCancel can signal its CancelEvent
+      $Ctx['_activeBackgroundJob'] = $job
       if (Get-Command Set-AppRunState -ErrorAction SilentlyContinue) {
         try { [void](Set-AppRunState -State 'Running') } catch { }
       }
@@ -2673,10 +2675,14 @@ function Start-WpfOperationAsync {
     try {
       if ($job -and $job.PSObject.Properties['LogQueue'] -and $job.LogQueue) {
         $queuedLine = $null
-        while ($job.LogQueue.TryDequeue([ref]$queuedLine)) {
+        # BUG GUI-005 FIX: Limit drain to 200 entries per tick to prevent UI freeze
+        $drainCount = 0
+        $drainLimit = 200
+        while ($drainCount -lt $drainLimit -and $job.LogQueue.TryDequeue([ref]$queuedLine)) {
           if (-not [string]::IsNullOrWhiteSpace([string]$queuedLine)) {
             & $logCallback ([string]$queuedLine)
           }
+          $drainCount++
         }
       }
     } catch {
@@ -2872,9 +2878,24 @@ function Start-WpfOperationAsync {
 
       # DUP-04: Consolidated dispose
       Dispose-WpfBackgroundJob -Job $job
+      # BUG GUI-001 FIX: Clear the background job reference
+      if ($Ctx.ContainsKey('_activeBackgroundJob')) { $Ctx['_activeBackgroundJob'] = $null }
 
+      # BUG GUI-002 FIX: Transition through the correct RunState before going to Idle.
+      # Running → Completed/Failed/Canceled → Idle (direct Running → Idle is invalid)
       if (Get-Command Set-AppRunState -ErrorAction SilentlyContinue) {
-        try { [void](Set-AppRunState -State 'Idle') } catch { }
+        try {
+          $intermediateState = if ($wasCanceled) { 'Canceled' } elseif ($success) { 'Completed' } else { 'Failed' }
+          try { [void](Set-AppRunState -State $intermediateState) } catch { }
+          [void](Set-AppRunState -State 'Idle')
+        } catch {
+          # Force-reset if transition chain fails
+          try { [void](Set-AppRunState -State 'Idle' -Force) } catch { }
+        }
+      }
+      # Reset CancelRequested so the next run can proceed
+      if (Get-Command Set-AppStateValue -ErrorAction SilentlyContinue) {
+        try { Set-AppStateValue -Key 'CancelRequested' -Value $false } catch { }
       }
 
       Update-WpfProgress -Ctx $Ctx -Percent 100 -Detail 'Fertig'

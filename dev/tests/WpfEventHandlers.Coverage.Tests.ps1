@@ -126,21 +126,21 @@ Describe 'WpfEventHandlers coverage harness' {
         $ctx = New-MockCtx
 
         Mock -CommandName Get-UserSettings -MockWith {
-            [pscustomobject]@{
-                toolPaths = [pscustomobject]@{
+            @{
+                toolPaths = @{
                     chdman = 'D:\tools\chdman.exe'
                     dolphintool = 'D:\tools\DolphinTool.exe'
                     '7z' = 'D:\tools\7z.exe'
                     psxtract = 'D:\tools\psxtract.exe'
                     ciso = 'D:\tools\ciso.exe'
                 }
-                dat = [pscustomobject]@{
+                dat = @{
                     root = 'D:\dat'
                     hashType = 'md5'
                     enabled = $true
                     fallback = $false
                 }
-                general = [pscustomobject]@{
+                general = @{
                     logLevel = 'Warn'
                     auditRoot = 'D:\audit'
                     ps3DupesRoot = 'D:\ps3'
