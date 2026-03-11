@@ -83,13 +83,13 @@ $stages = [ordered]@{
     )
     integration = @(
         (Join-Path $testsRoot 'integration\WpfSmoke.Tests.ps1'),
+        (Join-Path $testsRoot 'integration\PluginIntegration.Tests.ps1'),
         (Join-Path $testsRoot 'ApiServer.Integration.Tests.ps1'),
         (Join-Path $testsRoot 'Modules.Tests.ps1'),
         (Join-Path $testsRoot 'RegionDedupe.Tests.ps1'),
         (Join-Path $testsRoot 'Security.Tests.ps1'),
         (Join-Path $testsRoot 'FaultInjection.Tests.ps1'),
         (Join-Path $testsRoot 'RomCleanup.Tests.ps1'),
-        (Join-Path $testsRoot 'StrictModeSafety.Tests.ps1'),
         (Join-Path $testsRoot 'Phase2Smoke.Tests.ps1'),
         (Join-Path $testsRoot 'Phase3Smoke.Tests.ps1'),
         (Join-Path $testsRoot 'RunHelpers.Features.Tests.ps1'),

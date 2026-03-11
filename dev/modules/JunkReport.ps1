@@ -57,7 +57,6 @@ function Get-JunkClassificationReason {
   )
 
   $aggressiveTags = @(
-    '\((?:Rev\s*[A-Z])\)'     # Revisionen (in aggressiv: entfernen)
     '\((?:Alt|Alternate)\)'
     '\((?:Bonus Disc)\)'
   )

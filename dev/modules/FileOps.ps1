@@ -6,6 +6,13 @@
 # Dependencies: Settings.ps1 (Get-AppStateValue)
 # ================================================================
 
+# BUG-06 FIX: Cache LongPathsEnabled registry value at module scope (never changes at runtime)
+$script:_LongPathsEnabled = $false
+try {
+  $lpVal = (Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled' -ErrorAction SilentlyContinue).LongPathsEnabled
+  if ($lpVal -eq 1) { $script:_LongPathsEnabled = $true }
+} catch { }
+
 # ----------------------------------------------------------------
 #  Path Utilities
 # ----------------------------------------------------------------
@@ -824,11 +831,7 @@ function Move-ItemSafely {
   # BUG-042 FIX: Pre-check path length to avoid PathTooLongException crash
   $srcLen = ([string]$Source).Length
   $dstLen = ([string]$Dest).Length
-  $maxPathLen = 240
-  try {
-    $longPathEnabled = (Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled' -ErrorAction SilentlyContinue).LongPathsEnabled
-    if ($longPathEnabled -eq 1) { $maxPathLen = 32000 }
-  } catch { }
+  $maxPathLen = if ($script:_LongPathsEnabled) { 32000 } else { 240 }
   if ($srcLen -gt $maxPathLen -or $dstLen -gt $maxPathLen) {
     $maxLen = [Math]::Max($srcLen, $dstLen)
     Write-Warning ('[FileOps] Move-ItemSafely: Pfad zu lang ({0} Zeichen, max {1}): {2}' -f $maxLen, $maxPathLen, [IO.Path]::GetFileName($Source))

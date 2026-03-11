@@ -60,7 +60,9 @@ function ConvertTo-HtmlAttributeSafe {
   param([string]$Value)
 
   if ($null -eq $Value) { return '' }
-  return [System.Net.WebUtility]::HtmlEncode([string]$Value)
+  $encoded = [System.Net.WebUtility]::HtmlEncode([string]$Value)
+  # Escape single quotes for safe use in single-quoted HTML attributes
+  return $encoded.Replace("'", '&#39;')
 }
 
 function ConvertTo-SafeCsvValue {
@@ -259,9 +261,10 @@ function ConvertTo-HtmlReport {
   } else {
     Write-Warning 'SEC-03: SecurityEventStream nicht geladen — HTML-Report hat keinen CSP-Header.'
     # REPORT-003 FIX: Fallback basic CSP meta tag when SecurityEventStream module isn't loaded
-    $cspTag = '<meta http-equiv="Content-Security-Policy" content="default-src ''none''; style-src ''unsafe-inline''; script-src ''unsafe-inline''; img-src data:;">'
+    $cspTag = '<meta http-equiv="Content-Security-Policy" content="default-src ''none''; style-src ''self''; script-src ''none''; img-src data:;">'
   }
   $header = @"
+<!-- saved from url=(0016)http://localhost -->
 <!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge">
 ${cspTag}
 <title>ROM Cleanup Report</title><style>

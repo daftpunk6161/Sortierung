@@ -49,6 +49,9 @@ function Save-ScanIndexCacheIfNeeded {
 }
 
 function New-SecureXmlReaderSettings {
+  # XXE-Schutz: DtdProcessing=Ignore ignoriert DTDs komplett (keine Entity-Expansion).
+  # XmlResolver=$null verhindert externe Ressourcen-Aufloesung (SSRF-Schutz).
+  # Ignore statt Prohibit, da reale DATs (No-Intro, Redump) DOCTYPE-Deklarationen enthalten.
   $s = New-Object System.Xml.XmlReaderSettings
   $s.DtdProcessing = [System.Xml.DtdProcessing]::Ignore
   $s.XmlResolver = $null
@@ -583,6 +586,11 @@ function Get-FileHashCached {
     $cacheKey = ('{0}|{1}' -f [string]$HashType, [string]$Path)
     $sharedCacheMode = $true
 
+    # OPT-04: Check LRU cache first (fast in-memory lookup) before ScanIndex (disk I/O)
+    if ($Cache.ContainsKey($cacheKey)) {
+      return (Get-LruCacheValue -Cache $script:FILE_HASH_LRU -Key $cacheKey)
+    }
+
     if (Get-Command Get-PathFingerprint -ErrorAction SilentlyContinue) {
       $fingerprint = Get-PathFingerprint -Path $Path
       if (-not [string]::IsNullOrWhiteSpace($fingerprint)) {
@@ -602,7 +610,6 @@ function Get-FileHashCached {
 
   if ($Cache.ContainsKey($cacheKey)) {
     if ($sharedCacheMode) {
-      # Touch via Get to update LRU order
       return (Get-LruCacheValue -Cache $script:FILE_HASH_LRU -Key $cacheKey)
     }
     return $Cache[$cacheKey]

@@ -1,13 +1,20 @@
+# ── .NET Build Artifacts ──
+**/bin/
+**/obj/
+*.nupkg
+*.snupkg
+
 # ── Generated Test & Coverage Artifacts ──
 coverage.xml
 test-err.txt
 test-out.txt
 _test_results.txt
 test-output.txt
+TestResults/
+**/TestResults/
 
-# ── Reports: keep only *-latest*, ignore timestamped ──
-reports/*
-!reports/*-latest.*
+# ── Reports: all generated, never commit ──
+reports/
 
 # ── Audit-Logs: runtime-generated, never commit ──
 audit-logs/
@@ -18,10 +25,7 @@ dev/reports/
 
 # ── Generated docs ──
 docs/openapi.generated.json
-docs/implementation/archive/
-
-# ── Stale / unknown origin ──
-PBP/
+docs/archive/
 
 # ── Editor / OS ──
 .vs/
@@ -30,6 +34,3 @@ PBP/
 Thumbs.db
 Desktop.ini
 .DS_Store
-
-# ── PowerShell module output ──
-*.nupkg

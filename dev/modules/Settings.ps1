@@ -205,6 +205,11 @@ function Invoke-SettingsMigration {
     $migrated['schemaVersion'] = 'settings-v1'
   }
 
+  if ($migrated.ContainsKey('toolPaths') -and $migrated.toolPaths -and -not ($migrated.toolPaths -is [hashtable])) {
+    $tpObj = @{}
+    foreach ($prop in $migrated.toolPaths.PSObject.Properties) { $tpObj[[string]$prop.Name] = $prop.Value }
+    $migrated.toolPaths = $tpObj
+  }
   if ($migrated.ContainsKey('dat') -and $migrated.dat -and -not ($migrated.dat -is [hashtable])) {
     $datObj = @{}
     foreach ($prop in $migrated.dat.PSObject.Properties) { $datObj[[string]$prop.Name] = $prop.Value }

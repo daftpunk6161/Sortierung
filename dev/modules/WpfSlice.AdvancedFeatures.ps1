@@ -1406,6 +1406,48 @@ function Register-WpfAdvancedFeatureHandlers {
         }
         if (-not $files) { Add-WpfLogLine -Ctx $Ctx -Line 'Konvertierungs-Schätzung: Keine Dateien gefunden.' -Level 'INFO'; return }
         $estimate = Get-ConversionSavingsEstimate -Files $files
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnConversionEstimate'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Konvertierungs-Schätzung' -Width 500 -Height 360
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Einsparungspotential durch Konvertierung'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $items = @(
+          "Dateien gesamt:        $($estimate.FileCount)"
+          "Konvertierbar:         $($estimate.ConvertibleCount)"
+          "Aktuelle Größe:        {0:N0} MB" -f ($estimate.TotalSizeBytes / 1MB)
+          "Geschätzte Einsparung: {0:N0} MB" -f ($estimate.TotalSavingsBytes / 1MB)
+          "Einsparung:            {0:P0}" -f $(if($estimate.TotalSizeBytes -gt 0){ $estimate.TotalSavingsBytes / $estimate.TotalSizeBytes } else { 0 })
+        )
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        foreach ($line in $items) { [void]$lb.Items.Add($line) }
+
+        if ($estimate.PSObject.Properties.Name -contains 'ByFormat' -and $estimate.ByFormat) {
+          foreach ($fmt in $estimate.ByFormat.GetEnumerator() | Select-Object -First 8) {
+            [void]$lb.Items.Add(("  {0,-8} → {1:N0} MB einsparbar" -f $fmt.Key, ($fmt.Value / 1MB)))
+          }
+        }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
         Add-WpfLogLine -Ctx $Ctx -Line ("Schätzung: {0:N0} MB einsparbar bei {1} Dateien" -f ($estimate.TotalSavingsBytes / 1MB), $estimate.FileCount) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Konvertierungs-Schätzung fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
@@ -1420,6 +1462,45 @@ function Register-WpfAdvancedFeatureHandlers {
         $roots = Get-AppStateValue 'RootPaths'
         if (-not $roots) { Add-WpfLogLine -Ctx $Ctx -Line 'Junk-Bericht: Keine Roots konfiguriert.' -Level 'WARNING'; return }
         $result = Invoke-RunJunkReportService -Roots $roots -Log { param($m) Add-WpfLogLine -Ctx $Ctx -Line $m -Level 'INFO' } -Ports @{}
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnJunkReport'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Junk-Bericht' -Width 600 -Height 450
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = "Junk-Bericht: $($result.JunkCount) Junk-Dateien gefunden"
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(1)
+        if ($result.PSObject.Properties.Name -contains 'Items' -and $result.Items) {
+          foreach ($item in $result.Items) {
+            $display = if ($item.PSObject.Properties.Name -contains 'Path') { $item.Path } else { $item.ToString() }
+            [void]$lb.Items.Add($display)
+          }
+        } else {
+          [void]$lb.Items.Add("$($result.JunkCount) Junk-Dateien gefunden")
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
         Add-WpfLogLine -Ctx $Ctx -Line ("Junk-Bericht: {0} Junk-Dateien gefunden" -f $result.JunkCount) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Junk-Bericht fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
@@ -1436,11 +1517,41 @@ function Register-WpfAdvancedFeatureHandlers {
         $roots = Get-AppStateValue 'RootPaths'
         if (-not $roots) { Add-WpfLogLine -Ctx $Ctx -Line 'ROM-Filter: Keine Roots.' -Level 'WARNING'; return }
         $results = Search-RomCollection -Roots $roots -Query $query
-        $count = ($results | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("ROM-Filter: {0} Treffer für '{1}'" -f $count, $query) -Level 'INFO'
-        foreach ($item in $results | Select-Object -First 20) {
-          Add-WpfLogLine -Ctx $Ctx -Line ("  {0}" -f $item.Name) -Level 'INFO'
+        $allResults = @($results)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnRomFilter'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title ('ROM-Filter — {0} Treffer' -f $allResults.Count) -Width 650 -Height 480
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = "Suche: '$query' — $($allResults.Count) Treffer"
+        $lblTitle.FontSize = 15; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($item in $allResults) {
+          $display = if ($item.PSObject.Properties.Name -contains 'Name') { $item.Name } else { $item.ToString() }
+          [void]$lb.Items.Add($display)
         }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("ROM-Filter fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1455,9 +1566,42 @@ function Register-WpfAdvancedFeatureHandlers {
         if (-not $roots) { Add-WpfLogLine -Ctx $Ctx -Line 'Duplikat-Heatmap: Keine Roots.' -Level 'WARNING'; return }
         $data = Get-DuplicateHeatmapData -Roots $roots
         if (-not $data -or $data.Count -eq 0) { Add-WpfLogLine -Ctx $Ctx -Line 'Duplikat-Heatmap: Keine Duplikate gefunden.' -Level 'INFO'; return }
-        foreach ($entry in $data | Select-Object -First 15) {
-          Add-WpfLogLine -Ctx $Ctx -Line ("{0}: {1} Duplikate" -f $entry.Console, $entry.DuplicateCount) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnDuplicateHeatmap'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Duplikat-Heatmap' -Width 560 -Height 420
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Duplikate nach Konsole'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $maxDupes = ($data | Measure-Object -Property DuplicateCount -Maximum).Maximum
+        foreach ($entry in $data | Sort-Object DuplicateCount -Descending) {
+          $barLen = if ($maxDupes -gt 0) { [math]::Max(1, [int](($entry.DuplicateCount / $maxDupes) * 30)) } else { 1 }
+          $bar = [string]::new([char]0x2588, $barLen)
+          [void]$lb.Items.Add(("{0,-20} {1,5} Duplikate  {2}" -f $entry.Console, $entry.DuplicateCount, $bar))
         }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Duplikat-Heatmap fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1468,13 +1612,46 @@ function Register-WpfAdvancedFeatureHandlers {
   if ($Ctx.ContainsKey('btnMissingRom') -and $Ctx['btnMissingRom']) {
     $Ctx['btnMissingRom'].add_Click({
       try {
-        Add-WpfLogLine -Ctx $Ctx -Line 'Fehlende ROMs: Analyse wird gestartet...' -Level 'INFO'
         $datIndex = Get-AppStateValue 'DatIndex'
         if (-not $datIndex) { Add-WpfLogLine -Ctx $Ctx -Line 'Fehlende ROMs: Kein DAT-Index geladen.' -Level 'WARNING'; return }
         $foundHashes = @(Get-AppStateValue 'FoundHashes')
         $result = Invoke-RunMissingRomService -DatIndex $datIndex -FoundHashes $foundHashes -Ports @{}
-        $count = ($result | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Fehlende ROMs: {0} fehlende Einträge gefunden" -f $count) -Level 'INFO'
+        $allMissing = @($result)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnMissingRom'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title ('Fehlende ROMs — {0} Einträge' -f $allMissing.Count) -Width 650 -Height 480
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = "$($allMissing.Count) fehlende ROMs laut DAT-Index"
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($entry in $allMissing) {
+          $display = if ($entry.PSObject.Properties.Name -contains 'Name') { $entry.Name } elseif ($entry.PSObject.Properties.Name -contains 'GameName') { $entry.GameName } else { $entry.ToString() }
+          [void]$lb.Items.Add($display)
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
+        Add-WpfLogLine -Ctx $Ctx -Line ("Fehlende ROMs: {0} fehlende Einträge" -f $allMissing.Count) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Fehlende ROMs fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1485,12 +1662,45 @@ function Register-WpfAdvancedFeatureHandlers {
   if ($Ctx.ContainsKey('btnCrossRootDupe') -and $Ctx['btnCrossRootDupe']) {
     $Ctx['btnCrossRootDupe'].add_Click({
       try {
-        Add-WpfLogLine -Ctx $Ctx -Line 'Cross-Root-Duplikate: Suche wird gestartet...' -Level 'INFO'
         $fileIndex = Get-AppStateValue 'FileIndex'
         if (-not $fileIndex) { Add-WpfLogLine -Ctx $Ctx -Line 'Cross-Root: Kein FileIndex vorhanden. Bitte zuerst DryRun ausführen.' -Level 'WARNING'; return }
         $result = Invoke-RunCrossRootDupeService -FileIndex $fileIndex -Progress { param($m) Add-WpfLogLine -Ctx $Ctx -Line $m -Level 'INFO' } -Ports @{}
-        $count = ($result | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Cross-Root: {0} Duplikatgruppen gefunden" -f $count) -Level 'INFO'
+        $allGroups = @($result)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnCrossRootDupe'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title ('Cross-Root-Duplikate — {0} Gruppen' -f $allGroups.Count) -Width 650 -Height 480
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = "$($allGroups.Count) Duplikatgruppen über Root-Ordner hinweg"
+        $lblTitle.FontSize = 15; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($group in $allGroups) {
+          $name = if ($group.PSObject.Properties.Name -contains 'Key') { $group.Key } else { $group.ToString() }
+          $paths = if ($group.PSObject.Properties.Name -contains 'Paths') { ($group.Paths -join ', ') } else { '' }
+          [void]$lb.Items.Add(("{0}  →  {1}" -f $name, $paths))
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Cross-Root-Duplikate fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1505,7 +1715,39 @@ function Register-WpfAdvancedFeatureHandlers {
         if ([string]::IsNullOrWhiteSpace($filePath)) { return }
         if (-not (Test-Path -LiteralPath $filePath)) { Add-WpfLogLine -Ctx $Ctx -Line 'Header-Analyse: Datei nicht gefunden.' -Level 'WARNING'; return }
         $header = Read-RomHeader -Path $filePath
-        Add-WpfLogLine -Ctx $Ctx -Line ("Header: System={0}, Title={1}, Region={2}" -f $header.System, $header.Title, $header.Region) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnHeaderAnalysis'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Header-Analyse' -Width 520 -Height 380
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'ROM-Header-Informationen'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 180
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Datei:   $(Split-Path $filePath -Leaf)")
+        foreach ($prop in $header.PSObject.Properties) {
+          [void]$lb.Items.Add(("{0,-14} {1}" -f ($prop.Name + ':'), $prop.Value))
+        }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Header-Analyse fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1519,7 +1761,51 @@ function Register-WpfAdvancedFeatureHandlers {
         $roots = Get-AppStateValue 'RootPaths'
         if (-not $roots) { Add-WpfLogLine -Ctx $Ctx -Line 'Vollständigkeit: Keine Roots.' -Level 'WARNING'; return }
         $report = Get-CompletenessReport -Roots $roots
-        Add-WpfLogLine -Ctx $Ctx -Line ("Vollständigkeit: {0:P0} komplett ({1}/{2})" -f $report.Percentage, $report.OwnedCount, $report.TotalCount) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnCompleteness'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Sammlungs-Vollständigkeit' -Width 480 -Height 340
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Vollständigkeits-Report'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        # Progress bar
+        $pBar = New-Object System.Windows.Controls.ProgressBar
+        $pBar.Minimum = 0; $pBar.Maximum = 100
+        $pBar.Value = [math]::Round($report.Percentage * 100, 1)
+        $pBar.Height = 28; $pBar.Margin = [System.Windows.Thickness]::new(0,0,0,8)
+        [void]$root.Children.Add($pBar)
+
+        $lblPct = New-Object System.Windows.Controls.TextBlock
+        $lblPct.Text = ('{0:P1} komplett — {1} von {2} ROMs vorhanden' -f $report.Percentage, $report.OwnedCount, $report.TotalCount)
+        $lblPct.FontSize = 14; $lblPct.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [void]$root.Children.Add($lblPct)
+
+        if ($report.PSObject.Properties.Name -contains 'ByConsole' -and $report.ByConsole) {
+          $lb = New-Object System.Windows.Controls.ListBox
+          $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+          $lb.FontSize = 12; $lb.MaxHeight = 120
+          $lb.Background = [System.Windows.Media.Brushes]::Transparent
+          foreach ($c in $report.ByConsole.GetEnumerator()) {
+            [void]$lb.Items.Add(("{0,-22} {1:P0}" -f $c.Key, $c.Value))
+          }
+          [void]$root.Children.Add($lb)
+        }
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Vollständigkeit fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1534,7 +1820,47 @@ function Register-WpfAdvancedFeatureHandlers {
         $plans = Get-ChildItem -Path $reportsDir -Filter 'move-plan-*.json' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 2
         if ($plans.Count -lt 2) { Add-WpfLogLine -Ctx $Ctx -Line 'DryRun-Vergleich: Mindestens 2 Move-Plans benötigt.' -Level 'WARNING'; return }
         $diff = Compare-DryRunResults -BaselinePath $plans[1].FullName -CurrentPath $plans[0].FullName
-        Add-WpfLogLine -Ctx $Ctx -Line ("DryRun-Diff: +{0} neu, -{1} entfernt, ~{2} geändert" -f $diff.Added, $diff.Removed, $diff.Changed) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnDryRunCompare'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'DryRun-Vergleich' -Width 560 -Height 400
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Vergleich der letzten zwei DryRun-Ergebnisse'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 160
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Baseline:  $($plans[1].Name)")
+        [void]$lb.Items.Add("Aktuell:   $($plans[0].Name)")
+        [void]$lb.Items.Add("")
+        [void]$lb.Items.Add(("+ Neu:      {0}" -f $diff.Added))
+        [void]$lb.Items.Add(("- Entfernt: {0}" -f $diff.Removed))
+        [void]$lb.Items.Add(("~ Geändert: {0}" -f $diff.Changed))
+        if ($diff.PSObject.Properties.Name -contains 'Details' -and $diff.Details) {
+          [void]$lb.Items.Add("")
+          foreach ($d in $diff.Details | Select-Object -First 15) {
+            [void]$lb.Items.Add(("  {0} {1}" -f $d.Action, $d.Name))
+          }
+        }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("DryRun-Vergleich fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1548,7 +1874,48 @@ function Register-WpfAdvancedFeatureHandlers {
         $roots = Get-AppStateValue 'RootPaths'
         if (-not $roots) { Add-WpfLogLine -Ctx $Ctx -Line 'Trend-Analyse: Keine Roots.' -Level 'WARNING'; return }
         $snapshot = New-TrendSnapshot -Roots $roots
-        Add-WpfLogLine -Ctx $Ctx -Line ("Trend-Snapshot erstellt: {0} Dateien, {1:N0} MB" -f $snapshot.FileCount, ($snapshot.TotalBytes / 1MB)) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnTrendAnalysis'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Trend-Analyse' -Width 520 -Height 360
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Sammlungs-Trend-Snapshot'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 140
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add(("Zeitstempel:  {0}" -f $snapshot.Timestamp))
+        [void]$lb.Items.Add(("Dateien:      {0}" -f $snapshot.FileCount))
+        [void]$lb.Items.Add(("Gesamtgröße:  {0:N0} MB" -f ($snapshot.TotalBytes / 1MB)))
+        if ($snapshot.PSObject.Properties.Name -contains 'QualityScore') {
+          [void]$lb.Items.Add(("Qualität:     {0:P0}" -f $snapshot.QualityScore))
+        }
+        if ($snapshot.PSObject.Properties.Name -contains 'ByConsole' -and $snapshot.ByConsole) {
+          [void]$lb.Items.Add("")
+          foreach ($c in $snapshot.ByConsole.GetEnumerator() | Select-Object -First 10) {
+            [void]$lb.Items.Add(("  {0,-18} {1} Dateien" -f $c.Key, $c.Value))
+          }
+        }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
+        Add-WpfLogLine -Ctx $Ctx -Line ("Trend-Snapshot: {0} Dateien, {1:N0} MB" -f $snapshot.FileCount, ($snapshot.TotalBytes / 1MB)) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Trend-Analyse fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1560,7 +1927,43 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnEmulatorCompat'].add_Click({
       try {
         $profile = New-EmulatorProfile
-        Add-WpfLogLine -Ctx $Ctx -Line ("Emulator-Profil: {0} Konsolen, {1} Emulatoren konfiguriert" -f $profile.ConsoleCount, $profile.EmulatorCount) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnEmulatorCompat'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Emulator-Kompatibilität' -Width 520 -Height 380
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Emulator-Profil'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 160
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add(("Konsolen:   {0}" -f $profile.ConsoleCount))
+        [void]$lb.Items.Add(("Emulatoren: {0}" -f $profile.EmulatorCount))
+        if ($profile.PSObject.Properties.Name -contains 'Mappings' -and $profile.Mappings) {
+          [void]$lb.Items.Add("")
+          foreach ($m in $profile.Mappings.GetEnumerator() | Select-Object -First 12) {
+            [void]$lb.Items.Add(("  {0,-18} → {1}" -f $m.Key, $m.Value))
+          }
+        }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Emulator-Kompatibilität fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1574,7 +1977,42 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnConversionPipeline'].add_Click({
       try {
         $pipeline = New-ConversionPipeline
-        Add-WpfLogLine -Ctx $Ctx -Line ("Konvertierungs-Pipeline erstellt: {0} Schritte" -f $pipeline.Steps.Count) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnConversionPipeline'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Konvertierungs-Pipeline' -Width 520 -Height 400
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("Pipeline: {0} Schritte konfiguriert" -f $pipeline.Steps.Count)
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 180
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        $stepIdx = 1
+        foreach ($step in $pipeline.Steps) {
+          $stepName = if ($step.PSObject.Properties.Name -contains 'Name') { $step.Name } else { $step.ToString() }
+          $stepFmt  = if ($step.PSObject.Properties.Name -contains 'Format') { " → $($step.Format)" } else { '' }
+          [void]$lb.Items.Add(("{0}. {1}{2}" -f $stepIdx, $stepName, $stepFmt))
+          $stepIdx++
+        }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Konvertierungs-Pipeline fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1588,7 +2026,41 @@ function Register-WpfAdvancedFeatureHandlers {
         $filePath = Show-WpfTextInputDialog -Window $Window -Title 'NKit-Konvertierung' -Prompt 'NKit-Dateipfad eingeben:' -DefaultValue ''
         if ([string]::IsNullOrWhiteSpace($filePath)) { return }
         $result = Invoke-NKitConversion -Path $filePath -Mode 'DryRun'
-        Add-WpfLogLine -Ctx $Ctx -Line ("NKit: {0} → {1}" -f $result.SourceFormat, $result.TargetFormat) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnNKitConvert'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'NKit-Konvertierung (DryRun)' -Width 480 -Height 300
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'NKit-Konvertierungs-Vorschau'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 100
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Datei:       $(Split-Path $filePath -Leaf)")
+        [void]$lb.Items.Add("Quellformat: $($result.SourceFormat)")
+        [void]$lb.Items.Add("Zielformat:  $($result.TargetFormat)")
+        if ($result.PSObject.Properties.Name -contains 'EstimatedSize') {
+          [void]$lb.Items.Add(("Geschätzt:   {0:N0} MB" -f ($result.EstimatedSize / 1MB)))
+        }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("NKit-Konvertierung fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1600,7 +2072,41 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnConvertQueue'].add_Click({
       try {
         $queue = Invoke-RunConvertQueueService -Operation 'Create' -Items @() -Ports @{}
-        Add-WpfLogLine -Ctx $Ctx -Line ("Konvert-Warteschlange: {0} Einträge" -f $queue.Items.Count) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnConvertQueue'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Konvert-Warteschlange' -Width 520 -Height 380
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("Warteschlange: {0} Einträge" -f $queue.Items.Count)
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($item in $queue.Items) {
+          $display = if ($item.PSObject.Properties.Name -contains 'Name') { $item.Name } else { $item.ToString() }
+          [void]$lb.Items.Add($display)
+        }
+        if ($queue.Items.Count -eq 0) { [void]$lb.Items.Add('(Warteschlange ist leer — Dateien über Konvertierungs-Pipeline hinzufügen)') }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Konvert-Warteschlange fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1614,7 +2120,46 @@ function Register-WpfAdvancedFeatureHandlers {
         $roots = Get-AppStateValue 'RootPaths'
         if (-not $roots) { Add-WpfLogLine -Ctx $Ctx -Line 'Konvertierungs-Verifizierung: Keine Roots.' -Level 'WARNING'; return }
         $result = Invoke-BatchVerify -Roots $roots
-        Add-WpfLogLine -Ctx $Ctx -Line ("Verifizierung: {0} OK, {1} fehlerhaft" -f $result.Passed, $result.Failed) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnConversionVerify'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Konvertierungs-Verifizierung' -Width 500 -Height 360
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Verifizierungsergebnis'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 140
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add(("Bestanden:  {0}" -f $result.Passed))
+        [void]$lb.Items.Add(("Fehlerhaft: {0}" -f $result.Failed))
+        $total = $result.Passed + $result.Failed
+        if ($total -gt 0) { [void]$lb.Items.Add(("Erfolgsrate: {0:P1}" -f ($result.Passed / $total))) }
+        if ($result.PSObject.Properties.Name -contains 'FailedFiles' -and $result.FailedFiles) {
+          [void]$lb.Items.Add("")
+          [void]$lb.Items.Add("Fehlerhafte Dateien:")
+          foreach ($f in $result.FailedFiles | Select-Object -First 15) {
+            [void]$lb.Items.Add(("  ✗ {0}" -f $f))
+          }
+        }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Konvertierungs-Verifizierung fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1626,9 +2171,40 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnFormatPriority'].add_Click({
       try {
         $priorities = Get-FormatPriority
-        foreach ($p in $priorities | Select-Object -First 10) {
-          Add-WpfLogLine -Ctx $Ctx -Line ("  {0}: Priorität {1}" -f $p.Format, $p.Priority) -Level 'INFO'
+        $allPrios = @($priorities)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnFormatPriority'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Format-Prioritäten' -Width 480 -Height 400
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Format-Prioritäten pro Konsole'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($p in $allPrios) {
+          [void]$lb.Items.Add(("{0,-10} Priorität {1}" -f $p.Format, $p.Priority))
         }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Format-Priorität fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1647,9 +2223,44 @@ function Register-WpfAdvancedFeatureHandlers {
           }
         }
         if (-not $files) { Add-WpfLogLine -Ctx $Ctx -Line 'Parallel-Hashing: Keine Dateien.' -Level 'INFO'; return }
+        Add-WpfLogLine -Ctx $Ctx -Line 'Parallel-Hashing gestartet...' -Level 'INFO'
         $result = Invoke-RunParallelHashService -Files @($files) -Algorithm 'SHA1' -Progress { param($m) Add-WpfLogLine -Ctx $Ctx -Line $m -Level 'INFO' } -Ports @{}
-        $count = ($result | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Parallel-Hashing: {0} Dateien gehasht" -f $count) -Level 'INFO'
+        $allHashes = @($result)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnParallelHashing'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title ('Parallel-Hashing — {0} Dateien' -f $allHashes.Count) -Width 650 -Height 460
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("$($allHashes.Count) Dateien gehasht (SHA1)")
+        $lblTitle.FontSize = 15; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 11
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($h in $allHashes) {
+          $name = if ($h.PSObject.Properties.Name -contains 'Name') { $h.Name } elseif ($h.PSObject.Properties.Name -contains 'Path') { Split-Path $h.Path -Leaf } else { $h.ToString() }
+          $hash = if ($h.PSObject.Properties.Name -contains 'Hash') { $h.Hash.Substring(0, [math]::Min(16, $h.Hash.Length)) + '...' } else { '' }
+          [void]$lb.Items.Add(("{0,-40} {1}" -f $name, $hash))
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Parallel-Hashing fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1661,8 +2272,41 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnGpuHashing'].add_Click({
       try {
         $available = Test-GpuHashingAvailable
-        $status = if ($available) { 'GPU-Hashing verfügbar und aktiv' } else { 'GPU-Hashing nicht verfügbar (Fallback: CPU)' }
-        Add-WpfLogLine -Ctx $Ctx -Line $status -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnGpuHashing'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'GPU-Hashing Status' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'GPU-Hashing-Unterstützung'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $dot = New-Object System.Windows.Shapes.Ellipse
+        $dot.Width = 20; $dot.Height = 20
+        $dot.Fill = if ($available) { [System.Windows.Media.Brushes]::LimeGreen } else { [System.Windows.Media.Brushes]::OrangeRed }
+        $dot.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Left
+        $dot.Margin = [System.Windows.Thickness]::new(0,0,0,8)
+        [void]$root.Children.Add($dot)
+
+        $lblStatus = New-Object System.Windows.Controls.TextBlock
+        $lblStatus.Text = if ($available) { 'GPU-Hashing ist verfügbar und aktiv (OpenCL/CUDA erkannt)' } else { 'GPU-Hashing nicht verfügbar — Fallback auf CPU-Hashing' }
+        $lblStatus.FontSize = 13; $lblStatus.TextWrapping = [System.Windows.TextWrapping]::Wrap
+        $lblStatus.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblStatus)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("GPU-Hashing fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1677,14 +2321,46 @@ function Register-WpfAdvancedFeatureHandlers {
       try {
         Add-WpfLogLine -Ctx $Ctx -Line 'DAT Auto-Update: Prüfe auf Aktualisierungen...' -Level 'INFO'
         $updates = Test-DatUpdateAvailable
-        if ($updates -and $updates.Count -gt 0) {
-          Add-WpfLogLine -Ctx $Ctx -Line ("DAT-Updates verfügbar: {0} Quellen" -f $updates.Count) -Level 'INFO'
-          foreach ($u in $updates | Select-Object -First 5) {
-            Add-WpfLogLine -Ctx $Ctx -Line ("  {0}: {1}" -f $u.Source, $u.Status) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnDatAutoUpdate'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'DAT Auto-Update' -Width 520 -Height 380
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $hasUpdates = ($updates -and $updates.Count -gt 0)
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = if ($hasUpdates) { "$($updates.Count) DAT-Updates verfügbar" } else { 'Alle DATs sind aktuell' }
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        if ($hasUpdates) {
+          foreach ($u in $updates) {
+            $src = if ($u.PSObject.Properties.Name -contains 'Source') { $u.Source } else { $u.ToString() }
+            $st  = if ($u.PSObject.Properties.Name -contains 'Status') { $u.Status } else { 'Update verfügbar' }
+            [void]$lb.Items.Add(("{0,-24} {1}" -f $src, $st))
           }
         } else {
-          Add-WpfLogLine -Ctx $Ctx -Line 'DAT Auto-Update: Alle DATs sind aktuell.' -Level 'INFO'
+          [void]$lb.Items.Add('Keine Updates verfügbar — alle DAT-Quellen sind auf dem neuesten Stand.')
         }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("DAT Auto-Update fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1698,7 +2374,44 @@ function Register-WpfAdvancedFeatureHandlers {
         $datRoot = Get-AppStateValue 'DatRoot'
         if ([string]::IsNullOrWhiteSpace($datRoot)) { Add-WpfLogLine -Ctx $Ctx -Line 'DAT-Diff: Kein DAT-Root konfiguriert.' -Level 'WARNING'; return }
         $diff = Compare-DatVersions -DatRoot $datRoot
-        Add-WpfLogLine -Ctx $Ctx -Line ("DAT-Diff: +{0} neu, -{1} entfernt, ~{2} geändert" -f $diff.Added, $diff.Removed, $diff.Changed) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnDatDiffViewer'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'DAT-Diff-Viewer' -Width 540 -Height 400
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'DAT-Versions-Vergleich'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 180
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add(("+ Neu:      {0} Einträge" -f $diff.Added))
+        [void]$lb.Items.Add(("- Entfernt: {0} Einträge" -f $diff.Removed))
+        [void]$lb.Items.Add(("~ Geändert: {0} Einträge" -f $diff.Changed))
+        if ($diff.PSObject.Properties.Name -contains 'Details' -and $diff.Details) {
+          [void]$lb.Items.Add("")
+          foreach ($d in $diff.Details | Select-Object -First 20) {
+            [void]$lb.Items.Add(("  {0}" -f $d))
+          }
+        }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("DAT-Diff fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1712,8 +2425,42 @@ function Register-WpfAdvancedFeatureHandlers {
         $filePath = Show-WpfTextInputDialog -Window $Window -Title 'TOSEC-DAT' -Prompt 'TOSEC-DAT-Dateipfad eingeben:' -DefaultValue ''
         if ([string]::IsNullOrWhiteSpace($filePath)) { return }
         $result = ConvertFrom-TosecDat -Path $filePath
-        $count = ($result | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("TOSEC-DAT: {0} Einträge importiert" -f $count) -Level 'INFO'
+        $allEntries = @($result)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnTosecDat'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title ('TOSEC-DAT — {0} Einträge' -f $allEntries.Count) -Width 600 -Height 450
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("$($allEntries.Count) Einträge aus TOSEC-DAT importiert")
+        $lblTitle.FontSize = 15; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($entry in $allEntries | Select-Object -First 100) {
+          $display = if ($entry.PSObject.Properties.Name -contains 'Name') { $entry.Name } else { $entry.ToString() }
+          [void]$lb.Items.Add($display)
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
+        Add-WpfLogLine -Ctx $Ctx -Line ("TOSEC-DAT: {0} Einträge importiert" -f $allEntries.Count) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("TOSEC-DAT fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1724,8 +2471,44 @@ function Register-WpfAdvancedFeatureHandlers {
   if ($Ctx.ContainsKey('btnCustomDatEditor') -and $Ctx['btnCustomDatEditor']) {
     $Ctx['btnCustomDatEditor'].add_Click({
       try {
+        $datName = Show-WpfTextInputDialog -Window $Window -Title 'Custom-DAT-Editor' -Prompt 'Name für neues Custom-DAT:' -DefaultValue 'MeinCustomDAT'
+        if ([string]::IsNullOrWhiteSpace($datName)) { return }
         $dat = New-CustomDat
-        Add-WpfLogLine -Ctx $Ctx -Line ("Custom-DAT erstellt: {0}" -f $dat.Name) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnCustomDatEditor'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Custom-DAT-Editor' -Width 500 -Height 350
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("Custom-DAT: $datName")
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 140
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Name:      $($dat.Name)")
+        if ($dat.PSObject.Properties.Name -contains 'Format') { [void]$lb.Items.Add("Format:    $($dat.Format)") }
+        if ($dat.PSObject.Properties.Name -contains 'EntryCount') { [void]$lb.Items.Add("Einträge:  $($dat.EntryCount)") }
+        [void]$lb.Items.Add("")
+        [void]$lb.Items.Add("Das Custom-DAT kann über den DAT-Root geladen werden.")
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
+        Add-WpfLogLine -Ctx $Ctx -Line ("Custom-DAT erstellt: {0}" -f $datName) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Custom-DAT-Editor fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1738,7 +2521,40 @@ function Register-WpfAdvancedFeatureHandlers {
       try {
         $roots = Get-AppStateValue 'RootPaths'
         if (-not $roots) { Add-WpfLogLine -Ctx $Ctx -Line 'Hash-DB: Keine Roots.' -Level 'WARNING'; return }
+        Add-WpfLogLine -Ctx $Ctx -Line 'Hash-Datenbank: Export wird erstellt...' -Level 'INFO'
         $db = New-HashDatabase -Roots $roots
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnHashDatabaseExport'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Hash-Datenbank-Export' -Width 480 -Height 320
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Hash-Datenbank exportiert'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 100
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add(("Einträge:  {0}" -f $db.EntryCount))
+        if ($db.PSObject.Properties.Name -contains 'OutputPath') { [void]$lb.Items.Add("Pfad:      $($db.OutputPath)") }
+        if ($db.PSObject.Properties.Name -contains 'Algorithm') { [void]$lb.Items.Add("Algorithmus: $($db.Algorithm)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
         Add-WpfLogLine -Ctx $Ctx -Line ("Hash-Datenbank: {0} Einträge exportiert" -f $db.EntryCount) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Hash-Datenbank fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
@@ -1755,6 +2571,38 @@ function Register-WpfAdvancedFeatureHandlers {
         $name = Show-WpfTextInputDialog -Window $Window -Title 'Smart Collection' -Prompt 'Name der Sammlung:' -DefaultValue 'Meine Sammlung'
         if ([string]::IsNullOrWhiteSpace($name)) { return }
         $collection = New-SmartCollection -Name $name
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnCollectionManager'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Smart Collection' -Width 480 -Height 340
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("Sammlung '{0}' erstellt" -f $collection.Name)
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 120
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Name:   $($collection.Name)")
+        if ($collection.PSObject.Properties.Name -contains 'Filter') { [void]$lb.Items.Add("Filter: $($collection.Filter)") }
+        if ($collection.PSObject.Properties.Name -contains 'ItemCount') { [void]$lb.Items.Add("Items:  $($collection.ItemCount)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
         Add-WpfLogLine -Ctx $Ctx -Line ("Smart Collection '{0}' erstellt" -f $collection.Name) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Smart Collection fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
@@ -1769,8 +2617,42 @@ function Register-WpfAdvancedFeatureHandlers {
         $datIndex = Get-AppStateValue 'DatIndex'
         if (-not $datIndex) { Add-WpfLogLine -Ctx $Ctx -Line 'Clone-Liste: Kein DAT-Index geladen.' -Level 'WARNING'; return }
         $tree = Build-CloneTree -DatIndex $datIndex
-        $count = ($tree | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Clone-Baum: {0} Parent-Einträge" -f $count) -Level 'INFO'
+        $allEntries = @($tree)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnCloneListViewer'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title ('Clone-Baum — {0} Parents' -f $allEntries.Count) -Width 600 -Height 460
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = "$($allEntries.Count) Parent-Einträge im Clone-Baum"
+        $lblTitle.FontSize = 15; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($entry in $allEntries | Select-Object -First 80) {
+          $display = if ($entry.PSObject.Properties.Name -contains 'Parent') { $entry.Parent } else { $entry.ToString() }
+          $clones = if ($entry.PSObject.Properties.Name -contains 'Clones') { " ({0} Clones)" -f $entry.Clones.Count } else { '' }
+          [void]$lb.Items.Add(("{0}{1}" -f $display, $clones))
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Clone-Liste fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1782,6 +2664,41 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnCoverScraper'].add_Click({
       try {
         $config = New-CoverScraperConfig
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnCoverScraper'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Cover-Scraper Konfiguration' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Cover-Scraper'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 80
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Provider:    $($config.Provider)")
+        if ($config.PSObject.Properties.Name -contains 'OutputDir') { [void]$lb.Items.Add("Ausgabe:     $($config.OutputDir)") }
+        if ($config.PSObject.Properties.Name -contains 'ImageSize') { [void]$lb.Items.Add("Bildgröße:   $($config.ImageSize)") }
+        [void]$lb.Items.Add("")
+        [void]$lb.Items.Add("Cover-Downloads starten über den Run-Button.")
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
         Add-WpfLogLine -Ctx $Ctx -Line ("Cover-Scraper konfiguriert: Provider={0}" -f $config.Provider) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Cover-Scraper fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
@@ -1794,8 +2711,41 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnGenreClassification'].add_Click({
       try {
         $taxonomy = Get-GenreTaxonomy
-        $count = ($taxonomy | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Genre-Taxonomie: {0} Genres verfügbar" -f $count) -Level 'INFO'
+        $allGenres = @($taxonomy)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnGenreClassification'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Genre-Klassifikation' -Width 480 -Height 400
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("$($allGenres.Count) Genres verfügbar")
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($g in $allGenres) {
+          $display = if ($g.PSObject.Properties.Name -contains 'Name') { $g.Name } else { $g.ToString() }
+          [void]$lb.Items.Add($display)
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Genre-Klassifikation fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1809,8 +2759,43 @@ function Register-WpfAdvancedFeatureHandlers {
         $logPath = Show-WpfTextInputDialog -Window $Window -Title 'Spielzeit-Tracker' -Prompt 'RetroArch-Log-Pfad eingeben:' -DefaultValue ''
         if ([string]::IsNullOrWhiteSpace($logPath)) { return }
         $data = Import-RetroArchPlaytime -LogPath $logPath
-        $count = ($data | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Spielzeit: {0} Einträge importiert" -f $count) -Level 'INFO'
+        $allEntries = @($data)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnPlaytimeTracker'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title ('Spielzeit-Tracker — {0} Einträge' -f $allEntries.Count) -Width 580 -Height 430
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = "$($allEntries.Count) Spielzeit-Einträge importiert"
+        $lblTitle.FontSize = 15; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($entry in $allEntries | Select-Object -First 50) {
+          $game = if ($entry.PSObject.Properties.Name -contains 'Game') { $entry.Game } else { $entry.ToString() }
+          $time = if ($entry.PSObject.Properties.Name -contains 'PlaytimeMinutes') { " ({0}h {1}m)" -f [math]::Floor($entry.PlaytimeMinutes/60), ($entry.PlaytimeMinutes % 60) } else { '' }
+          [void]$lb.Items.Add(("{0}{1}" -f $game, $time))
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
+        Add-WpfLogLine -Ctx $Ctx -Line ("Spielzeit: {0} Einträge importiert" -f $allEntries.Count) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Spielzeit-Tracker fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1822,7 +2807,40 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnCollectionSharing'].add_Click({
       try {
         $config = New-CollectionExportConfig
-        Add-WpfLogLine -Ctx $Ctx -Line ("Sammlungs-Export konfiguriert: Format={0}" -f $config.Format) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnCollectionSharing'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Sammlung teilen' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Sammlungs-Export-Konfiguration'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 80
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Format:      $($config.Format)")
+        if ($config.PSObject.Properties.Name -contains 'IncludeHashes') { [void]$lb.Items.Add("Mit Hashes:  $($config.IncludeHashes)") }
+        if ($config.PSObject.Properties.Name -contains 'Scope') { [void]$lb.Items.Add("Umfang:      $($config.Scope)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
+        Add-WpfLogLine -Ctx $Ctx -Line ("Sammlungs-Export: Format={0}" -f $config.Format) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Sammlung teilen fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1836,7 +2854,45 @@ function Register-WpfAdvancedFeatureHandlers {
         $roots = Get-AppStateValue 'RootPaths'
         if (-not $roots) { Add-WpfLogLine -Ctx $Ctx -Line 'Virtuelle Ordner: Keine Roots.' -Level 'WARNING'; return }
         $data = Build-TreemapData -Roots $roots
-        Add-WpfLogLine -Ctx $Ctx -Line ("Treemap: {0} Knoten, {1:N0} MB gesamt" -f $data.NodeCount, ($data.TotalBytes / 1MB)) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnVirtualFolderPreview'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Virtuelle Ordner-Vorschau' -Width 560 -Height 420
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("Treemap: {0} Knoten, {1:N0} MB" -f $data.NodeCount, ($data.TotalBytes / 1MB))
+        $lblTitle.FontSize = 15; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        if ($data.PSObject.Properties.Name -contains 'Nodes' -and $data.Nodes) {
+          foreach ($node in $data.Nodes | Select-Object -First 40) {
+            $name = if ($node.PSObject.Properties.Name -contains 'Name') { $node.Name } else { $node.ToString() }
+            $size = if ($node.PSObject.Properties.Name -contains 'SizeBytes') { " ({0:N0} MB)" -f ($node.SizeBytes / 1MB) } else { '' }
+            [void]$lb.Items.Add(("{0}{1}" -f $name, $size))
+          }
+        } else {
+          [void]$lb.Items.Add(("{0} Knoten, {1:N0} MB gesamt" -f $data.NodeCount, ($data.TotalBytes / 1MB)))
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Virtuelle Ordner fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1856,7 +2912,49 @@ function Register-WpfAdvancedFeatureHandlers {
             Get-ChildItem -LiteralPath $r -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 200
           }
         }
+        Add-WpfLogLine -Ctx $Ctx -Line 'Integritäts-Baseline wird erstellt...' -Level 'INFO'
         $baseline = Invoke-RunIntegrityCheckService -Operation 'Baseline' -Files @($files) -Ports @{}
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnIntegrityMonitor'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Integritäts-Monitor' -Width 500 -Height 360
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Integritäts-Baseline erstellt'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $dot = New-Object System.Windows.Shapes.Ellipse
+        $dot.Width = 20; $dot.Height = 20
+        $dot.Fill = [System.Windows.Media.Brushes]::LimeGreen
+        $dot.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Left
+        $dot.Margin = [System.Windows.Thickness]::new(0,0,0,8)
+        [void]$root.Children.Add($dot)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 100
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add(("Dateien erfasst: {0}" -f $baseline.FileCount))
+        if ($baseline.PSObject.Properties.Name -contains 'Timestamp') { [void]$lb.Items.Add("Zeitstempel:     $($baseline.Timestamp)") }
+        if ($baseline.PSObject.Properties.Name -contains 'Algorithm')  { [void]$lb.Items.Add("Hash-Algorithmus: $($baseline.Algorithm)") }
+        [void]$lb.Items.Add("")
+        [void]$lb.Items.Add("Baseline gespeichert. Nächste Prüfung erkennt Änderungen.")
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
         Add-WpfLogLine -Ctx $Ctx -Line ("Integrität: Baseline mit {0} Dateien erstellt" -f $baseline.FileCount) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Integritäts-Monitor fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
@@ -1868,9 +2966,56 @@ function Register-WpfAdvancedFeatureHandlers {
   if ($Ctx.ContainsKey('btnBackupManager') -and $Ctx['btnBackupManager']) {
     $Ctx['btnBackupManager'].add_Click({
       try {
-        $config = New-BackupConfig
-        $session = Invoke-RunBackupService -Operation 'Create' -Config $config -Label 'GUI-Backup' -Ports @{}
-        Add-WpfLogLine -Ctx $Ctx -Line ("Backup-Session erstellt: {0}" -f $session.SessionId) -Level 'INFO'
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnBackupManager'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Backup-Manager' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 460
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Backup erstellen'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lblName = New-Object System.Windows.Controls.TextBlock
+        $lblName.Text = 'Backup-Label:'; $lblName.FontSize = 13
+        $lblName.Margin = [System.Windows.Thickness]::new(0,0,0,4)
+        [void]$root.Children.Add($lblName)
+
+        $tbLabel = New-Object System.Windows.Controls.TextBox
+        $tbLabel.Text = ('GUI-Backup-{0:yyyyMMdd-HHmm}' -f (Get-Date))
+        $tbLabel.FontSize = 13; $tbLabel.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($tbLabel)
+
+        $buttonPanel = New-Object System.Windows.Controls.StackPanel
+        $buttonPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        $buttonPanel.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+
+        $btnCancel = New-Object System.Windows.Controls.Button
+        $btnCancel.Content = 'Abbrechen'; $btnCancel.Width = 110
+        $btnCancel.Margin = [System.Windows.Thickness]::new(0,0,8,0)
+        $btnCancel.add_Click({ $dialog.DialogResult = $false; $dialog.Close() }.GetNewClosure())
+
+        $btnCreate = New-Object System.Windows.Controls.Button
+        $btnCreate.Content = 'Backup starten'; $btnCreate.Width = 140
+        $btnCreate.add_Click({ $dialog.DialogResult = $true; $dialog.Close() }.GetNewClosure())
+
+        [void]$buttonPanel.Children.Add($btnCancel)
+        [void]$buttonPanel.Children.Add($btnCreate)
+        [void]$root.Children.Add($buttonPanel)
+
+        $dialog.Content = $root
+        $result = $dialog.ShowDialog()
+
+        if ($result -eq $true) {
+          $label = [string]$tbLabel.Text
+          if ([string]::IsNullOrWhiteSpace($label)) { $label = 'GUI-Backup' }
+          $config = New-BackupConfig
+          $session = Invoke-RunBackupService -Operation 'Create' -Config $config -Label $label -Ports @{}
+          Add-WpfLogLine -Ctx $Ctx -Line ("Backup erstellt: {0} (Session={1})" -f $label, $session.SessionId) -Level 'INFO'
+        }
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Backup-Manager fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1885,7 +3030,39 @@ function Register-WpfAdvancedFeatureHandlers {
         if ([string]::IsNullOrWhiteSpace($filePath)) { return }
         $qRoot = Join-Path (Get-AppStateValue 'TrashRoot') 'quarantine'
         $result = Invoke-RunQuarantineService -SourcePath $filePath -QuarantineRoot $qRoot -Reasons @('ManualReview') -Mode 'DryRun' -Ports @{}
-        Add-WpfLogLine -Ctx $Ctx -Line ("Quarantäne (DryRun): {0} → {1}" -f $result.Source, $result.Destination) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnQuarantine'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Quarantäne (DryRun-Vorschau)' -Width 540 -Height 340
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Quarantäne-Vorschau (DryRun)'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12; $lb.MinHeight = 100
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Quelle:  $($result.Source)")
+        [void]$lb.Items.Add("Ziel:    $($result.Destination)")
+        [void]$lb.Items.Add("Grund:   ManualReview")
+        [void]$lb.Items.Add("Modus:   DryRun (keine Dateien verschoben)")
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Quarantäne fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1896,10 +3073,47 @@ function Register-WpfAdvancedFeatureHandlers {
   if ($Ctx.ContainsKey('btnRuleEngine') -and $Ctx['btnRuleEngine']) {
     $Ctx['btnRuleEngine'].add_Click({
       try {
-        Add-WpfLogLine -Ctx $Ctx -Line 'Regel-Engine: Lade Standard-Regeln...' -Level 'INFO'
         $rules = Get-AppStateValue 'Rules'
         if (-not $rules) { $rules = @() }
-        Add-WpfLogLine -Ctx $Ctx -Line ("Regel-Engine: {0} Regeln geladen" -f ($rules | Measure-Object).Count) -Level 'INFO'
+        $allRules = @($rules)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnRuleEngine'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Regel-Engine' -Width 560 -Height 420
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("$($allRules.Count) Regeln geladen")
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        if ($allRules.Count -eq 0) {
+          [void]$lb.Items.Add('(Keine Regeln geladen — Standard-Regeln werden aus rules.json verwendet)')
+        } else {
+          foreach ($rule in $allRules) {
+            $display = if ($rule -is [hashtable] -and $rule.ContainsKey('Name')) { $rule.Name } elseif ($rule.PSObject.Properties.Name -contains 'Name') { $rule.Name } else { $rule.ToString() }
+            [void]$lb.Items.Add($display)
+          }
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Regel-Engine fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1913,7 +3127,40 @@ function Register-WpfAdvancedFeatureHandlers {
         $patchPath = Show-WpfTextInputDialog -Window $Window -Title 'Patch-Engine' -Prompt 'Patch-Datei (.ips/.ups/.bps):' -DefaultValue ''
         if ([string]::IsNullOrWhiteSpace($patchPath)) { return }
         $format = Test-PatchFormat -Path $patchPath
-        Add-WpfLogLine -Ctx $Ctx -Line ("Patch-Format erkannt: {0}" -f $format.Format) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnPatchEngine'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Patch-Engine' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Patch-Format erkannt'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 80
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Datei:   $(Split-Path $patchPath -Leaf)")
+        [void]$lb.Items.Add("Format:  $($format.Format)")
+        if ($format.PSObject.Properties.Name -contains 'Version') { [void]$lb.Items.Add("Version: $($format.Version)") }
+        if ($format.PSObject.Properties.Name -contains 'Size') { [void]$lb.Items.Add(("Größe:   {0:N0} KB" -f ($format.Size / 1KB))) }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Patch-Engine fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1927,7 +3174,42 @@ function Register-WpfAdvancedFeatureHandlers {
         $filePath = Show-WpfTextInputDialog -Window $Window -Title 'Header-Reparatur' -Prompt 'ROM-Dateipfad:' -DefaultValue ''
         if ([string]::IsNullOrWhiteSpace($filePath)) { return }
         $result = Repair-NesHeader -Path $filePath -Mode 'DryRun'
-        Add-WpfLogLine -Ctx $Ctx -Line ("Header-Reparatur (DryRun): {0}" -f $result.Status) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnHeaderRepair'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Header-Reparatur (DryRun)' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Header-Reparatur-Vorschau'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 80
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Datei:   $(Split-Path $filePath -Leaf)")
+        [void]$lb.Items.Add("Status:  $($result.Status)")
+        [void]$lb.Items.Add("Modus:   DryRun (keine Änderungen)")
+        if ($result.PSObject.Properties.Name -contains 'Issues') {
+          foreach ($issue in $result.Issues) { [void]$lb.Items.Add(("  → {0}" -f $issue)) }
+        }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Header-Reparatur fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1943,11 +3225,42 @@ function Register-WpfAdvancedFeatureHandlers {
         $query = Show-WpfTextInputDialog -Window $Window -Title 'Command-Palette' -Prompt 'Befehl suchen:' -DefaultValue ''
         if ([string]::IsNullOrWhiteSpace($query)) { return }
         $results = Search-PaletteCommands -Query $query
-        $count = ($results | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Command-Palette: {0} Treffer für '{1}'" -f $count, $query) -Level 'INFO'
-        foreach ($cmd in $results | Select-Object -First 10) {
-          Add-WpfLogLine -Ctx $Ctx -Line ("  {0}: {1}" -f $cmd.Name, $cmd.Description) -Level 'INFO'
+        $allResults = @($results)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnCommandPalette'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title ('Command-Palette — {0} Treffer' -f $allResults.Count) -Width 560 -Height 420
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = "Suche: '$query' — $($allResults.Count) Befehle"
+        $lblTitle.FontSize = 15; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 12
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($cmd in $allResults) {
+          $name = if ($cmd.PSObject.Properties.Name -contains 'Name') { $cmd.Name } else { $cmd.ToString() }
+          $desc = if ($cmd.PSObject.Properties.Name -contains 'Description') { " — $($cmd.Description)" } else { '' }
+          [void]$lb.Items.Add(("{0}{1}" -f $name, $desc))
         }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Command-Palette fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1962,7 +3275,48 @@ function Register-WpfAdvancedFeatureHandlers {
         $latestPlan = Get-ChildItem -Path $reportsDir -Filter 'move-plan-*.json' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if (-not $latestPlan) { Add-WpfLogLine -Ctx $Ctx -Line 'Split-Panel: Kein Move-Plan vorhanden.' -Level 'WARNING'; return }
         $data = ConvertTo-SplitPanelData -PlanPath $latestPlan.FullName
-        Add-WpfLogLine -Ctx $Ctx -Line ("Split-Panel: {0} Einträge geladen" -f $data.EntryCount) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnSplitPanelPreview'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Split-Panel-Vorschau' -Width 600 -Height 460
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("Move-Plan: {0} Einträge" -f $data.EntryCount)
+        $lblTitle.FontSize = 15; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,8)
+        [void]$root.Children.Add($lblTitle)
+
+        $lblFile = New-Object System.Windows.Controls.TextBlock
+        $lblFile.Text = ("Datei: {0}" -f $latestPlan.Name)
+        $lblFile.FontSize = 11; $lblFile.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [void]$root.Children.Add($lblFile)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 11; $lb.MaxHeight = 260
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        if ($data.PSObject.Properties.Name -contains 'Entries' -and $data.Entries) {
+          foreach ($e in $data.Entries | Select-Object -First 40) {
+            $src = if ($e.PSObject.Properties.Name -contains 'Source') { $e.Source } else { '' }
+            $dst = if ($e.PSObject.Properties.Name -contains 'Destination') { $e.Destination } else { '' }
+            [void]$lb.Items.Add(("{0}  →  {1}" -f (Split-Path $src -Leaf), (Split-Path $dst -Leaf)))
+          }
+        } else {
+          [void]$lb.Items.Add("$($data.EntryCount) Einträge im Plan")
+        }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Split-Panel fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1973,8 +3327,67 @@ function Register-WpfAdvancedFeatureHandlers {
   if ($Ctx.ContainsKey('btnFilterBuilder') -and $Ctx['btnFilterBuilder']) {
     $Ctx['btnFilterBuilder'].add_Click({
       try {
-        $filter = New-FilterCondition
-        Add-WpfLogLine -Ctx $Ctx -Line ("Filter-Builder: Neue Filterbedingung erstellt (Typ={0})" -f $filter.Type) -Level 'INFO'
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnFilterBuilder'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Filter-Builder' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 460
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Neue Filterbedingung erstellen'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        # Filter type selection
+        $lblType = New-Object System.Windows.Controls.TextBlock
+        $lblType.Text = 'Filtertyp:'; $lblType.FontSize = 13
+        $lblType.Margin = [System.Windows.Thickness]::new(0,0,0,4)
+        [void]$root.Children.Add($lblType)
+
+        $cmbType = New-Object System.Windows.Controls.ComboBox
+        $cmbType.FontSize = 13; $cmbType.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        foreach ($t in @('Region', 'Format', 'Konsole', 'Größe', 'Name', 'Datum')) { [void]$cmbType.Items.Add($t) }
+        $cmbType.SelectedIndex = 0
+        [void]$root.Children.Add($cmbType)
+
+        # Filter value
+        $lblVal = New-Object System.Windows.Controls.TextBlock
+        $lblVal.Text = 'Wert / Pattern:'; $lblVal.FontSize = 13
+        $lblVal.Margin = [System.Windows.Thickness]::new(0,0,0,4)
+        [void]$root.Children.Add($lblVal)
+
+        $tbVal = New-Object System.Windows.Controls.TextBox
+        $tbVal.FontSize = 13; $tbVal.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($tbVal)
+
+        $buttonPanel = New-Object System.Windows.Controls.StackPanel
+        $buttonPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        $buttonPanel.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+
+        $btnCancel = New-Object System.Windows.Controls.Button
+        $btnCancel.Content = 'Abbrechen'; $btnCancel.Width = 110
+        $btnCancel.Margin = [System.Windows.Thickness]::new(0,0,8,0)
+        $btnCancel.add_Click({ $dialog.DialogResult = $false; $dialog.Close() }.GetNewClosure())
+
+        $btnApply = New-Object System.Windows.Controls.Button
+        $btnApply.Content = 'Filter erstellen'; $btnApply.Width = 130
+        $btnApply.add_Click({ $dialog.DialogResult = $true; $dialog.Close() }.GetNewClosure())
+
+        [void]$buttonPanel.Children.Add($btnCancel)
+        [void]$buttonPanel.Children.Add($btnApply)
+        [void]$root.Children.Add($buttonPanel)
+
+        $dialog.Content = $root
+        $result = $dialog.ShowDialog()
+
+        if ($result -eq $true) {
+          $filterType = [string]$cmbType.SelectedItem
+          $filterVal  = [string]$tbVal.Text
+          $filter = New-FilterCondition
+          Add-WpfLogLine -Ctx $Ctx -Line ("Filter erstellt: Typ={0}, Wert='{1}'" -f $filterType, $filterVal) -Level 'INFO'
+        }
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Filter-Builder fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -1986,11 +3399,42 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnSortTemplates'].add_Click({
       try {
         $templates = Get-DefaultSortTemplates
-        $count = ($templates | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Sort-Templates: {0} Vorlagen verfügbar" -f $count) -Level 'INFO'
-        foreach ($t in $templates | Select-Object -First 5) {
-          Add-WpfLogLine -Ctx $Ctx -Line ("  {0}: {1}" -f $t.Name, $t.Description) -Level 'INFO'
+        $allTemplates = @($templates)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnSortTemplates'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Sort-Templates' -Width 520 -Height 400
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("$($allTemplates.Count) Sortier-Vorlagen verfügbar")
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($t in $allTemplates) {
+          $name = if ($t.PSObject.Properties.Name -contains 'Name') { $t.Name } else { $t.ToString() }
+          $desc = if ($t.PSObject.Properties.Name -contains 'Description') { " — $($t.Description)" } else { '' }
+          [void]$lb.Items.Add(("{0}{1}" -f $name, $desc))
         }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Sort-Templates fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2002,6 +3446,39 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnPipelineEngine'].add_Click({
       try {
         $step = New-PipelineStep
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnPipelineEngine'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Pipeline-Engine' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Pipeline-Schritt erstellt'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 80
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Name:   $($step.Name)")
+        if ($step.PSObject.Properties.Name -contains 'Type') { [void]$lb.Items.Add("Typ:    $($step.Type)") }
+        if ($step.PSObject.Properties.Name -contains 'Action') { [void]$lb.Items.Add("Aktion: $($step.Action)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
         Add-WpfLogLine -Ctx $Ctx -Line ("Pipeline-Step erstellt: {0}" -f $step.Name) -Level 'INFO'
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Pipeline-Engine fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
@@ -2014,7 +3491,40 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnSystemTray'].add_Click({
       try {
         $config = New-TrayIconConfig
-        Add-WpfLogLine -Ctx $Ctx -Line ("System-Tray konfiguriert: Icon={0}" -f $config.IconPath) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnSystemTray'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'System-Tray' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'System-Tray-Konfiguration'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Icon:     $($config.IconPath)")
+        if ($config.PSObject.Properties.Name -contains 'Tooltip') { [void]$lb.Items.Add("Tooltip:  $($config.Tooltip)") }
+        [void]$lb.Items.Add("")
+        [void]$lb.Items.Add("System-Tray erlaubt Hintergrund-Überwachung.")
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("System-Tray fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2025,8 +3535,60 @@ function Register-WpfAdvancedFeatureHandlers {
   if ($Ctx.ContainsKey('btnSchedulerAdvanced') -and $Ctx['btnSchedulerAdvanced']) {
     $Ctx['btnSchedulerAdvanced'].add_Click({
       try {
-        $entry = New-ScheduleEntry
-        Add-WpfLogLine -Ctx $Ctx -Line ("Scheduler: Neuer Eintrag erstellt ({0})" -f $entry.Cron) -Level 'INFO'
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnSchedulerAdvanced'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Scheduler (Erweitert)' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 460
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Zeitplaner-Eintrag erstellen'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lblCron = New-Object System.Windows.Controls.TextBlock
+        $lblCron.Text = 'Cron-Ausdruck:'; $lblCron.FontSize = 13
+        $lblCron.Margin = [System.Windows.Thickness]::new(0,0,0,4)
+        [void]$root.Children.Add($lblCron)
+
+        $tbCron = New-Object System.Windows.Controls.TextBox
+        $tbCron.Text = '0 3 * * 0'; $tbCron.FontSize = 13
+        $tbCron.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $tbCron.Margin = [System.Windows.Thickness]::new(0,0,0,8)
+        [void]$root.Children.Add($tbCron)
+
+        $lblHelp = New-Object System.Windows.Controls.TextBlock
+        $lblHelp.Text = 'Format: Minute Stunde Tag Monat Wochentag (z.B. "0 3 * * 0" = So 03:00)'
+        $lblHelp.FontSize = 11; $lblHelp.TextWrapping = [System.Windows.TextWrapping]::Wrap
+        $lblHelp.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblHelp)
+
+        $buttonPanel = New-Object System.Windows.Controls.StackPanel
+        $buttonPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        $buttonPanel.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+
+        $btnCancel = New-Object System.Windows.Controls.Button
+        $btnCancel.Content = 'Abbrechen'; $btnCancel.Width = 110
+        $btnCancel.Margin = [System.Windows.Thickness]::new(0,0,8,0)
+        $btnCancel.add_Click({ $dialog.DialogResult = $false; $dialog.Close() }.GetNewClosure())
+
+        $btnCreate = New-Object System.Windows.Controls.Button
+        $btnCreate.Content = 'Eintrag erstellen'; $btnCreate.Width = 140
+        $btnCreate.add_Click({ $dialog.DialogResult = $true; $dialog.Close() }.GetNewClosure())
+
+        [void]$buttonPanel.Children.Add($btnCancel)
+        [void]$buttonPanel.Children.Add($btnCreate)
+        [void]$root.Children.Add($buttonPanel)
+
+        $dialog.Content = $root
+        $result = $dialog.ShowDialog()
+
+        if ($result -eq $true) {
+          $entry = New-ScheduleEntry
+          Add-WpfLogLine -Ctx $Ctx -Line ("Scheduler: Eintrag erstellt (Cron={0})" -f [string]$tbCron.Text) -Level 'INFO'
+        }
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Scheduler fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2037,8 +3599,43 @@ function Register-WpfAdvancedFeatureHandlers {
   if ($Ctx.ContainsKey('btnRulePackSharing') -and $Ctx['btnRulePackSharing']) {
     $Ctx['btnRulePackSharing'].add_Click({
       try {
+        $packName = Show-WpfTextInputDialog -Window $Window -Title 'Regel-Paket' -Prompt 'Name des Regel-Pakets:' -DefaultValue 'Standard-Regelpaket'
+        if ([string]::IsNullOrWhiteSpace($packName)) { return }
         $pack = New-RulePack
-        Add-WpfLogLine -Ctx $Ctx -Line ("Regel-Paket erstellt: {0}" -f $pack.Name) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnRulePackSharing'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Regel-Paket' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("Regel-Paket '{0}' erstellt" -f $packName)
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Name:   $($pack.Name)")
+        if ($pack.PSObject.Properties.Name -contains 'Rules') { [void]$lb.Items.Add("Regeln: $($pack.Rules.Count)") }
+        [void]$lb.Items.Add("")
+        [void]$lb.Items.Add("Regel-Pakete können mit anderen Benutzern geteilt werden.")
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Regel-Pakete fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2050,8 +3647,42 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnArcadeMergeSplit'].add_Click({
       try {
         $types = Get-ArcadeSetTypes
-        $count = ($types | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Arcade Set-Typen: {0} Typen verfügbar" -f $count) -Level 'INFO'
+        $allTypes = @($types)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnArcadeMergeSplit'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Arcade Merge/Split' -Width 480 -Height 380
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("$($allTypes.Count) Arcade-Set-Typen verfügbar")
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($t in $allTypes) {
+          $display = if ($t.PSObject.Properties.Name -contains 'Name') { $t.Name } else { $t.ToString() }
+          $desc = if ($t.PSObject.Properties.Name -contains 'Description') { " — $($t.Description)" } else { '' }
+          [void]$lb.Items.Add(("{0}{1}" -f $display, $desc))
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Arcade Merge/Split fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2065,7 +3696,39 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnPdfReport'].add_Click({
       try {
         $config = New-PdfReportConfig
-        Add-WpfLogLine -Ctx $Ctx -Line ("PDF-Report konfiguriert: Template={0}" -f $config.Template) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnPdfReport'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'PDF-Report' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'PDF-Report-Konfiguration'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Template: $($config.Template)")
+        if ($config.PSObject.Properties.Name -contains 'PageSize') { [void]$lb.Items.Add("Seitenformat: $($config.PageSize)") }
+        if ($config.PSObject.Properties.Name -contains 'IncludeCharts') { [void]$lb.Items.Add("Charts: $($config.IncludeCharts)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("PDF-Report fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2077,11 +3740,41 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnLauncherIntegration'].add_Click({
       try {
         $formats = Get-SupportedLauncherFormats
-        $count = ($formats | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Launcher-Integration: {0} Formate unterstützt" -f $count) -Level 'INFO'
-        foreach ($f in $formats | Select-Object -First 5) {
-          Add-WpfLogLine -Ctx $Ctx -Line ("  {0}" -f $f.Name) -Level 'INFO'
+        $allFormats = @($formats)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnLauncherIntegration'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Launcher-Integration' -Width 480 -Height 380
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("$($allFormats.Count) Launcher-Formate unterstützt")
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($f in $allFormats) {
+          $name = if ($f.PSObject.Properties.Name -contains 'Name') { $f.Name } else { $f.ToString() }
+          [void]$lb.Items.Add($name)
         }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Launcher-Integration fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2093,8 +3786,42 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnToolImport'].add_Click({
       try {
         $formats = Get-SupportedImportFormats
-        $count = ($formats | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Tool-Import: {0} Import-Formate unterstützt" -f $count) -Level 'INFO'
+        $allFormats = @($formats)
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnToolImport'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Tool-Import' -Width 480 -Height 380
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("$($allFormats.Count) Import-Formate verfügbar")
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($f in $allFormats) {
+          $name = if ($f.PSObject.Properties.Name -contains 'Name') { $f.Name } else { $f.ToString() }
+          $desc = if ($f.PSObject.Properties.Name -contains 'Description') { " — $($f.Description)" } else { '' }
+          [void]$lb.Items.Add(("{0}{1}" -f $name, $desc))
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Tool-Import fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2108,7 +3835,41 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnStorageTiering'].add_Click({
       try {
         $config = Get-StorageTierConfig
-        Add-WpfLogLine -Ctx $Ctx -Line ("Storage-Tiering: {0} Tier(s) konfiguriert" -f $config.Tiers.Count) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnStorageTiering'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Storage-Tiering' -Width 480 -Height 380
+
+        $root = New-Object System.Windows.Controls.DockPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("Storage-Tiering: {0} Tier(s)" -f $config.Tiers.Count)
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        [System.Windows.Controls.DockPanel]::SetDock($lblTitle, [System.Windows.Controls.Dock]::Top)
+        [void]$root.Children.Add($lblTitle)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'Schließen'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [System.Windows.Controls.DockPanel]::SetDock($btnClose, [System.Windows.Controls.Dock]::Bottom)
+        [void]$root.Children.Add($btnClose)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        foreach ($tier in $config.Tiers) {
+          $name = if ($tier.PSObject.Properties.Name -contains 'Name') { $tier.Name } else { $tier.ToString() }
+          $path = if ($tier.PSObject.Properties.Name -contains 'Path') { " → $($tier.Path)" } else { '' }
+          [void]$lb.Items.Add(("{0}{1}" -f $name, $path))
+        }
+        [void]$root.Children.Add($lb)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Storage-Tiering fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2120,7 +3881,39 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnNasOptimization'].add_Click({
       try {
         $profile = New-NasProfile
-        Add-WpfLogLine -Ctx $Ctx -Line ("NAS-Profil erstellt: BufferSize={0}" -f $profile.BufferSize) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnNasOptimization'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'NAS-Optimierung' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'NAS-Profil'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("BufferSize:  $($profile.BufferSize)")
+        if ($profile.PSObject.Properties.Name -contains 'Protocol') { [void]$lb.Items.Add("Protokoll:   $($profile.Protocol)") }
+        if ($profile.PSObject.Properties.Name -contains 'Parallel') { [void]$lb.Items.Add("Parallel:    $($profile.Parallel)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("NAS-Optimierung fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2132,7 +3925,40 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnFtpSource'].add_Click({
       try {
         $config = New-FtpSourceConfig
-        Add-WpfLogLine -Ctx $Ctx -Line ("FTP-Quelle konfiguriert: Protokoll={0}" -f $config.Protocol) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnFtpSource'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'FTP-Quelle' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 460
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'FTP-Quell-Konfiguration'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 80
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Protokoll:  $($config.Protocol)")
+        if ($config.PSObject.Properties.Name -contains 'Host') { [void]$lb.Items.Add("Host:       $($config.Host)") }
+        if ($config.PSObject.Properties.Name -contains 'Port') { [void]$lb.Items.Add("Port:       $($config.Port)") }
+        if ($config.PSObject.Properties.Name -contains 'Passive') { [void]$lb.Items.Add("Passiv:     $($config.Passive)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("FTP-Quelle fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2144,7 +3970,39 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnCloudSync'].add_Click({
       try {
         $config = New-CloudSyncConfig
-        Add-WpfLogLine -Ctx $Ctx -Line ("Cloud-Sync konfiguriert: Provider={0}" -f $config.Provider) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnCloudSync'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Cloud-Sync' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Cloud-Sync-Konfiguration'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Provider: $($config.Provider)")
+        if ($config.PSObject.Properties.Name -contains 'SyncDirection') { [void]$lb.Items.Add("Richtung: $($config.SyncDirection)") }
+        if ($config.PSObject.Properties.Name -contains 'Interval') { [void]$lb.Items.Add("Intervall: $($config.Interval)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Cloud-Sync fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2156,7 +4014,39 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnPluginMarketplaceFeature'].add_Click({
       try {
         $config = New-PluginMarketplaceConfig
-        Add-WpfLogLine -Ctx $Ctx -Line ("Plugin-Marktplatz: {0} Plugins verfügbar" -f $config.AvailableCount) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnPluginMarketplaceFeature'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Plugin-Marktplatz' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = ("Plugin-Marktplatz — {0} Plugins" -f $config.AvailableCount)
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Verfügbar: $($config.AvailableCount)")
+        if ($config.PSObject.Properties.Name -contains 'Installed') { [void]$lb.Items.Add("Installiert: $($config.Installed)") }
+        if ($config.PSObject.Properties.Name -contains 'Registry') { [void]$lb.Items.Add("Registry: $($config.Registry)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Plugin-Marktplatz fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2168,7 +4058,40 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnPortableMode'].add_Click({
       try {
         $root = Get-PortableSettingsRoot
-        Add-WpfLogLine -Ctx $Ctx -Line ("Portable Modus: Settings-Root = {0}" -f $root) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnPortableMode'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Portable Modus' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $rootPanel = New-Object System.Windows.Controls.StackPanel
+        $rootPanel.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Portable Modus'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$rootPanel.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Settings-Root: $root")
+        [void]$lb.Items.Add("")
+        [void]$lb.Items.Add("Im portablen Modus werden alle Einstellungen")
+        [void]$lb.Items.Add("im Programmverzeichnis gespeichert.")
+        [void]$rootPanel.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$rootPanel.Children.Add($btnClose)
+
+        $dialog.Content = $rootPanel
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Portable Modus fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2180,7 +4103,39 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnDockerContainer'].add_Click({
       try {
         $config = New-DockerfileConfig
-        Add-WpfLogLine -Ctx $Ctx -Line ("Dockerfile generiert: Base={0}" -f $config.BaseImage) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnDockerContainer'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Docker-Container' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Dockerfile-Konfiguration'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Base-Image: $($config.BaseImage)")
+        if ($config.PSObject.Properties.Name -contains 'ExposedPorts') { [void]$lb.Items.Add("Ports:      $($config.ExposedPorts -join ', ')") }
+        if ($config.PSObject.Properties.Name -contains 'Volumes') { [void]$lb.Items.Add("Volumes:    $($config.Volumes -join ', ')") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Docker fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2192,7 +4147,39 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnMobileWebUI'].add_Click({
       try {
         $config = New-WebUIConfig
-        Add-WpfLogLine -Ctx $Ctx -Line ("Web UI: Port={0}, Bind={1}" -f $config.Port, $config.BindAddress) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnMobileWebUI'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Mobile Web UI' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Web-UI-Konfiguration'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Port:    $($config.Port)")
+        [void]$lb.Items.Add("Bind:    $($config.BindAddress)")
+        if ($config.PSObject.Properties.Name -contains 'Theme') { [void]$lb.Items.Add("Theme:   $($config.Theme)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Mobile Web UI fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2204,7 +4191,41 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnWindowsContextMenu'].add_Click({
       try {
         $entry = New-ContextMenuEntry
-        Add-WpfLogLine -Ctx $Ctx -Line ("Kontextmenü-Eintrag: {0}" -f $entry.Label) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnWindowsContextMenu'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Windows-Kontextmenü' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Kontextmenü-Eintrag'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Label:   $($entry.Label)")
+        if ($entry.PSObject.Properties.Name -contains 'Command') { [void]$lb.Items.Add("Befehl:  $($entry.Command)") }
+        if ($entry.PSObject.Properties.Name -contains 'Icon') { [void]$lb.Items.Add("Icon:    $($entry.Icon)") }
+        [void]$lb.Items.Add("")
+        [void]$lb.Items.Add("Integriert RomCleanup in den Windows Explorer.")
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Kontextmenü fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2216,7 +4237,39 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnPSGallery'].add_Click({
       try {
         $manifest = New-PSGalleryManifest
-        Add-WpfLogLine -Ctx $Ctx -Line ("PSGallery-Manifest: Version={0}" -f $manifest.ModuleVersion) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnPSGallery'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'PSGallery-Manifest' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'PSGallery-Manifest'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Version:   $($manifest.ModuleVersion)")
+        if ($manifest.PSObject.Properties.Name -contains 'Author') { [void]$lb.Items.Add("Autor:     $($manifest.Author)") }
+        if ($manifest.PSObject.Properties.Name -contains 'Description') { [void]$lb.Items.Add("Beschreibung: $($manifest.Description)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("PSGallery fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2228,7 +4281,39 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnPackageManager'].add_Click({
       try {
         $manifest = New-WingetManifest
-        Add-WpfLogLine -Ctx $Ctx -Line ("Winget-Manifest: PackageId={0}" -f $manifest.PackageIdentifier) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnPackageManager'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Paketmanager (Winget)' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Winget-Manifest'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("PackageId: $($manifest.PackageIdentifier)")
+        if ($manifest.PSObject.Properties.Name -contains 'Version') { [void]$lb.Items.Add("Version:   $($manifest.Version)") }
+        if ($manifest.PSObject.Properties.Name -contains 'Publisher') { [void]$lb.Items.Add("Publisher: $($manifest.Publisher)") }
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Paketmanager fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2240,8 +4325,55 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnHardlinkMode'].add_Click({
       try {
         $supported = Test-HardlinkSupported
-        $status = if ($supported) { 'Hardlinks werden unterstützt' } else { 'Hardlinks nicht verfügbar (Dateisystem oder Rechte)' }
-        Add-WpfLogLine -Ctx $Ctx -Line ("Hardlink-Modus: {0}" -f $status) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnHardlinkMode'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Hardlink-Modus' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Hardlink-Modus'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $statusPanel = New-Object System.Windows.Controls.StackPanel
+        $statusPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        $statusPanel.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+
+        $dot = New-Object System.Windows.Shapes.Ellipse
+        $dot.Width = 14; $dot.Height = 14
+        $dot.Margin = [System.Windows.Thickness]::new(0,2,8,0)
+        if ($supported) {
+          $dot.Fill = [System.Windows.Media.Brushes]::LimeGreen
+        } else {
+          $dot.Fill = [System.Windows.Media.Brushes]::OrangeRed
+        }
+        [void]$statusPanel.Children.Add($dot)
+
+        $lblStatus = New-Object System.Windows.Controls.TextBlock
+        $lblStatus.FontSize = 14
+        $lblStatus.Text = if ($supported) { 'Hardlinks werden unterstützt' } else { 'Hardlinks nicht verfügbar' }
+        [void]$statusPanel.Children.Add($lblStatus)
+        [void]$root.Children.Add($statusPanel)
+
+        $lblHint = New-Object System.Windows.Controls.TextBlock
+        $lblHint.Text = 'Hardlinks sparen Speicherplatz, indem Dateien nur einmal auf der Festplatte existieren.'
+        $lblHint.TextWrapping = [System.Windows.TextWrapping]::Wrap
+        $lblHint.FontSize = 12
+        $lblHint.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblHint)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Hardlink-Modus fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2253,8 +4385,55 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnUsnJournal'].add_Click({
       try {
         $available = Test-UsnJournalAvailable
-        $status = if ($available) { 'USN-Journal verfügbar' } else { 'USN-Journal nicht verfügbar (Admin-Rechte benötigt)' }
-        Add-WpfLogLine -Ctx $Ctx -Line ("USN-Journal: {0}" -f $status) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnUsnJournal'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'USN-Journal' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'USN-Journal-Status'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $statusPanel = New-Object System.Windows.Controls.StackPanel
+        $statusPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        $statusPanel.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+
+        $dot = New-Object System.Windows.Shapes.Ellipse
+        $dot.Width = 14; $dot.Height = 14
+        $dot.Margin = [System.Windows.Thickness]::new(0,2,8,0)
+        if ($available) {
+          $dot.Fill = [System.Windows.Media.Brushes]::LimeGreen
+        } else {
+          $dot.Fill = [System.Windows.Media.Brushes]::OrangeRed
+        }
+        [void]$statusPanel.Children.Add($dot)
+
+        $lblStatus = New-Object System.Windows.Controls.TextBlock
+        $lblStatus.FontSize = 14
+        $lblStatus.Text = if ($available) { 'USN-Journal verfügbar' } else { 'USN-Journal nicht verfügbar (Admin-Rechte benötigt)' }
+        [void]$statusPanel.Children.Add($lblStatus)
+        [void]$root.Children.Add($statusPanel)
+
+        $lblHint = New-Object System.Windows.Controls.TextBlock
+        $lblHint.Text = 'Das USN-Journal ermöglicht schnelle Änderungserkennung auf NTFS-Laufwerken.'
+        $lblHint.TextWrapping = [System.Windows.TextWrapping]::Wrap
+        $lblHint.FontSize = 12
+        $lblHint.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblHint)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("USN-Journal fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2266,7 +4445,41 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnMultiInstanceSync'].add_Click({
       try {
         $identity = New-InstanceIdentity
-        Add-WpfLogLine -Ctx $Ctx -Line ("Multi-Instanz: ID={0}" -f $identity.InstanceId) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnMultiInstanceSync'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Multi-Instanz-Sync' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Instanz-Identität'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $lb = New-Object System.Windows.Controls.ListBox
+        $lb.FontFamily = New-Object System.Windows.Media.FontFamily('Consolas')
+        $lb.FontSize = 13; $lb.MinHeight = 60
+        $lb.Background = [System.Windows.Media.Brushes]::Transparent
+        $lb.BorderThickness = [System.Windows.Thickness]::new(0)
+        [void]$lb.Items.Add("Instanz-ID: $($identity.InstanceId)")
+        if ($identity.PSObject.Properties.Name -contains 'MachineName') { [void]$lb.Items.Add("Rechner:    $($identity.MachineName)") }
+        if ($identity.PSObject.Properties.Name -contains 'StartTime') { [void]$lb.Items.Add("Startzeit:  $($identity.StartTime)") }
+        [void]$lb.Items.Add("")
+        [void]$lb.Items.Add("Mehrere Instanzen können synchronisiert werden.")
+        [void]$root.Children.Add($lb)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.Margin = [System.Windows.Thickness]::new(0,8,0,0)
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Multi-Instanz fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2278,8 +4491,55 @@ function Register-WpfAdvancedFeatureHandlers {
     $Ctx['btnTelemetry'].add_Click({
       try {
         $config = New-TelemetryConfig
-        $status = if ($config.Enabled) { 'aktiviert' } else { 'deaktiviert' }
-        Add-WpfLogLine -Ctx $Ctx -Line ("Telemetrie: {0}" -f $status) -Level 'INFO'
+
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnTelemetry'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Telemetrie' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Telemetrie-Konfiguration'
+        $lblTitle.FontSize = 16; $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $statusPanel = New-Object System.Windows.Controls.StackPanel
+        $statusPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        $statusPanel.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+
+        $dot = New-Object System.Windows.Shapes.Ellipse
+        $dot.Width = 14; $dot.Height = 14
+        $dot.Margin = [System.Windows.Thickness]::new(0,2,8,0)
+        if ($config.Enabled) {
+          $dot.Fill = [System.Windows.Media.Brushes]::LimeGreen
+        } else {
+          $dot.Fill = [System.Windows.Media.Brushes]::OrangeRed
+        }
+        [void]$statusPanel.Children.Add($dot)
+
+        $lblStatus = New-Object System.Windows.Controls.TextBlock
+        $lblStatus.FontSize = 14
+        $lblStatus.Text = if ($config.Enabled) { 'Telemetrie ist aktiviert' } else { 'Telemetrie ist deaktiviert' }
+        [void]$statusPanel.Children.Add($lblStatus)
+        [void]$root.Children.Add($statusPanel)
+
+        $lblHint = New-Object System.Windows.Controls.TextBlock
+        $lblHint.Text = 'Telemetrie sammelt anonyme Nutzungsstatistiken zur Verbesserung der Anwendung.'
+        $lblHint.TextWrapping = [System.Windows.TextWrapping]::Wrap
+        $lblHint.FontSize = 12
+        $lblHint.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblHint)
+
+        $btnClose = New-Object System.Windows.Controls.Button
+        $btnClose.Content = 'OK'; $btnClose.Width = 110
+        $btnClose.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $btnClose.add_Click({ $dialog.Close() }.GetNewClosure())
+        [void]$root.Children.Add($btnClose)
+
+        $dialog.Content = $root
+        [void]$dialog.ShowDialog()
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Telemetrie fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
@@ -2288,27 +4548,337 @@ function Register-WpfAdvancedFeatureHandlers {
 
   # ── UI & Erscheinungsbild ──────────────────────────────────────────────
 
-  # Barrierefreiheit (LF-13)
+  # Barrierefreiheit (LF-13) — High-Contrast + Font-Skalierung
   if ($Ctx.ContainsKey('btnAccessibility') -and $Ctx['btnAccessibility']) {
     $Ctx['btnAccessibility'].add_Click({
       try {
-        $defaults = Get-AccessibilityDefaults
-        Add-WpfLogLine -Ctx $Ctx -Line ("Barrierefreiheit: HighContrast={0}, FontScale={1}" -f $defaults.HighContrast, $defaults.FontScale) -Level 'INFO'
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnAccessibility'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Barrierefreiheit' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 420
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20,20,20,20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Barrierefreiheits-Einstellungen'
+        $lblTitle.FontSize = 16
+        $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        # High-Contrast toggle
+        $chkContrast = New-Object System.Windows.Controls.CheckBox
+        $chkContrast.Content = 'High-Contrast-Modus aktivieren'
+        $chkContrast.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+        $chkContrast.FontSize = 13
+        $currentTheme = 'dark'
+        if (Get-Command Get-AppStateValue -ErrorAction SilentlyContinue) {
+          $currentTheme = [string](Get-AppStateValue -Key 'UITheme' -Default 'dark')
+        }
+        $chkContrast.IsChecked = ($currentTheme -eq 'high-contrast')
+        [void]$root.Children.Add($chkContrast)
+
+        # Font scale
+        $lblScale = New-Object System.Windows.Controls.TextBlock
+        $lblScale.Text = 'Schriftgröße-Skalierung:'
+        $lblScale.Margin = [System.Windows.Thickness]::new(0,4,0,4)
+        $lblScale.FontSize = 13
+        [void]$root.Children.Add($lblScale)
+
+        $scalePanel = New-Object System.Windows.Controls.StackPanel
+        $scalePanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        $scalePanel.Margin = [System.Windows.Thickness]::new(0,0,0,12)
+
+        $sldScale = New-Object System.Windows.Controls.Slider
+        $sldScale.Minimum = 0.8
+        $sldScale.Maximum = 1.5
+        $sldScale.Value = 1.0
+        $sldScale.Width = 200
+        $sldScale.TickFrequency = 0.1
+        $sldScale.IsSnapToTickEnabled = $true
+        $sldScale.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+        $currentScale = 1.0
+        if (Get-Command Get-AppStateValue -ErrorAction SilentlyContinue) {
+          try { $currentScale = [double](Get-AppStateValue -Key 'UIFontScale' -Default 1.0) } catch { }
+        }
+        $sldScale.Value = $currentScale
+
+        $lblScaleVal = New-Object System.Windows.Controls.TextBlock
+        $lblScaleVal.Text = ('{0:P0}' -f $sldScale.Value)
+        $lblScaleVal.Margin = [System.Windows.Thickness]::new(8,0,0,0)
+        $lblScaleVal.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+        $lblScaleVal.MinWidth = 40
+
+        $sldScale.add_ValueChanged({
+          $lblScaleVal.Text = ('{0:P0}' -f $sldScale.Value)
+        }.GetNewClosure())
+
+        [void]$scalePanel.Children.Add($sldScale)
+        [void]$scalePanel.Children.Add($lblScaleVal)
+        [void]$root.Children.Add($scalePanel)
+
+        # Reduced motion
+        $chkMotion = New-Object System.Windows.Controls.CheckBox
+        $chkMotion.Content = 'Animationen reduzieren'
+        $chkMotion.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        $chkMotion.FontSize = 13
+        $reducedMotion = $false
+        if (Get-Command Get-AppStateValue -ErrorAction SilentlyContinue) {
+          try { $reducedMotion = [bool](Get-AppStateValue -Key 'UIReducedMotion' -Default $false) } catch { }
+        }
+        $chkMotion.IsChecked = $reducedMotion
+        [void]$root.Children.Add($chkMotion)
+
+        # Buttons
+        $buttonPanel = New-Object System.Windows.Controls.StackPanel
+        $buttonPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        $buttonPanel.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+
+        $btnCancel = New-Object System.Windows.Controls.Button
+        $btnCancel.Content = 'Abbrechen'
+        $btnCancel.Width = 110
+        $btnCancel.Margin = [System.Windows.Thickness]::new(0,0,8,0)
+        $btnCancel.add_Click({ $dialog.DialogResult = $false; $dialog.Close() }.GetNewClosure())
+
+        $btnApply = New-Object System.Windows.Controls.Button
+        $btnApply.Content = 'Anwenden'
+        $btnApply.Width = 110
+        $btnApply.add_Click({ $dialog.DialogResult = $true; $dialog.Close() }.GetNewClosure())
+
+        [void]$buttonPanel.Children.Add($btnCancel)
+        [void]$buttonPanel.Children.Add($btnApply)
+        [void]$root.Children.Add($buttonPanel)
+
+        $dialog.Content = $root
+        $result = $dialog.ShowDialog()
+
+        if ($result -eq $true) {
+          $wantHighContrast = [bool]$chkContrast.IsChecked
+          $fontScale = [double]$sldScale.Value
+          $wantReducedMotion = [bool]$chkMotion.IsChecked
+
+          if (Get-Command Set-AppStateValue -ErrorAction SilentlyContinue) {
+            [void](Set-AppStateValue -Key 'UIFontScale' -Value $fontScale)
+            [void](Set-AppStateValue -Key 'UIReducedMotion' -Value $wantReducedMotion)
+          }
+
+          if ($wantHighContrast) {
+            # Apply high-contrast palette
+            $hcPalette = @{
+              BrushBackground   = '#000000'
+              BrushSurface      = '#1A1A1A'
+              BrushSurfaceAlt   = '#0D0D0D'
+              BrushSurfaceLight = '#262626'
+              BrushAccentCyan   = '#FFD700'
+              BrushAccentPurple = '#FFFFFF'
+              BrushDanger       = '#FF0000'
+              BrushSuccess      = '#00FF00'
+              BrushWarning      = '#FFFF00'
+              BrushTextPrimary  = '#FFFFFF'
+              BrushTextMuted    = '#CCCCCC'
+              BrushBorder       = '#FFFFFF'
+            }
+            foreach ($k in $hcPalette.Keys) {
+              try { $owner.Resources[$k] = [System.Windows.Media.SolidColorBrush]([System.Windows.Media.ColorConverter]::ConvertFromString([string]$hcPalette[$k])) } catch { }
+            }
+            if (Get-Command Set-AppStateValue -ErrorAction SilentlyContinue) {
+              [void](Set-AppStateValue -Key 'UITheme' -Value 'high-contrast')
+            }
+            if ($Ctx.ContainsKey('btnThemeToggle') -and $Ctx['btnThemeToggle']) {
+              $Ctx['btnThemeToggle'].Content = '◑ Kontrast'
+            }
+            Add-WpfLogLine -Ctx $Ctx -Line 'High-Contrast-Modus aktiviert' -Level 'INFO'
+          } else {
+            # Revert to current non-HC theme
+            $themeNow = 'dark'
+            if (Get-Command Get-AppStateValue -ErrorAction SilentlyContinue) {
+              $themeNow = [string](Get-AppStateValue -Key 'UITheme' -Default 'dark')
+            }
+            if ($themeNow -eq 'high-contrast') {
+              Set-WpfThemePalette -Window $owner -Ctx $Ctx -Light:$false
+              if (Get-Command Set-AppStateValue -ErrorAction SilentlyContinue) {
+                [void](Set-AppStateValue -Key 'UITheme' -Value 'dark')
+              }
+            }
+          }
+
+          # Apply font scale
+          if ($fontScale -ne 1.0) {
+            $baseSizes = @(11, 13, 14, 16, 18, 20, 24)
+            foreach ($ctrl in @($owner.Content)) {
+              if ($ctrl -and $ctrl.PSObject.Properties.Name -contains 'FontSize') {
+                try { $ctrl.FontSize = [math]::Round(13 * $fontScale, 1) } catch { }
+              }
+            }
+            Add-WpfLogLine -Ctx $Ctx -Line ('Schriftskalierung auf {0:P0} gesetzt' -f $fontScale) -Level 'INFO'
+          }
+
+          Add-WpfLogLine -Ctx $Ctx -Line ('Barrierefreiheit: HighContrast={0}, FontScale={1:P0}, ReducedMotion={2}' -f $wantHighContrast, $fontScale, $wantReducedMotion) -Level 'INFO'
+          try { Save-WpfToSettings -Ctx $Ctx } catch { }
+        }
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Barrierefreiheit fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'
       }
     }.GetNewClosure())
   }
 
-  # Theme-Engine (LF-20)
+  # Theme-Engine (LF-20) — Theme-Auswahl-Dialog
   if ($Ctx.ContainsKey('btnThemeEngine') -and $Ctx['btnThemeEngine']) {
     $Ctx['btnThemeEngine'].add_Click({
       try {
         $themes = Get-BuiltinThemes
-        $count = ($themes | Measure-Object).Count
-        Add-WpfLogLine -Ctx $Ctx -Line ("Theme-Engine: {0} Themes verfügbar" -f $count) -Level 'INFO'
-        foreach ($t in $themes | Select-Object -First 5) {
-          Add-WpfLogLine -Ctx $Ctx -Line ("  {0}" -f $t.Name) -Level 'INFO'
+        $owner = [System.Windows.Window]::GetWindow($Ctx['btnThemeEngine'])
+        $dialog = New-WpfStyledDialog -Owner $owner -Title 'Theme-Engine' -ResizeMode ([System.Windows.ResizeMode]::NoResize) -SizeToContent ([System.Windows.SizeToContent]::WidthAndHeight)
+        $dialog.MinWidth = 460
+
+        $root = New-Object System.Windows.Controls.StackPanel
+        $root.Margin = [System.Windows.Thickness]::new(20,20,20,20)
+
+        $lblTitle = New-Object System.Windows.Controls.TextBlock
+        $lblTitle.Text = 'Theme auswählen'
+        $lblTitle.FontSize = 16
+        $lblTitle.FontWeight = [System.Windows.FontWeights]::Bold
+        $lblTitle.Margin = [System.Windows.Thickness]::new(0,0,0,16)
+        [void]$root.Children.Add($lblTitle)
+
+        $currentTheme = 'dark'
+        if (Get-Command Get-AppStateValue -ErrorAction SilentlyContinue) {
+          $currentTheme = [string](Get-AppStateValue -Key 'UITheme' -Default 'dark')
+        }
+
+        # Map internal theme names to theme keys
+        $themeKeyMap = @{
+          'dark'          = 'retro-dark'
+          'light'         = 'retro-light'
+          'high-contrast' = 'high-contrast'
+          'retro-dark'    = 'retro-dark'
+          'retro-light'   = 'retro-light'
+        }
+        $currentKey = if ($themeKeyMap.ContainsKey($currentTheme)) { $themeKeyMap[$currentTheme] } else { 'retro-dark' }
+
+        $radioButtons = @{}
+        foreach ($theme in $themes) {
+          $border = New-Object System.Windows.Controls.Border
+          $border.BorderThickness = [System.Windows.Thickness]::new(1)
+          $border.CornerRadius = [System.Windows.CornerRadius]::new(4)
+          $border.Padding = [System.Windows.Thickness]::new(12,8,12,8)
+          $border.Margin = [System.Windows.Thickness]::new(0,0,0,6)
+          try {
+            $border.BorderBrush = [System.Windows.Media.SolidColorBrush]([System.Windows.Media.ColorConverter]::ConvertFromString($theme.Colors.Border))
+            $border.Background = [System.Windows.Media.SolidColorBrush]([System.Windows.Media.ColorConverter]::ConvertFromString($theme.Colors.Background))
+          } catch { }
+
+          $innerPanel = New-Object System.Windows.Controls.StackPanel
+
+          $rb = New-Object System.Windows.Controls.RadioButton
+          $rb.GroupName = 'ThemeGroup'
+          $rb.Content = ('{0} — {1}' -f $theme.Name, $theme.Description)
+          $rb.FontSize = 13
+          $rb.IsChecked = ($theme.Key -eq $currentKey)
+          try {
+            $rb.Foreground = [System.Windows.Media.SolidColorBrush]([System.Windows.Media.ColorConverter]::ConvertFromString($theme.Colors.TextPrimary))
+          } catch { }
+          $rb.Tag = $theme.Key
+          $radioButtons[$theme.Key] = $rb
+
+          # Color preview dots
+          $colorPanel = New-Object System.Windows.Controls.WrapPanel
+          $colorPanel.Margin = [System.Windows.Thickness]::new(20,4,0,0)
+          foreach ($colorName in @('Accent','Success','Warning','Error')) {
+            if ($theme.Colors.ContainsKey($colorName)) {
+              $dot = New-Object System.Windows.Shapes.Ellipse
+              $dot.Width = 14
+              $dot.Height = 14
+              $dot.Margin = [System.Windows.Thickness]::new(0,0,6,0)
+              $dot.ToolTip = $colorName
+              try { $dot.Fill = [System.Windows.Media.SolidColorBrush]([System.Windows.Media.ColorConverter]::ConvertFromString($theme.Colors[$colorName])) } catch { }
+              [void]$colorPanel.Children.Add($dot)
+            }
+          }
+
+          [void]$innerPanel.Children.Add($rb)
+          [void]$innerPanel.Children.Add($colorPanel)
+          $border.Child = $innerPanel
+          [void]$root.Children.Add($border)
+        }
+
+        # Buttons
+        $buttonPanel = New-Object System.Windows.Controls.StackPanel
+        $buttonPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        $buttonPanel.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+        $buttonPanel.Margin = [System.Windows.Thickness]::new(0,12,0,0)
+
+        $btnCancel = New-Object System.Windows.Controls.Button
+        $btnCancel.Content = 'Abbrechen'
+        $btnCancel.Width = 110
+        $btnCancel.Margin = [System.Windows.Thickness]::new(0,0,8,0)
+        $btnCancel.add_Click({ $dialog.DialogResult = $false; $dialog.Close() }.GetNewClosure())
+
+        $btnApply = New-Object System.Windows.Controls.Button
+        $btnApply.Content = 'Anwenden'
+        $btnApply.Width = 110
+        $btnApply.add_Click({ $dialog.DialogResult = $true; $dialog.Close() }.GetNewClosure())
+
+        [void]$buttonPanel.Children.Add($btnCancel)
+        [void]$buttonPanel.Children.Add($btnApply)
+        [void]$root.Children.Add($buttonPanel)
+
+        $dialog.Content = $root
+        $result = $dialog.ShowDialog()
+
+        if ($result -eq $true) {
+          $selectedKey = $null
+          foreach ($key in $radioButtons.Keys) {
+            if ([bool]$radioButtons[$key].IsChecked) {
+              $selectedKey = $key
+              break
+            }
+          }
+
+          if ($selectedKey) {
+            $selectedTheme = $themes | Where-Object { $_.Key -eq $selectedKey } | Select-Object -First 1
+            if ($selectedTheme) {
+              # Build brush palette from theme colors
+              $colorToBrush = @{
+                'Background'    = 'BrushBackground'
+                'Surface'       = 'BrushSurface'
+                'Primary'       = 'BrushSurfaceAlt'
+                'Accent'        = 'BrushAccentCyan'
+                'TextPrimary'   = 'BrushTextPrimary'
+                'TextSecondary' = 'BrushTextMuted'
+                'Success'       = 'BrushSuccess'
+                'Warning'       = 'BrushWarning'
+                'Error'         = 'BrushDanger'
+                'Border'        = 'BrushBorder'
+              }
+              foreach ($colorKey in $colorToBrush.Keys) {
+                if ($selectedTheme.Colors.ContainsKey($colorKey)) {
+                  $brushKey = $colorToBrush[$colorKey]
+                  try { $owner.Resources[$brushKey] = [System.Windows.Media.SolidColorBrush]([System.Windows.Media.ColorConverter]::ConvertFromString([string]$selectedTheme.Colors[$colorKey])) } catch { }
+                }
+              }
+
+              # Map theme key to internal UITheme value
+              $internalTheme = switch ($selectedKey) {
+                'retro-dark'    { 'dark' }
+                'retro-light'   { 'light' }
+                'high-contrast' { 'high-contrast' }
+                default         { 'dark' }
+              }
+              if (Get-Command Set-AppStateValue -ErrorAction SilentlyContinue) {
+                [void](Set-AppStateValue -Key 'UITheme' -Value $internalTheme)
+              }
+              if ($Ctx.ContainsKey('btnThemeToggle') -and $Ctx['btnThemeToggle']) {
+                $Ctx['btnThemeToggle'].Content = switch ($internalTheme) {
+                  'light'         { '☀ Hell' }
+                  'high-contrast' { '◑ Kontrast' }
+                  default         { '☾ Dunkel' }
+                }
+              }
+              Add-WpfLogLine -Ctx $Ctx -Line ('Theme gewechselt: {0}' -f $selectedTheme.Name) -Level 'INFO'
+              try { Save-WpfToSettings -Ctx $Ctx } catch { }
+            }
+          }
         }
       } catch {
         Add-WpfLogLine -Ctx $Ctx -Line ("Theme-Engine fehlgeschlagen: {0}" -f $_.Exception.Message) -Level 'ERROR'

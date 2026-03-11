@@ -1,6 +1,6 @@
 ﻿# Canonical language token set – single source of truth (ISO 639-1 subset)
 $script:LANG_TOKENS = [System.Collections.Generic.HashSet[string]]::new(
-  [string[]]@('en','fr','de','es','it','pt','nl','sv','no','da','fi','ru','pl','zh','ko','ja','cs','hu','el','tr','ar','he','th','vi','id','ms','ro','bg','uk','hr','sk','sl','et','lv','lt'),
+  [string[]]@('en','fr','de','es','it','pt','nl','sv','no','da','fi','ru','pl','zh','ko','ja','cs','hu','el','tr','ar','he','th','vi','id','ms','ro','bg','uk','hr','sk','sl','et','lv','lt','af','ca','gd','eu'),
   [StringComparer]::OrdinalIgnoreCase
 )
 
@@ -27,8 +27,15 @@ $script:RULE_DATA = @{
       @{ Key='IT';    Pattern='\((italy|ita)\)' }
       @{ Key='NL';    Pattern='\((netherlands|nld)\)' }
       @{ Key='SE';    Pattern='\((sweden|swe)\)' }
-      @{ Key='EU';    Pattern='\((uk|united\s*kingdom|great\s*britain|england|belgium|austria|portugal|switzerland|denmark|finland|norway|czech|hungary)\)' }
-      @{ Key='ASIA';  Pattern='\((taiwan|hong\s*kong|india)\)' }
+      @{ Key='RU';    Pattern='\((russia|rus)\)' }
+      @{ Key='PL';    Pattern='\((poland|pol)\)' }
+      @{ Key='CA';    Pattern='\((canada|can)\)' }
+      @{ Key='LATAM'; Pattern='\((latin\s*america)\)' }
+      @{ Key='TR';    Pattern='\((turkey)\)' }
+      @{ Key='AE';    Pattern='\((united\s*arab\s*emirates)\)' }
+      @{ Key='AU';    Pattern='\((new\s*zealand|nzl)\)' }
+      @{ Key='EU';    Pattern='\((uk|united\s*kingdom|great\s*britain|england|belgium|austria|portugal|switzerland|denmark|finland|norway|czech|hungary|croatia|greece|ireland|luxembourg|romania|bulgaria|slovakia|slovenia|estonia|latvia|lithuania|south\s*africa)\)' }
+      @{ Key='ASIA';  Pattern='\((taiwan|hong\s*kong|india|singapore|thailand|vietnam|indonesia|malaysia|philippines)\)' }
     )
 
     # --- Region 2-letter ambiguous codes (only used when no primary match) ---
@@ -44,6 +51,9 @@ $script:RULE_DATA = @{
       @{ Key='SE'; Pattern='\((se)\)' }
       @{ Key='AU'; Pattern='\((au)\)' }
       @{ Key='ASIA'; Pattern='\((as)\)' }
+      @{ Key='RU'; Pattern='\((ru)\)' }
+      @{ Key='PL'; Pattern='\((pl)\)' }
+      @{ Key='CA'; Pattern='\((ca)\)' }
     )
 
     # --- Multiregion detection ---
@@ -58,7 +68,7 @@ $script:RULE_DATA = @{
     VerifiedPattern  = '\[!\]'
     RevisionPattern  = '\(rev\s*([a-z0-9.]+)\)'
     VersionPattern   = '\(v\s*(\d+)\.?(\d*)\)'
-    LangPattern      = '\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja)(?:,\s*(?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja))*\)'
+    LangPattern      = '\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu)(?:,\s*(?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu))*\)'
     Cleanup1         = '[\._]+'
     Cleanup2         = '\s{2,}'
 
@@ -67,7 +77,7 @@ $script:RULE_DATA = @{
 
     # --- Junk tag patterns ---
     JunkTags = (
-      '\((alpha\s*\d*|beta\s*\d*|proto(?:type)?\s*\d*|sample|sampler|demo|preview|pre[\s-]*release|promo|kiosk|debug|trial|taikenban|location\s*test|test\s*program)\)' +
+      '\((alpha\s*\d*|beta\s*\d*|proto(?:type)?\s*\d*|sample|sampler|demo|preview|pre[\s-]*release|promo|kiosk(?:\s*demo)?|debug|trial(?:\s*version)?|taikenban|rehearsal-?\s*ban|location\s*test|test\s*program)\)' +
       '|\((program|application|utility|enhancement\s*chip|test\s*program|test\s*cartridge)\)' +
       '|\((competition\s*cart|service\s*disc|diagnostic|check\s*program)\)' +
       '|\((hack|pirate|bootleg|homebrew|aftermarket|translated|translation)\)' +
@@ -75,22 +85,22 @@ $script:RULE_DATA = @{
       '|\((not\s*for\s*resale|nfr)\)' +
       '|\[(b\d*|h\d*|p\d*|t\d*|f\d*|o\d*)\]' +
       '|\[(cr|tr|m)\s')
-    JunkWords = '\b(demo|sample\s*version|trial\s*version|trial|pre[\s-]*release|not\s*for\s*resale|sampler|bootleg\s*sampler)\b'
+    JunkWords = '\b(demo|sample\s*version|trial\s*version|trial|pre[\s-]*release|not\s*for\s*resale|sampler|bootleg\s*sampler)\b|^gamelist(?:\.xml)?(?:\.old|\.bak)?$'
     JunkTagsAggressive = '\((wip|work\s*in\s*progress|playtest|test\s*build|dev\s*build|qa\s*build|review\s*build|internal\s*build|preview\s*build|prototype\s*build|not\s*for\s*distribution)\)'
     JunkWordsAggressive = '\b(work\s*in\s*progress|wip|playtest|test\s*build|dev\s*build|qa\s*build|review\s*build|internal\s*build|preview\s*build|not\s*for\s*distribution)\b'
 
     # --- GameKey strip patterns (applied sequentially) ---
     GameKeyPatterns = @(
-      '\s*\((europe|eu|eur|pal|usa|us|u\.s\.a\.|u\.s\.|japan|jp|jpn|world|export|asia|as|korea|kr|kor|china|cn|chn|brazil|br|bra|australia|au|aus|france|fr|fra|germany|de|deu|spain|es|esp|italy|it|ita|netherlands|nl|nld|sweden|se|swe|scandinavia|canada|ca|russia|ru|rus|poland|pl|pol|uk|united\s*kingdom|great\s*britain|england|belgium|be|austria|at|portugal|pt|switzerland|ch|denmark|dk|finland|fi|norway|no|czech|cz|hungary|hu|taiwan|tw|hong\s*kong|hk|india|in)(,\s*(europe|eu|eur|pal|usa|us|japan|jp|jpn|world|asia|as|korea|kr|china|cn|brazil|br|australia|au|france|fr|germany|de|spain|es|italy|it|netherlands|nl|sweden|se|scandinavia|canada|ca|russia|ru|rus|poland|pl|pol|uk|united\s*kingdom|great\s*britain|england|belgium|be|austria|at|portugal|pt|switzerland|ch|denmark|dk|finland|fi|norway|no|czech|cz|hungary|hu|taiwan|tw|hong\s*kong|hk|india|in))*\)\s*',
+      '\s*\((europe|eu|eur|pal|usa|us|u\.s\.a\.|u\.s\.|japan|jp|jpn|world|export|asia|as|korea|kr|kor|china|cn|chn|brazil|br|bra|australia|au|aus|france|fr|fra|germany|de|deu|spain|es|esp|italy|it|ita|netherlands|nl|nld|sweden|se|swe|scandinavia|canada|ca|can|russia|ru|rus|poland|pl|pol|uk|united\s*kingdom|great\s*britain|england|belgium|be|austria|at|portugal|pt|switzerland|ch|denmark|dk|finland|fi|norway|no|czech|cz|hungary|hu|croatia|hr|greece|el|ireland|ie|luxembourg|romania|ro|bulgaria|bg|slovakia|sk|slovenia|si|estonia|et|latvia|lv|lithuania|lt|taiwan|tw|hong\s*kong|hk|india|in|turkey|tr|united\s*arab\s*emirates|latin\s*america|south\s*africa|za|new\s*zealand|nz|nzl|singapore|thailand|vietnam|indonesia|malaysia|philippines)(,\s*(europe|eu|eur|pal|usa|us|japan|jp|jpn|world|asia|as|korea|kr|china|cn|brazil|br|australia|au|france|fr|germany|de|spain|es|italy|it|netherlands|nl|sweden|se|scandinavia|canada|ca|russia|ru|rus|poland|pl|pol|uk|united\s*kingdom|great\s*britain|england|belgium|be|austria|at|portugal|pt|switzerland|ch|denmark|dk|finland|fi|norway|no|czech|cz|hungary|hu|taiwan|tw|hong\s*kong|hk|india|in|turkey|tr|south\s*africa|new\s*zealand|nz|latin\s*america))*\)\s*',
       '\s*\((headered|headerless)\)\s*',
       '\s*\((rev\s*[a-z0-9.]+|revision\s*[a-z0-9.]+)\)\s*',
       '\s*\((v\s*[0-9][0-9.]*[a-z]?)\)\s*',
-      '\s*\((alpha\s*\d*|beta\s*\d*|proto(?:type)?\s*\d*|sample|demo|preview|pre[\s-]*release|promo|kiosk|debug|trial|taikenban|location\s*test)\)\s*',
+      '\s*\((alpha\s*\d*|beta\s*\d*|proto(?:type)?\s*\d*|sample|demo|preview|pre[\s-]*release|promo|kiosk(?:\s*demo)?|debug|trial(?:\s*version)?|taikenban|rehearsal-?\s*ban|location\s*test)\)\s*',
       '\s*\((program|application|utility|enhancement\s*chip|test\s*program|test\s*cartridge)\)\s*',
       '\s*\((hack|pirate|bootleg|homebrew|aftermarket|translated|translation)\)\s*',
       '\s*\((unl|unlicensed|competition\s*cart|service\s*disc|diagnostic)\)\s*',
       '\s*\((bios|firmware)\)\s*',
-      '\s*\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt)(,\s*(en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt))*\)\s*',
+      '\s*\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu)(,\s*(en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu))*\)\s*',
       '\s*\[(\!|b\d*|h\d*|o\d*|p\d*|t\d*|f\d*|a\d*|cr[^\]]*|tr[^\]]*|m\s[^\]]*)\]\s*',
       '\s*\((not\s*for\s*resale|nfr)\)\s*',
       '\s*\((virtual\s*console|switch\s*online|classic\s*mini|wii\s*u|gamecube)\)\s*',
@@ -98,7 +108,15 @@ $script:RULE_DATA = @{
       '\s*\(([^\)]*\b(collection|classics?|anniversary|antholog(?:y|ies)|archives?|museum|evercade|retro-?bit(?:\s*generations)?)\b[^\)]*)\)\s*',
       '\s*\((edc|no\s*edc|libcrypt|sbi|subchannel)\)\s*',
       '\s*\((\d+S(?:,\s*\d+S)*)\)\s*',
-      '\s*\((Made\s+in\s+\w+)\)\s*'
+      '\s*\((Made\s+in\s+\w+)\)\s*',
+      '\s*\([^)]*\bEdition\b[^)]*\)\s*',
+      '\s*\((?:Greatest\s*Hits|PlayStation\s*\d+\s*the\s*Best|Platinum|Essentials|Budget|Best\s*Price|The\s*Best|Player''s\s*Choice|Nintendo\s*Selects|PlayStation\s*Hits|Rockstar\s*Classics|Aquaprice\s*\d+)\)\s*',
+      '\s*\([A-Z]{4}-\d{4,5}\)\s*',
+      '\s*\((?:Fukikaeban|Jimakuban|PlayStation\s*Move\s*Taiou|3D\s*Compatible|Tsuika\s*Contents\s*Disc|Append-ban)\)\s*',
+      '\s*\(Version\s*\d+\.?\d*\)\s*',
+      '\s*\(FW\d+\.\d+\)\s*',
+      '\s*\(\d{4}-\d{2}-\d{2}\)\s*',
+      '\s*\(\s*\)\s*'
     )
 
     # --- Alias edition tag patterns ---
@@ -300,8 +318,24 @@ function Resolve-RegionTagFromTokens {
       @{ K='russia'; V='RU' }, @{ K='ru'; V='RU' }, @{ K='rus'; V='RU' },
       @{ K='usa'; V='US' }, @{ K='us'; V='US' }, @{ K='u.s.a'; V='US' }, @{ K='north america'; V='US' },
       @{ K='japan'; V='JP' }, @{ K='jpn'; V='JP' }, @{ K='jp'; V='JP' },
-      @{ K='australia'; V='AU' }, @{ K='au'; V='AU' },
+      @{ K='australia'; V='AU' }, @{ K='au'; V='AU' }, @{ K='aus'; V='AU' },
       @{ K='asia'; V='ASIA' }, @{ K='taiwan'; V='ASIA' }, @{ K='hong kong'; V='ASIA' }, @{ K='india'; V='ASIA' },
+      @{ K='singapore'; V='ASIA' }, @{ K='thailand'; V='ASIA' }, @{ K='vietnam'; V='ASIA' },
+      @{ K='indonesia'; V='ASIA' }, @{ K='malaysia'; V='ASIA' }, @{ K='philippines'; V='ASIA' },
+      @{ K='canada'; V='CA' }, @{ K='ca'; V='CA' }, @{ K='can'; V='CA' },
+      @{ K='poland'; V='PL' }, @{ K='pl'; V='PL' }, @{ K='pol'; V='PL' },
+      @{ K='scandinavia'; V='EU' },
+      @{ K='turkey'; V='TR' }, @{ K='tr'; V='TR' },
+      @{ K='united arab emirates'; V='AE' },
+      @{ K='latin america'; V='LATAM' },
+      @{ K='new zealand'; V='AU' }, @{ K='nz'; V='AU' },
+      @{ K='south africa'; V='EU' }, @{ K='za'; V='EU' },
+      @{ K='croatia'; V='EU' }, @{ K='hr'; V='EU' },
+      @{ K='greece'; V='EU' }, @{ K='ireland'; V='EU' },
+      @{ K='luxembourg'; V='EU' }, @{ K='romania'; V='EU' },
+      @{ K='bulgaria'; V='EU' }, @{ K='slovakia'; V='EU' },
+      @{ K='slovenia'; V='EU' }, @{ K='estonia'; V='EU' },
+      @{ K='latvia'; V='EU' }, @{ K='lithuania'; V='EU' },
       # BUG-016 FIX: Add 'fr' to regionTokens so token-parser is consistent with Region2Letter regex fallback
       @{ K='france'; V='FR' }, @{ K='fr'; V='FR' }, @{ K='fra'; V='FR' }
     )) {
@@ -572,6 +606,25 @@ function Select-Winner {
 
   if (-not $Items -or $Items.Count -eq 0) { return $null }
   if ($Items.Count -eq 1) { return $Items[0] }
+
+  # OPT-03: Fast path for the common 2-item case (avoids full Sort-Object pipeline)
+  if ($Items.Count -eq 2) {
+    $a = $Items[0]; $b = $Items[1]
+    $csA = if ($a.PSObject.Properties['CompletenessScore']) { $a.CompletenessScore } else { 0 }
+    $csB = if ($b.PSObject.Properties['CompletenessScore']) { $b.CompletenessScore } else { 0 }
+    if ($csA -ne $csB) { return $(if ($csA -gt $csB) { $a } else { $b }) }
+    $dA = if ($a.PSObject.Properties['DatMatch'] -and $a.DatMatch) { 1 } else { 0 }
+    $dB = if ($b.PSObject.Properties['DatMatch'] -and $b.DatMatch) { 1 } else { 0 }
+    if ($dA -ne $dB) { return $(if ($dA -gt $dB) { $a } else { $b }) }
+    if ($a.RegionScore -ne $b.RegionScore) { return $(if ($a.RegionScore -gt $b.RegionScore) { $a } else { $b }) }
+    if ($a.HeaderScore -ne $b.HeaderScore) { return $(if ($a.HeaderScore -gt $b.HeaderScore) { $a } else { $b }) }
+    if ($a.VersionScore -ne $b.VersionScore) { return $(if ($a.VersionScore -gt $b.VersionScore) { $a } else { $b }) }
+    if ($a.FormatScore -ne $b.FormatScore) { return $(if ($a.FormatScore -gt $b.FormatScore) { $a } else { $b }) }
+    $sA = if ($a.PSObject.Properties['SizeTieBreakScore']) { $a.SizeTieBreakScore } else { -1 * [long]$a.SizeBytes }
+    $sB = if ($b.PSObject.Properties['SizeTieBreakScore']) { $b.SizeTieBreakScore } else { -1 * [long]$b.SizeBytes }
+    if ($sA -ne $sB) { return $(if ($sA -gt $sB) { $a } else { $b }) }
+    return $(if ([string]$a.MainPath -le [string]$b.MainPath) { $a } else { $b })
+  }
 
   return $Items |
     Sort-Object -Property `

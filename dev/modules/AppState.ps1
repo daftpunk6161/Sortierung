@@ -83,7 +83,7 @@ function Set-AppStateValue {
     [switch]$SyncLegacy
   )
 
-  Initialize-AppState
+  if (-not $script:AppState) { Initialize-AppState }
 
   # TD-007: Type validation via AppStateSchema (if loaded)
   if (Get-Command Assert-AppStateValue -ErrorAction SilentlyContinue) {

@@ -120,3 +120,171 @@ function New-TrayBalloonNotification {
     TimeoutMs = $TimeoutMs
   }
 }
+
+# ── WPF NotifyIcon Integration ──────────────────────────────────────────
+
+function Initialize-SystemTrayIcon {
+  <#
+  .SYNOPSIS
+    Erstellt und zeigt ein echtes System-Tray-Icon via System.Windows.Forms.NotifyIcon.
+    Gibt das NotifyIcon-Objekt zurueck (fuer spaetere Updates/Dispose).
+  .PARAMETER Window
+    WPF-Hauptfenster (fuer Show/Hide).
+  .PARAMETER Config
+    Tray-Konfiguration von Get-DefaultTrayMenu.
+  .PARAMETER OnMenuAction
+    ScriptBlock der bei Menu-Klick aufgerufen wird. Erhaelt $Key als Parameter.
+  #>
+  param(
+    [Parameter(Mandatory)][System.Windows.Window]$Window,
+    [hashtable]$Config = $null,
+    [scriptblock]$OnMenuAction = $null
+  )
+
+  if (-not $Config) { $Config = Get-DefaultTrayMenu }
+
+  Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+  Add-Type -AssemblyName System.Drawing -ErrorAction SilentlyContinue
+
+  $notifyIcon = [System.Windows.Forms.NotifyIcon]::new()
+  $notifyIcon.Text = $Config.ToolTip
+  $notifyIcon.Visible = $true
+
+  # Icon aus Anwendungs-Icon oder generiertes Fallback
+  try {
+    $exePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+    $notifyIcon.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($exePath)
+  } catch {
+    # Fallback: generiertes 16x16 Icon
+    $bmp = [System.Drawing.Bitmap]::new(16, 16)
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.Clear([System.Drawing.Color]::FromArgb(0, 245, 255))
+    $g.Dispose()
+    $notifyIcon.Icon = [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
+    $bmp.Dispose()
+  }
+
+  # Kontextmenu aufbauen
+  $contextMenu = [System.Windows.Forms.ContextMenuStrip]::new()
+  foreach ($mi in $Config.MenuItems) {
+    if ($mi.IsSeparator) {
+      [void]$contextMenu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
+    } else {
+      $menuItem = [System.Windows.Forms.ToolStripMenuItem]::new($mi.Label)
+      $itemKey = [string]$mi.Key
+      $menuItem.Tag = $itemKey
+      $menuItem.add_Click({
+        param($sender, $e)
+        $clickedKey = [string]$sender.Tag
+        if ($clickedKey -eq 'show') {
+          $Window.Dispatcher.Invoke({ $Window.Show(); $Window.WindowState = [System.Windows.WindowState]::Normal; $Window.Activate() })
+        } elseif ($clickedKey -eq 'exit') {
+          $Window.Dispatcher.Invoke({ $Window.Close() })
+        } elseif ($OnMenuAction) {
+          try { & $OnMenuAction $clickedKey } catch { }
+        }
+      }.GetNewClosure())
+      [void]$contextMenu.Items.Add($menuItem)
+    }
+  }
+  $notifyIcon.ContextMenuStrip = $contextMenu
+
+  # Doppelklick → Fenster anzeigen
+  $notifyIcon.add_DoubleClick({
+    $Window.Dispatcher.Invoke({ $Window.Show(); $Window.WindowState = [System.Windows.WindowState]::Normal; $Window.Activate() })
+  }.GetNewClosure())
+
+  return $notifyIcon
+}
+
+function Update-SystemTrayIcon {
+  <#
+  .SYNOPSIS
+    Aktualisiert Status und Tooltip des System-Tray-Icons.
+  #>
+  param(
+    [Parameter(Mandatory)]$NotifyIcon,
+    [ValidateSet('Idle','Running','Error','Paused')][string]$IconState = 'Idle',
+    [string]$ToolTip = ''
+  )
+
+  if (-not $NotifyIcon) { return }
+
+  $stateText = switch ($IconState) {
+    'Idle'    { 'Bereit' }
+    'Running' { 'Laeuft...' }
+    'Error'   { 'Fehler' }
+    'Paused'  { 'Pausiert' }
+  }
+
+  $newTip = if ($ToolTip) { "RomCleanup - $ToolTip" } else { "RomCleanup - $stateText" }
+  if ($newTip.Length -gt 63) { $newTip = $newTip.Substring(0, 63) }
+  $NotifyIcon.Text = $newTip
+}
+
+function Show-TrayBalloon {
+  <#
+  .SYNOPSIS
+    Zeigt eine Balloon-Benachrichtigung im System-Tray.
+  #>
+  param(
+    [Parameter(Mandatory)]$NotifyIcon,
+    [Parameter(Mandatory)][hashtable]$Notification
+  )
+
+  if (-not $NotifyIcon) { return }
+
+  $iconType = switch ($Notification.Icon) {
+    'Info'    { [System.Windows.Forms.ToolTipIcon]::Info }
+    'Warning' { [System.Windows.Forms.ToolTipIcon]::Warning }
+    'Error'   { [System.Windows.Forms.ToolTipIcon]::Error }
+    default   { [System.Windows.Forms.ToolTipIcon]::None }
+  }
+
+  $NotifyIcon.ShowBalloonTip(
+    $Notification.TimeoutMs,
+    $Notification.Title,
+    $Notification.Text,
+    $iconType
+  )
+}
+
+function Remove-SystemTrayIcon {
+  <#
+  .SYNOPSIS
+    Entfernt das System-Tray-Icon und gibt Ressourcen frei.
+  #>
+  param([Parameter(Mandatory)]$NotifyIcon)
+
+  if ($NotifyIcon) {
+    $NotifyIcon.Visible = $false
+    $NotifyIcon.Dispose()
+  }
+}
+
+function Enable-MinimizeToTray {
+  <#
+  .SYNOPSIS
+    Registriert einen Handler, der das Fenster beim Minimieren in den Tray schickt.
+  .PARAMETER Window
+    WPF-Hauptfenster.
+  .PARAMETER NotifyIcon
+    NotifyIcon-Objekt von Initialize-SystemTrayIcon.
+  #>
+  param(
+    [Parameter(Mandatory)][System.Windows.Window]$Window,
+    [Parameter(Mandatory)]$NotifyIcon
+  )
+
+  $Window.add_StateChanged({
+    if ($Window.WindowState -eq [System.Windows.WindowState]::Minimized) {
+      $Window.Hide()
+      Update-SystemTrayIcon -NotifyIcon $NotifyIcon -IconState 'Idle' -ToolTip 'Im Hintergrund'
+    }
+  }.GetNewClosure())
+
+  # Bei Close: Tray-Icon aufräumen
+  $Window.add_Closed({
+    Remove-SystemTrayIcon -NotifyIcon $NotifyIcon
+  }.GetNewClosure())
+}

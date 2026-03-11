@@ -759,8 +759,8 @@ function Get-WpfRunParameters {
       $regionChoice = [string]$Ctx['cmbEinfachRegion'].SelectedItem.Content
     }
     $params.Prefer = switch -Wildcard ($regionChoice) {
-      '*EU*'   { @('EU','DE','FR','IT','ES','WORLD') }
-      '*US*'   { @('US','WORLD','EU') }
+      '*EU*'   { @('EU','US','DE','FR','IT','ES','WORLD') }
+      '*US*'   { @('US','EU','WORLD') }
       '*JP*'   { @('JP','ASIA','WORLD') }
       '*Alle*' { @('EU','US','WORLD','JP','ASIA') }
       default  { @('EU','US','WORLD') }
@@ -875,6 +875,73 @@ function Set-WpfThemePalette {
 
   if ($Ctx.ContainsKey('btnThemeToggle')) {
     $Ctx['btnThemeToggle'].Content = if ($Light) { '☀ Hell' } else { '☾ Dunkel' }
+  }
+
+  # ── Refresh all programmatically-set colors after theme switch ──────────
+  # Controls whose Foreground/Fill was set via Resolve-WpfThemeBrush hold
+  # a frozen SolidColorBrush instance that does not update when the
+  # ResourceDictionary changes.  Re-run the status functions so they
+  # pick up the new theme's brush values.
+  try { Update-WpfStatusBar -Ctx $Ctx } catch { }
+  if (Get-Command Update-WpfStepIndicator -ErrorAction SilentlyContinue) {
+    try { Update-WpfStepIndicator -Ctx $Ctx } catch { }
+  }
+  try { Update-WpfDryRunBanner -Ctx $Ctx } catch { }
+  try { Reset-WpfInlineValidationState -Ctx $Ctx } catch { }
+  # Re-color tool status labels (✓ OK / ✗ Nicht gefunden)
+  try { Update-WpfToolStatusLabels -Ctx $Ctx } catch { }
+  # Re-color dashboard result labels based on current values
+  try { Update-WpfDashboardColors -Ctx $Ctx } catch { }
+}
+
+function Update-WpfToolStatusLabels {
+  <#
+  .SYNOPSIS
+    Re-applies theme-aware colors to the tool status labels.
+    Called after theme switch to pick up new brush values.
+  #>
+  param([Parameter(Mandatory)][hashtable]$Ctx)
+
+  foreach ($lblKey in @('lblChdmanStatus','lblDolphinStatus','lbl7zStatus','lblPsxtractStatus','lblCisoStatus')) {
+    if (-not $Ctx.ContainsKey($lblKey) -or -not $Ctx[$lblKey]) { continue }
+    $lblCtrl = $Ctx[$lblKey]
+    $txt = [string]$lblCtrl.Text
+    $brushKey = if ($txt -like '*OK*') { 'BrushSuccess' }
+                elseif ($txt -like '*Nicht*' -or $txt -like '*Fehler*') { 'BrushDanger' }
+                else { 'BrushTextMuted' }
+    $lblCtrl.Foreground = Resolve-WpfThemeBrush -Ctx $Ctx -BrushKey $brushKey
+  }
+}
+
+function Update-WpfDashboardColors {
+  <#
+  .SYNOPSIS
+    Re-applies theme-aware colors to dashboard result labels.
+    Called after theme switch when run results are already displayed.
+  #>
+  param([Parameter(Mandatory)][hashtable]$Ctx)
+
+  foreach ($entry in @(
+    @{ Key = 'lblDashWinners'; CondBrush = 'BrushSuccess' }
+    @{ Key = 'lblDashDupes';   CondBrush = 'BrushWarning' }
+    @{ Key = 'lblDashJunk';    CondBrush = 'BrushDanger'  }
+  )) {
+    if (-not $Ctx.ContainsKey($entry.Key) -or -not $Ctx[$entry.Key]) { continue }
+    $ctrl = $Ctx[$entry.Key]
+    $val = 0
+    [void][int]::TryParse([string]$ctrl.Text, [ref]$val)
+    $brushKey = if ($val -gt 0) { $entry.CondBrush } else { 'BrushTextMuted' }
+    $ctrl.Foreground = Resolve-WpfThemeBrush -Ctx $Ctx -BrushKey $brushKey
+  }
+  # Health score
+  if ($Ctx.ContainsKey('lblHealthScore') -and $Ctx['lblHealthScore'] -and
+      (Get-Command Update-WpfHealthScore -ErrorAction SilentlyContinue)) {
+    # Re-trigger health score to recalculate color from current theme
+    $w = 0; $d = 0; $j = 0
+    if ($Ctx.ContainsKey('lblDashWinners') -and $Ctx['lblDashWinners']) { [void][int]::TryParse([string]$Ctx['lblDashWinners'].Text, [ref]$w) }
+    if ($Ctx.ContainsKey('lblDashDupes')   -and $Ctx['lblDashDupes'])   { [void][int]::TryParse([string]$Ctx['lblDashDupes'].Text,   [ref]$d) }
+    if ($Ctx.ContainsKey('lblDashJunk')    -and $Ctx['lblDashJunk'])    { [void][int]::TryParse([string]$Ctx['lblDashJunk'].Text,    [ref]$j) }
+    try { Update-WpfHealthScore -Ctx $Ctx -Winners $w -Dupes $d -Junk $j } catch { }
   }
 }
 
@@ -1661,41 +1728,47 @@ function Register-WpfEventHandlers {
 
   # ── Initial status update ─────────────────────────────────────────────────
   $Window.add_Loaded({
-    Update-WpfStatusBar -Ctx $Ctx -Initial
-    $theme = 'dark'
-    if (Get-Command Get-AppStateValue -ErrorAction SilentlyContinue) {
-      try { $theme = [string](Get-AppStateValue -Key 'UITheme' -Default 'dark') } catch { }
-    }
-    Set-WpfThemePalette -Window $Window -Ctx $Ctx -Light:($theme -eq 'light')
-    Set-WpfDefaultTooltips -Ctx $Ctx
-    # Load saved settings into UI
-    $Ctx['_settingsInitialized'] = $false
-    Initialize-WpfFromSettings -Ctx $Ctx
-    $Ctx['_settingsInitialized'] = $true
-    Update-WpfDryRunBanner -Ctx $Ctx
-    Update-WpfRuntimeStatus -Ctx $Ctx -Elapsed ([TimeSpan]::Zero) -Reset
-    & $updateExpertModeUi
-    Update-WpfToolSetupVisibility -Ctx $Ctx
-    Update-WpfProfileCombo -Ctx $Ctx
-    # UX-01: Initial step indicator state
-    if (Get-Command Update-WpfStepIndicator -ErrorAction SilentlyContinue) {
-      Update-WpfStepIndicator -Ctx $Ctx
-    }
-    # Sync quick-profile dropdown with main profile combobox
-    if ($Ctx.ContainsKey('cmbQuickProfile') -and $Ctx['cmbQuickProfile'] -and $Ctx.ContainsKey('cmbConfigProfile') -and $Ctx['cmbConfigProfile']) {
-      try {
-        $Ctx['cmbQuickProfile'].Items.Clear()
-        foreach ($item in $Ctx['cmbConfigProfile'].Items) { [void]$Ctx['cmbQuickProfile'].Items.Add($item) }
-      } catch { }
-    }
-    try { Set-WpfLocale -Ctx $Ctx } catch { }
-    & $refreshReportPreview
-    # ISS-001: First-start wizard (replaces old 3-step MessageBox onboarding)
-    if (Get-Command Invoke-WpfFirstStartWizard -ErrorAction SilentlyContinue) {
-      Invoke-WpfFirstStartWizard -Window $Window -Ctx $Ctx -BrowseFolder $browseFolder
-    } else {
-      Invoke-WpfQuickOnboarding -Window $Window -Ctx $Ctx -BrowseFolder $browseFolder
-    }
+    # TD-002: Silent catch erlaubt in WPF-Event-Handlern (verhindert UI-Thread-Absturz)
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+    try {
+      Update-WpfStatusBar -Ctx $Ctx -Initial
+      $theme = 'dark'
+      if (Get-Command Get-AppStateValue -ErrorAction SilentlyContinue) {
+        try { $theme = [string](Get-AppStateValue -Key 'UITheme' -Default 'dark') } catch { }
+      }
+      Set-WpfThemePalette -Window $Window -Ctx $Ctx -Light:($theme -eq 'light')
+      Set-WpfDefaultTooltips -Ctx $Ctx
+      # Load saved settings into UI
+      $Ctx['_settingsInitialized'] = $false
+      Initialize-WpfFromSettings -Ctx $Ctx
+      $Ctx['_settingsInitialized'] = $true
+      Update-WpfDryRunBanner -Ctx $Ctx
+      Update-WpfRuntimeStatus -Ctx $Ctx -Elapsed ([TimeSpan]::Zero) -Reset
+      & $updateExpertModeUi
+      Update-WpfToolSetupVisibility -Ctx $Ctx
+      Update-WpfProfileCombo -Ctx $Ctx
+      # UX-01: Initial step indicator state
+      if (Get-Command Update-WpfStepIndicator -ErrorAction SilentlyContinue) {
+        Update-WpfStepIndicator -Ctx $Ctx
+      }
+      # Sync quick-profile dropdown with main profile combobox
+      if ($Ctx.ContainsKey('cmbQuickProfile') -and $Ctx['cmbQuickProfile'] -and $Ctx.ContainsKey('cmbConfigProfile') -and $Ctx['cmbConfigProfile']) {
+        try {
+          $Ctx['cmbQuickProfile'].Items.Clear()
+          foreach ($item in $Ctx['cmbConfigProfile'].Items) { [void]$Ctx['cmbQuickProfile'].Items.Add($item) }
+        } catch { }
+      }
+      try { Set-WpfLocale -Ctx $Ctx } catch { }
+      & $refreshReportPreview
+      # ISS-001: First-start wizard (replaces old 3-step MessageBox onboarding)
+      if (Get-Command Invoke-WpfFirstStartWizard -ErrorAction SilentlyContinue) {
+        Invoke-WpfFirstStartWizard -Window $Window -Ctx $Ctx -BrowseFolder $browseFolder
+      } else {
+        Invoke-WpfQuickOnboarding -Window $Window -Ctx $Ctx -BrowseFolder $browseFolder
+      }
+    } catch { }
+    finally { $ErrorActionPreference = $prevEap }
   }.GetNewClosure())
 
   # ── Save settings on window close ──────────────────────────────────────
@@ -1926,6 +1999,28 @@ function Initialize-WpfFromSettings {
 
     Update-WpfCrcVerifyOptions -Ctx $Ctx
 
+    # Load persisted roots
+    if ($g.ContainsKey('roots') -and -not [string]::IsNullOrWhiteSpace([string]$g['roots'])) {
+      $savedRoots = @(([string]$g['roots']).Split('|') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+      if ($savedRoots.Count -gt 0) {
+        $rootsCollection = $null
+        if ($Ctx.ContainsKey('__rootsCollection') -and $Ctx['__rootsCollection']) {
+          $rootsCollection = $Ctx['__rootsCollection']
+        } elseif (Get-Command Get-WpfRootsCollection -ErrorAction SilentlyContinue) {
+          $rootsCollection = Get-WpfRootsCollection -Ctx $Ctx
+        }
+        if ($rootsCollection) {
+          foreach ($savedRoot in $savedRoots) {
+            $already = $false
+            foreach ($existing in @($rootsCollection)) {
+              if ([string]$existing -ieq [string]$savedRoot) { $already = $true; break }
+            }
+            if (-not $already) { [void]$rootsCollection.Add([string]$savedRoot) }
+          }
+        }
+      }
+    }
+
     if (Get-Command Sync-WpfViewModelRootsFromControl -ErrorAction SilentlyContinue) {
       Sync-WpfViewModelRootsFromControl -Ctx $Ctx
     }
@@ -2032,6 +2127,15 @@ function Save-WpfToSettings {
         [bool]$Ctx['chkExpertMode'].IsChecked
       } else { $false })
     }
+
+    # Persist roots
+    $rootsList = @()
+    if ($Ctx.ContainsKey('__rootsCollection') -and $Ctx['__rootsCollection'] -and $Ctx['__rootsCollection'].Count -gt 0) {
+      $rootsList = @($Ctx['__rootsCollection'] | ForEach-Object { [string]$_ })
+    } elseif ($Ctx.ContainsKey('listRoots') -and $Ctx['listRoots'] -and $Ctx['listRoots'].Items.Count -gt 0) {
+      $rootsList = @($Ctx['listRoots'].Items | ForEach-Object { [string]$_ })
+    }
+    $general['roots'] = ($rootsList -join '|')
 
     Set-UserSettings -Settings @{ toolPaths = $toolPaths; dat = $dat; general = $general }
   } catch {

@@ -748,7 +748,7 @@ $script:CONSOLE_RX_MAP_BASE = @(
 )
 
 $script:CONSOLE_FOLDER_RX_MAP = @($script:CONSOLE_RX_MAP_BASE | ForEach-Object {
-  @{ Key = $_.Key; Rx = $_.Rx; RxObj = [regex]::new($_.Rx, 'IgnoreCase, Compiled') }
+  @{ Key = $_.Key; Rx = $_.Rx; RxObj = [regex]::new($_.Rx, 'IgnoreCase') }
 })
 # BUG-CS-07: Fuer Filename-Regex kurze 2-Buchstaben-Patterns entfernen,
 # die zu False-Positives fuehren (z.B. "Washington DC" -> DC, "GG Allin" -> GG).
@@ -780,7 +780,7 @@ $script:CONSOLE_NAME_RX_MAP = @($script:CONSOLE_RX_MAP_BASE | ForEach-Object {
       $rx = $parts -join '|'
     }
   }
-  @{ Key = $_.Key; Rx = $rx; RxObj = [regex]::new($rx, 'IgnoreCase, Compiled') }
+  @{ Key = $_.Key; Rx = $rx; RxObj = [regex]::new($rx, 'IgnoreCase') }
 })
 # DUP-CS-04: DAT_CONSOLE_RX_MAP direkt auf CONSOLE_RX_MAP_BASE referenzieren.
 # BUG-CS-07: Whitelist-Filter war No-Op — alle Keys bereits enthalten.
@@ -927,6 +927,9 @@ $script:CONSOLE_TYPE_CACHE = [hashtable]::new([StringComparer]::OrdinalIgnoreCas
 $script:CONSOLE_FOLDER_TYPE_CACHE = [hashtable]::new([StringComparer]::OrdinalIgnoreCase)
 # REF-CS-01: Paralleler Source-Cache — speichert Source-Infos zum CONSOLE_TYPE_CACHE
 $script:CONSOLE_TYPE_SOURCE_CACHE = [hashtable]::new([StringComparer]::OrdinalIgnoreCase)
+
+# OPT-02: Max cache size to prevent unbounded growth with large ROM collections
+$script:CONSOLE_TYPE_CACHE_MAX = 50000
 
 # PERF-CS-01: Root-Normalisierung Cache — vermeidet redundante Resolve-RootPath Aufrufe
 $script:ROOT_PATH_NORM_CACHE = [hashtable]::new([StringComparer]::OrdinalIgnoreCase)
@@ -1463,7 +1466,10 @@ function Get-ConsoleType {
         if ($entry -and ($entry.PSObject.Properties.Name -contains 'Console') -and
             -not [string]::IsNullOrWhiteSpace([string]$entry.Console)) {
           $scanResult = [string]$entry.Console
-          if ($cache) { $cache[$cacheKey] = $scanResult }
+          if ($cache) {
+            if ($cache.Count -ge $script:CONSOLE_TYPE_CACHE_MAX) { $cache.Clear(); $script:CONSOLE_TYPE_SOURCE_CACHE.Clear() }
+            $cache[$cacheKey] = $scanResult
+          }
           # REF-CS-01: Source-Info aus ScanIndex rekonstruieren
           $scanSource = if ($entry.PSObject.Properties.Name -contains 'Source') { [string]$entry.Source } else { '' }
           $scanConf = switch ($scanSource) { 'DISC_HEADER' {95}; 'FOLDER' {50}; 'EXT_MAP' {60}; 'EXT_MAP_AMBIG' {40}; 'FILENAME_RX' {30}; default {50} }
@@ -1635,6 +1641,7 @@ function Get-ConsoleType {
     }
   }
   if ($cache -and $cacheKey) {
+    if ($cache.Count -ge $script:CONSOLE_TYPE_CACHE_MAX) { $cache.Clear(); $script:CONSOLE_TYPE_SOURCE_CACHE.Clear() }
     $cache[$cacheKey] = $result
     # REF-CS-01: Source-Info parallel cachen
     if ($script:LAST_CONSOLE_TYPE_SOURCE) {

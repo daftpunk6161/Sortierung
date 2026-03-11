@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <LangVersion>14</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>RomCleanup.UI.Wpf</RootNamespace>
+    <AssemblyName>RomCleanup.Wpf</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RomCleanup.Core\RomCleanup.Core.csproj" />
+    <ProjectReference Include="..\RomCleanup.Contracts\RomCleanup.Contracts.csproj" />
+    <ProjectReference Include="..\RomCleanup.Infrastructure\RomCleanup.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

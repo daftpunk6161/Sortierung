@@ -127,12 +127,12 @@ function Invoke-Quarantine {
 
     try {
       $dir = $action.QuarantineDir
-      if (-not (Test-Path $dir)) {
+      if (-not (Test-Path -LiteralPath $dir)) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
       }
 
-      if (Test-Path $action.SourcePath) {
-        Move-Item -Path $action.SourcePath -Destination $action.TargetPath -Force
+      if (Test-Path -LiteralPath $action.SourcePath) {
+        Move-ItemSafely -Source $action.SourcePath -Dest $action.TargetPath
         $action.Status = 'Moved'
         $moved++
       } else {
@@ -213,7 +213,7 @@ function Restore-FromQuarantine {
     [ValidateSet('DryRun','Move')][string]$Mode = 'DryRun'
   )
 
-  if (-not (Test-Path $QuarantinePath)) {
+  if (-not (Test-Path -LiteralPath $QuarantinePath)) {
     return @{ Status = 'Error'; Reason = 'QuarantineFileNotFound' }
   }
 
@@ -222,10 +222,10 @@ function Restore-FromQuarantine {
   }
 
   $dir = [System.IO.Path]::GetDirectoryName($OriginalPath)
-  if ($dir -and -not (Test-Path $dir)) {
+  if ($dir -and -not (Test-Path -LiteralPath $dir)) {
     New-Item -ItemType Directory -Path $dir -Force | Out-Null
   }
 
-  Move-Item -Path $QuarantinePath -Destination $OriginalPath -Force
+  Move-ItemSafely -Source $QuarantinePath -Dest $OriginalPath
   return @{ Status = 'Restored'; From = $QuarantinePath; To = $OriginalPath }
 }

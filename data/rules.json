@@ -1,5 +1,5 @@
 {
-  "LangPattern": "\\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja)(?:,\\s*(?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja))*\\)",
+  "LangPattern": "\\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu)(?:,\\s*(?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu))*\\)",
   "RegionOrdered": [
     {
       "Key": "EU",
@@ -66,28 +66,56 @@
       "Pattern": "\\((sweden|swe)\\)"
     },
     {
+      "Key": "RU",
+      "Pattern": "\\((russia|rus)\\)"
+    },
+    {
+      "Key": "PL",
+      "Pattern": "\\((poland|pol)\\)"
+    },
+    {
+      "Key": "CA",
+      "Pattern": "\\((canada|can)\\)"
+    },
+    {
+      "Key": "LATAM",
+      "Pattern": "\\((latin\\s*america)\\)"
+    },
+    {
+      "Key": "TR",
+      "Pattern": "\\((turkey)\\)"
+    },
+    {
+      "Key": "AE",
+      "Pattern": "\\((united\\s*arab\\s*emirates)\\)"
+    },
+    {
+      "Key": "AU",
+      "Pattern": "\\((new\\s*zealand|nzl)\\)"
+    },
+    {
       "Key": "EU",
-      "Pattern": "\\((uk|united\\s*kingdom|great\\s*britain|england|belgium|austria|portugal|switzerland|denmark|finland|norway|czech|hungary)\\)"
+      "Pattern": "\\((uk|united\\s*kingdom|great\\s*britain|england|belgium|austria|portugal|switzerland|denmark|finland|norway|czech|hungary|croatia|greece|ireland|luxembourg|romania|bulgaria|slovakia|slovenia|estonia|latvia|lithuania|south\\s*africa)\\)"
     },
     {
       "Key": "ASIA",
-      "Pattern": "\\((taiwan|hong\\s*kong|india)\\)"
+      "Pattern": "\\((taiwan|hong\\s*kong|india|singapore|thailand|vietnam|indonesia|malaysia|philippines)\\)"
     }
   ],
   "VerifiedPattern": "\\[!\\]",
   "FallbackEU": "\\b(europe|pal)\\b",
-  "JunkTags": "\\((alpha\\s*\\d*|beta\\s*\\d*|proto(?:type)?\\s*\\d*|sample|sampler|demo|preview|pre[\\s-]*release|promo|kiosk|debug|trial|taikenban|location\\s*test|test\\s*program)\\)|\\((program|application|utility|enhancement\\s*chip|test\\s*program|test\\s*cartridge)\\)|\\((competition\\s*cart|service\\s*disc|diagnostic|check\\s*program)\\)|\\((hack|pirate|bootleg|homebrew|aftermarket|translated|translation)\\)|\\((unl|unlicensed)\\)|\\((not\\s*for\\s*resale|nfr)\\)|\\[(b\\d*|h\\d*|p\\d*|t\\d*|f\\d*|o\\d*)\\]|\\[(cr|tr|m)\\s",
+  "JunkTags": "\\((alpha\\s*\\d*|beta\\s*\\d*|proto(?:type)?\\s*\\d*|sample|sampler|demo|preview|pre[\\s-]*release|promo|kiosk(?:\\s*demo)?|debug|trial(?:\\s*version)?|taikenban|rehearsal-?\\s*ban|location\\s*test|test\\s*program)\\)|\\((program|application|utility|enhancement\\s*chip|test\\s*program|test\\s*cartridge)\\)|\\((competition\\s*cart|service\\s*disc|diagnostic|check\\s*program)\\)|\\((hack|pirate|bootleg|homebrew|aftermarket|translated|translation)\\)|\\((unl|unlicensed)\\)|\\((not\\s*for\\s*resale|nfr)\\)|\\[(b\\d*|h\\d*|p\\d*|t\\d*|f\\d*|o\\d*)\\]|\\[(cr|tr|m)\\s",
   "GameKeyPatterns": [
-    "\\s*\\((europe|eu|eur|pal|usa|us|u\\.s\\.a\\.|u\\.s\\.|japan|jp|jpn|world|export|asia|as|korea|kr|kor|china|cn|chn|brazil|br|bra|australia|au|aus|france|fr|fra|germany|de|deu|spain|es|esp|italy|it|ita|netherlands|nl|nld|sweden|se|swe|scandinavia|canada|ca|russia|ru|rus|poland|pl|pol|uk|united\\s*kingdom|great\\s*britain|england|belgium|be|austria|at|portugal|pt|switzerland|ch|denmark|dk|finland|fi|norway|no|czech|cz|hungary|hu|taiwan|tw|hong\\s*kong|hk|india|in)(,\\s*(europe|eu|eur|pal|usa|us|japan|jp|jpn|world|asia|as|korea|kr|china|cn|brazil|br|australia|au|france|fr|germany|de|spain|es|italy|it|netherlands|nl|sweden|se|scandinavia|canada|ca|russia|ru|rus|poland|pl|pol|uk|united\\s*kingdom|great\\s*britain|england|belgium|be|austria|at|portugal|pt|switzerland|ch|denmark|dk|finland|fi|norway|no|czech|cz|hungary|hu|taiwan|tw|hong\\s*kong|hk|india|in))*\\)\\s*",
+    "\\s*\\((europe|eu|eur|pal|usa|us|u\\.s\\.a\\.|u\\.s\\.|japan|jp|jpn|world|export|asia|as|korea|kr|kor|china|cn|chn|brazil|br|bra|australia|au|aus|france|fr|fra|germany|de|deu|spain|es|esp|italy|it|ita|netherlands|nl|nld|sweden|se|swe|scandinavia|canada|ca|russia|ru|rus|poland|pl|pol|uk|united\\s*kingdom|great\\s*britain|england|belgium|be|austria|at|portugal|pt|switzerland|ch|denmark|dk|finland|fi|norway|no|czech|cz|hungary|hu|taiwan|tw|hong\\s*kong|hk|india|in|latin\\s*america|latam|turkey|tr|united\\s*arab\\s*emirates|ae|new\\s*zealand|nz|nzl|south\\s*africa|za|croatia|hr|greece|gr|ireland|ie|luxembourg|lu|romania|ro|bulgaria|bg|slovakia|sk|slovenia|si|estonia|ee|latvia|lv|lithuania|lt|singapore|sg|thailand|th|vietnam|vn|indonesia|id|malaysia|my|philippines|ph)(,\\s*(europe|eu|eur|pal|usa|us|japan|jp|jpn|world|asia|as|korea|kr|china|cn|brazil|br|australia|au|france|fr|germany|de|spain|es|italy|it|netherlands|nl|sweden|se|scandinavia|canada|ca|russia|ru|rus|poland|pl|pol|uk|united\\s*kingdom|great\\s*britain|england|belgium|be|austria|at|portugal|pt|switzerland|ch|denmark|dk|finland|fi|norway|no|czech|cz|hungary|hu|taiwan|tw|hong\\s*kong|hk|india|in|latin\\s*america|latam|turkey|tr|united\\s*arab\\s*emirates|ae|new\\s*zealand|nz|nzl|south\\s*africa|za|croatia|hr|greece|gr|ireland|ie|luxembourg|lu|romania|ro|bulgaria|bg|slovakia|sk|slovenia|si|estonia|ee|latvia|lv|lithuania|lt|singapore|sg|thailand|th|vietnam|vn|indonesia|id|malaysia|my|philippines|ph))*\\)\\s*",
     "\\s*\\((headered|headerless)\\)\\s*",
     "\\s*\\((rev\\s*[a-z0-9.]+|revision\\s*[a-z0-9.]+)\\)\\s*",
     "\\s*\\((v\\s*[0-9][0-9.]*[a-z]?)\\)\\s*",
-    "\\s*\\((alpha\\s*\\d*|beta\\s*\\d*|proto(?:type)?\\s*\\d*|sample|demo|preview|pre[\\s-]*release|promo|kiosk|debug|trial|taikenban|location\\s*test)\\)\\s*",
+    "\\s*\\((alpha\\s*\\d*|beta\\s*\\d*|proto(?:type)?\\s*\\d*|sample|demo|preview|pre[\\s-]*release|promo|kiosk(?:\\s*demo)?|debug|trial(?:\\s*version)?|taikenban|rehearsal-?\\s*ban|location\\s*test)\\)\\s*",
     "\\s*\\((program|application|utility|enhancement\\s*chip|test\\s*program|test\\s*cartridge)\\)\\s*",
     "\\s*\\((hack|pirate|bootleg|homebrew|aftermarket|translated|translation)\\)\\s*",
     "\\s*\\((unl|unlicensed|competition\\s*cart|service\\s*disc|diagnostic)\\)\\s*",
     "\\s*\\((bios|firmware)\\)\\s*",
-    "\\s*\\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt)(,\\s*(en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt))*\\)\\s*",
+    "\\s*\\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu)(,\\s*(en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu))*\\)\\s*",
     "\\s*\\[(\\!|b\\d*|h\\d*|o\\d*|p\\d*|t\\d*|f\\d*|a\\d*|cr[^\\]]*|tr[^\\]]*|m\\s[^\\]]*)\\]\\s*",
     "\\s*\\((not\\s*for\\s*resale|nfr)\\)\\s*",
     "\\s*\\((virtual\\s*console|switch\\s*online|classic\\s*mini|wii\\s*u|gamecube)\\)\\s*",
@@ -95,7 +123,15 @@
     "\\s*\\(([^\\)]*\\b(collection|classics?|anniversary|antholog(?:y|ies)|archives?|museum|evercade|retro-?bit(?:\\s*generations)?)\\b[^\\)]*)\\)\\s*",
     "\\s*\\((edc|no\\s*edc|libcrypt|sbi|subchannel)\\)\\s*",
     "\\s*\\((\\d+S(?:,\\s*\\d+S)*)\\)\\s*",
-    "\\s*\\((Made\\s+in\\s+\\w+)\\)\\s*"
+    "\\s*\\((Made\\s+in\\s+\\w+)\\)\\s*",
+    "\\s*\\([^)]*\\bEdition\\b[^)]*\\)\\s*",
+    "\\s*\\((Greatest\\s*Hits|Platinum|Essentials|PlayStation\\s*\\d*\\s*the\\s*Best|The\\s*Best|Budget|Aquaprice\\s*\\d+|Mega\\s*Hits|Best\\s*Collection|Super\\s*Hits|ChoicePrice|Taiou\\s*Version)\\)\\s*",
+    "\\s*\\(([A-Z]{4}-\\d{4,5})\\)\\s*",
+    "\\s*\\((Fukikaeban|Jimakuban|PlayStation\\s*Move\\s*Taiou|3D\\s*Compatible|Tsuika\\s*Contents\\s*Disc|Append-ban)\\)\\s*",
+    "\\s*\\((Version\\s+\\d+[0-9.]*)\\)\\s*",
+    "\\s*\\((FW\\s*\\d+[0-9.]*)\\)\\s*",
+    "\\s*\\((\\d{4}\\.\\d{2}\\.\\d{2}|\\d{8})\\)\\s*",
+    "\\s*\\(\\s*\\)\\s*"
   ],
   "JunkWordsAggressive": "\\b(work\\s*in\\s*progress|wip|playtest|test\\s*build|dev\\s*build|qa\\s*build|review\\s*build|internal\\s*build|preview\\s*build|not\\s*for\\s*distribution)\\b",
   "MultiRegionPattern": "\\([^)]*(?:europe|usa|japan|world)[^)]*(?:europe|usa|japan|world)[^)]*\\)",
@@ -165,6 +201,18 @@
     {
       "Key": "AU",
       "Pattern": "\\((au)\\)"
+    },
+    {
+      "Key": "RU",
+      "Pattern": "\\((ru)\\)"
+    },
+    {
+      "Key": "PL",
+      "Pattern": "\\((pl)\\)"
+    },
+    {
+      "Key": "CA",
+      "Pattern": "\\((ca)\\)"
     },
     {
       "Key": "ASIA",
@@ -242,6 +290,6 @@
   "BiosPattern": "\\((bios|firmware)\\)|\\[bios\\]|^\\s*bios\\b",
   "Cleanup2": "\\s{2,}",
   "Cleanup1": "[\\._]+",
-  "JunkWords": "\\b(demo|sample\\s*version|trial\\s*version|trial|pre[\\s-]*release|not\\s*for\\s*resale|sampler|bootleg\\s*sampler)\\b",
+  "JunkWords": "\\b(demo|sample\\s*version|trial\\s*version|trial|pre[\\s-]*release|not\\s*for\\s*resale|sampler|bootleg\\s*sampler)\\b|^gamelist(?:\\.xml)?(?:\\.old|\\.bak)?$",
   "JunkTagsAggressive": "\\((wip|work\\s*in\\s*progress|playtest|test\\s*build|dev\\s*build|qa\\s*build|review\\s*build|internal\\s*build|preview\\s*build|prototype\\s*build|not\\s*for\\s*distribution)\\)"
 }

@@ -1,0 +1,491 @@
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
+using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
+
+namespace RomCleanup.Infrastructure.Deduplication;
+
+/// <summary>
+/// Folder-level deduplication engine for PS3 (hash-based) and base-name strategies.
+/// Port of FolderDedupe.ps1.
+/// </summary>
+public sealed class FolderDeduplicator
+{
+    private static readonly HashSet<string> FolderDedupeConsoleKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "DOS", "AMIGA", "CD32", "C64", "PC98", "X68K", "MSX", "ATARIST",
+        "ZX", "CPC", "FMTOWNS", "XBOX", "X360", "3DO", "CDI"
+    };
+
+    private static readonly HashSet<string> Ps3DedupeConsoleKeys = new(StringComparer.OrdinalIgnoreCase) { "PS3" };
+
+    private static readonly string[] Ps3KeyFiles = ["PS3_DISC.SFB", "PARAM.SFO", "EBOOT.BIN"];
+
+    private static readonly Regex PreservePattern = new(
+        @"(?:Disk|Disc|CD|Side)\s*[\dA-Z]|AGA|ECS|OCS|NTSC|PAL|WHDLoad|ADF",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex ParenthesisPattern = new(
+        @"\([^)]*\)", RegexOptions.Compiled);
+
+    private static readonly Regex TrailingBracketPattern = new(
+        @"\s*\[[^\]]*\]\s*$", RegexOptions.Compiled);
+
+    private static readonly Regex VersionSuffixPattern = new(
+        @"\s+v?\d+(\.\d+)+\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex MultiSpacePattern = new(
+        @"\s{2,}", RegexOptions.Compiled);
+
+    private static readonly Regex MultidiscPattern = new(
+        @"(?:Disc|Disk|CD|Side)\s*\d", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private readonly IFileSystem _fs;
+    private readonly Action<string>? _log;
+
+    public FolderDeduplicator(IFileSystem fs, Action<string>? log = null)
+    {
+        _fs = fs;
+        _log = log;
+    }
+
+    /// <summary>
+    /// Compute MD5 hash of PS3 key files in a folder.
+    /// Returns null if no key files found.
+    /// </summary>
+    public static string? GetPs3FolderHash(string folderPath)
+    {
+        using var md5 = MD5.Create();
+        bool found = false;
+
+        foreach (var keyFile in Ps3KeyFiles)
+        {
+            var filePath = FindFileRecursive(folderPath, keyFile);
+            if (filePath is null) continue;
+
+            found = true;
+            try
+            {
+                using var stream = File.OpenRead(filePath);
+                var hash = md5.ComputeHash(stream);
+                // Accumulate: feed each file's hash bytes as additional data
+                md5.TransformBlock(hash, 0, hash.Length, null, 0);
+            }
+            catch { /* skip unreadable files */ }
+        }
+
+        if (!found) return null;
+
+        md5.TransformFinalBlock([], 0, 0);
+        return Convert.ToHexStringLower(md5.Hash!);
+    }
+
+    /// <summary>
+    /// Check if a folder name indicates a multi-disc PS3 game.
+    /// </summary>
+    public static bool IsPs3MultidiscFolder(string folderName)
+        => MultidiscPattern.IsMatch(folderName);
+
+    /// <summary>
+    /// Normalize a folder name into a grouping key for deduplication.
+    /// Preserves disc/side markers and platform-variant tags (AGA/ECS/OCS/NTSC/PAL).
+    /// </summary>
+    public static string GetFolderBaseKey(string folderName)
+    {
+        if (string.IsNullOrWhiteSpace(folderName))
+            return "";
+
+        var result = folderName;
+
+        // Unicode normalization (FormC for basic folding)
+        result = result.Normalize(System.Text.NormalizationForm.FormC);
+
+        // Collect preserved parenthetical tags, strip all parens, re-append preserved
+        var preserved = new List<string>();
+        foreach (Match m in ParenthesisPattern.Matches(result))
+        {
+            if (PreservePattern.IsMatch(m.Value))
+                preserved.Add(m.Value);
+        }
+        result = ParenthesisPattern.Replace(result, "");
+        if (preserved.Count > 0)
+            result = result.TrimEnd() + " " + string.Join(" ", preserved);
+
+        // Strip all trailing bracket groups
+        while (TrailingBracketPattern.IsMatch(result))
+            result = TrailingBracketPattern.Replace(result, "");
+
+        // Strip version-like suffixes
+        result = VersionSuffixPattern.Replace(result, "");
+
+        // Collapse multiple spaces
+        result = MultiSpacePattern.Replace(result, " ").Trim();
+
+        return string.IsNullOrWhiteSpace(result)
+            ? folderName.Trim().ToLowerInvariant()
+            : result.ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// PS3 folder deduplication: hash key files and move duplicates.
+    /// </summary>
+    public Ps3FolderDedupeResult DeduplicatePs3(
+        IReadOnlyList<string> roots,
+        string? dupeRoot = null,
+        CancellationToken ct = default)
+    {
+        int total = 0, dupes = 0, moved = 0, skipped = 0;
+
+        foreach (var root in roots)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!Directory.Exists(root))
+            {
+                _log?.Invoke($"WARNING: Root nicht gefunden: {root}");
+                continue;
+            }
+
+            var dupeBase = string.IsNullOrWhiteSpace(dupeRoot)
+                ? Path.Combine(root, "PS3_DUPES")
+                : Path.Combine(dupeRoot, Path.GetFileName(root));
+            dupeBase = Path.GetFullPath(dupeBase);
+            _fs.EnsureDirectory(dupeBase);
+
+            var folders = Directory.GetDirectories(root)
+                .Where(d => !string.Equals(Path.GetFullPath(d), dupeBase, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            _log?.Invoke($"PS3 Scan: {folders.Length} Ordner in {root}");
+
+            var hashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < folders.Length; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                total++;
+                var folder = folders[i];
+                var folderName = Path.GetFileName(folder);
+                _log?.Invoke($"  [{i + 1}/{folders.Length}] {folderName}");
+
+                var hash = GetPs3FolderHash(folder);
+                if (hash is null)
+                {
+                    skipped++;
+                    _log?.Invoke("    ÜBERSPRUNGEN (keine PS3-Schlüsseldateien)");
+                    continue;
+                }
+
+                if (hashes.TryGetValue(hash, out var existingPath))
+                {
+                    dupes++;
+                    var existingCount = CountFilesRecursive(existingPath);
+                    var newCount = CountFilesRecursive(folder);
+
+                    // Quality comparison: more files wins, then alphabetical for determinism
+                    var loserPath = folder;
+                    if (newCount > existingCount ||
+                        (newCount == existingCount && string.Compare(folder, existingPath, StringComparison.OrdinalIgnoreCase) < 0))
+                    {
+                        loserPath = existingPath;
+                        hashes[hash] = folder;
+                    }
+
+                    var loserName = Path.GetFileName(loserPath);
+                    var dest = Path.Combine(dupeBase, loserName!);
+
+                    // Path traversal check
+                    var resolvedSrc = _fs.ResolveChildPathWithinRoot(root, Path.GetRelativePath(root, loserPath));
+                    if (resolvedSrc is null)
+                    {
+                        _log?.Invoke($"    BLOCKED: {loserName} - außerhalb Root");
+                        continue;
+                    }
+
+                    if (_fs.MoveItemSafely(loserPath, dest))
+                    {
+                        moved++;
+                        _log?.Invoke($"    DUP -> {loserName}");
+                    }
+                }
+                else
+                {
+                    hashes[hash] = folder;
+                }
+            }
+        }
+
+        _log?.Invoke($"PS3 Dedupe: {total} gescannt, {dupes} Duplikate, {moved} verschoben, {skipped} übersprungen");
+        return new Ps3FolderDedupeResult { Total = total, Dupes = dupes, Moved = moved, Skipped = skipped };
+    }
+
+    /// <summary>
+    /// Base-name folder deduplication. Winner: most files (populated beats empty),
+    /// then newest file, then most files count, then shortest name.
+    /// </summary>
+    public FolderDedupeResult DeduplicateByBaseName(
+        IReadOnlyList<string> roots,
+        string? dupeRoot = null,
+        string mode = "DryRun",
+        CancellationToken ct = default)
+    {
+        int totalFolders = 0, dupeGroups = 0, movedFolders = 0, errorCount = 0;
+        var actions = new List<FolderDedupeAction>();
+
+        foreach (var rootPath in roots)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
+            {
+                _log?.Invoke($"WARNING: Root not found: {rootPath}");
+                continue;
+            }
+
+            var normalizedRoot = Path.GetFullPath(rootPath);
+            var dupeBase = string.IsNullOrWhiteSpace(dupeRoot)
+                ? Path.Combine(normalizedRoot, "_FOLDER_DUPES")
+                : Path.GetFullPath(dupeRoot);
+
+            if (mode == "Move")
+                _fs.EnsureDirectory(dupeBase);
+
+            var folders = Directory.GetDirectories(normalizedRoot)
+                .Where(d => !string.Equals(Path.GetFullPath(d), dupeBase, StringComparison.OrdinalIgnoreCase))
+                .Select(d => new DirectoryInfo(d))
+                .ToArray();
+
+            if (folders.Length == 0)
+            {
+                _log?.Invoke($"No sub-folders found in: {normalizedRoot}");
+                continue;
+            }
+
+            totalFolders += folders.Length;
+            _log?.Invoke($"Folder-Dedupe scan: {folders.Length} folders in {normalizedRoot}");
+
+            // Group by normalized base key
+            var groups = folders.GroupBy(d => GetFolderBaseKey(d.Name));
+
+            foreach (var group in groups)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (string.IsNullOrWhiteSpace(group.Key) || group.Count() <= 1)
+                    continue;
+
+                dupeGroups++;
+                var candidates = group.Select(dir => new
+                {
+                    Dir = dir,
+                    Newest = GetNewestFileTimestamp(dir),
+                    FileCount = CountFilesRecursive(dir.FullName)
+                }).ToList();
+
+                // Sort: populated first, newest, most files, shortest name, then alpha
+                var sorted = candidates
+                    .OrderByDescending(c => c.FileCount > 0 ? 1 : 0)
+                    .ThenByDescending(c => c.Newest)
+                    .ThenByDescending(c => c.FileCount)
+                    .ThenBy(c => c.Dir.Name.Length)
+                    .ThenBy(c => c.Dir.FullName, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var winner = sorted[0];
+                _log?.Invoke($"  Key '{group.Key}' -> {sorted.Count} folders | KEEP: {winner.Dir.Name} (newest: {winner.Newest:u}, files: {winner.FileCount})");
+
+                for (int i = 1; i < sorted.Count; i++)
+                {
+                    var loser = sorted[i];
+                    var srcPath = loser.Dir.FullName;
+                    var destPath = Path.Combine(dupeBase, loser.Dir.Name);
+
+                    var action = new FolderDedupeAction
+                    {
+                        Key = group.Key,
+                        Source = srcPath,
+                        Dest = destPath,
+                        Winner = winner.Dir.FullName
+                    };
+
+                    if (mode == "DryRun")
+                    {
+                        action = action with { Action = "DRYRUN-MOVE" };
+                        _log?.Invoke($"    DRYRUN -> {loser.Dir.Name}");
+                    }
+                    else
+                    {
+                        var resolvedSrc = _fs.ResolveChildPathWithinRoot(
+                            normalizedRoot, Path.GetRelativePath(normalizedRoot, srcPath));
+                        if (resolvedSrc is null)
+                        {
+                            action = action with { Action = "BLOCKED", Error = "Source outside root or crosses reparse point" };
+                            errorCount++;
+                            _log?.Invoke($"    BLOCKED: {loser.Dir.Name} - outside root or reparse point");
+                            actions.Add(action);
+                            continue;
+                        }
+
+                        try
+                        {
+                            if (_fs.MoveItemSafely(srcPath, destPath))
+                            {
+                                action = action with { Action = "MOVED", Dest = destPath };
+                                movedFolders++;
+                                _log?.Invoke($"    MOVED -> {destPath}");
+                            }
+                            else
+                            {
+                                action = action with { Action = "ERROR", Error = "Move returned false" };
+                                errorCount++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            action = action with { Action = "ERROR", Error = ex.Message };
+                            errorCount++;
+                            _log?.Invoke($"    ERROR moving {loser.Dir.Name}: {ex.Message}");
+                        }
+                    }
+                    actions.Add(action);
+                }
+            }
+        }
+
+        _log?.Invoke($"Folder-Dedupe complete: {totalFolders} scanned, {dupeGroups} dupe groups, {movedFolders} moved, {errorCount} errors (mode: {mode})");
+        return new FolderDedupeResult
+        {
+            TotalFolders = totalFolders,
+            DupeGroups = dupeGroups,
+            Moved = movedFolders,
+            Errors = errorCount,
+            Mode = mode,
+            Actions = actions
+        };
+    }
+
+    /// <summary>
+    /// Auto-detect which roots need folder-level dedup and dispatch accordingly.
+    /// </summary>
+    public AutoFolderDedupeResult AutoDeduplicate(
+        IReadOnlyList<string> roots,
+        string mode = "DryRun",
+        string? dupeRoot = null,
+        Func<string, string?>? consoleKeyDetector = null,
+        CancellationToken ct = default)
+    {
+        var ps3Roots = new List<string>();
+        var folderRoots = new List<string>();
+        var results = new List<AutoFolderDedupeEntry>();
+
+        foreach (var root in roots)
+        {
+            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
+                continue;
+
+            var consoleKey = consoleKeyDetector?.Invoke(root);
+            if (consoleKey is not null && Ps3DedupeConsoleKeys.Contains(consoleKey))
+            {
+                ps3Roots.Add(root);
+                _log?.Invoke($"Auto-dedupe: {root} -> PS3 hash-based dedupe");
+            }
+            else if (consoleKey is not null && FolderDedupeConsoleKeys.Contains(consoleKey))
+            {
+                folderRoots.Add(root);
+                _log?.Invoke($"Auto-dedupe: {root} -> folder base-name dedupe ({consoleKey})");
+            }
+        }
+
+        if (ps3Roots.Count > 0 && mode == "Move")
+        {
+            _log?.Invoke($"Auto-dedupe: running PS3 dedupe on {ps3Roots.Count} root(s)...");
+            try
+            {
+                var ps3Result = DeduplicatePs3(ps3Roots, dupeRoot, ct);
+                results.Add(new AutoFolderDedupeEntry { Type = "PS3", Roots = ps3Roots, Result = ps3Result });
+            }
+            catch (Exception ex)
+            {
+                _log?.Invoke($"Auto-dedupe: PS3 dedupe error: {ex.Message}");
+            }
+        }
+        else if (ps3Roots.Count > 0)
+        {
+            _log?.Invoke("Auto-dedupe: PS3 dedupe skipped in DryRun mode (hash-based dedupe is destructive-only)");
+        }
+
+        if (folderRoots.Count > 0)
+        {
+            _log?.Invoke($"Auto-dedupe: running folder dedupe on {folderRoots.Count} root(s)...");
+            try
+            {
+                var folderResult = DeduplicateByBaseName(folderRoots, dupeRoot, mode, ct);
+                results.Add(new AutoFolderDedupeEntry { Type = "FolderBaseName", Roots = folderRoots, Result = folderResult });
+            }
+            catch (Exception ex)
+            {
+                _log?.Invoke($"Auto-dedupe: folder dedupe error: {ex.Message}");
+            }
+        }
+
+        if (ps3Roots.Count == 0 && folderRoots.Count == 0)
+            _log?.Invoke("Auto-dedupe: no roots detected that need folder-level deduplication");
+
+        return new AutoFolderDedupeResult
+        {
+            Ps3Roots = ps3Roots,
+            FolderRoots = folderRoots,
+            Mode = mode,
+            Results = results
+        };
+    }
+
+    /// <summary>
+    /// Check if a console key requires folder-level deduplication.
+    /// </summary>
+    public static bool NeedsFolderDedupe(string consoleKey)
+        => FolderDedupeConsoleKeys.Contains(consoleKey);
+
+    /// <summary>
+    /// Check if a console key requires PS3 hash-based deduplication.
+    /// </summary>
+    public static bool NeedsPs3Dedupe(string consoleKey)
+        => Ps3DedupeConsoleKeys.Contains(consoleKey);
+
+    private static DateTime GetNewestFileTimestamp(DirectoryInfo dir)
+    {
+        try
+        {
+            var newest = dir.EnumerateFiles("*", SearchOption.AllDirectories)
+                .Select(f => f.LastWriteTimeUtc)
+                .DefaultIfEmpty(dir.LastWriteTimeUtc)
+                .Max();
+            return newest;
+        }
+        catch
+        {
+            return dir.LastWriteTimeUtc;
+        }
+    }
+
+    private static int CountFilesRecursive(string path)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).Count();
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static string? FindFileRecursive(string folderPath, string fileName)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(folderPath, fileName, SearchOption.AllDirectories)
+                .FirstOrDefault();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}

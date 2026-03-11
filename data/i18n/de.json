@@ -31,7 +31,7 @@
   "Start.ModeDryRun": "Nur prüfen (DryRun)",
   "Start.ModeMove": "Verschieben (Move)",
   "Start.ReadinessBlocked": "Readiness: 0/100 (Blockiert)",
-  "Start.RunButton": "Dedupe &starten (DryRun)",
+  "Start.RunButton": "Starten",
   "Start.PreviewKeys": "Key Vorschau",
   "Start.DryRunCheck": "☑ Nur Vorschau (Dry Run)",
   "Start.ConvertCheck": "Winner nach Move konvertieren (CHD/RVZ/ZIP)",

@@ -27,8 +27,8 @@ function New-FileSystemPort {
       return (Get-FilesSafe -Root $Root -AllowedExtensions $AllowedExtensions -Responsive:$Responsive)
     }
     MoveItemSafely = {
-      param([string]$SourcePath, [string]$DestinationPath)
-      return (Move-ItemSafely -SourcePath $SourcePath -DestinationPath $DestinationPath)
+      param([string]$Source, [string]$Dest)
+      return (Move-ItemSafely -Source $Source -Dest $Dest)
     }
     ResolveChildPathWithinRoot = {
       param([string]$RootPath, [string]$RelativePath)
@@ -67,8 +67,8 @@ function New-DatRepositoryPort {
   return [pscustomobject]@{
     Name = 'DatRepository'
     GetDatIndex = {
-      param([string]$DatRoot, [hashtable]$DatMap, [string]$HashType = 'SHA1', [scriptblock]$OnDatHash)
-      return (Get-DatIndex -DatRoot $DatRoot -DatMap $DatMap -HashType $HashType -OnDatHash $OnDatHash)
+      param([string]$DatRoot, [hashtable]$ConsoleMap, [string]$HashType = 'SHA1', [scriptblock]$Log)
+      return (Get-DatIndex -DatRoot $DatRoot -ConsoleMap $ConsoleMap -HashType $HashType -Log $Log)
     }
     GetDatGameKey = {
       param([string]$GameName, [string]$Console)

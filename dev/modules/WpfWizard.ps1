@@ -1,4 +1,4 @@
-# ================================================================
+﻿# ================================================================
 #  ISS-001: First-Start Wizard  (WpfWizard.ps1)
 # ================================================================
 #  6-step guided wizard shown on first launch (no settings file).
@@ -351,11 +351,11 @@ function Show-FirstStartWizard {
   $showStep = {
     param([int]$Step)
 
-    $wiz['wizStep1'].Visibility = if ($Step -eq 1) { 'Visible' } else { 'Collapsed' }
-    $wiz['wizStep2'].Visibility = if ($Step -eq 2) { 'Visible' } else { 'Collapsed' }
-    $wiz['wizStep3'].Visibility = if ($Step -eq 3) { 'Visible' } else { 'Collapsed' }
+    $wiz['wizStep1'].Visibility = $(if ($Step -eq 1) { 'Visible' } else { 'Collapsed' })
+    $wiz['wizStep2'].Visibility = $(if ($Step -eq 2) { 'Visible' } else { 'Collapsed' })
+    $wiz['wizStep3'].Visibility = $(if ($Step -eq 3) { 'Visible' } else { 'Collapsed' })
 
-    $wiz['wizBtnBack'].Visibility = if ($Step -gt 1) { 'Visible' } else { 'Collapsed' }
+    $wiz['wizBtnBack'].Visibility = $(if ($Step -gt 1) { 'Visible' } else { 'Collapsed' })
 
     if ($Step -eq 3) {
       $wiz['wizBtnNext'].Content = 'Fertig ✓'
@@ -398,7 +398,7 @@ function Show-FirstStartWizard {
         $missingFolders += $root
       }
     }
-    $wiz['wizChkFolders'].Fill = if ($foldersOk) { $brushSuccess } else { $brushDanger }
+    $wiz['wizChkFolders'].Fill = $(if ($foldersOk) { $brushSuccess } else { $brushDanger })
     if ($foldersOk) {
       $wiz['wizChkFoldersText'].Text = "$($wizardResult.Roots.Count) Ordner OK"
     } else {
@@ -419,7 +419,7 @@ function Show-FirstStartWizard {
     }
     if ($totalFiles -gt 0) {
       $wiz['wizChkFiles'].Fill = $brushSuccess
-      $displayCount = if ($totalFiles -ge 500) { '500+' } else { $totalFiles }
+      $displayCount = $(if ($totalFiles -ge 500) { '500+' } else { $totalFiles })
       $wiz['wizChkFilesText'].Text = "$displayCount Dateien gefunden"
     } else {
       $wiz['wizChkFiles'].Fill = $brushDanger
@@ -457,7 +457,7 @@ function Show-FirstStartWizard {
     } else {
       $toolMsg = 'Tool-Prüfung übersprungen'
     }
-    $wiz['wizChkTools'].Fill = if ($toolsOk) { $brushSuccess } else { $brushWarning }
+    $wiz['wizChkTools'].Fill = $(if ($toolsOk) { $brushSuccess } else { $brushWarning })
     $wiz['wizChkToolsText'].Text = $toolMsg
 
     # Overall status
@@ -487,9 +487,11 @@ function Show-FirstStartWizard {
     $wizardResult.Roots.Add($normalizedPath)
     $wiz['wizFolderList'].Items.Add($normalizedPath)
 
-    # Auto-set trash if not yet set
+    # Auto-set trash if not yet set – MUST be outside root to avoid PREFLIGHT-OVERLAP
     if ([string]::IsNullOrWhiteSpace([string]$wizardResult.TrashRoot)) {
-      $defaultTrash = Join-Path -Path $normalizedPath -ChildPath '_trash'
+      $parentDir = [System.IO.Path]::GetDirectoryName($normalizedPath)
+      $rootName  = [System.IO.Path]::GetFileName($normalizedPath)
+      $defaultTrash = [System.IO.Path]::Combine($parentDir, ($rootName + '_trash'))
       $wizardResult.TrashRoot = $defaultTrash
       $wiz['wizTxtTrash'].Text = $defaultTrash
     }
@@ -673,23 +675,39 @@ function Invoke-WpfFirstStartWizard {
   $result = Show-FirstStartWizard -OwnerWindow $Window -BrowseFolder $BrowseFolder
   if ($null -eq $result) { return }
 
-  # ── Apply wizard results to main window ──────────────────────────────────
-  # Add roots
+  # ── Apply wizard results to main window (v3 – self-contained) ─────────────
+  # Guarantee a working roots collection exists. Create fresh if needed.
+  $rootsCollection = $Ctx['__rootsCollection']
+  if (-not $rootsCollection -and $vm -and $vm.Roots) {
+    $rootsCollection = $vm.Roots
+  }
+  if (-not $rootsCollection) {
+    $rootsCollection = New-Object 'System.Collections.ObjectModel.ObservableCollection[string]'
+  }
+  # Always store and bind – ensures listRoots and StatusBar see the collection
+  $Ctx['__rootsCollection'] = $rootsCollection
+  if ($Ctx.ContainsKey('listRoots') -and $Ctx['listRoots']) {
+    try { $Ctx['listRoots'].ItemsSource = $rootsCollection } catch { }
+  }
+
+  # Add wizard roots to collection
   foreach ($root in $result.Roots) {
-    if ($vm -and $vm.Roots) {
-      $already = $false
-      foreach ($existing in $vm.Roots) {
-        if ([string]$existing -ieq [string]$root) { $already = $true; break }
-      }
-      if (-not $already) { $vm.Roots.Add([string]$root) }
-    } elseif ($Ctx.ContainsKey('listRoots') -and $Ctx['listRoots']) {
-      $rootsCollection = $Ctx['listRoots'].Items
-      $already = $false
-      foreach ($existing in @($rootsCollection)) {
-        if ([string]$existing -ieq [string]$root) { $already = $true; break }
-      }
-      if (-not $already) { [void]$rootsCollection.Add([string]$root) }
+    $normalized = ([string]$root).Trim()
+    $duplicate = $false
+    foreach ($existing in @($rootsCollection)) {
+      if ([string]$existing -ieq $normalized) { $duplicate = $true; break }
     }
+    if (-not $duplicate) { [void]$rootsCollection.Add($normalized) }
+  }
+
+  # Sync ViewModel roots if needed
+  if (Get-Command Sync-WpfViewModelRootsFromControl -ErrorAction SilentlyContinue) {
+    try { Sync-WpfViewModelRootsFromControl -Ctx $Ctx } catch { }
+  }
+
+  # Log result (v3 marker)
+  if (Get-Command Add-WpfLogLine -ErrorAction SilentlyContinue) {
+    Add-WpfLogLine -Ctx $Ctx -Line ("WIZ-v3: roots={0}, listItems={1}" -f $rootsCollection.Count, $(if ($Ctx.ContainsKey('listRoots') -and $Ctx['listRoots']) { $Ctx['listRoots'].Items.Count } else { -1 })) -Level 'DEBUG'
   }
 
   # Set trash
@@ -737,9 +755,17 @@ function Invoke-WpfFirstStartWizard {
     }
   }
 
-  # Update status bar
+  # Update status bar and step indicator
   if (Get-Command Update-WpfStatusBar -ErrorAction SilentlyContinue) {
     Update-WpfStatusBar -Ctx $Ctx
+  }
+  if (Get-Command Update-WpfStepIndicator -ErrorAction SilentlyContinue) {
+    Update-WpfStepIndicator -Ctx $Ctx
+  }
+
+  # Persist roots so they survive restart
+  if (Get-Command Save-WpfToSettings -ErrorAction SilentlyContinue) {
+    try { Save-WpfToSettings -Ctx $Ctx } catch { }
   }
 
   # Log completion
@@ -756,5 +782,15 @@ function Invoke-WpfFirstStartWizard {
   # Mark onboarding as done (prevent re-show next time)
   if (Get-Command Set-AppStateValue -ErrorAction SilentlyContinue) {
     try { Set-AppStateValue -Key 'SkipOnboardingWizard' -Value $true } catch { }
+  }
+
+  # Auto-start DryRun if wizard requested it
+  if ($result.AutoStartDryRun) {
+    if ($Ctx.ContainsKey('btnRunGlobal') -and $Ctx['btnRunGlobal'] -and $Ctx['btnRunGlobal'].IsEnabled) {
+      Add-WpfLogLine -Ctx $Ctx -Line 'Wizard: Starte automatischen DryRun...' -Level 'INFO'
+      $Ctx['btnRunGlobal'].RaiseEvent(
+        [System.Windows.RoutedEventArgs]::new([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)
+      )
+    }
   }
 }

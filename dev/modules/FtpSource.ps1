@@ -114,3 +114,207 @@ function Get-FtpTransferProgress {
     FilePercent      = $filePercent
   }
 }
+
+# ── Echte FTP-Verbindung und Dateitransfer ──────────────────────────────
+
+function Connect-FtpSource {
+  <#
+  .SYNOPSIS
+    Testet die FTP-Verbindung und gibt Verzeichnis-Listing zurueck.
+  #>
+  param(
+    [Parameter(Mandatory)][hashtable]$Config,
+    [Parameter(Mandatory)][System.Security.SecureString]$Password
+  )
+
+  if ($Config.Protocol -eq 'SFTP') {
+    return @{ Success = $false; Error = 'SFTP erfordert SSH.NET oder WinSCP — aktuell nur FTP unterstuetzt' }
+  }
+
+  $uri = "ftp://$($Config.Host):$($Config.Port)$($Config.RemotePath)"
+  $cred = New-Object System.Net.NetworkCredential($Config.Username, $Password)
+
+  try {
+    $request = [System.Net.FtpWebRequest]::Create($uri)
+    $request.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectoryDetails
+    $request.Credentials = $cred
+    $request.UseBinary = $true
+    $request.UsePassive = $true
+    $request.Timeout = 15000
+
+    $response = $request.GetResponse()
+    $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
+    $listing = $reader.ReadToEnd()
+    $reader.Close()
+    $response.Close()
+
+    $Config.Connected = $true
+    $Config.LastSync = [datetime]::UtcNow
+
+    return @{ Success = $true; Listing = $listing; Config = $Config }
+  } catch {
+    return @{ Success = $false; Error = $_.Exception.Message }
+  }
+}
+
+function Get-FtpFileList {
+  <#
+  .SYNOPSIS
+    Holt die Dateiliste von einem FTP-Verzeichnis.
+  #>
+  param(
+    [Parameter(Mandatory)][hashtable]$Config,
+    [Parameter(Mandatory)][System.Security.SecureString]$Password
+  )
+
+  if ($Config.Protocol -eq 'SFTP') {
+    return @{ Success = $false; Files = @(); Error = 'SFTP nicht unterstuetzt' }
+  }
+
+  $uri = "ftp://$($Config.Host):$($Config.Port)$($Config.RemotePath)"
+  if (-not $uri.EndsWith('/')) { $uri += '/' }
+  $cred = New-Object System.Net.NetworkCredential($Config.Username, $Password)
+
+  try {
+    $request = [System.Net.FtpWebRequest]::Create($uri)
+    $request.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectory
+    $request.Credentials = $cred
+    $request.UseBinary = $true
+    $request.UsePassive = $true
+    $request.Timeout = 15000
+
+    $response = $request.GetResponse()
+    $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
+    $names = @($reader.ReadToEnd() -split "`r?`n" | Where-Object { $_ -ne '' })
+    $reader.Close()
+    $response.Close()
+
+    $files = [System.Collections.Generic.List[hashtable]]::new()
+    foreach ($name in $names) {
+      $fileUri = $uri + $name
+      try {
+        $sizeReq = [System.Net.FtpWebRequest]::Create($fileUri)
+        $sizeReq.Method = [System.Net.WebRequestMethods+Ftp]::GetFileSize
+        $sizeReq.Credentials = $cred
+        $sizeReq.UseBinary = $true
+        $sizeReq.UsePassive = $true
+        $sizeReq.Timeout = 10000
+        $sizeResp = $sizeReq.GetResponse()
+        $size = $sizeResp.ContentLength
+        $sizeResp.Close()
+      } catch {
+        $size = -1
+      }
+      $files.Add(@{ Name = $name; Size = $size })
+    }
+
+    return @{ Success = $true; Files = ,$files.ToArray() }
+  } catch {
+    return @{ Success = $false; Files = @(); Error = $_.Exception.Message }
+  }
+}
+
+function Invoke-FtpDownload {
+  <#
+  .SYNOPSIS
+    Laed eine Datei per FTP herunter.
+  #>
+  param(
+    [Parameter(Mandatory)][hashtable]$Config,
+    [Parameter(Mandatory)][System.Security.SecureString]$Password,
+    [Parameter(Mandatory)][string]$RemoteFileName,
+    [Parameter(Mandatory)][string]$LocalPath
+  )
+
+  if ($Config.Protocol -eq 'SFTP') {
+    return @{ Success = $false; Error = 'SFTP nicht unterstuetzt' }
+  }
+
+  $remotePath = $Config.RemotePath
+  if (-not $remotePath.EndsWith('/')) { $remotePath += '/' }
+  $uri = "ftp://$($Config.Host):$($Config.Port)$remotePath$RemoteFileName"
+  $cred = New-Object System.Net.NetworkCredential($Config.Username, $Password)
+
+  $localDir = [System.IO.Path]::GetDirectoryName($LocalPath)
+  if (-not (Test-Path -LiteralPath $localDir)) { [void](New-Item -Path $localDir -ItemType Directory -Force) }
+
+  try {
+    $request = [System.Net.FtpWebRequest]::Create($uri)
+    $request.Method = [System.Net.WebRequestMethods+Ftp]::DownloadFile
+    $request.Credentials = $cred
+    $request.UseBinary = $true
+    $request.UsePassive = $true
+    $request.Timeout = 120000
+
+    $response = $request.GetResponse()
+    $stream = $response.GetResponseStream()
+    $fileStream = [System.IO.File]::Create($LocalPath)
+
+    $buffer = New-Object byte[] 65536
+    $totalRead = 0
+    while (($read = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+      $fileStream.Write($buffer, 0, $read)
+      $totalRead += $read
+    }
+
+    $fileStream.Close()
+    $stream.Close()
+    $response.Close()
+
+    return @{ Success = $true; BytesDownloaded = $totalRead; LocalPath = $LocalPath }
+  } catch {
+    if (Test-Path -LiteralPath $LocalPath) { Remove-Item -LiteralPath $LocalPath -Force -ErrorAction SilentlyContinue }
+    return @{ Success = $false; Error = $_.Exception.Message }
+  }
+}
+
+function Invoke-FtpUpload {
+  <#
+  .SYNOPSIS
+    Laed eine lokale Datei per FTP hoch.
+  #>
+  param(
+    [Parameter(Mandatory)][hashtable]$Config,
+    [Parameter(Mandatory)][System.Security.SecureString]$Password,
+    [Parameter(Mandatory)][string]$LocalPath,
+    [string]$RemoteFileName = ''
+  )
+
+  if ($Config.Protocol -eq 'SFTP') {
+    return @{ Success = $false; Error = 'SFTP nicht unterstuetzt' }
+  }
+
+  if (-not (Test-Path -LiteralPath $LocalPath)) {
+    return @{ Success = $false; Error = "Lokale Datei nicht gefunden: $LocalPath" }
+  }
+
+  if (-not $RemoteFileName) { $RemoteFileName = [System.IO.Path]::GetFileName($LocalPath) }
+  $remotePath = $Config.RemotePath
+  if (-not $remotePath.EndsWith('/')) { $remotePath += '/' }
+  $uri = "ftp://$($Config.Host):$($Config.Port)$remotePath$RemoteFileName"
+  $cred = New-Object System.Net.NetworkCredential($Config.Username, $Password)
+
+  try {
+    $request = [System.Net.FtpWebRequest]::Create($uri)
+    $request.Method = [System.Net.WebRequestMethods+Ftp]::UploadFile
+    $request.Credentials = $cred
+    $request.UseBinary = $true
+    $request.UsePassive = $true
+    $request.Timeout = 120000
+
+    $fileContent = [System.IO.File]::ReadAllBytes($LocalPath)
+    $request.ContentLength = $fileContent.Length
+
+    $stream = $request.GetRequestStream()
+    $stream.Write($fileContent, 0, $fileContent.Length)
+    $stream.Close()
+
+    $response = $request.GetResponse()
+    $status = $response.StatusDescription
+    $response.Close()
+
+    return @{ Success = $true; BytesUploaded = $fileContent.Length; Status = $status }
+  } catch {
+    return @{ Success = $false; Error = $_.Exception.Message }
+  }
+}

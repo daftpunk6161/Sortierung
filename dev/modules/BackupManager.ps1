@@ -73,11 +73,11 @@ function Add-FileToBackup {
     [ValidateSet('DryRun','Move')][string]$Mode = 'DryRun'
   )
 
-  if (-not (Test-Path $SourcePath)) {
+  if (-not (Test-Path -LiteralPath $SourcePath)) {
     return @{ Status = 'Error'; Reason = 'SourceNotFound'; Path = $SourcePath }
   }
 
-  $fileInfo = Get-Item $SourcePath
+  $fileInfo = Get-Item -LiteralPath $SourcePath
   $relativePath = $fileInfo.Name
   $targetPath = Join-Path $Session.SessionDir $relativePath
 
@@ -90,10 +90,10 @@ function Add-FileToBackup {
 
   if ($Mode -eq 'Move') {
     $dir = [System.IO.Path]::GetDirectoryName($targetPath)
-    if (-not (Test-Path $dir)) {
+    if (-not (Test-Path -LiteralPath $dir)) {
       New-Item -ItemType Directory -Path $dir -Force | Out-Null
     }
-    Copy-Item -Path $SourcePath -Destination $targetPath -Force
+    Copy-Item -LiteralPath $SourcePath -Destination $targetPath -Force
     $entry.Status = 'Backed'
   } else {
     $entry.Status = 'DryRun'
@@ -119,7 +119,7 @@ function Invoke-BackupRetention {
     [ValidateSet('DryRun','Move')][string]$Mode = 'DryRun'
   )
 
-  if (-not (Test-Path $Config.BackupRoot)) {
+  if (-not (Test-Path -LiteralPath $Config.BackupRoot)) {
     return @{ Removed = @(); Kept = @(); Status = 'NoBackupDir' }
   }
 
@@ -158,7 +158,7 @@ function Get-BackupSizeTotal {
     [Parameter(Mandatory)][string]$BackupRoot
   )
 
-  if (-not (Test-Path $BackupRoot)) {
+  if (-not (Test-Path -LiteralPath $BackupRoot)) {
     return @{ TotalBytes = 0; TotalGB = 0; SessionCount = 0 }
   }
 

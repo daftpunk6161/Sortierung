@@ -64,7 +64,7 @@ Describe 'WPF Smoke – Fenster konstruierbar ohne Ausnahme' {
                 $psExec.Runspace = $runspace
                 [void]$psExec.AddScript($Script.ToString())
                 $result = $psExec.Invoke()
-                if ($psExec.HadErrors) {
+                if ($psExec.Streams.Error.Count -gt 0) {
                     $firstError = @($psExec.Streams.Error)[0]
                     throw [System.Exception]::new([string]$firstError)
                 }
@@ -138,8 +138,8 @@ Describe 'WPF Smoke – Fenster konstruierbar ohne Ausnahme' {
             $window = New-WpfWindowFromXaml -Xaml $script:RC_XAML_MAIN
             $ctx = Get-WpfNamedElements -Window $window
             Register-WpfEventHandlers -Window $window -Ctx $ctx
-            $args = [System.Windows.RoutedEventArgs]::new([System.Windows.FrameworkElement]::LoadedEvent, $window)
-            $window.RaiseEvent($args)
+            $loadedArgs = [System.Windows.RoutedEventArgs]::new([System.Windows.FrameworkElement]::LoadedEvent, $window)
+            $window.RaiseEvent($loadedArgs)
         } } | Should -Not -Throw
     }
 }

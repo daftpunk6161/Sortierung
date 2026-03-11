@@ -368,7 +368,10 @@ function Wait-ProcessResponsive {
   $timer = [System.Diagnostics.Stopwatch]::StartNew()
   try {
     while (-not $Process.WaitForExit($PollMs)) {
-      Invoke-UiPump
+      # OPT-05: Only pump UI if running in STA thread (GUI mode)
+      if ([System.Threading.Thread]::CurrentThread.ApartmentState -eq [System.Threading.ApartmentState]::STA) {
+        Invoke-UiPump
+      }
       if (& $getCancelRequested) {
         Stop-ExternalProcessTree -Process $Process
         throw [System.OperationCanceledException]::new("Abbruch durch Benutzer")

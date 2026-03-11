@@ -126,8 +126,12 @@ function Update-WpfStatusBar {
   )
 
   try {
-    $roots = @($Ctx['listRoots'].Items)
-    $rootCount = $roots.Count
+    $rootCount = 0
+    if ($Ctx.ContainsKey('__rootsCollection') -and $Ctx['__rootsCollection'] -and $Ctx['__rootsCollection'].Count -gt 0) {
+      $rootCount = $Ctx['__rootsCollection'].Count
+    } elseif ($Ctx.ContainsKey('listRoots') -and $Ctx['listRoots']) {
+      $rootCount = @($Ctx['listRoots'].Items).Count
+    }
     $rootsOk = ($rootCount -gt 0)
     $Ctx['dotRoots'].Fill    = Resolve-WpfThemeBrush -Ctx $Ctx -BrushKey $(if ($rootsOk) { 'BrushSuccess' } else { 'BrushDanger' })
     $Ctx['lblStatusRoots'].Text = "Roots: $rootCount"
