@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <LangVersion>14</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -21,5 +21,6 @@
     <ProjectReference Include="..\RomCleanup.Contracts\RomCleanup.Contracts.csproj" />
     <ProjectReference Include="..\RomCleanup.Infrastructure\RomCleanup.Infrastructure.csproj" />
     <ProjectReference Include="..\RomCleanup.Api\RomCleanup.Api.csproj" />
+    <ProjectReference Include="..\RomCleanup.UI.Wpf\RomCleanup.UI.Wpf.csproj" />
   </ItemGroup>
 </Project>
