@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Contracts.Models;
-using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Classification;
 using RomCleanup.Infrastructure.Configuration;
 using RomCleanup.Infrastructure.Reporting;
@@ -1482,7 +1481,7 @@ public class ConsoleSorterCoverageTests
         );
         var sorter = new ConsoleSorter(fs, BuildDetector());
         var result = sorter.Sort(new[] { root }, dryRun: true);
-        Assert.Equal(0, fs.Moves.Count); // DryRun - no actual moves
+        Assert.Empty(fs.Moves); // DryRun - no actual moves
     }
 
     [Fact]
@@ -1633,7 +1632,6 @@ public class FcsCommandDeepTests
 <game name=""GameA""><rom name=""a.zip"" /></game></datafile>");
             File.WriteAllText(tmpB, @"<?xml version=""1.0""?><datafile>
 <game name=""GameB""><rom name=""b.zip"" /></game></datafile>");
-            int browseCount = 0;
             dialog.NextBrowseFile = tmpA; // First browse
             // We need a way to return different files
             // The FCS calls BrowseFile twice - we'll just set one path for both

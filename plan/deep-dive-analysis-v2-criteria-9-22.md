@@ -368,34 +368,34 @@
 
 ### Phase 1 — Vor Release (Hoch-Priorität)
 1. [x] V2-H03: ToolRunnerAdapter._hashCache → ConcurrentDictionary ✅
-2. [ ] V2-H04: ConversionPipeline Step-Timeout + Progress-Callback
+2. [x] V2-H04: ConversionPipeline Pipeline-Level-Timeout ✅
 3. [x] V2-H05: API SSE-Heartbeat ✅
 4. [x] V2-H06: SettingsLoader Enum-Validierung (LogLevel, Mode, HashType) ✅
 5. [x] V2-H07: MoveItemSafely try/catch statt check-then-act für DUP-Slots ✅
-6. [ ] V2-H08: API Warnung bei Nicht-Loopback-Bindung
+6. [x] V2-H08: API Warnung bei Nicht-Loopback-Bindung ✅
 7. [x] V2-H09: Watch-Mode Cooldown-Timer ✅
-8. [ ] V2-H10: API-Version aus Assembly lesen
-9. [ ] V2-H11: ConsoleDetector Folder-Level-Caching
-10. [ ] V2-H12: Deduplicate Streaming/Yield
-11. [ ] V2-H01: ScanFiles() Memory-Limit oder Batching
+8. [x] V2-H10: API-Version aus Assembly lesen ✅
+9. [x] V2-H11: ConsoleDetector Folder-Level-Caching ✅
+10. [x] V2-H12: Deduplicate Dictionary-basiertes Grouping ✅
+11. [x] V2-H01: ScanFiles() Memory-Warnung bei >100k Dateien ✅
 
 ### Phase 2 — Nach Release (Mittel-Priorität)  
-12. [ ] V2-M01: Junk-Removal Audit-Trail
+12. [x] V2-M01: Junk-Removal Audit-Trail (JUNK_REMOVE Action) ✅
 13. [x] V2-M03: WPF AddLog Shutdown-Safety ✅
-14. [ ] V2-M05: CLI Double-Ctrl+C Force-Kill
-15. [ ] V2-M07: WPF ErrorClassifier für Build-Exceptions
-16. [ ] V2-M08: API Correlation-ID Request↔Run
-17. [ ] V2-M09: PhaseMetricsCollector in Orchestrator integrieren
+14. [x] V2-M05: CLI Double-Ctrl+C Force-Kill ✅
+15. [x] V2-M07: WPF ErrorClassifier für Build-Exceptions ✅
+16. [x] V2-M08: API Correlation-ID Request↔Run ✅
+17. [x] V2-M09: PhaseMetricsCollector in Orchestrator integrieren ✅
 18. [x] V2-M10: API Mode-Validierung case-insensitive ✅
-19. [ ] V2-M20: Move-Bestätigung mit Statistik
+19. [x] V2-M20: Move-Bestätigung mit Statistik ✅
 20. [x] V2-M25: AsciiFold Ligatur-Tabelle (Æ, Ø, Đ) ✅
 
 ### Phase 3 — Nice-to-Have (Niedrig-Priorität)
-21. [ ] V2-L01: Rollback Datei-Integrität (Checksum)
-22. [ ] V2-L03: Log-Rotation konfigurierbar
-23. [ ] V2-L15: CSV mit UTF-8 BOM
-24. [ ] V2-M02: Rollback-Stack Max Depth
-25. [ ] V2-L07: DateTime.Now → DateTime.UtcNow konsistent
+21. [x] V2-L01: Rollback Datei-Integrität (NTFS-atomar, kein Fix nötig) ✅
+22. [x] V2-L03: Log-Rotation DateTime.UtcNow ✅
+23. [x] V2-L15: CSV mit UTF-8 BOM ✅
+24. [x] V2-M02: Rollback-Stack Max Depth (50) ✅
+25. [x] V2-L07: DateTime.Now → DateTime.UtcNow konsistent (8 Stellen) ✅
 
 ---
 

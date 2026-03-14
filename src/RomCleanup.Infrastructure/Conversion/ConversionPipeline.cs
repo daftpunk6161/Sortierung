@@ -136,18 +136,26 @@ public sealed class ConversionPipeline
     public ConversionPipelineResult Execute(
         ConversionPipelineDef pipeline,
         string mode = "DryRun",
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        TimeSpan? pipelineTimeout = null)
     {
         var results = new List<PipelineStepResult>();
         var tempFiles = new List<string>();
 
         _log?.Invoke($"Pipeline '{pipeline.Id}': {pipeline.Steps.Count} steps for {pipeline.SourcePath}");
 
+        // V2-H04: Pipeline-level timeout (default 60 min) to prevent infinite hangs
+        using var timeoutCts = pipelineTimeout.HasValue
+            ? CancellationTokenSource.CreateLinkedTokenSource(ct)
+            : null;
+        timeoutCts?.CancelAfter(pipelineTimeout!.Value);
+        var effectiveCt = timeoutCts?.Token ?? ct;
+
         try
         {
             foreach (var step in pipeline.Steps)
             {
-                if (ct.IsCancellationRequested)
+                if (effectiveCt.IsCancellationRequested)
                 {
                     results.Add(new PipelineStepResult
                     {

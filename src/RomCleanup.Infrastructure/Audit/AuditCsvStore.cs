@@ -67,7 +67,8 @@ public sealed class AuditCsvStore : IAuditStore
         if (writeHeader)
             sw.WriteLine("RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp");
 
-        var timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+        // V2-L07: Consistent UTC timestamps across CLI and API
+        var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
         sw.WriteLine(string.Join(",",
             SanitizeCsvField(rootPath),
             SanitizeCsvField(oldPath),
@@ -103,7 +104,8 @@ public sealed class AuditCsvStore : IAuditStore
             var newPath = parts[2];
             var action = parts[3];
 
-            if (!string.Equals(action, "Move", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(action, "Move", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, "MOVED", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             // Validate paths within allowed roots

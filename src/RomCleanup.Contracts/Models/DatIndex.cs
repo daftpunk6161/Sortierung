@@ -26,12 +26,16 @@ public sealed class DatIndex
     public void Add(string consoleKey, string hash, string gameName)
     {
         var hashMap = _data.GetOrAdd(consoleKey, _ => new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+        // Allow updates for existing keys even when at capacity
+        if (hashMap.ContainsKey(hash))
+        {
+            hashMap[hash] = gameName;
+            return;
+        }
         if (MaxEntriesPerConsole > 0 && hashMap.Count >= MaxEntriesPerConsole)
             return;
         if (hashMap.TryAdd(hash, gameName))
             Interlocked.Increment(ref _totalEntries);
-        else
-            hashMap[hash] = gameName;
     }
 
     /// <summary>Look up a game name by console key and hash.</summary>

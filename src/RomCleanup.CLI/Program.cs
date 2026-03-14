@@ -54,10 +54,20 @@ internal static class Program
     private static int Run(CliOptions opts)
     {
         using var cts = new CancellationTokenSource();
+        int cancelCount = 0;
         Console.CancelKeyPress += (_, e) =>
         {
+            cancelCount++;
+            if (cancelCount >= 2)
+            {
+                // V2-M05: Second Ctrl+C force-kills the process
+                Console.Error.WriteLine("Force exit.");
+                Environment.Exit(2);
+                return;
+            }
             e.Cancel = true; // Prevent immediate process kill
             cts.Cancel();
+            Console.Error.WriteLine("Cancelling… press Ctrl+C again to force exit.");
         };
 
         var fs = new FileSystemAdapter();
@@ -155,7 +165,7 @@ internal static class Program
         {
             var auditDir = GetSiblingDirectory(opts.Roots[0], "audit-logs");
             auditPath = Path.Combine(Path.GetFullPath(auditDir),
-                $"audit-{DateTime.Now:yyyyMMdd-HHmmss}.csv");
+                $"audit-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv");
         }
 
         // Build RunOptions and execute via RunOrchestrator
@@ -236,7 +246,7 @@ internal static class Program
                 {
                     ["mode"] = opts.Mode,
                     ["roots"] = string.Join(";", opts.Roots),
-                    ["timestamp"] = DateTime.Now.ToString("o"),
+                    ["timestamp"] = DateTime.UtcNow.ToString("o"),
                     ["totalFiles"] = result.TotalFilesScanned,
                     ["keep"] = result.WinnerCount,
                     ["move"] = result.LoserCount
@@ -353,7 +363,7 @@ internal static class Program
         return new ReportSummary
         {
             Mode = mode,
-            Timestamp = DateTime.Now,
+            Timestamp = DateTime.UtcNow,
             TotalFiles = result.TotalFilesScanned,
             KeepCount = result.WinnerCount,
             MoveCount = result.LoserCount,

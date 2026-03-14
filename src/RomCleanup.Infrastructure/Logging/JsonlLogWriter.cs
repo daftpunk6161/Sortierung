@@ -193,7 +193,7 @@ public static class JsonlLogRotation
 
         var dir = fi.DirectoryName ?? ".";
         var baseName = Path.GetFileNameWithoutExtension(fi.Name);
-        var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
         var archiveName = $"{baseName}-{stamp}.jsonl";
         var archivePath = Path.Combine(dir, archiveName);
 

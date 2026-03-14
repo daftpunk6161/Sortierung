@@ -111,6 +111,24 @@ public sealed class DiscHeaderDetector
             if (string.IsNullOrWhiteSpace(path))
                 continue;
 
+            // Skip reparse points (symlinks/junctions) — security rule
+            try
+            {
+                var attrs = File.GetAttributes(path);
+                if ((attrs & FileAttributes.ReparsePoint) != 0)
+                {
+                    results[path] = null;
+                    processed++;
+                    continue;
+                }
+            }
+            catch (IOException)
+            {
+                results[path] = null;
+                processed++;
+                continue;
+            }
+
             var ext = Path.GetExtension(path).ToLowerInvariant();
             results[path] = ext == ".chd"
                 ? DetectFromChd(path)

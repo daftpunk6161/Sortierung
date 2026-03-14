@@ -146,13 +146,13 @@ public sealed class DatIndexFullTests
     }
 
     [Fact]
-    public void TotalEntries_ConcurrentAdds_TracksCorrectly()
+    public async Task TotalEntries_ConcurrentAdds_TracksCorrectly()
     {
         var idx = new DatIndex();
         var tasks = Enumerable.Range(0, 100)
             .Select(i => Task.Run(() => idx.Add("SNES", $"hash_{i}", $"Game_{i}")))
             .ToArray();
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
         Assert.Equal(100, idx.TotalEntries);
         Assert.Equal(1, idx.ConsoleCount);
     }

@@ -85,7 +85,7 @@ public sealed class VersionScorer
                         suffixScore = (suffixScore * 26) + (ch - 'a' + 1);
                     }
                 }
-                score += (numeric * 100L) + suffixScore;
+                score += (numeric * 10L) + suffixScore;
             }
             else if (RxLeadingDigits.IsMatch(rev))
             {

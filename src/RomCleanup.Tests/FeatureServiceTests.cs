@@ -934,7 +934,7 @@ public sealed class FeatureServiceTests : IDisposable
 
         using var verify = File.OpenRead(path);
         var buf = new byte[16];
-        verify.Read(buf, 0, 16);
+        verify.ReadExactly(buf, 0, 16);
         Assert.Equal(0, buf[12]);
         Assert.Equal(0, buf[13]);
         Assert.Equal(0, buf[14]);

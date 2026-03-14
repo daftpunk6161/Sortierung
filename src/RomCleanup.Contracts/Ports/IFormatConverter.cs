@@ -17,7 +17,7 @@ public interface IFormatConverter
     /// <summary>
     /// Convert a file to its target format.
     /// </summary>
-    ConversionResult Convert(string sourcePath, ConversionTarget target, string? sevenZipPath = null);
+    ConversionResult Convert(string sourcePath, ConversionTarget target);
 
     /// <summary>
     /// Verify a converted file using the appropriate tool.

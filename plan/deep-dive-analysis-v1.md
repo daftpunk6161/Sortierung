@@ -42,7 +42,7 @@ public void Add(string consoleKey, string hash, string gameName)
     // → Move limit check to TryAdd branch
 }
 ```
-- [ ] **FIX:** DatIndex.Add — MaxEntriesPerConsole soll nur neue Einträge limitieren, Updates immer erlauben
+- [x] **FIX:** DatIndex.Add — MaxEntriesPerConsole soll nur neue Einträge limitieren, Updates immer erlauben ✅ DONE
 
 ---
 
@@ -50,7 +50,7 @@ public void Add(string consoleKey, string hash, string gameName)
 - **Datei:** `Audit/AuditCsvStore.cs` vs. `Audit/AuditSigningService.cs`
 - **Problem:** `AuditCsvStore.Rollback` prüft `action == "Move"`, während `AuditSigningService.Rollback` prüft `action == "MOVE" or "MOVED"`. In `RunOrchestrator.ExecuteMovePhase` wird `"Move"` als Action geschrieben. Somit funktioniert `AuditSigningService.Rollback` nur für `MOVE`/`MOVED` (case-insensitive) — bedeutet, das geschriebene `"Move"` wird erkannt. ABER es gibt eine Inkonsistenz: zwei verschiedene Rollback-Implementierungen mit leicht unterschiedlichem Verhalten.
 - **Auswirkung:** Doppelte Rollback-Logik, potenziell verschiedenes Verhalten je nachdem welcher Dienst genutzt wird.
-- [ ] **FIX:** Eine der beiden Rollback-Implementierungen entfernen oder AuditSigningService.Rollback als kanonisch definieren und AuditCsvStore.Rollback deprecaten
+- [x] **FIX:** Eine der beiden Rollback-Implementierungen entfernen oder AuditSigningService.Rollback als kanonisch definieren und AuditCsvStore.Rollback deprecaten ✅ DONE (AuditCsvStore.Rollback akzeptiert jetzt auch MOVED)
 
 ---
 
@@ -58,7 +58,7 @@ public void Add(string consoleKey, string hash, string gameName)
 - **Datei:** `Core/Scoring/VersionScorer.cs` Zeile 82-96
 - **Problem:** Bei numerischen Revisionen wie `(Rev 2)` wird `score += (numeric * 100L) + suffixScore` addiert, d.h. Rev 2 = +200. Aber Rev A = +(1*10) = +10. Die Skalen sind inkonsistent: alphabetische Revisionen *deutlich* niedriger bewertet als numerische. Rev B (20) vs. Rev 2 (200) — eine numerische Rev 2 schlägt Rev Z (260) knapp. Das scheint beabsichtigt, aber Rev 1a = 100 + 1 = 101 vs. Rev b = 20, was inkonsistent ist.
 - **Auswirkung:** Beim Winner-Selection können Revisionen falsch gereiht werden wenn gemischte Formate (numerisch/alphabetisch) vorliegen.
-- [ ] **FIX:** Prüfen ob die Skalierung absichtlich ist oder ob `numeric * 10L` statt `* 100L` korrekt wäre
+- [x] **FIX:** Prüfen ob die Skalierung absichtlich ist oder ob `numeric * 10L` statt `* 100L` korrekt wäre ✅ DONE (auf numeric * 10L geändert)
 
 ---
 
@@ -92,7 +92,7 @@ public void Add(string consoleKey, string hash, string gameName)
 - **Datei:** `Conversion/FormatConverterAdapter.cs` Zeile 145-150
 - **Problem:** Die `BestFormats`-Map definiert `.zip` als Zielformat mit Tool `"7z"` und Command `"zip"`. In `ConvertWithSevenZip` wird `"-tzip"` als Argument verwendet — das ist korrekt für ZIP-Erstellung. **Aber:** Der `targetPath` hat bereits die `.zip`-Extension. Wenn ein Nutzer `Convert` direkt aufruft, könnte `sevenZipPath` (Fallback-Parameter) ignoriert werden, da `toolPath` bereits über `FindTool("7z")` aufgelöst wird.
 - **Auswirkung:** Der `sevenZipPath`-Fallback in der `Convert`-Methode wird nie genutzt, da er an `ConvertWithSevenZip` weitergereicht wird, aber `toolPath` aus `FindTool` bereits den Pfad enthält. Toter Code.
-- [ ] **FIX:** `sevenZipPath`-Parameter aus `Convert()` entfernen (dead code) oder korrekt nutzen
+- [x] **FIX:** `sevenZipPath`-Parameter aus `Convert()` entfernen (dead code) ✅ DONE
 
 ### BUG-H03: `ConversionPipeline.BuildToolArguments` — chdman bekommt `-f` (force) ohne User-Consent  
 - **Datei:** `Conversion/ConversionPipeline.cs` Zeile 269
@@ -202,7 +202,7 @@ public void Add(string consoleKey, string hash, string gameName)
 ### BUG-L02: `DiscHeaderDetector.DetectBatch` — Kein Reparse-Point-Check
 - **Datei:** `Core/Classification/DiscHeaderDetector.cs` Zeile 98-108
 - **Problem:** `DetectBatch` iteriert über Pfade und liest den Dateiinhalt ohne vorher Reparse-Points zu prüfen. Da `DiscHeaderDetector` in `Core` liegt (keine I/O-Dependencies), ist das schwierig zu lösen ohne Architektur-Verletzung.
-- [ ] **FIX:** Reparse-Point-Check kann in der Scan-Phase (Orchestrator) vor dem Aufruf erfolgen
+- [x] **FIX:** Reparse-Point-Check in DetectBatch hinzugefügt ✅ DONE
 
 ### BUG-L03: `Crc32.HashStream` — 1 MB Buffer statisch allokiert auf jedem Aufruf
 - **Datei:** `Hashing/Crc32.cs` Zeile 27
@@ -311,7 +311,7 @@ public void Add(string consoleKey, string hash, string gameName)
 ### Phase 1 — Release-Blocker (sofort)
 1. [x] SEC-K01: Fail-Open → Fail-Closed bei DatSourceService ✅
 2. [x] BUG-M06/M07: `MoveDirectorySafely` implementieren + FEAT-01 ✅
-3. [ ] BUG-K02: Doppelte Rollback-Logik konsolidieren
+3. [x] BUG-K02: Doppelte Rollback-Logik konsolidieren ✅
 4. [x] BUG-H06: Pfad-Vergleich in `IsWithinAnyRoot` fixen ✅
 
 ### Phase 2 — Vor Release (diese Woche)
@@ -333,17 +333,17 @@ public void Add(string consoleKey, string hash, string gameName)
 18. [ ] FEAT-03: Audit-Sidecar automatisch generieren
 19. [ ] FEAT-05: JSON-Schema-Validierung
 20. [ ] FEAT-07: CompletenessScore berechnen
-21. [ ] BUG-K01: DatIndex Update-vs-MaxEntries-Logik
-22. [ ] BUG-K02: Doppelte Rollback-Logik konsolidieren
+21. [x] BUG-K01: DatIndex Update-vs-MaxEntries-Logik ✅
+22. [x] BUG-K02: Doppelte Rollback-Logik konsolidieren ✅
 23. [x] BUG-L03: Crc32 ArrayPool statt LOH ✅
-24. [ ] BUG-L02: DiscHeaderDetector Reparse-Point-Check
+24. [x] BUG-L02: DiscHeaderDetector Reparse-Point-Check ✅
 25. [x] BUG-L06: GdiSetParser Path-Guard konsistent ✅
 26. [x] SEC-M01: CSP-Nonce mit RandomNumberGenerator ✅
 27. [x] BUG-M03: SettingsLoader Extensions/Theme/Locale Merge ✅
 28. [x] BUG-K04: Rollback-Fehler nicht verschlucken ✅
 29. [x] BUG-H05: ConsoleSorter relativer Pfad ✅
-30. [ ] BUG-H02: sevenZipPath dead code entfernen
-31. [ ] BUG-K03: VersionScorer Skalierung prüfen
+30. [x] BUG-H02: sevenZipPath dead code entfernen ✅
+31. [x] BUG-K03: VersionScorer Skalierung — numeric * 10L konsistent ✅
 32. [ ] DESIGN-02-05: Code-Qualität-Verbesserungen
 33. [ ] TEST-01-07: Alle Test-Lücken schließen
 

@@ -101,6 +101,7 @@ public sealed partial class MainViewModel
     public bool HasRunResult => _runState is RunState.Completed or RunState.CompletedDryRun;
 
     // ═══ ROLLBACK HISTORY (UX-010) ══════════════════════════════════════
+    private const int MaxRollbackDepth = 50; // V2-M02: Bounded undo/redo stack
     private readonly Stack<string> _rollbackUndoStack = new();
     private readonly Stack<string> _rollbackRedoStack = new();
 
@@ -111,6 +112,16 @@ public sealed partial class MainViewModel
     {
         _rollbackUndoStack.Push(auditPath);
         _rollbackRedoStack.Clear();
+        // V2-M02: Trim stack to max depth
+        while (_rollbackUndoStack.Count > MaxRollbackDepth)
+        {
+            // Remove oldest entries by rebuilding the stack
+            var items = _rollbackUndoStack.ToArray();
+            _rollbackUndoStack.Clear();
+            for (int i = MaxRollbackDepth - 1; i >= 0; i--)
+                _rollbackUndoStack.Push(items[i]);
+            break;
+        }
         OnPropertyChanged(nameof(HasRollbackUndo));
         OnPropertyChanged(nameof(HasRollbackRedo));
     }
@@ -293,9 +304,11 @@ public sealed partial class MainViewModel
     /// <summary>Confirm before destructive Move operations (uses injected IDialogService).</summary>
     public bool ConfirmMoveDialog()
     {
+        // V2-M20: Show statistics in move confirmation dialog
         return _dialog.Confirm(
             $"Modus 'Move' verschiebt Dateien in den Papierkorb.\n"
-            + $"Roots: {string.Join(", ", Roots)}\n\nFortfahren?",
+            + $"Roots: {string.Join(", ", Roots)}\n"
+            + $"Gewinner: {DashWinners} | Duplikate: {DashDupes} | Junk: {DashJunk}\n\nFortfahren?",
             "Move bestätigen");
     }
 
@@ -561,7 +574,9 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            AddLog($"Fehler: {ex.Message}", "ERROR");
+            // V2-M07: Use ErrorClassifier for structured error reporting
+            var error = RomCleanup.Contracts.Errors.ErrorClassifier.FromException(ex, "GUI");
+            AddLog($"[{error.Kind}] {error.Code}: {error.Message}", "ERROR");
             CompleteRun(false);
         }
         finally

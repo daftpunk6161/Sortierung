@@ -86,7 +86,7 @@ public class DatSourceServiceTests : IDisposable
         var completed = await Task.WhenAny(all, Task.Delay(TimeSpan.FromSeconds(10))) == all;
 
         Assert.True(completed, "Parallel signature verification timed out or deadlocked");
-        Assert.All(all.Result, r => Assert.True(r));
+        Assert.All(await all, r => Assert.True(r));
     }
 
     [Fact]

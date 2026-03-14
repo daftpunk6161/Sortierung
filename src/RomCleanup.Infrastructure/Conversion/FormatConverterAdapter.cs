@@ -68,7 +68,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
         return BestFormats.TryGetValue(consoleKey.Trim(), out var target) ? target : null;
     }
 
-    public ConversionResult Convert(string sourcePath, ConversionTarget target, string? sevenZipPath = null)
+    public ConversionResult Convert(string sourcePath, ConversionTarget target)
     {
         if (!File.Exists(sourcePath))
             return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "source-not-found");
@@ -94,7 +94,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
         {
             "chdman" => ConvertWithChdman(sourcePath, targetPath, toolPath, target.Command),
             "dolphintool" => ConvertWithDolphinTool(sourcePath, targetPath, toolPath, sourceExt),
-            "7z" => ConvertWithSevenZip(sourcePath, targetPath, toolPath, sevenZipPath),
+            "7z" => ConvertWithSevenZip(sourcePath, targetPath, toolPath),
             _ => new ConversionResult(sourcePath, null, ConversionOutcome.Error, $"unknown-tool:{target.ToolName}")
         };
     }
@@ -184,11 +184,9 @@ public sealed class FormatConverterAdapter : IFormatConverter
         return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success);
     }
 
-    private ConversionResult ConvertWithSevenZip(string sourcePath, string targetPath, string toolPath, string? fallbackZipPath)
+    private ConversionResult ConvertWithSevenZip(string sourcePath, string targetPath, string toolPath)
     {
         var zipTool = toolPath;
-        if (!File.Exists(zipTool) && fallbackZipPath is not null && File.Exists(fallbackZipPath))
-            zipTool = fallbackZipPath;
 
         var args = new[] { "a", "-tzip", "-y", targetPath, sourcePath };
         var result = _tools.InvokeProcess(zipTool, args, "7z");

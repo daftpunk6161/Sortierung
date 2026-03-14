@@ -5,6 +5,7 @@ using RomCleanup.Core.Deduplication;
 using RomCleanup.Core.GameKeys;
 using RomCleanup.Core.Scoring;
 using RomCleanup.Infrastructure.Hashing;
+using RomCleanup.Infrastructure.Metrics;
 using RomCleanup.Infrastructure.Sorting;
 
 namespace RomCleanup.Infrastructure.Orchestration;
@@ -102,13 +103,19 @@ public sealed class RunOrchestrator
         var result = new RunResult();
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
+        // V2-M09: Structured phase metrics collection
+        var metrics = new PhaseMetricsCollector();
+        metrics.Initialize();
+
         try
         {
 
         // Phase 1: Preflight
+        metrics.StartPhase("Preflight");
         _onProgress?.Invoke("Preflight...");
         var preflight = Preflight(options);
         result.Preflight = preflight;
+        metrics.CompletePhase();
         if (preflight.ShouldReturn)
         {
             result.Status = "blocked";
@@ -119,9 +126,17 @@ public sealed class RunOrchestrator
         cancellationToken.ThrowIfCancellationRequested();
 
         // Phase 2: Scan
+        // V2-H01: Report scan progress (file count) for large collections
+        metrics.StartPhase("Scan");
         _onProgress?.Invoke("Scanning files...");
         var candidates = ScanFiles(options, cancellationToken);
         result.TotalFilesScanned = candidates.Count;
+        _onProgress?.Invoke($"Scan complete: {candidates.Count} files found");
+        metrics.CompletePhase(candidates.Count);
+
+        // V2-H01: Memory warning for very large scans
+        if (candidates.Count > 100_000)
+            _onProgress?.Invoke($"WARNING: {candidates.Count:N0} files scanned — high memory usage. Consider scanning fewer roots.");
 
         if (candidates.Count == 0)
         {
@@ -133,6 +148,7 @@ public sealed class RunOrchestrator
         cancellationToken.ThrowIfCancellationRequested();
 
         // Phase 3: Deduplicate
+        metrics.StartPhase("Deduplicate");
         _onProgress?.Invoke("Deduplicating...");
         var groups = DeduplicationEngine.Deduplicate(candidates);
         result.GroupCount = groups.Count;
@@ -140,32 +156,31 @@ public sealed class RunOrchestrator
         result.LoserCount = groups.Sum(g => g.Losers.Count);
         result.AllCandidates = candidates;
         result.DedupeGroups = groups;
+        metrics.CompletePhase(groups.Count);
 
         cancellationToken.ThrowIfCancellationRequested();
 
         // Phase 3b: Remove junk (if enabled)
-        // Junk files that are the sole representative of their GameKey become "winners"
-        // and would never appear in any group's Losers list. This phase catches them.
-        // Track removed junk winners so Phase 6 (conversion) skips them.
         var junkRemovedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (options.RemoveJunk && options.Mode == "Move")
         {
+            metrics.StartPhase("JunkRemoval");
             _onProgress?.Invoke("Removing junk files...");
             var junkResult = ExecuteJunkRemovalPhase(candidates, groups, options, junkRemovedPaths, cancellationToken);
             result.JunkRemovedCount = junkResult.MoveCount;
-            result.MoveResult = junkResult; // will be merged below if dedupe move also runs
+            result.MoveResult = junkResult;
+            metrics.CompletePhase(junkResult.MoveCount);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
 
         // Phase 4: Move (if Mode=Move)
-        // Must run BEFORE Console Sort so that MainPath references remain valid for the move.
         if (options.Mode == "Move")
         {
+            metrics.StartPhase("Move");
             _onProgress?.Invoke("Moving files...");
             var moveResult = ExecuteMovePhase(groups, options, cancellationToken);
 
-            // Merge with junk removal result if both ran
             if (result.MoveResult is not null)
             {
                 moveResult = new MovePhaseResult(
@@ -174,33 +189,34 @@ public sealed class RunOrchestrator
                     result.MoveResult.SavedBytes + moveResult.SavedBytes);
             }
             result.MoveResult = moveResult;
+            metrics.CompletePhase(moveResult.MoveCount);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
 
         // Phase 5: Console Sort (optional, Move mode only)
-        // Runs after Move so that moved losers are already in trash and won't be sorted.
         if (options.SortConsole && options.Mode == "Move" && _consoleDetector is not null)
         {
+            metrics.StartPhase("ConsoleSort");
             _onProgress?.Invoke("Sorting by console...");
             var sorter = new ConsoleSorter(_fs, _consoleDetector);
             result.ConsoleSortResult = sorter.Sort(
                 options.Roots, options.Extensions, dryRun: false, cancellationToken);
+            metrics.CompletePhase();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
 
         // Phase 6: Format Conversion (optional, Move mode only)
-        // Skip groups whose winners were moved to trash in Phase 3b.
         if (options.ConvertFormat is not null && options.Mode == "Move" && _converter is not null)
         {
+            metrics.StartPhase("FormatConvert");
             _onProgress?.Invoke("Converting formats...");
             int converted = 0;
             foreach (var group in groups)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // Skip junk winners already moved to trash
                 if (junkRemovedPaths.Contains(group.Winner.MainPath))
                     continue;
 
@@ -214,12 +230,14 @@ public sealed class RunOrchestrator
                 }
             }
             result.ConvertedCount = converted;
+            metrics.CompletePhase(converted);
         }
 
         sw.Stop();
         result.Status = "ok";
         result.ExitCode = 0;
         result.DurationMs = sw.ElapsedMilliseconds;
+        result.PhaseMetrics = metrics.GetMetrics();
         return result;
         }
         catch (OperationCanceledException)
@@ -228,6 +246,7 @@ public sealed class RunOrchestrator
             result.Status = "cancelled";
             result.ExitCode = 2;
             result.DurationMs = sw.ElapsedMilliseconds;
+            result.PhaseMetrics = metrics.GetMetrics();
             return result;
         }
     }
@@ -236,6 +255,9 @@ public sealed class RunOrchestrator
     {
         var versionScorer = new VersionScorer();
         var candidates = new List<RomCandidate>();
+
+        // V2-H11: Folder-level cache for ConsoleDetector — same folder always yields same console
+        var folderConsoleCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var root in options.Roots)
         {
@@ -264,7 +286,15 @@ public sealed class RunOrchestrator
 
                 string consoleKey = "";
                 if (_consoleDetector is not null)
-                    consoleKey = _consoleDetector.Detect(filePath, root);
+                {
+                    var folder = Path.GetDirectoryName(filePath) ?? "";
+                    if (!folderConsoleCache.TryGetValue(folder, out var cachedKey))
+                    {
+                        cachedKey = _consoleDetector.Detect(filePath, root);
+                        folderConsoleCache[folder] = cachedKey;
+                    }
+                    consoleKey = cachedKey;
+                }
 
                 var regionTag = Core.Regions.RegionDetector.GetRegionTag(fileName);
                 var regionScore = FormatScorer.GetRegionScore(regionTag, options.PreferRegions);
@@ -359,8 +389,9 @@ public sealed class RunOrchestrator
 
                 if (!string.IsNullOrEmpty(options.AuditPath))
                 {
+                    // V2-M01: Distinct JUNK_REMOVE action for audit differentiation
                     _audit.AppendAuditRow(options.AuditPath, root, junk.MainPath, destPath,
-                        "Move", "JUNK", "", "junk-removal");
+                        "JUNK_REMOVE", "JUNK", "", "junk-removal");
                 }
             }
             else
@@ -509,6 +540,9 @@ public sealed class RunResult
 
     /// <summary>Dedupe group results (for DryRun JSON output and reports).</summary>
     public IReadOnlyList<DedupeResult> DedupeGroups { get; set; } = Array.Empty<DedupeResult>();
+
+    /// <summary>V2-M09: Structured phase timing metrics.</summary>
+    public PhaseMetricsResult? PhaseMetrics { get; set; }
 }
 
 /// <summary>Result of the move phase.</summary>

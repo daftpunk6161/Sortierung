@@ -172,7 +172,7 @@ public class FcsExportCommandTests : IDisposable
         var (_, vm, dialog) = Setup();
         vm.LastCandidates.Clear();
         Exec(vm, "HashDatabaseExport");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 
     // ── CollectionSharing Import ─────────────────────────────────
@@ -421,7 +421,7 @@ public class FcsDatCommandTests : IDisposable
         var (_, vm, dialog) = Setup();
         vm.LastCandidates.Clear();
         Exec(vm, "Completeness");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 
     // ── MissingRom deeper ────────────────────────────────────────
@@ -432,7 +432,7 @@ public class FcsDatCommandTests : IDisposable
         var (_, vm, dialog) = Setup();
         vm.UseDat = false;
         Exec(vm, "MissingRom");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 }
 
@@ -475,7 +475,7 @@ public class FcsConversionCommandTests
         var (_, vm, dialog) = Setup();
         vm.LastCandidates.Clear();
         Exec(vm, "ConversionPipeline");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 
     [Fact]
@@ -496,7 +496,7 @@ public class FcsConversionCommandTests
         var (_, vm, dialog) = Setup();
         vm.LastCandidates.Clear();
         Exec(vm, "ConvertQueue");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 
     [Fact]
@@ -589,7 +589,7 @@ public class FcsWorkflowCommandTests
         var (_, vm, dialog) = Setup();
         vm.LastDedupeGroups.Clear();
         Exec(vm, "SplitPanelPreview");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 
     [Fact]
@@ -722,7 +722,7 @@ public class FcsInfraCommandTests
         var (_, vm, dialog) = Setup();
         vm.Roots.Clear();
         Exec(vm, "NasOptimization");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 
     [Fact]
@@ -791,7 +791,7 @@ public class FcsInfraCommandTests
         var (_, vm, dialog) = Setup();
         vm.LastDedupeGroups.Clear();
         Exec(vm, "HardlinkMode");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 
     [Fact]
@@ -829,7 +829,7 @@ public class FcsInfraCommandTests
     {
         var (_, vm, dialog) = Setup();
         Exec(vm, "AutoFindTools");
-        Assert.True(vm.LogEntries.Any(e => e.Text.Contains("Tool")));
+        Assert.Contains(vm.LogEntries, e => e.Text.Contains("Tool"));
     }
 
     // ── Window-level commands ────────────────────────────────────
@@ -956,7 +956,7 @@ public class FcsAnalysisDeepTests
         var (_, vm, dialog) = Setup();
         vm.LastCandidates.Clear();
         Exec(vm, "ConversionEstimate");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 
     [Fact]
@@ -1041,7 +1041,7 @@ public class FcsAnalysisDeepTests
         var (_, vm, dialog) = Setup();
         vm.LastCandidates.Clear();
         Exec(vm, "CollectionManager");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 
     [Fact]
@@ -1050,7 +1050,7 @@ public class FcsAnalysisDeepTests
         var (_, vm, dialog) = Setup();
         vm.LastDedupeGroups.Clear();
         Exec(vm, "CloneListViewer");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 
     [Fact]
@@ -1093,7 +1093,7 @@ public class FcsAnalysisDeepTests
         var (_, vm, dialog) = Setup();
         vm.LastCandidates.Clear();
         Exec(vm, "StorageTiering");
-        Assert.True(vm.LogEntries.Any(e => e.Level == "WARN"));
+        Assert.Contains(vm.LogEntries, e => e.Level == "WARN");
     }
 }
 
@@ -1208,17 +1208,13 @@ public class ProfileServiceDeepTests : IDisposable
     [Fact]
     public void LoadSavedConfigFlat_NoFile_ReturnsNull()
     {
-        var result = ProfileService.LoadSavedConfigFlat();
-        // May return null if no user settings exist
-        // or may return values from existing settings - both ok
-        Assert.True(result is null or not null);
+        ProfileService.LoadSavedConfigFlat();
     }
 
     [Fact]
     public void Delete_ReturnsBool()
     {
-        var result = ProfileService.Delete();
-        Assert.True(result is true or false);
+        ProfileService.Delete();
     }
 
     [Fact]
@@ -1389,8 +1385,7 @@ public class SettingsServiceSaveFromTests
         vm.ConvertEnabled = true;
         vm.ConfirmMove = false;
         vm.DryRun = false;
-        var result = svc.SaveFrom(vm);
-        Assert.True(result is true or false);
+        svc.SaveFrom(vm);
     }
 
     [Fact]
@@ -1401,8 +1396,7 @@ public class SettingsServiceSaveFromTests
         vm.PreferEU = true;
         vm.PreferUS = true;
         vm.PreferJP = false;
-        var result = svc.SaveFrom(vm);
-        Assert.True(result is true or false);
+        svc.SaveFrom(vm);
     }
 
     [Fact]

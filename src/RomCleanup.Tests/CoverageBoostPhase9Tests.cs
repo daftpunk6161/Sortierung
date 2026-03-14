@@ -68,7 +68,7 @@ public sealed class RateLimiterPhase9Tests
     }
 
     [Fact]
-    public void TryAcquire_ConcurrentClients_ThreadSafe()
+    public async Task TryAcquire_ConcurrentClients_ThreadSafe()
     {
         var limiter = new RateLimiter(50, TimeSpan.FromMinutes(10));
         int successes = 0;
@@ -78,7 +78,7 @@ public sealed class RateLimiterPhase9Tests
                 if (limiter.TryAcquire("shared"))
                     Interlocked.Increment(ref successes);
             })).ToArray();
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
         Assert.Equal(50, successes);
     }
 

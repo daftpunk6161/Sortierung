@@ -147,7 +147,7 @@ public sealed class PhaseMetricsCollector
         if (!Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
-        var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
         var filePath = Path.Combine(dir, $"phase-metrics-{timestamp}.json");
         var latestPath = Path.Combine(dir, "phase-metrics-latest.json");
 

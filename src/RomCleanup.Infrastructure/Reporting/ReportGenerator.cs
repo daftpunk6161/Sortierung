@@ -30,7 +30,7 @@ public sealed record ReportEntry
 public sealed record ReportSummary
 {
     public string Mode { get; init; } = "DryRun";
-    public DateTime Timestamp { get; init; } = DateTime.Now;
+    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
     public int TotalFiles { get; init; }
     public int KeepCount { get; init; }
     public int MoveCount { get; init; }
@@ -98,6 +98,8 @@ public static class ReportGenerator
     public static string GenerateCsv(IReadOnlyList<ReportEntry> entries)
     {
         var sb = new StringBuilder();
+        // V2-L15: UTF-8 BOM for Excel compatibility
+        sb.Append('\uFEFF');
         sb.AppendLine("GameKey,Action,Category,Region,FileName,Extension,SizeBytes,RegionScore,FormatScore,VersionScore,Console,DatMatch");
 
         foreach (var e in entries)

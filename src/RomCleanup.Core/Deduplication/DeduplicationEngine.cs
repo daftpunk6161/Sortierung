@@ -36,27 +36,39 @@ public static class DeduplicationEngine
     /// <summary>
     /// Runs deduplication across all groups.
     /// Each group is keyed by GameKey; returns the winner + losers for each group.
+    /// V2-H12: Uses dictionary-based grouping instead of LINQ GroupBy+OrderBy+ToList
+    /// to reduce intermediate allocations for large candidate sets.
     /// </summary>
     public static IReadOnlyList<DedupeResult> Deduplicate(
         IReadOnlyList<RomCandidate> candidates)
     {
-        var results = new List<DedupeResult>();
-
-        var groups = candidates
-            .Where(c => !string.IsNullOrWhiteSpace(c.GameKey))
-            .GroupBy(c => c.GameKey, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var group in groups)
+        // Build groups with a single pass over candidates
+        var groupDict = new Dictionary<string, List<RomCandidate>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var c in candidates)
         {
-            var items = group.ToList();
+            if (string.IsNullOrWhiteSpace(c.GameKey)) continue;
+            if (!groupDict.TryGetValue(c.GameKey, out var list))
+            {
+                list = new List<RomCandidate>(2); // most groups have 1-3 items
+                groupDict[c.GameKey] = list;
+            }
+            list.Add(c);
+        }
+
+        // Sort keys for deterministic output order
+        var sortedKeys = groupDict.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToList();
+
+        var results = new List<DedupeResult>(sortedKeys.Count);
+        foreach (var key in sortedKeys)
+        {
+            var items = groupDict[key];
             var winner = SelectWinner(items)!;
             var losers = items.Where(x => !string.Equals(x.MainPath, winner.MainPath, StringComparison.OrdinalIgnoreCase)).ToList();
             results.Add(new DedupeResult
             {
                 Winner = winner,
                 Losers = losers,
-                GameKey = group.Key
+                GameKey = key
             });
         }
 

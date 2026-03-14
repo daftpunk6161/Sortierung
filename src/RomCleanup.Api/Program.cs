@@ -8,7 +8,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Bind to loopback only (security: no network exposure)
 var port = builder.Configuration.GetValue("Port", 7878);
-builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
+var bindAddress = builder.Configuration.GetValue("BindAddress", "127.0.0.1");
+builder.WebHost.UseUrls($"http://{bindAddress}:{port}");
+
+// V2-H08: Warn if binding to non-loopback address
+if (bindAddress != "127.0.0.1" && bindAddress != "localhost" && bindAddress != "::1")
+{
+    Console.WriteLine($"WARNING: API bound to non-loopback address '{bindAddress}'. " +
+        "This exposes the API to the network. Ensure firewall rules and TLS are configured.");
+}
 
 builder.Services.AddSingleton<RomCleanup.Contracts.Ports.IFileSystem, RomCleanup.Infrastructure.FileSystem.FileSystemAdapter>();
 builder.Services.AddSingleton<RomCleanup.Contracts.Ports.IAuditStore, RomCleanup.Infrastructure.Audit.AuditCsvStore>();
@@ -44,7 +52,7 @@ app.Use(async (ctx, next) =>
     ctx.Response.Headers.Remove("Server");
     ctx.Response.Headers.Remove("X-Powered-By");
     ctx.Response.Headers["Cache-Control"] = "no-store";
-    ctx.Response.Headers["X-Api-Version"] = "1.0";
+    ctx.Response.Headers["X-Api-Version"] = ApiVersion;
 
     // CORS
     if (corsMode != "none")
@@ -95,13 +103,18 @@ app.Use(async (ctx, next) =>
 // --- Request Logging (P3-API-11) ---
 app.Use(async (ctx, next) =>
 {
+    // V2-M08: Correlation-ID linking HTTP requests to run lifecycle
+    var correlationId = ctx.Request.Headers["X-Correlation-ID"].FirstOrDefault()
+        ?? Guid.NewGuid().ToString("N")[..16];
+    ctx.Response.Headers["X-Correlation-ID"] = correlationId;
+
     var start = DateTime.UtcNow;
     await next();
     var elapsed = (DateTime.UtcNow - start).TotalMilliseconds;
     var method = ctx.Request.Method;
     var path = ctx.Request.Path;
     var status = ctx.Response.StatusCode;
-    Console.WriteLine($"[{start:o}] {method} {path} → {status} ({elapsed:F0}ms)");
+    Console.WriteLine($"[{start:o}] {correlationId} {method} {path} → {status} ({elapsed:F0}ms)");
 });
 
 // --- Endpoints ---
@@ -360,6 +373,31 @@ app.Lifetime.ApplicationStopping.Register(() =>
     mgr.ShutdownAsync().GetAwaiter().GetResult();
 });
 
+// V2-H08: Warn if binding is not loopback-only (security risk without TLS)
+foreach (var url in app.Urls)
+{
+    if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+    {
+        var host = uri.Host;
+        if (host != "127.0.0.1" && host != "localhost" && host != "[::1]" && host != "0.0.0.0")
+        {
+            Console.WriteLine($"[SECURITY WARNING] Binding to non-loopback address: {url}");
+            Console.WriteLine("  API key is transmitted in plain text without TLS.");
+            Console.WriteLine("  Consider enabling HTTPS or binding to 127.0.0.1 only.");
+        }
+        else if (host == "0.0.0.0")
+        {
+            Console.WriteLine($"[SECURITY WARNING] Binding to all interfaces: {url}");
+            Console.WriteLine("  API key will be exposed on the network without TLS.");
+            Console.WriteLine("  Use 127.0.0.1 for local-only access or enable HTTPS.");
+        }
+        if (uri.Scheme == "http" && host != "127.0.0.1" && host != "localhost" && host != "[::1]")
+        {
+            Console.WriteLine("  Strongly recommend using HTTPS for non-loopback bindings.");
+        }
+    }
+}
+
 app.Run();
 
 // --- Helpers ---
@@ -383,4 +421,9 @@ static async Task WriteSseEvent(Stream stream, Encoding encoding, string eventNa
     await stream.FlushAsync();
 }
 
-public partial class Program { }
+public partial class Program
+{
+    // V2-H10: API version from assembly metadata, not hardcoded
+    internal static readonly string ApiVersion =
+        typeof(Program).Assembly.GetName().Version?.ToString(2) ?? "1.0";
+}

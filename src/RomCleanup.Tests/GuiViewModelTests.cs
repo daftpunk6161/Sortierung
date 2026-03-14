@@ -1612,7 +1612,7 @@ public class GuiViewModelTests
             var sourcePath = Path.Combine(datRoot, "..", "escape.dat");
             var target = FeatureService.ImportDatFileToRoot(sourcePath, datRoot);
             // Target MUST be within datRoot (path traversal protection)
-            Assert.True(target.StartsWith(Path.GetFullPath(datRoot), StringComparison.OrdinalIgnoreCase));
+            Assert.StartsWith(Path.GetFullPath(datRoot), target);
             Assert.True(File.Exists(target));
             Assert.Equal("test-content", File.ReadAllText(target));
         }

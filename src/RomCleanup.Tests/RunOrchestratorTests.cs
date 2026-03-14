@@ -469,7 +469,7 @@ public class RunOrchestratorTests : IDisposable
             return null;
         }
 
-        public ConversionResult Convert(string sourcePath, ConversionTarget target, string? sevenZipPath = null)
+        public ConversionResult Convert(string sourcePath, ConversionTarget target)
         {
             ConvertedPaths.Add(sourcePath);
             return new ConversionResult(sourcePath, sourcePath + ".chd", ConversionOutcome.Success);

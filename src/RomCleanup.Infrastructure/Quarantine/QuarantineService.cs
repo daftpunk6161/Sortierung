@@ -79,7 +79,7 @@ public sealed class QuarantineService
         IReadOnlyList<string>? reasons = null, string mode = "DryRun")
     {
         var fileName = Path.GetFileName(sourcePath);
-        var timestamp = DateTime.Now.ToString("yyyyMMdd");
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd");
         var targetDir = Path.Combine(quarantineRoot, timestamp);
         var targetPath = Path.Combine(targetDir, fileName);
 
@@ -91,7 +91,7 @@ public sealed class QuarantineService
             Reasons = reasons != null ? new List<string>(reasons) : new List<string>(),
             Mode = mode,
             Status = "Pending",
-            Timestamp = DateTime.Now.ToString("o")
+            Timestamp = DateTime.UtcNow.ToString("o")
         };
     }
 

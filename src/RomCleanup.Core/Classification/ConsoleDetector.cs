@@ -16,6 +16,9 @@ public sealed class ConsoleDetector
     private readonly Dictionary<string, ConsoleInfo> _consoles; // key → info
     private readonly DiscHeaderDetector? _discHeaderDetector;
 
+    // V2-H11: Folder-level detection cache — avoids re-scanning path segments per file
+    private readonly Dictionary<string, string> _folderDetectCache = new(StringComparer.OrdinalIgnoreCase);
+
     public ConsoleDetector(IReadOnlyList<ConsoleInfo> consoles, DiscHeaderDetector? discHeaderDetector = null)
     {
         _discHeaderDetector = discHeaderDetector;
@@ -84,13 +87,23 @@ public sealed class ConsoleDetector
     /// <summary>
     /// Detect console by folder path components (highest confidence heuristic).
     /// Checks each path segment against the folder alias map.
+    /// V2-H11: Results are cached per directory path to avoid repeated segment scanning.
     /// </summary>
     public string? DetectByFolder(string filePath, string rootPath)
     {
+        // Cache key: directory of the file relative to root
+        var dir = Path.GetDirectoryName(filePath) ?? "";
+        var cacheKey = $"{rootPath}|{dir}";
+        if (_folderDetectCache.TryGetValue(cacheKey, out var cached))
+            return cached.Length > 0 ? cached : null;
+
         // Only check path segments between root and file (relative path)
         var relativePath = GetRelativePath(filePath, rootPath);
         if (string.IsNullOrEmpty(relativePath))
+        {
+            _folderDetectCache[cacheKey] = "";
             return null;
+        }
 
         var segments = relativePath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -98,9 +111,13 @@ public sealed class ConsoleDetector
         for (int i = 0; i < segments.Length - 1; i++)
         {
             if (_folderMap.TryGetValue(segments[i], out var consoleKey))
+            {
+                _folderDetectCache[cacheKey] = consoleKey;
                 return consoleKey;
+            }
         }
 
+        _folderDetectCache[cacheKey] = "";
         return null;
     }
 

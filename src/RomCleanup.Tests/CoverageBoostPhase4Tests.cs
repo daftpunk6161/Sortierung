@@ -773,8 +773,7 @@ public class SettingsServiceCoverageTests
         var svc = new SettingsService();
         var vm = new MainViewModel(new StubTheme(), new StubDialog());
         // SaveFrom may fail if dir not writable - that's OK
-        var result = svc.SaveFrom(vm);
-        Assert.True(result is true or false);
+        svc.SaveFrom(vm);
     }
 }
 
