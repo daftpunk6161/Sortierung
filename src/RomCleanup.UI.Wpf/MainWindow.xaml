@@ -56,20 +56,20 @@
       <DockPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
           <ComboBox x:Name="cmbQuickProfile" Width="160" Margin="{DynamicResource SpaceDotInline}"
-                    ToolTip="Konfigurationsprofil schnell wechseln" IsEditable="False"
+                    ToolTip="{Binding Loc[Profile.QuickSwitch]}" IsEditable="False"
                     SelectedIndex="{Binding QuickProfileIndex, Mode=TwoWay}"
-                    AutomationProperties.Name="Konfigurationsprofil">
+                    AutomationProperties.Name="{Binding Loc[Profile.QuickSwitch]}">
             <ComboBoxItem Content="Standard" IsSelected="True"/>
             <ComboBoxItem Content="Disc (CHD)"/>
             <ComboBoxItem Content="Cartridge (ZIP)"/>
             <ComboBoxItem Content="Gemischt"/>
           </ComboBox>
-          <Button Command="{Binding OpenReportCommand}" ToolTip="Letzten Bericht öffnen (Ctrl+R)" Margin="4,0,8,0"
-                  AutomationProperties.Name="Letzten Bericht öffnen"
+          <Button Command="{Binding OpenReportCommand}" ToolTip="{Binding Loc[Report.OpenReportTip]}" Margin="4,0,8,0"
+                  AutomationProperties.Name="{Binding Loc[Report.OpenReport]}"
                   AutomationProperties.AcceleratorKey="Ctrl+R">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A7;" FontSize="14" Margin="{DynamicResource SpaceRightSM}"/>
-              <TextBlock Text="Bericht"/>
+              <TextBlock Text="{Binding Loc[Report.OpenReportLog]}"/>
             </StackPanel>
           </Button>
         </StackPanel>
@@ -80,26 +80,26 @@
           <!-- Status dots bound to ViewModel StatusLevel via converter -->
           <Ellipse Width="12" Height="12" VerticalAlignment="Center" Margin="{DynamicResource SpaceDotInline}"
                    Fill="{Binding RootsStatusLevel, Converter={StaticResource StatusToBrush}}"
-                   ToolTip="ROM-Ordner: Grün = konfiguriert, Grau = fehlt"/>
+                   ToolTip="{Binding Loc[Status.RootsTip]}"/>
           <TextBlock Text="{Binding StatusRoots}" Foreground="{DynamicResource BrushTextMuted}"
                      VerticalAlignment="Center" Margin="{DynamicResource SpaceRightMD}" FontSize="11"/>
           <Ellipse Width="12" Height="12" VerticalAlignment="Center" Margin="{DynamicResource SpaceDotInline}"
                    Fill="{Binding ToolsStatusLevel, Converter={StaticResource StatusToBrush}}"
-                   ToolTip="Tools: Grün = chdman/7z gefunden, Grau = fehlt"/>
+                   ToolTip="{Binding Loc[Status.ToolsTip]}"/>
           <TextBlock Text="{Binding StatusTools}" Foreground="{DynamicResource BrushTextMuted}"
                      VerticalAlignment="Center" Margin="{DynamicResource SpaceRightMD}" FontSize="11"/>
           <Ellipse Width="12" Height="12" VerticalAlignment="Center" Margin="{DynamicResource SpaceDotInline}"
                    Fill="{Binding DatStatusLevel, Converter={StaticResource StatusToBrush}}"
-                   ToolTip="DAT-Verifizierung: Grün = aktiv, Grau = deaktiviert"/>
+                   ToolTip="{Binding Loc[Status.DatTip]}"/>
           <TextBlock Text="{Binding StatusDat}" Foreground="{DynamicResource BrushTextMuted}"
                      VerticalAlignment="Center" FontSize="11"/>
           <Rectangle Width="1" Height="16" Fill="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="{DynamicResource SpaceDivider}"/>
           <Ellipse Width="14" Height="14" VerticalAlignment="Center" Margin="{DynamicResource SpaceDotInline}"
                    Fill="{Binding ReadyStatusLevel, Converter={StaticResource StatusToBrush}}"
-                   ToolTip="Gesamtstatus: Grün = startbereit, Gelb = Warnung, Rot = blockiert"/>
+                   ToolTip="{Binding Loc[Status.ReadyTip]}"/>
           <TextBlock Text="{Binding StatusReady}" Foreground="{DynamicResource BrushTextMuted}"
                      VerticalAlignment="Center" FontSize="11"
-                     AutomationProperties.Name="Gesamtstatus" AutomationProperties.LiveSetting="Polite"/>
+                     AutomationProperties.Name="{Binding Loc[Status.ReadyLabel]}" AutomationProperties.LiveSetting="Polite"/>
           <Rectangle Width="1" Height="16" Fill="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="{DynamicResource SpaceDivider}"/>
           <TextBlock Text="{Binding StatusRuntime}" Foreground="{DynamicResource BrushTextMuted}"
                      VerticalAlignment="Center" FontSize="11"/>
@@ -124,21 +124,21 @@
           <!-- Start -->
           <Button Command="{Binding RunCommand}" Style="{StaticResource PrimaryButton}"
                   Width="140" Height="52" Margin="{DynamicResource SpaceRightXS}"
-                  ToolTip="Sortierung starten (F5)" AutomationProperties.Name="Sortierung starten"
+                  ToolTip="{Binding Loc[Start.RunTip]}" AutomationProperties.Name="{Binding Loc[Start.RunButton]}"
                   AutomationProperties.AcceleratorKey="F5" TabIndex="1">
             <StackPanel HorizontalAlignment="Center">
               <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE768;" FontSize="20" HorizontalAlignment="Center"/>
-              <TextBlock Text="Starten" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+              <TextBlock Text="{Binding Loc[Start.RunButton]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
             </StackPanel>
           </Button>
           <!-- Cancel -->
           <Button Command="{Binding CancelCommand}" Style="{StaticResource DangerButton}"
                   Width="60" Height="52" Margin="{DynamicResource SpaceRightXS}"
                   AutomationProperties.AcceleratorKey="Esc"
-                  ToolTip="Lauf abbrechen (Esc)" AutomationProperties.Name="Lauf abbrechen" TabIndex="2">
+                  ToolTip="{Binding Loc[Start.CancelTip]}" AutomationProperties.Name="{Binding Loc[Start.CancelButton]}" TabIndex="2">
             <StackPanel HorizontalAlignment="Center">
               <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71A;" FontSize="20" HorizontalAlignment="Center"/>
-              <TextBlock Text="Stopp" FontSize="11" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+              <TextBlock Text="{Binding Loc[Start.CancelButton]}" FontSize="11" HorizontalAlignment="Center" Margin="0,2,0,0"/>
             </StackPanel>
           </Button>
           <Rectangle Width="1" Height="40" Fill="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="{DynamicResource SpaceDivider}"/>
@@ -148,10 +148,10 @@
                   BorderBrush="{DynamicResource BrushAccentPurple}" Foreground="{DynamicResource BrushAccentPurple}"
                   AutomationProperties.AcceleratorKey="Ctrl+Z"
                   Background="{DynamicResource BrushDangerBg}" BorderThickness="2"
-                  ToolTip="Letzten Lauf rückgängig machen (Ctrl+Z)" AutomationProperties.Name="Letzten Lauf rückgängig machen" TabIndex="3">
+                  ToolTip="{Binding Loc[Start.RollbackTip]}" AutomationProperties.Name="{Binding Loc[Start.RollbackButton]}" TabIndex="3">
             <StackPanel HorizontalAlignment="Center">
               <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE777;" FontSize="20" HorizontalAlignment="Center"/>
-              <TextBlock Text="Rückgängig" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+              <TextBlock Text="{Binding Loc[Start.RollbackButton]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
             </StackPanel>
           </Button>
           <Rectangle Width="1" Height="40" Fill="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="{DynamicResource SpaceDivider}"/>
@@ -164,19 +164,19 @@
     <!-- ═══ MAIN TABCONTROL ═══════════════════════════════════════════════ -->
     <TabControl x:Name="tabMain" Margin="0">
 
-      <TabItem Header="Start">
+      <TabItem Header="{Binding Loc[Tab.Start]}">
         <views:SortView />
       </TabItem>
 
-      <TabItem Header="Werkzeuge">
-        <views:ToolsView />
+      <TabItem Header="{Binding Loc[Tab.Tools]}">
+        <views:ToolsView DataContext="{Binding Tools}" />
       </TabItem>
 
-      <TabItem Header="Einstellungen">
+      <TabItem Header="{Binding Loc[Tab.Settings]}">
         <views:SettingsView />
       </TabItem>
 
-      <TabItem Header="Ergebnis">
+      <TabItem Header="{Binding Loc[Tab.Analysis]}">
         <views:ResultView x:Name="resultView"/>
       </TabItem>
 

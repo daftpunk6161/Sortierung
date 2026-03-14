@@ -1223,14 +1223,14 @@ public class GuiViewModelTests
     [Fact]
     public void RunService_GetSiblingDirectory_ReturnsParentSibling()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\Games\Roms", "reports");
+        var result = new RunService().GetSiblingDirectory(@"C:\Games\Roms", "reports");
         Assert.Equal(Path.Combine(@"C:\Games", "reports"), result);
     }
 
     [Fact]
     public void RunService_GetSiblingDirectory_DriveRoot_FallsBackToSubdirectory()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\", "reports");
+        var result = new RunService().GetSiblingDirectory(@"C:\", "reports");
         Assert.Equal(Path.Combine(@"C:\", "reports"), result);
     }
 

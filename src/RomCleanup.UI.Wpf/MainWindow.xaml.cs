@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using RomCleanup.Contracts.Ports;
 using RomCleanup.UI.Wpf.Services;
 using RomCleanup.UI.Wpf.Models;
 using RomCleanup.UI.Wpf.ViewModels;
@@ -11,8 +12,7 @@ namespace RomCleanup.UI.Wpf;
 public partial class MainWindow : Window, IWindowHost
 {
     private readonly MainViewModel _vm;
-    private readonly ThemeService _theme;
-    private readonly SettingsService _settings = new();
+    private readonly ISettingsService _settings;
     private readonly DispatcherTimer _settingsTimer;
     private Task? _activeRunTask;
     // System tray service
@@ -23,10 +23,10 @@ public partial class MainWindow : Window, IWindowHost
     // Guard against recursive OnClosing calls
     private bool _isClosing;
 
-    public MainWindow()
+    public MainWindow(MainViewModel vm, ISettingsService settings, IDialogService dialog)
     {
-        _theme = new ThemeService();
-        _vm = new MainViewModel(_theme, new WpfDialogService(), _settings);
+        _vm = vm;
+        _settings = settings;
         DataContext = _vm;
 
         InitializeComponent();
@@ -43,7 +43,7 @@ public partial class MainWindow : Window, IWindowHost
         _vm.RunRequested += OnRunRequested;
 
         // Feature commands (registered into VM.FeatureCommands, bound in XAML)
-        var featureCommands = new FeatureCommandService(_vm, _settings, new WpfDialogService(), this);
+        var featureCommands = new FeatureCommandService(_vm, _settings, dialog, this);
         featureCommands.RegisterCommands();
         _vm.WireToolItemCommands();
     }

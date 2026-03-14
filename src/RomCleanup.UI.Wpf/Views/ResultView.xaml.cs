@@ -61,7 +61,7 @@ public partial class ResultView : UserControl
         if (string.IsNullOrEmpty(vm.LastReportPath) || !File.Exists(vm.LastReportPath))
         {
             vm.ErrorSummaryItems.Clear();
-            vm.ErrorSummaryItems.Add("Kein Report vorhanden.");
+            vm.ErrorSummaryItems.Add(new Models.UiError("GUI-NOREPORT", "Kein Report vorhanden.", Models.UiErrorSeverity.Info));
             await EnsureWebView2Initialized(vm);
             webReportPreview.NavigateToString(
                 "<html><body style='background:#1a1a2e;color:#888;font-family:Consolas;padding:16px'>" +
@@ -80,7 +80,7 @@ public partial class ResultView : UserControl
         catch (Exception ex)
         {
             vm.ErrorSummaryItems.Clear();
-            vm.ErrorSummaryItems.Add($"Fehler: {ex.Message}");
+            vm.ErrorSummaryItems.Add(new Models.UiError("GUI-REPORTERR", ex.Message, Models.UiErrorSeverity.Error));
             vm.AddLog($"Report-Vorschau fehlgeschlagen: {ex.Message}", "ERROR");
         }
     }

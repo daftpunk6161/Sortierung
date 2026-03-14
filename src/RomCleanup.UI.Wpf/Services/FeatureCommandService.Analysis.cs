@@ -219,7 +219,7 @@ public sealed partial class FeatureCommandService
                 }
                 _dialog.ShowText("DryRun-Vergleich", sb.ToString());
             }
-            catch (Exception ex) { _vm.AddLog($"DryRun-Vergleich Fehler: {ex.Message}", "ERROR"); }
+            catch (Exception ex) { LogError("GUI-DRYRUN", $"DryRun-Vergleich Fehler: {ex.Message}"); }
         }
         else
         {

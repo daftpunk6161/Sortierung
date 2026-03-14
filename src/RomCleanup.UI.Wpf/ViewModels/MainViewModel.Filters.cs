@@ -124,7 +124,7 @@ public sealed partial class MainViewModel
         get => _toolFilterText;
         set
         {
-            if (SetField(ref _toolFilterText, value))
+            if (SetProperty(ref _toolFilterText, value))
             {
                 ToolItemsView?.Refresh();
                 OnPropertyChanged(nameof(IsToolSearchActive));

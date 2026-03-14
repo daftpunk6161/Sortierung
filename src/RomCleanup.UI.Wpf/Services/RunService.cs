@@ -20,7 +20,7 @@ namespace RomCleanup.UI.Wpf.Services;
 /// All methods run on a background thread (no Dispatcher calls).
 /// RF-003 from gui-ux-deep-audit.md.
 /// </summary>
-public sealed class RunService
+public sealed class RunService : IRunService
 {
     /// <summary>Result of a single pipeline run.</summary>
     public sealed class RunServiceResult
@@ -34,7 +34,7 @@ public sealed class RunService
     /// Build infrastructure and RunOptions from current ViewModel state.
     /// Must be called on a background thread — performs file I/O.
     /// </summary>
-    public static (RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)
+    public (RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)
         BuildOrchestrator(MainViewModel vm, Action<string>? onProgress = null)
     {
         var fs = new FileSystemAdapter();
@@ -126,7 +126,7 @@ public sealed class RunService
     /// Execute the pipeline and generate the HTML report.
     /// Must be called on a background thread.
     /// </summary>
-    public static RunServiceResult ExecuteRun(
+    public RunServiceResult ExecuteRun(
         RunOrchestrator orchestrator,
         RunOptions options,
         string? auditPath,
@@ -197,7 +197,7 @@ public sealed class RunService
     /// Get a directory at the same level as <paramref name="rootPath"/>.
     /// Falls back to a subdirectory within root for drive roots (C:\).
     /// </summary>
-    public static string GetSiblingDirectory(string rootPath, string siblingName)
+    public string GetSiblingDirectory(string rootPath, string siblingName)
     {
         var fullRoot = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var parent = Path.GetDirectoryName(fullRoot);
@@ -210,7 +210,7 @@ public sealed class RunService
     /// Build console-key → DAT-file mapping using dat-catalog.json and filesystem scan.
     /// Matches CLI BuildConsoleMap logic: catalog-based mapping first, then fallback scan.
     /// </summary>
-    private static Dictionary<string, string> BuildConsoleMap(string dataDir, string datRoot)
+    private Dictionary<string, string> BuildConsoleMap(string dataDir, string datRoot)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 

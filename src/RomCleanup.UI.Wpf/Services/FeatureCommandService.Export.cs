@@ -45,7 +45,7 @@ public sealed partial class FeatureCommandService
             _vm.AddLog($"Report erstellt: {path} (Im Browser drucken → PDF)", "INFO");
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
         }
-        catch (Exception ex) { _vm.AddLog($"Report-Fehler: {ex.Message}", "ERROR"); }
+        catch (Exception ex) { LogError("GUI-REPORT", $"Report-Fehler: {ex.Message}"); }
     }
 
     private void LauncherIntegration()
@@ -78,7 +78,7 @@ public sealed partial class FeatureCommandService
             _vm.AddLog($"DAT importiert nach: {targetPath}", "INFO");
             _dialog.Info($"DAT erfolgreich importiert:\n\n  Quelle: {path}\n  Ziel: {targetPath}", "Tool-Import");
         }
-        catch (Exception ex) { _vm.AddLog($"DAT-Import fehlgeschlagen: {ex.Message}", "ERROR"); }
+        catch (Exception ex) { LogError("DAT-IMPORT", $"DAT-Import fehlgeschlagen: {ex.Message}"); }
     }
 
 }

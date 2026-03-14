@@ -222,6 +222,7 @@
             <TextBlock Text="FEHLER-SUMMARY" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomXS}"/>
             <ListBox MinHeight="60"
                      ItemsSource="{Binding ErrorSummaryItems}"
+                     DisplayMemberPath="DisplayText"
                      Background="{DynamicResource BrushBackground}" Foreground="{DynamicResource BrushWarning}"
                      BorderThickness="0" FontFamily="Consolas" FontSize="11"
                      VirtualizingPanel.IsVirtualizing="True"

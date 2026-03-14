@@ -788,14 +788,14 @@ public class RunServiceCoverageTests
     [InlineData(@"D:\Roms", "_audit", @"D:\_audit")]
     public void GetSiblingDirectory_ReturnsParentSibling(string root, string sibling, string expected)
     {
-        var result = RunService.GetSiblingDirectory(root, sibling);
+        var result = new RunService().GetSiblingDirectory(root, sibling);
         Assert.Equal(expected, result);
     }
 
     [Fact]
     public void GetSiblingDirectory_DriveRoot_ReturnsSiblingUnderRoot()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\", "trash");
+        var result = new RunService().GetSiblingDirectory(@"C:\", "trash");
         Assert.Equal(@"C:\trash", result);
     }
 }

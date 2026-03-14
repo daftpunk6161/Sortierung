@@ -387,14 +387,14 @@ public sealed class CoverageBoostPhase2Tests : IDisposable
     [InlineData(@"D:\Collection", "trash", @"D:\trash")]
     public void GetSiblingDirectory_VariousPaths(string root, string sibling, string expected)
     {
-        var result = RunService.GetSiblingDirectory(root, sibling);
+        var result = new RunService().GetSiblingDirectory(root, sibling);
         Assert.Equal(Path.GetFullPath(expected), Path.GetFullPath(result));
     }
 
     [Fact]
     public void GetSiblingDirectory_DriveRoot_UsesSubfolder()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\", "reports");
+        var result = new RunService().GetSiblingDirectory(@"C:\", "reports");
         Assert.Contains("reports", result);
     }
 

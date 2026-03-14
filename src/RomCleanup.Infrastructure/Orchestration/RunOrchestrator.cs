@@ -276,6 +276,12 @@ public sealed class RunOrchestrator
         }
     }
 
+    // V2-MEM-H01 DEFERRED (langfristig): ScanFiles lädt alle Kandidaten synchron in eine
+    // List<RomCandidate>. Bei >100k Dateien verursacht das hohen Speicherverbrauch (~2x durch
+    // Deduplizierung mit GroupBy/OrderBy/ToList). Langfristige Lösung: IAsyncEnumerable-basiertes
+    // Streaming durch die gesamte Pipeline (ScanFiles → Deduplicate → Move → Sort). Dies
+    // erfordert Änderungen an DeduplicationEngine, RunOrchestrator und allen nachgelagerten
+    // Phasen. Aktuell zeigt der Orchestrator bei >100k Dateien eine Speicher-Warnung an.
     private List<RomCandidate> ScanFiles(RunOptions options, CancellationToken ct)
     {
         var versionScorer = new VersionScorer();

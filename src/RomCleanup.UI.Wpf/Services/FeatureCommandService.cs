@@ -4,10 +4,12 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Reporting;
 using RomCleanup.Infrastructure.Tools;
+using RomCleanup.UI.Wpf.Models;
 using RomCleanup.UI.Wpf.ViewModels;
 
 namespace RomCleanup.UI.Wpf.Services;
@@ -33,6 +35,20 @@ public sealed partial class FeatureCommandService
         _windowHost = windowHost;
     }
 
+    /// <summary>GUI-045: Log error to both AddLog and ErrorSummaryItems for structured tracking.</summary>
+    private void LogError(string code, string message, string? fixHint = null)
+    {
+        _vm.AddLog(message, "ERROR");
+        _vm.ErrorSummaryItems.Add(new UiError(code, message, UiErrorSeverity.Error, fixHint));
+    }
+
+    /// <summary>GUI-045: Log warning to both AddLog and ErrorSummaryItems.</summary>
+    private void LogWarning(string code, string message, string? fixHint = null)
+    {
+        _vm.AddLog(message, "WARN");
+        _vm.ErrorSummaryItems.Add(new UiError(code, message, UiErrorSeverity.Warning, fixHint));
+    }
+
     public void RegisterCommands()
     {
         var cmds = _vm.FeatureCommands;
@@ -46,7 +62,7 @@ public sealed partial class FeatureCommandService
         cmds["ConfigDiff"] = new RelayCommand(ConfigDiff);
         cmds["ExportUnified"] = new RelayCommand(ExportUnified);
         cmds["ConfigImport"] = new RelayCommand(ConfigImport);
-        cmds["AutoFindTools"] = new RelayCommand(async () => await AutoFindToolsAsync());
+        cmds["AutoFindTools"] = new AsyncRelayCommand(AutoFindToolsAsync);
 
         // ── Konfiguration tab misc ──────────────────────────────────────
         cmds["HealthScore"] = new RelayCommand(HealthScore);
@@ -84,7 +100,7 @@ public sealed partial class FeatureCommandService
         cmds["GpuHashing"] = new RelayCommand(GpuHashing);
 
         // ── DAT & Verifizierung ─────────────────────────────────────────
-        cmds["DatAutoUpdate"] = new RelayCommand(async () => await DatAutoUpdateAsync());
+        cmds["DatAutoUpdate"] = new AsyncRelayCommand(DatAutoUpdateAsync);
         cmds["DatDiffViewer"] = new RelayCommand(DatDiffViewer);
         cmds["TosecDat"] = new RelayCommand(TosecDat);
         cmds["CustomDatEditor"] = new RelayCommand(CustomDatEditor);
@@ -100,7 +116,7 @@ public sealed partial class FeatureCommandService
         cmds["VirtualFolderPreview"] = new RelayCommand(VirtualFolderPreview);
 
         // ── Sicherheit & Integrität ─────────────────────────────────────
-        cmds["IntegrityMonitor"] = new RelayCommand(async () => await IntegrityMonitorAsync());
+        cmds["IntegrityMonitor"] = new AsyncRelayCommand(IntegrityMonitorAsync);
         cmds["BackupManager"] = new RelayCommand(BackupManager);
         cmds["Quarantine"] = new RelayCommand(Quarantine);
         cmds["RuleEngine"] = new RelayCommand(RuleEngine);
@@ -157,7 +173,7 @@ public sealed partial class FeatureCommandService
             _vm.AddLog($"Log exportiert: {path}", "INFO");
         }
         catch (Exception ex)
-        { _vm.AddLog($"Log-Export fehlgeschlagen: {ex.Message}", "ERROR"); }
+        { LogError("IO-EXPORT", $"Log-Export fehlgeschlagen: {ex.Message}"); }
     }
 
     private void ProfileDelete()
@@ -178,8 +194,8 @@ public sealed partial class FeatureCommandService
             _vm.RefreshStatus();
             _vm.AddLog($"Profil importiert: {Path.GetFileName(path)}", "INFO");
         }
-        catch (JsonException) { _vm.AddLog("Import fehlgeschlagen: Ungültiges JSON-Format.", "ERROR"); }
-        catch (Exception ex) { _vm.AddLog($"Import fehlgeschlagen: {ex.Message}", "ERROR"); }
+        catch (JsonException) { LogError("GUI-IMPORT", "Import fehlgeschlagen: Ungültiges JSON-Format.", "JSON-Datei prüfen"); }
+        catch (Exception ex) { LogError("GUI-IMPORT", $"Import fehlgeschlagen: {ex.Message}"); }
     }
 
     private void ConfigDiff()
@@ -207,7 +223,7 @@ public sealed partial class FeatureCommandService
             ProfileService.Export(path, _vm.GetCurrentConfigMap());
             _vm.AddLog($"Konfiguration exportiert: {path} — Hinweis: Enthält lokale Pfade (Roots, ToolPaths). Vor dem Teilen prüfen.", "INFO");
         }
-        catch (Exception ex) { _vm.AddLog($"Export fehlgeschlagen: {ex.Message}", "ERROR"); }
+        catch (Exception ex) { LogError("IO-EXPORT", $"Export fehlgeschlagen: {ex.Message}"); }
     }
 
     private void ConfigImport()
@@ -221,8 +237,8 @@ public sealed partial class FeatureCommandService
             _vm.RefreshStatus();
             _vm.AddLog($"Konfiguration importiert: {Path.GetFileName(path)}", "INFO");
         }
-        catch (JsonException) { _vm.AddLog("Import fehlgeschlagen: Ungültiges JSON-Format.", "ERROR"); }
-        catch (Exception ex) { _vm.AddLog($"Import fehlgeschlagen: {ex.Message}", "ERROR"); }
+        catch (JsonException) { LogError("GUI-IMPORT", "Import fehlgeschlagen: Ungültiges JSON-Format.", "JSON-Datei prüfen"); }
+        catch (Exception ex) { LogError("GUI-IMPORT", $"Import fehlgeschlagen: {ex.Message}"); }
     }
 
     private async Task AutoFindToolsAsync()
@@ -313,7 +329,7 @@ public sealed partial class FeatureCommandService
                 }
                 _dialog.ShowText("Collection-Diff", sb.ToString());
             }
-            catch (Exception ex) { _vm.AddLog($"Collection-Diff Fehler: {ex.Message}", "ERROR"); }
+            catch (Exception ex) { LogError("GUI-DIFF", $"Collection-Diff Fehler: {ex.Message}"); }
         }
         else
         {

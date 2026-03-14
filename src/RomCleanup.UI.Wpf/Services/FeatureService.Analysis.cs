@@ -341,7 +341,9 @@ public static partial class FeatureService
     // ═══ LAUNCHER INTEGRATION ═══════════════════════════════════════════
     // Port of LauncherIntegration.ps1
 
-    private static readonly Dictionary<string, string> CoreMapping = new(StringComparer.OrdinalIgnoreCase)
+    private static Dictionary<string, string> CoreMapping =>
+        UiLookupData.Instance.CoreMapping.Count > 0 ? UiLookupData.Instance.CoreMapping
+        : new(StringComparer.OrdinalIgnoreCase)
     {
         ["nes"] = "mesen_libretro", ["snes"] = "snes9x_libretro", ["n64"] = "mupen64plus_next_libretro",
         ["gb"] = "gambatte_libretro", ["gbc"] = "gambatte_libretro", ["gba"] = "mgba_libretro",
@@ -381,7 +383,18 @@ public static partial class FeatureService
     // ═══ GENRE CLASSIFICATION ═══════════════════════════════════════════
     // Port of GenreClassification.ps1
 
-    private static readonly (string keyword, string genre)[] GenreKeywords =
+    private static (string keyword, string genre)[] GenreKeywords
+    {
+        get
+        {
+            var ext = UiLookupData.Instance.GenreKeywords;
+            if (ext.Count > 0)
+                return ext.Select(e => (e.Keyword, e.Genre)).ToArray();
+            return _defaultGenreKeywords;
+        }
+    }
+
+    private static readonly (string keyword, string genre)[] _defaultGenreKeywords =
     [
         ("rpg", "RPG"), ("quest", "RPG"), ("dragon", "RPG"), ("fantasy", "RPG"),
         ("race", "Racing"), ("rally", "Racing"), ("kart", "Racing"), ("speed", "Racing"),

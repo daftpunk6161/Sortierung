@@ -26,6 +26,7 @@
     <ProjectReference Include="..\RomCleanup.Contracts\RomCleanup.Contracts.csproj" />
     <ProjectReference Include="..\RomCleanup.Infrastructure\RomCleanup.Infrastructure.csproj" />
     <ProjectReference Include="..\RomCleanup.Api\RomCleanup.Api.csproj" />
+    <ProjectReference Include="..\RomCleanup.CLI\RomCleanup.CLI.csproj" />
     <ProjectReference Include="..\RomCleanup.UI.Wpf\RomCleanup.UI.Wpf.csproj" />
   </ItemGroup>
 </Project>

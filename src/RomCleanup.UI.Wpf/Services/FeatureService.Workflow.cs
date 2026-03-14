@@ -52,14 +52,19 @@ public static partial class FeatureService
     // ═══ SORT TEMPLATES ═════════════════════════════════════════════════
     // Port of SortTemplates.ps1
 
-    public static Dictionary<string, string> GetSortTemplates() => new()
+    public static Dictionary<string, string> GetSortTemplates()
     {
-        ["RetroArch"] = "{console}/{filename}",
-        ["EmulationStation"] = "roms/{console_lower}/{filename}",
-        ["LaunchBox"] = "Games/{console}/{filename}",
-        ["Batocera"] = "share/roms/{console_lower}/{filename}",
-        ["Flat"] = "{filename}"
-    };
+        var ext = UiLookupData.Instance.SortTemplates;
+        if (ext.Count > 0) return new(ext);
+        return new()
+        {
+            ["RetroArch"] = "{console}/{filename}",
+            ["EmulationStation"] = "roms/{console_lower}/{filename}",
+            ["LaunchBox"] = "Games/{console}/{filename}",
+            ["Batocera"] = "share/roms/{console_lower}/{filename}",
+            ["Flat"] = "{filename}"
+        };
+    }
 
 
     // ═══ SCHEDULER ══════════════════════════════════════════════════════

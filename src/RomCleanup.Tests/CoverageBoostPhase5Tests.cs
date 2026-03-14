@@ -1346,14 +1346,14 @@ public class RunServiceDeepTests
     [Fact]
     public void GetSiblingDirectory_MultiLevel_ReturnsCorrectSibling()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\Users\Games\Roms", "audit");
+        var result = new RunService().GetSiblingDirectory(@"C:\Users\Games\Roms", "audit");
         Assert.Equal(@"C:\Users\Games\audit", result);
     }
 
     [Fact]
     public void GetSiblingDirectory_TrailingSlash_Works()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\Games\", "trash");
+        var result = new RunService().GetSiblingDirectory(@"C:\Games\", "trash");
         Assert.Contains("trash", result);
     }
 
@@ -1363,7 +1363,7 @@ public class RunServiceDeepTests
     [InlineData(@"E:\a\b\c", "sibling", @"E:\a\b\sibling")]
     public void GetSiblingDirectory_Variations(string root, string sibling, string expected)
     {
-        Assert.Equal(expected, RunService.GetSiblingDirectory(root, sibling));
+        Assert.Equal(expected, new RunService().GetSiblingDirectory(root, sibling));
     }
 }
 

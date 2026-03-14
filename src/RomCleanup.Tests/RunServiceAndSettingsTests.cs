@@ -30,28 +30,28 @@ public sealed class RunServiceAndSettingsTests : IDisposable
     [Fact]
     public void GetSiblingDirectory_NormalPath_ReturnsSiblingAtSameLevel()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\Games\Roms", "audit-logs");
+        var result = new RunService().GetSiblingDirectory(@"C:\Games\Roms", "audit-logs");
         Assert.Equal(Path.GetFullPath(@"C:\Games\audit-logs"), result);
     }
 
     [Fact]
     public void GetSiblingDirectory_DriveRoot_ReturnsSubdirectory()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\", "reports");
+        var result = new RunService().GetSiblingDirectory(@"C:\", "reports");
         Assert.Equal(Path.GetFullPath(@"C:\reports"), result);
     }
 
     [Fact]
     public void GetSiblingDirectory_TrailingSlash_NormalizedCorrectly()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\Games\Roms\", "trash");
+        var result = new RunService().GetSiblingDirectory(@"C:\Games\Roms\", "trash");
         Assert.Equal(Path.GetFullPath(@"C:\Games\trash"), result);
     }
 
     [Fact]
     public void GetSiblingDirectory_NestedPath_CorrectSibling()
     {
-        var result = RunService.GetSiblingDirectory(@"D:\Data\Retro\ROMs", "backups");
+        var result = new RunService().GetSiblingDirectory(@"D:\Data\Retro\ROMs", "backups");
         Assert.Equal(Path.GetFullPath(@"D:\Data\Retro\backups"), result);
     }
 

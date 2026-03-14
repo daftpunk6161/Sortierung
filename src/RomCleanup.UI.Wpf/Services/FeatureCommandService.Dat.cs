@@ -125,7 +125,7 @@ public sealed partial class FeatureCommandService
                     if (result is not null) { success++; _vm.AddLog($"  ✓ {id}", "INFO"); }
                     else { failed++; _vm.AddLog($"  ✗ {id}: Download fehlgeschlagen", "WARN"); }
                 }
-                catch (Exception ex) { failed++; _vm.AddLog($"  ✗ {id}: {ex.Message}", "WARN"); }
+                catch (Exception ex) { failed++; LogWarning("DAT-DOWNLOAD", $"{id}: {ex.Message}"); }
             }
 
             _vm.AddLog($"DAT-Download: {success} erfolgreich, {failed} fehlgeschlagen", success > 0 ? "INFO" : "WARN");
@@ -177,7 +177,7 @@ public sealed partial class FeatureCommandService
         }
         catch (Exception ex)
         {
-            _vm.AddLog($"DAT-Diff Fehler: {ex.Message}", "ERROR");
+            LogError("DAT-DIFF", $"DAT-Diff Fehler: {ex.Message}");
             _dialog.ShowText("DAT-Diff-Viewer", $"Fehler beim Parsen der DAT-Dateien:\n\n{ex.Message}\n\nStelle sicher, dass beide Dateien gültiges Logiqx-XML enthalten.");
         }
     }
@@ -199,7 +199,7 @@ public sealed partial class FeatureCommandService
             _vm.AddLog($"TOSEC-DAT kopiert nach: {targetPath}", "INFO");
             _dialog.Info($"TOSEC-DAT erfolgreich importiert:\n\n  Quelle: {path}\n  Ziel: {targetPath}", "TOSEC-DAT");
         }
-        catch (Exception ex) { _vm.AddLog($"TOSEC-DAT Import fehlgeschlagen: {ex.Message}", "ERROR"); }
+        catch (Exception ex) { LogError("DAT-TOSEC", $"TOSEC-DAT Import fehlgeschlagen: {ex.Message}"); }
     }
 
     private void CustomDatEditor()
@@ -249,7 +249,7 @@ public sealed partial class FeatureCommandService
                 }
                 _vm.AddLog($"Custom-DAT-Eintrag gespeichert: {customDatPath}", "INFO");
             }
-            catch (Exception ex) { _vm.AddLog($"Custom-DAT Fehler: {ex.Message}", "ERROR"); }
+            catch (Exception ex) { LogError("DAT-CUSTOM", $"Custom-DAT Fehler: {ex.Message}"); }
         }
         else
             _vm.AddLog("DatRoot nicht gesetzt – Eintrag wird nur angezeigt.", "WARN");

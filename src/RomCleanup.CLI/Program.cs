@@ -376,7 +376,7 @@ internal static class Program
         };
     }
 
-    private static (CliOptions?, int exitCode) ParseArgs(string[] args)
+    internal static (CliOptions?, int exitCode) ParseArgs(string[] args)
     {
         if (args.Length == 0)
             return (null, 0);
@@ -573,7 +573,7 @@ Exit codes:
   3  Preflight / validation failure");
     }
 
-    private sealed class CliOptions
+    internal sealed class CliOptions
     {
         public string[] Roots { get; set; } = Array.Empty<string>();
         public string Mode { get; set; } = "DryRun";

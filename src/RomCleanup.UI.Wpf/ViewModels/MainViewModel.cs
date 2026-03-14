@@ -6,6 +6,8 @@ using System.Runtime.CompilerServices;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Orchestration;
@@ -21,35 +23,55 @@ namespace RomCleanup.UI.Wpf.ViewModels;
 /// No direct UI element access. All data flows through bindings.
 /// Partial class: core + Settings + Filters + RunPipeline.
 /// </summary>
-public sealed partial class MainViewModel : INotifyPropertyChanged
+public sealed partial class MainViewModel : ObservableObject
 {
-    public event PropertyChangedEventHandler? PropertyChanged;
-
     private readonly IThemeService _theme;
     private readonly IDialogService _dialog;
     private readonly ISettingsService _settings;
+    private readonly IRunService _runService;
+    private readonly ILocalizationService _loc;
     private readonly SynchronizationContext? _syncContext;
     private readonly WatchService _watchService = new();
     private CancellationTokenSource? _cts;
     // V2-THR-H02: Lock for consistent CTS access between OnCancel and CreateRunCancellation
     private readonly object _ctsLock = new();
 
+    // ═══ CHILD VIEWMODELS (GUI-021: shell ViewModel pattern) ════════════
+    /// <summary>Configuration, paths, regions, filters, validation.</summary>
+    public SetupViewModel Setup { get; }
+    /// <summary>Tool catalog, quick access, search, categories.</summary>
+    public ToolsViewModel Tools { get; }
+    /// <summary>Run pipeline state, progress, dashboard, rollback.</summary>
+    public RunViewModel Run { get; }
+
     public MainViewModel() : this(new ThemeService(), new WpfDialogService()) { }
 
-    public MainViewModel(IThemeService theme, IDialogService dialog, ISettingsService? settings = null)
+    public MainViewModel(IThemeService theme, IDialogService dialog, ISettingsService? settings = null, IRunService? runService = null, ILocalizationService? loc = null)
     {
         _theme = theme;
         _dialog = dialog;
         _settings = settings ?? new SettingsService();
+        _runService = runService ?? new RunService();
+        _loc = loc ?? new LocalizationService();
         _syncContext = SynchronizationContext.Current;
+
+        // ── Child ViewModels (GUI-021) ────────────────────────────────
+        Setup = new SetupViewModel(_theme, _dialog, _settings);
+        Tools = new ToolsViewModel();
+        Run = new RunViewModel();
+
+        // Wire child VM events
+        Setup.StatusRefreshRequested += () => RefreshStatus();
+        Run.CommandRequeryRequested += DeferCommandRequery;
+        Run.RunRequested += (_, _) => OnRun();
 
         // Wire collection changes to status refresh
         Roots.CollectionChanged += OnRootsChanged;
 
-        // ── Commands ────────────────────────────────────────────────────
+        // ── Commands (CommunityToolkit.Mvvm.Input) ────────────────────
         RunCommand = new RelayCommand(OnRun, () => !IsBusy && Roots.Count > 0);
         CancelCommand = new RelayCommand(OnCancel, () => IsBusy);
-        RollbackCommand = new RelayCommand(OnRollback, () => !IsBusy && CanRollback);
+        RollbackCommand = new AsyncRelayCommand(OnRollbackAsync, () => !IsBusy && CanRollback);
         AddRootCommand = new RelayCommand(OnAddRoot, () => !IsBusy);
         RemoveRootCommand = new RelayCommand(OnRemoveRoot, () => !IsBusy && SelectedRoot is not null);
         OpenReportCommand = new RelayCommand(OnOpenReport, () => !string.IsNullOrEmpty(LastReportPath));
@@ -63,8 +85,8 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         PresetConvertCommand = new RelayCommand(OnPresetConvert);
 
         // Browse commands (parameter = property name to set)
-        BrowseToolPathCommand = new RelayCommand(OnBrowseToolPath);
-        BrowseFolderPathCommand = new RelayCommand(OnBrowseFolderPath);
+        BrowseToolPathCommand = new RelayCommand<string>(OnBrowseToolPath);
+        BrowseFolderPathCommand = new RelayCommand<string>(OnBrowseFolderPath);
 
         // Settings commands
         SaveSettingsCommand = new RelayCommand(OnSaveSettings);
@@ -96,26 +118,30 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         _watchService.WatcherError += msg => AddLog(msg, "WARN");
     }
 
+    // ═══ LOCALIZATION (GUI-047) ═════════════════════════════════════════
+    /// <summary>XAML-bindable localization: {Binding Loc[Key]}.</summary>
+    public ILocalizationService Loc => _loc;
+
     // ═══ COMMANDS ═══════════════════════════════════════════════════════
-    public ICommand RunCommand { get; }
-    public ICommand CancelCommand { get; }
-    public ICommand RollbackCommand { get; }
-    public ICommand AddRootCommand { get; }
-    public ICommand RemoveRootCommand { get; }
-    public ICommand OpenReportCommand { get; }
-    public ICommand ClearLogCommand { get; }
-    public ICommand ThemeToggleCommand { get; }
-    public ICommand GameKeyPreviewCommand { get; }
-    public ICommand PresetSafeDryRunCommand { get; }
-    public ICommand PresetFullSortCommand { get; }
-    public ICommand PresetConvertCommand { get; }
-    public ICommand BrowseToolPathCommand { get; }
-    public ICommand BrowseFolderPathCommand { get; }
-    public ICommand QuickPreviewCommand { get; }
-    public ICommand StartMoveCommand { get; }
-    public ICommand SaveSettingsCommand { get; }
-    public ICommand LoadSettingsCommand { get; }
-    public ICommand WatchApplyCommand { get; }
+    public IRelayCommand RunCommand { get; }
+    public IRelayCommand CancelCommand { get; }
+    public IAsyncRelayCommand RollbackCommand { get; }
+    public IRelayCommand AddRootCommand { get; }
+    public IRelayCommand RemoveRootCommand { get; }
+    public IRelayCommand OpenReportCommand { get; }
+    public IRelayCommand ClearLogCommand { get; }
+    public IRelayCommand ThemeToggleCommand { get; }
+    public IRelayCommand GameKeyPreviewCommand { get; }
+    public IRelayCommand PresetSafeDryRunCommand { get; }
+    public IRelayCommand PresetFullSortCommand { get; }
+    public IRelayCommand PresetConvertCommand { get; }
+    public IRelayCommand BrowseToolPathCommand { get; }
+    public IRelayCommand BrowseFolderPathCommand { get; }
+    public IRelayCommand QuickPreviewCommand { get; }
+    public IRelayCommand StartMoveCommand { get; }
+    public IRelayCommand SaveSettingsCommand { get; }
+    public IRelayCommand LoadSettingsCommand { get; }
+    public IRelayCommand WatchApplyCommand { get; }
 
     // ═══ FEATURE COMMANDS (TASK-111: replaces Click event handlers) ═══════
     public Dictionary<string, ICommand> FeatureCommands { get; } = new();
@@ -129,16 +155,22 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     public ObservableCollection<string> Roots { get; } = [];
     public ObservableCollection<LogEntry> LogEntries { get; } = [];
     public ObservableCollection<DatMapRow> DatMappings { get; } = [];
-    public ObservableCollection<string> ErrorSummaryItems { get; } = [];
+    public ObservableCollection<UiError> ErrorSummaryItems { get; } = [];
 
     /// <summary>Assigns FeatureCommands to matching ToolItems. Call after FeatureCommandService.RegisterCommands().</summary>
     public void WireToolItemCommands()
     {
+        // Legacy: wire to old MainViewModel.ToolItems (until fully migrated)
         foreach (var item in ToolItems)
         {
             if (FeatureCommands.TryGetValue(item.Key, out var cmd))
                 item.Command = cmd;
         }
+
+        // GUI-021: Also wire to child ToolsViewModel
+        foreach (var kvp in FeatureCommands)
+            Tools.FeatureCommands[kvp.Key] = kvp.Value;
+        Tools.WireToolItemCommands();
     }
 
     /// <summary>Add a log entry (thread-safe via Dispatcher if needed). Caps at 10,000 entries.</summary>
@@ -181,16 +213,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     }
 
     // ═══ INPC INFRASTRUCTURE ════════════════════════════════════════════
-    private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return false;
-        field = value;
-        OnPropertyChanged(propertyName);
-        return true;
-    }
-
-    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    // Provided by ObservableObject base class (SetProperty, OnPropertyChanged).
 
     private void OnRootsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
@@ -199,7 +222,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     }
 
     private bool _requeryScheduled;
-    /// <summary>P1-008: Batches CommandManager.InvalidateRequerySuggested to one call per dispatcher cycle.</summary>
+    /// <summary>P1-008: Batches command CanExecute re-evaluation to one call per dispatcher cycle.</summary>
     private void DeferCommandRequery()
     {
         if (_requeryScheduled) return;
@@ -208,13 +231,27 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         if (dispatcher is null)
         {
             _requeryScheduled = false;
-            CommandManager.InvalidateRequerySuggested();
+            NotifyAllCommands();
             return;
         }
         dispatcher.InvokeAsync(() =>
         {
             _requeryScheduled = false;
-            CommandManager.InvalidateRequerySuggested();
+            NotifyAllCommands();
         }, System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    private void NotifyAllCommands()
+    {
+        RunCommand.NotifyCanExecuteChanged();
+        CancelCommand.NotifyCanExecuteChanged();
+        RollbackCommand.NotifyCanExecuteChanged();
+        AddRootCommand.NotifyCanExecuteChanged();
+        RemoveRootCommand.NotifyCanExecuteChanged();
+        OpenReportCommand.NotifyCanExecuteChanged();
+        GameKeyPreviewCommand.NotifyCanExecuteChanged();
+        WatchApplyCommand.NotifyCanExecuteChanged();
+        QuickPreviewCommand.NotifyCanExecuteChanged();
+        StartMoveCommand.NotifyCanExecuteChanged();
     }
 }

@@ -137,7 +137,7 @@ public sealed partial class FeatureCommandService
             var savePath = _dialog.SaveFile("Regeln exportieren", "JSON (*.json)|*.json", "rules-export.json");
             if (savePath is null) return;
             try { File.Copy(rulesPath, savePath, overwrite: true); _vm.AddLog($"Regeln exportiert: {savePath}", "INFO"); }
-            catch (Exception ex) { _vm.AddLog($"Export fehlgeschlagen: {ex.Message}", "ERROR"); }
+            catch (Exception ex) { LogError("IO-EXPORT", $"Export fehlgeschlagen: {ex.Message}"); }
         }
         else
         {
@@ -151,8 +151,8 @@ public sealed partial class FeatureCommandService
                 File.Copy(importPath, rulesPath, overwrite: true);
                 _vm.AddLog($"Regeln importiert: {Path.GetFileName(importPath)} nach {rulesPath}", "INFO");
             }
-            catch (JsonException) { _vm.AddLog("Import fehlgeschlagen: Ungültiges JSON-Format.", "ERROR"); }
-            catch (Exception ex) { _vm.AddLog($"Import fehlgeschlagen: {ex.Message}", "ERROR"); }
+            catch (JsonException) { LogError("GUI-IMPORT", "Import fehlgeschlagen: Ungültiges JSON-Format.", "JSON-Datei prüfen"); }
+            catch (Exception ex) { LogError("GUI-IMPORT", $"Import fehlgeschlagen: {ex.Message}"); }
         }
     }
 
@@ -169,7 +169,7 @@ public sealed partial class FeatureCommandService
         }
         catch (Exception ex)
         {
-            _vm.AddLog($"Arcade Merge/Split Fehler: {ex.Message}", "ERROR");
+            LogError("GUI-ARCADE", $"Arcade Merge/Split Fehler: {ex.Message}");
             _dialog.Error($"Fehler beim Parsen der DAT:\n\n{ex.Message}", "Arcade Merge/Split");
         }
     }

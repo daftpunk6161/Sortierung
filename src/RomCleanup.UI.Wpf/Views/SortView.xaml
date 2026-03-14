@@ -21,7 +21,7 @@
     <StackPanel Margin="20,16">
 
       <!-- ── Pipeline ── -->
-      <TextBlock Text="PIPELINE" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <TextBlock Text="{Binding Loc[Phase.Pipeline]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
       <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}"
               BorderThickness="1" CornerRadius="8" Padding="16,12" Margin="{DynamicResource SpaceBottomMD}">
         <ItemsControl>
@@ -34,69 +34,69 @@
                       ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=1}">
             <Ellipse Width="18" Height="18" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
                      Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=1}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-            <TextBlock Text="Preflight" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Phase.Preflight]}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
           </StackPanel>
           <Border Height="2" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=2}" Margin="2,0"/>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
                       ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=2}">
             <Ellipse Width="18" Height="18" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
                      Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=2}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-            <TextBlock Text="Scan" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Phase.Scan]}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
           </StackPanel>
           <Border Height="2" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=3}" Margin="2,0"/>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
                       ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=3}">
             <Ellipse Width="18" Height="18" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
                      Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=3}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-            <TextBlock Text="Dedupe" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Phase.Dedupe]}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
           </StackPanel>
           <Border Height="2" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=4}" Margin="2,0"/>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
                       ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=4}">
             <Ellipse Width="18" Height="18" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
                      Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=4}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-            <TextBlock Text="Sort" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Phase.Sort]}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
           </StackPanel>
           <Border Height="2" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=5}" Margin="2,0"/>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
                       ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=5}">
             <Ellipse Width="18" Height="18" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
                      Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=5}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-            <TextBlock Text="Move" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Phase.Move]}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
           </StackPanel>
           <Border Height="2" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=6}" Margin="2,0"/>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
                       ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=6}">
             <Ellipse Width="18" Height="18" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
                      Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=6}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-            <TextBlock Text="Convert" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Phase.Convert]}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
           </StackPanel>
           <Border Height="2" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=7}" Margin="2,0"/>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
                       ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=7}">
             <Ellipse Width="18" Height="18" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
                      Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=7}" VerticalAlignment="Center" Margin="0,0,4,0"/>
-            <TextBlock Text="Fertig" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Phase.Done]}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
           </StackPanel>
         </ItemsControl>
       </Border>
 
       <!-- ── Quick-Start Presets ── -->
-      <TextBlock Text="QUICK-START" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <TextBlock Text="{Binding Loc[Sort.QuickStart]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
       <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomSM}">
         <StackPanel>
-          <TextBlock Text="Presets" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" Margin="{DynamicResource SpaceBottomXS}"/>
+          <TextBlock Text="{Binding Loc[Sort.Presets]}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" Margin="{DynamicResource SpaceBottomXS}"/>
           <Border CornerRadius="6" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                   Background="{DynamicResource BrushSurface}" HorizontalAlignment="Left" Margin="0,4,0,0">
             <StackPanel Orientation="Horizontal">
               <RadioButton GroupName="Preset" Padding="14,10" MinWidth="180" Cursor="Hand"
                            IsChecked="{Binding ActivePreset, Converter={StaticResource StrEqualsToBool}, ConverterParameter=SafeDryRun}"
                            Command="{Binding PresetSafeDryRunCommand}"
-                           ToolTip="Sichere Vorschau: Nur prüfen, nichts verschieben"
-                           AutomationProperties.Name="Preset: Sichere Vorschau">
+                           ToolTip="{Binding Loc[Sort.PresetSafeDryRunTip]}"
+                           AutomationProperties.Name="{Binding Loc[Sort.PresetSafeDryRun]}">
                 <StackPanel>
-                  <TextBlock Text="Sichere Vorschau" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                  <TextBlock Text="Nur prüfen, nichts ändern" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding Loc[Sort.PresetSafeDryRun]}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding Loc[Sort.PresetSafeDryRunDesc]}" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
                 </StackPanel>
               </RadioButton>
               <Border Width="1" Background="{DynamicResource BrushBorder}" Margin="0,4"/>
@@ -104,10 +104,10 @@
                            IsChecked="{Binding ActivePreset, Converter={StaticResource StrEqualsToBool}, ConverterParameter=FullSort}"
                            Command="{Binding PresetFullSortCommand}"
                            ToolTip="Volle Sortierung: Alle Regionen, Standard-Regeln, Vorschau aktiv"
-                           AutomationProperties.Name="Preset: Volle Sortierung">
+                           AutomationProperties.Name="{Binding Loc[Sort.PresetFullSort]}">
                 <StackPanel>
-                  <TextBlock Text="Volle Sortierung" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                  <TextBlock Text="Alle Regionen, Standard-Regeln" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding Loc[Sort.PresetFullSort]}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding Loc[Sort.PresetFullSortDesc]}" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
                 </StackPanel>
               </RadioButton>
               <Border Width="1" Background="{DynamicResource BrushBorder}" Margin="0,4"/>
@@ -115,10 +115,10 @@
                            IsChecked="{Binding ActivePreset, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Convert}"
                            Command="{Binding PresetConvertCommand}"
                            ToolTip="Konvertierung: Formate nach Move optimieren (CHD/RVZ)"
-                           AutomationProperties.Name="Preset: Konvertierung">
+                           AutomationProperties.Name="{Binding Loc[Sort.PresetConvert]}">
                 <StackPanel>
-                  <TextBlock Text="Konvertierung" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                  <TextBlock Text="Formate optimieren (CHD/RVZ)" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding Loc[Sort.PresetConvert]}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding Loc[Sort.PresetConvertDesc]}" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
                 </StackPanel>
               </RadioButton>
             </StackPanel>

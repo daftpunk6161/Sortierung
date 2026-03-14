@@ -52,7 +52,7 @@ public sealed partial class MainViewModel
                 throw new InvalidOperationException(
                     $"RF-007: Invalid RunState transition {_runState} → {value}");
 
-            if (SetField(ref _runState, value))
+            if (SetProperty(ref _runState, value))
             {
                 OnPropertyChanged(nameof(IsBusy));
                 OnPropertyChanged(nameof(IsIdle));
@@ -148,123 +148,123 @@ public sealed partial class MainViewModel
 
     // ═══ PROGRESS & PERFORMANCE ═════════════════════════════════════════
     private double _progress;
-    public double Progress { get => _progress; set => SetField(ref _progress, value); }
+    public double Progress { get => _progress; set => SetProperty(ref _progress, value); }
 
     private string _progressText = "";
-    public string ProgressText { get => _progressText; set => SetField(ref _progressText, value); }
+    public string ProgressText { get => _progressText; set => SetProperty(ref _progressText, value); }
 
     private string _perfPhase = "Phase: –";
-    public string PerfPhase { get => _perfPhase; set => SetField(ref _perfPhase, value); }
+    public string PerfPhase { get => _perfPhase; set => SetProperty(ref _perfPhase, value); }
 
     private string _perfFile = "Datei: –";
-    public string PerfFile { get => _perfFile; set => SetField(ref _perfFile, value); }
+    public string PerfFile { get => _perfFile; set => SetProperty(ref _perfFile, value); }
 
     private string _busyHint = "";
-    public string BusyHint { get => _busyHint; set => SetField(ref _busyHint, value); }
+    public string BusyHint { get => _busyHint; set => SetProperty(ref _busyHint, value); }
 
     // ═══ MISC UI STATE ══════════════════════════════════════════════════
     private string? _selectedRoot;
     public string? SelectedRoot
     {
         get => _selectedRoot;
-        set { SetField(ref _selectedRoot, value); DeferCommandRequery(); }
+        set { SetProperty(ref _selectedRoot, value); DeferCommandRequery(); }
     }
 
     private bool _canRollback;
     public bool CanRollback
     {
         get => _canRollback;
-        set { SetField(ref _canRollback, value); DeferCommandRequery(); }
+        set { SetProperty(ref _canRollback, value); DeferCommandRequery(); }
     }
 
     private string _lastReportPath = "";
     public string LastReportPath
     {
         get => _lastReportPath;
-        set { SetField(ref _lastReportPath, value); DeferCommandRequery(); }
+        set { SetProperty(ref _lastReportPath, value); DeferCommandRequery(); }
     }
 
     private bool _showDryRunBanner = true;
-    public bool ShowDryRunBanner { get => _showDryRunBanner; set => SetField(ref _showDryRunBanner, value); }
+    public bool ShowDryRunBanner { get => _showDryRunBanner; set => SetProperty(ref _showDryRunBanner, value); }
 
     private bool _showMoveCompleteBanner;
-    public bool ShowMoveCompleteBanner { get => _showMoveCompleteBanner; set => SetField(ref _showMoveCompleteBanner, value); }
+    public bool ShowMoveCompleteBanner { get => _showMoveCompleteBanner; set => SetProperty(ref _showMoveCompleteBanner, value); }
 
     // ═══ STATUS INDICATORS ══════════════════════════════════════════════
     private string _statusRoots = "Roots: –";
-    public string StatusRoots { get => _statusRoots; set => SetField(ref _statusRoots, value); }
+    public string StatusRoots { get => _statusRoots; set => SetProperty(ref _statusRoots, value); }
 
     private string _statusTools = "Tools: –";
-    public string StatusTools { get => _statusTools; set => SetField(ref _statusTools, value); }
+    public string StatusTools { get => _statusTools; set => SetProperty(ref _statusTools, value); }
 
     private string _statusDat = "DAT: –";
-    public string StatusDat { get => _statusDat; set => SetField(ref _statusDat, value); }
+    public string StatusDat { get => _statusDat; set => SetProperty(ref _statusDat, value); }
 
     private string _statusReady = "Status: –";
-    public string StatusReady { get => _statusReady; set => SetField(ref _statusReady, value); }
+    public string StatusReady { get => _statusReady; set => SetProperty(ref _statusReady, value); }
 
     private string _statusRuntime = "Laufzeit: –";
-    public string StatusRuntime { get => _statusRuntime; set => SetField(ref _statusRuntime, value); }
+    public string StatusRuntime { get => _statusRuntime; set => SetProperty(ref _statusRuntime, value); }
 
     private StatusLevel _rootsStatusLevel = StatusLevel.Missing;
-    public StatusLevel RootsStatusLevel { get => _rootsStatusLevel; set => SetField(ref _rootsStatusLevel, value); }
+    public StatusLevel RootsStatusLevel { get => _rootsStatusLevel; set => SetProperty(ref _rootsStatusLevel, value); }
 
     private StatusLevel _toolsStatusLevel = StatusLevel.Missing;
-    public StatusLevel ToolsStatusLevel { get => _toolsStatusLevel; set => SetField(ref _toolsStatusLevel, value); }
+    public StatusLevel ToolsStatusLevel { get => _toolsStatusLevel; set => SetProperty(ref _toolsStatusLevel, value); }
 
     private StatusLevel _datStatusLevel = StatusLevel.Missing;
-    public StatusLevel DatStatusLevel { get => _datStatusLevel; set => SetField(ref _datStatusLevel, value); }
+    public StatusLevel DatStatusLevel { get => _datStatusLevel; set => SetProperty(ref _datStatusLevel, value); }
 
     private StatusLevel _readyStatusLevel = StatusLevel.Missing;
-    public StatusLevel ReadyStatusLevel { get => _readyStatusLevel; set => SetField(ref _readyStatusLevel, value); }
+    public StatusLevel ReadyStatusLevel { get => _readyStatusLevel; set => SetProperty(ref _readyStatusLevel, value); }
 
     // ═══ TOOL STATUS LABELS (P1-007: VM-bound instead of x:Name TextBlocks) ═══
     private string _chdmanStatusText = "–";
-    public string ChdmanStatusText { get => _chdmanStatusText; set => SetField(ref _chdmanStatusText, value); }
+    public string ChdmanStatusText { get => _chdmanStatusText; set => SetProperty(ref _chdmanStatusText, value); }
 
     private string _dolphinStatusText = "–";
-    public string DolphinStatusText { get => _dolphinStatusText; set => SetField(ref _dolphinStatusText, value); }
+    public string DolphinStatusText { get => _dolphinStatusText; set => SetProperty(ref _dolphinStatusText, value); }
 
     private string _sevenZipStatusText = "–";
-    public string SevenZipStatusText { get => _sevenZipStatusText; set => SetField(ref _sevenZipStatusText, value); }
+    public string SevenZipStatusText { get => _sevenZipStatusText; set => SetProperty(ref _sevenZipStatusText, value); }
 
     private string _psxtractStatusText = "–";
-    public string PsxtractStatusText { get => _psxtractStatusText; set => SetField(ref _psxtractStatusText, value); }
+    public string PsxtractStatusText { get => _psxtractStatusText; set => SetProperty(ref _psxtractStatusText, value); }
 
     private string _cisoStatusText = "–";
-    public string CisoStatusText { get => _cisoStatusText; set => SetField(ref _cisoStatusText, value); }
+    public string CisoStatusText { get => _cisoStatusText; set => SetProperty(ref _cisoStatusText, value); }
 
     // ═══ DASHBOARD COUNTERS ═════════════════════════════════════════════
     private string _dashMode = "–";
-    public string DashMode { get => _dashMode; set => SetField(ref _dashMode, value); }
+    public string DashMode { get => _dashMode; set => SetProperty(ref _dashMode, value); }
 
     private string _dashWinners = "0";
-    public string DashWinners { get => _dashWinners; set => SetField(ref _dashWinners, value); }
+    public string DashWinners { get => _dashWinners; set => SetProperty(ref _dashWinners, value); }
 
     private string _dashDupes = "0";
-    public string DashDupes { get => _dashDupes; set => SetField(ref _dashDupes, value); }
+    public string DashDupes { get => _dashDupes; set => SetProperty(ref _dashDupes, value); }
 
     private string _dashJunk = "0";
-    public string DashJunk { get => _dashJunk; set => SetField(ref _dashJunk, value); }
+    public string DashJunk { get => _dashJunk; set => SetProperty(ref _dashJunk, value); }
 
     private string _dashDuration = "00:00";
-    public string DashDuration { get => _dashDuration; set => SetField(ref _dashDuration, value); }
+    public string DashDuration { get => _dashDuration; set => SetProperty(ref _dashDuration, value); }
 
     private string _healthScore = "–";
-    public string HealthScore { get => _healthScore; set => SetField(ref _healthScore, value); }
+    public string HealthScore { get => _healthScore; set => SetProperty(ref _healthScore, value); }
 
     private string _dashGames = "0";
-    public string DashGames { get => _dashGames; set => SetField(ref _dashGames, value); }
+    public string DashGames { get => _dashGames; set => SetProperty(ref _dashGames, value); }
 
     private string _dashDatHits = "0";
-    public string DashDatHits { get => _dashDatHits; set => SetField(ref _dashDatHits, value); }
+    public string DashDatHits { get => _dashDatHits; set => SetProperty(ref _dashDatHits, value); }
 
     private string _dedupeRate = "–";
-    public string DedupeRate { get => _dedupeRate; set => SetField(ref _dedupeRate, value); }
+    public string DedupeRate { get => _dedupeRate; set => SetProperty(ref _dedupeRate, value); }
 
     // ═══ STEP INDICATOR ═════════════════════════════════════════════════
     private int _currentStep;
-    public int CurrentStep { get => _currentStep; set => SetField(ref _currentStep, value); }
+    public int CurrentStep { get => _currentStep; set => SetProperty(ref _currentStep, value); }
 
     // RD-004: Phase detail tooltips for interactive stepper
     /// <summary>Returns a detail string for the given pipeline phase (1–7). Used by stepper tooltips.</summary>
@@ -291,13 +291,13 @@ public sealed partial class MainViewModel
     };
 
     private string _stepLabel1 = "Keine Ordner";
-    public string StepLabel1 { get => _stepLabel1; set => SetField(ref _stepLabel1, value); }
+    public string StepLabel1 { get => _stepLabel1; set => SetProperty(ref _stepLabel1, value); }
 
     private string _stepLabel2 = "Bereit";
-    public string StepLabel2 { get => _stepLabel2; set => SetField(ref _stepLabel2, value); }
+    public string StepLabel2 { get => _stepLabel2; set => SetProperty(ref _stepLabel2, value); }
 
     private string _stepLabel3 = "F5 drücken";
-    public string StepLabel3 { get => _stepLabel3; set => SetField(ref _stepLabel3, value); }
+    public string StepLabel3 { get => _stepLabel3; set => SetProperty(ref _stepLabel3, value); }
 
     // ═══ RUN COMMAND HANDLERS ═══════════════════════════════════════════
 
@@ -339,7 +339,7 @@ public sealed partial class MainViewModel
         BusyHint = "Abbruch angefordert…";
     }
 
-    private async void OnRollback()
+    private async Task OnRollbackAsync()
     {
         if (!_dialog.Confirm("Letzten Lauf rückgängig machen?", "Rollback bestätigen"))
             return;
@@ -533,7 +533,7 @@ public sealed partial class MainViewModel
             var (orchestrator, runOptions, auditPath, reportPath) = await Task.Run(() =>
             {
                 DateTime lastProgressUpdate = DateTime.MinValue;
-                return RunService.BuildOrchestrator(this, msg =>
+                return _runService.BuildOrchestrator(this, msg =>
                 {
                     var now = DateTime.UtcNow;
                     if ((now - lastProgressUpdate).TotalMilliseconds < 100) return;
@@ -554,7 +554,7 @@ public sealed partial class MainViewModel
             }, ct);
 
             var svcResult = await Task.Run(
-                () => RunService.ExecuteRun(orchestrator, runOptions, auditPath, reportPath, ct), ct);
+                () => _runService.ExecuteRun(orchestrator, runOptions, auditPath, reportPath, ct), ct);
 
             ApplyRunResult(svcResult.Result);
             LastAuditPath = auditPath;
@@ -646,41 +646,46 @@ public sealed partial class MainViewModel
     {
         ErrorSummaryItems.Clear();
 
-        var issues = LogEntries
-            .Skip(_runLogStartIndex)
-            .Where(e => e.Level is "WARN" or "ERROR")
-            .Select(e => $"[{e.Level}] {e.Text}")
-            .ToList();
+        var issues = new List<UiError>();
+
+        // Collect log-based warnings/errors
+        foreach (var e in LogEntries.Skip(_runLogStartIndex))
+        {
+            if (e.Level is "WARN")
+                issues.Add(new UiError("RUN-WARN", e.Text, UiErrorSeverity.Warning));
+            else if (e.Level is "ERROR")
+                issues.Add(new UiError("RUN-ERR", e.Text, UiErrorSeverity.Error));
+        }
 
         if (LastRunResult is not null)
         {
             if (LastRunResult.Status == "blocked")
-                issues.Insert(0, $"[BLOCKED] Preflight: {LastRunResult.Preflight?.Reason}");
+                issues.Insert(0, new UiError("RUN-BLOCKED", $"Preflight: {LastRunResult.Preflight?.Reason}", UiErrorSeverity.Blocked));
 
             if (LastRunResult.MoveResult is { FailCount: > 0 } mv)
-                issues.Insert(0, $"[ERROR] {mv.FailCount} Dateien konnten nicht verschoben werden");
+                issues.Insert(0, new UiError("IO-MOVE", $"{mv.FailCount} Dateien konnten nicht verschoben werden", UiErrorSeverity.Error));
 
             var junk = LastCandidates.Count(c => c.Category == "JUNK");
             if (junk > 0)
-                issues.Insert(0, $"[WARN] {junk} Junk-Dateien erkannt");
+                issues.Insert(0, new UiError("RUN-JUNK", $"{junk} Junk-Dateien erkannt", UiErrorSeverity.Warning));
 
             var unverified = LastCandidates.Count(c => !c.DatMatch);
             if (unverified > 0 && LastCandidates.Count > 0)
-                issues.Insert(0, $"[INFO] {unverified}/{LastCandidates.Count} Dateien ohne DAT-Verifizierung");
+                issues.Insert(0, new UiError("DAT-UNVERIFIED", $"{unverified}/{LastCandidates.Count} Dateien ohne DAT-Verifizierung", UiErrorSeverity.Info));
         }
 
         if (issues.Count == 0)
         {
-            ErrorSummaryItems.Add("✓ Keine Fehler oder Warnungen.");
+            ErrorSummaryItems.Add(new UiError("RUN-OK", "Keine Fehler oder Warnungen.", UiErrorSeverity.Info));
             if (LastRunResult is not null)
-                ErrorSummaryItems.Add($"Report geladen: {LastRunResult.WinnerCount} Winner, {LastRunResult.LoserCount} Dupes");
+                ErrorSummaryItems.Add(new UiError("RUN-STATS", $"Report geladen: {LastRunResult.WinnerCount} Winner, {LastRunResult.LoserCount} Dupes", UiErrorSeverity.Info));
             return;
         }
 
         foreach (var issue in issues.Take(50))
             ErrorSummaryItems.Add(issue);
         if (issues.Count > 50)
-            ErrorSummaryItems.Add($"… und {issues.Count - 50} weitere");
+            ErrorSummaryItems.Add(new UiError("RUN-TRUNC", $"… und {issues.Count - 50} weitere", UiErrorSeverity.Warning));
     }
 
     /// <summary>Apply run results from orchestrator to all dashboard/state properties.</summary>
