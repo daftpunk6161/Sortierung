@@ -151,6 +151,8 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
             // only if called from the thread that created the VM; discard otherwise.
             if (_syncContext is null || SynchronizationContext.Current == _syncContext)
                 AddLogCore(text, level);
+            else
+                System.Diagnostics.Debug.WriteLine($"[RomCleanup] Log discarded (no Dispatcher): [{level}] {text}");
             return;
         }
         if (dispatcher.CheckAccess())

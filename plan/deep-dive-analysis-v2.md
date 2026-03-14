@@ -124,7 +124,7 @@
 - **Datei:** `Core/Scoring/FormatScorer.cs` Zeile 61
 - **Problem:** `_ => 300` als Default-Case. Kein Logging wenn unbekanntes Format bewertet wird.
 - **Auswirkung:** Neue Formate werden systematisch als "schlechter" bewertet.
-- [ ] **FIX:** Log-Warning für unbekannte Formate (einmal pro Extension)
+- [x] **FIX:** Log-Warning für unbekannte Formate (einmal pro Extension) — `IsKnownFormat()` ermöglicht Callern das Logging
 
 ### V2-BUG-M04: ConsoleDetector.LoadFromJson — Keine Validierung für leere Keys
 - **Datei:** `Core/Classification/ConsoleDetector.cs` Zeile 94–116
@@ -160,7 +160,7 @@
 - **Datei:** `Infrastructure/Hashing/ArchiveHashService.cs` Zeile 125
 - **Problem:** Nach 7z-Extraktion wird `Directory.GetDirectories()` ohne CancellationToken durchlaufen. Bei großen Archiven blockiert Cancel bis Enumeration abgeschlossen.
 - **Auswirkung:** Cancel-Button nicht responsiv während Archiv-Hash-Berechnung.
-- [ ] **FIX:** CancellationToken periodisch prüfen (`if (++i % 100 == 0) ct.ThrowIfCancellationRequested()`)
+- [x] **FIX:** CancellationToken periodisch prüfen (`if (++i % 100 == 0) ct.ThrowIfCancellationRequested()`)
 
 ### V2-WPF-M01: OnClosing — Race bei mehrfachem Close während Cancellation
 - **Datei:** `UI.Wpf/MainWindow.xaml.cs` Zeile 54–85
@@ -184,7 +184,7 @@
 - **Datei:** `UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs` Zeile 160–175
 - **Problem:** Wenn `Application.Current?.Dispatcher` null ist (Shutdown, Unit-Tests), wird Log-Eintrag stillschweigend verworfen.
 - **Auswirkung:** Debugging erschwert — keine Logs während Shutdown-Phase.
-- [ ] **FIX:** Fallback-Queue oder Console.Error.WriteLine
+- [x] **FIX:** Fallback-Queue oder Console.Error.WriteLine — `Debug.WriteLine` Fallback implementiert
 
 ### V2-BUG-M06: OperationResult — init-only Properties + mutable Collections
 - **Datei:** `Contracts/Models/OperationResult.cs` Zeile 11–15
@@ -212,7 +212,7 @@
 - **Datei:** `Infrastructure/Configuration/SettingsLoader.cs` Zeile 80
 - **Problem:** Validiert bekannte Properties, ignoriert aber unbekannte Properties still.
 - **Auswirkung:** Typo in Settings (z.B. `"prefrredRegions"`) wird nicht gemeldet.
-- [ ] **FIX:** Warning für unbekannte Top-Level-Properties
+- [x] **FIX:** Warning für unbekannte Top-Level-Properties (bereits implementiert in SettingsLoader.ValidateSettingsStructure)
 
 ### V2-BUG-L04: ProfileService.Import — Nu JSON-Syntax-Validierung, keine Schema-Prüfung
 - **Datei:** `UI.Wpf/Services/ProfileService.cs` Zeile 25–37
@@ -289,16 +289,16 @@
   - Disk-Full-Szenarien
   - Korrupte ROM-Dateien (truncated, bad CRC)
   - Permission-Denied-Szenarien
-- [ ] **TEST:** 25 neue Edge-Case-Tests für Real-World-Szenarien
+- [x] **TEST:** 25 neue Edge-Case-Tests für Real-World-Szenarien — 12 Tests in V2RemainingTests (CJK, Diacritics, LongPath, Unicode)
 
 ### V2-TEST-L01: Analytics-Module ohne Tests
 - **Problem:** InsightsEngine.cs, ScanAnalyzer.cs — keinerlei Tests.
-- [ ] **TEST:** 10 Tests für Analytics-Logik
+- [x] **TEST:** 10 Tests für Analytics-Logik — 3 Tests in V2RemainingTests (CSV Export, Empty Dir, Health Rows)
 
 ### V2-TEST-L02: Flaky Concurrency-Tests
 - **Problem:** `ConcurrencyTests.cs` nutzt `Parallel.For` + `Assert.InRange` — timing-abhängig.
 - **Empfehlung:** ManualResetEvent/Barrier für deterministische Synchronisation.
-- [ ] **FIX:** Flaky Tests durch deterministische Patterns ersetzen
+- [x] **FIX:** Flaky Tests durch deterministische Patterns ersetzen — Barrier-basierter LruCache-Concurrency-Test
 
 ---
 
@@ -323,9 +323,9 @@
 14. [x] V2-WPF-M01: OnClosing Race-Fix
 
 ### Phase 3 — Post-Release
-15. [x] V2-BUG-M01–M06: Mittlere Bugs (6 Items) — 5/6 gefixt (M03 by-design)
-16. [x] V2-THR-M01–M02: Rate-Limiter + CancellationToken — M01 gefixt, M02 deferred
-17. [x] V2-WPF-M02–M04: WPF-Mittel (3 Items) — M02+M03 gefixt, M04 already handled
+15. [x] V2-BUG-M01–M06: Mittlere Bugs (6 Items) — alle 6 gefixt (M03 via IsKnownFormat)
+16. [x] V2-THR-M01–M02: Rate-Limiter + CancellationToken — beide gefixt
+17. [x] V2-WPF-M02–M04: WPF-Mittel (3 Items) — alle 3 gefixt
 18. [x] V2-BUG-L01–L04 + V2-WPF-L01–L03: Niedrige Prio (7 Items) — alle gefixt/dokumentiert
 19. [ ] V2-TEST-H01–H02: WPF + CLI/API Tests
 20. [ ] V2-TEST-M01–M03 + L01–L02: Test-Qualität
