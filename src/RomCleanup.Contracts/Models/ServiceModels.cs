@@ -203,7 +203,7 @@ public sealed class DuplicateInspectorRow
     public int VersionScore { get; init; }
     public int FormatScore { get; init; }
     public int CompletenessScore { get; init; }
-    public int SizeTieBreakScore { get; init; }
+    public long SizeTieBreakScore { get; init; }
     public int TotalScore { get; init; }
     public string ScoreBreakdown { get; init; } = "";
     public string MainPath { get; init; } = "";
@@ -220,21 +220,6 @@ public sealed class CollectionHealthRow
     public int MissingDat { get; init; }
     public int Corrupt { get; init; }
     public string Formats { get; init; } = "";
-}
-
-/// <summary>
-/// Incremental dry-run delta comparing to previous snapshot.
-/// </summary>
-public sealed class IncrementalDelta
-{
-    public string? SnapshotPath { get; init; }
-    public DateTime? PreviousTimestampUtc { get; init; }
-    public int CurrentCount { get; init; }
-    public int PreviousCount { get; init; }
-    public int AddedCount { get; init; }
-    public int ResolvedCount { get; init; }
-    public IReadOnlyList<string> AddedSamples { get; init; } = [];
-    public IReadOnlyList<string> ResolvedSamples { get; init; } = [];
 }
 
 /// <summary>

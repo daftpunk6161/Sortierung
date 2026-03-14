@@ -22,6 +22,8 @@ public static class RegionDetector
     /// </summary>
     public sealed record RegionRule(string Key, System.Text.RegularExpressions.Regex Pattern);
 
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(500);
+
     // Default rules matching rules.json RegionOrdered — full set
     private static readonly IReadOnlyList<RegionRule> DefaultOrderedRules = new[]
     {
@@ -81,17 +83,26 @@ public static class RegionDetector
     // All language codes from rules.json GameKeyPatterns (expanded set)
     private static readonly System.Text.RegularExpressions.Regex DefaultMultiRegionPattern =
         new(@"\((?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu)(?:,\s*(?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu))+\)",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled);
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
+            RegexTimeout);
 
     // Helper to create compiled, case-insensitive RegionRule
     private static RegionRule R(string key, string pattern)
         => new(key, new System.Text.RegularExpressions.Regex(pattern,
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled));
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
+            RegexTimeout));
 
     // Pre-compiled UK/Great Britain pattern (TASK-153)
     private static readonly System.Text.RegularExpressions.Regex UkPattern =
         new(@"\((?:[^)]*\b(?:uk|united\s*kingdom|great\s*britain|england)\b[^)]*)\)",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled);
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
+            RegexTimeout);
+
+    // Pre-compiled pattern for extracting parenthesized groups (BUG-M02)
+    private static readonly System.Text.RegularExpressions.Regex ParenGroupPattern =
+        new(@"\(([^)]+)\)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
+            RegexTimeout);
 
     /// <summary>
     /// Convenience overload using default detection rules from rules.json.
@@ -156,8 +167,7 @@ public static class RegionDetector
     internal static string? ResolveRegionFromTokens(string name)
     {
         // Extract all parenthesized groups
-        var matches = System.Text.RegularExpressions.Regex.Matches(
-            name, @"\(([^)]+)\)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var matches = ParenGroupPattern.Matches(name);
 
         if (matches.Count == 0)
             return null;

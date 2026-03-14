@@ -9,6 +9,7 @@ public enum RunState
     Preflight,
     Scanning,
     Deduplicating,
+    Sorting,
     Moving,
     Converting,
     Completed,

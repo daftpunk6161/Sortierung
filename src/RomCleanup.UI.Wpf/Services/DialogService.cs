@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Microsoft.Win32;
 
@@ -58,62 +59,71 @@ public static class DialogService
         });
     }
 
-    /// <summary>Show a confirmation dialog. Returns true if user confirmed.</summary>
+    /// <summary>Show a themed confirmation dialog. Returns true if user confirmed.</summary>
     public static bool Confirm(string message, string title = "Bestätigung", Window? owner = null)
     {
         return InvokeOnUiThread(() =>
         {
+            var previousFocus = Keyboard.FocusedElement;
             var effectiveOwner = owner ?? GetMainWindow();
-            var result = MessageBox.Show(
+            var result = MessageDialog.Show(
                 effectiveOwner,
                 message, title,
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
+            (previousFocus as UIElement)?.Focus();
             return result == MessageBoxResult.Yes;
         });
     }
 
-    /// <summary>Show an info message.</summary>
+    /// <summary>Show a themed info message.</summary>
     public static void Info(string message, string title = "Information", Window? owner = null)
     {
         InvokeOnUiThread(() =>
         {
+            var previousFocus = Keyboard.FocusedElement;
             var effectiveOwner = owner ?? GetMainWindow();
-            MessageBox.Show(
+            MessageDialog.Show(
                 effectiveOwner,
                 message, title,
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
+            (previousFocus as UIElement)?.Focus();
             return true; // dummy return for InvokeOnUiThread<T>
         });
     }
 
-    /// <summary>Show an error message.</summary>
+    /// <summary>Show a themed error message.</summary>
     public static void Error(string message, string title = "Fehler", Window? owner = null)
     {
         InvokeOnUiThread(() =>
         {
+            var previousFocus = Keyboard.FocusedElement;
             var effectiveOwner = owner ?? GetMainWindow();
-            MessageBox.Show(
+            MessageDialog.Show(
                 effectiveOwner,
                 message, title,
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
+            (previousFocus as UIElement)?.Focus();
             return true; // dummy return for InvokeOnUiThread<T>
         });
     }
 
-    /// <summary>Show a Yes/No/Cancel question dialog. Returns the MessageBoxResult.</summary>
+    /// <summary>Show a themed Yes/No/Cancel question dialog. Returns the MessageBoxResult.</summary>
     public static MessageBoxResult YesNoCancel(string message, string title = "Frage", Window? owner = null)
     {
         return InvokeOnUiThread(() =>
         {
+            var previousFocus = Keyboard.FocusedElement;
             var effectiveOwner = owner ?? GetMainWindow();
-            return MessageBox.Show(
+            var result = MessageDialog.Show(
                 effectiveOwner,
                 message, title,
                 MessageBoxButton.YesNoCancel,
                 MessageBoxImage.Question);
+            (previousFocus as UIElement)?.Focus();
+            return result;
         });
     }
 
@@ -125,6 +135,7 @@ public static class DialogService
     {
         return InvokeOnUiThread(() =>
         {
+            var previousFocus = Keyboard.FocusedElement;
             var dlg = new Window
             {
                 Title = title,
@@ -182,6 +193,7 @@ public static class DialogService
             textBox.Focus();
 
             dlg.ShowDialog();
+            (previousFocus as UIElement)?.Focus();
             return result;
         });
     }
@@ -191,7 +203,9 @@ public static class DialogService
     {
         InvokeOnUiThread(() =>
         {
+            var previousFocus = Keyboard.FocusedElement;
             ResultDialog.ShowText(title, content, GetMainWindow());
+            (previousFocus as UIElement)?.Focus();
             return true;
         });
     }

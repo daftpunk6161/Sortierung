@@ -70,7 +70,8 @@ public static class GdiSetParser
                 continue;
             }
 
-            if (!fullPath.StartsWith(dir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            var normalizedDir = dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (!fullPath.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             if (seen.Add(fullPath) && (!existingOnly || File.Exists(fullPath)))

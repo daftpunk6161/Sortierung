@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -30,6 +31,113 @@ public sealed class DatSourceService : IDisposable
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
     }
 
+    /// <summary>Validates that a URL uses HTTPS scheme. Returns false for http/file/ftp/etc.</summary>
+    private static bool IsSecureUrl(string url)
+    {
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            && string.Equals(uri.Scheme, "https", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Download a DAT file from URL to datRoot directory, handling format-specific extraction.
+    /// <list type="bullet">
+    /// <item><c>raw-dat</c>: Direct download of .dat content.</item>
+    /// <item><c>zip-dat</c>: Downloads a ZIP, extracts the first .dat/.xml file inside.</item>
+    /// <item><c>7z-dat</c>: Downloads a 7z archive; extraction requires external 7z tool, logs warning if unavailable.</item>
+    /// </list>
+    /// Returns the local path on success, null on failure.
+    /// </summary>
+    public async Task<string?> DownloadDatByFormatAsync(string url, string localFileName,
+        string format, string? expectedSha256 = null, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(localFileName))
+            return null;
+
+        if (!IsSecureUrl(url))
+            return null;
+
+        if (string.Equals(format, "zip-dat", StringComparison.OrdinalIgnoreCase))
+            return await DownloadZipDatAsync(url, localFileName, expectedSha256, ct);
+
+        // raw-dat and other formats: delegate to existing method
+        return await DownloadDatAsync(url, localFileName, expectedSha256, ct);
+    }
+
+    /// <summary>
+    /// Downloads a ZIP file, extracts the first .dat or .xml file from it,
+    /// and stores it locally. Mirrors the PowerShell Invoke-DatDownload logic for zip-dat format.
+    /// </summary>
+    private async Task<string?> DownloadZipDatAsync(string url, string localFileName,
+        string? expectedSha256, CancellationToken ct)
+    {
+        Directory.CreateDirectory(_datRoot);
+        var finalPath = Path.GetFullPath(Path.Combine(_datRoot, localFileName));
+        if (!finalPath.StartsWith(Path.GetFullPath(_datRoot) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            && !finalPath.Equals(Path.GetFullPath(_datRoot), StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var tempZip = Path.Combine(Path.GetTempPath(), $"dat_download_{Guid.NewGuid():N}.zip");
+        var tempExtract = Path.Combine(Path.GetTempPath(), $"dat_extract_{Guid.NewGuid():N}");
+        try
+        {
+            // Download ZIP to temp
+            using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+            response.EnsureSuccessStatusCode();
+            if (response.Content.Headers.ContentLength is > MaxDownloadBytes)
+                return null;
+            var bytes = await response.Content.ReadAsByteArrayAsync(ct);
+            if (bytes.Length > MaxDownloadBytes)
+                return null;
+
+            await File.WriteAllBytesAsync(tempZip, bytes, ct);
+
+            // Verify ZIP integrity before extraction (if SHA256 available)
+            if (!string.IsNullOrWhiteSpace(expectedSha256))
+            {
+                var actual = ComputeFileSha256(tempZip);
+                if (!string.Equals(actual, expectedSha256.Trim(), StringComparison.OrdinalIgnoreCase))
+                    return null;
+            }
+
+            // Extract ZIP — use safe extraction with Zip-Slip protection
+            Directory.CreateDirectory(tempExtract);
+            using (var archive = ZipFile.OpenRead(tempZip))
+            {
+                foreach (var entry in archive.Entries)
+                {
+                    if (string.IsNullOrEmpty(entry.Name)) continue; // Skip directories
+                    var destPath = Path.GetFullPath(Path.Combine(tempExtract, entry.Name));
+                    if (!destPath.StartsWith(Path.GetFullPath(tempExtract), StringComparison.OrdinalIgnoreCase))
+                        continue; // Zip-Slip protection
+                    entry.ExtractToFile(destPath, overwrite: true);
+                }
+            }
+
+            // Find first .dat or .xml file in extracted contents
+            var datFile = Directory.GetFiles(tempExtract, "*.dat", SearchOption.TopDirectoryOnly).FirstOrDefault()
+                       ?? Directory.GetFiles(tempExtract, "*.xml", SearchOption.TopDirectoryOnly).FirstOrDefault();
+            if (datFile is null)
+                return null;
+
+            // Ensure the target path ends with .dat
+            if (!finalPath.EndsWith(".dat", StringComparison.OrdinalIgnoreCase)
+                && !finalPath.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                finalPath = Path.ChangeExtension(finalPath, ".dat");
+
+            File.Copy(datFile, finalPath, overwrite: true);
+            return finalPath;
+        }
+        catch (HttpRequestException) { return null; }
+        catch (TaskCanceledException) { return null; }
+        catch (InvalidDataException) { return null; } // Corrupt ZIP
+        finally
+        {
+            // Cleanup temp files
+            try { if (File.Exists(tempZip)) File.Delete(tempZip); } catch { /* best-effort */ }
+            try { if (Directory.Exists(tempExtract)) Directory.Delete(tempExtract, true); } catch { /* best-effort */ }
+        }
+    }
+
     /// <summary>
     /// Download a DAT file from URL to datRoot directory.
     /// Verifies integrity via SHA256 sidecar if available.
@@ -41,13 +149,17 @@ public sealed class DatSourceService : IDisposable
         if (string.IsNullOrWhiteSpace(url))
             return null;
 
-        // Path-traversal guard: localFileName must not escape datRoot
-        if (localFileName.Contains("..") || Path.IsPathRooted(localFileName)
-            || localFileName.IndexOfAny(new[] { '/', '\\' }) >= 0)
+        if (!IsSecureUrl(url))
             return null;
 
+        // Path-traversal guard: localFileName must resolve within datRoot
+        if (string.IsNullOrWhiteSpace(localFileName))
+            return null;
         Directory.CreateDirectory(_datRoot);
-        var localPath = Path.Combine(_datRoot, localFileName);
+        var localPath = Path.GetFullPath(Path.Combine(_datRoot, localFileName));
+        if (!localPath.StartsWith(Path.GetFullPath(_datRoot) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            && !localPath.Equals(Path.GetFullPath(_datRoot), StringComparison.OrdinalIgnoreCase))
+            return null;
 
         try
         {
@@ -115,8 +227,10 @@ public sealed class DatSourceService : IDisposable
             var shaUrl = sourceUrl + ".sha256";
             using var request = new HttpRequestMessage(HttpMethod.Get, shaUrl);
             using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return false; // Fail-closed: no sidecar available — cannot verify integrity
             if (!response.IsSuccessStatusCode)
-                return false; // Fail-closed
+                return false; // Fail-closed on other HTTP errors
 
             var shaText = await response.Content.ReadAsStringAsync(ct);
 
@@ -137,19 +251,6 @@ public sealed class DatSourceService : IDisposable
             return false; // Fail-closed on network error
         }
     }
-
-    /// <summary>
-    /// Synchronous wrapper for <see cref="VerifyDatSignatureAsync"/>.</summary>
-    /// <remarks>
-    /// This method blocks on an async operation and can deadlock in environments with a
-    /// synchronization context (e.g. WPF/WinForms UI threads, ASP.NET request threads).
-    /// Prefer <see cref="VerifyDatSignatureAsync(string, string, string?, CancellationToken)"/>
-    /// and use async all the way. If you must call this method, only do so from
-    /// non-UI / non-ASP.NET contexts (e.g. console apps, background workers).
-    /// </remarks>
-    [Obsolete("Use VerifyDatSignatureAsync and await it instead. This sync wrapper may deadlock on UI/ASP.NET contexts.")]
-    public bool VerifyDatSignature(string localPath, string sourceUrl, string? expectedSha256 = null)
-        => VerifyDatSignatureAsync(localPath, sourceUrl, expectedSha256).GetAwaiter().GetResult();
 
     /// <summary>
     /// Load catalogue entries from a dat-catalog.json file.

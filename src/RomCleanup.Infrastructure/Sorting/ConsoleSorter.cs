@@ -14,7 +14,8 @@ namespace RomCleanup.Infrastructure.Sorting;
 public sealed class ConsoleSorter
 {
     private static readonly Regex RxValidConsoleKey = new(@"^[A-Z0-9_-]+$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        RegexOptions.Compiled | RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(100));
 
     private static readonly string[] ExcludedFolders =
         { "_TRASH_REGION_DEDUPE", "_TRASH_JUNK", "_BIOS", "_JUNK" };
@@ -171,9 +172,10 @@ public sealed class ConsoleSorter
 
             return (true, members.Count);
         }
-        catch
+        catch (Exception ex)
         {
             // Roll back all completed moves in reverse order using safe move
+            var rollbackFailures = new List<string>();
             foreach (var (source, dest) in completedMoves.AsEnumerable().Reverse())
             {
                 try
@@ -182,10 +184,17 @@ public sealed class ConsoleSorter
                     if (actualDest is not null && File.Exists(actualDest))
                         _fs.MoveItemSafely(actualDest, source);
                 }
-                catch
+                catch (Exception rbEx)
                 {
-                    // Best-effort rollback — don't let rollback failures mask the original error
+                    rollbackFailures.Add($"Rollback failed for {dest} → {source}: {rbEx.Message}");
                 }
+            }
+
+            if (rollbackFailures.Count > 0)
+            {
+                throw new AggregateException(
+                    $"Set move failed ({ex.Message}) and {rollbackFailures.Count} rollback(s) also failed: {string.Join("; ", rollbackFailures)}",
+                    ex);
             }
 
             return (false, 0);
@@ -195,8 +204,12 @@ public sealed class ConsoleSorter
     private string? ResolveMoveDestination(string root, string sourcePath, string destDir)
     {
         var fileName = Path.GetFileName(sourcePath);
-        return _fs.ResolveChildPathWithinRoot(root, Path.Combine(
-            Path.GetFileName(destDir), fileName));
+        var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normalizedDest = Path.GetFullPath(destDir);
+        var relativeDest = normalizedDest.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            ? normalizedDest[(normalizedRoot.Length + 1)..]
+            : Path.GetFileName(destDir);
+        return _fs.ResolveChildPathWithinRoot(root, Path.Combine(relativeDest, fileName));
     }
 
     /// <summary>

@@ -117,14 +117,20 @@ public sealed class SettingsLoader
                 if (user.General.PreferredRegions is { Count: > 0 })
                     settings.General.PreferredRegions = user.General.PreferredRegions;
                 if (!string.IsNullOrEmpty(user.General.LogLevel))
-                    settings.General.LogLevel = user.General.LogLevel;
+                    settings.General.LogLevel = ValidateEnum(user.General.LogLevel, AllowedLogLevels, settings.General.LogLevel);
                 if (!string.IsNullOrEmpty(user.General.Mode))
-                    settings.General.Mode = user.General.Mode;
+                    settings.General.Mode = ValidateEnum(user.General.Mode, AllowedModes, settings.General.Mode);
 
                 if (user.General.AggressiveJunk.HasValue)
                     settings.General.AggressiveJunk = user.General.AggressiveJunk.Value;
                 if (user.General.AliasEditionKeying.HasValue)
                     settings.General.AliasEditionKeying = user.General.AliasEditionKeying.Value;
+                if (!string.IsNullOrEmpty(user.General.Extensions))
+                    settings.General.Extensions = user.General.Extensions;
+                if (!string.IsNullOrEmpty(user.General.Theme))
+                    settings.General.Theme = user.General.Theme;
+                if (!string.IsNullOrEmpty(user.General.Locale))
+                    settings.General.Locale = user.General.Locale;
             }
 
             if (user.ToolPaths is not null)
@@ -144,7 +150,7 @@ public sealed class SettingsLoader
                 if (!string.IsNullOrEmpty(user.Dat.DatRoot))
                     settings.Dat.DatRoot = user.Dat.DatRoot;
                 if (!string.IsNullOrEmpty(user.Dat.HashType))
-                    settings.Dat.HashType = user.Dat.HashType;
+                    settings.Dat.HashType = ValidateEnum(user.Dat.HashType, AllowedHashTypes, settings.Dat.HashType);
                 if (user.Dat.DatFallback.HasValue)
                     settings.Dat.DatFallback = user.Dat.DatFallback.Value;
             }
@@ -155,8 +161,22 @@ public sealed class SettingsLoader
         }
     }
 
+    // V2-H06: Allowed enum values for settings validation
+    private static readonly HashSet<string> AllowedLogLevels = new(StringComparer.OrdinalIgnoreCase)
+        { "Debug", "Info", "Warning", "Error" };
+
+    private static readonly HashSet<string> AllowedModes = new(StringComparer.OrdinalIgnoreCase)
+        { "DryRun", "Move" };
+
+    private static readonly HashSet<string> AllowedHashTypes = new(StringComparer.OrdinalIgnoreCase)
+        { "SHA1", "SHA256", "MD5", "CRC32" };
+
     private static readonly HashSet<string> AllowedToolExtensions = new(StringComparer.OrdinalIgnoreCase)
         { ".exe", ".bat", ".cmd" };
+
+    /// <summary>V2-H06: Returns value if it is in allowedValues, otherwise returns fallback.</summary>
+    private static string ValidateEnum(string value, HashSet<string> allowedValues, string fallback)
+        => allowedValues.Contains(value) ? value : fallback;
 
     private static string ValidateToolPath(string path)
     {

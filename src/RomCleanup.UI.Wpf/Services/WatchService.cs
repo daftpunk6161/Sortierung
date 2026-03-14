@@ -13,6 +13,8 @@ public sealed class WatchService : IDisposable
     private readonly List<FileSystemWatcher> _watchers = new();
     private DispatcherTimer? _debounceTimer;
     private DateTime _firstChangeUtc = DateTime.MaxValue;
+    private DateTime _lastRunCompletedUtc = DateTime.MinValue;
+    private static readonly TimeSpan CooldownAfterRun = TimeSpan.FromSeconds(30);
     private bool _pendingWhileBusy;
     private bool _disposed;
 
@@ -53,6 +55,7 @@ public sealed class WatchService : IDisposable
                 watcher.Created += OnFileChanged;
                 watcher.Deleted += OnFileChanged;
                 watcher.Renamed += (s, e) => OnFileChanged(s, e);
+                watcher.Error += OnWatcherError;
                 _watchers.Add(watcher);
             }
             catch
@@ -98,8 +101,10 @@ public sealed class WatchService : IDisposable
 
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
-        // Must marshal to UI thread for DispatcherTimer
-        Dispatcher.CurrentDispatcher.InvokeAsync(() =>
+        // Must marshal to UI thread for DispatcherTimer (FileSystemWatcher fires on ThreadPool)
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null) return;
+        dispatcher.InvokeAsync(() =>
         {
             if (_firstChangeUtc == DateTime.MaxValue)
                 _firstChangeUtc = DateTime.UtcNow;
@@ -121,6 +126,9 @@ public sealed class WatchService : IDisposable
     /// <summary>Predicate to check if a run is currently active. Set by consumer.</summary>
     public Func<bool>? IsBusyCheck { get; set; }
 
+    /// <summary>Raised when a FileSystemWatcher buffer overflows.</summary>
+    public event Action<string>? WatcherError;
+
     private void OnDebounceTick(object? sender, EventArgs e)
     {
         _debounceTimer?.Stop();
@@ -132,11 +140,25 @@ public sealed class WatchService : IDisposable
             return;
         }
 
+        // V2-H09: Cooldown after last run to prevent rapid re-triggering
+        if ((DateTime.UtcNow - _lastRunCompletedUtc) < CooldownAfterRun)
+        {
+            _pendingWhileBusy = true;
+            return;
+        }
+
+        _lastRunCompletedUtc = DateTime.UtcNow;
         RunTriggered?.Invoke();
     }
 
     /// <summary>Mark that a change occurred while a run was busy.</summary>
     public void MarkPendingWhileBusy() => _pendingWhileBusy = true;
+
+    private void OnWatcherError(object sender, ErrorEventArgs e)
+    {
+        var msg = e.GetException()?.Message ?? "Unbekannter Watcher-Fehler";
+        WatcherError?.Invoke($"FileSystemWatcher-Fehler: {msg}");
+    }
 
     public void Dispose()
     {

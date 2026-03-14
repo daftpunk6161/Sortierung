@@ -45,7 +45,7 @@ public sealed class FileHashService
             return null;
         }
 
-        var cacheKey = $"{hashType.ToUpperInvariant()}|{fullPath}|{lastWrite.Ticks}";
+        var cacheKey = $"{NormalizeHashType(hashType)}|{fullPath}|{lastWrite.Ticks}";
 
         if (_cache.TryGet(cacheKey, out var cached))
             return cached;
@@ -97,5 +97,16 @@ public sealed class FileHashService
 
         var bytes = algo.ComputeHash(stream);
         return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    /// <summary>Normalize hash type aliases to canonical form for consistent cache keys.</summary>
+    private static string NormalizeHashType(string hashType)
+    {
+        var upper = hashType.ToUpperInvariant();
+        return upper switch
+        {
+            "CRC" => "CRC32",
+            _ => upper
+        };
     }
 }

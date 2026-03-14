@@ -8,7 +8,14 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>RomCleanup.UI.Wpf</RootNamespace>
     <AssemblyName>RomCleanup.Wpf</AssemblyName>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="RomCleanup.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
   </ItemGroup>

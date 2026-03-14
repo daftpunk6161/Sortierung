@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace RomCleanup.Infrastructure.Reporting;
@@ -54,7 +55,8 @@ public static class ReportGenerator
     public static string GenerateHtml(ReportSummary summary, IReadOnlyList<ReportEntry> entries)
     {
         var sb = new StringBuilder(64 * 1024);
-        var nonce = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        var nonceBytes = RandomNumberGenerator.GetBytes(16);
+        var nonce = Convert.ToBase64String(nonceBytes);
 
         sb.AppendLine("<!DOCTYPE html>");
         sb.AppendLine("<html lang=\"de\">");

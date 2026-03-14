@@ -99,11 +99,23 @@ public sealed partial class MainViewModel
         ConsoleFiltersView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(ConsoleFilterItem.Category)));
     }
 
-    // ═══ TOOL ITEMS (RD-004: Werkzeuge tab with categorized, filterable list) ═══
+    // ═══ TOOL ITEMS (RD-004: Smart Werkzeuge layout with Quick Access, Recents, Expander categories) ═══
     public ObservableCollection<ToolItem> ToolItems { get; } = [];
 
-    /// <summary>Grouped view for XAML binding with category headers.</summary>
+    /// <summary>Grouped view for XAML binding with category headers (used for search results).</summary>
     public ICollectionView ToolItemsView { get; private set; } = null!;
+
+    /// <summary>Expander-based category groups for the main tools view.</summary>
+    public ObservableCollection<ToolCategory> ToolCategories { get; } = [];
+
+    /// <summary>Quick Access pinned tools (max 6).</summary>
+    public ObservableCollection<ToolItem> QuickAccessItems { get; } = [];
+
+    /// <summary>Recently used tools (max 4, auto-tracked).</summary>
+    public ObservableCollection<ToolItem> RecentToolItems { get; } = [];
+
+    /// <summary>True when the search box has text – shows filtered list instead of categories.</summary>
+    public bool IsToolSearchActive => !string.IsNullOrWhiteSpace(_toolFilterText);
 
     private string _toolFilterText = "";
     public string ToolFilterText
@@ -112,9 +124,32 @@ public sealed partial class MainViewModel
         set
         {
             if (SetField(ref _toolFilterText, value))
+            {
                 ToolItemsView?.Refresh();
+                OnPropertyChanged(nameof(IsToolSearchActive));
+            }
         }
     }
+
+    // Default pinned tool keys (sensible defaults for first-time users)
+    private static readonly HashSet<string> DefaultPinnedKeys =
+    [
+        "QuickPreview", "HealthScore", "RollbackQuick", "ExportCsv", "DatAutoUpdate", "DuplicateInspector"
+    ];
+
+    // Category icon mapping
+    private static readonly Dictionary<string, string> CategoryIcons = new()
+    {
+        ["Analyse & Berichte"] = "\xE9D9",
+        ["Konvertierung & Hashing"] = "\xE8AB",
+        ["DAT & Verifizierung"] = "\xE73E",
+        ["Sammlungsverwaltung"] = "\xE8F1",
+        ["Sicherheit & Integrität"] = "\xE72E",
+        ["Workflow & Automatisierung"] = "\xE713",
+        ["Export & Integration"] = "\xE792",
+        ["Infrastruktur"] = "\xE8CB",
+        ["UI & Erscheinungsbild"] = "\xE771",
+    };
 
     private void InitToolItems()
     {
@@ -143,8 +178,8 @@ public sealed partial class MainViewModel
             ("ConvertQueue",       "Konvert-Warteschlange",      "Konvertierung & Hashing",   "Warteschlange anzeigen",                       "\xE8CB", false),
             ("ConversionVerify",   "Konvertierung verifizieren", "Konvertierung & Hashing",   "Konvertierte Dateien prüfen",                  "\xE73E", false),
             ("FormatPriority",     "Format-Priorität",           "Konvertierung & Hashing",   "Format-Prioritätsliste anzeigen",              "\xE8CB", false),
-            ("ParallelHashing",    "Parallel-Hashing",           "Konvertierung & Hashing",   "Hash-Threading konfigurieren",                 "\xE8CB", false),
-            ("GpuHashing",         "GPU-Hashing",                "Konvertierung & Hashing",   "GPU-beschleunigtes Hashing",                   "\xE8CB", false),
+            ("ParallelHashing",    "Parallel-Hashing",           "Konvertierung & Hashing",   "Hash-Threading konfigurieren (experimentell)", "\xE8CB", false),
+            ("GpuHashing",         "GPU-Hashing",                "Konvertierung & Hashing",   "GPU-beschleunigtes Hashing (experimentell)",  "\xE8CB", false),
 
             // DAT & Verifizierung
             ("DatAutoUpdate",      "DAT Auto-Update",            "DAT & Verifizierung",       "Lokale DAT-Dateien prüfen",                    "\xE895", false),
@@ -212,11 +247,99 @@ public sealed partial class MainViewModel
             ("ThemeEngine",        "Theme-Engine",               "UI & Erscheinungsbild",      "Theme-Optionen",                               "\xE771", false),
         };
         foreach (var (key, display, cat, desc, icon, needsResult) in items)
-            ToolItems.Add(new ToolItem { Key = key, DisplayName = display, Category = cat, Description = desc, Icon = icon, RequiresRunResult = needsResult });
+        {
+            var isPlanned = key is "FtpSource" or "CloudSync" or "PluginMarketplaceFeature" or "PluginManager"
+                or "ParallelHashing" or "GpuHashing" or "DockerContainer" or "MultiInstanceSync"
+                or "TosecDat" or "PatchEngine" or "NKitConvert" or "WindowsContextMenu"
+                or "EmulatorCompat" or "TrendAnalysis" or "GenreClassification" or "PlaytimeTracker"
+                or "CoverScraper" or "CollectionSharing";
+            var item = new ToolItem
+            {
+                Key = key, DisplayName = display, Category = cat, Description = desc,
+                Icon = icon, RequiresRunResult = needsResult,
+                IsPinned = DefaultPinnedKeys.Contains(key),
+                IsLocked = needsResult, // initially locked; unlocked after a run completes
+                IsPlanned = isPlanned
+            };
+            ToolItems.Add(item);
+        }
 
+        // Build grouped view (still useful for search mode)
         ToolItemsView = CollectionViewSource.GetDefaultView(ToolItems);
         ToolItemsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(ToolItem.Category)));
         ToolItemsView.Filter = ToolItemFilter;
+
+        // Build category expanders
+        RebuildToolCategories();
+
+        // Build quick access
+        RebuildQuickAccess();
+    }
+
+    /// <summary>Rebuilds the ToolCategories collection from ToolItems, grouped and ordered.</summary>
+    private void RebuildToolCategories()
+    {
+        ToolCategories.Clear();
+        bool isFirst = true;
+        foreach (var group in ToolItems.GroupBy(t => t.Category))
+        {
+            var catIcon = CategoryIcons.GetValueOrDefault(group.Key, "\xE8CB");
+            var cat = new ToolCategory { Name = group.Key, Icon = catIcon, IsExpanded = isFirst };
+            foreach (var item in group)
+                cat.Items.Add(item);
+            ToolCategories.Add(cat);
+            isFirst = false;
+        }
+    }
+
+    /// <summary>Rebuilds the QuickAccessItems from pinned ToolItems.</summary>
+    private void RebuildQuickAccess()
+    {
+        QuickAccessItems.Clear();
+        foreach (var item in ToolItems.Where(t => t.IsPinned).Take(6))
+            QuickAccessItems.Add(item);
+    }
+
+    /// <summary>Records usage of a tool and updates RecentToolItems.</summary>
+    public void RecordToolUsage(string toolKey)
+    {
+        var item = ToolItems.FirstOrDefault(t => t.Key == toolKey);
+        if (item is null) return;
+
+        item.LastUsedAt = DateTime.Now;
+
+        RecentToolItems.Clear();
+        foreach (var recent in ToolItems
+            .Where(t => t.LastUsedAt.HasValue)
+            .OrderByDescending(t => t.LastUsedAt)
+            .Take(4))
+        {
+            RecentToolItems.Add(recent);
+        }
+        OnPropertyChanged(nameof(HasRecentTools));
+    }
+
+    public bool HasRecentTools => RecentToolItems.Count > 0;
+
+    /// <summary>Toggles pin state and rebuilds quick access.</summary>
+    public void ToggleToolPin(string toolKey)
+    {
+        var item = ToolItems.FirstOrDefault(t => t.Key == toolKey);
+        if (item is null) return;
+
+        // Enforce max 6 pins
+        if (!item.IsPinned && QuickAccessItems.Count >= 6) return;
+
+        item.IsPinned = !item.IsPinned;
+        RebuildQuickAccess();
+    }
+
+    /// <summary>Updates IsLocked state on all RequiresRunResult tools based on whether a run result exists.</summary>
+    public void RefreshToolLockState()
+    {
+        bool hasResult = HasRunResult;
+        foreach (var item in ToolItems.Where(t => t.RequiresRunResult))
+            item.IsLocked = !hasResult;
     }
 
     private bool ToolItemFilter(object obj)

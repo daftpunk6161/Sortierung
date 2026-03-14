@@ -59,7 +59,7 @@ public sealed class ConsoleDetector
     /// </summary>
     public static ConsoleDetector LoadFromJson(string jsonContent, DiscHeaderDetector? discHeaderDetector = null)
     {
-        var doc = JsonDocument.Parse(jsonContent);
+        using var doc = JsonDocument.Parse(jsonContent);
         var consoles = new List<ConsoleInfo>();
 
         if (doc.RootElement.TryGetProperty("consoles", out var array))

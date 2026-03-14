@@ -43,7 +43,14 @@ public sealed class ArchiveHashService
             var tempRoot = Path.GetTempPath();
             foreach (var dir in Directory.GetDirectories(tempRoot, "romcleanup_7z_*"))
             {
-                try { Directory.Delete(dir, recursive: true); }
+                try
+                {
+                    // Block reparse points to prevent directory junction attacks
+                    var dirInfo = new DirectoryInfo(dir);
+                    if ((dirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+                        continue;
+                    Directory.Delete(dir, recursive: true);
+                }
                 catch { /* best effort */ }
             }
         }

@@ -163,4 +163,44 @@ public class DeduplicationEngineTests
         Assert.Equal("zelda_eu.zip", zelda.Winner.MainPath);
         Assert.Empty(zelda.Losers);
     }
+
+    [Fact]
+    public void Deduplicate_EmptyGameKey_ExcludedFromGroups()
+    {
+        var candidates = new[]
+        {
+            MakeCandidate(mainPath: "no_key.zip", gameKey: "", regionScore: 1000),
+            MakeCandidate(mainPath: "mario.zip", gameKey: "mario", regionScore: 500),
+        };
+
+        var results = DeduplicationEngine.Deduplicate(candidates);
+        Assert.Single(results);
+        Assert.Equal("mario", results[0].GameKey);
+    }
+
+    [Fact]
+    public void Deduplicate_CaseInsensitiveGrouping()
+    {
+        var candidates = new[]
+        {
+            MakeCandidate(mainPath: "mario_upper.zip", gameKey: "MARIO", regionScore: 500),
+            MakeCandidate(mainPath: "mario_lower.zip", gameKey: "mario", regionScore: 1000),
+        };
+
+        var results = DeduplicationEngine.Deduplicate(candidates);
+        Assert.Single(results);
+        Assert.Equal("mario_lower.zip", results[0].Winner.MainPath);
+        Assert.Single(results[0].Losers);
+    }
+
+    [Fact]
+    public void Deduplicate_HeaderScore_BreaksTie()
+    {
+        var a = MakeCandidate(mainPath: "a.zip", gameKey: "game", regionScore: 100, headerScore: 50);
+        var b = MakeCandidate(mainPath: "b.zip", gameKey: "game", regionScore: 100, headerScore: 100);
+
+        var results = DeduplicationEngine.Deduplicate(new[] { a, b });
+        Assert.Single(results);
+        Assert.Equal("b.zip", results[0].Winner.MainPath);
+    }
 }

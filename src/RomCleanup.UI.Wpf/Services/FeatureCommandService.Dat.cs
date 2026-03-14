@@ -1,0 +1,270 @@
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Windows.Input;
+using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Reporting;
+using RomCleanup.Infrastructure.Tools;
+using RomCleanup.UI.Wpf.ViewModels;
+namespace RomCleanup.UI.Wpf.Services;
+
+public sealed partial class FeatureCommandService
+{
+    // ═══ DAT & VERIFIZIERUNG ════════════════════════════════════════════
+
+    /// <summary>Threshold in days after which a local DAT is considered outdated.</summary>
+    private const int DatStaleThresholdDays = 365;
+
+    private async Task DatAutoUpdateAsync()
+    {
+        if (_datUpdateRunning)
+        { _vm.AddLog("DAT-Update läuft bereits.", "WARN"); return; }
+        _datUpdateRunning = true;
+        try
+        {
+        if (string.IsNullOrWhiteSpace(_vm.DatRoot))
+        { _vm.AddLog("DAT-Root nicht konfiguriert.", "WARN"); return; }
+        if (!Directory.Exists(_vm.DatRoot))
+        { _vm.AddLog($"DAT-Root existiert nicht: {_vm.DatRoot}", "ERROR"); return; }
+        _vm.AddLog("DAT Auto-Update: Prüfe lokale DAT-Dateien…", "INFO");
+
+        // ── Katalog laden (via DatSourceService) ───────────────────────
+        var dataDir = FeatureService.ResolveDataDirectory() ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
+        var catalogPath = Path.Combine(dataDir, "dat-catalog.json");
+        var catalog = Infrastructure.Dat.DatSourceService.LoadCatalog(catalogPath);
+        if (catalog.Count == 0)
+        { _vm.AddLog("DAT-Katalog leer oder nicht gefunden.", "WARN"); return; }
+
+        // ── Lokale DATs scannen (ein Durchlauf) ────────────────────────
+        var localDats = Directory.GetFiles(_vm.DatRoot, "*.*", SearchOption.AllDirectories)
+            .Where(f => f.EndsWith(".dat", StringComparison.OrdinalIgnoreCase)
+                     || f.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var localNames = new HashSet<string>(
+            localDats.Select(d => Path.GetFileNameWithoutExtension(d)!.ToUpperInvariant()),
+            StringComparer.OrdinalIgnoreCase);
+
+        // ── Klassifizierung ────────────────────────────────────────────
+        var staleDats = localDats.Where(d => (DateTime.Now - File.GetLastWriteTime(d)).TotalDays > DatStaleThresholdDays).ToList();
+        var freshCount = localDats.Count - staleDats.Count;
+
+        var missing = catalog
+            .Where(e => !localNames.Contains(e.Id.ToUpperInvariant())
+                     && !localNames.Contains(e.ConsoleKey.ToUpperInvariant()))
+            .ToList();
+
+        bool CanAutoDownload(Infrastructure.Dat.DatCatalogEntry e) =>
+            !string.IsNullOrWhiteSpace(e.Url);
+
+        var autoMissing = missing.Where(CanAutoDownload).ToList();
+        var manualOnly = missing.Where(e => !CanAutoDownload(e)).ToList();
+        var noIntroCount = manualOnly.Count(e => e.Group.Equals("No-Intro", StringComparison.OrdinalIgnoreCase));
+
+        // ── Download-Liste vorbereiten ─────────────────────────────────
+        var toDownload = new List<(string Id, string Url, string FileName, string Format)>();
+
+        foreach (var entry in autoMissing)
+            toDownload.Add((entry.Id, entry.Url, entry.Id + ".dat", entry.Format));
+
+        foreach (var staleFile in staleDats)
+        {
+            var stem = Path.GetFileNameWithoutExtension(staleFile)!;
+            var entry = catalog.FirstOrDefault(e =>
+                e.Id.Equals(stem, StringComparison.OrdinalIgnoreCase)
+                || e.ConsoleKey.Equals(stem, StringComparison.OrdinalIgnoreCase));
+            if (entry is not null && CanAutoDownload(entry))
+                toDownload.Add((entry.Id, entry.Url, Path.GetFileName(staleFile), entry.Format));
+        }
+
+        _vm.AddLog($"DAT-Status: {localDats.Count} DATs, {staleDats.Count} veraltet, {missing.Count} fehlend", "INFO");
+
+        // ── Dialog bauen ───────────────────────────────────────────────
+        var sb = new StringBuilder();
+
+        // Zeile 1: Kompakt-Status
+        if (localDats.Count == 0)
+            sb.AppendLine("Keine lokalen DATs gefunden.");
+        else
+        {
+            sb.Append($"Aktuell: {freshCount}");
+            if (staleDats.Count > 0)
+                sb.Append($"  ·  Veraltet (>{DatStaleThresholdDays}d): {staleDats.Count}");
+            sb.AppendLine();
+        }
+
+        // Zeile 2: Fehlend (aufgeschlüsselt)
+        if (missing.Count > 0)
+        {
+            sb.AppendLine($"\n{missing.Count} DATs fehlen lokal:");
+            if (autoMissing.Count > 0) sb.AppendLine($"  {autoMissing.Count} automatisch ladbar");
+            if (noIntroCount > 0) sb.AppendLine($"  {noIntroCount} No-Intro — manuell (datomatic.no-intro.org)");
+        }
+
+        // ── Download oder nur Info ─────────────────────────────────────
+        if (toDownload.Count > 0)
+        {
+            sb.AppendLine($"\n{toDownload.Count} DATs jetzt herunterladen?");
+
+            if (!_dialog.Confirm(sb.ToString(), "DAT Auto-Update"))
+                return;
+
+            _vm.AddLog($"DAT-Download: {toDownload.Count} Dateien…", "INFO");
+            using var datService = new Infrastructure.Dat.DatSourceService(_vm.DatRoot);
+            int success = 0, failed = 0;
+
+            for (int i = 0; i < toDownload.Count; i++)
+            {
+                var (id, url, fileName, format) = toDownload[i];
+                _vm.AddLog($"  [{i + 1}/{toDownload.Count}] {id}…", "DEBUG");
+                try
+                {
+                    var result = await datService.DownloadDatByFormatAsync(url, fileName, format);
+                    if (result is not null) { success++; _vm.AddLog($"  ✓ {id}", "INFO"); }
+                    else { failed++; _vm.AddLog($"  ✗ {id}: Download fehlgeschlagen", "WARN"); }
+                }
+                catch (Exception ex) { failed++; _vm.AddLog($"  ✗ {id}: {ex.Message}", "WARN"); }
+            }
+
+            _vm.AddLog($"DAT-Download: {success} erfolgreich, {failed} fehlgeschlagen", success > 0 ? "INFO" : "WARN");
+        }
+        else if (missing.Count > 0)
+        {
+            _dialog.Info(sb.ToString(), "DAT Auto-Update");
+        }
+        else
+        {
+            _dialog.Info($"Alle {catalog.Count} Katalog-DATs vorhanden.", "DAT Auto-Update");
+        }
+        }
+        finally { _datUpdateRunning = false; }
+    }
+
+    private void DatDiffViewer()
+    {
+        var fileA = _dialog.BrowseFile("Alte DAT-Datei wählen", "DAT (*.dat;*.xml)|*.dat;*.xml");
+        if (fileA is null) return;
+        var fileB = _dialog.BrowseFile("Neue DAT-Datei wählen", "DAT (*.dat;*.xml)|*.dat;*.xml");
+        if (fileB is null) return;
+        _vm.AddLog($"DAT-Diff: {Path.GetFileName(fileA)} vs. {Path.GetFileName(fileB)}", "INFO");
+        try
+        {
+            var diff = FeatureService.CompareDatFiles(fileA, fileB);
+            var sb = new StringBuilder();
+            sb.AppendLine("DAT-Diff-Viewer (Logiqx XML)");
+            sb.AppendLine(new string('═', 50));
+            sb.AppendLine($"\n  A: {Path.GetFileName(fileA)}");
+            sb.AppendLine($"  B: {Path.GetFileName(fileB)}");
+            sb.AppendLine($"\n  Gleich:       {diff.UnchangedCount}");
+            sb.AppendLine($"  Geändert:     {diff.ModifiedCount}");
+            sb.AppendLine($"  Hinzugefügt:  {diff.Added.Count}");
+            sb.AppendLine($"  Entfernt:     {diff.Removed.Count}");
+            if (diff.Added.Count > 0)
+            {
+                sb.AppendLine($"\n  --- Hinzugefügt (erste {Math.Min(30, diff.Added.Count)}) ---");
+                foreach (var name in diff.Added.Take(30)) sb.AppendLine($"    + {name}");
+                if (diff.Added.Count > 30) sb.AppendLine($"    … und {diff.Added.Count - 30} weitere");
+            }
+            if (diff.Removed.Count > 0)
+            {
+                sb.AppendLine($"\n  --- Entfernt (erste {Math.Min(30, diff.Removed.Count)}) ---");
+                foreach (var name in diff.Removed.Take(30)) sb.AppendLine($"    - {name}");
+                if (diff.Removed.Count > 30) sb.AppendLine($"    … und {diff.Removed.Count - 30} weitere");
+            }
+            _dialog.ShowText("DAT-Diff-Viewer", sb.ToString());
+        }
+        catch (Exception ex)
+        {
+            _vm.AddLog($"DAT-Diff Fehler: {ex.Message}", "ERROR");
+            _dialog.ShowText("DAT-Diff-Viewer", $"Fehler beim Parsen der DAT-Dateien:\n\n{ex.Message}\n\nStelle sicher, dass beide Dateien gültiges Logiqx-XML enthalten.");
+        }
+    }
+
+    private void TosecDat()
+    {
+        var path = _dialog.BrowseFile("TOSEC-DAT wählen", "DAT (*.dat;*.xml)|*.dat;*.xml");
+        if (path is null) return;
+        _vm.AddLog($"TOSEC-DAT geladen: {Path.GetFileName(path)}", "INFO");
+        if (string.IsNullOrWhiteSpace(_vm.DatRoot))
+        { _dialog.Error("DAT-Root ist nicht konfiguriert. Bitte zuerst den DAT-Root-Ordner setzen.", "TOSEC-DAT"); return; }
+        try
+        {
+            var safeName = Path.GetFileName(path);
+            var targetPath = Path.GetFullPath(Path.Combine(_vm.DatRoot, safeName));
+            if (!targetPath.StartsWith(Path.GetFullPath(_vm.DatRoot), StringComparison.OrdinalIgnoreCase))
+            { _vm.AddLog("TOSEC-DAT Import blockiert: Pfad außerhalb des DatRoot.", "ERROR"); return; }
+            File.Copy(path, targetPath, overwrite: true);
+            _vm.AddLog($"TOSEC-DAT kopiert nach: {targetPath}", "INFO");
+            _dialog.Info($"TOSEC-DAT erfolgreich importiert:\n\n  Quelle: {path}\n  Ziel: {targetPath}", "TOSEC-DAT");
+        }
+        catch (Exception ex) { _vm.AddLog($"TOSEC-DAT Import fehlgeschlagen: {ex.Message}", "ERROR"); }
+    }
+
+    private void CustomDatEditor()
+    {
+        var gameName = _dialog.ShowInputBox("Spielname eingeben:", "Custom-DAT-Editor", "");
+        if (string.IsNullOrWhiteSpace(gameName)) return;
+        var romName = _dialog.ShowInputBox("ROM-Dateiname eingeben:", "Custom-DAT-Editor", $"{gameName}.zip");
+        if (string.IsNullOrWhiteSpace(romName)) return;
+        var crc32 = _dialog.ShowInputBox("CRC32-Hash eingeben (hex):", "Custom-DAT-Editor", "00000000");
+        if (string.IsNullOrWhiteSpace(crc32)) return;
+        if (!Regex.IsMatch(crc32, @"^[0-9A-Fa-f]{8}$"))
+        { _vm.AddLog($"Ungültiger CRC32-Hash: '{crc32}' — erwartet: 8 Hex-Zeichen.", "WARN"); return; }
+        var sha1 = _dialog.ShowInputBox("SHA1-Hash eingeben (hex):", "Custom-DAT-Editor", "");
+        if (string.IsNullOrWhiteSpace(sha1)) sha1 = "";
+        if (sha1.Length > 0 && !Regex.IsMatch(sha1, @"^[0-9A-Fa-f]{40}$"))
+        { _vm.AddLog($"Ungültiger SHA1-Hash: '{sha1}' — erwartet: 40 Hex-Zeichen.", "WARN"); return; }
+
+        var xmlEntry = $"  <game name=\"{System.Security.SecurityElement.Escape(gameName)}\">\n" +
+                       $"    <description>{System.Security.SecurityElement.Escape(gameName)}</description>\n" +
+                       $"    <rom name=\"{System.Security.SecurityElement.Escape(romName)}\" size=\"0\" crc=\"{crc32}\"" +
+                       (sha1.Length > 0 ? $" sha1=\"{sha1}\"" : "") + " />\n  </game>";
+
+        if (!string.IsNullOrWhiteSpace(_vm.DatRoot) && Directory.Exists(_vm.DatRoot))
+        {
+            try
+            {
+                var customDatPath = Path.Combine(_vm.DatRoot, "custom.dat");
+                if (File.Exists(customDatPath))
+                {
+                    var content = File.ReadAllText(customDatPath);
+                    var closeTag = "</datafile>";
+                    var idx = content.LastIndexOf(closeTag, StringComparison.OrdinalIgnoreCase);
+                    if (idx >= 0) content = content[..idx] + xmlEntry + "\n" + closeTag;
+                    else content += "\n" + xmlEntry;
+                    var tempPath = customDatPath + ".tmp";
+                    File.WriteAllText(tempPath, content);
+                    File.Move(tempPath, customDatPath, overwrite: true);
+                }
+                else
+                {
+                    var fullXml = "<?xml version=\"1.0\"?>\n" +
+                                  "<!DOCTYPE datafile SYSTEM \"http://www.logiqx.com/Dats/datafile.dtd\">\n" +
+                                  "<datafile>\n  <header>\n    <name>Custom DAT</name>\n" +
+                                  "    <description>Benutzerdefinierte DAT-Einträge</description>\n  </header>\n" +
+                                  xmlEntry + "\n</datafile>";
+                    File.WriteAllText(customDatPath, fullXml);
+                }
+                _vm.AddLog($"Custom-DAT-Eintrag gespeichert: {customDatPath}", "INFO");
+            }
+            catch (Exception ex) { _vm.AddLog($"Custom-DAT Fehler: {ex.Message}", "ERROR"); }
+        }
+        else
+            _vm.AddLog("DatRoot nicht gesetzt – Eintrag wird nur angezeigt.", "WARN");
+        _dialog.ShowText("Custom-DAT-Editor", $"Generierter Logiqx-XML-Eintrag:\n\n{xmlEntry}");
+    }
+
+    private void HashDatabaseExport()
+    {
+        if (_vm.LastCandidates.Count == 0)
+        { _vm.AddLog("Keine Daten für Hash-Export.", "WARN"); return; }
+        var path = _dialog.SaveFile("Hash-Datenbank exportieren", "JSON (*.json)|*.json", "hash-database.json");
+        if (path is null) return;
+        var entries = _vm.LastCandidates.Select(c => new { c.MainPath, c.GameKey, c.Extension, c.Region, c.DatMatch, c.SizeBytes }).ToList();
+        File.WriteAllText(path, JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true }));
+        _vm.AddLog($"Hash-Datenbank exportiert: {path} ({entries.Count} Einträge)", "INFO");
+    }
+
+}

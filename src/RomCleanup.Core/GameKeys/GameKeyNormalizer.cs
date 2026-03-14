@@ -22,6 +22,7 @@ public static class GameKeyNormalizer
     private static System.Text.RegularExpressions.Regex[] BuildDefaultTagPatterns()
     {
         var opts = System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled;
+        var timeout = TimeSpan.FromMilliseconds(500);
         return new[]
         {
             // 1. Region tags (all countries/codes from rules.json GameKeyPatterns[0])
@@ -48,64 +49,64 @@ public static class GameKeyNormalizer
                 @"russia|ru|rus|poland|pl|pol|uk|united\s*kingdom|great\s*britain|england|belgium|be|austria|at|" +
                 @"portugal|pt|switzerland|ch|denmark|dk|finland|fi|norway|no|czech|cz|hungary|hu|taiwan|tw|" +
                 @"hong\s*kong|hk|india|in|latin\s*america|turkey|tr|south\s*africa|new\s*zealand|nz" +
-                @"))*\)\s*", opts),
+                @"))*\)\s*", opts, timeout),
 
             // 2. Headered/Headerless
-            new System.Text.RegularExpressions.Regex(@"\s*\((headered|headerless)\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\((headered|headerless)\)\s*", opts, timeout),
 
             // 3. Revision tags
-            new System.Text.RegularExpressions.Regex(@"\s*\((rev\s*[a-z0-9.]+|revision\s*[a-z0-9.]+)\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\((rev\s*[a-z0-9.]+|revision\s*[a-z0-9.]+)\)\s*", opts, timeout),
 
             // 4. Version tags (v1.0, v02.01, etc.)
-            new System.Text.RegularExpressions.Regex(@"\s*\((v\s*[0-9][0-9.]*[a-z]?)\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\((v\s*[0-9][0-9.]*[a-z]?)\)\s*", opts, timeout),
 
             // 5. Demo/Beta/Proto/Kiosk/Trial/Taikenban and other pre-release tags
             new System.Text.RegularExpressions.Regex(
-                @"\s*\((alpha\s*\d*|beta\s*\d*|proto(?:type)?\s*\d*|sample|sampler|demo|preview|pre[\s-]*release|promo|kiosk(?:\s*demo)?|debug|trial(?:\s*version)?|taikenban|rehearsal-?\s*ban|location\s*test|test\s*program)\)\s*", opts),
+                @"\s*\((alpha\s*\d*|beta\s*\d*|proto(?:type)?\s*\d*|sample|sampler|demo|preview|pre[\s-]*release|promo|kiosk(?:\s*demo)?|debug|trial(?:\s*version)?|taikenban|rehearsal-?\s*ban|location\s*test|test\s*program)\)\s*", opts, timeout),
 
             // 6. Utility/Program tags
             new System.Text.RegularExpressions.Regex(
-                @"\s*\((program|application|utility|enhancement\s*chip|test\s*program|test\s*cartridge|competition\s*cart|service\s*disc|diagnostic|check\s*program)\)\s*", opts),
+                @"\s*\((program|application|utility|enhancement\s*chip|test\s*program|test\s*cartridge|competition\s*cart|service\s*disc|diagnostic|check\s*program)\)\s*", opts, timeout),
 
             // 7. Hack/Pirate/Homebrew
             new System.Text.RegularExpressions.Regex(
-                @"\s*\((hack|pirate|bootleg|homebrew|aftermarket|translated|translation)\)\s*", opts),
+                @"\s*\((hack|pirate|bootleg|homebrew|aftermarket|translated|translation)\)\s*", opts, timeout),
 
             // 8. Unlicensed/NFR
-            new System.Text.RegularExpressions.Regex(@"\s*\((unl|unlicensed|not\s*for\s*resale|nfr)\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\((unl|unlicensed|not\s*for\s*resale|nfr)\)\s*", opts, timeout),
 
             // 9. BIOS/Firmware/FW Update/IDU
-            new System.Text.RegularExpressions.Regex(@"\s*\((bios|firmware)\)\s*", opts),
-            new System.Text.RegularExpressions.Regex(@"\s*\b(?:IDU|FW\s*Update|FW\s*\d+\.\d+)\b\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\((bios|firmware)\)\s*", opts, timeout),
+            new System.Text.RegularExpressions.Regex(@"\s*\b(?:IDU|FW\s*Update|FW\s*\d+\.\d+)\b\s*", opts, timeout),
 
             // 10. Language tags (full set including Af, Ca, Gd, Eu etc.)
             new System.Text.RegularExpressions.Regex(
                 @"\s*\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu)" +
-                @"(?:,\s*(?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu))*\)\s*", opts),
+                @"(?:,\s*(?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu))*\)\s*", opts, timeout),
 
             // 11. Bracket tags: [!] [b] [h] [o] [p] [t] [f] [a] [cr...] [tr...] [m ...]
-            new System.Text.RegularExpressions.Regex(@"\s*\[(?:\!|b\d*|h\d*|o\d*|p\d*|t\d*|f\d*|a\d*|cr[^\]]*|tr[^\]]*|m\s[^\]]*)\]\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\[(?:\!|b\d*|h\d*|o\d*|p\d*|t\d*|f\d*|a\d*|cr[^\]]*|tr[^\]]*|m\s[^\]]*)\]\s*", opts, timeout),
 
             // 12. Virtual Console / Switch Online / Classic Mini
-            new System.Text.RegularExpressions.Regex(@"\s*\((virtual\s*console|switch\s*online|classic\s*mini|wii\s*u|gamecube)\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\((virtual\s*console|switch\s*online|classic\s*mini|wii\s*u|gamecube)\)\s*", opts, timeout),
 
             // 13. Reprint/Alt/Collection labels
-            new System.Text.RegularExpressions.Regex(@"\s*\((reprint|rerelease|rerip|alt|alt\s*\d*|collection)\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\((reprint|rerelease|rerip|alt|alt\s*\d*|collection)\)\s*", opts, timeout),
 
             // 14. Collection/Anniversary/Archives/Museum/Classics (with optional surrounding text)
-            new System.Text.RegularExpressions.Regex(@"\s*\(([^\)]*\b(?:collection|classics?|anniversary|antholog(?:y|ies)|archives?|museum|evercade|retro-?bit(?:\s*generations)?)\b[^\)]*)\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\(([^\)]*\b(?:collection|classics?|anniversary|antholog(?:y|ies)|archives?|museum|evercade|retro-?bit(?:\s*generations)?)\b[^\)]*)\)\s*", opts, timeout),
 
             // 15. EDC/Subchannel/LibCrypt
-            new System.Text.RegularExpressions.Regex(@"\s*\((edc|no\s*edc|libcrypt|sbi|subchannel)\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\((edc|no\s*edc|libcrypt|sbi|subchannel)\)\s*", opts, timeout),
 
             // 16. Sector count tags like (2S, 3S)
-            new System.Text.RegularExpressions.Regex(@"\s*\((\d+S(?:,\s*\d+S)*)\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\((\d+S(?:,\s*\d+S)*)\)\s*", opts, timeout),
 
             // 17. "Made in X" tags
-            new System.Text.RegularExpressions.Regex(@"\s*\((Made\s+in\s+\w+)\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\((Made\s+in\s+\w+)\)\s*", opts, timeout),
 
             // 18. Parenthesized Edition catch-all (Gold Edition, Target Limited Edition, etc.)
-            new System.Text.RegularExpressions.Regex(@"\s*\([^)]*\bEdition\b[^)]*\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\([^)]*\bEdition\b[^)]*\)\s*", opts, timeout),
 
             // 19. Non-parenthesized edition/budget labels (word-boundary fallback)
             new System.Text.RegularExpressions.Regex(
@@ -115,42 +116,46 @@ public static class GameKeyNormalizer
                 @"5th\s*Anniversary\s*Edition|Double\s*Pack|HD\s*(?:Collection|Edition|Remaster)|" +
                 @"PlayStation\s*3\s*the\s*Best|Rockstar\s*Classics|Platinum|Greatest\s*Hits|" +
                 @"Player'?s\s*Choice|Nintendo\s*Selects|PlayStation\s*Hits|Budget|Essentials|" +
-                @"Best\s*Price|The\s*Best|Taikenban)\b\s*", opts),
+                @"Best\s*Price|The\s*Best|Taikenban)\b\s*", opts, timeout),
 
             // 20. Date-stamped beta/proto tags like (Beta) (2010-07-08) or (2011-07-16)
-            new System.Text.RegularExpressions.Regex(@"\s*\(\d{4}-\d{2}-\d{2}\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\(\d{4}-\d{2}-\d{2}\)\s*", opts, timeout),
 
             // 21. FW version tags like (FW3.40), (FW3.50) and IDU prefixes
-            new System.Text.RegularExpressions.Regex(@"\s*\(FW\d+\.\d+\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\(FW\d+\.\d+\)\s*", opts, timeout),
 
             // 22. Budget/re-release labels in parentheses
             new System.Text.RegularExpressions.Regex(
                 @"\s*\((?:Greatest\s*Hits|PlayStation\s*\d+\s*the\s*Best|Platinum|Essentials|Budget|Best\s*Price|" +
                 @"The\s*Best|Player'?s\s*Choice|Nintendo\s*Selects|PlayStation\s*Hits|Rockstar\s*Classics|" +
-                @"Aquaprice\s*\d+)\)\s*", opts),
+                @"Aquaprice\s*\d+)\)\s*", opts, timeout),
 
             // 23. Serial number tags (BLES-01384, BLUS-30905, BCUS-98152, etc.)
-            new System.Text.RegularExpressions.Regex(@"\s*\([A-Z]{4}-\d{4,5}\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\([A-Z]{4}-\d{4,5}\)\s*", opts, timeout),
 
             // 24. Japanese-specific metadata and feature markers
             new System.Text.RegularExpressions.Regex(
-                @"\s*\((?:Fukikaeban|Jimakuban|PlayStation\s*Move\s*Taiou|3D\s*Compatible)\)\s*", opts),
+                @"\s*\((?:Fukikaeban|Jimakuban|PlayStation\s*Move\s*Taiou|3D\s*Compatible)\)\s*", opts, timeout),
 
             // 25. Version prefix form: (Version 2.0)
-            new System.Text.RegularExpressions.Regex(@"\s*\(Version\s*\d+\.?\d*\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\(Version\s*\d+\.?\d*\)\s*", opts, timeout),
 
             // 26. Empty parentheses cleanup (left after tag content removal)
-            new System.Text.RegularExpressions.Regex(@"\s*\(\s*\)\s*", opts),
+            new System.Text.RegularExpressions.Regex(@"\s*\(\s*\)\s*", opts, timeout),
         };
     }
 
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(500);
+
     private static readonly System.Text.RegularExpressions.Regex MsDosTrailingBracketRegex =
         new(@"\s*(?:\[[^\]]+\]\s*)+$",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled);
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
+            RegexTimeout);
 
     private static readonly System.Text.RegularExpressions.Regex MsDosTrailingParenRegex =
         new(@"\s*\((?!\s*(?:disc|disk|side|cd\s*\d*|floppy|tape)\b)[^)]*\)\s*$",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled);
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
+            RegexTimeout);
 
     private static readonly IReadOnlyDictionary<string, string> EmptyAliasMap =
         new Dictionary<string, string>();
@@ -174,7 +179,14 @@ public static class GameKeyNormalizer
             .Replace("ß", "ss").Replace("ẞ", "ss")
             .Replace("\u0131", "i").Replace("\u0130", "I") // BUG-027: Turkish İ/ı
             .Replace("\u2019", "'").Replace("\u2018", "'")
-            .Replace("\u2013", "-").Replace("\u2014", "-");
+            .Replace("\u2013", "-").Replace("\u2014", "-")
+            // V2-M25: Non-decomposable ligatures and Nordic letters
+            .Replace("Æ", "AE").Replace("æ", "ae")
+            .Replace("Ø", "O").Replace("ø", "o")
+            .Replace("Đ", "D").Replace("đ", "d")
+            .Replace("Ł", "L").Replace("ł", "l")
+            .Replace("Œ", "OE").Replace("œ", "oe")
+            .Replace("Þ", "Th").Replace("þ", "th");
 
         var normalized = work.Normalize(NormalizationForm.FormD);
         var sb = new StringBuilder(normalized.Length);
@@ -230,7 +242,7 @@ public static class GameKeyNormalizer
 
         // Normalize and collapse whitespace
         var key = s.Trim().ToLowerInvariant();
-        key = System.Text.RegularExpressions.Regex.Replace(key, @"\s+", "");
+        key = System.Text.RegularExpressions.Regex.Replace(key, @"\s+", "", System.Text.RegularExpressions.RegexOptions.None, RegexTimeout);
 
         // Apply alias maps
         if (alwaysAliasMap.TryGetValue(key, out var aliased))

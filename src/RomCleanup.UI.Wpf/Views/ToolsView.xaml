@@ -1,0 +1,260 @@
+<UserControl x:Class="RomCleanup.UI.Wpf.Views.ToolsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="clr-namespace:RomCleanup.UI.Wpf.Converters">
+  <UserControl.Resources>
+    <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
+    <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
+    <conv:InverseBoolConverter x:Key="InverseBool"/>
+    <conv:StringEqualsToVisibilityConverter x:Key="StrEqualsToVis"/>
+  </UserControl.Resources>
+
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="180" MinWidth="140" MaxWidth="240"/>
+      <ColumnDefinition Width="1"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- ═══ SIDEBAR NAVIGATION ═══════════════════════════════════════════ -->
+    <Border Grid.Column="0" Background="{DynamicResource BrushSurface}" Padding="0,12">
+      <ListBox Background="Transparent" BorderThickness="0"
+               SelectedValue="{Binding SelectedToolsSection, Mode=TwoWay}"
+               SelectedValuePath="Content"
+               ItemContainerStyle="{DynamicResource SidebarNavItem}"
+               AutomationProperties.Name="Werkzeugkategorien">
+        <ListBoxItem Content="Schnellzugriff" AutomationProperties.Name="Navigation: Schnellzugriff"/>
+        <ListBoxItem Content="Zuletzt verwendet" AutomationProperties.Name="Navigation: Zuletzt verwendet"/>
+        <ListBoxItem Content="Alle Werkzeuge" AutomationProperties.Name="Navigation: Alle Werkzeuge"/>
+      </ListBox>
+    </Border>
+
+    <!-- Divider -->
+    <Border Grid.Column="1" Background="{DynamicResource BrushBorder}"/>
+
+    <!-- ═══ CONTENT AREA ═══════════════════════════════════════════════ -->
+    <DockPanel Grid.Column="2">
+      <!-- Filter bar -->
+      <Border DockPanel.Dock="Top" Background="{DynamicResource BrushSurfaceAlt}"
+              BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,0,1" Padding="12,8">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                     Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
+          <TextBox Grid.Column="1" Text="{Binding ToolFilterText, UpdateSourceTrigger=PropertyChanged}"
+                   MinWidth="200" VerticalAlignment="Center"
+                   ToolTip="Werkzeuge filtern (Name, Kategorie, Beschreibung)"
+                   AutomationProperties.Name="Werkzeuge-Filter"/>
+          <TextBlock Grid.Column="2" Text="{Binding ToolItems.Count, StringFormat='{}{0} Werkzeuge'}"
+                     Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="{DynamicResource SpaceLeftSM}" FontSize="11"/>
+        </Grid>
+      </Border>
+
+      <!-- SEARCH RESULTS (visible only when typing) -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16"
+                    Visibility="{Binding IsToolSearchActive, Converter={StaticResource BoolToVis}}">
+        <ItemsControl ItemsSource="{Binding ToolItemsView}">
+          <ItemsControl.GroupStyle>
+            <GroupStyle>
+              <GroupStyle.HeaderTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding Name}" Style="{StaticResource SectionHeader}" Margin="0,16,0,6"/>
+                </DataTemplate>
+              </GroupStyle.HeaderTemplate>
+            </GroupStyle>
+          </ItemsControl.GroupStyle>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button Margin="0,0,8,6" Padding="10,8" HorizontalContentAlignment="Left" MinWidth="220" MaxWidth="360"
+                      Command="{Binding Command}"
+                      IsEnabled="{Binding IsLocked, Converter={StaticResource InverseBool}}"
+                      ToolTip="{Binding Description}"
+                      AutomationProperties.Name="{Binding DisplayName}"
+                      Tag="{Binding Key}">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                             Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBlock Text="{Binding Description}" Style="{StaticResource CaptionText}" TextTrimming="CharacterEllipsis" MaxWidth="260"/>
+                  </StackPanel>
+                  <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="11"
+                             Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="6,0,0,0"
+                             Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}}"
+                             ToolTip="Gesperrt – starte eine Vorschau oder einen Run im Start-Tab"/>
+                  <Border Background="{DynamicResource BrushWarning}" CornerRadius="3" Padding="4,1" Margin="6,0,0,0"
+                          Visibility="{Binding IsPlanned, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="Geplant" FontSize="9" FontWeight="SemiBold" Foreground="#1a1a2e"/>
+                  </Border>
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- MAIN SMART VIEW (hidden when searching) -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16"
+                    Visibility="{Binding IsToolSearchActive, Converter={StaticResource InverseBoolToVis}}">
+        <Grid>
+
+          <!-- Run erforderlich Hinweis (above all sections) -->
+          <Border Background="#1A00F5FF" BorderBrush="{DynamicResource BrushAccentCyan}" BorderThickness="1"
+                  CornerRadius="6" Padding="12,10" Margin="0,0,0,12"
+                  Visibility="{Binding HasRunResult, Converter={StaticResource InverseBoolToVis}}"
+                  VerticalAlignment="Top">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                         Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+              <TextBlock TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{DynamicResource BrushTextPrimary}">
+                <Run FontWeight="SemiBold">Einige Werkzeuge sind gesperrt.</Run>
+                <Run> Starte zuerst einen </Run>
+                <Run FontWeight="SemiBold" Foreground="{DynamicResource BrushAccentCyan}">Quick-Preview</Run>
+                <Run> oder </Run>
+                <Run FontWeight="SemiBold" Foreground="{DynamicResource BrushAccentCyan}">Vorschau</Run>
+                <Run> im Start-Tab, um alle Analyse- und Export-Werkzeuge freizuschalten.</Run>
+              </TextBlock>
+            </StackPanel>
+          </Border>
+
+          <!-- ── Schnellzugriff ── -->
+          <StackPanel Visibility="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Schnellzugriff}"
+                      Margin="0,52,0,0">
+            <TextBlock Text="SCHNELLZUGRIFF" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+            <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomSM}">
+              <ItemsControl ItemsSource="{Binding QuickAccessItems}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Button Margin="0,0,8,6" Padding="12,10" HorizontalContentAlignment="Left" MinWidth="160" MaxWidth="260"
+                            Command="{Binding Command}"
+                            IsEnabled="{Binding IsLocked, Converter={StaticResource InverseBool}}"
+                            ToolTip="{Binding Description}"
+                            AutomationProperties.Name="{Binding DisplayName}"
+                            Tag="{Binding Key}">
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" FontSize="18"
+                                   Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
+                        <StackPanel VerticalAlignment="Center">
+                          <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="12"/>
+                          <TextBlock Text="{Binding Description}" Style="{StaticResource CaptionText}" TextTrimming="CharacterEllipsis" MaxWidth="180"/>
+                        </StackPanel>
+                        <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                   Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="6,0,0,0"
+                                   Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}}"
+                                   ToolTip="Gesperrt – starte eine Vorschau oder einen Run im Start-Tab"/>
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Border>
+          </StackPanel>
+
+          <!-- ── Zuletzt verwendet ── -->
+          <StackPanel Visibility="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Zuletzt verwendet}"
+                      Margin="0,52,0,0">
+            <TextBlock Text="ZULETZT VERWENDET" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+            <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomSM}">
+              <ItemsControl ItemsSource="{Binding RecentToolItems}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Button Margin="0,0,8,6" Padding="10,8" HorizontalContentAlignment="Left" MinWidth="160" MaxWidth="260"
+                            Command="{Binding Command}"
+                            ToolTip="{Binding Description}"
+                            AutomationProperties.Name="{Binding DisplayName}"
+                            Tag="{Binding Key}">
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                   Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
+                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Border>
+          </StackPanel>
+
+          <!-- ── Alle Werkzeuge ── -->
+          <StackPanel Visibility="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Alle Werkzeuge}"
+                      Margin="0,52,0,0">
+            <TextBlock Text="ALLE WERKZEUGE" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+            <ItemsControl ItemsSource="{Binding ToolCategories}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Style="{StaticResource SectionCard}" Margin="0,0,0,4">
+                    <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
+                      <Expander.Header>
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                     Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
+                          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding Items.Count, StringFormat=' ({0})'}"
+                                     Foreground="{DynamicResource BrushTextMuted}" FontSize="11" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                        </StackPanel>
+                      </Expander.Header>
+                      <ItemsControl ItemsSource="{Binding Items}" Margin="0,8,0,0">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <WrapPanel/>
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Button Margin="0,0,8,6" Padding="10,8" HorizontalContentAlignment="Left" MinWidth="200" MaxWidth="340"
+                                    Command="{Binding Command}"
+                                    IsEnabled="{Binding IsLocked, Converter={StaticResource InverseBool}}"
+                                    ToolTip="{Binding Description}"
+                                    AutomationProperties.Name="{Binding DisplayName}"
+                                    Tag="{Binding Key}">
+                              <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                           Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
+                                <StackPanel VerticalAlignment="Center">
+                                  <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="12"/>
+                                  <TextBlock Text="{Binding Description}" Style="{StaticResource CaptionText}" TextTrimming="CharacterEllipsis" MaxWidth="240"/>
+                                </StackPanel>
+                                <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                           Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="6,0,0,0"
+                                           Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}}"
+                                           ToolTip="Gesperrt – starte eine Vorschau oder einen Run im Start-Tab"/>
+                                <Border Background="{DynamicResource BrushWarning}" CornerRadius="3" Padding="4,1" Margin="6,0,0,0"
+                                        Visibility="{Binding IsPlanned, Converter={StaticResource BoolToVis}}">
+                                  <TextBlock Text="Geplant" FontSize="9" FontWeight="SemiBold" Foreground="#1a1a2e"/>
+                                </Border>
+                              </StackPanel>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Expander>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+        </Grid>
+      </ScrollViewer>
+    </DockPanel>
+  </Grid>
+</UserControl>

@@ -167,4 +167,22 @@ public class RegionDetectorTests
     {
         Assert.Equal("WORLD", RegionDetector.GetRegionTag(input));
     }
+
+    // --- Edge cases: empty/nested parens ---
+
+    [Theory]
+    [InlineData("Game ()")]
+    [InlineData("Game ((USA))")]
+    public void EdgeCase_EmptyOrNestedParens_NoCrash(string input)
+    {
+        var result = RegionDetector.GetRegionTag(input);
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public void EdgeCase_DuplicateRegion_StillDetected()
+    {
+        var result = RegionDetector.GetRegionTag("Game (USA) (USA)");
+        Assert.Equal("US", result);
+    }
 }

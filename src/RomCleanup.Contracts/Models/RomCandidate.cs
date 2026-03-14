@@ -11,7 +11,7 @@ public sealed class RomCandidate
     public string Region { get; init; } = "UNKNOWN";
     public int RegionScore { get; init; }
     public int FormatScore { get; init; }
-    public int VersionScore { get; init; }
+    public long VersionScore { get; init; }
     public int HeaderScore { get; init; }
     public int CompletenessScore { get; init; }
     public long SizeTieBreakScore { get; init; }

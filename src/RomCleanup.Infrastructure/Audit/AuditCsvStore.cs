@@ -12,21 +12,7 @@ namespace RomCleanup.Infrastructure.Audit;
 public sealed class AuditCsvStore : IAuditStore
 {
     /// <summary>CSV injection prevention: blocks leading =, +, -, @ characters.</summary>
-    private static string SanitizeCsvField(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return value;
-
-        // CSV injection prevention per OWASP
-        if (value.Length > 0 && (value[0] == '=' || value[0] == '+' || value[0] == '-' || value[0] == '@'))
-            value = "'" + value;
-
-        // Escape quotes and wrap if contains comma/quote/newline
-        if (value.Contains('"') || value.Contains(',') || value.Contains('\n') || value.Contains('\r'))
-            return "\"" + value.Replace("\"", "\"\"") + "\"";
-
-        return value;
-    }
+    private static string SanitizeCsvField(string value) => AuditCsvParser.SanitizeCsvField(value);
 
     public void WriteMetadataSidecar(string auditCsvPath, IDictionary<string, object> metadata)
     {
@@ -143,7 +129,7 @@ public sealed class AuditCsvStore : IAuditStore
 
     private static bool IsWithinAnyRoot(string path, string[] roots)
     {
-        var fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var fullPath = Path.GetFullPath(path);
         foreach (var root in roots)
         {
             var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;

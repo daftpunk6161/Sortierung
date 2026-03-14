@@ -9,7 +9,7 @@ namespace RomCleanup.UI.Wpf.Services;
 /// Loads/saves settings from %APPDATA%\RomCleanupRegionDedupe\settings.json.
 /// Port of Settings.ps1 persistence logic.
 /// </summary>
-public sealed class SettingsService
+public sealed class SettingsService : ISettingsService
 {
     /// <summary>Current settings schema version. Increment when breaking changes are made.</summary>
     private const int CurrentVersion = 1;
@@ -23,13 +23,13 @@ public sealed class SettingsService
     /// <summary>Last audit path loaded from settings (for rollback after restart).</summary>
     public string? LastAuditPath { get; private set; }
 
-    /// <summary>Load settings from disk into the ViewModel.
-    /// Synchronous — acceptable for the small settings file (~1 KB).</summary>
+    /// <summary>Theme name loaded from settings (Dark/Light/HighContrast).</summary>
+    public string LastTheme { get; private set; } = "Dark";
 
-    /// <summary>Load settings from disk into the ViewModel.</summary>
-    public void LoadInto(MainViewModel vm)
+    /// <summary>RF-010: Load settings from disk as DTO (decoupled from ViewModel).</summary>
+    public SettingsDto? Load()
     {
-        if (!File.Exists(SettingsPath)) return;
+        if (!File.Exists(SettingsPath)) return null;
 
         try
         {
@@ -37,102 +37,171 @@ public sealed class SettingsService
             var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
-            // Version check — future migrations can be added here
-            var version = root.TryGetProperty("version", out var verEl) && verEl.TryGetInt32(out var v) ? v : 0;
-            _ = version; // reserved for future migration logic
+            var dto = new SettingsDto();
 
             if (root.TryGetProperty("general", out var general))
             {
-                vm.LogLevel = GetString(general, "logLevel", "Info");
-                vm.AggressiveJunk = GetBool(general, "aggressiveJunk");
-                vm.AliasKeying = GetBool(general, "aliasEditionKeying");
+                dto = dto with
+                {
+                    LogLevel = GetString(general, "logLevel", "Info"),
+                    AggressiveJunk = GetBool(general, "aggressiveJunk"),
+                    AliasKeying = GetBool(general, "aliasEditionKeying")
+                };
 
                 if (general.TryGetProperty("preferredRegions", out var regions) &&
                     regions.ValueKind == JsonValueKind.Array)
                 {
-                    vm.PreferEU = false; vm.PreferUS = false; vm.PreferJP = false; vm.PreferWORLD = false;
-                    vm.PreferDE = false; vm.PreferFR = false; vm.PreferIT = false; vm.PreferES = false;
-                    vm.PreferAU = false; vm.PreferASIA = false; vm.PreferKR = false; vm.PreferCN = false;
-                    vm.PreferBR = false; vm.PreferNL = false; vm.PreferSE = false; vm.PreferSCAN = false;
+                    var regionList = new List<string>();
                     foreach (var r in regions.EnumerateArray())
                     {
-                        switch (r.GetString()?.ToUpperInvariant())
-                        {
-                            case "EU": vm.PreferEU = true; break;
-                            case "US": vm.PreferUS = true; break;
-                            case "JP": vm.PreferJP = true; break;
-                            case "WORLD": vm.PreferWORLD = true; break;
-                            case "DE": vm.PreferDE = true; break;
-                            case "FR": vm.PreferFR = true; break;
-                            case "IT": vm.PreferIT = true; break;
-                            case "ES": vm.PreferES = true; break;
-                            case "AU": vm.PreferAU = true; break;
-                            case "ASIA": vm.PreferASIA = true; break;
-                            case "KR": vm.PreferKR = true; break;
-                            case "CN": vm.PreferCN = true; break;
-                            case "BR": vm.PreferBR = true; break;
-                            case "NL": vm.PreferNL = true; break;
-                            case "SE": vm.PreferSE = true; break;
-                            case "SCAN": vm.PreferSCAN = true; break;
-                        }
+                        var val = r.GetString();
+                        if (!string.IsNullOrWhiteSpace(val))
+                            regionList.Add(val.ToUpperInvariant());
                     }
+                    dto = dto with { PreferredRegions = [.. regionList] };
                 }
             }
 
             if (root.TryGetProperty("toolPaths", out var tools))
             {
-                vm.ToolChdman = GetString(tools, "chdman");
-                vm.Tool7z = GetString(tools, "7z");
-                vm.ToolDolphin = GetString(tools, "dolphintool");
-                vm.ToolPsxtract = GetString(tools, "psxtract");
-                vm.ToolCiso = GetString(tools, "ciso");
+                dto = dto with
+                {
+                    ToolChdman = GetString(tools, "chdman"),
+                    Tool7z = GetString(tools, "7z"),
+                    ToolDolphin = GetString(tools, "dolphintool"),
+                    ToolPsxtract = GetString(tools, "psxtract"),
+                    ToolCiso = GetString(tools, "ciso")
+                };
             }
 
             if (root.TryGetProperty("dat", out var dat))
             {
-                vm.UseDat = GetBool(dat, "useDat");
-                vm.DatRoot = GetString(dat, "datRoot");
-                vm.DatHashType = GetString(dat, "hashType", "SHA1");
-                vm.DatFallback = GetBool(dat, "datFallback", true);
+                dto = dto with
+                {
+                    UseDat = GetBool(dat, "useDat"),
+                    DatRoot = GetString(dat, "datRoot"),
+                    DatHashType = GetString(dat, "hashType", "SHA1"),
+                    DatFallback = GetBool(dat, "datFallback", true)
+                };
             }
 
             if (root.TryGetProperty("paths", out var paths))
             {
-                vm.TrashRoot = GetString(paths, "trashRoot");
-                vm.AuditRoot = GetString(paths, "auditRoot");
-                vm.Ps3DupesRoot = GetString(paths, "ps3DupesRoot");
-                LastAuditPath = GetString(paths, "lastAuditPath");
+                dto = dto with
+                {
+                    TrashRoot = GetString(paths, "trashRoot"),
+                    AuditRoot = GetString(paths, "auditRoot"),
+                    Ps3DupesRoot = GetString(paths, "ps3DupesRoot"),
+                    LastAuditPath = GetString(paths, "lastAuditPath")
+                };
             }
 
             if (root.TryGetProperty("ui", out var ui))
             {
-                vm.SortConsole = GetBool(ui, "sortConsole");
-                vm.DryRun = GetBool(ui, "dryRun", true);
-                vm.ConvertEnabled = GetBool(ui, "convertEnabled");
-                vm.ConfirmMove = GetBool(ui, "confirmMove", true);
+                var cp = Models.ConflictPolicy.Rename;
                 if (ui.TryGetProperty("conflictPolicy", out var cpEl) && cpEl.ValueKind == JsonValueKind.String)
+                    Enum.TryParse(cpEl.GetString(), true, out cp);
+
+                dto = dto with
                 {
-                    if (Enum.TryParse<RomCleanup.UI.Wpf.Models.ConflictPolicy>(cpEl.GetString(), true, out var cp))
-                        vm.ConflictPolicy = cp;
-                }
+                    SortConsole = GetBool(ui, "sortConsole"),
+                    DryRun = GetBool(ui, "dryRun", true),
+                    ConvertEnabled = GetBool(ui, "convertEnabled"),
+                    ConfirmMove = GetBool(ui, "confirmMove", true),
+                    ConflictPolicy = cp,
+                    Theme = GetString(ui, "theme", "Dark")
+                };
             }
 
             if (root.TryGetProperty("roots", out var roots) &&
                 roots.ValueKind == JsonValueKind.Array)
             {
-                vm.Roots.Clear();
+                var rootList = new List<string>();
                 foreach (var r in roots.EnumerateArray())
                 {
                     var path = r.GetString();
                     if (!string.IsNullOrWhiteSpace(path))
-                        vm.Roots.Add(path);
+                        rootList.Add(path);
                 }
+                dto = dto with { Roots = [.. rootList] };
             }
+
+            // Update service-level state
+            LastAuditPath = dto.LastAuditPath;
+            LastTheme = dto.Theme;
+
+            return dto;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
-            // Settings corrupted — continue with defaults
+            return null;
         }
+    }
+
+    /// <summary>Load settings from disk into the ViewModel (delegates to Load).</summary>
+    public void LoadInto(MainViewModel vm)
+    {
+        var dto = Load();
+        if (dto is null) return;
+
+        ApplyToViewModel(vm, dto);
+    }
+
+    /// <summary>Apply a SettingsDto to the ViewModel properties.</summary>
+    public static void ApplyToViewModel(MainViewModel vm, SettingsDto dto)
+    {
+        vm.LogLevel = dto.LogLevel;
+        vm.AggressiveJunk = dto.AggressiveJunk;
+        vm.AliasKeying = dto.AliasKeying;
+
+        // Region preferences
+        var regions = new HashSet<string>(dto.PreferredRegions, StringComparer.OrdinalIgnoreCase);
+        vm.PreferEU = regions.Contains("EU");
+        vm.PreferUS = regions.Contains("US");
+        vm.PreferJP = regions.Contains("JP");
+        vm.PreferWORLD = regions.Contains("WORLD");
+        vm.PreferDE = regions.Contains("DE");
+        vm.PreferFR = regions.Contains("FR");
+        vm.PreferIT = regions.Contains("IT");
+        vm.PreferES = regions.Contains("ES");
+        vm.PreferAU = regions.Contains("AU");
+        vm.PreferASIA = regions.Contains("ASIA");
+        vm.PreferKR = regions.Contains("KR");
+        vm.PreferCN = regions.Contains("CN");
+        vm.PreferBR = regions.Contains("BR");
+        vm.PreferNL = regions.Contains("NL");
+        vm.PreferSE = regions.Contains("SE");
+        vm.PreferSCAN = regions.Contains("SCAN");
+
+        // Tool paths
+        vm.ToolChdman = dto.ToolChdman;
+        vm.Tool7z = dto.Tool7z;
+        vm.ToolDolphin = dto.ToolDolphin;
+        vm.ToolPsxtract = dto.ToolPsxtract;
+        vm.ToolCiso = dto.ToolCiso;
+
+        // DAT
+        vm.UseDat = dto.UseDat;
+        vm.DatRoot = dto.DatRoot;
+        vm.DatHashType = dto.DatHashType;
+        vm.DatFallback = dto.DatFallback;
+
+        // Paths
+        vm.TrashRoot = dto.TrashRoot;
+        vm.AuditRoot = dto.AuditRoot;
+        vm.Ps3DupesRoot = dto.Ps3DupesRoot;
+
+        // UI
+        vm.SortConsole = dto.SortConsole;
+        vm.DryRun = dto.DryRun;
+        vm.ConvertEnabled = dto.ConvertEnabled;
+        vm.ConfirmMove = dto.ConfirmMove;
+        vm.ConflictPolicy = dto.ConflictPolicy;
+
+        // Roots
+        vm.Roots.Clear();
+        foreach (var r in dto.Roots)
+            vm.Roots.Add(r);
     }
 
     /// <summary>Save current ViewModel state to disk.</summary>
@@ -181,7 +250,8 @@ public sealed class SettingsService
                     dryRun = vm.DryRun,
                     convertEnabled = vm.ConvertEnabled,
                     confirmMove = vm.ConfirmMove,
-                    conflictPolicy = vm.ConflictPolicy.ToString()
+                    conflictPolicy = vm.ConflictPolicy.ToString(),
+                    theme = vm.CurrentThemeName
                 }
             };
 

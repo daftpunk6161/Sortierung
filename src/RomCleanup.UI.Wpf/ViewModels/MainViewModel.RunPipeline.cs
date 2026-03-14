@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Input;
 using RomCleanup.Contracts.Models;
@@ -11,15 +12,16 @@ namespace RomCleanup.UI.Wpf.ViewModels;
 public sealed partial class MainViewModel
 {
     // ═══ RUN RESULT STATE ═══════════════════════════════════════════════
-    private IReadOnlyList<RomCandidate> _lastCandidates = Array.Empty<RomCandidate>();
-    public IReadOnlyList<RomCandidate> LastCandidates
+    private int _runLogStartIndex;
+    private ObservableCollection<RomCandidate> _lastCandidates = [];
+    public ObservableCollection<RomCandidate> LastCandidates
     {
         get => _lastCandidates;
         set { _lastCandidates = value; OnPropertyChanged(); }
     }
 
-    private IReadOnlyList<DedupeResult> _lastDedupeGroups = Array.Empty<DedupeResult>();
-    public IReadOnlyList<DedupeResult> LastDedupeGroups
+    private ObservableCollection<DedupeResult> _lastDedupeGroups = [];
+    public ObservableCollection<DedupeResult> LastDedupeGroups
     {
         get => _lastDedupeGroups;
         set { _lastDedupeGroups = value; OnPropertyChanged(); }
@@ -46,19 +48,52 @@ public sealed partial class MainViewModel
         get => _runState;
         set
         {
+            if (!IsValidTransition(_runState, value))
+                throw new InvalidOperationException(
+                    $"RF-007: Invalid RunState transition {_runState} → {value}");
+
             if (SetField(ref _runState, value))
             {
                 OnPropertyChanged(nameof(IsBusy));
                 OnPropertyChanged(nameof(IsIdle));
                 OnPropertyChanged(nameof(ShowStartMoveButton));
                 OnPropertyChanged(nameof(HasRunResult));
-                CommandManager.InvalidateRequerySuggested();
+                DeferCommandRequery();
             }
         }
     }
 
+    /// <summary>RF-007: Checks whether the state transition is valid.</summary>
+    internal static bool IsValidTransition(RunState from, RunState to)
+    {
+        if (from == to) return true;
+        return (from, to) switch
+        {
+            // From Idle: can start preflight, or be cancelled/failed
+            (RunState.Idle, RunState.Preflight) => true,
+            // Pipeline forward progression
+            (RunState.Preflight, RunState.Scanning) => true,
+            (RunState.Scanning, RunState.Deduplicating) => true,
+            (RunState.Deduplicating, RunState.Sorting) => true,
+            (RunState.Sorting, RunState.Moving) => true,
+            (RunState.Moving, RunState.Converting) => true,
+            // Completion from any active phase
+            (RunState.Preflight or RunState.Scanning or RunState.Deduplicating or
+             RunState.Sorting or RunState.Moving or RunState.Converting,
+             RunState.Completed or RunState.CompletedDryRun or RunState.Failed or RunState.Cancelled) => true,
+            // Skip phases (e.g. no conversion step)
+            (RunState.Scanning, RunState.Sorting or RunState.Moving or RunState.Converting) => true,
+            (RunState.Deduplicating, RunState.Moving or RunState.Converting) => true,
+            (RunState.Sorting, RunState.Converting) => true,
+            // Reset from terminal states back to Idle
+            (RunState.Completed or RunState.CompletedDryRun or RunState.Failed or RunState.Cancelled,
+             RunState.Idle or RunState.Preflight) => true,
+            _ => false,
+        };
+    }
+
     public bool IsBusy => _runState is RunState.Preflight or RunState.Scanning
-        or RunState.Deduplicating or RunState.Moving or RunState.Converting;
+        or RunState.Deduplicating or RunState.Sorting or RunState.Moving or RunState.Converting;
     public bool IsIdle => !IsBusy;
 
     public bool ShowStartMoveButton => _runState == RunState.CompletedDryRun && !IsBusy;
@@ -121,21 +156,21 @@ public sealed partial class MainViewModel
     public string? SelectedRoot
     {
         get => _selectedRoot;
-        set { SetField(ref _selectedRoot, value); CommandManager.InvalidateRequerySuggested(); }
+        set { SetField(ref _selectedRoot, value); DeferCommandRequery(); }
     }
 
     private bool _canRollback;
     public bool CanRollback
     {
         get => _canRollback;
-        set { SetField(ref _canRollback, value); CommandManager.InvalidateRequerySuggested(); }
+        set { SetField(ref _canRollback, value); DeferCommandRequery(); }
     }
 
     private string _lastReportPath = "";
     public string LastReportPath
     {
         get => _lastReportPath;
-        set { SetField(ref _lastReportPath, value); CommandManager.InvalidateRequerySuggested(); }
+        set { SetField(ref _lastReportPath, value); DeferCommandRequery(); }
     }
 
     private bool _showDryRunBanner = true;
@@ -172,6 +207,22 @@ public sealed partial class MainViewModel
     private StatusLevel _readyStatusLevel = StatusLevel.Missing;
     public StatusLevel ReadyStatusLevel { get => _readyStatusLevel; set => SetField(ref _readyStatusLevel, value); }
 
+    // ═══ TOOL STATUS LABELS (P1-007: VM-bound instead of x:Name TextBlocks) ═══
+    private string _chdmanStatusText = "–";
+    public string ChdmanStatusText { get => _chdmanStatusText; set => SetField(ref _chdmanStatusText, value); }
+
+    private string _dolphinStatusText = "–";
+    public string DolphinStatusText { get => _dolphinStatusText; set => SetField(ref _dolphinStatusText, value); }
+
+    private string _sevenZipStatusText = "–";
+    public string SevenZipStatusText { get => _sevenZipStatusText; set => SetField(ref _sevenZipStatusText, value); }
+
+    private string _psxtractStatusText = "–";
+    public string PsxtractStatusText { get => _psxtractStatusText; set => SetField(ref _psxtractStatusText, value); }
+
+    private string _cisoStatusText = "–";
+    public string CisoStatusText { get => _cisoStatusText; set => SetField(ref _cisoStatusText, value); }
+
     // ═══ DASHBOARD COUNTERS ═════════════════════════════════════════════
     private string _dashMode = "–";
     public string DashMode { get => _dashMode; set => SetField(ref _dashMode, value); }
@@ -191,9 +242,42 @@ public sealed partial class MainViewModel
     private string _healthScore = "–";
     public string HealthScore { get => _healthScore; set => SetField(ref _healthScore, value); }
 
+    private string _dashGames = "0";
+    public string DashGames { get => _dashGames; set => SetField(ref _dashGames, value); }
+
+    private string _dashDatHits = "0";
+    public string DashDatHits { get => _dashDatHits; set => SetField(ref _dashDatHits, value); }
+
+    private string _dedupeRate = "–";
+    public string DedupeRate { get => _dedupeRate; set => SetField(ref _dedupeRate, value); }
+
     // ═══ STEP INDICATOR ═════════════════════════════════════════════════
     private int _currentStep;
     public int CurrentStep { get => _currentStep; set => SetField(ref _currentStep, value); }
+
+    // RD-004: Phase detail tooltips for interactive stepper
+    /// <summary>Returns a detail string for the given pipeline phase (1–7). Used by stepper tooltips.</summary>
+    public string GetPhaseDetail(int phase) => phase switch
+    {
+        1 => HasRunResult && LastRunResult is { } r
+            ? $"Preflight: {(r.Preflight?.ShouldReturn != true ? "✓ OK" : $"✗ Blockiert – {r.Preflight?.Reason}")}"
+            : "Preflight: Konfiguration und Pfade prüfen",
+        2 => HasRunResult && LastRunResult is { } r2
+            ? $"Scan: {r2.TotalFilesScanned} Dateien gefunden"
+            : "Scan: ROM-Verzeichnisse durchsuchen",
+        3 => HasRunResult && LastRunResult is { } r3
+            ? $"Dedupe: {r3.WinnerCount} behalten, {r3.LoserCount} Duplikate"
+            : "Dedupe: Duplikate erkennen und beste Version wählen",
+        4 => "Sort: Dateien nach Konsole gruppieren",
+        5 => HasRunResult && LastRunResult?.MoveResult is { } mv
+            ? $"Move: {mv.MoveCount} verschoben, {mv.FailCount} Fehler"
+            : "Move: Duplikate in Papierkorb verschieben",
+        6 => HasRunResult && LastRunResult is { } r6 && r6.ConvertedCount > 0
+            ? $"Convert: {r6.ConvertedCount} Dateien konvertiert"
+            : "Convert: Formate optimieren (CHD/RVZ/ZIP)",
+        7 => HasRunResult ? $"Fertig – Dauer: {DashDuration}" : "Fertig: Ergebnis und Report",
+        _ => ""
+    };
 
     private string _stepLabel1 = "Keine Ordner";
     public string StepLabel1 { get => _stepLabel1; set => SetField(ref _stepLabel1, value); }
@@ -218,8 +302,8 @@ public sealed partial class MainViewModel
     private void OnRun()
     {
         CurrentRunState = RunState.Preflight;
-        BusyHint = DryRun ? "DryRun läuft…" : "Move läuft…";
-        DashMode = DryRun ? "DryRun" : "Move";
+        BusyHint = DryRun ? (IsSimpleMode ? "Vorschau läuft…" : "DryRun läuft…") : "Move läuft…";
+        DashMode = DryRun ? (IsSimpleMode ? "Vorschau" : "DryRun") : "Move";
         Progress = 0;
         ProgressText = "0%";
         PerfPhase = "Phase: –";
@@ -340,13 +424,23 @@ public sealed partial class MainViewModel
         // Tools
         bool hasChdman = !string.IsNullOrWhiteSpace(ToolChdman) && File.Exists(ToolChdman);
         bool has7z = !string.IsNullOrWhiteSpace(Tool7z) && File.Exists(Tool7z);
+        bool hasDolphin = !string.IsNullOrWhiteSpace(ToolDolphin) && File.Exists(ToolDolphin);
+        bool hasPsxtract = !string.IsNullOrWhiteSpace(ToolPsxtract) && File.Exists(ToolPsxtract);
+        bool hasCiso = !string.IsNullOrWhiteSpace(ToolCiso) && File.Exists(ToolCiso);
         bool anyToolSpecified = !string.IsNullOrWhiteSpace(ToolChdman) || !string.IsNullOrWhiteSpace(Tool7z);
-        int toolCount = (hasChdman ? 1 : 0) + (has7z ? 1 : 0);
+        int toolCount = (hasChdman ? 1 : 0) + (has7z ? 1 : 0) + (hasDolphin ? 1 : 0);
         ToolsStatusLevel = (hasChdman || has7z) ? StatusLevel.Ok
             : (anyToolSpecified || ConvertEnabled) ? StatusLevel.Warning
             : StatusLevel.Missing;
         StatusTools = ToolsStatusLevel == StatusLevel.Ok ? $"{toolCount} Tools gefunden"
             : ToolsStatusLevel == StatusLevel.Warning ? "Tools nicht gefunden" : "Keine Tools";
+
+        // P1-007: Update tool status labels
+        ChdmanStatusText = string.IsNullOrWhiteSpace(ToolChdman) ? "–" : hasChdman ? "✓ Gefunden" : "✗ Nicht gefunden";
+        DolphinStatusText = string.IsNullOrWhiteSpace(ToolDolphin) ? "–" : hasDolphin ? "✓ Gefunden" : "✗ Nicht gefunden";
+        SevenZipStatusText = string.IsNullOrWhiteSpace(Tool7z) ? "–" : has7z ? "✓ Gefunden" : "✗ Nicht gefunden";
+        PsxtractStatusText = string.IsNullOrWhiteSpace(ToolPsxtract) ? "–" : hasPsxtract ? "✓ Gefunden" : "✗ Nicht gefunden";
+        CisoStatusText = string.IsNullOrWhiteSpace(ToolCiso) ? "–" : hasCiso ? "✓ Gefunden" : "✗ Nicht gefunden";
 
         // DAT
         bool datRootValid = !string.IsNullOrWhiteSpace(DatRoot) && Directory.Exists(DatRoot);
@@ -378,6 +472,7 @@ public sealed partial class MainViewModel
                 RunState.Preflight => "Prüfe…",
                 RunState.Scanning => "Scanne…",
                 RunState.Deduplicating => "Dedupliziere…",
+                RunState.Sorting => "Sortiere…",
                 RunState.Moving => "Verschiebe…",
                 RunState.Converting => "Konvertiere…",
                 _ => "Läuft…"
@@ -409,6 +504,7 @@ public sealed partial class MainViewModel
         var ct = CreateRunCancellation();
         try
         {
+            _runLogStartIndex = LogEntries.Count;
             AddLog("Initialisierung…", "INFO");
 
             var (orchestrator, runOptions, auditPath, reportPath) = await Task.Run(() =>
@@ -484,6 +580,7 @@ public sealed partial class MainViewModel
         _watchService.IsBusyCheck = () => IsBusy;
 
         var count = _watchService.Start(Roots);
+        IsWatchModeActive = _watchService.IsActive;
         if (count == 0)
         {
             AddLog("Watch-Mode deaktiviert.", "INFO");
@@ -525,6 +622,7 @@ public sealed partial class MainViewModel
         ErrorSummaryItems.Clear();
 
         var issues = LogEntries
+            .Skip(_runLogStartIndex)
             .Where(e => e.Level is "WARN" or "ERROR")
             .Select(e => $"[{e.Level}] {e.Text}")
             .ToList();
@@ -564,8 +662,9 @@ public sealed partial class MainViewModel
     public void ApplyRunResult(RunResult result)
     {
         LastRunResult = result;
-        LastCandidates = result.AllCandidates;
-        LastDedupeGroups = result.DedupeGroups;
+        LastCandidates = new ObservableCollection<RomCandidate>(result.AllCandidates);
+        LastDedupeGroups = new ObservableCollection<DedupeResult>(result.DedupeGroups);
+        RefreshToolLockState();
 
         Progress = 100;
         DashWinners = result.WinnerCount.ToString();
@@ -575,6 +674,12 @@ public sealed partial class MainViewModel
         DashDuration = $"{result.DurationMs / 1000.0:F1}s";
         var total = result.AllCandidates.Count;
         HealthScore = total > 0 ? $"{100.0 * result.WinnerCount / total:F0}%" : "–";
+
+        var gameCount = result.DedupeGroups.Count;
+        DashGames = gameCount.ToString();
+        var datHits = result.AllCandidates.Count(c => c.DatMatch);
+        DashDatHits = datHits.ToString();
+        DedupeRate = gameCount > 0 ? $"{100.0 * result.LoserCount / (result.WinnerCount + result.LoserCount):F0}%" : "–";
 
         if (result.Status == "blocked")
         {

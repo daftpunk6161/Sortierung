@@ -7,7 +7,7 @@ namespace RomCleanup.Core.SetParsing;
 public static class CueSetParser
 {
     private static readonly System.Text.RegularExpressions.Regex RxFile =
-        new(@"^\s*FILE\s+""(.+?)""\s+",
+        new(@"^\s*FILE\s+(?:""(.+?)""|(\S+))\s+",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase |
             System.Text.RegularExpressions.RegexOptions.Compiled);
 
@@ -43,7 +43,7 @@ public static class CueSetParser
             var match = RxFile.Match(line);
             if (!match.Success) continue;
 
-            var refPath = match.Groups[1].Value;
+            var refPath = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
             var fullPath = Path.IsPathRooted(refPath)
                 ? refPath
                 : Path.GetFullPath(Path.Combine(dir, refPath));

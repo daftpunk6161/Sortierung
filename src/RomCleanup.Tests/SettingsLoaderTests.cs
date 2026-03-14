@@ -118,25 +118,17 @@ public class SettingsLoaderTests : IDisposable
     [Fact]
     public void MergeUserSettings_MissingBoolKeys_PreservesDefaults()
     {
-        // defaults.json sets datFallback=true and useDat=true (hardcoded defaults)
-        // User settings JSON has ONLY logLevel — no bool keys at all
-        var defaultsJson = @"{ ""logLevel"": ""Info"" }";
-        var defaultsPath = Path.Combine(_tempDir, "defaults.json");
-        File.WriteAllText(defaultsPath, defaultsJson);
-
+        // Test that LoadFrom with only a logLevel key doesn't zero-out bools.
+        // We use LoadFrom (not Load) to avoid interference from real user settings.json.
         var userJson = @"{ ""general"": { ""logLevel"": ""Debug"" } }";
         var userPath = Path.Combine(_tempDir, "user-settings.json");
         File.WriteAllText(userPath, userJson);
 
-        // Simulate the merge: Load defaults first, then overlay
-        var settings = SettingsLoader.Load(defaultsPath);
+        var settings = SettingsLoader.LoadFrom(userPath);
 
-        // The hardcoded defaults for bools should be preserved:
-        // - DatFallback defaults to true (must not become false)
-        // - UseDat defaults to true (must not become false)
-        // - AggressiveJunk defaults to false (this is fine either way)
-        Assert.True(settings.Dat.DatFallback, "DatFallback should stay true when missing from user JSON");
-        Assert.True(settings.Dat.UseDat, "UseDat should stay true when missing from user JSON");
+        // Hardcoded defaults for bools should be preserved when missing from JSON:
+        Assert.True(settings.Dat.DatFallback, "DatFallback should stay true when missing from JSON");
+        Assert.True(settings.Dat.UseDat, "UseDat should stay true when missing from JSON");
         Assert.False(settings.General.AggressiveJunk, "AggressiveJunk default is false");
     }
 

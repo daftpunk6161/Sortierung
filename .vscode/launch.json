@@ -41,32 +41,15 @@
             }
         },
         {
-            "name": "Debug: Tests",
-            "type": "node-terminal",
+            "name": "Run: Tests (xUnit)",
+            "type": "coreclr",
             "request": "launch",
-            "command": "dotnet test ${workspaceFolder}/src/RomCleanup.Tests/RomCleanup.Tests.csproj --no-build",
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "name": "Run: simple_sort GUI (STA)",
-            "type": "node-terminal",
-            "request": "launch",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File ${workspaceFolder}\\simple_sort.ps1",
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "name": "Run: Current PowerShell File",
-            "type": "node-terminal",
-            "request": "launch",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ${file}",
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "name": "Run: simple_sort GUI (pwsh)",
-            "type": "node-terminal",
-            "request": "launch",
-            "command": "pwsh.exe -NoProfile -ExecutionPolicy Bypass -STA -File ${workspaceFolder}\\simple_sort.ps1",
-            "cwd": "${workspaceFolder}"
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/RomCleanup.Tests/bin/Debug/net10.0-windows/RomCleanup.Tests.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "stopAtEntry": false
         }
     ]
 }

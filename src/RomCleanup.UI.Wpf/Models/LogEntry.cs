@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 namespace RomCleanup.UI.Wpf.Models;
@@ -83,6 +84,62 @@ public sealed class ToolItem : INotifyPropertyChanged
             if (_isVisible == value) return;
             _isVisible = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsVisible)));
+        }
+    }
+
+    private bool _isPinned;
+    /// <summary>User-pinned to the Quick Access bar.</summary>
+    public bool IsPinned
+    {
+        get => _isPinned;
+        set
+        {
+            if (_isPinned == value) return;
+            _isPinned = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsPinned)));
+        }
+    }
+
+    /// <summary>Timestamp of last use for "Recently Used" section.</summary>
+    public DateTime? LastUsedAt { get; set; }
+
+    private bool _isLocked;
+    /// <summary>True when RequiresRunResult is set but no run result is available yet.</summary>
+    public bool IsLocked
+    {
+        get => _isLocked;
+        set
+        {
+            if (_isLocked == value) return;
+            _isLocked = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsLocked)));
+        }
+    }
+
+    /// <summary>P1-004: True for features that are planned but not yet fully implemented.</summary>
+    public bool IsPlanned { get; init; }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+}
+
+/// <summary>
+/// Groups tool items by category for Expander-based display.
+/// </summary>
+public sealed class ToolCategory : INotifyPropertyChanged
+{
+    public required string Name { get; init; }
+    public required string Icon { get; init; }
+    public ObservableCollection<ToolItem> Items { get; } = [];
+
+    private bool _isExpanded;
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (_isExpanded == value) return;
+            _isExpanded = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded)));
         }
     }
 

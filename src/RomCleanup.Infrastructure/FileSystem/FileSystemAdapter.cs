@@ -172,7 +172,7 @@ public sealed class FileSystemAdapter : IFileSystem
             Directory.CreateDirectory(destDir);
         }
 
-        // Collision handling with __DUP suffix
+        // Collision handling with __DUP suffix (V2-H07: try/catch eliminates TOCTOU)
         var finalDest = fullDest;
         if (File.Exists(finalDest))
         {
@@ -184,9 +184,85 @@ public sealed class FileSystemAdapter : IFileSystem
             for (int i = 1; i <= MaxDuplicateAttempts; i++)
             {
                 finalDest = Path.Combine(dir, $"{baseName}__DUP{i}{ext}");
-                if (!File.Exists(finalDest))
+                try
                 {
-                    File.Move(fullSource, finalDest);
+                    File.Move(fullSource, finalDest, overwrite: false);
+                    moved = true;
+                    break;
+                }
+                catch (IOException)
+                {
+                    // Slot already taken — try next index
+                }
+            }
+
+            if (!moved)
+                throw new IOException($"Could not find free DUP slot after {MaxDuplicateAttempts} attempts.");
+        }
+        else
+        {
+            try
+            {
+                File.Move(fullSource, finalDest, overwrite: false);
+            }
+            catch (IOException) when (File.Exists(finalDest))
+            {
+                // Race: file appeared between our check and move — retry with DUP suffix
+                return MoveItemSafely(sourcePath, destinationPath);
+            }
+        }
+
+        return true;
+    }
+
+    public bool MoveDirectorySafely(string sourcePath, string destinationPath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+            throw new ArgumentException("Source path must not be empty.", nameof(sourcePath));
+        if (string.IsNullOrWhiteSpace(destinationPath))
+            throw new ArgumentException("Destination path must not be empty.", nameof(destinationPath));
+
+        var fullSource = Path.GetFullPath(sourcePath).TrimEnd(Path.DirectorySeparatorChar);
+        var fullDest = Path.GetFullPath(destinationPath).TrimEnd(Path.DirectorySeparatorChar);
+
+        if (string.Equals(fullSource, fullDest, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Source and destination are the same path.");
+
+        if (!Directory.Exists(fullSource))
+            throw new DirectoryNotFoundException($"Source directory not found: {fullSource}");
+
+        // Block reparse points on source
+        var sourceInfo = new DirectoryInfo(fullSource);
+        if ((sourceInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidOperationException("Blocked: Source directory is a reparse point.");
+
+        // Ensure destination parent exists
+        var destParent = Path.GetDirectoryName(fullDest);
+        if (!string.IsNullOrEmpty(destParent))
+        {
+            if (Directory.Exists(destParent))
+            {
+                var parentInfo = new DirectoryInfo(destParent);
+                if ((parentInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+                    throw new InvalidOperationException("Blocked: Destination parent is a reparse point.");
+            }
+            Directory.CreateDirectory(destParent);
+        }
+
+        // Collision handling
+        var finalDest = fullDest;
+        if (Directory.Exists(finalDest))
+        {
+            var dirName = Path.GetFileName(fullDest);
+            var parentDir = Path.GetDirectoryName(fullDest) ?? "";
+
+            bool moved = false;
+            for (int i = 1; i <= MaxDuplicateAttempts; i++)
+            {
+                finalDest = Path.Combine(parentDir, $"{dirName}__DUP{i}");
+                if (!Directory.Exists(finalDest))
+                {
+                    Directory.Move(fullSource, finalDest);
                     moved = true;
                     break;
                 }
@@ -197,7 +273,7 @@ public sealed class FileSystemAdapter : IFileSystem
         }
         else
         {
-            File.Move(fullSource, finalDest);
+            Directory.Move(fullSource, finalDest);
         }
 
         return true;

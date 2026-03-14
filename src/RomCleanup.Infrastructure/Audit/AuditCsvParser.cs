@@ -57,4 +57,34 @@ internal static class AuditCsvParser
 
         return fields.ToArray();
     }
+
+    /// <summary>
+    /// Sanitize a CSV field to prevent CSV injection (OWASP).
+    /// Prefixes dangerous leading characters with single quote, but allows plain negative numbers.
+    /// </summary>
+    public static string SanitizeCsvField(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+
+        if (value[0] is '=' or '+' or '@')
+            value = "'" + value;
+        else if (value[0] == '-' && !IsPlainNegativeNumber(value))
+            value = "'" + value;
+
+        if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
+
+        return value;
+    }
+
+    private static bool IsPlainNegativeNumber(string value)
+    {
+        if (value.Length < 2 || value[0] != '-') return false;
+        for (int i = 1; i < value.Length; i++)
+        {
+            if (!char.IsDigit(value[i]) && value[i] != '.')
+                return false;
+        }
+        return true;
+    }
 }

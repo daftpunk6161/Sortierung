@@ -10,6 +10,8 @@ public interface IFileSystem
     string EnsureDirectory(string path);
     IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? allowedExtensions = null);
     bool MoveItemSafely(string sourcePath, string destinationPath);
+    bool MoveDirectorySafely(string sourcePath, string destinationPath)
+        => throw new NotSupportedException("MoveDirectorySafely not implemented.");
     string? ResolveChildPathWithinRoot(string rootPath, string relativePath);
     bool IsReparsePoint(string path);
     void DeleteFile(string path);

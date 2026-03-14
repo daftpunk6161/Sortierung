@@ -298,7 +298,7 @@ internal static class Program
                 SizeBytes = group.Winner.SizeBytes,
                 RegionScore = group.Winner.RegionScore,
                 FormatScore = group.Winner.FormatScore,
-                VersionScore = group.Winner.VersionScore,
+                VersionScore = (int)group.Winner.VersionScore,
                 Console = group.Winner.ConsoleKey ?? "",
                 DatMatch = group.Winner.DatMatch
             });
@@ -317,7 +317,7 @@ internal static class Program
                     SizeBytes = loser.SizeBytes,
                     RegionScore = loser.RegionScore,
                     FormatScore = loser.FormatScore,
-                    VersionScore = loser.VersionScore,
+                    VersionScore = (int)loser.VersionScore,
                     Console = loser.ConsoleKey ?? "",
                     DatMatch = loser.DatMatch
                 });

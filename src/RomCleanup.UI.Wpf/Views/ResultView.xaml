@@ -1,0 +1,241 @@
+<UserControl x:Class="RomCleanup.UI.Wpf.Views.ResultView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="clr-namespace:RomCleanup.UI.Wpf.Converters"
+    xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf">
+  <UserControl.Resources>
+    <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
+    <conv:LogLevelToBrushConverter x:Key="LogLevelToBrush"/>
+    <conv:StringEqualsToVisibilityConverter x:Key="StrEqualsToVis"/>
+    <DataTemplate x:Key="LogEntryTemplate">
+      <StackPanel Orientation="Horizontal">
+        <TextBlock Text="&#x2022; " Foreground="{Binding Level, Converter={StaticResource LogLevelToBrush}}"/>
+        <TextBlock Text="{Binding Text}" Foreground="{Binding Level, Converter={StaticResource LogLevelToBrush}}"
+                   FontFamily="Consolas" FontSize="11"/>
+      </StackPanel>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <Grid Background="{DynamicResource BrushBackground}">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="180" MinWidth="140" MaxWidth="240"/>
+      <ColumnDefinition Width="1"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- ═══ SIDEBAR NAVIGATION ═══════════════════════════════════════════ -->
+    <Border Grid.Column="0" Background="{DynamicResource BrushSurface}" Padding="0,12">
+      <ListBox Background="Transparent" BorderThickness="0"
+               SelectedValue="{Binding SelectedResultSection, Mode=TwoWay}"
+               SelectedValuePath="Content"
+               ItemContainerStyle="{DynamicResource SidebarNavItem}"
+               AutomationProperties.Name="Ergebniskategorien">
+        <ListBoxItem Content="Dashboard" AutomationProperties.Name="Navigation: Dashboard"/>
+        <ListBoxItem Content="Protokoll" AutomationProperties.Name="Navigation: Protokoll"/>
+        <ListBoxItem Content="Report-Vorschau" AutomationProperties.Name="Navigation: Report-Vorschau"/>
+      </ListBox>
+    </Border>
+
+    <!-- Divider -->
+    <Border Grid.Column="1" Background="{DynamicResource BrushBorder}"/>
+
+    <!-- ═══ CONTENT AREA ═══════════════════════════════════════════════ -->
+    <Grid Grid.Column="2">
+
+      <!-- ── Dashboard ── -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16"
+                    Visibility="{Binding SelectedResultSection, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Dashboard}">
+        <StackPanel>
+
+          <!-- Simple-Mode Ergebnis-Zusammenfassung -->
+          <Border Visibility="{Binding IsSimpleMode, Converter={StaticResource BoolToVis}}"
+                  Background="{DynamicResource BrushSurfaceAlt}" BorderBrush="{DynamicResource BrushAccentCyan}"
+                  BorderThickness="1" CornerRadius="8" Padding="20,16" Margin="0,0,0,12">
+            <StackPanel>
+              <TextBlock Text="ZUSAMMENFASSUNG" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomSM}"/>
+              <WrapPanel Margin="{DynamicResource SpaceBottomSM}">
+                <StackPanel Orientation="Horizontal" Margin="0,0,24,4">
+                  <TextBlock Text="{Binding DashDupes}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource BrushWarning}" VerticalAlignment="Center"/>
+                  <TextBlock Text=" Duplikate erkannt" FontSize="14" Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,24,4">
+                  <TextBlock Text="{Binding DashJunk}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource BrushDanger}" VerticalAlignment="Center"/>
+                  <TextBlock Text=" Junk-Dateien" FontSize="14" Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,24,4">
+                  <TextBlock Text="{Binding DashWinners}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource BrushSuccess}" VerticalAlignment="Center"/>
+                  <TextBlock Text=" Dateien behalten" FontSize="14" Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                </StackPanel>
+              </WrapPanel>
+              <Border Padding="12,8" Background="{DynamicResource BrushSuccessBg}" CornerRadius="6"
+                      Visibility="{Binding ShowStartMoveButton, Converter={StaticResource BoolToVis}}">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="Vorschau abgeschlossen. Bereit zum Aufräumen."
+                             Foreground="{DynamicResource BrushSuccess}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                  <Button Command="{Binding StartMoveCommand}" Content="▶ Jetzt aufräumen"
+                          Margin="16,0,0,0" Padding="16,6" FontWeight="SemiBold"
+                          Background="{DynamicResource BrushDangerBg}" Foreground="{DynamicResource BrushDanger}"
+                          BorderBrush="{DynamicResource BrushDanger}" BorderThickness="1" Cursor="Hand"
+                          AutomationProperties.Name="Jetzt aufräumen"/>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <!-- Dashboard Metrics -->
+          <Border Background="{DynamicResource BrushSurfaceAlt}"
+                  BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="8"
+                  Padding="12,8" Margin="0,0,0,12">
+            <Border.Effect>
+              <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.25" Color="#000000"/>
+            </Border.Effect>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="ERGEBNIS-DASHBOARD" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomSM}"/>
+                <WrapPanel Margin="{DynamicResource SpaceBottomXS}" MaxWidth="1200">
+                  <Border Style="{StaticResource MetricCard}" MinWidth="100" Margin="0,0,8,8">
+                    <StackPanel HorizontalAlignment="Center">
+                      <TextBlock Text="Modus" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                      <TextBlock Text="{Binding DashMode}" Foreground="{DynamicResource BrushTextPrimary}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"
+                                 AutomationProperties.Name="Aktueller Modus" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                    <StackPanel HorizontalAlignment="Center">
+                      <TextBlock Text="Behalten" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                      <TextBlock Text="{Binding DashWinners}" Foreground="{DynamicResource BrushSuccess}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"
+                                 AutomationProperties.Name="Anzahl Behalten" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                    <StackPanel HorizontalAlignment="Center">
+                      <TextBlock Text="Aussortiert" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                      <TextBlock Text="{Binding DashDupes}" Foreground="{DynamicResource BrushWarning}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"
+                                 AutomationProperties.Name="Anzahl Duplikate" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                    <StackPanel HorizontalAlignment="Center">
+                      <TextBlock Text="Junk" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                      <TextBlock Text="{Binding DashJunk}" Foreground="{DynamicResource BrushDanger}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"
+                                 AutomationProperties.Name="Anzahl Junk" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                    <StackPanel HorizontalAlignment="Center">
+                      <TextBlock Text="Laufzeit" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                      <TextBlock Text="{Binding DashDuration}" Foreground="{DynamicResource BrushTextPrimary}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"
+                                 AutomationProperties.Name="Laufzeit" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                    <StackPanel HorizontalAlignment="Center">
+                      <TextBlock Text="Sammlungs-Qualität" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                      <TextBlock Text="{Binding HealthScore}" Foreground="{DynamicResource BrushAccentCyan}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"
+                                 AutomationProperties.Name="Sammlungs-Qualität" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                    <StackPanel HorizontalAlignment="Center">
+                      <TextBlock Text="Spiele" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                      <TextBlock Text="{Binding DashGames}" Foreground="{DynamicResource BrushAccentCyan}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"
+                                 AutomationProperties.Name="Anzahl Spiele" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                    <StackPanel HorizontalAlignment="Center">
+                      <TextBlock Text="Verifiziert" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                      <TextBlock Text="{Binding DashDatHits}" Foreground="{DynamicResource BrushSuccess}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"
+                                 AutomationProperties.Name="Verifizierte Dateien" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                  </Border>
+                  <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                    <StackPanel HorizontalAlignment="Center">
+                      <TextBlock Text="Bereinigungs-Quote" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                      <TextBlock Text="{Binding DedupeRate}" Foreground="{DynamicResource BrushWarning}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"
+                                 AutomationProperties.Name="Bereinigungs-Quote" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                  </Border>
+                </WrapPanel>
+                <!-- Performance Details -->
+                <Expander Header="Performance-Details" IsExpanded="False" Margin="0,0,0,2">
+                  <WrapPanel Margin="0,4,0,0">
+                    <TextBlock Text="{Binding ProgressText}" Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,12,0"/>
+                    <TextBlock Text="{Binding PerfPhase}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,12,0"/>
+                    <TextBlock Text="{Binding PerfFile}" Foreground="{DynamicResource BrushTextMuted}" TextTrimming="CharacterEllipsis" MaxWidth="300"/>
+                  </WrapPanel>
+                </Expander>
+              </StackPanel>
+              <Button Grid.Column="1" Command="{Binding OpenReportCommand}" Width="150" Height="28"
+                      VerticalAlignment="Center" ToolTip="HTML-Bericht öffnen (Ctrl+R)"
+                      AutomationProperties.Name="HTML-Bericht öffnen">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A7;" Margin="{DynamicResource SpaceRightSM}"/>
+                  <TextBlock Text="Bericht öffnen"/>
+                </StackPanel>
+              </Button>
+            </Grid>
+          </Border>
+
+        </StackPanel>
+      </ScrollViewer>
+
+      <!-- ── Protokoll ── -->
+      <DockPanel Visibility="{Binding SelectedResultSection, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Protokoll}">
+        <!-- Log Footer -->
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource BrushSurfaceAlt}"
+                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,1,0,0" Padding="12,8">
+          <StackPanel Orientation="Horizontal">
+            <Button Command="{Binding ClearLogCommand}" Content="Log leeren" MinWidth="118" Padding="8,2" Margin="{DynamicResource SpaceRightSM}" AutomationProperties.Name="Log leeren"/>
+            <Button Content="Log exportieren" MinWidth="130" Padding="8,2"
+                    Command="{Binding FeatureCommands[ExportLog]}" AutomationProperties.Name="Log exportieren"/>
+          </StackPanel>
+        </Border>
+        <ListBox x:Name="listLog"
+                 ItemsSource="{Binding LogEntries}"
+                 Background="{DynamicResource BrushBackground}" Foreground="{DynamicResource BrushAccentCyan}"
+                 FontFamily="Consolas" FontSize="11"
+                 BorderThickness="0" Margin="12"
+                 ItemTemplate="{StaticResource LogEntryTemplate}"
+                 VirtualizingPanel.IsVirtualizing="True"
+                 VirtualizingPanel.VirtualizationMode="Recycling"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 ScrollViewer.CanContentScroll="True"
+                 AutomationProperties.Name="Protokoll-Einträge"/>
+      </DockPanel>
+
+      <!-- ── Report-Vorschau ── -->
+      <DockPanel Visibility="{Binding SelectedResultSection, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Report-Vorschau}">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,16,20,8">
+          <TextBlock Text="REPORT-VORSCHAU" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceRightSM}"/>
+          <Button x:Name="btnRefreshReportPreview" Width="120" Height="28" Content="Aktualisieren"
+                  AutomationProperties.Name="Berichtsvorschau aktualisieren"/>
+        </StackPanel>
+        <Border DockPanel.Dock="Top" Background="{DynamicResource BrushSurfaceAlt}" BorderBrush="{DynamicResource BrushBorder}"
+                BorderThickness="1" CornerRadius="6" Padding="8" Margin="20,0,20,8">
+          <StackPanel>
+            <TextBlock Text="FEHLER-SUMMARY" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomXS}"/>
+            <ListBox MinHeight="60"
+                     ItemsSource="{Binding ErrorSummaryItems}"
+                     Background="{DynamicResource BrushBackground}" Foreground="{DynamicResource BrushWarning}"
+                     BorderThickness="0" FontFamily="Consolas" FontSize="11"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling"
+                     ScrollViewer.CanContentScroll="True"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     AutomationProperties.Name="Fehler-Summary"/>
+          </StackPanel>
+        </Border>
+        <wv2:WebView2 x:Name="webReportPreview" Margin="20,0,20,16" MinHeight="80"
+                     AutomationProperties.Name="HTML-Berichtsvorschau"
+                     AutomationProperties.HelpText="Zeigt den generierten HTML-Report als Vorschau an."/>
+      </DockPanel>
+
+    </Grid>
+  </Grid>
+</UserControl>

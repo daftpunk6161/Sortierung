@@ -196,8 +196,12 @@ app.MapPost("/runs", async (HttpContext ctx, RunManager mgr) =>
     }
 
     var mode = request.Mode ?? "DryRun";
-    if (mode != "DryRun" && mode != "Move")
+    if (!mode.Equals("DryRun", StringComparison.OrdinalIgnoreCase) &&
+        !mode.Equals("Move", StringComparison.OrdinalIgnoreCase))
         return Results.BadRequest(new { error = "mode must be DryRun or Move." });
+
+    // Normalize to canonical casing
+    mode = mode.Equals("Move", StringComparison.OrdinalIgnoreCase) ? "Move" : "DryRun";
 
     // TASK-200: Validate PreferRegions to prevent injection
     if (request.PreferRegions is { Length: > 0 })
@@ -294,6 +298,7 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunMana
     var timeout = TimeSpan.FromSeconds(300);
     var start = DateTime.UtcNow;
     string? lastJson = null;
+    var lastHeartbeat = DateTime.UtcNow;
 
     try
     {
@@ -314,12 +319,20 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunMana
             if (!string.Equals(json, lastJson, StringComparison.Ordinal))
             {
                 lastJson = json;
+                lastHeartbeat = DateTime.UtcNow;
                 if (current.Status != "running")
                 {
                     await WriteSseEvent(writer, encoding, "completed", new { run = current, result = current.Result });
                     break;
                 }
                 await WriteSseEvent(writer, encoding, "status", current);
+            }
+            else if ((DateTime.UtcNow - lastHeartbeat).TotalSeconds >= 15)
+            {
+                // V2-H05: SSE heartbeat to prevent proxy/browser timeouts
+                await writer.WriteAsync(encoding.GetBytes(":\n\n"));
+                await writer.FlushAsync();
+                lastHeartbeat = DateTime.UtcNow;
             }
 
             await Task.Delay(250, ctx.RequestAborted).ContinueWith(_ => { });

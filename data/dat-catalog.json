@@ -1,7 +1,7 @@
 [
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/3do/",
+    "Url": "https://redump.org/datfile/3do/",
     "System": "3DO Interactive Multiplayer",
     "Id": "redump-3do",
     "ConsoleKey": "3DO",
@@ -9,7 +9,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/acd/",
+    "Url": "https://redump.org/datfile/acd/",
     "System": "Acorn - Archimedes CD",
     "Id": "redump-acd",
     "ConsoleKey": "ACD",
@@ -17,7 +17,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/cd32/",
+    "Url": "https://redump.org/datfile/cd32/",
     "System": "Commodore - Amiga CD32",
     "Id": "redump-cd32",
     "ConsoleKey": "CD32",
@@ -25,7 +25,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/cdtv/",
+    "Url": "https://redump.org/datfile/cdtv/",
     "System": "Commodore - Amiga CDTV",
     "Id": "redump-cdtv",
     "ConsoleKey": "CDTV",
@@ -33,7 +33,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/cdi/",
+    "Url": "https://redump.org/datfile/cdi/",
     "System": "Philips - CD-i",
     "Id": "redump-cdi",
     "ConsoleKey": "CDI",
@@ -41,7 +41,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/chihiro/",
+    "Url": "https://redump.org/datfile/chihiro/",
     "System": "Sega - Chihiro",
     "Id": "redump-chihiro",
     "ConsoleKey": "CHI",
@@ -49,7 +49,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/dc/",
+    "Url": "https://redump.org/datfile/dc/",
     "System": "Sega - Dreamcast",
     "Id": "redump-dc",
     "ConsoleKey": "DC",
@@ -57,7 +57,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/fmt/",
+    "Url": "https://redump.org/datfile/fmt/",
     "System": "Fujitsu - FM Towns",
     "Id": "redump-fmt",
     "ConsoleKey": "FMT",
@@ -65,7 +65,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/gc/",
+    "Url": "https://redump.org/datfile/gc/",
     "System": "Nintendo - GameCube",
     "Id": "redump-gc",
     "ConsoleKey": "GC",
@@ -73,7 +73,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/hs/",
+    "Url": "https://redump.org/datfile/hs/",
     "System": "Matsushita - Video Now Color",
     "Id": "redump-hs",
     "ConsoleKey": "HS",
@@ -81,7 +81,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/ksite/",
+    "Url": "https://redump.org/datfile/ksite/",
     "System": "Konami - e-Amusement",
     "Id": "redump-ksite",
     "ConsoleKey": "KSITE",
@@ -89,7 +89,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/lindbergh/",
+    "Url": "https://redump.org/datfile/lindbergh/",
     "System": "Sega - Lindbergh",
     "Id": "redump-lindbergh",
     "ConsoleKey": "LIND",
@@ -97,7 +97,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/mac/",
+    "Url": "https://redump.org/datfile/mac/",
     "System": "Apple - Macintosh",
     "Id": "redump-mac",
     "ConsoleKey": "MAC",
@@ -105,7 +105,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/mcd/",
+    "Url": "https://redump.org/datfile/mcd/",
     "System": "Sega - Mega CD & Sega CD",
     "Id": "redump-mcd",
     "ConsoleKey": "MCD",
@@ -113,7 +113,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/naomi/",
+    "Url": "https://redump.org/datfile/naomi/",
     "System": "Sega - Naomi",
     "Id": "redump-naomi",
     "ConsoleKey": "NAOMI",
@@ -121,7 +121,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/naomi2/",
+    "Url": "https://redump.org/datfile/naomi2/",
     "System": "Sega - Naomi 2",
     "Id": "redump-naomi2",
     "ConsoleKey": "NAO2",
@@ -129,7 +129,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/ngcd/",
+    "Url": "https://redump.org/datfile/ngcd/",
     "System": "SNK - Neo Geo CD",
     "Id": "redump-ngcd",
     "ConsoleKey": "NEOCD",
@@ -137,7 +137,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/nuon/",
+    "Url": "https://redump.org/datfile/nuon/",
     "System": "VM Labs - NUON",
     "Id": "redump-nuon",
     "ConsoleKey": "NUON",
@@ -145,7 +145,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/palm/",
+    "Url": "https://redump.org/datfile/palm/",
     "System": "Palm",
     "Id": "redump-palm",
     "ConsoleKey": "PALM",
@@ -153,7 +153,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/pc/",
+    "Url": "https://redump.org/datfile/pc/",
     "System": "IBM - PC compatible",
     "Id": "redump-pc",
     "ConsoleKey": "IBMPC",
@@ -161,7 +161,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/pc-88/",
+    "Url": "https://redump.org/datfile/pc-88/",
     "System": "NEC - PC-88 series",
     "Id": "redump-pc88",
     "ConsoleKey": "PC88",
@@ -169,7 +169,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/pc-98/",
+    "Url": "https://redump.org/datfile/pc-98/",
     "System": "NEC - PC-98 series",
     "Id": "redump-pc98",
     "ConsoleKey": "PC98",
@@ -177,7 +177,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/pce/",
+    "Url": "https://redump.org/datfile/pce/",
     "System": "NEC - PC Engine CD & TurboGrafx CD",
     "Id": "redump-pce-cd",
     "ConsoleKey": "PCECD",
@@ -185,7 +185,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/pc-fx/",
+    "Url": "https://redump.org/datfile/pc-fx/",
     "System": "NEC - PC-FX & PC-FXGA",
     "Id": "redump-pcfx",
     "ConsoleKey": "PCFX",
@@ -193,7 +193,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/photo-cd/",
+    "Url": "https://redump.org/datfile/photo-cd/",
     "System": "Photo CD",
     "Id": "redump-photo-cd",
     "ConsoleKey": "PCD",
@@ -201,7 +201,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/pippin/",
+    "Url": "https://redump.org/datfile/pippin/",
     "System": "Apple - Bandai Pippin",
     "Id": "redump-pippin",
     "ConsoleKey": "PIPPIN",
@@ -209,7 +209,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/psx/",
+    "Url": "https://redump.org/datfile/psx/",
     "System": "Sony - PlayStation",
     "Id": "redump-ps1",
     "ConsoleKey": "PSX",
@@ -217,7 +217,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/ps2/",
+    "Url": "https://redump.org/datfile/ps2/",
     "System": "Sony - PlayStation 2",
     "Id": "redump-ps2",
     "ConsoleKey": "PS2",
@@ -225,7 +225,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/ps3/",
+    "Url": "https://redump.org/datfile/ps3/",
     "System": "Sony - PlayStation 3",
     "Id": "redump-ps3",
     "ConsoleKey": "PS3",
@@ -233,7 +233,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/psp/",
+    "Url": "https://redump.org/datfile/psp/",
     "System": "Sony - PlayStation Portable",
     "Id": "redump-psp",
     "ConsoleKey": "PSP",
@@ -241,7 +241,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/ss/",
+    "Url": "https://redump.org/datfile/ss/",
     "System": "Sega - Saturn",
     "Id": "redump-ss",
     "ConsoleKey": "SAT",
@@ -249,7 +249,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/vflash/",
+    "Url": "https://redump.org/datfile/vflash/",
     "System": "VTech - V.Flash & V.Smile Pro",
     "Id": "redump-vflash",
     "ConsoleKey": "VFLASH",
@@ -257,7 +257,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/wii/",
+    "Url": "https://redump.org/datfile/wii/",
     "System": "Nintendo - Wii",
     "Id": "redump-wii",
     "ConsoleKey": "WII",
@@ -265,7 +265,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/xbox/",
+    "Url": "https://redump.org/datfile/xbox/",
     "System": "Microsoft - Xbox",
     "Id": "redump-xbox",
     "ConsoleKey": "XBOX",
@@ -273,7 +273,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/xbox360/",
+    "Url": "https://redump.org/datfile/xbox360/",
     "System": "Microsoft - Xbox 360",
     "Id": "redump-xbox360",
     "ConsoleKey": "X360",
@@ -281,7 +281,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/ajcd/",
+    "Url": "https://redump.org/datfile/ajcd/",
     "System": "Atari - Jaguar CD",
     "Id": "redump-ajcd",
     "ConsoleKey": "AJCD",
@@ -289,7 +289,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/gamewave/",
+    "Url": "https://redump.org/datfile/gamewave/",
     "System": "ZAPiT - Game Wave",
     "Id": "redump-gamewave",
     "ConsoleKey": "GW",
@@ -297,7 +297,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/ite/",
+    "Url": "https://redump.org/datfile/ite/",
     "System": "Incredible Technologies - Eagle",
     "Id": "redump-ite",
     "ConsoleKey": "ITE",
@@ -305,7 +305,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/ixl/",
+    "Url": "https://redump.org/datfile/ixl/",
     "System": "Mattel - Fisher-Price iXL",
     "Id": "redump-ixl",
     "ConsoleKey": "IXL",
@@ -313,7 +313,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/ppc/",
+    "Url": "https://redump.org/datfile/ppc/",
     "System": "Pocket PC",
     "Id": "redump-ppc",
     "ConsoleKey": "PPC",
@@ -321,7 +321,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/quizard/",
+    "Url": "https://redump.org/datfile/quizard/",
     "System": "TAB-Austria - Quizard",
     "Id": "redump-quizard",
     "ConsoleKey": "QUIZ",
@@ -329,7 +329,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/vis/",
+    "Url": "https://redump.org/datfile/vis/",
     "System": "Memorex - Visual Information System",
     "Id": "redump-vis",
     "ConsoleKey": "VIS",
@@ -337,7 +337,7 @@
   },
   {
     "Group": "Redump",
-    "Url": "http://redump.org/datfile/x68k/",
+    "Url": "https://redump.org/datfile/x68k/",
     "System": "Sharp - X68000",
     "Id": "redump-x68k",
     "ConsoleKey": "X68K",

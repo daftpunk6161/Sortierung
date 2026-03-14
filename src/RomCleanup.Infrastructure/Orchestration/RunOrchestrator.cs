@@ -287,6 +287,9 @@ public sealed class RunOrchestrator
                         datMatch = _datIndex.Lookup(consoleKey, hash) is not null;
                 }
 
+                var headerScore = FormatScorer.GetHeaderVariantScore(root, filePath);
+                var sizeTieBreak = FormatScorer.GetSizeTieBreakScore(null, ext, sizeBytes);
+
                 candidates.Add(new RomCandidate
                 {
                     MainPath = filePath,
@@ -295,7 +298,9 @@ public sealed class RunOrchestrator
                     Category = categoryStr,
                     RegionScore = regionScore,
                     FormatScore = fmtScore,
-                    VersionScore = (int)verScore,
+                    VersionScore = verScore,
+                    HeaderScore = headerScore,
+                    SizeTieBreakScore = sizeTieBreak,
                     SizeBytes = sizeBytes,
                     Extension = ext,
                     DatMatch = datMatch,

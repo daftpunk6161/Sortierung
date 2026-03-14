@@ -1,3 +1,5 @@
+using System.Buffers;
+
 namespace RomCleanup.Infrastructure.Hashing;
 
 /// <summary>
@@ -31,12 +33,19 @@ public static class Crc32
     public static string HashStream(Stream s)
     {
         var crc = 0xFFFFFFFFu;
-        var buf = new byte[1_048_576]; // 1 MB buffer
-        int read;
-        while ((read = s.Read(buf, 0, buf.Length)) > 0)
+        var buf = ArrayPool<byte>.Shared.Rent(81_920); // 80 KB — avoids LOH allocation
+        try
         {
-            for (var i = 0; i < read; i++)
-                crc = Table[(crc ^ buf[i]) & 0xFF] ^ (crc >> 8);
+            int read;
+            while ((read = s.Read(buf, 0, buf.Length)) > 0)
+            {
+                for (var i = 0; i < read; i++)
+                    crc = Table[(crc ^ buf[i]) & 0xFF] ^ (crc >> 8);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buf);
         }
         crc ^= 0xFFFFFFFFu;
         return crc.ToString("x8");

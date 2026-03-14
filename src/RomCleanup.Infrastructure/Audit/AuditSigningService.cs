@@ -373,41 +373,12 @@ public sealed class AuditSigningService
     /// <summary>
     /// Sanitize a CSV field to prevent CSV injection.
     /// </summary>
-    public static string SanitizeCsvField(string value)
-    {
-        if (string.IsNullOrEmpty(value)) return value;
-
-        // Prefix with single quote if starts with dangerous characters
-        if (value.Length > 0 && value[0] is '=' or '+' or '@')
-            value = "'" + value;
-        else if (value[0] == '-' && !IsPlainNegativeNumber(value))
-            value = "'" + value;
-
-        // Quote if contains comma, newline, or double-quote
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
-            return "\"" + value.Replace("\"", "\"\"") + "\"";
-
-        return value;
-    }
+    public static string SanitizeCsvField(string value) => AuditCsvParser.SanitizeCsvField(value);
 
     private static void AppendRollbackRow(string path, string action, string from, string to, string status)
     {
         var timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
         var line = $"{SanitizeCsvField(timestamp)},{SanitizeCsvField(action)},{SanitizeCsvField(from)},{SanitizeCsvField(to)},{SanitizeCsvField(status)}\n";
         File.AppendAllText(path, line, Encoding.UTF8);
-    }
-
-    /// <summary>
-    /// Checks if a string is a plain negative number (e.g. "-42", "-3.14") as opposed to a formula like "-2+3".
-    /// </summary>
-    private static bool IsPlainNegativeNumber(string value)
-    {
-        if (value.Length < 2 || value[0] != '-') return false;
-        for (int i = 1; i < value.Length; i++)
-        {
-            if (!char.IsDigit(value[i]) && value[i] != '.')
-                return false;
-        }
-        return true;
     }
 }

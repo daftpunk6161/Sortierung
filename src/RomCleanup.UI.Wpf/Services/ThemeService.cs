@@ -9,7 +9,7 @@ public enum AppTheme { Dark, Light, HighContrast }
 /// Theme switching service. Swaps MergedDictionaries between Dark/Light/HighContrast themes.
 /// Port of WpfHost.ps1 Set-WpfThemeResourceDictionary + Initialize-DesignSystem.
 /// </summary>
-public sealed class ThemeService
+public sealed class ThemeService : IThemeService
 {
     private const string DarkThemeUri = "pack://application:,,,/Themes/SynthwaveDark.xaml";
     private const string LightThemeUri = "pack://application:,,,/Themes/Light.xaml";

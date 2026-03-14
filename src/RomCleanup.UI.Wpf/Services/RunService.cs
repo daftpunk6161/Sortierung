@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.Json;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Core.Classification;
 using RomCleanup.Infrastructure.Audit;
@@ -60,14 +61,17 @@ public sealed class RunService
         {
             var datRepo = new DatRepositoryAdapter();
             hashService = new FileHashService();
-            var consoleMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var datFile in Directory.GetFiles(vm.DatRoot, "*.dat"))
-            {
-                var key = Path.GetFileNameWithoutExtension(datFile);
-                consoleMap.TryAdd(key, datFile);
-            }
+            var consoleMap = BuildConsoleMap(dataDir, vm.DatRoot);
+            onProgress?.Invoke($"DAT: {consoleMap.Count} Konsolen-Zuordnungen in {vm.DatRoot}");
             if (consoleMap.Count > 0)
+            {
                 datIndex = datRepo.GetDatIndex(vm.DatRoot, consoleMap, vm.DatHashType);
+                onProgress?.Invoke($"DAT: {datIndex.TotalEntries} Hashes für {datIndex.ConsoleCount} Konsolen geladen");
+            }
+            else
+            {
+                onProgress?.Invoke("DAT: Keine DAT-Dateien gefunden – DAT-Verifizierung übersprungen");
+            }
         }
 
         FormatConverterAdapter? converter = null;
@@ -145,7 +149,7 @@ public sealed class RunService
                         FileName = Path.GetFileName(g.Winner.MainPath),
                         Extension = g.Winner.Extension, SizeBytes = g.Winner.SizeBytes,
                         RegionScore = g.Winner.RegionScore, FormatScore = g.Winner.FormatScore,
-                        VersionScore = g.Winner.VersionScore, DatMatch = g.Winner.DatMatch
+                        VersionScore = (int)g.Winner.VersionScore, DatMatch = g.Winner.DatMatch
                     });
                     foreach (var l in g.Losers)
                         list.Add(new ReportEntry
@@ -155,7 +159,7 @@ public sealed class RunService
                             FileName = Path.GetFileName(l.MainPath),
                             Extension = l.Extension, SizeBytes = l.SizeBytes,
                             RegionScore = l.RegionScore, FormatScore = l.FormatScore,
-                            VersionScore = l.VersionScore, DatMatch = l.DatMatch
+                            VersionScore = (int)l.VersionScore, DatMatch = l.DatMatch
                         });
                     return list;
                 }).ToList();
@@ -200,5 +204,79 @@ public sealed class RunService
         if (string.IsNullOrEmpty(parent))
             return Path.Combine(fullRoot, siblingName);
         return Path.Combine(parent, siblingName);
+    }
+
+    /// <summary>
+    /// Build console-key → DAT-file mapping using dat-catalog.json and filesystem scan.
+    /// Matches CLI BuildConsoleMap logic: catalog-based mapping first, then fallback scan.
+    /// </summary>
+    private static Dictionary<string, string> BuildConsoleMap(string dataDir, string datRoot)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        var catalogPath = Path.Combine(dataDir, "dat-catalog.json");
+        if (File.Exists(catalogPath))
+        {
+            try
+            {
+                var json = File.ReadAllText(catalogPath);
+                var entries = JsonSerializer.Deserialize<List<DatCatalogEntry>>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (entries != null)
+                {
+                    foreach (var entry in entries)
+                    {
+                        if (string.IsNullOrWhiteSpace(entry.ConsoleKey))
+                            continue;
+
+                        var candidates = new[]
+                        {
+                            Path.Combine(datRoot, entry.Id + ".dat"),
+                            Path.Combine(datRoot, entry.Id + ".xml"),
+                            Path.Combine(datRoot, entry.System + ".dat"),
+                            Path.Combine(datRoot, entry.System + ".xml"),
+                            Path.Combine(datRoot, entry.ConsoleKey + ".dat"),
+                            Path.Combine(datRoot, entry.ConsoleKey + ".xml")
+                        };
+
+                        foreach (var candidate in candidates)
+                        {
+                            if (File.Exists(candidate))
+                            {
+                                map[entry.ConsoleKey] = candidate;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Malformed catalog — fall through to directory scan
+            }
+        }
+
+        // Fallback: scan datRoot for any .dat/.xml files not yet mapped
+        if (Directory.Exists(datRoot))
+        {
+            foreach (var datFile in Directory.GetFiles(datRoot, "*.dat", SearchOption.AllDirectories)
+                         .Concat(Directory.GetFiles(datRoot, "*.xml", SearchOption.AllDirectories)))
+            {
+                var stem = Path.GetFileNameWithoutExtension(datFile).ToUpperInvariant();
+                if (!map.ContainsKey(stem))
+                    map[stem] = datFile;
+            }
+        }
+
+        return map;
+    }
+
+    private sealed class DatCatalogEntry
+    {
+        public string Group { get; set; } = "";
+        public string System { get; set; } = "";
+        public string Id { get; set; } = "";
+        public string ConsoleKey { get; set; } = "";
     }
 }

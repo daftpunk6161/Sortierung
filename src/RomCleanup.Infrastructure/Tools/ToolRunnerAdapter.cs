@@ -16,7 +16,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
     private readonly int _timeoutMinutes;
     private Dictionary<string, string>? _toolHashes;
     private readonly object _toolHashLock = new();
-    private readonly Dictionary<string, (string Hash, DateTime LastWriteUtc)> _hashCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Hash, DateTime LastWriteUtc)> _hashCache = new(StringComparer.OrdinalIgnoreCase);
 
     /// <param name="toolHashesPath">Path to data/tool-hashes.json for SHA256 verification.</param>
     /// <param name="allowInsecureHashBypass">Skip hash check (NOT recommended for production).</param>

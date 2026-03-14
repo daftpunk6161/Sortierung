@@ -13,7 +13,7 @@ namespace RomCleanup.Infrastructure.Analytics;
 /// <summary>
 /// Analytics and diagnostics engine.
 /// Port of RunHelpers.Insights.ps1 — DuplicateInspector, HealthDashboard,
-/// DatCoverageHeatmap, CrossCollectionHints, IncrementalDelta.
+/// DatCoverageHeatmap, CrossCollectionHints.
 /// </summary>
 public sealed class InsightsEngine
 {
@@ -190,83 +190,6 @@ public sealed class InsightsEngine
     }
 
     /// <summary>
-    /// Compute incremental dry-run delta vs. a previous snapshot.
-    /// Port of Get-IncrementalDryRunDelta.
-    /// </summary>
-    public IncrementalDelta GetIncrementalDelta(
-        RunResult result,
-        string? snapshotPath = null,
-        int maxSamples = 12)
-    {
-        var currentKeys = new HashSet<string>(
-            result.DedupeGroups.SelectMany(g => g.Losers.Select(l => l.MainPath)),
-            StringComparer.OrdinalIgnoreCase);
-
-        var previousKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        DateTime? previousTimestamp = null;
-        bool snapshotLoadFailed = false;
-
-        // Load previous snapshot if exists
-        if (snapshotPath is not null && File.Exists(snapshotPath))
-        {
-            try
-            {
-                var json = File.ReadAllText(snapshotPath, Encoding.UTF8);
-                var snapshot = JsonSerializer.Deserialize<SnapshotData>(json);
-                if (snapshot is not null)
-                {
-                    previousKeys = new HashSet<string>(snapshot.LoserPaths ?? [], StringComparer.OrdinalIgnoreCase);
-                    previousTimestamp = snapshot.Timestamp;
-                }
-            }
-            catch (Exception ex)
-            {
-                _log?.Invoke($"Failed to load snapshot: {ex.Message}");
-                snapshotLoadFailed = true;
-            }
-        }
-
-        var added = currentKeys.Except(previousKeys).ToList();
-        var resolved = previousKeys.Except(currentKeys).ToList();
-
-        // Save current snapshot (skip if previous load was corrupt to avoid losing data)
-        if (snapshotPath is not null && !snapshotLoadFailed)
-        {
-            try
-            {
-                var dir = Path.GetDirectoryName(snapshotPath);
-                if (dir is not null) _fs.EnsureDirectory(dir);
-
-                var snapshot = new SnapshotData
-                {
-                    Timestamp = DateTime.UtcNow,
-                    LoserPaths = currentKeys.ToList()
-                };
-                var json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true });
-                var tmpPath = snapshotPath + ".tmp";
-                File.WriteAllText(tmpPath, json, Encoding.UTF8);
-                File.Move(tmpPath, snapshotPath, overwrite: true);
-            }
-            catch (Exception ex)
-            {
-                _log?.Invoke($"Failed to save snapshot: {ex.Message}");
-            }
-        }
-
-        return new IncrementalDelta
-        {
-            SnapshotPath = snapshotPath,
-            PreviousTimestampUtc = previousTimestamp,
-            CurrentCount = currentKeys.Count,
-            PreviousCount = previousKeys.Count,
-            AddedCount = added.Count,
-            ResolvedCount = resolved.Count,
-            AddedSamples = added.Take(maxSamples).ToList(),
-            ResolvedSamples = resolved.Take(maxSamples).ToList()
-        };
-    }
-
-    /// <summary>
     /// Build DAT coverage heatmap rows.
     /// Port of Get-DatCoverageHeatmapRows.
     /// </summary>
@@ -398,12 +321,6 @@ public sealed class InsightsEngine
         if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
             return "\"" + value.Replace("\"", "\"\"") + "\"";
         return value;
-    }
-
-    private sealed class SnapshotData
-    {
-        public DateTime Timestamp { get; set; }
-        public List<string> LoserPaths { get; set; } = [];
     }
 }
 

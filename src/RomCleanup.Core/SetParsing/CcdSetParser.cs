@@ -40,7 +40,7 @@ public static class CcdSetParser
         {
             var companion = Path.Combine(dir, baseName + ext);
             if (!File.Exists(companion))
-                result.Add(companion);
+                result.Add(Path.GetFullPath(companion));
         }
 
         return result;

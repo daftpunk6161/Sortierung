@@ -25,16 +25,16 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    private readonly ThemeService _theme;
+    private readonly IThemeService _theme;
     private readonly IDialogService _dialog;
-    private readonly SettingsService _settings;
+    private readonly ISettingsService _settings;
     private readonly SynchronizationContext? _syncContext;
     private readonly WatchService _watchService = new();
     private CancellationTokenSource? _cts;
 
     public MainViewModel() : this(new ThemeService(), new WpfDialogService()) { }
 
-    public MainViewModel(ThemeService theme, IDialogService dialog, SettingsService? settings = null)
+    public MainViewModel(IThemeService theme, IDialogService dialog, ISettingsService? settings = null)
     {
         _theme = theme;
         _dialog = dialog;
@@ -91,6 +91,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
 
         // Wire watch-mode auto-run trigger
         _watchService.RunTriggered += OnWatchRunTriggered;
+        _watchService.WatcherError += msg => AddLog(msg, "WARN");
     }
 
     // ═══ COMMANDS ═══════════════════════════════════════════════════════
@@ -138,19 +139,41 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    /// <summary>Add a log entry (thread-safe via Dispatcher if needed).</summary>
+    /// <summary>Add a log entry (thread-safe via Dispatcher if needed). Caps at 10,000 entries.</summary>
     public void AddLog(string text, string level = "INFO")
     {
         var dispatcher = System.Windows.Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.CheckAccess())
+        if (dispatcher is null)
         {
-            LogEntries.Add(new LogEntry(text, level));
+            // V2-M03: No WPF Application (unit tests or post-shutdown) — write directly
+            // only if called from the thread that created the VM; discard otherwise.
+            if (_syncContext is null || SynchronizationContext.Current == _syncContext)
+                AddLogCore(text, level);
+            return;
+        }
+        if (dispatcher.CheckAccess())
+        {
+            AddLogCore(text, level);
         }
         else
         {
             dispatcher.InvokeAsync(
-                () => LogEntries.Add(new LogEntry(text, level)));
+                () => AddLogCore(text, level));
         }
+    }
+
+    private const int MaxLogEntries = 10_000;
+
+    private void AddLogCore(string text, string level)
+    {
+        if (LogEntries.Count >= MaxLogEntries)
+        {
+            LogEntries.RemoveAt(0);
+            // Keep _runLogStartIndex consistent after removing oldest entry
+            if (_runLogStartIndex > 0)
+                _runLogStartIndex--;
+        }
+        LogEntries.Add(new LogEntry(text, level));
     }
 
     // ═══ INPC INFRASTRUCTURE ════════════════════════════════════════════
@@ -168,6 +191,26 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
     private void OnRootsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         RefreshStatus();
-        CommandManager.InvalidateRequerySuggested();
+        DeferCommandRequery();
+    }
+
+    private bool _requeryScheduled;
+    /// <summary>P1-008: Batches CommandManager.InvalidateRequerySuggested to one call per dispatcher cycle.</summary>
+    private void DeferCommandRequery()
+    {
+        if (_requeryScheduled) return;
+        _requeryScheduled = true;
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null)
+        {
+            _requeryScheduled = false;
+            CommandManager.InvalidateRequerySuggested();
+            return;
+        }
+        dispatcher.InvokeAsync(() =>
+        {
+            _requeryScheduled = false;
+            CommandManager.InvalidateRequerySuggested();
+        }, System.Windows.Threading.DispatcherPriority.Background);
     }
 }

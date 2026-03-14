@@ -9,32 +9,32 @@ public sealed partial class MainViewModel
 {
     // ═══ PATH PROPERTIES (persisted) ════════════════════════════════════
     private string _trashRoot = "";
-    public string TrashRoot { get => _trashRoot; set => SetField(ref _trashRoot, value); }
+    public string TrashRoot { get => _trashRoot; set { if (SetField(ref _trashRoot, value)) ValidateDirectoryPath(value, nameof(TrashRoot)); } }
 
     private string _datRoot = "";
-    public string DatRoot { get => _datRoot; set { if (SetField(ref _datRoot, value)) RefreshStatus(); } }
+    public string DatRoot { get => _datRoot; set { if (SetField(ref _datRoot, value)) { ValidateDirectoryPath(value, nameof(DatRoot)); RefreshStatus(); } } }
 
     private string _auditRoot = "";
-    public string AuditRoot { get => _auditRoot; set => SetField(ref _auditRoot, value); }
+    public string AuditRoot { get => _auditRoot; set { if (SetField(ref _auditRoot, value)) ValidateDirectoryPath(value, nameof(AuditRoot)); } }
 
     private string _ps3DupesRoot = "";
-    public string Ps3DupesRoot { get => _ps3DupesRoot; set => SetField(ref _ps3DupesRoot, value); }
+    public string Ps3DupesRoot { get => _ps3DupesRoot; set { if (SetField(ref _ps3DupesRoot, value)) ValidateDirectoryPath(value, nameof(Ps3DupesRoot)); } }
 
     // ═══ TOOL PATHS (persisted) ═════════════════════════════════════════
     private string _toolChdman = "";
-    public string ToolChdman { get => _toolChdman; set { if (SetField(ref _toolChdman, value)) RefreshStatus(); } }
+    public string ToolChdman { get => _toolChdman; set { if (SetField(ref _toolChdman, value)) { ValidateToolPath(value, nameof(ToolChdman)); RefreshStatus(); } } }
 
     private string _toolDolphin = "";
-    public string ToolDolphin { get => _toolDolphin; set { if (SetField(ref _toolDolphin, value)) RefreshStatus(); } }
+    public string ToolDolphin { get => _toolDolphin; set { if (SetField(ref _toolDolphin, value)) { ValidateToolPath(value, nameof(ToolDolphin)); RefreshStatus(); } } }
 
     private string _tool7z = "";
-    public string Tool7z { get => _tool7z; set { if (SetField(ref _tool7z, value)) RefreshStatus(); } }
+    public string Tool7z { get => _tool7z; set { if (SetField(ref _tool7z, value)) { ValidateToolPath(value, nameof(Tool7z)); RefreshStatus(); } } }
 
     private string _toolPsxtract = "";
-    public string ToolPsxtract { get => _toolPsxtract; set => SetField(ref _toolPsxtract, value); }
+    public string ToolPsxtract { get => _toolPsxtract; set { if (SetField(ref _toolPsxtract, value)) ValidateToolPath(value, nameof(ToolPsxtract)); } }
 
     private string _toolCiso = "";
-    public string ToolCiso { get => _toolCiso; set => SetField(ref _toolCiso, value); }
+    public string ToolCiso { get => _toolCiso; set { if (SetField(ref _toolCiso, value)) ValidateToolPath(value, nameof(ToolCiso)); } }
 
     // ═══ BOOLEAN FLAGS (persisted) ══════════════════════════════════════
     private bool _sortConsole = true;
@@ -169,6 +169,46 @@ public sealed partial class MainViewModel
     private bool _simpleSort = true;
     public bool SimpleSort { get => _simpleSort; set => SetField(ref _simpleSort, value); }
 
+    // Quick profile selector (STATUS BAR)
+    private int _quickProfileIndex;
+    public int QuickProfileIndex { get => _quickProfileIndex; set => SetField(ref _quickProfileIndex, value); }
+
+    // RF-011: Profile name bound to Einstellungen ComboBox
+    private string _profileName = "Standard";
+    public string ProfileName { get => _profileName; set => SetField(ref _profileName, value); }
+
+    // P1-005 / RD-005: Sidebar-Navigation im Einstellungen-Tab
+    private string _selectedSettingsSection = "Sortieroptionen";
+    public string SelectedSettingsSection
+    {
+        get => _selectedSettingsSection;
+        set => SetField(ref _selectedSettingsSection, value);
+    }
+
+    // Sidebar-Navigation: Werkzeuge-Tab
+    private string _selectedToolsSection = "Schnellzugriff";
+    public string SelectedToolsSection
+    {
+        get => _selectedToolsSection;
+        set => SetField(ref _selectedToolsSection, value);
+    }
+
+    // Sidebar-Navigation: Ergebnis-Tab
+    private string _selectedResultSection = "Dashboard";
+    public string SelectedResultSection
+    {
+        get => _selectedResultSection;
+        set => SetField(ref _selectedResultSection, value);
+    }
+
+    // RD-006: Aktiver Preset-Name für SegmentedControl-Selektion
+    private string? _activePreset;
+    public string? ActivePreset
+    {
+        get => _activePreset;
+        set => SetField(ref _activePreset, value);
+    }
+
     // ═══ CONFLICT POLICY (UX-007: was YesNoCancel hack, now VM property) ═
     private ConflictPolicy _conflictPolicy = ConflictPolicy.Rename;
     public ConflictPolicy ConflictPolicy
@@ -192,6 +232,8 @@ public sealed partial class MainViewModel
     public string GameKeyPreviewOutput { get => _gameKeyPreviewOutput; set => SetField(ref _gameKeyPreviewOutput, value); }
 
     // Theme
+    public string CurrentThemeName => _theme.Current.ToString();
+
     public string ThemeToggleText => _theme.Current switch
     {
         AppTheme.Dark => "☀ Hell",
@@ -235,13 +277,16 @@ public sealed partial class MainViewModel
         ConvertEnabled = false;
         AggressiveJunk = false;
         PreferEU = true; PreferUS = true; PreferJP = true; PreferWORLD = true;
+        ActivePreset = "SafeDryRun";
         RefreshStatus();
     }
 
     private void OnPresetFullSort()
     {
+        DryRun = true;
         SortConsole = true;
         PreferEU = true; PreferUS = true; PreferJP = true; PreferWORLD = true;
+        ActivePreset = "FullSort";
         RefreshStatus();
     }
 
@@ -249,6 +294,7 @@ public sealed partial class MainViewModel
     {
         DryRun = true;
         ConvertEnabled = true;
+        ActivePreset = "Convert";
         RefreshStatus();
     }
 
@@ -272,6 +318,15 @@ public sealed partial class MainViewModel
     {
         _settings.LoadInto(this);
         LastAuditPath = _settings.LastAuditPath;
+
+        // RD-009: Restore persisted theme preference
+        if (Enum.TryParse<AppTheme>(_settings.LastTheme, true, out var savedTheme) && savedTheme != _theme.Current)
+        {
+            _theme.ApplyTheme(savedTheme);
+            OnPropertyChanged(nameof(ThemeToggleText));
+            OnPropertyChanged(nameof(CurrentThemeName));
+        }
+
         RefreshStatus();
     }
 
@@ -282,6 +337,7 @@ public sealed partial class MainViewModel
     {
         _theme.Toggle();
         OnPropertyChanged(nameof(ThemeToggleText));
+        OnPropertyChanged(nameof(CurrentThemeName));
     }
 
     private void OnGameKeyPreview()

@@ -193,6 +193,23 @@ public sealed class ConversionPipeline
                     break;
                 }
 
+                // Skip if final output already exists (don't overwrite)
+                if (!step.IsTemp && File.Exists(step.Output))
+                {
+                    results.Add(new PipelineStepResult
+                    {
+                        Status = "skipped",
+                        Tool = step.Tool,
+                        Action = step.Action,
+                        Input = step.Input,
+                        Output = step.Output,
+                        Skipped = true,
+                        Error = "target-exists"
+                    });
+                    _log?.Invoke($"  SKIPPED: {Path.GetFileName(step.Output)} already exists");
+                    break;
+                }
+
                 var stepResult = ExecuteStep(step);
                 results.Add(stepResult);
 
@@ -261,7 +278,7 @@ public sealed class ConversionPipeline
         return step.Tool.ToLowerInvariant() switch
         {
             "ciso" => [step.Action, step.Input, step.Output],
-            "chdman" => [step.Action, "-i", step.Input, "-o", step.Output, "-f"],
+            "chdman" => [step.Action, "-i", step.Input, "-o", step.Output],
             "dolphintool" => ["convert", "-i", step.Input, "-o", step.Output, "-f", "rvz"],
             "7z" => [step.Action, step.Input, step.Output],
             _ => throw new InvalidOperationException($"Unknown conversion tool: '{step.Tool}'")

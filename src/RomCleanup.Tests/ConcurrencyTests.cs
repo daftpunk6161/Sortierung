@@ -39,8 +39,9 @@ public sealed class ConcurrencyTests : IDisposable
             cache.TryGet($"key-{i % 50}", out _);
         });
 
-        Assert.True(cache.Count > 0);
-        Assert.True(cache.Count <= 100);
+        Assert.InRange(cache.Count, 1, 100);
+        // With 50 unique keys and capacity 100, most should survive
+        Assert.True(cache.Count >= 10, $"Expected at least 10 cached items, got {cache.Count}");
     }
 
     [Fact]
@@ -119,9 +120,9 @@ public sealed class ConcurrencyTests : IDisposable
             store.GetValue<int>($"key-{i % 20}");
         });
 
-        // Should have consistent state
+        // With 20 unique keys, all should be stored
         var state = store.Get();
-        Assert.True(state.Count > 0);
+        Assert.InRange(state.Count, 1, 20);
     }
 
     [Fact]
@@ -142,9 +143,9 @@ public sealed class ConcurrencyTests : IDisposable
                 store.Redo();
         });
 
-        // Should not throw
+        // After undo/redo, value should be within the original range
         var val = store.GetValue<int>("x");
-        Assert.True(val >= 0);
+        Assert.InRange(val, 0, 49);
     }
 
     [Fact]
@@ -166,7 +167,8 @@ public sealed class ConcurrencyTests : IDisposable
         foreach (var w in watchers)
             w.Dispose();
 
-        Assert.True(notifications > 0);
+        // 10 watchers x 100 sets = up to 1000 notifications; at least some must have fired
+        Assert.True(notifications >= 10, $"Expected at least 10 notifications, got {notifications}");
     }
 
     // ── TEST-CONC-04: FileHashService concurrent hashing ──
