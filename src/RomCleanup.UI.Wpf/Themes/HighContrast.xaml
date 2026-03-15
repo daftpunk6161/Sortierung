@@ -146,4 +146,39 @@
         </Setter.Value>
       </Setter>
     </Style>
+
+    <!-- ═══ GUI-061: MAIN SIDEBAR NAV BUTTON ═════════════════════════════ -->
+    <Style x:Key="NavButton" TargetType="RadioButton">
+      <Setter Property="Width" Value="48"/>
+      <Setter Property="Height" Value="44"/>
+      <Setter Property="Margin" Value="4,2"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+      <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="navBd" Background="Transparent" CornerRadius="4"
+                    Padding="4" Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"
+                    BorderThickness="0,0,0,0" BorderBrush="Transparent">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="navBd" Property="Background" Value="{DynamicResource BrushSurface}"/>
+              </Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="navBd" Property="Background" Value="{DynamicResource BrushSurface}"/>
+                <Setter TargetName="navBd" Property="BorderBrush" Value="{DynamicResource BrushAccentCyan}"/>
+                <Setter TargetName="navBd" Property="BorderThickness" Value="3,0,0,0"/>
+                <Setter Property="Foreground" Value="{DynamicResource BrushAccentCyan}"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.4"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
 </ResourceDictionary>

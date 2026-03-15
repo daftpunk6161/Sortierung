@@ -724,7 +724,7 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
     {
         var vm = new MainViewModel(new StubTheme(), _dialog, _settings);
         vm.IsSimpleMode = true;
-        vm.SimpleRegionIndex = 0; // Europa
+        vm.PreferEU = true; vm.PreferDE = true;
         var regions = vm.GetPreferredRegions();
         Assert.Contains("EU", regions);
         Assert.Contains("DE", regions);
@@ -746,7 +746,7 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
     {
         var vm = new MainViewModel(new StubTheme(), _dialog, _settings);
         vm.IsSimpleMode = true;
-        vm.SimpleRegionIndex = 2; // Japan
+        vm.PreferJP = true; vm.PreferASIA = true;
         var regions = vm.GetPreferredRegions();
         Assert.Contains("JP", regions);
         Assert.Contains("ASIA", regions);
@@ -945,5 +945,6 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
         }
 
         public void ShowText(string title, string content) => ShowTextCalls.Add((title, content));
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 }

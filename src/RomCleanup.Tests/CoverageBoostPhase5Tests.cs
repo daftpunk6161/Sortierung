@@ -54,6 +54,7 @@ sealed class P5Dialog : IDialogService
     public string ShowInputBox(string prompt, string title = "", string defaultValue = "")
         => InputBoxResponses.Count > 0 ? InputBoxResponses.Dequeue() : "";
     public void ShowText(string title, string content) => ShowTextCalls.Add(content);
+    public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
 }
 
 file sealed class P5Settings : ISettingsService

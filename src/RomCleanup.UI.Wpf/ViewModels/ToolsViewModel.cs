@@ -4,6 +4,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using RomCleanup.UI.Wpf.Models;
+using RomCleanup.UI.Wpf.Services;
 
 namespace RomCleanup.UI.Wpf.ViewModels;
 
@@ -13,6 +14,8 @@ namespace RomCleanup.UI.Wpf.ViewModels;
 /// </summary>
 public sealed class ToolsViewModel : ObservableObject
 {
+    private readonly ILocalizationService _loc;
+
     // ═══ TOOL ITEMS ═══════════════════════════════════════════════════
     public ObservableCollection<ToolItem> ToolItems { get; } = [];
     public ICollectionView ToolItemsView { get; private set; } = null!;
@@ -69,8 +72,9 @@ public sealed class ToolsViewModel : ObservableObject
         ["UI & Erscheinungsbild"] = "\xE771",
     };
 
-    public ToolsViewModel()
+    public ToolsViewModel(ILocalizationService? loc = null)
     {
+        _loc = loc ?? new LocalizationService();
         InitToolItems();
     }
 
@@ -128,100 +132,100 @@ public sealed class ToolsViewModel : ObservableObject
 
     private void InitToolItems()
     {
-        var items = new (string key, string display, string cat, string desc, string icon, bool needsResult)[]
+        var items = new (string key, string catKey, string icon, bool needsResult)[]
         {
-            // Analyse & Berichte
-            ("QuickPreview",       "Quick-Preview",              "Analyse & Berichte",        "Schnelle ROM-Vorschau (DryRun)",               "\xE8A7", false),
-            ("HealthScore",        "Health-Score",               "Analyse & Berichte",        "Sammlungsqualität prüfen",                     "\xE8CB", true),
-            ("CollectionDiff",     "Collection-Diff",            "Analyse & Berichte",        "Sammlungen vergleichen",                       "\xE8F1", false),
-            ("DuplicateInspector", "Duplikat-Inspektor",         "Analyse & Berichte",        "Duplikate untersuchen",                        "\xE71D", true),
-            ("ConversionEstimate", "Konvertierungs-Schätzung",   "Analyse & Berichte",        "Speicherersparnis berechnen",                  "\xE8EF", true),
-            ("JunkReport",         "Junk-Bericht",               "Analyse & Berichte",        "Detaillierter Junk-Bericht",                   "\xE74D", true),
-            ("RomFilter",          "ROM-Filter",                 "Analyse & Berichte",        "ROM-Sammlung durchsuchen",                     "\xE721", true),
-            ("DuplicateHeatmap",   "Duplikat-Heatmap",           "Analyse & Berichte",        "Duplikatverteilung visualisieren",             "\xEB05", true),
-            ("MissingRom",         "Fehlende ROMs",              "Analyse & Berichte",        "Fehlende ROMs ermitteln",                      "\xE783", true),
-            ("CrossRootDupe",      "Cross-Root-Duplikate",       "Analyse & Berichte",        "Duplikate über mehrere Roots finden",          "\xE8B9", true),
-            ("HeaderAnalysis",     "Header-Analyse",             "Analyse & Berichte",        "ROM-Header analysieren",                       "\xE9D9", true),
-            ("Completeness",       "Vollständigkeit",            "Analyse & Berichte",        "Vollständigkeitsbericht",                      "\xE73E", true),
-            ("DryRunCompare",      "DryRun-Vergleich",           "Analyse & Berichte",        "Zwei DryRun-Ergebnisse vergleichen",           "\xE8F1", false),
-            ("TrendAnalysis",      "Trend-Analyse",              "Analyse & Berichte",        "Historische Trends",                           "\xE9D2", false),
-            ("EmulatorCompat",     "Emulator-Kompatibilität",    "Analyse & Berichte",        "Kompatibilitätsmatrix",                        "\xE7FC", false),
+            // Analysis
+            ("QuickPreview",       "Analysis",       "\xE8A7", false),
+            ("HealthScore",        "Analysis",       "\xE8CB", true),
+            ("CollectionDiff",     "Analysis",       "\xE8F1", false),
+            ("DuplicateInspector", "Analysis",       "\xE71D", true),
+            ("ConversionEstimate", "Analysis",       "\xE8EF", true),
+            ("JunkReport",         "Analysis",       "\xE74D", true),
+            ("RomFilter",          "Analysis",       "\xE721", true),
+            ("DuplicateHeatmap",   "Analysis",       "\xEB05", true),
+            ("MissingRom",         "Analysis",       "\xE783", true),
+            ("CrossRootDupe",      "Analysis",       "\xE8B9", true),
+            ("HeaderAnalysis",     "Analysis",       "\xE9D9", true),
+            ("Completeness",       "Analysis",       "\xE73E", true),
+            ("DryRunCompare",      "Analysis",       "\xE8F1", false),
+            ("TrendAnalysis",      "Analysis",       "\xE9D2", false),
+            ("EmulatorCompat",     "Analysis",       "\xE7FC", false),
 
-            // Konvertierung & Hashing
-            ("ConversionPipeline", "Konvertierungs-Pipeline",    "Konvertierung & Hashing",   "Konvertierungspipeline starten",               "\xE8AB", false),
-            ("NKitConvert",        "NKit-Konvertierung",         "Konvertierung & Hashing",   "NKit-Images konvertieren",                     "\xE8AB", false),
-            ("ConvertQueue",       "Konvert-Warteschlange",      "Konvertierung & Hashing",   "Warteschlange anzeigen",                       "\xE8CB", false),
-            ("ConversionVerify",   "Konvertierung verifizieren", "Konvertierung & Hashing",   "Konvertierte Dateien prüfen",                  "\xE73E", false),
-            ("FormatPriority",     "Format-Priorität",           "Konvertierung & Hashing",   "Format-Prioritätsliste anzeigen",              "\xE8CB", false),
-            ("ParallelHashing",    "Parallel-Hashing",           "Konvertierung & Hashing",   "Hash-Threading konfigurieren (experimentell)", "\xE8CB", false),
-            ("GpuHashing",         "GPU-Hashing",                "Konvertierung & Hashing",   "GPU-beschleunigtes Hashing (experimentell)",  "\xE8CB", false),
+            // Conversion
+            ("ConversionPipeline", "Conversion",     "\xE8AB", false),
+            ("NKitConvert",        "Conversion",     "\xE8AB", false),
+            ("ConvertQueue",       "Conversion",     "\xE8CB", false),
+            ("ConversionVerify",   "Conversion",     "\xE73E", false),
+            ("FormatPriority",     "Conversion",     "\xE8CB", false),
+            ("ParallelHashing",    "Conversion",     "\xE8CB", false),
+            ("GpuHashing",         "Conversion",     "\xE8CB", false),
 
-            // DAT & Verifizierung
-            ("DatAutoUpdate",      "DAT Auto-Update",            "DAT & Verifizierung",       "Lokale DAT-Dateien prüfen",                    "\xE895", false),
-            ("DatDiffViewer",      "DAT-Diff-Viewer",            "DAT & Verifizierung",       "DAT-Versionen vergleichen",                    "\xE8F1", false),
-            ("TosecDat",           "TOSEC-DAT",                  "DAT & Verifizierung",       "TOSEC-DAT importieren",                        "\xE8B5", false),
-            ("CustomDatEditor",    "Custom-DAT-Editor",          "DAT & Verifizierung",       "Eigene DAT-Einträge erstellen",                "\xE70F", false),
-            ("HashDatabaseExport", "Hash-Datenbank",             "DAT & Verifizierung",       "Hash-Datenbank exportieren",                   "\xE792", true),
+            // DatVerify
+            ("DatAutoUpdate",      "DatVerify",      "\xE895", false),
+            ("DatDiffViewer",      "DatVerify",      "\xE8F1", false),
+            ("TosecDat",           "DatVerify",      "\xE8B5", false),
+            ("CustomDatEditor",    "DatVerify",      "\xE70F", false),
+            ("HashDatabaseExport", "DatVerify",      "\xE792", true),
 
-            // Sammlungsverwaltung
-            ("CollectionManager",  "Smart Collection",           "Sammlungsverwaltung",       "Sammlung intelligent verwalten",               "\xE8F1", true),
-            ("CloneListViewer",    "Clone-Liste",                "Sammlungsverwaltung",       "Clone-/Parent-Beziehungen",                    "\xE8B9", true),
-            ("CoverScraper",       "Cover-Scraper",              "Sammlungsverwaltung",       "Cover-Bilder zuordnen",                        "\xE8B9", true),
-            ("GenreClassification","Genre-Klassifikation",       "Sammlungsverwaltung",       "ROMs nach Genre einordnen",                    "\xE8CB", true),
-            ("PlaytimeTracker",    "Spielzeit-Tracker",          "Sammlungsverwaltung",       "RetroArch-Spielzeiten auslesen",               "\xE916", false),
-            ("CollectionSharing",  "Sammlung teilen",            "Sammlungsverwaltung",       "Sammlungsliste exportieren",                   "\xE72D", true),
-            ("VirtualFolderPreview","Virtuelle Ordner",          "Sammlungsverwaltung",       "Virtuelle Ordnerstruktur planen",              "\xE8B7", true),
+            // Collection
+            ("CollectionManager",  "Collection",     "\xE8F1", true),
+            ("CloneListViewer",    "Collection",     "\xE8B9", true),
+            ("CoverScraper",       "Collection",     "\xE8B9", true),
+            ("GenreClassification","Collection",     "\xE8CB", true),
+            ("PlaytimeTracker",    "Collection",     "\xE916", false),
+            ("CollectionSharing",  "Collection",     "\xE72D", true),
+            ("VirtualFolderPreview","Collection",    "\xE8B7", true),
 
-            // Sicherheit & Integrität
-            ("IntegrityMonitor",   "Integritäts-Monitor",        "Sicherheit & Integrität",   "Baseline erstellen/prüfen",                    "\xE72E", true),
-            ("BackupManager",      "Backup-Manager",             "Sicherheit & Integrität",   "Winner-Dateien sichern",                       "\xE8F1", true),
-            ("Quarantine",         "Quarantäne",                 "Sicherheit & Integrität",   "Verdächtige Dateien isolieren",                "\xE7BA", true),
-            ("RuleEngine",         "Regel-Engine",               "Sicherheit & Integrität",   "Aktive Regeln anzeigen",                       "\xE713", false),
-            ("PatchEngine",        "Patch-Engine",               "Sicherheit & Integrität",   "ROM-Patches anwenden",                         "\xE70F", false),
-            ("HeaderRepair",       "Header-Reparatur",           "Sicherheit & Integrität",   "ROM-Header reparieren",                        "\xE90F", false),
-            ("RollbackQuick",      "Schnell-Rollback",           "Sicherheit & Integrität",   "Letzten Lauf rückgängig machen",               "\xE777", false),
-            ("RollbackUndo",       "Rollback Undo",              "Sicherheit & Integrität",   "Rollback rückgängig machen",                   "\xE7A7", false),
-            ("RollbackRedo",       "Rollback Redo",              "Sicherheit & Integrität",   "Rollback wiederherstellen",                    "\xE7A6", false),
+            // Security
+            ("IntegrityMonitor",   "Security",       "\xE72E", true),
+            ("BackupManager",      "Security",       "\xE8F1", true),
+            ("Quarantine",         "Security",       "\xE7BA", true),
+            ("RuleEngine",         "Security",       "\xE713", false),
+            ("PatchEngine",        "Security",       "\xE70F", false),
+            ("HeaderRepair",       "Security",       "\xE90F", false),
+            ("RollbackQuick",      "Security",       "\xE777", false),
+            ("RollbackUndo",       "Security",       "\xE7A7", false),
+            ("RollbackRedo",       "Security",       "\xE7A6", false),
 
-            // Workflow & Automatisierung
-            ("CommandPalette",     "Command-Palette",            "Workflow & Automatisierung", "Befehle suchen und ausführen",                 "\xE721", false),
-            ("SplitPanelPreview",  "Split-Panel",                "Workflow & Automatisierung", "Winner/Loser-Vergleich",                       "\xE8A0", true),
-            ("FilterBuilder",      "Filter-Builder",             "Workflow & Automatisierung", "Erweiterte Filter erstellen",                  "\xE71C", true),
-            ("SortTemplates",      "Sort-Templates",             "Workflow & Automatisierung", "Sortierungs-Vorlagen",                         "\xE8CB", false),
-            ("PipelineEngine",     "Pipeline-Engine",            "Workflow & Automatisierung", "Pipeline-Status anzeigen",                     "\xE8CB", false),
-            ("SystemTray",         "System-Tray",                "Workflow & Automatisierung", "System-Tray ein-/ausschalten",                 "\xE8CB", false),
-            ("SchedulerAdvanced",  "Cron-Tester",                "Workflow & Automatisierung", "Cron-Expressions testen",                     "\xE787", false),
-            ("RulePackSharing",    "Regel-Pakete",               "Workflow & Automatisierung", "Regeln importieren/exportieren",               "\xE72D", false),
-            ("ArcadeMergeSplit",   "Arcade Merge/Split",         "Workflow & Automatisierung", "Arcade-Sets analysieren",                     "\xE8CB", false),
-            ("AutoProfile",        "Auto-Profil",                "Workflow & Automatisierung", "Profil automatisch erkennen",                  "\xE713", false),
+            // Workflow
+            ("CommandPalette",     "Workflow",       "\xE721", false),
+            ("SplitPanelPreview",  "Workflow",       "\xE8A0", true),
+            ("FilterBuilder",      "Workflow",       "\xE71C", true),
+            ("SortTemplates",      "Workflow",       "\xE8CB", false),
+            ("PipelineEngine",     "Workflow",       "\xE8CB", false),
+            ("SystemTray",         "Workflow",       "\xE8CB", false),
+            ("SchedulerAdvanced",  "Workflow",       "\xE787", false),
+            ("RulePackSharing",    "Workflow",       "\xE72D", false),
+            ("ArcadeMergeSplit",   "Workflow",       "\xE8CB", false),
+            ("AutoProfile",        "Workflow",       "\xE713", false),
 
-            // Export & Integration
-            ("PdfReport",          "PDF-Report",                 "Export & Integration",       "HTML-Report für PDF-Druck",                    "\xE8A5", true),
-            ("LauncherIntegration","Launcher-Integration",       "Export & Integration",       "RetroArch-Playlist exportieren",               "\xE768", true),
-            ("ToolImport",         "Tool-Import",                "Export & Integration",       "DAT-Dateien importieren",                      "\xE8B5", false),
-            ("DuplicateExport",    "Duplikate exportieren",      "Export & Integration",       "Duplikatliste als CSV speichern",              "\xE792", true),
-            ("ExportCsv",          "CSV Export",                 "Export & Integration",       "Sammlung als CSV exportieren",                 "\xE792", true),
-            ("ExportExcel",        "Excel Export",               "Export & Integration",       "Sammlung als Excel-XML exportieren",           "\xE792", true),
+            // Export
+            ("PdfReport",          "Export",         "\xE8A5", true),
+            ("LauncherIntegration","Export",         "\xE768", true),
+            ("ToolImport",         "Export",         "\xE8B5", false),
+            ("DuplicateExport",    "Export",         "\xE792", true),
+            ("ExportCsv",          "Export",         "\xE792", true),
+            ("ExportExcel",        "Export",         "\xE792", true),
 
-            // Infrastruktur & Deployment
-            ("StorageTiering",     "Storage-Tiering",            "Infrastruktur",              "Speicher-Analyse",                             "\xE8CB", true),
-            ("NasOptimization",    "NAS-Optimierung",            "Infrastruktur",              "NAS-Pfad-Infos anzeigen",                     "\xE8CB", false),
-            ("FtpSource",          "FTP-Quelle",                 "Infrastruktur",              "FTP/SFTP-Quelle konfigurieren",               "\xE774", false),
-            ("CloudSync",          "Cloud-Sync",                 "Infrastruktur",              "Cloud-Status prüfen",                          "\xE753", false),
-            ("PluginMarketplaceFeature","Plugin-Marktplatz",     "Infrastruktur",              "Plugin-System (geplant)",                      "\xE71B", false),
-            ("PluginManager",      "Plugin-Manager",             "Infrastruktur",              "Installierte Plugins verwalten",               "\xE71B", false),
-            ("PortableMode",       "Portable Modus",             "Infrastruktur",              "Portable-Modus Status",                        "\xE8CB", false),
-            ("DockerContainer",    "Docker",                     "Infrastruktur",              "Docker-Dateien generieren",                    "\xE8CB", false),
-            ("MobileWebUI",        "Mobile Web UI",              "Infrastruktur",              "REST API starten",                             "\xE774", false),
-            ("WindowsContextMenu", "Kontextmenü",                "Infrastruktur",              "Windows-Kontextmenü registrieren",             "\xE8CB", false),
-            ("HardlinkMode",       "Hardlink-Modus",             "Infrastruktur",              "Hardlink-Schätzung berechnen",                 "\xE8CB", true),
-            ("MultiInstanceSync",  "Multi-Instanz",              "Infrastruktur",              "Lock-Dateien verwalten",                       "\xE8CB", false),
+            // Infrastructure
+            ("StorageTiering",     "Infra",          "\xE8CB", true),
+            ("NasOptimization",    "Infra",          "\xE8CB", false),
+            ("FtpSource",          "Infra",          "\xE774", false),
+            ("CloudSync",          "Infra",          "\xE753", false),
+            ("PluginMarketplaceFeature","Infra",     "\xE71B", false),
+            ("PluginManager",      "Infra",          "\xE71B", false),
+            ("PortableMode",       "Infra",          "\xE8CB", false),
+            ("DockerContainer",    "Infra",          "\xE8CB", false),
+            ("MobileWebUI",        "Infra",          "\xE774", false),
+            ("WindowsContextMenu", "Infra",          "\xE8CB", false),
+            ("HardlinkMode",       "Infra",          "\xE8CB", true),
+            ("MultiInstanceSync",  "Infra",          "\xE8CB", false),
 
-            // UI & Erscheinungsbild
-            ("Accessibility",      "Barrierefreiheit",           "UI & Erscheinungsbild",      "Schriftgröße/Kontrast anpassen",               "\xE7F8", false),
-            ("ThemeEngine",        "Theme-Engine",               "UI & Erscheinungsbild",      "Theme-Optionen",                               "\xE771", false),
+            // UI
+            ("Accessibility",      "UI",             "\xE7F8", false),
+            ("ThemeEngine",        "UI",             "\xE771", false),
         };
-        foreach (var (key, display, cat, desc, icon, needsResult) in items)
+        foreach (var (key, catKey, icon, needsResult) in items)
         {
             var isPlanned = key is "FtpSource" or "CloudSync" or "PluginMarketplaceFeature" or "PluginManager"
                 or "ParallelHashing" or "GpuHashing" or "DockerContainer" or "MultiInstanceSync"
@@ -230,7 +234,7 @@ public sealed class ToolsViewModel : ObservableObject
                 or "CoverScraper" or "CollectionSharing";
             var item = new ToolItem
             {
-                Key = key, DisplayName = display, Category = cat, Description = desc,
+                Key = key, DisplayName = _loc[$"Tool.{key}"], Category = _loc[$"Tool.Cat.{catKey}"], Description = _loc[$"Tool.{key}.Desc"],
                 Icon = icon, RequiresRunResult = needsResult,
                 IsPinned = DefaultPinnedKeys.Contains(key),
                 IsLocked = needsResult,

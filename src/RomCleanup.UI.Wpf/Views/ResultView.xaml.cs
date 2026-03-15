@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -5,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using RomCleanup.UI.Wpf.ViewModels;
+using ScottPlot;
 
 namespace RomCleanup.UI.Wpf.Views;
 
@@ -41,16 +43,88 @@ public partial class ResultView : UserControl
         };
         vm.LogEntries.CollectionChanged += _logScrollHandler;
 
+        // GUI-104/106: Refresh charts when run result becomes available
+        vm.PropertyChanged += OnVmPropertyChanged;
+
         if (!string.IsNullOrEmpty(vm.LastReportPath) && File.Exists(vm.LastReportPath))
             RefreshReportPreview();
+
+        if (vm.HasRunResult)
+            RefreshCharts(vm);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         _logScrollTimer.Stop();
-        if (_logScrollHandler is not null && DataContext is MainViewModel vm)
-            vm.LogEntries.CollectionChanged -= _logScrollHandler;
+        if (DataContext is MainViewModel vm)
+        {
+            if (_logScrollHandler is not null)
+                vm.LogEntries.CollectionChanged -= _logScrollHandler;
+            vm.PropertyChanged -= OnVmPropertyChanged;
+        }
         _logScrollHandler = null;
+    }
+
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.HasRunResult) && sender is MainViewModel vm && vm.HasRunResult)
+            RefreshCharts(vm);
+    }
+
+    /// <summary>GUI-104/106: Populate ScottPlot charts with run result data.</summary>
+    private void RefreshCharts(MainViewModel vm)
+    {
+        // ── Pie Chart: Console Distribution ──
+        var items = vm.ConsoleDistribution;
+        chartConsolePie.Plot.Clear();
+        if (items.Count > 0)
+        {
+            var slices = new List<PieSlice>();
+            var palette = new ScottPlot.Palettes.Category10();
+            for (int i = 0; i < items.Count; i++)
+            {
+                slices.Add(new PieSlice
+                {
+                    Value = items[i].FileCount,
+                    Label = items[i].DisplayName,
+                    FillColor = palette.GetColor(i),
+                });
+            }
+            var pie = chartConsolePie.Plot.Add.Pie(slices);
+            pie.DonutFraction = 0.4;
+            chartConsolePie.Plot.ShowLegend();
+        }
+        StyleChart(chartConsolePie);
+        chartConsolePie.Refresh();
+
+        // ── Bar Chart: Before/After (Keep vs Move vs Junk) ──
+        chartBeforeAfter.Plot.Clear();
+        if (int.TryParse(vm.DashGames, out var totalGames) && totalGames > 0)
+        {
+            int.TryParse(vm.DashDupes, out var dupes);
+            int.TryParse(vm.DashJunk, out var junk);
+            int kept = totalGames - dupes - junk;
+
+            double[] values = [kept, dupes, junk];
+            var bar = chartBeforeAfter.Plot.Add.Bars(values);
+            bar.Color = ScottPlot.Color.FromHex("#00d4ff");
+
+            ScottPlot.TickGenerators.NumericManual ticks = new();
+            ticks.AddMajor(0, "Keep");
+            ticks.AddMajor(1, "Move");
+            ticks.AddMajor(2, "Junk");
+            chartBeforeAfter.Plot.Axes.Bottom.TickGenerator = ticks;
+        }
+        StyleChart(chartBeforeAfter);
+        chartBeforeAfter.Refresh();
+    }
+
+    /// <summary>Apply dark theme style consistent with app theme.</summary>
+    private static void StyleChart(ScottPlot.WPF.WpfPlot chart)
+    {
+        chart.Plot.FigureBackground.Color = ScottPlot.Color.FromHex("#1a1a2e");
+        chart.Plot.DataBackground.Color = ScottPlot.Color.FromHex("#16213e");
+        chart.Plot.Axes.Color(ScottPlot.Color.FromHex("#888888"));
     }
 
     /// <summary>Load the last report into the WebView2 preview and update error summary.</summary>
@@ -108,7 +182,7 @@ public partial class ResultView : UserControl
                     FontSize = 12,
                     Margin = new Thickness(8),
                     Name = "webView2Fallback",
-                    VerticalAlignment = VerticalAlignment.Center
+                    VerticalAlignment = System.Windows.VerticalAlignment.Center
                 };
                 panel.Children.Add(fallback);
             }

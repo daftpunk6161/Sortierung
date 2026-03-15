@@ -772,6 +772,7 @@ public sealed class CoverageBoostPhase2Tests : IDisposable
             return defaultVal;
         }
         public void ShowText(string title, string content) => ShowTextCalls.Add((title, content));
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 
     private sealed class StubSettings : ISettingsService

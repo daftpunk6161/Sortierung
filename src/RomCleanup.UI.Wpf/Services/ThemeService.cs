@@ -58,13 +58,18 @@ public sealed class ThemeService : IThemeService
         ApplyTheme(next);
     }
 
+    // GUI-114: Robust theme detection via known URI set instead of fragile substring matching
+    private static readonly HashSet<string> ThemeUris = new(StringComparer.OrdinalIgnoreCase)
+    {
+        DarkThemeUri,
+        LightThemeUri,
+        HighContrastThemeUri,
+    };
+
     private static bool IsThemeDictionary(ResourceDictionary rd)
     {
         if (rd.Source is not null)
-        {
-            var s = rd.Source.OriginalString;
-            return s.Contains("SynthwaveDark") || s.Contains("Light.xaml") || s.Contains("HighContrast");
-        }
+            return ThemeUris.Contains(rd.Source.OriginalString);
         // Legacy sentinel key from programmatic HC dictionary
         return rd.Contains("__HighContrastTheme");
     }

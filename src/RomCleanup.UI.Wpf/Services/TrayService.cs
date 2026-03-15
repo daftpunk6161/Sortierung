@@ -109,6 +109,19 @@ public sealed class TrayService : IDisposable
         }
     }
 
+    /// <summary>GUI-111: Show a balloon tip notification.</summary>
+    public void ShowBalloonTip(string title, string message)
+    {
+        _trayIcon?.ShowBalloonTip(3000, title, message, System.Windows.Forms.ToolTipIcon.Info);
+    }
+
+    /// <summary>GUI-111: Update the tray icon tooltip text.</summary>
+    public void UpdateTooltip(string text)
+    {
+        if (_trayIcon is not null)
+            _trayIcon.Text = text.Length > 63 ? text[..63] : text;
+    }
+
     public void Dispose()
     {
         _window.StateChanged -= OnWindowStateChanged;

@@ -332,9 +332,9 @@ public sealed class WpfNewTests : IDisposable
     {
         var vm = new MainViewModel();
         vm.IsSimpleMode = true;
-        vm.SimpleRegionIndex = 0;
+        vm.PreferEU = true;
         var regions = vm.GetPreferredRegions();
-        Assert.Equal("EU", regions[0]);
+        Assert.Contains("EU", regions);
     }
 
     [Fact]
@@ -342,9 +342,9 @@ public sealed class WpfNewTests : IDisposable
     {
         var vm = new MainViewModel();
         vm.IsSimpleMode = true;
-        vm.SimpleRegionIndex = 1;
+        vm.PreferUS = true;
         var regions = vm.GetPreferredRegions();
-        Assert.Equal("US", regions[0]);
+        Assert.Contains("US", regions);
     }
 
     [Fact]
@@ -352,9 +352,9 @@ public sealed class WpfNewTests : IDisposable
     {
         var vm = new MainViewModel();
         vm.IsSimpleMode = true;
-        vm.SimpleRegionIndex = 2;
+        vm.PreferJP = true;
         var regions = vm.GetPreferredRegions();
-        Assert.Equal("JP", regions[0]);
+        Assert.Contains("JP", regions);
     }
 
     [Fact]
@@ -362,9 +362,9 @@ public sealed class WpfNewTests : IDisposable
     {
         var vm = new MainViewModel();
         vm.IsSimpleMode = true;
-        vm.SimpleRegionIndex = 3;
+        vm.PreferWORLD = true;
         var regions = vm.GetPreferredRegions();
-        Assert.Equal("WORLD", regions[0]);
+        Assert.Contains("WORLD", regions);
     }
 
     [Fact]

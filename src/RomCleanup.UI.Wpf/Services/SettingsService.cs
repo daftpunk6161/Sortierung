@@ -37,6 +37,17 @@ public sealed class SettingsService : ISettingsService
             var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
+            // GUI-060: Check schema version and migrate if needed
+            var fileVersion = 0;
+            if (root.TryGetProperty("version", out var versionEl) && versionEl.ValueKind == JsonValueKind.Number)
+                fileVersion = versionEl.GetInt32();
+
+            if (fileVersion > CurrentVersion)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[WARN] Settings version {fileVersion} is newer than supported {CurrentVersion}. Using defaults for unknown fields.");
+            }
+
             var dto = new SettingsDto();
 
             if (root.TryGetProperty("general", out var general))

@@ -96,6 +96,29 @@ public sealed partial class MainViewModel
     [ObservableProperty]
     private bool _isWatchModeActive;
 
+    /// <summary>GUI-109: Scheduled run interval in minutes (0 = disabled).</summary>
+    private int _schedulerIntervalMinutes;
+    public int SchedulerIntervalMinutes
+    {
+        get => _schedulerIntervalMinutes;
+        set
+        {
+            if (SetProperty(ref _schedulerIntervalMinutes, value))
+                OnPropertyChanged(nameof(SchedulerIntervalDisplay));
+        }
+    }
+
+    public string SchedulerIntervalDisplay => SchedulerIntervalMinutes switch
+    {
+        0 => "–",
+        < 60 => $"{SchedulerIntervalMinutes} min",
+        _ => $"{SchedulerIntervalMinutes / 60} h",
+    };
+
+    /// <summary>GUI-110: Minimize to system tray on close.</summary>
+    [ObservableProperty]
+    private bool _minimizeToTray;
+
     [ObservableProperty]
     private string _datHashType = "SHA1";
 
@@ -225,9 +248,17 @@ public sealed partial class MainViewModel
         set => ConflictPolicy = (ConflictPolicy)value;
     }
 
-    // GameKey preview
+    // GameKey preview — GUI-116: Live preview auto-triggers on input change
     private string _gameKeyPreviewInput = "";
-    public string GameKeyPreviewInput { get => _gameKeyPreviewInput; set => SetProperty(ref _gameKeyPreviewInput, value); }
+    public string GameKeyPreviewInput
+    {
+        get => _gameKeyPreviewInput;
+        set
+        {
+            if (SetProperty(ref _gameKeyPreviewInput, value))
+                OnGameKeyPreview();
+        }
+    }
 
     private string _gameKeyPreviewOutput = "–";
     public string GameKeyPreviewOutput { get => _gameKeyPreviewOutput; set => SetProperty(ref _gameKeyPreviewOutput, value); }
@@ -257,6 +288,7 @@ public sealed partial class MainViewModel
             case "Psxtract": ToolPsxtract = path; break;
             case "Ciso": ToolCiso = path; break;
         }
+        SaveSettings();
     }
 
     private void OnBrowseFolderPath(string? parameter)
@@ -270,6 +302,7 @@ public sealed partial class MainViewModel
             case "Audit": AuditRoot = path; break;
             case "Ps3": Ps3DupesRoot = path; break;
         }
+        SaveSettings();
     }
 
     private void OnPresetSafeDryRun()
@@ -343,6 +376,11 @@ public sealed partial class MainViewModel
 
     private void OnGameKeyPreview()
     {
+        if (string.IsNullOrWhiteSpace(GameKeyPreviewInput))
+        {
+            GameKeyPreviewOutput = "–";
+            return;
+        }
         try
         {
             GameKeyPreviewOutput = Core.GameKeys.GameKeyNormalizer.Normalize(GameKeyPreviewInput);
@@ -356,19 +394,6 @@ public sealed partial class MainViewModel
     /// <summary>Build the preferred regions array from all boolean flags.</summary>
     public string[] GetPreferredRegions()
     {
-        // TASK-032: In simple mode, translate SimpleRegionIndex to region preferences
-        if (IsSimpleMode)
-        {
-            return SimpleRegionIndex switch
-            {
-                0 => ["EU", "DE", "WORLD", "US", "JP"],    // Europa
-                1 => ["US", "WORLD", "EU", "JP"],           // Nordamerika
-                2 => ["JP", "ASIA", "WORLD", "US", "EU"],   // Japan
-                3 => ["WORLD", "EU", "US", "JP"],            // Weltweit
-                _ => ["EU", "US", "WORLD", "JP"]
-            };
-        }
-
         var regions = new List<string>(16);
         if (PreferEU) regions.Add("EU");
         if (PreferUS) regions.Add("US");

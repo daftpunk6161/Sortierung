@@ -15,8 +15,15 @@ namespace RomCleanup.UI.Wpf.ViewModels;
 /// </summary>
 public sealed class RunViewModel : ObservableObject
 {
+    private readonly ILocalizationService _loc;
+
     /// <summary>Raised when command CanExecute should be re-evaluated.</summary>
     public event Action? CommandRequeryRequested;
+
+    public RunViewModel(ILocalizationService? loc = null)
+    {
+        _loc = loc ?? new LocalizationService();
+    }
 
     // ═══ RUN RESULT STATE ═══════════════════════════════════════════════
     private int _runLogStartIndex;
@@ -189,19 +196,19 @@ public sealed class RunViewModel : ObservableObject
     public bool ShowMoveCompleteBanner { get => _showMoveCompleteBanner; set => SetProperty(ref _showMoveCompleteBanner, value); }
 
     // ═══ STATUS INDICATORS ══════════════════════════════════════════════
-    private string _statusRoots = "Roots: –";
+    private string _statusRoots = "";
     public string StatusRoots { get => _statusRoots; set => SetProperty(ref _statusRoots, value); }
 
-    private string _statusTools = "Tools: –";
+    private string _statusTools = "";
     public string StatusTools { get => _statusTools; set => SetProperty(ref _statusTools, value); }
 
-    private string _statusDat = "DAT: –";
+    private string _statusDat = "";
     public string StatusDat { get => _statusDat; set => SetProperty(ref _statusDat, value); }
 
-    private string _statusReady = "Status: –";
+    private string _statusReady = "";
     public string StatusReady { get => _statusReady; set => SetProperty(ref _statusReady, value); }
 
-    private string _statusRuntime = "Laufzeit: –";
+    private string _statusRuntime = "";
     public string StatusRuntime { get => _statusRuntime; set => SetProperty(ref _statusRuntime, value); }
 
     private StatusLevel _rootsStatusLevel = StatusLevel.Missing;
@@ -267,32 +274,32 @@ public sealed class RunViewModel : ObservableObject
     public string GetPhaseDetail(int phase) => phase switch
     {
         1 => HasRunResult && LastRunResult is { } r
-            ? $"Preflight: {(r.Preflight?.ShouldReturn != true ? "✓ OK" : $"✗ Blockiert – {r.Preflight?.Reason}")}"
-            : "Preflight: Konfiguration und Pfade prüfen",
+            ? _loc.Format(r.Preflight?.ShouldReturn != true ? "Run.PreflightOk" : "Run.PreflightBlocked", r.Preflight?.Reason ?? "")
+            : _loc["Run.PreflightDesc"],
         2 => HasRunResult && LastRunResult is { } r2
-            ? $"Scan: {r2.TotalFilesScanned} Dateien gefunden"
-            : "Scan: ROM-Verzeichnisse durchsuchen",
+            ? _loc.Format("Run.ScanDone", r2.TotalFilesScanned)
+            : _loc["Run.ScanDesc"],
         3 => HasRunResult && LastRunResult is { } r3
-            ? $"Dedupe: {r3.WinnerCount} behalten, {r3.LoserCount} Duplikate"
-            : "Dedupe: Duplikate erkennen und beste Version wählen",
-        4 => "Sort: Dateien nach Konsole gruppieren",
+            ? _loc.Format("Run.DedupeDone", r3.WinnerCount, r3.LoserCount)
+            : _loc["Run.DedupeDesc"],
+        4 => _loc["Run.SortDesc"],
         5 => HasRunResult && LastRunResult?.MoveResult is { } mv
-            ? $"Move: {mv.MoveCount} verschoben, {mv.FailCount} Fehler"
-            : "Move: Duplikate in Papierkorb verschieben",
+            ? _loc.Format("Run.MoveDone", mv.MoveCount, mv.FailCount)
+            : _loc["Run.MoveDesc"],
         6 => HasRunResult && LastRunResult is { } r6 && r6.ConvertedCount > 0
-            ? $"Convert: {r6.ConvertedCount} Dateien konvertiert"
-            : "Convert: Formate optimieren (CHD/RVZ/ZIP)",
-        7 => HasRunResult ? $"Fertig – Dauer: {DashDuration}" : "Fertig: Ergebnis und Report",
+            ? _loc.Format("Run.ConvertDone", r6.ConvertedCount)
+            : _loc["Run.ConvertDesc"],
+        7 => HasRunResult ? _loc.Format("Run.AllDone", DashDuration) : _loc["Run.DoneDesc"],
         _ => ""
     };
 
-    private string _stepLabel1 = "Keine Ordner";
+    private string _stepLabel1 = "";
     public string StepLabel1 { get => _stepLabel1; set => SetProperty(ref _stepLabel1, value); }
 
-    private string _stepLabel2 = "Bereit";
+    private string _stepLabel2 = "";
     public string StepLabel2 { get => _stepLabel2; set => SetProperty(ref _stepLabel2, value); }
 
-    private string _stepLabel3 = "F5 drücken";
+    private string _stepLabel3 = "";
     public string StepLabel3 { get => _stepLabel3; set => SetProperty(ref _stepLabel3, value); }
 
     // ═══ CANCELLATION ═══════════════════════════════════════════════════
@@ -321,7 +328,7 @@ public sealed class RunViewModel : ObservableObject
         }
         try { cts?.Cancel(); } catch (ObjectDisposedException) { }
         CurrentRunState = RunState.Cancelled;
-        BusyHint = "Abbruch angefordert…";
+        BusyHint = _loc["Run.CancelRequested"];
     }
 
     public void TransitionTo(RunState newState) => CurrentRunState = newState;
@@ -352,16 +359,16 @@ public sealed class RunViewModel : ObservableObject
 
         if (result.Status == "blocked")
         {
-            addLog?.Invoke($"Preflight blockiert: {result.Preflight?.Reason}", "ERROR");
+            addLog?.Invoke(_loc.Format("Run.LogPreflight", result.Preflight?.Reason ?? ""), "ERROR");
         }
         else
         {
-            addLog?.Invoke($"Scan: {result.TotalFilesScanned} Dateien", "INFO");
-            addLog?.Invoke($"Dedupe: Keep={result.WinnerCount}, Move={result.LoserCount}, Junk={junkCount}", "INFO");
+            addLog?.Invoke(_loc.Format("Run.LogScan", result.TotalFilesScanned), "INFO");
+            addLog?.Invoke(_loc.Format("Run.LogDedupe", result.WinnerCount, result.LoserCount, junkCount), "INFO");
             if (result.MoveResult is { } mv)
-                addLog?.Invoke($"Verschoben: {mv.MoveCount}, Fehler: {mv.FailCount}", mv.FailCount > 0 ? "WARN" : "INFO");
+                addLog?.Invoke(_loc.Format("Run.LogMoved", mv.MoveCount, mv.FailCount), mv.FailCount > 0 ? "WARN" : "INFO");
             if (result.ConvertedCount > 0)
-                addLog?.Invoke($"Konvertiert: {result.ConvertedCount}", "INFO");
+                addLog?.Invoke(_loc.Format("Run.LogConverted", result.ConvertedCount), "INFO");
         }
     }
 
@@ -392,8 +399,8 @@ public sealed class RunViewModel : ObservableObject
     {
         bool hasRoots = rootCount > 0;
         RootsStatusLevel = hasRoots ? StatusLevel.Ok : StatusLevel.Missing;
-        StatusRoots = hasRoots ? $"{rootCount} Ordner konfiguriert" : "Keine Ordner";
-        StepLabel1 = hasRoots ? $"{rootCount} Ordner" : "Keine Ordner";
+        StatusRoots = hasRoots ? _loc.Format("Run.RootsConfigured", rootCount) : _loc["Run.NoFolders"];
+        StepLabel1 = hasRoots ? _loc.Format("Run.FolderCount", rootCount) : _loc["Run.NoFolders"];
 
         bool hasChdman = !string.IsNullOrWhiteSpace(setup.ToolChdman) && File.Exists(setup.ToolChdman);
         bool has7z = !string.IsNullOrWhiteSpace(setup.Tool7z) && File.Exists(setup.Tool7z);
@@ -405,32 +412,32 @@ public sealed class RunViewModel : ObservableObject
         ToolsStatusLevel = (hasChdman || has7z) ? StatusLevel.Ok
             : (anyToolSpecified || setup.ConvertEnabled) ? StatusLevel.Warning
             : StatusLevel.Missing;
-        StatusTools = ToolsStatusLevel == StatusLevel.Ok ? $"{toolCount} Tools gefunden"
-            : ToolsStatusLevel == StatusLevel.Warning ? "Tools nicht gefunden" : "Keine Tools";
+        StatusTools = ToolsStatusLevel == StatusLevel.Ok ? _loc.Format("Run.ToolsFound", toolCount)
+            : ToolsStatusLevel == StatusLevel.Warning ? _loc["Run.ToolsNotFound"] : _loc["Run.NoTools"];
 
-        ChdmanStatusText = string.IsNullOrWhiteSpace(setup.ToolChdman) ? "–" : hasChdman ? "✓ Gefunden" : "✗ Nicht gefunden";
-        DolphinStatusText = string.IsNullOrWhiteSpace(setup.ToolDolphin) ? "–" : hasDolphin ? "✓ Gefunden" : "✗ Nicht gefunden";
-        SevenZipStatusText = string.IsNullOrWhiteSpace(setup.Tool7z) ? "–" : has7z ? "✓ Gefunden" : "✗ Nicht gefunden";
-        PsxtractStatusText = string.IsNullOrWhiteSpace(setup.ToolPsxtract) ? "–" : hasPsxtract ? "✓ Gefunden" : "✗ Nicht gefunden";
-        CisoStatusText = string.IsNullOrWhiteSpace(setup.ToolCiso) ? "–" : hasCiso ? "✓ Gefunden" : "✗ Nicht gefunden";
+        ChdmanStatusText = string.IsNullOrWhiteSpace(setup.ToolChdman) ? "–" : hasChdman ? _loc["Run.ToolFound"] : _loc["Run.ToolMissing"];
+        DolphinStatusText = string.IsNullOrWhiteSpace(setup.ToolDolphin) ? "–" : hasDolphin ? _loc["Run.ToolFound"] : _loc["Run.ToolMissing"];
+        SevenZipStatusText = string.IsNullOrWhiteSpace(setup.Tool7z) ? "–" : has7z ? _loc["Run.ToolFound"] : _loc["Run.ToolMissing"];
+        PsxtractStatusText = string.IsNullOrWhiteSpace(setup.ToolPsxtract) ? "–" : hasPsxtract ? _loc["Run.ToolFound"] : _loc["Run.ToolMissing"];
+        CisoStatusText = string.IsNullOrWhiteSpace(setup.ToolCiso) ? "–" : hasCiso ? _loc["Run.ToolFound"] : _loc["Run.ToolMissing"];
 
         bool datRootValid = !string.IsNullOrWhiteSpace(setup.DatRoot) && Directory.Exists(setup.DatRoot);
         DatStatusLevel = !setup.UseDat ? StatusLevel.Missing
             : datRootValid ? StatusLevel.Ok
             : !string.IsNullOrWhiteSpace(setup.DatRoot) ? StatusLevel.Warning
             : StatusLevel.Warning;
-        StatusDat = DatStatusLevel == StatusLevel.Ok ? "DAT aktiv"
-            : DatStatusLevel == StatusLevel.Warning ? "DAT-Pfad ungültig" : "DAT deaktiviert";
+        StatusDat = DatStatusLevel == StatusLevel.Ok ? _loc["Run.DatActive"]
+            : DatStatusLevel == StatusLevel.Warning ? _loc["Run.DatPathInvalid"] : _loc["Run.DatDisabled"];
 
         ReadyStatusLevel = !hasRoots ? StatusLevel.Blocked
             : ToolsStatusLevel == StatusLevel.Warning ? StatusLevel.Warning
             : StatusLevel.Ok;
         StatusReady = ReadyStatusLevel switch
         {
-            StatusLevel.Ok => "Startbereit ✓",
-            StatusLevel.Warning => "Startbereit (Warnung) ⚠",
-            StatusLevel.Blocked => "Nicht bereit ✗",
-            _ => "Status: –"
+            StatusLevel.Ok => _loc["Run.Ready"],
+            StatusLevel.Warning => _loc["Run.ReadyWarning"],
+            StatusLevel.Blocked => _loc["Run.NotReady"],
+            _ => ""
         };
 
         if (IsBusy)
@@ -438,24 +445,24 @@ public sealed class RunViewModel : ObservableObject
             CurrentStep = 2;
             StepLabel3 = _runState switch
             {
-                RunState.Preflight => "Prüfe…",
-                RunState.Scanning => "Scanne…",
-                RunState.Deduplicating => "Dedupliziere…",
-                RunState.Sorting => "Sortiere…",
-                RunState.Moving => "Verschiebe…",
-                RunState.Converting => "Konvertiere…",
-                _ => "Läuft…"
+                RunState.Preflight => _loc["Run.PhaseChecking"],
+                RunState.Scanning => _loc["Run.PhaseScanning"],
+                RunState.Deduplicating => _loc["Run.PhaseDeduplicating"],
+                RunState.Sorting => _loc["Run.PhaseSorting"],
+                RunState.Moving => _loc["Run.PhaseMoving"],
+                RunState.Converting => _loc["Run.PhaseConverting"],
+                _ => _loc["Run.PhaseRunning"]
             };
         }
         else if (_runState is RunState.Completed or RunState.CompletedDryRun)
         {
             CurrentStep = 3;
-            StepLabel3 = _runState == RunState.CompletedDryRun ? "Vorschau fertig" : "Abgeschlossen";
+            StepLabel3 = _runState == RunState.CompletedDryRun ? _loc["Run.PreviewDone"] : _loc["Run.Completed"];
         }
         else
         {
             CurrentStep = hasRoots ? 1 : 0;
-            StepLabel3 = "F5 drücken";
+            StepLabel3 = _loc["Run.PressF5"];
         }
     }
 

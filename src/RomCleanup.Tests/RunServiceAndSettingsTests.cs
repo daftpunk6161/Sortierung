@@ -348,5 +348,6 @@ public sealed class RunServiceAndSettingsTests : IDisposable
         public ConfirmResult YesNoCancel(string message, string title = "Frage") => ConfirmResult.Yes;
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => defaultValue;
         public void ShowText(string title, string content) { }
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 }

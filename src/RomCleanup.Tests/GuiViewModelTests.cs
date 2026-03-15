@@ -550,23 +550,33 @@ public class GuiViewModelTests
     [Fact]
     public void GetPreferredRegions_SimpleMode_Index0_ReturnsEuropaOrder()
     {
-        var vm = new MainViewModel { IsSimpleMode = true, SimpleRegionIndex = 0 };
+        var vm = new MainViewModel { IsSimpleMode = true };
+        vm.PreferEU = true; vm.PreferDE = true; vm.PreferWORLD = true; vm.PreferUS = true; vm.PreferJP = true;
         var regions = vm.GetPreferredRegions();
-        Assert.Equal("EU", regions[0]);
+        Assert.Contains("EU", regions);
         Assert.Contains("DE", regions);
         Assert.Contains("WORLD", regions);
     }
 
     [Theory]
-    [InlineData(0, "EU")]
-    [InlineData(1, "US")]
-    [InlineData(2, "JP")]
-    [InlineData(3, "WORLD")]
-    public void GetPreferredRegions_SimpleMode_FirstRegionCorrect(int index, string expectedFirst)
+    [InlineData("EU")]
+    [InlineData("US")]
+    [InlineData("JP")]
+    [InlineData("WORLD")]
+    public void GetPreferredRegions_SimpleMode_FirstRegionCorrect(string region)
     {
-        var vm = new MainViewModel { IsSimpleMode = true, SimpleRegionIndex = index };
+        var vm = new MainViewModel { IsSimpleMode = true };
+        vm.PreferEU = false; vm.PreferUS = false; vm.PreferJP = false; vm.PreferWORLD = false;
+        switch (region)
+        {
+            case "EU": vm.PreferEU = true; break;
+            case "US": vm.PreferUS = true; break;
+            case "JP": vm.PreferJP = true; break;
+            case "WORLD": vm.PreferWORLD = true; break;
+        }
         var regions = vm.GetPreferredRegions();
-        Assert.Equal(expectedFirst, regions[0]);
+        Assert.Single(regions);
+        Assert.Equal(region, regions[0]);
     }
 
     [Fact]
@@ -1999,6 +2009,7 @@ public class GuiViewModelTests
         public ConfirmResult YesNoCancel(string message, string title = "Frage") => ConfirmResult.Yes;
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => defaultValue;
         public void ShowText(string title, string content) { }
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 
     // ═══ XAML Binding Validation (VERIFY-001) ═══════════════════════════
@@ -2040,7 +2051,9 @@ public class GuiViewModelTests
             "IsExpanded", "IsLocked", "IsPinned", "IsPlanned", "Items",
             // Werkzeuge/Features tab DataTemplate models
             "HasRecentTools", "IsToolSearchActive", "QuickAccessItems",
-            "RecentToolItems", "ToolCategories"
+            "RecentToolItems", "ToolCategories",
+            // NotificationItem model + RelativeSource ancestor bindings
+            "DataContext", "Message", "Type"
         };
 
         var missing = new List<string>();
@@ -2340,11 +2353,13 @@ public class GuiViewModelTests
         var xamlContent = ReadAllWpfXaml();
 
         // Profile buttons should use MinWidth, not fixed Width
-        var profileA11yNames = new[] { "Profil speichern", "Profil laden", "Profil löschen", "Profil importieren", "Config-Diff anzeigen" };
-        foreach (var a11yName in profileA11yNames)
+        // AutomationProperties.Name is now a binding key (e.g. Settings.ProfileSaveTip)
+        var profileBindingKeys = new[] { "Settings.ProfileSaveTip", "Settings.ProfileLoadTip", "Settings.ProfileDeleteTip", "Settings.ProfileImportTip", "Settings.ProfileDiffTip" };
+        foreach (var key in profileBindingKeys)
         {
-            var idx = xamlContent.IndexOf($"AutomationProperties.Name=\"{a11yName}\"", StringComparison.Ordinal);
-            Assert.True(idx >= 0, $"Button with AutomationProperties.Name='{a11yName}' not found in XAML");
+            var pattern = $"Loc[{key}]";
+            var idx = xamlContent.IndexOf(pattern, StringComparison.Ordinal);
+            Assert.True(idx >= 0, $"Button with AutomationProperties.Name binding for '{key}' not found in XAML");
 
             // Extract the Button tag containing this automation name
             var tagStart = xamlContent.LastIndexOf("<Button", idx, StringComparison.Ordinal);
@@ -2356,7 +2371,7 @@ public class GuiViewModelTests
             // Should NOT have fixed Width= (only MinWidth=)
             var hasFixedWidth = System.Text.RegularExpressions.Regex.IsMatch(
                 buttonTag, @"(?<!\bMin)Width=""");
-            Assert.False(hasFixedWidth, $"Button '{a11yName}' still uses fixed Width instead of MinWidth");
+            Assert.False(hasFixedWidth, $"Button '{key}' still uses fixed Width instead of MinWidth");
         }
     }
 

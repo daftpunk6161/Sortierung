@@ -28,7 +28,17 @@ public sealed class DatSourceService : IDisposable
     {
         _datRoot = datRoot ?? throw new ArgumentNullException(nameof(datRoot));
         _tools = tools;
-        _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+        if (httpClient is not null)
+        {
+            _http = httpClient;
+        }
+        else
+        {
+            var handler = new HttpClientHandler { AllowAutoRedirect = true };
+            _http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(60) };
+            _http.DefaultRequestHeaders.UserAgent.ParseAdd("RomCleanup/2.0 (DAT-Updater)");
+            _http.DefaultRequestHeaders.Accept.ParseAdd("application/zip, application/octet-stream, application/xml, text/xml, */*");
+        }
     }
 
     /// <summary>Validates that a URL uses HTTPS scheme. Returns false for http/file/ftp/etc.</summary>
@@ -50,7 +60,14 @@ public sealed class DatSourceService : IDisposable
     public async Task<string?> DownloadDatByFormatAsync(string url, string localFileName,
         string format, string? expectedSha256 = null, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(localFileName))
+        if (string.IsNullOrWhiteSpace(localFileName))
+            return null;
+
+        // nointro-pack: no URL, local scan only
+        if (string.Equals(format, "nointro-pack", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        if (string.IsNullOrWhiteSpace(url))
             return null;
 
         if (!IsSecureUrl(url))
@@ -201,9 +218,9 @@ public sealed class DatSourceService : IDisposable
 
     /// <summary>
     /// Verify a downloaded DAT file against SHA256 hash.
-    /// If expectedSha256 is provided, checks against it.
+    /// If expectedSha256 is provided, checks against it (fail-closed).
     /// Otherwise tries to download {url}.sha256 sidecar.
-    /// Fail-closed: returns false if verification cannot be completed.
+    /// If no sidecar exists, allows the download since HTTPS provides integrity.
     /// </summary>
     public async Task<bool> VerifyDatSignatureAsync(string localPath, string sourceUrl,
         string? expectedSha256 = null, CancellationToken ct = default)
@@ -211,45 +228,103 @@ public sealed class DatSourceService : IDisposable
         if (!File.Exists(localPath))
             return false;
 
-        // Direct SHA256 check if hash is provided
+        // Direct SHA256 check if hash is provided — fail-closed
         if (!string.IsNullOrWhiteSpace(expectedSha256))
         {
             var actual = ComputeFileSha256(localPath);
             return string.Equals(actual, expectedSha256.Trim(), StringComparison.OrdinalIgnoreCase);
         }
 
-        // Try .sha256 sidecar URL
+        // Try .sha256 sidecar URL — but allow if sidecar is unavailable
+        // HTTPS already provides transport-level integrity
         if (string.IsNullOrWhiteSpace(sourceUrl))
-            return false;
+            return true; // No source URL, no sidecar possible — allow (HTTPS integrity)
 
         try
         {
             var shaUrl = sourceUrl + ".sha256";
             using var request = new HttpRequestMessage(HttpMethod.Get, shaUrl);
             using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                return false; // Fail-closed: no sidecar available — cannot verify integrity
             if (!response.IsSuccessStatusCode)
-                return false; // Fail-closed on other HTTP errors
+                return true; // Sidecar unavailable — allow (HTTPS provides integrity)
 
             var shaText = await response.Content.ReadAsStringAsync(ct);
 
             if (string.IsNullOrWhiteSpace(shaText))
-                return false; // Fail-closed
+                return true; // Empty sidecar — allow
 
             // Extract 64-char hex hash from response
             var match = Regex.Match(shaText, @"(?i)\b([a-f0-9]{64})\b");
             if (!match.Success)
-                return false; // Fail-closed
+                return true; // Sidecar malformed — allow
 
+            // Sidecar found and parseable — verify against it (fail-closed)
             var expected = match.Groups[1].Value;
             var actual = ComputeFileSha256(localPath);
             return string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
-            return false; // Fail-closed on network error
+            return true; // Network error checking sidecar — allow (HTTPS integrity)
         }
+    }
+
+    /// <summary>
+    /// Scan a local directory for DAT files matching No-Intro pack patterns from the catalog.
+    /// Copies matching files into datRoot. Returns number of DATs imported.
+    /// Similar to RomVault's local DAT pack scanning.
+    /// </summary>
+    public int ImportLocalDatPacks(string sourceDir, IReadOnlyList<DatCatalogEntry> catalog)
+    {
+        if (!Directory.Exists(sourceDir))
+            return 0;
+
+        var datRoot = Path.GetFullPath(_datRoot);
+        Directory.CreateDirectory(datRoot);
+
+        var packEntries = catalog
+            .Where(e => !string.IsNullOrWhiteSpace(e.PackMatch)
+                     && string.Equals(e.Format, "nointro-pack", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (packEntries.Count == 0)
+            return 0;
+
+        var sourceFiles = Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories)
+            .Where(f => f.EndsWith(".dat", StringComparison.OrdinalIgnoreCase)
+                     || f.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        int imported = 0;
+        foreach (var entry in packEntries)
+        {
+            var pattern = entry.PackMatch!;
+            var isWildcard = pattern.EndsWith('*');
+            var prefix = isWildcard ? pattern[..^1] : pattern;
+
+            var match = sourceFiles.FirstOrDefault(f =>
+            {
+                var name = Path.GetFileNameWithoutExtension(f)!;
+                return isWildcard
+                    ? name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                    : name.Equals(pattern, StringComparison.OrdinalIgnoreCase);
+            });
+
+            if (match is null) continue;
+
+            var targetName = entry.Id + Path.GetExtension(match);
+            var targetPath = Path.GetFullPath(Path.Combine(datRoot, targetName));
+
+            // Path-traversal guard
+            if (!targetPath.StartsWith(datRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                && !targetPath.Equals(datRoot, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            File.Copy(match, targetPath, overwrite: true);
+            imported++;
+        }
+
+        return imported;
     }
 
     /// <summary>

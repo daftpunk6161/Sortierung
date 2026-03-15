@@ -56,9 +56,9 @@ public sealed partial class MainViewModel : ObservableObject
         _syncContext = SynchronizationContext.Current;
 
         // ── Child ViewModels (GUI-021) ────────────────────────────────
-        Setup = new SetupViewModel(_theme, _dialog, _settings);
-        Tools = new ToolsViewModel();
-        Run = new RunViewModel();
+        Setup = new SetupViewModel(_theme, _dialog, _settings, _loc);
+        Tools = new ToolsViewModel(_loc);
+        Run = new RunViewModel(_loc);
 
         // Wire child VM events
         Setup.StatusRefreshRequested += () => RefreshStatus();
@@ -101,6 +101,18 @@ public sealed partial class MainViewModel : ObservableObject
             () => { DryRun = false; RunCommand.Execute(null); },
             () => Roots.Count > 0 && !IsBusy);
 
+        // GUI-063: Navigation history commands
+        NavBackCommand = new RelayCommand(NavGoBack, () => CanNavBack);
+        NavForwardCommand = new RelayCommand(NavGoForward, () => CanNavForward);
+
+        // GUI-081: First-Run Wizard commands
+        WizardNextCommand = new RelayCommand(WizardNext);
+        WizardBackCommand = new RelayCommand(WizardBack, () => WizardStep > 0);
+        WizardSkipCommand = new RelayCommand(WizardSkip);
+
+        // GUI-101: Shortcut cheatsheet toggle
+        ToggleShortcutSheetCommand = new RelayCommand(() => ShowShortcutSheet = !ShowShortcutSheet);
+
         // Extension filter collection (UX-004)
         InitExtensionFilters();
 
@@ -115,8 +127,224 @@ public sealed partial class MainViewModel : ObservableObject
 
         // Wire watch-mode auto-run trigger
         _watchService.RunTriggered += OnWatchRunTriggered;
-        _watchService.WatcherError += msg => AddLog(msg, "WARN");
+        _watchService.WatcherError += OnWatcherError;
     }
+
+    /// <summary>GUI-115: Named handler for proper unsubscription in CleanupWatchers.</summary>
+    private void OnWatcherError(string msg) => AddLog(msg, "WARN");
+
+    // ═══ NAVIGATION (GUI-061) ═══════════════════════════════════════════
+    private int _selectedNavIndex;
+    /// <summary>GUI-061: Active sidebar navigation index (0=Start, 1=Analyse, 2=Setup, 3=Tools, 4=Log).</summary>
+    public int SelectedNavIndex
+    {
+        get => _selectedNavIndex;
+        set
+        {
+            if (SetProperty(ref _selectedNavIndex, value))
+            {
+                OnPropertyChanged(nameof(SelectedNavTag));
+                OnPropertyChanged(nameof(CanNavBack));
+                OnPropertyChanged(nameof(CanNavForward));
+            }
+        }
+    }
+
+    /// <summary>Navigation tag derived from index for ContentControl switching.</summary>
+    public string SelectedNavTag
+    {
+        get => _selectedNavIndex switch
+        {
+            0 => "Start",
+            1 => "Analyse",
+            2 => "Setup",
+            3 => "Tools",
+            4 => "Log",
+            _ => "Start"
+        };
+        set
+        {
+            int idx = value switch
+            {
+                "Start" => 0,
+                "Analyse" => 1,
+                "Setup" => 2,
+                "Tools" => 3,
+                "Log" => 4,
+                _ => 0
+            };
+            SelectedNavIndex = idx;
+        }
+    }
+
+    // ═══ GUI-063: NAVIGATION HISTORY ════════════════════════════════════
+    private readonly Stack<int> _navBack = new();
+    private readonly Stack<int> _navForward = new();
+    private bool _isNavigatingHistory;
+
+    public bool CanNavBack => _navBack.Count > 0;
+    public bool CanNavForward => _navForward.Count > 0;
+
+    /// <summary>Navigate to a specific screen by tag name (with history tracking).</summary>
+    public void NavigateTo(string tag)
+    {
+        int newIndex = tag switch
+        {
+            "Start" => 0,
+            "Analyse" => 1,
+            "Setup" => 2,
+            "Tools" => 3,
+            "Log" => 4,
+            _ => 0
+        };
+
+        if (!_isNavigatingHistory && newIndex != _selectedNavIndex)
+        {
+            _navBack.Push(_selectedNavIndex);
+            _navForward.Clear();
+        }
+        SelectedNavIndex = newIndex;
+    }
+
+    public void NavGoBack()
+    {
+        if (_navBack.Count == 0) return;
+        _isNavigatingHistory = true;
+        _navForward.Push(_selectedNavIndex);
+        SelectedNavIndex = _navBack.Pop();
+        _isNavigatingHistory = false;
+    }
+
+    public void NavGoForward()
+    {
+        if (_navForward.Count == 0) return;
+        _isNavigatingHistory = true;
+        _navBack.Push(_selectedNavIndex);
+        SelectedNavIndex = _navForward.Pop();
+        _isNavigatingHistory = false;
+    }
+
+    // ═══ FIRST-RUN WIZARD (GUI-081) ═════════════════════════════════════
+    private bool _showFirstRunWizard;
+    public bool ShowFirstRunWizard
+    {
+        get => _showFirstRunWizard;
+        set => SetProperty(ref _showFirstRunWizard, value);
+    }
+
+    private int _wizardStep;
+    public int WizardStep
+    {
+        get => _wizardStep;
+        set
+        {
+            if (SetProperty(ref _wizardStep, value))
+            {
+                OnPropertyChanged(nameof(WizardStepIs0));
+                OnPropertyChanged(nameof(WizardStepIs1));
+                OnPropertyChanged(nameof(WizardStepIs2));
+                OnPropertyChanged(nameof(WizardNextLabel));
+                WizardBackCommand?.NotifyCanExecuteChanged();
+                WizardNextCommand?.NotifyCanExecuteChanged();
+            }
+        }
+    }
+
+    // Step visibility helpers for XAML DataTrigger
+    public bool WizardStepIs0 => WizardStep == 0;
+    public bool WizardStepIs1 => WizardStep == 1;
+    public bool WizardStepIs2 => WizardStep == 2;
+
+    /// <summary>GUI-082: Returns the recommended region label based on current selection.</summary>
+    public string WizardRegionSummary
+    {
+        get
+        {
+            if (PreferEU) return "EU";
+            if (PreferUS) return "US";
+            if (PreferJP) return "JP";
+            return "World";
+        }
+    }
+
+    /// <summary>Dynamic label for the Next/Finish button.</summary>
+    public string WizardNextLabel => WizardStep < 2 ? Loc["Wizard.Next"] : Loc["Wizard.Finish"];
+
+    // ── Wizard Commands ─────────────────────────────────────────────────
+    public IRelayCommand WizardNextCommand { get; private set; } = null!;
+    public IRelayCommand WizardBackCommand { get; private set; } = null!;
+    public IRelayCommand WizardSkipCommand { get; private set; } = null!;
+
+    private void WizardNext()
+    {
+        if (WizardStep < 2)
+        {
+            WizardStep++;
+        }
+        else
+        {
+            // Finish wizard
+            ShowFirstRunWizard = false;
+            WizardStep = 0;
+        }
+    }
+
+    private void WizardBack()
+    {
+        if (WizardStep > 0) WizardStep--;
+    }
+
+    private void WizardSkip()
+    {
+        ShowFirstRunWizard = false;
+        WizardStep = 0;
+    }
+
+    /// <summary>GUI-082: Auto-detect region from OS locale on wizard start.</summary>
+    public void ApplyLocaleRegionDefaults()
+    {
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        var region = culture.TwoLetterISOLanguageName.ToUpperInvariant() switch
+        {
+            "DE" or "FR" or "IT" or "ES" or "NL" or "PT" or "SV" or "DA" or "FI" or "NB" or "PL" => "EU",
+            "EN" => culture.Name.Contains("GB", StringComparison.OrdinalIgnoreCase) ? "EU" : "US",
+            "JA" => "JP",
+            _ => "US"
+        };
+        PreferEU = region == "EU";
+        PreferUS = region == "US";
+        PreferJP = region == "JP";
+        PreferWORLD = false;
+    }
+
+    // ═══ GUI-101: SHORTCUT CHEATSHEET OVERLAY ═══════════════════════════
+    private bool _showShortcutSheet;
+    public bool ShowShortcutSheet
+    {
+        get => _showShortcutSheet;
+        set => SetProperty(ref _showShortcutSheet, value);
+    }
+
+    public RelayCommand ToggleShortcutSheetCommand { get; private set; } = null!;
+
+    // ═══ NOTIFICATIONS (GUI-055) ════════════════════════════════════════
+    public ObservableCollection<NotificationItem> Notifications { get; } = [];
+
+    public void ShowNotification(string message, string type = "Success", int autoCloseMs = 5000)
+    {
+        var item = new NotificationItem { Message = message, Type = type, AutoCloseMs = autoCloseMs };
+        Notifications.Add(item);
+        if (autoCloseMs > 0)
+        {
+            _ = Task.Delay(autoCloseMs).ContinueWith(_ =>
+            {
+                var d = System.Windows.Application.Current?.Dispatcher;
+                d?.InvokeAsync(() => Notifications.Remove(item));
+            });
+        }
+    }
+
+    public void DismissNotification(NotificationItem item) => Notifications.Remove(item);
 
     // ═══ LOCALIZATION (GUI-047) ═════════════════════════════════════════
     /// <summary>XAML-bindable localization: {Binding Loc[Key]}.</summary>
@@ -142,6 +370,10 @@ public sealed partial class MainViewModel : ObservableObject
     public IRelayCommand SaveSettingsCommand { get; }
     public IRelayCommand LoadSettingsCommand { get; }
     public IRelayCommand WatchApplyCommand { get; }
+
+    // GUI-063: Navigation history commands
+    public IRelayCommand NavBackCommand { get; }
+    public IRelayCommand NavForwardCommand { get; }
 
     // ═══ FEATURE COMMANDS (TASK-111: replaces Click event handlers) ═══════
     public Dictionary<string, ICommand> FeatureCommands { get; } = new();
@@ -218,6 +450,7 @@ public sealed partial class MainViewModel : ObservableObject
     private void OnRootsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         RefreshStatus();
+        OnPropertyChanged(nameof(HasNoRoots));
         DeferCommandRequery();
     }
 
@@ -254,4 +487,7 @@ public sealed partial class MainViewModel : ObservableObject
         QuickPreviewCommand.NotifyCanExecuteChanged();
         StartMoveCommand.NotifyCanExecuteChanged();
     }
+
+    // GUI-098: Respect prefers-reduced-motion (Windows "Show animations" setting)
+    public bool ReduceMotion => !System.Windows.SystemParameters.ClientAreaAnimation;
 }

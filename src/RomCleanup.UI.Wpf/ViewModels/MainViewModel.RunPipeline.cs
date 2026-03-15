@@ -100,6 +100,9 @@ public sealed partial class MainViewModel
 
     public bool HasRunResult => _runState is RunState.Completed or RunState.CompletedDryRun;
 
+    /// <summary>GUI-065: True when no roots are configured (for StartView hero drop-zone).</summary>
+    public bool HasNoRoots => Roots.Count == 0;
+
     // ═══ ROLLBACK HISTORY (UX-010) ══════════════════════════════════════
     private const int MaxRollbackDepth = 50; // V2-M02: Bounded undo/redo stack
     private readonly Stack<string> _rollbackUndoStack = new();
@@ -261,6 +264,14 @@ public sealed partial class MainViewModel
 
     private string _dedupeRate = "–";
     public string DedupeRate { get => _dedupeRate; set => SetProperty(ref _dedupeRate, value); }
+
+    // ═══ GUI-070-073: ANALYSE SCREEN DATA ═══════════════════════════════
+    public ObservableCollection<Models.ConsoleDistributionItem> ConsoleDistribution { get; } = [];
+    public ObservableCollection<Models.DedupeGroupItem> DedupeGroupItems { get; } = [];
+
+    // GUI-074: Move consequence text
+    private string _moveConsequenceText = "";
+    public string MoveConsequenceText { get => _moveConsequenceText; set => SetProperty(ref _moveConsequenceText, value); }
 
     // ═══ STEP INDICATOR ═════════════════════════════════════════════════
     private int _currentStep;
@@ -597,6 +608,33 @@ public sealed partial class MainViewModel
 
     // ═══ WATCH-MODE ════════════════════════════════════════════════════
 
+    private System.Threading.Timer? _schedulerTimer;
+
+    /// <summary>GUI-109: Start/stop periodic scheduled runs.</summary>
+    public void ApplyScheduler()
+    {
+        _schedulerTimer?.Dispose();
+        _schedulerTimer = null;
+
+        if (SchedulerIntervalMinutes <= 0 || Roots.Count == 0) return;
+
+        var interval = TimeSpan.FromMinutes(SchedulerIntervalMinutes);
+        _schedulerTimer = new System.Threading.Timer(_ =>
+        {
+            _syncContext?.Post(_ =>
+            {
+                if (!IsBusy && Roots.Count > 0)
+                {
+                    AddLog($"Scheduler: Geplanter Lauf gestartet.", "INFO");
+                    DryRun = true;
+                    RunCommand.Execute(null);
+                }
+            }, null);
+        }, null, interval, interval);
+
+        AddLog($"Scheduler: Alle {SchedulerIntervalDisplay} wird ein DryRun gestartet.", "INFO");
+    }
+
     private void ToggleWatchMode()
     {
         if (Roots.Count == 0)
@@ -629,11 +667,14 @@ public sealed partial class MainViewModel
         }
     }
 
-    /// <summary>Dispose watch-mode resources.</summary>
+    /// <summary>GUI-115: Dispose watch-mode and scheduler resources — unsubscribe all events.</summary>
     public void CleanupWatchers()
     {
         _watchService.RunTriggered -= OnWatchRunTriggered;
+        _watchService.WatcherError -= OnWatcherError;
         _watchService.Dispose();
+        _schedulerTimer?.Dispose();
+        _schedulerTimer = null;
     }
 
     // ═══ EVENTS ═════════════════════════════════════════════════════════
@@ -724,5 +765,57 @@ public sealed partial class MainViewModel
             if (result.ConvertedCount > 0)
                 AddLog($"Konvertiert: {result.ConvertedCount}", "INFO");
         }
+
+        // GUI-071: Console distribution bars
+        ConsoleDistribution.Clear();
+        var consoleCounts = result.AllCandidates
+            .Where(c => !string.IsNullOrEmpty(c.ConsoleKey))
+            .GroupBy(c => c.ConsoleKey)
+            .Select(g => (Key: g.Key, Count: g.Count()))
+            .OrderByDescending(x => x.Count)
+            .Take(20)
+            .ToList();
+        int maxCount = consoleCounts.Count > 0 ? consoleCounts[0].Count : 1;
+        foreach (var (key, count) in consoleCounts)
+            ConsoleDistribution.Add(new Models.ConsoleDistributionItem
+            {
+                ConsoleKey = key,
+                DisplayName = key,
+                FileCount = count,
+                Fraction = (double)count / maxCount
+            });
+
+        // GUI-072/073: Dedup decision browser
+        DedupeGroupItems.Clear();
+        foreach (var grp in result.DedupeGroups.Take(200))
+        {
+            DedupeGroupItems.Add(new Models.DedupeGroupItem
+            {
+                GameKey = grp.GameKey,
+                Winner = new Models.DedupeEntryItem
+                {
+                    FileName = System.IO.Path.GetFileName(grp.Winner.MainPath),
+                    Region = grp.Winner.Region,
+                    RegionScore = grp.Winner.RegionScore,
+                    FormatScore = grp.Winner.FormatScore,
+                    VersionScore = grp.Winner.VersionScore,
+                    IsWinner = true
+                },
+                Losers = grp.Losers.Select(l => new Models.DedupeEntryItem
+                {
+                    FileName = System.IO.Path.GetFileName(l.MainPath),
+                    Region = l.Region,
+                    RegionScore = l.RegionScore,
+                    FormatScore = l.FormatScore,
+                    VersionScore = l.VersionScore,
+                    IsWinner = false
+                }).ToList()
+            });
+        }
+
+        // GUI-074: Move consequence text
+        MoveConsequenceText = result.LoserCount > 0
+            ? $"{result.LoserCount} Dateien werden in den Papierkorb verschoben"
+            : "Keine Dateien zum Verschieben";
     }
 }

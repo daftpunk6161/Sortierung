@@ -20,15 +20,17 @@ public sealed partial class SetupViewModel : ObservableObject, INotifyDataErrorI
     private readonly IDialogService _dialog;
     private readonly IThemeService _theme;
     private readonly ISettingsService _settings;
+    private readonly ILocalizationService _loc;
 
     /// <summary>Raised when a path/tool property changes that requires status refresh.</summary>
     public event Action? StatusRefreshRequested;
 
-    public SetupViewModel(IThemeService theme, IDialogService dialog, ISettingsService settings)
+    public SetupViewModel(IThemeService theme, IDialogService dialog, ISettingsService settings, ILocalizationService? loc = null)
     {
         _theme = theme;
         _dialog = dialog;
         _settings = settings;
+        _loc = loc ?? new LocalizationService();
 
         InitExtensionFilters();
         InitConsoleFilters();
@@ -132,32 +134,32 @@ public sealed partial class SetupViewModel : ObservableObject, INotifyDataErrorI
 
     private void InitRegionItems()
     {
-        var regions = new (string code, string display, string flag, bool active)[]
+        var regions = new (string code, string key, string flag, bool active)[]
         {
-            ("EU",    "Europa",         "🇪🇺", true),
-            ("US",    "Nordamerika",    "🇺🇸", true),
-            ("JP",    "Japan",          "🇯🇵", true),
-            ("WORLD", "Weltweit",       "🌍", true),
-            ("DE",    "Deutschland",    "🇩🇪", false),
-            ("FR",    "Frankreich",     "🇫🇷", false),
-            ("IT",    "Italien",        "🇮🇹", false),
-            ("ES",    "Spanien",        "🇪🇸", false),
-            ("AU",    "Australien",     "🇦🇺", false),
-            ("ASIA",  "Asien",          "🌏", false),
-            ("KR",    "Südkorea",       "🇰🇷", false),
-            ("CN",    "China",          "🇨🇳", false),
-            ("BR",    "Brasilien",      "🇧🇷", false),
-            ("NL",    "Niederlande",    "🇳🇱", false),
-            ("SE",    "Schweden",       "🇸🇪", false),
-            ("SCAN",  "Skandinavien",   "🇳🇴", false),
+            ("EU",    "Region.EU",    "🇪🇺", true),
+            ("US",    "Region.US",    "🇺🇸", true),
+            ("JP",    "Region.JP",    "🇯🇵", true),
+            ("WORLD", "Region.WORLD", "🌍", true),
+            ("DE",    "Region.DE",    "🇩🇪", false),
+            ("FR",    "Region.FR",    "🇫🇷", false),
+            ("IT",    "Region.IT",    "🇮🇹", false),
+            ("ES",    "Region.ES",    "🇪🇸", false),
+            ("AU",    "Region.AU",    "🇦🇺", false),
+            ("ASIA",  "Region.ASIA",  "🌏", false),
+            ("KR",    "Region.KR",    "🇰🇷", false),
+            ("CN",    "Region.CN",    "🇨🇳", false),
+            ("BR",    "Region.BR",    "🇧🇷", false),
+            ("NL",    "Region.NL",    "🇳🇱", false),
+            ("SE",    "Region.SE",    "🇸🇪", false),
+            ("SCAN",  "Region.SCAN",  "🇳🇴", false),
         };
         for (int i = 0; i < regions.Length; i++)
         {
-            var (code, display, flag, active) = regions[i];
+            var (code, key, flag, active) = regions[i];
             RegionItems.Add(new RegionItem
             {
                 Code = code,
-                DisplayName = display,
+                DisplayName = _loc[key],
                 FlagEmoji = flag,
                 IsActive = active,
                 Priority = i
@@ -168,18 +170,6 @@ public sealed partial class SetupViewModel : ObservableObject, INotifyDataErrorI
     /// <summary>Build the preferred regions array from RegionItems (active only, ordered by priority).</summary>
     public string[] GetPreferredRegions()
     {
-        if (IsSimpleMode)
-        {
-            return SimpleRegionIndex switch
-            {
-                0 => ["EU", "DE", "WORLD", "US", "JP"],
-                1 => ["US", "WORLD", "EU", "JP"],
-                2 => ["JP", "ASIA", "WORLD", "US", "EU"],
-                3 => ["WORLD", "EU", "US", "JP"],
-                _ => ["EU", "US", "WORLD", "JP"]
-            };
-        }
-
         return RegionItems
             .Where(r => r.IsActive)
             .OrderBy(r => r.Priority)
@@ -335,7 +325,7 @@ public sealed partial class SetupViewModel : ObservableObject, INotifyDataErrorI
     // ═══ SETTINGS HANDLERS ══════════════════════════════════════════════
     public void OnBrowseToolPath(string? parameter)
     {
-        var path = _dialog.BrowseFile("Executable auswählen", "Executables (*.exe)|*.exe|Alle (*.*)|*.*");
+        var path = _dialog.BrowseFile(_loc["Dialog.SelectExe"], _loc["Dialog.ExeFilter"]);
         if (path is null) return;
         switch (parameter)
         {
@@ -349,7 +339,7 @@ public sealed partial class SetupViewModel : ObservableObject, INotifyDataErrorI
 
     public void OnBrowseFolderPath(string? parameter)
     {
-        var path = _dialog.BrowseFolder("Ordner auswählen");
+        var path = _dialog.BrowseFolder(_loc["Dialog.SelectFolder"]);
         if (path is null) return;
         switch (parameter)
         {
@@ -404,7 +394,7 @@ public sealed partial class SetupViewModel : ObservableObject, INotifyDataErrorI
         }
         catch (Exception ex)
         {
-            GameKeyPreviewOutput = $"Fehler: {ex.Message}";
+            GameKeyPreviewOutput = _loc.Format("Error.Generic", ex.Message);
         }
     }
 
@@ -535,7 +525,7 @@ public sealed partial class SetupViewModel : ObservableObject, INotifyDataErrorI
         if (string.IsNullOrWhiteSpace(value))
             ClearError(propertyName);
         else if (!File.Exists(value))
-            SetError(propertyName, $"Datei nicht gefunden: {Path.GetFileName(value)}");
+            SetError(propertyName, _loc.Format("Error.FileNotFound", Path.GetFileName(value)));
         else
             ClearError(propertyName);
     }
@@ -545,7 +535,7 @@ public sealed partial class SetupViewModel : ObservableObject, INotifyDataErrorI
         if (string.IsNullOrWhiteSpace(value))
             ClearError(propertyName);
         else if (!Directory.Exists(value))
-            SetError(propertyName, "Verzeichnis existiert nicht");
+            SetError(propertyName, _loc["Error.DirNotFound"]);
         else
             ClearError(propertyName);
     }

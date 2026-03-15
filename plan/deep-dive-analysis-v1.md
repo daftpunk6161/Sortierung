@@ -6,7 +6,7 @@
 
 ---
 
-## Zusammenfassung
+## Zusammenfklmmmmmmnassung
 
 | Kategorie | Kritisch 🔴 | Hoch 🟠 | Mittel 🟡 | Niedrig 🔵 | Info ⚪ |
 |-----------|:-----------:|:-------:|:---------:|:----------:|:------:|

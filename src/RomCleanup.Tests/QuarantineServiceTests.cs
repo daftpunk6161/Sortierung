@@ -113,7 +113,7 @@ public class QuarantineServiceTests : IDisposable
     public void CreateAction_TargetHasDateDirectory()
     {
         var action = _svc.CreateAction(@"C:\Roms\file.bin", @"C:\Q");
-        var dateStr = DateTime.Now.ToString("yyyyMMdd");
+        var dateStr = DateTime.UtcNow.ToString("yyyyMMdd");
         Assert.Contains(dateStr, action.QuarantineDir);
     }
 
