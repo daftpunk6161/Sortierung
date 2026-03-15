@@ -271,11 +271,14 @@ public sealed class AuditSigningService
         }
 
         // Pre-cache normalized root paths to avoid Path.GetFullPath per root per row (expensive on UNC)
+        // Issue #21: NFC normalization for macOS HFS+ paths
         var normalizedCurrentRoots = allowedCurrentRoots
-            .Select(r => Path.GetFullPath(r).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar)
+            .Select(r => Path.GetFullPath(r).Normalize(NormalizationForm.FormC)
+                .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar)
             .ToArray();
         var normalizedRestoreRoots = allowedRestoreRoots
-            .Select(r => Path.GetFullPath(r).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar)
+            .Select(r => Path.GetFullPath(r).Normalize(NormalizationForm.FormC)
+                .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar)
             .ToArray();
 
         // Process rows in reverse order (undo last moves first)
@@ -293,16 +296,17 @@ public sealed class AuditSigningService
             var newPath = fields.Length > 2 ? fields[2] : "";
             var action = fields.Length > 3 ? fields[3] : "";
 
-            // Only rollback MOVE actions
+            // Rollback MOVE and JUNK_REMOVE actions (Issue #22)
             if (!string.Equals(action, "MOVE", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(action, "MOVED", StringComparison.OrdinalIgnoreCase))
+                !string.Equals(action, "MOVED", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, "JUNK_REMOVE", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             eligible++;
 
             // Safety: check the current location (newPath) is within allowed roots
-            var fullNewPath = Path.GetFullPath(newPath);
-            var fullOldPath = Path.GetFullPath(oldPath);
+            var fullNewPath = Path.GetFullPath(newPath).Normalize(NormalizationForm.FormC);
+            var fullOldPath = Path.GetFullPath(oldPath).Normalize(NormalizationForm.FormC);
             var inAllowedCurrent = normalizedCurrentRoots.Any(nr =>
                 fullNewPath.StartsWith(nr, StringComparison.OrdinalIgnoreCase));
             var inAllowedRestore = normalizedRestoreRoots.Any(nr =>
@@ -342,7 +346,7 @@ public sealed class AuditSigningService
                     if (parentDir is not null)
                         _fs.EnsureDirectory(parentDir);
 
-                    if (_fs.MoveItemSafely(newPath, oldPath))
+                    if (_fs.MoveItemSafely(newPath, oldPath) is not null)
                     {
                         rolledBack++;
                         _log?.Invoke($"Rolled back: {newPath} -> {oldPath}");

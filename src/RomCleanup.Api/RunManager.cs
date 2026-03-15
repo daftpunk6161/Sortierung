@@ -38,7 +38,9 @@ public sealed class RunManager
                 Status = "running",
                 Mode = mode,
                 Roots = request.Roots!,
-                PreferRegions = request.PreferRegions ?? new[] { "EU", "US", "WORLD", "JP" },
+                PreferRegions = request.PreferRegions is { Length: > 0 }
+                    ? request.PreferRegions
+                    : new[] { "EU", "US", "WORLD", "JP" },
                 StartedUtc = DateTime.UtcNow
             };
 
@@ -109,12 +111,20 @@ public sealed class RunManager
             var orchestrator = new RunOrchestrator(_fs, _audit,
                 onProgress: msg => run.ProgressMessage = msg);
 
+            // Generate audit and report paths per-run
+            var auditDir = Path.Combine(Path.GetTempPath(), "RomCleanup", "audit");
+            Directory.CreateDirectory(auditDir);
+            var auditPath = Path.Combine(auditDir, $"audit-{run.RunId}.csv");
+            var reportPath = Path.Combine(auditDir, $"report-{run.RunId}.html");
+
             var options = new RunOptions
             {
                 Roots = run.Roots,
                 Mode = run.Mode,
                 PreferRegions = run.PreferRegions,
-                Extensions = RunOptions.DefaultExtensions
+                Extensions = RunOptions.DefaultExtensions,
+                AuditPath = auditPath,
+                ReportPath = reportPath
             };
 
             var result = orchestrator.Execute(options, ct);
@@ -127,7 +137,9 @@ public sealed class RunManager
                 Groups = result.GroupCount,
                 Keep = result.WinnerCount,
                 Move = result.LoserCount,
-                DurationMs = result.DurationMs
+                DurationMs = result.DurationMs,
+                AuditPath = File.Exists(auditPath) ? auditPath : null,
+                ReportPath = File.Exists(reportPath) ? reportPath : null
             };
             run.Status = result.ExitCode switch
             {
@@ -229,4 +241,6 @@ public sealed class ApiRunResult
     public int Move { get; init; }
     public long DurationMs { get; init; }
     public string? Error { get; init; }
+    public string? AuditPath { get; init; }
+    public string? ReportPath { get; init; }
 }

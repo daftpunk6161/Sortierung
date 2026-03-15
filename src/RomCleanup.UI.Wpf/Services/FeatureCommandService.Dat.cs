@@ -59,15 +59,18 @@ public sealed partial class FeatureCommandService
         bool CanAutoDownload(Infrastructure.Dat.DatCatalogEntry e) =>
             !string.IsNullOrWhiteSpace(e.Url);
 
-        var autoMissing = missing.Where(CanAutoDownload).ToList();
-        var manualOnly = missing.Where(e => !CanAutoDownload(e)).ToList();
-        var noIntroCount = manualOnly.Count(e => e.Group.Equals("No-Intro", StringComparison.OrdinalIgnoreCase));
+        bool IsNoIntroPack(Infrastructure.Dat.DatCatalogEntry e) =>
+            string.Equals(e.Format, "nointro-pack", StringComparison.OrdinalIgnoreCase);
+
+        var autoMissing = missing.Where(e => CanAutoDownload(e) && !IsNoIntroPack(e)).ToList();
+        var noIntroMissing = missing.Where(IsNoIntroPack).ToList();
+        var otherManual = missing.Where(e => !CanAutoDownload(e) && !IsNoIntroPack(e)).ToList();
 
         // ── Download-Liste vorbereiten ─────────────────────────────────
-        var toDownload = new List<(string Id, string Url, string FileName, string Format)>();
+        var toDownload = new List<(string Id, string Url, string FileName, string Format, string Group)>();
 
         foreach (var entry in autoMissing)
-            toDownload.Add((entry.Id, entry.Url, entry.Id + ".dat", entry.Format));
+            toDownload.Add((entry.Id, entry.Url, entry.Id + ".dat", entry.Format, entry.Group));
 
         foreach (var staleFile in staleDats)
         {
@@ -75,8 +78,8 @@ public sealed partial class FeatureCommandService
             var entry = catalog.FirstOrDefault(e =>
                 e.Id.Equals(stem, StringComparison.OrdinalIgnoreCase)
                 || e.ConsoleKey.Equals(stem, StringComparison.OrdinalIgnoreCase));
-            if (entry is not null && CanAutoDownload(entry))
-                toDownload.Add((entry.Id, entry.Url, Path.GetFileName(staleFile), entry.Format));
+            if (entry is not null && CanAutoDownload(entry) && !IsNoIntroPack(entry))
+                toDownload.Add((entry.Id, entry.Url, Path.GetFileName(staleFile), entry.Format, entry.Group));
         }
 
         _vm.AddLog($"DAT-Status: {localDats.Count} DATs, {staleDats.Count} veraltet, {missing.Count} fehlend", "INFO");
@@ -95,40 +98,95 @@ public sealed partial class FeatureCommandService
             sb.AppendLine();
         }
 
-        // Zeile 2: Fehlend (aufgeschlüsselt)
+        // Zeile 2: Fehlend nach Gruppe
         if (missing.Count > 0)
         {
             sb.AppendLine($"\n{missing.Count} DATs fehlen lokal:");
-            if (autoMissing.Count > 0) sb.AppendLine($"  {autoMissing.Count} automatisch ladbar");
-            if (noIntroCount > 0) sb.AppendLine($"  {noIntroCount} No-Intro — manuell (datomatic.no-intro.org)");
+            var byGroup = missing.GroupBy(e => e.Group).OrderBy(g => g.Key);
+            foreach (var g in byGroup)
+            {
+                var autoCount = g.Count(e => CanAutoDownload(e) && !IsNoIntroPack(e));
+                var packCount = g.Count(IsNoIntroPack);
+                if (autoCount > 0) sb.AppendLine($"  {g.Key}: {autoCount} automatisch ladbar");
+                if (packCount > 0) sb.AppendLine($"  {g.Key}: {packCount} via lokalem Pack-Import");
+            }
+        }
+
+        // ── No-Intro Pack-Import anbieten ──────────────────────────────
+        if (noIntroMissing.Count > 0)
+        {
+            sb.AppendLine($"\n{noIntroMissing.Count} No-Intro/Non-Redump DATs können aus lokalem Ordner importiert werden.");
+            sb.AppendLine("Lade DAT-Packs von datomatic.no-intro.org herunter und wähle den Ordner.");
         }
 
         // ── Download oder nur Info ─────────────────────────────────────
-        if (toDownload.Count > 0)
+        bool hasWork = toDownload.Count > 0 || noIntroMissing.Count > 0;
+        if (hasWork)
         {
-            sb.AppendLine($"\n{toDownload.Count} DATs jetzt herunterladen?");
+            if (toDownload.Count > 0)
+                sb.AppendLine($"\n{toDownload.Count} DATs jetzt herunterladen?");
+            if (noIntroMissing.Count > 0)
+                sb.AppendLine("No-Intro Packs danach aus lokalem Ordner importieren?");
 
             if (!_dialog.Confirm(sb.ToString(), "DAT Auto-Update"))
                 return;
 
-            _vm.AddLog($"DAT-Download: {toDownload.Count} Dateien…", "INFO");
-            using var datService = new Infrastructure.Dat.DatSourceService(_vm.DatRoot);
-            int success = 0, failed = 0;
-
-            for (int i = 0; i < toDownload.Count; i++)
+            // ── Auto-Downloads ─────────────────────────────────────────
+            if (toDownload.Count > 0)
             {
-                var (id, url, fileName, format) = toDownload[i];
-                _vm.AddLog($"  [{i + 1}/{toDownload.Count}] {id}…", "DEBUG");
-                try
+                _vm.AddLog($"DAT-Download: {toDownload.Count} Dateien…", "INFO");
+                using var datService = new Infrastructure.Dat.DatSourceService(_vm.DatRoot);
+                int success = 0, failed = 0;
+                var failedIds = new List<string>();
+
+                // Gruppiert nach Quelle
+                var byGroup = toDownload.GroupBy(t => t.Group).OrderBy(g => g.Key);
+                foreach (var group in byGroup)
                 {
-                    var result = await datService.DownloadDatByFormatAsync(url, fileName, format);
-                    if (result is not null) { success++; _vm.AddLog($"  ✓ {id}", "INFO"); }
-                    else { failed++; _vm.AddLog($"  ✗ {id}: Download fehlgeschlagen", "WARN"); }
+                    _vm.AddLog($"── {group.Key} ({group.Count()} DATs) ──", "INFO");
+                    foreach (var (id, url, fileName, format, _) in group)
+                    {
+                        _vm.AddLog($"  [{success + failed + 1}/{toDownload.Count}] {id}…", "DEBUG");
+                        try
+                        {
+                            var result = await datService.DownloadDatByFormatAsync(url, fileName, format);
+                            if (result is not null)
+                            {
+                                success++;
+                                _vm.AddLog($"  ✓ {id}", "INFO");
+                            }
+                            else
+                            {
+                                failed++;
+                                failedIds.Add(id);
+                                _vm.AddLog($"  ✗ {id}: Download fehlgeschlagen", "WARN");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            failed++;
+                            failedIds.Add(id);
+                            LogWarning("DAT-DOWNLOAD", $"{id}: {ex.Message}");
+                        }
+                    }
                 }
-                catch (Exception ex) { failed++; _vm.AddLog($"  ✗ {id}: {ex.Message}", "WARN"); }
+
+                _vm.AddLog($"DAT-Download: {success} erfolgreich, {failed} fehlgeschlagen", success > 0 ? "INFO" : "WARN");
+                if (failedIds.Count > 0 && failedIds.Count <= 10)
+                    _vm.AddLog($"  Fehlgeschlagen: {string.Join(", ", failedIds)}", "WARN");
             }
 
-            _vm.AddLog($"DAT-Download: {success} erfolgreich, {failed} fehlgeschlagen", success > 0 ? "INFO" : "WARN");
+            // ── No-Intro Pack-Import ───────────────────────────────────
+            if (noIntroMissing.Count > 0)
+            {
+                var packDir = _dialog.BrowseFolder("No-Intro DAT-Pack Ordner auswählen (enthält .dat/.xml Dateien)");
+                if (!string.IsNullOrWhiteSpace(packDir) && Directory.Exists(packDir))
+                {
+                    using var datService = new Infrastructure.Dat.DatSourceService(_vm.DatRoot);
+                    var imported = datService.ImportLocalDatPacks(packDir, catalog);
+                    _vm.AddLog($"No-Intro Pack-Import: {imported} DATs importiert aus {packDir}", imported > 0 ? "INFO" : "WARN");
+                }
+            }
         }
         else if (missing.Count > 0)
         {
@@ -177,7 +235,7 @@ public sealed partial class FeatureCommandService
         }
         catch (Exception ex)
         {
-            _vm.AddLog($"DAT-Diff Fehler: {ex.Message}", "ERROR");
+            LogError("DAT-DIFF", $"DAT-Diff Fehler: {ex.Message}");
             _dialog.ShowText("DAT-Diff-Viewer", $"Fehler beim Parsen der DAT-Dateien:\n\n{ex.Message}\n\nStelle sicher, dass beide Dateien gültiges Logiqx-XML enthalten.");
         }
     }
@@ -193,13 +251,13 @@ public sealed partial class FeatureCommandService
         {
             var safeName = Path.GetFileName(path);
             var targetPath = Path.GetFullPath(Path.Combine(_vm.DatRoot, safeName));
-            if (!targetPath.StartsWith(Path.GetFullPath(_vm.DatRoot), StringComparison.OrdinalIgnoreCase))
+            if (!targetPath.StartsWith(Path.GetFullPath(_vm.DatRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             { _vm.AddLog("TOSEC-DAT Import blockiert: Pfad außerhalb des DatRoot.", "ERROR"); return; }
             File.Copy(path, targetPath, overwrite: true);
             _vm.AddLog($"TOSEC-DAT kopiert nach: {targetPath}", "INFO");
             _dialog.Info($"TOSEC-DAT erfolgreich importiert:\n\n  Quelle: {path}\n  Ziel: {targetPath}", "TOSEC-DAT");
         }
-        catch (Exception ex) { _vm.AddLog($"TOSEC-DAT Import fehlgeschlagen: {ex.Message}", "ERROR"); }
+        catch (Exception ex) { LogError("DAT-TOSEC", $"TOSEC-DAT Import fehlgeschlagen: {ex.Message}"); }
     }
 
     private void CustomDatEditor()
@@ -210,11 +268,11 @@ public sealed partial class FeatureCommandService
         if (string.IsNullOrWhiteSpace(romName)) return;
         var crc32 = _dialog.ShowInputBox("CRC32-Hash eingeben (hex):", "Custom-DAT-Editor", "00000000");
         if (string.IsNullOrWhiteSpace(crc32)) return;
-        if (!Regex.IsMatch(crc32, @"^[0-9A-Fa-f]{8}$"))
+        if (!Regex.IsMatch(crc32, @"^[0-9A-Fa-f]{8}$", RegexOptions.None, TimeSpan.FromMilliseconds(200)))
         { _vm.AddLog($"Ungültiger CRC32-Hash: '{crc32}' — erwartet: 8 Hex-Zeichen.", "WARN"); return; }
         var sha1 = _dialog.ShowInputBox("SHA1-Hash eingeben (hex):", "Custom-DAT-Editor", "");
         if (string.IsNullOrWhiteSpace(sha1)) sha1 = "";
-        if (sha1.Length > 0 && !Regex.IsMatch(sha1, @"^[0-9A-Fa-f]{40}$"))
+        if (sha1.Length > 0 && !Regex.IsMatch(sha1, @"^[0-9A-Fa-f]{40}$", RegexOptions.None, TimeSpan.FromMilliseconds(200)))
         { _vm.AddLog($"Ungültiger SHA1-Hash: '{sha1}' — erwartet: 40 Hex-Zeichen.", "WARN"); return; }
 
         var xmlEntry = $"  <game name=\"{System.Security.SecurityElement.Escape(gameName)}\">\n" +
@@ -249,7 +307,7 @@ public sealed partial class FeatureCommandService
                 }
                 _vm.AddLog($"Custom-DAT-Eintrag gespeichert: {customDatPath}", "INFO");
             }
-            catch (Exception ex) { _vm.AddLog($"Custom-DAT Fehler: {ex.Message}", "ERROR"); }
+            catch (Exception ex) { LogError("DAT-CUSTOM", $"Custom-DAT Fehler: {ex.Message}"); }
         }
         else
             _vm.AddLog("DatRoot nicht gesetzt – Eintrag wird nur angezeigt.", "WARN");

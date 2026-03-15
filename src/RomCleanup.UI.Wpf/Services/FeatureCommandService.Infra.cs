@@ -57,7 +57,7 @@ public sealed partial class FeatureCommandService
             _dialog.ShowText("FTP-Quelle", sb.ToString());
             _vm.AddLog($"FTP-Quelle registriert: {uri.Host}{uri.AbsolutePath}", "INFO");
         }
-        catch (Exception ex) { _vm.AddLog($"FTP-URL ungültig: {ex.Message}", "ERROR"); }
+        catch (Exception ex) { LogError("GUI-FTP", $"FTP-URL ungültig: {ex.Message}"); }
     }
 
     private void CloudSync()
@@ -108,7 +108,7 @@ public sealed partial class FeatureCommandService
                     sb.AppendLine($"  [{type}] {name} v{ver}");
                     sb.AppendLine($"         {Path.GetDirectoryName(manifest)}");
                 }
-                catch { sb.AppendLine($"  [?] {Path.GetFileName(manifest)} (manifest ungültig)"); }
+                catch (Exception ex) { LogWarning("GUI-PLUGIN", $"Manifest ungültig: {Path.GetFileName(manifest)} – {ex.Message}"); sb.AppendLine($"  [?] {Path.GetFileName(manifest)} (manifest ungültig)"); }
             }
             if (dlls.Length > 0) { sb.AppendLine($"\n  DLLs:"); foreach (var dll in dlls) sb.AppendLine($"    {Path.GetFileName(dll)}"); }
         }

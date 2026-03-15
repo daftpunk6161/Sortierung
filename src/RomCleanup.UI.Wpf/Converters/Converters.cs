@@ -223,3 +223,22 @@ public sealed class PhaseDetailConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+
+/// <summary>GUI-071: Converts (fraction, containerWidth) → pixel width for bar charts.</summary>
+public sealed class FractionToWidthConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values.Length >= 2
+            && values[0] is double fraction
+            && values[1] is double containerWidth
+            && containerWidth > 0)
+        {
+            return Math.Max(2, fraction * containerWidth);
+        }
+        return 2.0;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}

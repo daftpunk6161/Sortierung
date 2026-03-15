@@ -280,10 +280,10 @@ public sealed class AuditSigningServiceTests : IDisposable
             => File.Exists(literalPath) || Directory.Exists(literalPath);
         public string EnsureDirectory(string path) { Directory.CreateDirectory(path); return path; }
         public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? extensions = null) => [];
-        public bool MoveItemSafely(string src, string dest)
+        public string? MoveItemSafely(string src, string dest)
         {
             File.Move(src, dest);
-            return true;
+            return dest;
         }
         public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
             => Path.Combine(rootPath, relativePath);

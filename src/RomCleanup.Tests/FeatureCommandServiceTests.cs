@@ -776,6 +776,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
         public ConfirmResult YesNoCancel(string message, string title = "Frage") => Contracts.Ports.ConfirmResult.Yes;
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => ShowInputBoxResult;
         public void ShowText(string title, string content) => ShowTextCalls.Add((title, content));
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 
     private sealed class StubSettingsService : ISettingsService

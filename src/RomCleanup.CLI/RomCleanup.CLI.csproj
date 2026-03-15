@@ -9,6 +9,9 @@
     <AssemblyName>romcleanup</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="RomCleanup.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\RomCleanup.Core\RomCleanup.Core.csproj" />
     <ProjectReference Include="..\RomCleanup.Contracts\RomCleanup.Contracts.csproj" />
     <ProjectReference Include="..\RomCleanup.Infrastructure\RomCleanup.Infrastructure.csproj" />

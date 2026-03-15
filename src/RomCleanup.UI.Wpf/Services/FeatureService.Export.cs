@@ -49,11 +49,13 @@ public static partial class FeatureService
     ];
 
 
+    private static readonly TimeSpan JunkRxTimeout = TimeSpan.FromMilliseconds(500);
+
     public static JunkReportEntry? GetJunkReason(string baseName, bool aggressive)
     {
         foreach (var (pattern, tag, reason) in JunkPatterns)
         {
-            if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase, JunkRxTimeout))
                 return new JunkReportEntry(tag, reason, "standard");
         }
 
@@ -61,7 +63,7 @@ public static partial class FeatureService
         {
             foreach (var (pattern, tag, reason) in AggressivePatterns)
             {
-                if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase))
+                if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase, JunkRxTimeout))
                     return new JunkReportEntry(tag, reason, "aggressive");
             }
         }
@@ -299,9 +301,16 @@ public static partial class FeatureService
             GroupCount = groups.Count,
             Duration = TimeSpan.FromMilliseconds(runResult?.DurationMs ?? 0)
         };
+        // Build winner/loser lookup from groups so Action reflects actual dedupe decisions
+        var loserPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var g in groups)
+            foreach (var l in g.Losers)
+                loserPaths.Add(l.MainPath);
+
         var entries = candidates.Select(c => new ReportEntry
         {
-            GameKey = c.GameKey, Action = c.Category == "JUNK" ? "JUNK" : "KEEP",
+            GameKey = c.GameKey,
+            Action = c.Category == "JUNK" ? "JUNK" : loserPaths.Contains(c.MainPath) ? "MOVE" : "KEEP",
             Category = c.Category, Region = c.Region, FilePath = c.MainPath,
             FileName = Path.GetFileName(c.MainPath), Extension = c.Extension,
             SizeBytes = c.SizeBytes, RegionScore = c.RegionScore, FormatScore = c.FormatScore,

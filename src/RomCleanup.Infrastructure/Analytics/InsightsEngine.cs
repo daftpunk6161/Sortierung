@@ -46,7 +46,8 @@ public sealed class InsightsEngine
             var files = _fs.GetFilesSafe(root, extensions);
             if (excludedPaths is { Count: > 0 })
                 files = files.Where(f => !excludedPaths.Any(ex =>
-                    f.StartsWith(ex, StringComparison.OrdinalIgnoreCase))).ToList();
+                    f.StartsWith(ex.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(f, ex, StringComparison.OrdinalIgnoreCase))).ToList();
             allFiles.AddRange(files);
         }
 
@@ -251,7 +252,8 @@ public sealed class InsightsEngine
             var files = _fs.GetFilesSafe(root, extensions);
             if (excludedPaths is not null)
                 files = files.Where(f => !excludedPaths.Any(ex =>
-                    f.StartsWith(ex, StringComparison.OrdinalIgnoreCase))).ToList();
+                    f.StartsWith(ex.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(f, ex, StringComparison.OrdinalIgnoreCase))).ToList();
 
             foreach (var file in files)
             {
@@ -315,12 +317,25 @@ public sealed class InsightsEngine
     private static string SanitizeCsv(string value)
     {
         if (string.IsNullOrEmpty(value)) return "";
-        // CSV injection prevention
+        // CSV injection prevention (OWASP: =, +, -, @)
         if (value[0] is '=' or '+' or '@')
+            value = "'" + value;
+        else if (value[0] == '-' && !IsPlainNegativeNumber(value))
             value = "'" + value;
         if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
             return "\"" + value.Replace("\"", "\"\"") + "\"";
         return value;
+    }
+
+    private static bool IsPlainNegativeNumber(string value)
+    {
+        if (value.Length < 2 || value[0] != '-') return false;
+        for (int i = 1; i < value.Length; i++)
+        {
+            if (!char.IsDigit(value[i]) && value[i] != '.')
+                return false;
+        }
+        return true;
     }
 }
 

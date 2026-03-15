@@ -98,6 +98,29 @@ public sealed partial class MainViewModel
 
         ConsoleFiltersView = CollectionViewSource.GetDefaultView(ConsoleFilters);
         ConsoleFiltersView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(ConsoleFilterItem.Category)));
+        ConsoleFiltersView.Filter = FilterConsoleItem;
+    }
+
+    // GUI-087: Console filter search text
+    private string _consoleFilterText = string.Empty;
+    public string ConsoleFilterText
+    {
+        get => _consoleFilterText;
+        set
+        {
+            if (_consoleFilterText == value) return;
+            _consoleFilterText = value;
+            OnPropertyChanged();
+            ConsoleFiltersView.Refresh();
+        }
+    }
+
+    private bool FilterConsoleItem(object obj)
+    {
+        if (string.IsNullOrWhiteSpace(_consoleFilterText)) return true;
+        if (obj is not ConsoleFilterItem item) return false;
+        return item.DisplayName.Contains(_consoleFilterText, StringComparison.OrdinalIgnoreCase)
+            || item.Key.Contains(_consoleFilterText, StringComparison.OrdinalIgnoreCase);
     }
 
     // ═══ TOOL ITEMS (RD-004: Smart Werkzeuge layout with Quick Access, Recents, Expander categories) ═══
@@ -124,7 +147,7 @@ public sealed partial class MainViewModel
         get => _toolFilterText;
         set
         {
-            if (SetField(ref _toolFilterText, value))
+            if (SetProperty(ref _toolFilterText, value))
             {
                 ToolItemsView?.Refresh();
                 OnPropertyChanged(nameof(IsToolSearchActive));

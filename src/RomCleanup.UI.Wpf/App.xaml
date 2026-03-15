@@ -1,12 +1,25 @@
 <Application x:Class="RomCleanup.UI.Wpf.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    StartupUri="MainWindow.xaml">
+    xmlns:conv="clr-namespace:RomCleanup.UI.Wpf.Converters">
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Themes/_Tokens.xaml"/>
         <ResourceDictionary Source="Themes/SynthwaveDark.xaml"/>
       </ResourceDictionary.MergedDictionaries>
+      <!-- GUI-086: Shared converters (centralized from View.Resources) -->
+      <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
+      <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
+      <conv:InverseBoolConverter x:Key="InverseBool"/>
+      <conv:StatusLevelToBrushConverter x:Key="StatusToBrush"/>
+      <conv:LogLevelToBrushConverter x:Key="LogLevelToBrush"/>
+      <conv:StepActiveBrushConverter x:Key="StepToBrush"/>
+      <conv:PipelinePhaseBrushConverter x:Key="PhaseBrush"/>
+      <conv:StringEqualsToVisibilityConverter x:Key="StrEqualsToVis"/>
+      <conv:StringEqualsToBoolConverter x:Key="StrEqualsToBool"/>
+      <conv:PhaseDetailConverter x:Key="PhaseDetail"/>
+      <conv:FractionToWidthConverter x:Key="FractionToWidth"/>
     </ResourceDictionary>
   </Application.Resources>
 </Application>

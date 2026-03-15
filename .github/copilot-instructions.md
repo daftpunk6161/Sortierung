@@ -17,7 +17,7 @@ C# .NET 10 Tool zur ROM-Sammlungsverwaltung: regionsbasierte Deduplizierung, Ent
 dotnet build src/RomCleanup.sln
 ```
 
-### Tests (xUnit, 940 Tests)
+### Tests (xUnit, 3090+ Tests)
 ```bash
 # Alle Tests
 dotnet test src/RomCleanup.sln
@@ -84,7 +84,7 @@ src/
 │   ├── Converters/            WPF Value Converters
 │   ├── Themes/                ResourceDictionary (Dark + Neon Accent)
 │   └── MainWindow.xaml(.cs)   RunOrchestrator-Wiring, Rollback
-└── RomCleanup.Tests/          ← xUnit Tests (940 Tests)
+└── RomCleanup.Tests/          ← xUnit Tests (3090+ Tests, 72 Testdateien)
 ```
 
 Dependency-Richtung: Entry Points → Infrastructure → Core → Contracts (nie umgekehrt).
@@ -264,7 +264,7 @@ WPF GUI in `src/RomCleanup.UI.Wpf/` (MVVM-Pattern):
 
 ## Tests
 
-940 xUnit-Tests in `src/RomCleanup.Tests/`.
+3090+ xUnit-Tests in `src/RomCleanup.Tests/` (72 Testdateien).
 
 **Benennung:** `<Klasse>Tests.cs` (z.B. `GameKeyNormalizerTests.cs`, `DeduplicationEngineTests.cs`)
 

@@ -1,25 +1,16 @@
-using System.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace RomCleanup.UI.Wpf.Models;
 
 /// <summary>
 /// Row in the console → DAT-file mapping DataGrid.
+/// GUI-113: Uses ObservableObject to eliminate boilerplate.
 /// </summary>
-public sealed class DatMapRow : INotifyPropertyChanged
+public sealed partial class DatMapRow : ObservableObject
 {
-    public event PropertyChangedEventHandler? PropertyChanged;
-
+    [ObservableProperty]
     private string _console = "";
-    public string Console
-    {
-        get => _console;
-        set { _console = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Console))); }
-    }
 
+    [ObservableProperty]
     private string _datFile = "";
-    public string DatFile
-    {
-        get => _datFile;
-        set { _datFile = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DatFile))); }
-    }
 }

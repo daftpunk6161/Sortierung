@@ -117,4 +117,25 @@ public static class FormatScorer
     /// </summary>
     public static bool IsDiscExtension(string extension)
         => DiscExtensions.Contains(extension);
+
+    /// <summary>
+    /// Returns whether the given extension has a known format score (not the default 300).
+    /// Callers can use this to log warnings for unknown formats.
+    /// </summary>
+    public static bool IsKnownFormat(string extension)
+    {
+        var ext = extension.ToLowerInvariant();
+        return ext switch
+        {
+            ".chd" or ".iso" or ".cso" or ".pbp" or ".gcz" or ".rvz"
+            or ".wia" or ".wbf1" or ".wbfs" or ".nsp" or ".xci" or ".3ds"
+            or ".dax" or ".jso" or ".zso" or ".cia" or ".nsz" or ".xcz"
+            or ".nrg" or ".mdf" or ".mds" or ".cdi"
+            or ".nds" or ".gba" or ".gbc" or ".gb" or ".nes" or ".sfc" or ".smc"
+            or ".n64" or ".z64" or ".v64" or ".md" or ".gen" or ".sms"
+            or ".gg" or ".pce" or ".fds" or ".32x" or ".a26" or ".a52" or ".a78"
+            or ".ecm" or ".zip" or ".7z" or ".rar" => true,
+            _ => false
+        };
+    }
 }

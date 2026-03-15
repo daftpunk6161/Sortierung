@@ -18,6 +18,8 @@ public interface IDialogService
     string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "");
     /// <summary>Show a large text result dialog with Copy/Export buttons.</summary>
     void ShowText(string title, string content);
+    /// <summary>GUI-054: Danger-Confirm dialog requiring typed confirmation. Returns true only if confirmed.</summary>
+    bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen");
 }
 
 /// <summary>Platform-neutral replacement for <c>System.Windows.MessageBoxResult</c>.</summary>

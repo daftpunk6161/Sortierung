@@ -21,24 +21,26 @@ public sealed class FolderDeduplicator
 
     private static readonly string[] Ps3KeyFiles = ["PS3_DISC.SFB", "PARAM.SFO", "EBOOT.BIN"];
 
+    private static readonly TimeSpan RxTimeout = TimeSpan.FromMilliseconds(200);
+
     private static readonly Regex PreservePattern = new(
         @"(?:Disk|Disc|CD|Side)\s*[\dA-Z]|AGA|ECS|OCS|NTSC|PAL|WHDLoad|ADF",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
 
     private static readonly Regex ParenthesisPattern = new(
-        @"\([^)]*\)", RegexOptions.Compiled);
+        @"\([^)]*\)", RegexOptions.Compiled, RxTimeout);
 
     private static readonly Regex TrailingBracketPattern = new(
-        @"\s*\[[^\]]*\]\s*$", RegexOptions.Compiled);
+        @"\s*\[[^\]]*\]\s*$", RegexOptions.Compiled, RxTimeout);
 
     private static readonly Regex VersionSuffixPattern = new(
-        @"\s+v?\d+(\.\d+)+\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        @"\s+v?\d+(\.\d+)+\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
 
     private static readonly Regex MultiSpacePattern = new(
-        @"\s{2,}", RegexOptions.Compiled);
+        @"\s{2,}", RegexOptions.Compiled, RxTimeout);
 
     private static readonly Regex MultidiscPattern = new(
-        @"(?:Disc|Disk|CD|Side)\s*\d", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        @"(?:Disc|Disk|CD|Side)\s*\d", RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
 
     private readonly IFileSystem _fs;
     private readonly Action<string>? _log;
@@ -50,13 +52,14 @@ public sealed class FolderDeduplicator
     }
 
     /// <summary>
-    /// Compute MD5 hash of PS3 key files in a folder.
-    /// Returns null if no key files found.
+    /// Compute SHA256 hash of PS3 key files in a folder.
+    /// Returns null if no key files found or no data could be read.
     /// </summary>
     public static string? GetPs3FolderHash(string folderPath)
     {
         using var sha = SHA256.Create();
         bool found = false;
+        bool dataFed = false;
 
         foreach (var keyFile in Ps3KeyFiles)
         {
@@ -73,13 +76,14 @@ public sealed class FolderDeduplicator
                 while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
                 {
                     sha.TransformBlock(buffer, 0, bytesRead, null, 0);
+                    dataFed = true;
                 }
             }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
         }
 
-        if (!found) return null;
+        if (!found || !dataFed) return null;
 
         sha.TransformFinalBlock([], 0, 0);
         return Convert.ToHexStringLower(sha.Hash!);

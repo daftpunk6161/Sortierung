@@ -42,4 +42,7 @@ public sealed class WpfDialogService : IDialogService
 
     public void ShowText(string title, string content)
         => DialogService.ShowText(title, content);
+
+    public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen")
+        => DialogService.DangerConfirm(title, message, confirmText, buttonLabel);
 }

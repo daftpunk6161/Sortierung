@@ -145,7 +145,7 @@ internal static class Program
             if (consoleMap.Count > 0)
             {
                 datIndex = datRepo.GetDatIndex(datRoot, consoleMap, hashType);
-                Console.WriteLine($"[DAT] Loaded {datIndex.TotalEntries} hashes for {datIndex.ConsoleCount} consoles");
+                Console.Error.WriteLine($"[DAT] Loaded {datIndex.TotalEntries} hashes for {datIndex.ConsoleCount} consoles");
                 log?.Info("CLI", "dat-loaded",
                     $"{datIndex.TotalEntries} hashes for {datIndex.ConsoleCount} consoles (hashType={hashType})", "init");
             }
@@ -188,7 +188,7 @@ internal static class Program
         log?.Info("CLI", "start", $"Run started: Mode={opts.Mode}, Roots={string.Join(";", opts.Roots)}", "scan");
 
         var orchestrator = new RunOrchestrator(fs, audit, consoleDetector, hashService,
-            converter, datIndex, onProgress: msg => Console.WriteLine($"[{msg}]"));
+            converter, datIndex, onProgress: msg => Console.Error.WriteLine($"[{msg}]"));
 
         var result = orchestrator.Execute(runOptions, cts.Token);
 
@@ -234,10 +234,10 @@ internal static class Program
         else if (opts.Mode == "Move")
         {
             var mr = result.MoveResult;
-            Console.WriteLine($"[Done] Moved {mr?.MoveCount ?? 0} files ({mr?.SavedBytes ?? 0:N0} bytes saved), {mr?.FailCount ?? 0} failed");
+            Console.Error.WriteLine($"[Done] Moved {mr?.MoveCount ?? 0} files ({mr?.SavedBytes ?? 0:N0} bytes saved), {mr?.FailCount ?? 0} failed");
 
             if (result.ConvertedCount > 0)
-                Console.WriteLine($"[Convert] {result.ConvertedCount} files converted");
+                Console.Error.WriteLine($"[Convert] {result.ConvertedCount} files converted");
 
             // Write final audit sidecar
             if (!string.IsNullOrEmpty(auditPath) && File.Exists(auditPath))
@@ -251,7 +251,7 @@ internal static class Program
                     ["keep"] = result.WinnerCount,
                     ["move"] = result.LoserCount
                 });
-                Console.WriteLine($"[Audit] {auditPath}");
+                Console.Error.WriteLine($"[Audit] {auditPath}");
             }
         }
 
@@ -275,7 +275,7 @@ internal static class Program
                 var html = ReportGenerator.GenerateHtml(reportSummary, reportEntries);
                 File.WriteAllText(opts.ReportPath, html, System.Text.Encoding.UTF8);
             }
-            Console.WriteLine($"[Report] {opts.ReportPath}");
+            Console.Error.WriteLine($"[Report] {opts.ReportPath}");
             log?.Info("CLI", "report", $"Report written: {opts.ReportPath}", "report");
         }
 
@@ -376,7 +376,7 @@ internal static class Program
         };
     }
 
-    private static (CliOptions?, int exitCode) ParseArgs(string[] args)
+    internal static (CliOptions?, int exitCode) ParseArgs(string[] args)
     {
         if (args.Length == 0)
             return (null, 0);
@@ -397,12 +397,15 @@ internal static class Program
                     if (++i < args.Length)
                     {
                         var modeVal = args[i];
-                        if (modeVal != "DryRun" && modeVal != "Move")
+                        if (string.Equals(modeVal, "DryRun", StringComparison.OrdinalIgnoreCase))
+                            opts.Mode = "DryRun";
+                        else if (string.Equals(modeVal, "Move", StringComparison.OrdinalIgnoreCase))
+                            opts.Mode = "Move";
+                        else
                         {
                             Console.Error.WriteLine($"[Error] Invalid mode '{modeVal}'. Must be DryRun or Move.");
                             return (null, 3);
                         }
-                        opts.Mode = modeVal;
                     }
                     break;
 
@@ -429,6 +432,10 @@ internal static class Program
 
                 case "-removejunk" or "--removejunk":
                     opts.RemoveJunk = true;
+                    break;
+
+                case "-no-removejunk" or "--no-removejunk":
+                    opts.RemoveJunk = false;
                     break;
 
                 case "-aggressivejunk" or "--aggressivejunk":
@@ -573,7 +580,7 @@ Exit codes:
   3  Preflight / validation failure");
     }
 
-    private sealed class CliOptions
+    internal sealed class CliOptions
     {
         public string[] Roots { get; set; } = Array.Empty<string>();
         public string Mode { get; set; } = "DryRun";
@@ -581,7 +588,7 @@ Exit codes:
         public HashSet<string> Extensions { get; set; } = new(RunOptions.DefaultExtensions, StringComparer.OrdinalIgnoreCase);
         public bool ExtensionsExplicit { get; set; }
         public string? TrashRoot { get; set; }
-        public bool RemoveJunk { get; set; }
+        public bool RemoveJunk { get; set; } = true;
         public bool AggressiveJunk { get; set; }
         public bool SortConsole { get; set; }
         public bool EnableDat { get; set; }

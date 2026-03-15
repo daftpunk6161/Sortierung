@@ -113,7 +113,7 @@ public class QuarantineServiceTests : IDisposable
     public void CreateAction_TargetHasDateDirectory()
     {
         var action = _svc.CreateAction(@"C:\Roms\file.bin", @"C:\Q");
-        var dateStr = DateTime.Now.ToString("yyyyMMdd");
+        var dateStr = DateTime.UtcNow.ToString("yyyyMMdd");
         Assert.Contains(dateStr, action.QuarantineDir);
     }
 
@@ -307,13 +307,13 @@ public class QuarantineServiceTests : IDisposable
             return files;
         }
 
-        public bool MoveItemSafely(string source, string destination)
+        public string? MoveItemSafely(string source, string destination)
         {
             var dir = Path.GetDirectoryName(destination);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
             File.Move(source, destination);
-            return true;
+            return destination;
         }
 
         public string ResolveChildPathWithinRoot(string root, string childPath)

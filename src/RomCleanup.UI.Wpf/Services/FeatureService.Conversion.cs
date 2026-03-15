@@ -19,7 +19,9 @@ public static partial class FeatureService
     // ═══ CONVERSION ESTIMATE ════════════════════════════════════════════
     // Port of ConversionEstimate.ps1
 
-    private static readonly Dictionary<string, double> CompressionRatios = new(StringComparer.OrdinalIgnoreCase)
+    private static Dictionary<string, double> CompressionRatios =>
+        UiLookupData.Instance.CompressionRatios.Count > 0 ? UiLookupData.Instance.CompressionRatios
+        : new(StringComparer.OrdinalIgnoreCase)
     {
         ["bin_chd"] = 0.50, ["cue_chd"] = 0.50, ["iso_chd"] = 0.60,
         ["iso_rvz"] = 0.40, ["gcz_rvz"] = 0.70, ["zip_7z"] = 0.90,
@@ -82,7 +84,9 @@ public static partial class FeatureService
     // ═══ FORMAT PRIORITY ════════════════════════════════════════════════
     // Port of FormatPriority.ps1
 
-    private static readonly Dictionary<string, string[]> ConsoleFormatPriority = new(StringComparer.OrdinalIgnoreCase)
+    private static Dictionary<string, string[]> ConsoleFormatPriority =>
+        UiLookupData.Instance.ConsoleFormatPriority.Count > 0 ? UiLookupData.Instance.ConsoleFormatPriority
+        : new(StringComparer.OrdinalIgnoreCase)
     {
         ["ps1"] = ["chd", "bin/cue", "pbp", "cso", "iso"],
         ["ps2"] = ["chd", "iso"],
@@ -120,7 +124,9 @@ public static partial class FeatureService
     // ═══ EMULATOR COMPAT ════════════════════════════════════════════════
     // Port of EmulatorCompatReport.ps1
 
-    private static readonly Dictionary<string, Dictionary<string, string>> EmulatorMatrix = new()
+    private static Dictionary<string, Dictionary<string, string>> EmulatorMatrix =>
+        UiLookupData.Instance.EmulatorMatrix.Count > 0 ? UiLookupData.Instance.EmulatorMatrix
+        : new()
     {
         ["nes"] = new() { ["Mesen"] = "Perfect", ["FCEUX"] = "Great", ["Nestopia"] = "Great" },
         ["snes"] = new() { ["bsnes"] = "Perfect", ["Snes9x"] = "Great", ["ZSNES"] = "Good" },

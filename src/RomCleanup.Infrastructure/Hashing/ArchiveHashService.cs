@@ -15,7 +15,8 @@ namespace RomCleanup.Infrastructure.Hashing;
 public sealed class ArchiveHashService
 {
     private static readonly Regex RxPathEntry = new(@"^Path = (.+)$",
-        RegexOptions.Compiled | RegexOptions.Multiline);
+        RegexOptions.Compiled | RegexOptions.Multiline,
+        TimeSpan.FromMilliseconds(500));
 
     private readonly LruCache<string, string[]> _cache;
     private readonly IToolRunner? _toolRunner;
@@ -61,10 +62,13 @@ public sealed class ArchiveHashService
     /// Get hashes of all entries inside an archive file.
     /// Returns empty array on failure or if archive exceeds size limit.
     /// </summary>
-    public string[] GetArchiveHashes(string archivePath, string hashType = "SHA1")
+    public string[] GetArchiveHashes(string archivePath, string hashType = "SHA1",
+        CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(archivePath) || !File.Exists(archivePath))
             return Array.Empty<string>();
+
+        ct.ThrowIfCancellationRequested();
 
         var cacheKey = $"ARCHIVE|{hashType}|{archivePath}";
         if (_cache.TryGet(cacheKey, out var cached))
@@ -87,11 +91,12 @@ public sealed class ArchiveHashService
         try
         {
             hashes = ext == ".zip"
-                ? HashZipEntries(archivePath, hashType)
+                ? HashZipEntries(archivePath, hashType, ct)
                 : ext == ".7z"
-                    ? Hash7zEntries(archivePath, hashType)
+                    ? Hash7zEntries(archivePath, hashType, ct)
                     : Array.Empty<string>();
         }
+        catch (OperationCanceledException) { throw; }
         catch (IOException) { hashes = Array.Empty<string>(); }
         catch (InvalidDataException) { hashes = Array.Empty<string>(); }
         catch (UnauthorizedAccessException) { hashes = Array.Empty<string>(); }
@@ -108,13 +113,15 @@ public sealed class ArchiveHashService
 
     // ── ZIP: in-memory stream hashing ──
 
-    private static string[] HashZipEntries(string zipPath, string hashType)
+    private static string[] HashZipEntries(string zipPath, string hashType,
+        CancellationToken ct = default)
     {
         var hashes = new List<string>();
         using var archive = ZipFile.OpenRead(zipPath);
 
         foreach (var entry in archive.Entries)
         {
+            ct.ThrowIfCancellationRequested();
             if (entry.Length <= 0) continue;
             try
             {
@@ -131,7 +138,8 @@ public sealed class ArchiveHashService
 
     // ── 7z: temp extraction + file hashing ──
 
-    private string[] Hash7zEntries(string archivePath, string hashType)
+    private string[] Hash7zEntries(string archivePath, string hashType,
+        CancellationToken ct = default)
     {
         if (_toolRunner is null)
             return Array.Empty<string>();
@@ -155,13 +163,17 @@ public sealed class ArchiveHashService
             if (result.ExitCode != 0)
                 return Array.Empty<string>();
 
+            ct.ThrowIfCancellationRequested();
+
             // Post-extraction security: check for path traversal, reparse points, and directory junctions
             var normalizedTemp = Path.GetFullPath(tempDir).TrimEnd(Path.DirectorySeparatorChar)
                                  + Path.DirectorySeparatorChar;
 
             // Check directories for junctions/reparse points
+            var dirIndex = 0;
             foreach (var dir in Directory.GetDirectories(tempDir, "*", SearchOption.AllDirectories))
             {
+                if (++dirIndex % 100 == 0) ct.ThrowIfCancellationRequested();
                 var dirInfo = new DirectoryInfo(dir);
                 if ((dirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
                     return Array.Empty<string>();
@@ -169,11 +181,13 @@ public sealed class ArchiveHashService
                     return Array.Empty<string>();
             }
 
+            ct.ThrowIfCancellationRequested();
             var extractedFiles = Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories);
             var hashes = new List<string>();
 
             foreach (var file in extractedFiles)
             {
+                ct.ThrowIfCancellationRequested();
                 // Validate extracted file is within tempDir (with separator guard)
                 if (!Path.GetFullPath(file).StartsWith(normalizedTemp, StringComparison.OrdinalIgnoreCase))
                     return Array.Empty<string>();
@@ -235,6 +249,11 @@ public sealed class ArchiveHashService
         return paths;
     }
 
+    private static readonly Regex RxDotDotTraversal = new(
+        @"(^|[\\/])\.\.([\\/]|$)",
+        RegexOptions.Compiled,
+        TimeSpan.FromMilliseconds(200));
+
     /// <summary>
     /// Detect Zip-Slip patterns: absolute paths or ".." traversal.
     /// </summary>
@@ -244,7 +263,7 @@ public sealed class ArchiveHashService
         {
             if (string.IsNullOrWhiteSpace(p)) continue;
             if (Path.IsPathRooted(p)) return false;
-            if (Regex.IsMatch(p, @"(^|[\\/])\.\.([\\/]|$)")) return false;
+            if (RxDotDotTraversal.IsMatch(p)) return false;
         }
         return true;
     }

@@ -68,10 +68,12 @@ public sealed class FormatConverterAdapter : IFormatConverter
         return BestFormats.TryGetValue(consoleKey.Trim(), out var target) ? target : null;
     }
 
-    public ConversionResult Convert(string sourcePath, ConversionTarget target)
+    public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
     {
         if (!File.Exists(sourcePath))
             return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "source-not-found");
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         var toolPath = _tools.FindTool(target.ToolName);
         if (toolPath is null)
@@ -95,6 +97,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
             "chdman" => ConvertWithChdman(sourcePath, targetPath, toolPath, target.Command),
             "dolphintool" => ConvertWithDolphinTool(sourcePath, targetPath, toolPath, sourceExt),
             "7z" => ConvertWithSevenZip(sourcePath, targetPath, toolPath),
+            "psxtract" => ConvertWithPsxtract(sourcePath, targetPath, toolPath, target.Command),
             _ => new ConversionResult(sourcePath, null, ConversionOutcome.Error, $"unknown-tool:{target.ToolName}")
         };
     }
@@ -201,6 +204,24 @@ public sealed class FormatConverterAdapter : IFormatConverter
             CleanupPartialOutput(targetPath);
             return new ConversionResult(sourcePath, null, ConversionOutcome.Error,
                 "7z-failed", result.ExitCode);
+        }
+
+        if (!File.Exists(targetPath))
+            return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "output-not-created");
+
+        return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success);
+    }
+
+    private ConversionResult ConvertWithPsxtract(string sourcePath, string targetPath, string toolPath, string command)
+    {
+        var args = new[] { command, "-i", sourcePath, "-o", targetPath };
+        var result = _tools.InvokeProcess(toolPath, args, "psxtract");
+
+        if (!result.Success)
+        {
+            CleanupPartialOutput(targetPath);
+            return new ConversionResult(sourcePath, null, ConversionOutcome.Error,
+                "psxtract-failed", result.ExitCode);
         }
 
         if (!File.Exists(targetPath))

@@ -26,7 +26,7 @@ public static class GdiSetParser
         if (string.IsNullOrWhiteSpace(gdiPath) || !File.Exists(gdiPath))
             return Array.Empty<string>();
 
-        var dir = Path.GetDirectoryName(gdiPath) ?? "";
+        var dir = Path.GetDirectoryName(Path.GetFullPath(gdiPath)) ?? "";
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

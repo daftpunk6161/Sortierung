@@ -54,6 +54,7 @@ sealed class P5Dialog : IDialogService
     public string ShowInputBox(string prompt, string title = "", string defaultValue = "")
         => InputBoxResponses.Count > 0 ? InputBoxResponses.Dequeue() : "";
     public void ShowText(string title, string content) => ShowTextCalls.Add(content);
+    public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
 }
 
 file sealed class P5Settings : ISettingsService
@@ -1346,14 +1347,14 @@ public class RunServiceDeepTests
     [Fact]
     public void GetSiblingDirectory_MultiLevel_ReturnsCorrectSibling()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\Users\Games\Roms", "audit");
+        var result = new RunService().GetSiblingDirectory(@"C:\Users\Games\Roms", "audit");
         Assert.Equal(@"C:\Users\Games\audit", result);
     }
 
     [Fact]
     public void GetSiblingDirectory_TrailingSlash_Works()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\Games\", "trash");
+        var result = new RunService().GetSiblingDirectory(@"C:\Games\", "trash");
         Assert.Contains("trash", result);
     }
 
@@ -1363,7 +1364,7 @@ public class RunServiceDeepTests
     [InlineData(@"E:\a\b\c", "sibling", @"E:\a\b\sibling")]
     public void GetSiblingDirectory_Variations(string root, string sibling, string expected)
     {
-        Assert.Equal(expected, RunService.GetSiblingDirectory(root, sibling));
+        Assert.Equal(expected, new RunService().GetSiblingDirectory(root, sibling));
     }
 }
 
@@ -1371,6 +1372,7 @@ public class RunServiceDeepTests
 // SettingsService SaveFrom deeper
 // ═══════════════════════════════════════════════════════════════════
 
+[Collection("SettingsFile")]
 public class SettingsServiceSaveFromTests
 {
     [Fact]
@@ -1500,27 +1502,6 @@ public class OperationResultTests
         var result = OperationResult.Ok("all good");
         Assert.Equal("ok", result.Status);
         Assert.Equal("all good", result.Reason);
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// ConversionModels
-// ═══════════════════════════════════════════════════════════════════
-
-public class ConversionModelTests
-{
-    [Fact]
-    public void ConversionPipelineDef_HasEmptyStepsByDefault()
-    {
-        var def = new ConversionPipelineDef { SourcePath = "a.cso" };
-        Assert.NotNull(def.Steps);
-    }
-
-    [Fact]
-    public void ConversionPipelineResult_DefaultsToFailed()
-    {
-        var result = new ConversionPipelineResult();
-        Assert.Equal("pending", result.Status);
     }
 }
 

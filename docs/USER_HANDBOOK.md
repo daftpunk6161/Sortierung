@@ -1,6 +1,6 @@
 # User-Handbuch
 
-**Stand:** 2026-03-11
+**Stand:** 2026-03-15
 
 ---
 

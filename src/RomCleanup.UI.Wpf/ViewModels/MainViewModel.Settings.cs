@@ -1,4 +1,5 @@
 using System.IO;
+using CommunityToolkit.Mvvm.ComponentModel;
 using RomCleanup.UI.Wpf.Models;
 using RomCleanup.UI.Wpf.Services;
 using ConflictPolicy = RomCleanup.UI.Wpf.Models.ConflictPolicy;
@@ -9,180 +10,203 @@ public sealed partial class MainViewModel
 {
     // ═══ PATH PROPERTIES (persisted) ════════════════════════════════════
     private string _trashRoot = "";
-    public string TrashRoot { get => _trashRoot; set { if (SetField(ref _trashRoot, value)) ValidateDirectoryPath(value, nameof(TrashRoot)); } }
+    public string TrashRoot { get => _trashRoot; set { if (SetProperty(ref _trashRoot, value)) ValidateDirectoryPath(value, nameof(TrashRoot)); } }
 
     private string _datRoot = "";
-    public string DatRoot { get => _datRoot; set { if (SetField(ref _datRoot, value)) { ValidateDirectoryPath(value, nameof(DatRoot)); RefreshStatus(); } } }
+    public string DatRoot { get => _datRoot; set { if (SetProperty(ref _datRoot, value)) { ValidateDirectoryPath(value, nameof(DatRoot)); RefreshStatus(); } } }
 
     private string _auditRoot = "";
-    public string AuditRoot { get => _auditRoot; set { if (SetField(ref _auditRoot, value)) ValidateDirectoryPath(value, nameof(AuditRoot)); } }
+    public string AuditRoot { get => _auditRoot; set { if (SetProperty(ref _auditRoot, value)) ValidateDirectoryPath(value, nameof(AuditRoot)); } }
 
     private string _ps3DupesRoot = "";
-    public string Ps3DupesRoot { get => _ps3DupesRoot; set { if (SetField(ref _ps3DupesRoot, value)) ValidateDirectoryPath(value, nameof(Ps3DupesRoot)); } }
+    public string Ps3DupesRoot { get => _ps3DupesRoot; set { if (SetProperty(ref _ps3DupesRoot, value)) ValidateDirectoryPath(value, nameof(Ps3DupesRoot)); } }
 
     // ═══ TOOL PATHS (persisted) ═════════════════════════════════════════
     private string _toolChdman = "";
-    public string ToolChdman { get => _toolChdman; set { if (SetField(ref _toolChdman, value)) { ValidateToolPath(value, nameof(ToolChdman)); RefreshStatus(); } } }
+    public string ToolChdman { get => _toolChdman; set { if (SetProperty(ref _toolChdman, value)) { ValidateToolPath(value, nameof(ToolChdman)); RefreshStatus(); } } }
 
     private string _toolDolphin = "";
-    public string ToolDolphin { get => _toolDolphin; set { if (SetField(ref _toolDolphin, value)) { ValidateToolPath(value, nameof(ToolDolphin)); RefreshStatus(); } } }
+    public string ToolDolphin { get => _toolDolphin; set { if (SetProperty(ref _toolDolphin, value)) { ValidateToolPath(value, nameof(ToolDolphin)); RefreshStatus(); } } }
 
     private string _tool7z = "";
-    public string Tool7z { get => _tool7z; set { if (SetField(ref _tool7z, value)) { ValidateToolPath(value, nameof(Tool7z)); RefreshStatus(); } } }
+    public string Tool7z { get => _tool7z; set { if (SetProperty(ref _tool7z, value)) { ValidateToolPath(value, nameof(Tool7z)); RefreshStatus(); } } }
 
     private string _toolPsxtract = "";
-    public string ToolPsxtract { get => _toolPsxtract; set { if (SetField(ref _toolPsxtract, value)) ValidateToolPath(value, nameof(ToolPsxtract)); } }
+    public string ToolPsxtract { get => _toolPsxtract; set { if (SetProperty(ref _toolPsxtract, value)) ValidateToolPath(value, nameof(ToolPsxtract)); } }
 
     private string _toolCiso = "";
-    public string ToolCiso { get => _toolCiso; set { if (SetField(ref _toolCiso, value)) ValidateToolPath(value, nameof(ToolCiso)); } }
+    public string ToolCiso { get => _toolCiso; set { if (SetProperty(ref _toolCiso, value)) ValidateToolPath(value, nameof(ToolCiso)); } }
 
     // ═══ BOOLEAN FLAGS (persisted) ══════════════════════════════════════
+    [ObservableProperty]
     private bool _sortConsole = true;
-    public bool SortConsole { get => _sortConsole; set => SetField(ref _sortConsole, value); }
 
+    [ObservableProperty]
     private bool _aliasKeying;
-    public bool AliasKeying { get => _aliasKeying; set => SetField(ref _aliasKeying, value); }
 
     private bool _useDat;
-    public bool UseDat { get => _useDat; set { if (SetField(ref _useDat, value)) RefreshStatus(); } }
+    public bool UseDat { get => _useDat; set { if (SetProperty(ref _useDat, value)) RefreshStatus(); } }
 
+    [ObservableProperty]
     private bool _datFallback;
-    public bool DatFallback { get => _datFallback; set => SetField(ref _datFallback, value); }
 
+    [ObservableProperty]
     private bool _dryRun = true;
-    public bool DryRun { get => _dryRun; set => SetField(ref _dryRun, value); }
 
     private bool _convertEnabled;
-    public bool ConvertEnabled { get => _convertEnabled; set { if (SetField(ref _convertEnabled, value)) RefreshStatus(); } }
+    public bool ConvertEnabled { get => _convertEnabled; set { if (SetProperty(ref _convertEnabled, value)) RefreshStatus(); } }
 
+    [ObservableProperty]
     private bool _confirmMove = true;
-    public bool ConfirmMove { get => _confirmMove; set => SetField(ref _confirmMove, value); }
 
+    [ObservableProperty]
     private bool _aggressiveJunk;
-    public bool AggressiveJunk { get => _aggressiveJunk; set => SetField(ref _aggressiveJunk, value); }
 
+    [ObservableProperty]
     private bool _crcVerifyScan;
-    public bool CrcVerifyScan { get => _crcVerifyScan; set => SetField(ref _crcVerifyScan, value); }
 
+    [ObservableProperty]
     private bool _crcVerifyDat;
-    public bool CrcVerifyDat { get => _crcVerifyDat; set => SetField(ref _crcVerifyDat, value); }
 
+    [ObservableProperty]
     private bool _safetyStrict;
-    public bool SafetyStrict { get => _safetyStrict; set => SetField(ref _safetyStrict, value); }
 
+    [ObservableProperty]
     private bool _safetyPrompts;
-    public bool SafetyPrompts { get => _safetyPrompts; set => SetField(ref _safetyPrompts, value); }
 
+    [ObservableProperty]
     private bool _jpOnlySelected;
-    public bool JpOnlySelected { get => _jpOnlySelected; set => SetField(ref _jpOnlySelected, value); }
 
     // ═══ STRING CONFIG (persisted) ══════════════════════════════════════
+    [ObservableProperty]
     private string _protectedPaths = "";
-    public string ProtectedPaths { get => _protectedPaths; set => SetField(ref _protectedPaths, value); }
 
+    [ObservableProperty]
     private string _safetySandbox = "";
-    public string SafetySandbox { get => _safetySandbox; set => SetField(ref _safetySandbox, value); }
 
+    [ObservableProperty]
     private string _jpKeepConsoles = "";
-    public string JpKeepConsoles { get => _jpKeepConsoles; set => SetField(ref _jpKeepConsoles, value); }
 
+    [ObservableProperty]
     private string _logLevel = "Info";
-    public string LogLevel { get => _logLevel; set => SetField(ref _logLevel, value); }
 
+    [ObservableProperty]
     private string _locale = "de";
-    public string Locale { get => _locale; set => SetField(ref _locale, value); }
 
+    [ObservableProperty]
     private bool _isWatchModeActive;
-    public bool IsWatchModeActive { get => _isWatchModeActive; set => SetField(ref _isWatchModeActive, value); }
 
+    /// <summary>GUI-109: Scheduled run interval in minutes (0 = disabled).</summary>
+    private int _schedulerIntervalMinutes;
+    public int SchedulerIntervalMinutes
+    {
+        get => _schedulerIntervalMinutes;
+        set
+        {
+            if (SetProperty(ref _schedulerIntervalMinutes, value))
+                OnPropertyChanged(nameof(SchedulerIntervalDisplay));
+        }
+    }
+
+    public string SchedulerIntervalDisplay => SchedulerIntervalMinutes switch
+    {
+        0 => "–",
+        < 60 => $"{SchedulerIntervalMinutes} min",
+        _ => $"{SchedulerIntervalMinutes / 60} h",
+    };
+
+    /// <summary>GUI-110: Minimize to system tray on close.</summary>
+    [ObservableProperty]
+    private bool _minimizeToTray;
+
+    [ObservableProperty]
     private string _datHashType = "SHA1";
-    public string DatHashType { get => _datHashType; set => SetField(ref _datHashType, value); }
 
     // ═══ REGION PREFERENCES (persisted) ═════════════════════════════════
     private bool _preferEU = true;
-    public bool PreferEU { get => _preferEU; set => SetField(ref _preferEU, value); }
+    public bool PreferEU { get => _preferEU; set => SetProperty(ref _preferEU, value); }
 
     private bool _preferUS = true;
-    public bool PreferUS { get => _preferUS; set => SetField(ref _preferUS, value); }
+    public bool PreferUS { get => _preferUS; set => SetProperty(ref _preferUS, value); }
 
     private bool _preferJP = true;
-    public bool PreferJP { get => _preferJP; set => SetField(ref _preferJP, value); }
+    public bool PreferJP { get => _preferJP; set => SetProperty(ref _preferJP, value); }
 
     private bool _preferWORLD = true;
-    public bool PreferWORLD { get => _preferWORLD; set => SetField(ref _preferWORLD, value); }
+    public bool PreferWORLD { get => _preferWORLD; set => SetProperty(ref _preferWORLD, value); }
 
     private bool _preferDE;
-    public bool PreferDE { get => _preferDE; set => SetField(ref _preferDE, value); }
+    public bool PreferDE { get => _preferDE; set => SetProperty(ref _preferDE, value); }
 
     private bool _preferFR;
-    public bool PreferFR { get => _preferFR; set => SetField(ref _preferFR, value); }
+    public bool PreferFR { get => _preferFR; set => SetProperty(ref _preferFR, value); }
 
     private bool _preferIT;
-    public bool PreferIT { get => _preferIT; set => SetField(ref _preferIT, value); }
+    public bool PreferIT { get => _preferIT; set => SetProperty(ref _preferIT, value); }
 
     private bool _preferES;
-    public bool PreferES { get => _preferES; set => SetField(ref _preferES, value); }
+    public bool PreferES { get => _preferES; set => SetProperty(ref _preferES, value); }
 
     private bool _preferAU;
-    public bool PreferAU { get => _preferAU; set => SetField(ref _preferAU, value); }
+    public bool PreferAU { get => _preferAU; set => SetProperty(ref _preferAU, value); }
 
     private bool _preferASIA;
-    public bool PreferASIA { get => _preferASIA; set => SetField(ref _preferASIA, value); }
+    public bool PreferASIA { get => _preferASIA; set => SetProperty(ref _preferASIA, value); }
 
     private bool _preferKR;
-    public bool PreferKR { get => _preferKR; set => SetField(ref _preferKR, value); }
+    public bool PreferKR { get => _preferKR; set => SetProperty(ref _preferKR, value); }
 
     private bool _preferCN;
-    public bool PreferCN { get => _preferCN; set => SetField(ref _preferCN, value); }
+    public bool PreferCN { get => _preferCN; set => SetProperty(ref _preferCN, value); }
 
     private bool _preferBR;
-    public bool PreferBR { get => _preferBR; set => SetField(ref _preferBR, value); }
+    public bool PreferBR { get => _preferBR; set => SetProperty(ref _preferBR, value); }
 
     private bool _preferNL;
-    public bool PreferNL { get => _preferNL; set => SetField(ref _preferNL, value); }
+    public bool PreferNL { get => _preferNL; set => SetProperty(ref _preferNL, value); }
 
     private bool _preferSE;
-    public bool PreferSE { get => _preferSE; set => SetField(ref _preferSE, value); }
+    public bool PreferSE { get => _preferSE; set => SetProperty(ref _preferSE, value); }
 
     private bool _preferSCAN;
-    public bool PreferSCAN { get => _preferSCAN; set => SetField(ref _preferSCAN, value); }
+    public bool PreferSCAN { get => _preferSCAN; set => SetProperty(ref _preferSCAN, value); }
 
     // ═══ UI MODE ════════════════════════════════════════════════════════
     private bool _isSimpleMode = true;
     public bool IsSimpleMode
     {
         get => _isSimpleMode;
-        set { if (SetField(ref _isSimpleMode, value)) OnPropertyChanged(nameof(IsExpertMode)); }
+        set { if (SetProperty(ref _isSimpleMode, value)) OnPropertyChanged(nameof(IsExpertMode)); }
     }
     public bool IsExpertMode => !_isSimpleMode;
 
     // Simple-mode options (not persisted — derived from main options at run time)
+    [ObservableProperty]
     private int _simpleRegionIndex;
-    public int SimpleRegionIndex { get => _simpleRegionIndex; set => SetField(ref _simpleRegionIndex, value); }
 
+    [ObservableProperty]
     private bool _simpleDupes = true;
-    public bool SimpleDupes { get => _simpleDupes; set => SetField(ref _simpleDupes, value); }
 
+    [ObservableProperty]
     private bool _simpleJunk = true;
-    public bool SimpleJunk { get => _simpleJunk; set => SetField(ref _simpleJunk, value); }
 
+    [ObservableProperty]
     private bool _simpleSort = true;
-    public bool SimpleSort { get => _simpleSort; set => SetField(ref _simpleSort, value); }
 
     // Quick profile selector (STATUS BAR)
     private int _quickProfileIndex;
-    public int QuickProfileIndex { get => _quickProfileIndex; set => SetField(ref _quickProfileIndex, value); }
+    public int QuickProfileIndex { get => _quickProfileIndex; set => SetProperty(ref _quickProfileIndex, value); }
 
     // RF-011: Profile name bound to Einstellungen ComboBox
     private string _profileName = "Standard";
-    public string ProfileName { get => _profileName; set => SetField(ref _profileName, value); }
+    public string ProfileName { get => _profileName; set => SetProperty(ref _profileName, value); }
 
     // P1-005 / RD-005: Sidebar-Navigation im Einstellungen-Tab
     private string _selectedSettingsSection = "Sortieroptionen";
     public string SelectedSettingsSection
     {
         get => _selectedSettingsSection;
-        set => SetField(ref _selectedSettingsSection, value);
+        set => SetProperty(ref _selectedSettingsSection, value);
     }
 
     // Sidebar-Navigation: Werkzeuge-Tab
@@ -190,7 +214,7 @@ public sealed partial class MainViewModel
     public string SelectedToolsSection
     {
         get => _selectedToolsSection;
-        set => SetField(ref _selectedToolsSection, value);
+        set => SetProperty(ref _selectedToolsSection, value);
     }
 
     // Sidebar-Navigation: Ergebnis-Tab
@@ -198,7 +222,7 @@ public sealed partial class MainViewModel
     public string SelectedResultSection
     {
         get => _selectedResultSection;
-        set => SetField(ref _selectedResultSection, value);
+        set => SetProperty(ref _selectedResultSection, value);
     }
 
     // RD-006: Aktiver Preset-Name für SegmentedControl-Selektion
@@ -206,7 +230,7 @@ public sealed partial class MainViewModel
     public string? ActivePreset
     {
         get => _activePreset;
-        set => SetField(ref _activePreset, value);
+        set => SetProperty(ref _activePreset, value);
     }
 
     // ═══ CONFLICT POLICY (UX-007: was YesNoCancel hack, now VM property) ═
@@ -214,7 +238,7 @@ public sealed partial class MainViewModel
     public ConflictPolicy ConflictPolicy
     {
         get => _conflictPolicy;
-        set => SetField(ref _conflictPolicy, value);
+        set => SetProperty(ref _conflictPolicy, value);
     }
 
     /// <summary>Index for ComboBox binding (0=Rename, 1=Skip, 2=Overwrite).</summary>
@@ -224,12 +248,20 @@ public sealed partial class MainViewModel
         set => ConflictPolicy = (ConflictPolicy)value;
     }
 
-    // GameKey preview
+    // GameKey preview — GUI-116: Live preview auto-triggers on input change
     private string _gameKeyPreviewInput = "";
-    public string GameKeyPreviewInput { get => _gameKeyPreviewInput; set => SetField(ref _gameKeyPreviewInput, value); }
+    public string GameKeyPreviewInput
+    {
+        get => _gameKeyPreviewInput;
+        set
+        {
+            if (SetProperty(ref _gameKeyPreviewInput, value))
+                OnGameKeyPreview();
+        }
+    }
 
     private string _gameKeyPreviewOutput = "–";
-    public string GameKeyPreviewOutput { get => _gameKeyPreviewOutput; set => SetField(ref _gameKeyPreviewOutput, value); }
+    public string GameKeyPreviewOutput { get => _gameKeyPreviewOutput; set => SetProperty(ref _gameKeyPreviewOutput, value); }
 
     // Theme
     public string CurrentThemeName => _theme.Current.ToString();
@@ -244,11 +276,11 @@ public sealed partial class MainViewModel
 
     // ═══ SETTINGS HANDLERS ══════════════════════════════════════════════
 
-    private void OnBrowseToolPath(object? parameter)
+    private void OnBrowseToolPath(string? parameter)
     {
         var path = _dialog.BrowseFile("Executable auswählen", "Executables (*.exe)|*.exe|Alle (*.*)|*.*");
         if (path is null) return;
-        switch (parameter as string)
+        switch (parameter)
         {
             case "Chdman": ToolChdman = path; break;
             case "Dolphin": ToolDolphin = path; break;
@@ -256,19 +288,21 @@ public sealed partial class MainViewModel
             case "Psxtract": ToolPsxtract = path; break;
             case "Ciso": ToolCiso = path; break;
         }
+        SaveSettings();
     }
 
-    private void OnBrowseFolderPath(object? parameter)
+    private void OnBrowseFolderPath(string? parameter)
     {
         var path = _dialog.BrowseFolder("Ordner auswählen");
         if (path is null) return;
-        switch (parameter as string)
+        switch (parameter)
         {
             case "Dat": DatRoot = path; break;
             case "Trash": TrashRoot = path; break;
             case "Audit": AuditRoot = path; break;
             case "Ps3": Ps3DupesRoot = path; break;
         }
+        SaveSettings();
     }
 
     private void OnPresetSafeDryRun()
@@ -342,6 +376,11 @@ public sealed partial class MainViewModel
 
     private void OnGameKeyPreview()
     {
+        if (string.IsNullOrWhiteSpace(GameKeyPreviewInput))
+        {
+            GameKeyPreviewOutput = "–";
+            return;
+        }
         try
         {
             GameKeyPreviewOutput = Core.GameKeys.GameKeyNormalizer.Normalize(GameKeyPreviewInput);
@@ -355,19 +394,6 @@ public sealed partial class MainViewModel
     /// <summary>Build the preferred regions array from all boolean flags.</summary>
     public string[] GetPreferredRegions()
     {
-        // TASK-032: In simple mode, translate SimpleRegionIndex to region preferences
-        if (IsSimpleMode)
-        {
-            return SimpleRegionIndex switch
-            {
-                0 => ["EU", "DE", "WORLD", "US", "JP"],    // Europa
-                1 => ["US", "WORLD", "EU", "JP"],           // Nordamerika
-                2 => ["JP", "ASIA", "WORLD", "US", "EU"],   // Japan
-                3 => ["WORLD", "EU", "US", "JP"],            // Weltweit
-                _ => ["EU", "US", "WORLD", "JP"]
-            };
-        }
-
         var regions = new List<string>(16);
         if (PreferEU) regions.Add("EU");
         if (PreferUS) regions.Add("US");

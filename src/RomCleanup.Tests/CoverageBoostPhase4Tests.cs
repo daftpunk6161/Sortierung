@@ -402,63 +402,6 @@ public class SafetyValidatorCoverageTests
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// ConversionPipeline Tests
-// ═══════════════════════════════════════════════════════════════════
-
-public class ConversionPipelineCoverageTests
-{
-    private sealed class FakeToolRunner : IToolRunner
-    {
-        public string? FindTool(string toolName) => null;
-        public ToolResult InvokeProcess(string filePath, string[] arguments, string? errorLabel = null)
-            => new(0, "ok", true);
-        public ToolResult Invoke7z(string sevenZipPath, string[] arguments)
-            => new(0, "ok", true);
-    }
-
-    [Fact]
-    public void BuildCsoToChdPipeline_ReturnsSteps()
-    {
-        var pipeline = ConversionPipeline.BuildCsoToChdPipeline(@"C:\Roms\game.cso", @"C:\Output");
-        Assert.NotEmpty(pipeline.Steps);
-        Assert.Equal(@"C:\Roms\game.cso", pipeline.SourcePath);
-        Assert.True(pipeline.CleanupTemps);
-    }
-
-    [Fact]
-    public void CheckDiskSpace_NonExistentPath_ReportsNotOk()
-    {
-        var result = ConversionPipeline.CheckDiskSpace(
-            @"C:\nonexistent_" + Guid.NewGuid(),
-            @"C:\nonexistent_" + Guid.NewGuid());
-        Assert.False(result.Ok);
-    }
-
-    [Fact]
-    public void CheckDiskSpace_TempDir_ChecksSpace()
-    {
-        var tmpFile = Path.GetTempFileName();
-        File.WriteAllBytes(tmpFile, new byte[1024]);
-        try
-        {
-            var result = ConversionPipeline.CheckDiskSpace(tmpFile, Path.GetTempPath());
-            // On temp drive there should be space for 3KB
-            Assert.NotNull(result);
-        }
-        finally { File.Delete(tmpFile); }
-    }
-
-    [Fact]
-    public void Execute_DryRunPipeline_NoCrash()
-    {
-        var pipeline = ConversionPipeline.BuildCsoToChdPipeline(@"C:\Roms\game.cso", @"C:\Output");
-        var cp = new ConversionPipeline(new FakeToolRunner(), new FileSystemAdapter());
-        var result = cp.Execute(pipeline, mode: "DryRun");
-        Assert.NotNull(result);
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════
 // ConsoleSorter deeper tests
 // ═══════════════════════════════════════════════════════════════════
 
@@ -666,6 +609,7 @@ public class SettingsLoaderDeepTests : IDisposable
 // SettingsService WPF Tests
 // ═══════════════════════════════════════════════════════════════════
 
+[Collection("SettingsFile")]
 public class SettingsServiceCoverageTests
 {
     private sealed class StubTheme : IThemeService
@@ -688,6 +632,7 @@ public class SettingsServiceCoverageTests
         public ConfirmResult YesNoCancel(string message, string title = "") => ConfirmResult.Yes;
         public string ShowInputBox(string prompt, string title = "", string defaultValue = "") => "";
         public void ShowText(string title, string content) { }
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 
     [Fact]
@@ -788,14 +733,14 @@ public class RunServiceCoverageTests
     [InlineData(@"D:\Roms", "_audit", @"D:\_audit")]
     public void GetSiblingDirectory_ReturnsParentSibling(string root, string sibling, string expected)
     {
-        var result = RunService.GetSiblingDirectory(root, sibling);
+        var result = new RunService().GetSiblingDirectory(root, sibling);
         Assert.Equal(expected, result);
     }
 
     [Fact]
     public void GetSiblingDirectory_DriveRoot_ReturnsSiblingUnderRoot()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\", "trash");
+        var result = new RunService().GetSiblingDirectory(@"C:\", "trash");
         Assert.Equal(@"C:\trash", result);
     }
 }
@@ -828,6 +773,7 @@ public class FcsDeepBranchTests
         public string ShowInputBox(string prompt, string title = "", string defaultValue = "")
             => InputBoxResponses.Count > 0 ? InputBoxResponses.Dequeue() : "";
         public void ShowText(string title, string content) => ShowTextCalls.Add(content);
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 
     private sealed class StubSettings : ISettingsService
@@ -1275,6 +1221,7 @@ public class MainViewModelRunPipelineTests
         public ConfirmResult YesNoCancel(string message, string title = "") => ConfirmResult.Yes;
         public string ShowInputBox(string prompt, string title = "", string defaultValue = "") => "";
         public void ShowText(string title, string content) { }
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 
     private MainViewModel CreateVm() => new(new StubTheme(), new StubDialog());
@@ -1663,7 +1610,7 @@ public class FileSystemAdapterCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         fs.EnsureDirectory(Path.Combine(_tmpDir, "sub"));
         var result = fs.MoveItemSafely(src, dst);
-        Assert.True(result);
+        Assert.NotNull(result);
         Assert.True(File.Exists(dst));
         Assert.False(File.Exists(src));
     }

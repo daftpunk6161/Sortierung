@@ -63,7 +63,7 @@ public static partial class FeatureService
 
     internal static bool TryRegexMatch(string input, string pattern)
     {
-        try { return Regex.IsMatch(input, pattern, RegexOptions.IgnoreCase); }
+        try { return Regex.IsMatch(input, pattern, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(200)); }
         catch { return false; }
     }
 
@@ -88,7 +88,7 @@ public static partial class FeatureService
             var full = Path.GetFullPath(filePath);
             foreach (var root in normalizedRoots)
             {
-                if (full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                if (full.Length > root.Length && full.StartsWith(root, StringComparison.OrdinalIgnoreCase) && full[root.Length] is '\\' or '/')
                 {
                     var relative = full[(root.Length + 1)..];
                     var sep = relative.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
@@ -128,7 +128,7 @@ public static partial class FeatureService
         string? GetRoot(string filePath)
         {
             var full = Path.GetFullPath(filePath);
-            return normalizedRoots.FirstOrDefault(r => full.StartsWith(r, StringComparison.OrdinalIgnoreCase));
+            return normalizedRoots.FirstOrDefault(r => full.Length > r.Length && full.StartsWith(r, StringComparison.OrdinalIgnoreCase) && full[r.Length] is '\\' or '/');
         }
 
         var crossRootGroups = new List<DedupeResult>();

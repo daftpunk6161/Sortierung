@@ -1438,10 +1438,10 @@ public class ConsoleSorterCoverageTests
             var full = Path.GetFullPath(Path.Combine(rootPath, relativePath));
             return full.StartsWith(Path.GetFullPath(rootPath), StringComparison.OrdinalIgnoreCase) ? full : null;
         }
-        public bool MoveItemSafely(string sourcePath, string destinationPath)
+        public string? MoveItemSafely(string sourcePath, string destinationPath)
         {
             _moves.Add((sourcePath, destinationPath));
-            return true;
+            return destinationPath;
         }
         public string EnsureDirectory(string path) => path;
         public IReadOnlyList<(string, string)> Moves => _moves;
@@ -1542,6 +1542,7 @@ public class FcsCommandDeepTests
         public string ShowInputBox(string prompt, string title = "", string defaultValue = "")
             => InputBoxResponses.Count > 0 ? InputBoxResponses.Dequeue() : "";
         public void ShowText(string title, string content) => ShowTextCalls.Add(content);
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 
     private sealed class StubSettings : ISettingsService
@@ -2351,6 +2352,7 @@ public class MainViewModelSettingsTests
         public ConfirmResult YesNoCancel(string message, string title = "") => ConfirmResult.Cancel;
         public string ShowInputBox(string prompt, string title = "", string defaultValue = "") => "";
         public void ShowText(string title, string content) { }
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 
     private MainViewModel CreateVm() => new(new StubTheme(), new TestDialog());
