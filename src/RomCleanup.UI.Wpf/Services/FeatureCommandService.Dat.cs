@@ -251,7 +251,7 @@ public sealed partial class FeatureCommandService
         {
             var safeName = Path.GetFileName(path);
             var targetPath = Path.GetFullPath(Path.Combine(_vm.DatRoot, safeName));
-            if (!targetPath.StartsWith(Path.GetFullPath(_vm.DatRoot), StringComparison.OrdinalIgnoreCase))
+            if (!targetPath.StartsWith(Path.GetFullPath(_vm.DatRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             { _vm.AddLog("TOSEC-DAT Import blockiert: Pfad außerhalb des DatRoot.", "ERROR"); return; }
             File.Copy(path, targetPath, overwrite: true);
             _vm.AddLog($"TOSEC-DAT kopiert nach: {targetPath}", "INFO");
@@ -268,11 +268,11 @@ public sealed partial class FeatureCommandService
         if (string.IsNullOrWhiteSpace(romName)) return;
         var crc32 = _dialog.ShowInputBox("CRC32-Hash eingeben (hex):", "Custom-DAT-Editor", "00000000");
         if (string.IsNullOrWhiteSpace(crc32)) return;
-        if (!Regex.IsMatch(crc32, @"^[0-9A-Fa-f]{8}$"))
+        if (!Regex.IsMatch(crc32, @"^[0-9A-Fa-f]{8}$", RegexOptions.None, TimeSpan.FromMilliseconds(200)))
         { _vm.AddLog($"Ungültiger CRC32-Hash: '{crc32}' — erwartet: 8 Hex-Zeichen.", "WARN"); return; }
         var sha1 = _dialog.ShowInputBox("SHA1-Hash eingeben (hex):", "Custom-DAT-Editor", "");
         if (string.IsNullOrWhiteSpace(sha1)) sha1 = "";
-        if (sha1.Length > 0 && !Regex.IsMatch(sha1, @"^[0-9A-Fa-f]{40}$"))
+        if (sha1.Length > 0 && !Regex.IsMatch(sha1, @"^[0-9A-Fa-f]{40}$", RegexOptions.None, TimeSpan.FromMilliseconds(200)))
         { _vm.AddLog($"Ungültiger SHA1-Hash: '{sha1}' — erwartet: 40 Hex-Zeichen.", "WARN"); return; }
 
         var xmlEntry = $"  <game name=\"{System.Security.SecurityElement.Escape(gameName)}\">\n" +

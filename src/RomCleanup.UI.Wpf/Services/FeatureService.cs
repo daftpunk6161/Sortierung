@@ -46,11 +46,24 @@ public static partial class FeatureService
     {
         if (string.IsNullOrEmpty(value)) return "";
         // CSV injection protection (OWASP)
-        if (value[0] is '=' or '+' or '-' or '@' or '\t' or '\r')
+        if (value[0] is '=' or '+' or '@' or '\t' or '\r')
+            value = "'" + value;
+        else if (value[0] == '-' && !IsPlainNegativeNumber(value))
             value = "'" + value;
         if (value.Contains('"') || value.Contains(';') || value.Contains(','))
             return "\"" + value.Replace("\"", "\"\"") + "\"";
         return value;
+    }
+
+    private static bool IsPlainNegativeNumber(string value)
+    {
+        if (value.Length < 2 || value[0] != '-') return false;
+        for (int i = 1; i < value.Length; i++)
+        {
+            if (!char.IsDigit(value[i]) && value[i] != '.')
+                return false;
+        }
+        return true;
     }
 
 

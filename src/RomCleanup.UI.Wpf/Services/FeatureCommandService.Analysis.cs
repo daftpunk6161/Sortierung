@@ -90,7 +90,7 @@ public sealed partial class FeatureCommandService
             var full = Path.GetFullPath(filePath);
             foreach (var root in roots)
             {
-                if (full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                if (full.Length > root.Length && full.StartsWith(root, StringComparison.OrdinalIgnoreCase) && full[root.Length] is '\\' or '/')
                 {
                     var relative = full[(root.Length + 1)..];
                     var sep = relative.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
@@ -122,7 +122,7 @@ public sealed partial class FeatureCommandService
         string? GetRoot(string filePath)
         {
             var full = Path.GetFullPath(filePath);
-            return roots.FirstOrDefault(r => full.StartsWith(r, StringComparison.OrdinalIgnoreCase));
+            return roots.FirstOrDefault(r => full.Length > r.Length && full.StartsWith(r, StringComparison.OrdinalIgnoreCase) && full[r.Length] is '\\' or '/');
         }
 
         var crossRootGroups = new List<DedupeResult>();

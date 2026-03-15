@@ -254,7 +254,7 @@ public sealed class DatSourceService : IDisposable
                 return true; // Empty sidecar — allow
 
             // Extract 64-char hex hash from response
-            var match = Regex.Match(shaText, @"(?i)\b([a-f0-9]{64})\b");
+            var match = Regex.Match(shaText, @"(?i)\b([a-f0-9]{64})\b", RegexOptions.None, TimeSpan.FromMilliseconds(500));
             if (!match.Success)
                 return true; // Sidecar malformed — allow
 

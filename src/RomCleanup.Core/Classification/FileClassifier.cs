@@ -11,10 +11,13 @@ public static class FileClassifier
 {
     // Patterns from data/rules.json — compiled once for performance.
     // Order matters: BIOS checked first, then standard junk, then aggressive.
+    // BUG-FIX: Added RegexTimeout to all patterns to prevent ReDoS on malicious filenames.
+
+    private static readonly TimeSpan RxTimeout = TimeSpan.FromMilliseconds(500);
 
     private static readonly Regex RxBios = new(
         @"\((bios|firmware)\)|\[bios\]|^\s*bios\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
 
     private static readonly Regex RxJunkTags = new(
         @"\((alpha\s*\d*|beta\s*\d*|proto(?:type)?\s*\d*|sample|sampler|demo|preview|pre[\s-]*release|promo|kiosk(?:\s*demo)?|debug|trial(?:\s*version)?|taikenban|rehearsal-?\s*ban|location\s*test|test\s*program)\)"
@@ -25,20 +28,20 @@ public static class FileClassifier
         + @"|\((not\s*for\s*resale|nfr)\)"
         + @"|\[(b\d*|h\d*|p\d*|t\d*|f\d*|o\d*)\]"
         + @"|\[(cr|tr|m)\s",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
 
     private static readonly Regex RxJunkWords = new(
         @"\b(demo|sample\s*version|trial\s*version|trial|pre[\s-]*release|not\s*for\s*resale|sampler|bootleg\s*sampler)\b"
         + @"|^gamelist(?:\.xml)?(?:\.old|\.bak)?$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
 
     private static readonly Regex RxJunkTagsAggressive = new(
         @"\((wip|work\s*in\s*progress|playtest|test\s*build|dev\s*build|qa\s*build|review\s*build|internal\s*build|preview\s*build|prototype\s*build|not\s*for\s*distribution)\)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
 
     private static readonly Regex RxJunkWordsAggressive = new(
         @"\b(work\s*in\s*progress|wip|playtest|test\s*build|dev\s*build|qa\s*build|review\s*build|internal\s*build|preview\s*build|not\s*for\s*distribution)\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
 
     /// <summary>
     /// Classifies a ROM filename (without extension) into GAME, BIOS or JUNK.

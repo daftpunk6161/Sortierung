@@ -15,7 +15,8 @@ namespace RomCleanup.Infrastructure.Hashing;
 public sealed class ArchiveHashService
 {
     private static readonly Regex RxPathEntry = new(@"^Path = (.+)$",
-        RegexOptions.Compiled | RegexOptions.Multiline);
+        RegexOptions.Compiled | RegexOptions.Multiline,
+        TimeSpan.FromMilliseconds(500));
 
     private readonly LruCache<string, string[]> _cache;
     private readonly IToolRunner? _toolRunner;
@@ -248,6 +249,11 @@ public sealed class ArchiveHashService
         return paths;
     }
 
+    private static readonly Regex RxDotDotTraversal = new(
+        @"(^|[\\/])\.\.([\\/]|$)",
+        RegexOptions.Compiled,
+        TimeSpan.FromMilliseconds(200));
+
     /// <summary>
     /// Detect Zip-Slip patterns: absolute paths or ".." traversal.
     /// </summary>
@@ -257,7 +263,7 @@ public sealed class ArchiveHashService
         {
             if (string.IsNullOrWhiteSpace(p)) continue;
             if (Path.IsPathRooted(p)) return false;
-            if (Regex.IsMatch(p, @"(^|[\\/])\.\.([\\/]|$)")) return false;
+            if (RxDotDotTraversal.IsMatch(p)) return false;
         }
         return true;
     }

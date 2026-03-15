@@ -72,7 +72,7 @@ public sealed partial class FeatureCommandService
         {
             var safeName = Path.GetFileName(path);
             var targetPath = Path.GetFullPath(Path.Combine(_vm.DatRoot, safeName));
-            if (!targetPath.StartsWith(Path.GetFullPath(_vm.DatRoot), StringComparison.OrdinalIgnoreCase))
+            if (!targetPath.StartsWith(Path.GetFullPath(_vm.DatRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             { _vm.AddLog("DAT-Import blockiert: Pfad außerhalb des DatRoot.", "ERROR"); return; }
             File.Copy(path, targetPath, overwrite: true);
             _vm.AddLog($"DAT importiert nach: {targetPath}", "INFO");

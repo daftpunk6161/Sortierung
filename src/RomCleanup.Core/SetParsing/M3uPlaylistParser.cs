@@ -45,8 +45,8 @@ public static class M3uPlaylistParser
     {
         if (depth >= MaxDepth)
         {
-            // V2-BUG-M02: Warn instead of silent exit at max recursion depth
-            result.Add($"[WARNING] M3U recursion depth limit ({MaxDepth}) reached for: {m3uPath}");
+            // V2-BUG-M02: Stop at max recursion depth — do NOT add warning strings
+            // to the path list as they would be treated as file paths downstream.
             return;
         }
 

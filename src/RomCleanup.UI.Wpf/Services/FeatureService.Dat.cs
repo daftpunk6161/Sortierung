@@ -313,7 +313,7 @@ public static partial class FeatureService
     {
         var safeName = Path.GetFileName(sourcePath);
         var targetPath = Path.GetFullPath(Path.Combine(datRoot, safeName));
-        if (!targetPath.StartsWith(Path.GetFullPath(datRoot), StringComparison.OrdinalIgnoreCase))
+        if (!targetPath.StartsWith(Path.GetFullPath(datRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Pfad außerhalb des DatRoot.");
         File.Copy(sourcePath, targetPath, overwrite: true);
         return targetPath;
@@ -351,8 +351,10 @@ public static partial class FeatureService
 
 
     /// <summary>Validate a hex hash string (CRC32=8, SHA1=40 chars).</summary>
+    private static readonly TimeSpan HexRxTimeout = TimeSpan.FromMilliseconds(200);
+
     public static bool IsValidHexHash(string hash, int expectedLength) =>
-        hash.Length == expectedLength && Regex.IsMatch(hash, $"^[0-9A-Fa-f]{{{expectedLength}}}$");
+        hash.Length == expectedLength && Regex.IsMatch(hash, $"^[0-9A-Fa-f]{{{expectedLength}}}$", RegexOptions.None, HexRxTimeout);
 
 
     /// <summary>Build custom DAT XML entry using SecurityElement.Escape for safe XML.</summary>

@@ -120,11 +120,39 @@ public sealed class AuditCsvStore : IAuditStore
 
             if (!dryRun && File.Exists(newPath))
             {
-                var destDir = Path.GetDirectoryName(oldPath);
-                if (!string.IsNullOrEmpty(destDir))
-                    Directory.CreateDirectory(destDir);
+                // BUG-FIX: Block reparse points on source/destination to prevent symlink attacks
+                // from crafted audit CSV entries.
+                try
+                {
+                    var newAttrs = File.GetAttributes(newPath);
+                    if ((newAttrs & FileAttributes.ReparsePoint) != 0)
+                        continue; // Skip: source is a symlink/junction
+                }
+                catch { continue; } // Skip inaccessible files
 
-                File.Move(newPath, oldPath);
+                var fullOldPath = Path.GetFullPath(oldPath);
+                var destDir = Path.GetDirectoryName(fullOldPath);
+                if (!string.IsNullOrEmpty(destDir))
+                {
+                    // Block reparse point on destination parent
+                    if (Directory.Exists(destDir))
+                    {
+                        try
+                        {
+                            var destDirInfo = new DirectoryInfo(destDir);
+                            if ((destDirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+                                continue;
+                        }
+                        catch { continue; }
+                    }
+                    Directory.CreateDirectory(destDir);
+                }
+
+                // Use overwrite:false to prevent clobbering existing files
+                if (File.Exists(fullOldPath))
+                    continue; // Skip: destination already exists
+
+                File.Move(newPath, fullOldPath);
             }
 
             restoredPaths.Add(oldPath);

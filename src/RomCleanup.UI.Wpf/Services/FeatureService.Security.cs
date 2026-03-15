@@ -156,6 +156,8 @@ public static partial class FeatureService
     public static async Task<Dictionary<string, IntegrityEntry>> CreateBaseline(
         IReadOnlyList<string> filePaths, IProgress<string>? progress = null, CancellationToken ct = default)
     {
+        if (filePaths.Count == 0)
+            return new Dictionary<string, IntegrityEntry>(StringComparer.OrdinalIgnoreCase);
         var commonRoot = FindCommonRoot(filePaths) ?? Path.GetDirectoryName(filePaths[0]) ?? "";
         var baseline = new System.Collections.Concurrent.ConcurrentDictionary<string, IntegrityEntry>(StringComparer.OrdinalIgnoreCase);
         int completed = 0;

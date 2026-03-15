@@ -416,7 +416,7 @@ public static partial class FeatureService
         foreach (var (keyword, genre) in GenreKeywords)
         {
             // Use word boundary matching to avoid false positives (e.g. "gun" matching "Gundam")
-            if (System.Text.RegularExpressions.Regex.IsMatch(lower, $@"\b{System.Text.RegularExpressions.Regex.Escape(keyword)}\b"))
+            if (System.Text.RegularExpressions.Regex.IsMatch(lower, $@"\b{System.Text.RegularExpressions.Regex.Escape(keyword)}\b", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromMilliseconds(200)))
                 return genre;
         }
         return "Other";

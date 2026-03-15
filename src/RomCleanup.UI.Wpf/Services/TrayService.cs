@@ -96,6 +96,7 @@ public sealed class TrayService : IDisposable
         _window.StateChanged -= OnWindowStateChanged;
         _window.StateChanged += OnWindowStateChanged;
 
+        _isCreating = false;
         _trayIcon.ShowBalloonTip(2000, "RomCleanup", "In den System-Tray minimiert.", System.Windows.Forms.ToolTipIcon.Info);
         _window.WindowState = WindowState.Minimized;
     }
@@ -124,6 +125,7 @@ public sealed class TrayService : IDisposable
 
     public void Dispose()
     {
+        _isCreating = false;
         _window.StateChanged -= OnWindowStateChanged;
         _trayIcon?.Dispose();
         _trayIcon = null;

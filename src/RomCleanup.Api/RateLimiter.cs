@@ -11,7 +11,7 @@ public sealed class RateLimiter
     private readonly int _maxRequests;
     private readonly TimeSpan _window;
     private readonly ConcurrentDictionary<string, ClientBucket> _buckets = new();
-    private DateTime _lastEviction = DateTime.UtcNow;
+    private long _lastEvictionTicks = DateTime.UtcNow.Ticks;
 
     public RateLimiter(int maxRequestsPerWindow, TimeSpan window)
     {
@@ -42,10 +42,15 @@ public sealed class RateLimiter
         }
 
         // Periodic eviction of stale buckets (every 5 minutes)
-        if (now - _lastEviction > TimeSpan.FromMinutes(5))
+        // BUG-FIX: Use Interlocked for thread-safe access to _lastEvictionTicks
+        var lastTicks = Interlocked.Read(ref _lastEvictionTicks);
+        if (now.Ticks - lastTicks > TimeSpan.FromMinutes(5).Ticks)
         {
-            _lastEviction = now;
-            EvictStaleBuckets(now);
+            // Only one thread should evict — CAS to prevent duplicate evictions
+            if (Interlocked.CompareExchange(ref _lastEvictionTicks, now.Ticks, lastTicks) == lastTicks)
+            {
+                EvictStaleBuckets(now);
+            }
         }
 
         return true;

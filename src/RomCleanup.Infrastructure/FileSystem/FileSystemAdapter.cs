@@ -207,8 +207,30 @@ public sealed class FileSystemAdapter : IFileSystem
             }
             catch (IOException) when (File.Exists(finalDest))
             {
-                // Race: file appeared between our check and move — retry with DUP suffix
-                return MoveItemSafely(sourcePath, destinationPath);
+                // Race: file appeared between our check and move — use DUP suffix logic
+                // BUG-FIX: Iterative DUP fallback instead of unbounded recursion
+                var baseName = Path.GetFileNameWithoutExtension(fullDest);
+                var ext = Path.GetExtension(fullDest);
+                var dir = Path.GetDirectoryName(fullDest) ?? "";
+
+                bool moved = false;
+                for (int i = 1; i <= MaxDuplicateAttempts; i++)
+                {
+                    finalDest = Path.Combine(dir, $"{baseName}__DUP{i}{ext}");
+                    try
+                    {
+                        File.Move(fullSource, finalDest, overwrite: false);
+                        moved = true;
+                        break;
+                    }
+                    catch (IOException)
+                    {
+                        // Slot already taken — try next index
+                    }
+                }
+
+                if (!moved)
+                    throw new IOException($"Could not find free DUP slot after {MaxDuplicateAttempts} attempts.");
             }
         }
 

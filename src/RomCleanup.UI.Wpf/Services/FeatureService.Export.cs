@@ -49,11 +49,13 @@ public static partial class FeatureService
     ];
 
 
+    private static readonly TimeSpan JunkRxTimeout = TimeSpan.FromMilliseconds(500);
+
     public static JunkReportEntry? GetJunkReason(string baseName, bool aggressive)
     {
         foreach (var (pattern, tag, reason) in JunkPatterns)
         {
-            if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase, JunkRxTimeout))
                 return new JunkReportEntry(tag, reason, "standard");
         }
 
@@ -61,7 +63,7 @@ public static partial class FeatureService
         {
             foreach (var (pattern, tag, reason) in AggressivePatterns)
             {
-                if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase))
+                if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase, JunkRxTimeout))
                     return new JunkReportEntry(tag, reason, "aggressive");
             }
         }

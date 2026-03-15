@@ -34,9 +34,14 @@ public static class CueSetParser
         if (string.IsNullOrWhiteSpace(cuePath) || !File.Exists(cuePath))
             return Array.Empty<string>();
 
-        var dir = Path.GetDirectoryName(cuePath) ?? "";
+        var dir = Path.GetDirectoryName(Path.GetFullPath(cuePath)) ?? "";
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // BUG-FIX: Use absolute directory from GetFullPath to handle relative CUE paths
+        // and prevent the guard from being ineffective when dir is empty.
+        var normalizedDir = dir.TrimEnd(Path.DirectorySeparatorChar)
+                            + Path.DirectorySeparatorChar;
 
         foreach (var line in File.ReadLines(cuePath))
         {
@@ -45,12 +50,10 @@ public static class CueSetParser
 
             var refPath = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
             var fullPath = Path.IsPathRooted(refPath)
-                ? refPath
+                ? Path.GetFullPath(refPath)
                 : Path.GetFullPath(Path.Combine(dir, refPath));
 
             // Path traversal guard: must stay within CUE directory
-            var normalizedDir = dir.TrimEnd(Path.DirectorySeparatorChar)
-                                + Path.DirectorySeparatorChar;
             if (!fullPath.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase))
                 continue;
 
