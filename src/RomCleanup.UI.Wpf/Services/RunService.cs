@@ -85,7 +85,7 @@ public sealed class RunService : IRunService
                 ? vm.AuditRoot
                 : GetSiblingDirectory(vm.Roots[0], "audit-logs");
             auditDir = Path.GetFullPath(auditDir);
-            auditPath = Path.Combine(auditDir, $"audit-{DateTime.Now:yyyyMMdd-HHmmss}.csv");
+            auditPath = Path.Combine(auditDir, $"audit-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv");
         }
 
         string? reportPath = null;
@@ -94,7 +94,7 @@ public sealed class RunService : IRunService
             var reportDir = GetSiblingDirectory(vm.Roots[0], "reports");
             reportDir = Path.GetFullPath(reportDir);
             Directory.CreateDirectory(reportDir);
-            reportPath = Path.Combine(reportDir, $"report-{DateTime.Now:yyyyMMdd-HHmmss}.html");
+            reportPath = Path.Combine(reportDir, $"report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.html");
         }
 
         var selectedExts = vm.GetSelectedExtensions();

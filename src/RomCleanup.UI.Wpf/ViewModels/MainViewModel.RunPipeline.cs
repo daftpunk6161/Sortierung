@@ -366,7 +366,7 @@ public sealed partial class MainViewModel
             var auditPathCopy = LastAuditPath;
             var roots = Roots.ToList();
             var restored = await Task.Run(() => RollbackService.Execute(auditPathCopy, roots));
-            AddLog($"Rollback: {restored.Count} Dateien wiederhergestellt.", "INFO");
+            AddLog($"Rollback: {restored.RolledBack} Dateien wiederhergestellt.", "INFO");
             CanRollback = false;
             ShowMoveCompleteBanner = false;
         }

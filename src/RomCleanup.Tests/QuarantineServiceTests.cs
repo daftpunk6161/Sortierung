@@ -307,13 +307,13 @@ public class QuarantineServiceTests : IDisposable
             return files;
         }
 
-        public bool MoveItemSafely(string source, string destination)
+        public string? MoveItemSafely(string source, string destination)
         {
             var dir = Path.GetDirectoryName(destination);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
             File.Move(source, destination);
-            return true;
+            return destination;
         }
 
         public string ResolveChildPathWithinRoot(string root, string childPath)

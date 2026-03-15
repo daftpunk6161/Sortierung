@@ -421,10 +421,10 @@ public class RunOrchestratorTests : IDisposable
             return Array.Empty<string>();
         }
 
-        public bool MoveItemSafely(string sourcePath, string destinationPath)
+        public string? MoveItemSafely(string sourcePath, string destinationPath)
         {
             MoveLog.Add((sourcePath, destinationPath));
-            return true;
+            return destinationPath;
         }
 
         public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
@@ -469,7 +469,7 @@ public class RunOrchestratorTests : IDisposable
             return null;
         }
 
-        public ConversionResult Convert(string sourcePath, ConversionTarget target)
+        public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
         {
             ConvertedPaths.Add(sourcePath);
             return new ConversionResult(sourcePath, sourcePath + ".chd", ConversionOutcome.Success);

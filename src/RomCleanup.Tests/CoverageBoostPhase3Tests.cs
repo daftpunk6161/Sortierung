@@ -1438,10 +1438,10 @@ public class ConsoleSorterCoverageTests
             var full = Path.GetFullPath(Path.Combine(rootPath, relativePath));
             return full.StartsWith(Path.GetFullPath(rootPath), StringComparison.OrdinalIgnoreCase) ? full : null;
         }
-        public bool MoveItemSafely(string sourcePath, string destinationPath)
+        public string? MoveItemSafely(string sourcePath, string destinationPath)
         {
             _moves.Add((sourcePath, destinationPath));
-            return true;
+            return destinationPath;
         }
         public string EnsureDirectory(string path) => path;
         public IReadOnlyList<(string, string)> Moves => _moves;

@@ -402,63 +402,6 @@ public class SafetyValidatorCoverageTests
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// ConversionPipeline Tests
-// ═══════════════════════════════════════════════════════════════════
-
-public class ConversionPipelineCoverageTests
-{
-    private sealed class FakeToolRunner : IToolRunner
-    {
-        public string? FindTool(string toolName) => null;
-        public ToolResult InvokeProcess(string filePath, string[] arguments, string? errorLabel = null)
-            => new(0, "ok", true);
-        public ToolResult Invoke7z(string sevenZipPath, string[] arguments)
-            => new(0, "ok", true);
-    }
-
-    [Fact]
-    public void BuildCsoToChdPipeline_ReturnsSteps()
-    {
-        var pipeline = ConversionPipeline.BuildCsoToChdPipeline(@"C:\Roms\game.cso", @"C:\Output");
-        Assert.NotEmpty(pipeline.Steps);
-        Assert.Equal(@"C:\Roms\game.cso", pipeline.SourcePath);
-        Assert.True(pipeline.CleanupTemps);
-    }
-
-    [Fact]
-    public void CheckDiskSpace_NonExistentPath_ReportsNotOk()
-    {
-        var result = ConversionPipeline.CheckDiskSpace(
-            @"C:\nonexistent_" + Guid.NewGuid(),
-            @"C:\nonexistent_" + Guid.NewGuid());
-        Assert.False(result.Ok);
-    }
-
-    [Fact]
-    public void CheckDiskSpace_TempDir_ChecksSpace()
-    {
-        var tmpFile = Path.GetTempFileName();
-        File.WriteAllBytes(tmpFile, new byte[1024]);
-        try
-        {
-            var result = ConversionPipeline.CheckDiskSpace(tmpFile, Path.GetTempPath());
-            // On temp drive there should be space for 3KB
-            Assert.NotNull(result);
-        }
-        finally { File.Delete(tmpFile); }
-    }
-
-    [Fact]
-    public void Execute_DryRunPipeline_NoCrash()
-    {
-        var pipeline = ConversionPipeline.BuildCsoToChdPipeline(@"C:\Roms\game.cso", @"C:\Output");
-        var cp = new ConversionPipeline(new FakeToolRunner(), new FileSystemAdapter());
-        var result = cp.Execute(pipeline, mode: "DryRun");
-        Assert.NotNull(result);
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════
 // ConsoleSorter deeper tests
 // ═══════════════════════════════════════════════════════════════════
 
@@ -1667,7 +1610,7 @@ public class FileSystemAdapterCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         fs.EnsureDirectory(Path.Combine(_tmpDir, "sub"));
         var result = fs.MoveItemSafely(src, dst);
-        Assert.True(result);
+        Assert.NotNull(result);
         Assert.True(File.Exists(dst));
         Assert.False(File.Exists(src));
     }

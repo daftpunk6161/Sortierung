@@ -1342,7 +1342,7 @@ public class GuiViewModelTests
         var result = RollbackService.Execute(
             Path.Combine(Path.GetTempPath(), "nonexistent_audit.csv"),
             new[] { @"C:\Games" });
-        Assert.Empty(result);
+        Assert.Equal(0, result.RolledBack);
     }
 
     // ═══ ProfileService tests ═══════════════════════════════════════════
@@ -2715,8 +2715,7 @@ public class GuiViewModelTests
             // Execute rollback: should move destFile back to srcFile
             var restored = RollbackService.Execute(auditPath, new[] { tempDir });
 
-            Assert.Single(restored);
-            Assert.Equal(srcFile, restored[0]);
+            Assert.Equal(1, restored.RolledBack);
             Assert.True(File.Exists(srcFile), "Source file should be restored");
             Assert.False(File.Exists(destFile), "Dest file should be gone after rollback");
             Assert.Equal("ROM-DATA", File.ReadAllText(srcFile));
@@ -2743,7 +2742,7 @@ public class GuiViewModelTests
                 "Skip", "GAME", "", "test");
 
             var restored = RollbackService.Execute(auditPath, new[] { tempDir });
-            Assert.Empty(restored);
+            Assert.Equal(0, restored.RolledBack);
         }
         finally
         {

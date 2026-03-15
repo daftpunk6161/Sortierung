@@ -16,7 +16,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
     private readonly int _timeoutMinutes;
     private Dictionary<string, string>? _toolHashes;
     private readonly object _toolHashLock = new();
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Hash, DateTime LastWriteUtc)> _hashCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Hash, DateTime LastWriteUtc, long Length)> _hashCache = new(StringComparer.OrdinalIgnoreCase);
 
     /// <param name="toolHashesPath">Path to data/tool-hashes.json for SHA256 verification.</param>
     /// <param name="allowInsecureHashBypass">Skip hash check (NOT recommended for production).</param>
@@ -191,10 +191,21 @@ public sealed class ToolRunnerAdapter : IToolRunner
             return false;
         }
 
-        // PERF-02: Cache tool hash with LastWriteTime check
+        // Issue #11: Reject PLACEHOLDER hashes — these are not real SHA256 checksums
+        if (expectedHash.StartsWith("PLACEHOLDER", StringComparison.OrdinalIgnoreCase))
+        {
+            _log?.Invoke($"[SECURITY] PLACEHOLDER-Hash fuer {fileName} — ersetze durch echten SHA256-Hash in data/tool-hashes.json");
+            return false;
+        }
+
+        // PERF-02: Cache tool hash with LastWriteTime + FileLength check (Issue #22)
         var fullPath = Path.GetFullPath(toolPath);
-        var lastWrite = File.GetLastWriteTimeUtc(fullPath);
-        if (_hashCache.TryGetValue(fullPath, out var cached) && cached.LastWriteUtc == lastWrite)
+        var fileInfo = new FileInfo(fullPath);
+        var lastWrite = fileInfo.LastWriteTimeUtc;
+        var fileLength = fileInfo.Length;
+        if (_hashCache.TryGetValue(fullPath, out var cached)
+            && cached.LastWriteUtc == lastWrite
+            && cached.Length == fileLength)
         {
             return string.Equals(cached.Hash, expectedHash, StringComparison.OrdinalIgnoreCase);
         }
@@ -204,7 +215,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
         var hashBytes = sha256.ComputeHash(stream);
         var actualHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
 
-        _hashCache[fullPath] = (actualHash, lastWrite);
+        _hashCache[fullPath] = (actualHash, lastWrite, fileLength);
 
         return string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase);
     }

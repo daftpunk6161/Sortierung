@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 using RomCleanup.Contracts.Ports;
 
 namespace RomCleanup.Infrastructure.FileSystem;
@@ -11,6 +12,13 @@ namespace RomCleanup.Infrastructure.FileSystem;
 public sealed class FileSystemAdapter : IFileSystem
 {
     private const int MaxDuplicateAttempts = 10_000;
+
+    /// <summary>
+    /// Issue #21: Normalize path to NFC to handle macOS NFD-encoded paths
+    /// on HFS+ volumes or USB sticks.
+    /// </summary>
+    internal static string NormalizePathNfc(string path)
+        => Path.GetFullPath(path).Normalize(NormalizationForm.FormC);
 
     public bool TestPath(string literalPath, string pathType = "Any")
     {
@@ -135,15 +143,15 @@ public sealed class FileSystemAdapter : IFileSystem
         return results;
     }
 
-    public bool MoveItemSafely(string sourcePath, string destinationPath)
+    public string? MoveItemSafely(string sourcePath, string destinationPath)
     {
         if (string.IsNullOrWhiteSpace(sourcePath))
             throw new ArgumentException("Source path must not be empty.", nameof(sourcePath));
         if (string.IsNullOrWhiteSpace(destinationPath))
             throw new ArgumentException("Destination path must not be empty.", nameof(destinationPath));
 
-        var fullSource = Path.GetFullPath(sourcePath);
-        var fullDest = Path.GetFullPath(destinationPath);
+        var fullSource = NormalizePathNfc(sourcePath);
+        var fullDest = NormalizePathNfc(destinationPath);
 
         if (string.Equals(fullSource, fullDest, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Source and destination are the same path.");
@@ -234,7 +242,7 @@ public sealed class FileSystemAdapter : IFileSystem
             }
         }
 
-        return true;
+        return finalDest;
     }
 
     public bool MoveDirectorySafely(string sourcePath, string destinationPath)
@@ -244,8 +252,8 @@ public sealed class FileSystemAdapter : IFileSystem
         if (string.IsNullOrWhiteSpace(destinationPath))
             throw new ArgumentException("Destination path must not be empty.", nameof(destinationPath));
 
-        var fullSource = Path.GetFullPath(sourcePath).TrimEnd(Path.DirectorySeparatorChar);
-        var fullDest = Path.GetFullPath(destinationPath).TrimEnd(Path.DirectorySeparatorChar);
+        var fullSource = Path.GetFullPath(sourcePath);
+        var fullDest = Path.GetFullPath(destinationPath);
 
         if (string.Equals(fullSource, fullDest, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Source and destination are the same path.");
@@ -253,25 +261,6 @@ public sealed class FileSystemAdapter : IFileSystem
         if (!Directory.Exists(fullSource))
             throw new DirectoryNotFoundException($"Source directory not found: {fullSource}");
 
-        // Block reparse points on source
-        var sourceInfo = new DirectoryInfo(fullSource);
-        if ((sourceInfo.Attributes & FileAttributes.ReparsePoint) != 0)
-            throw new InvalidOperationException("Blocked: Source directory is a reparse point.");
-
-        // Ensure destination parent exists
-        var destParent = Path.GetDirectoryName(fullDest);
-        if (!string.IsNullOrEmpty(destParent))
-        {
-            if (Directory.Exists(destParent))
-            {
-                var parentInfo = new DirectoryInfo(destParent);
-                if ((parentInfo.Attributes & FileAttributes.ReparsePoint) != 0)
-                    throw new InvalidOperationException("Blocked: Destination parent is a reparse point.");
-            }
-            Directory.CreateDirectory(destParent);
-        }
-
-        // Collision handling
         var finalDest = fullDest;
         if (Directory.Exists(finalDest))
         {
@@ -312,10 +301,10 @@ public sealed class FileSystemAdapter : IFileSystem
         try
         {
             var candidate = Path.IsPathRooted(relativePath)
-                ? Path.GetFullPath(relativePath)
-                : Path.GetFullPath(Path.Combine(rootPath, relativePath));
+                ? NormalizePathNfc(relativePath)
+                : NormalizePathNfc(Path.Combine(rootPath, relativePath));
 
-            var normalizedRoot = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar)
+            var normalizedRoot = NormalizePathNfc(rootPath).TrimEnd(Path.DirectorySeparatorChar)
                                + Path.DirectorySeparatorChar;
             var normalizedCandidate = candidate.TrimEnd(Path.DirectorySeparatorChar)
                                     + Path.DirectorySeparatorChar;

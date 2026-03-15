@@ -591,9 +591,9 @@ public sealed class AuditComplianceTests : IDisposable
         File.WriteAllText(source, "source content");
         File.WriteAllText(dest, "dest content");
 
-        // MoveItemSafely should succeed (returns true) but use __DUP1 name
+        // MoveItemSafely should succeed (returns destination path) but use __DUP1 name
         var result = fs.MoveItemSafely(source, dest);
-        Assert.True(result);
+        Assert.NotNull(result);
 
         // Source should be gone (moved)
         Assert.False(File.Exists(source));
@@ -1485,16 +1485,16 @@ public sealed class AuditComplianceTests : IDisposable
         }
 
         public string EnsureDirectory(string path) { Directory.CreateDirectory(path); return path; }
-        public bool MoveItemSafely(string source, string dest)
+        public string? MoveItemSafely(string source, string dest)
         {
             try
             {
                 var dir = Path.GetDirectoryName(dest);
                 if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
                 File.Move(source, dest);
-                return true;
+                return dest;
             }
-            catch { return false; }
+            catch { return null; }
         }
 
         public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? extensions = null) => [];

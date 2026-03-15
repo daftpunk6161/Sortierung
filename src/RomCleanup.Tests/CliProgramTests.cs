@@ -397,7 +397,7 @@ public sealed class CliProgramTests : IDisposable
         var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir });
         Assert.NotNull(opts);
         Assert.Equal("DryRun", opts!.Mode);
-        Assert.False(opts.RemoveJunk);
+        Assert.True(opts.RemoveJunk);
         Assert.False(opts.AggressiveJunk);
         Assert.False(opts.SortConsole);
         Assert.False(opts.EnableDat);

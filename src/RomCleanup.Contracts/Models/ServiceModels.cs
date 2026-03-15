@@ -3,65 +3,6 @@ using RomCleanup.Contracts.Errors;
 namespace RomCleanup.Contracts.Models;
 
 /// <summary>
-/// Multi-step conversion pipeline definition.
-/// Port of New-ConversionPipeline from ConversionPipeline.ps1.
-/// </summary>
-public sealed class ConversionPipelineDef
-{
-    public string Id { get; init; } = Guid.NewGuid().ToString("N")[..8];
-    public string SourcePath { get; init; } = "";
-    public IReadOnlyList<ConversionPipelineStep> Steps { get; init; } = [];
-    public bool CleanupTemps { get; init; } = true;
-    public DateTime Created { get; init; } = DateTime.UtcNow;
-}
-
-/// <summary>
-/// Result of executing a conversion pipeline.
-/// </summary>
-public sealed class ConversionPipelineResult
-{
-    public string Status { get; init; } = "pending";
-    public IReadOnlyList<PipelineStepResult> Steps { get; init; } = [];
-}
-
-/// <summary>
-/// A single step in a conversion pipeline.
-/// </summary>
-public sealed class ConversionPipelineStep
-{
-    public string Tool { get; init; } = "";
-    public string Action { get; init; } = "";
-    public string Input { get; init; } = "";
-    public string Output { get; init; } = "";
-    public bool IsTemp { get; init; }
-}
-
-/// <summary>
-/// Result of a single pipeline step execution.
-/// </summary>
-public sealed class PipelineStepResult
-{
-    public string Status { get; init; } = "pending"; // ok, error, skipped
-    public string Tool { get; init; } = "";
-    public string Action { get; init; } = "";
-    public string Input { get; init; } = "";
-    public string Output { get; init; } = "";
-    public bool Skipped { get; init; }
-    public string? Error { get; init; }
-}
-
-/// <summary>
-/// Disk space validation result for conversion.
-/// </summary>
-public sealed class DiskSpaceCheckResult
-{
-    public bool Ok { get; init; }
-    public string? Reason { get; init; }
-    public long RequiredBytes { get; init; }
-    public long AvailableBytes { get; init; }
-}
-
-/// <summary>
 /// Safety profile for sandbox validation.
 /// Port of Get-SafetyPolicyProfiles from SafetyToolsService.ps1.
 /// </summary>

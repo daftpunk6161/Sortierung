@@ -121,7 +121,7 @@ public sealed class QuarantineService
 
                 if (_fs.TestPath(action.SourcePath, "Leaf"))
                 {
-                    if (_fs.MoveItemSafely(action.SourcePath, action.TargetPath))
+                    if (_fs.MoveItemSafely(action.SourcePath, action.TargetPath) is not null)
                     {
                         action.Status = "Moved";
                         moved++;
@@ -246,7 +246,7 @@ public sealed class QuarantineService
             if (!string.IsNullOrEmpty(dir))
                 _fs.EnsureDirectory(dir);
 
-            if (!_fs.MoveItemSafely(quarantinePath, fullOriginal))
+            if (_fs.MoveItemSafely(quarantinePath, fullOriginal) is null)
                 return new QuarantineRestoreResult { Status = "Error", Reason = "MoveFailedAtDestination" };
             return new QuarantineRestoreResult { Status = "Restored", From = quarantinePath, To = fullOriginal };
         }

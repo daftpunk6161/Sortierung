@@ -266,7 +266,7 @@ public sealed class InsightsEngineTests
         public bool TestPath(string literalPath, string pathType = "Any") => true;
         public string EnsureDirectory(string path) => path;
         public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? extensions = null) => _files;
-        public bool MoveItemSafely(string src, string dest) => true;
+        public string? MoveItemSafely(string src, string dest) => dest;
         public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
             => Path.Combine(rootPath, relativePath);
         public bool IsReparsePoint(string path) => false;

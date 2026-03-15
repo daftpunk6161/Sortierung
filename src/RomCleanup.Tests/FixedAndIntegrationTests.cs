@@ -264,7 +264,7 @@ public sealed class FixedAndIntegrationTests
         public bool TestPath(string literalPath, string pathType = "Any") => false;
         public string EnsureDirectory(string path) => path;
         public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? ext = null) => [];
-        public bool MoveItemSafely(string src, string dest) => true;
+        public string? MoveItemSafely(string src, string dest) => dest;
         public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
             => Path.Combine(rootPath, relativePath);
         public bool IsReparsePoint(string path) => false;

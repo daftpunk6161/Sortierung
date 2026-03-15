@@ -358,11 +358,11 @@ public sealed class FolderDeduplicatorTests
                     .Where(f => extensions is null || extensions.Any(e => f.EndsWith(e, StringComparison.OrdinalIgnoreCase)))
                     .ToList()
                 : [];
-        public bool MoveItemSafely(string src, string dest)
+        public string? MoveItemSafely(string src, string dest)
         {
-            if (Directory.Exists(src)) { Directory.Move(src, dest); return true; }
-            if (File.Exists(src)) { File.Move(src, dest); return true; }
-            return false;
+            if (Directory.Exists(src)) { Directory.Move(src, dest); return dest; }
+            if (File.Exists(src)) { File.Move(src, dest); return dest; }
+            return null;
         }
         public bool MoveDirectorySafely(string src, string dest)
         {

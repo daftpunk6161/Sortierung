@@ -117,7 +117,7 @@ public static class ZipSorter
                     continue;
                 }
 
-                if (fs.MoveItemSafely(zipPath, destPath))
+                if (fs.MoveItemSafely(zipPath, destPath) is not null)
                     moved++;
                 else
                     errors++;

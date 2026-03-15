@@ -1506,27 +1506,6 @@ public class OperationResultTests
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// ConversionModels
-// ═══════════════════════════════════════════════════════════════════
-
-public class ConversionModelTests
-{
-    [Fact]
-    public void ConversionPipelineDef_HasEmptyStepsByDefault()
-    {
-        var def = new ConversionPipelineDef { SourcePath = "a.cso" };
-        Assert.NotNull(def.Steps);
-    }
-
-    [Fact]
-    public void ConversionPipelineResult_DefaultsToFailed()
-    {
-        var result = new ConversionPipelineResult();
-        Assert.Equal("pending", result.Status);
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════
 // MainViewModel Filters Tests
 // ═══════════════════════════════════════════════════════════════════
 

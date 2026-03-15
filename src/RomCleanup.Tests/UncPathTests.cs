@@ -77,57 +77,6 @@ public sealed class UncPathTests
     }
 
     // =========================================================================
-    //  CheckDiskSpace — UNC path handling (no DriveInfo crash)
-    // =========================================================================
-
-    [Fact]
-    public void CheckDiskSpace_UncTarget_DoesNotThrow()
-    {
-        // Even with a non-existent UNC target, CheckDiskSpace should not throw
-        // — it should return a result (likely source not found, but no DriveInfo crash)
-        var tempFile = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllBytes(tempFile, new byte[1024]);
-            var result = ConversionPipeline.CheckDiskSpace(
-                tempFile, @"\\nonexistent-server\share\output");
-            // Should not throw ArgumentException from DriveInfo
-            // Result may be Ok=true (assumed OK for unmapped UNC) or false (if creation fails)
-            Assert.NotNull(result);
-        }
-        finally
-        {
-            File.Delete(tempFile);
-        }
-    }
-
-    [Fact]
-    public void CheckDiskSpace_UncTarget_SourceNotFound_ReturnsFalse()
-    {
-        var result = ConversionPipeline.CheckDiskSpace(
-            @"\\server\share\nonexistent.iso", @"\\server\share\output");
-        Assert.False(result.Ok);
-        Assert.Contains("not found", result.Reason, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void CheckDiskSpace_LocalPath_StillWorks()
-    {
-        var tempFile = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllBytes(tempFile, new byte[4096]);
-            var result = ConversionPipeline.CheckDiskSpace(tempFile, Path.GetTempPath());
-            Assert.True(result.Ok);
-            Assert.True(result.AvailableBytes > 0);
-        }
-        finally
-        {
-            File.Delete(tempFile);
-        }
-    }
-
-    // =========================================================================
     //  FileSystemAdapter — ResolveChildPathWithinRoot with UNC
     // =========================================================================
 
