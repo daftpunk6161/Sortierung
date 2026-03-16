@@ -100,6 +100,14 @@ public sealed class DatSourceService : IDisposable
             // Download ZIP to temp
             using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
             response.EnsureSuccessStatusCode();
+
+            // Reject HTML responses (login/redirect pages, e.g. Redump)
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+            if (contentType.Contains("html", StringComparison.OrdinalIgnoreCase)
+                || contentType.Contains("text", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    $"Server returned HTML instead of a ZIP file. The source may require manual download: {url}");
+
             if (response.Content.Headers.ContentLength is > MaxDownloadBytes)
                 return null;
             var bytes = await response.Content.ReadAsByteArrayAsync(ct);
@@ -146,6 +154,7 @@ public sealed class DatSourceService : IDisposable
         }
         catch (HttpRequestException) { return null; }
         catch (TaskCanceledException) { return null; }
+        catch (InvalidOperationException) { throw; } // Propagate HTML detection errors
         catch (InvalidDataException) { return null; } // Corrupt ZIP
         finally
         {
@@ -183,6 +192,13 @@ public sealed class DatSourceService : IDisposable
             using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
             response.EnsureSuccessStatusCode();
 
+            // Reject HTML responses (login/redirect pages, e.g. Redump)
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+            if (contentType.Contains("html", StringComparison.OrdinalIgnoreCase)
+                || contentType.Contains("text", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    $"Server returned HTML instead of a DAT file. The source may require manual download: {url}");
+
             // P2-DAT-03: Reject downloads exceeding size limit
             if (response.Content.Headers.ContentLength is > MaxDownloadBytes)
                 return null;
@@ -213,6 +229,10 @@ public sealed class DatSourceService : IDisposable
         catch (TaskCanceledException)
         {
             return null;
+        }
+        catch (InvalidOperationException)
+        {
+            throw; // Propagate HTML detection errors
         }
     }
 

@@ -73,8 +73,12 @@ public sealed partial class FeatureCommandService
         cmds["DuplicateExport"] = new RelayCommand(DuplicateExport);
         cmds["ExportCsv"] = new RelayCommand(ExportCsv);
         cmds["ExportExcel"] = new RelayCommand(ExportExcel);
-        cmds["RollbackUndo"] = new RelayCommand(RollbackUndo);
-        cmds["RollbackRedo"] = new RelayCommand(RollbackRedo);
+        var rollbackHistoryBack = new RelayCommand(RollbackHistoryBack);
+        var rollbackHistoryForward = new RelayCommand(RollbackHistoryForward);
+        cmds["RollbackHistoryBack"] = rollbackHistoryBack;
+        cmds["RollbackHistoryForward"] = rollbackHistoryForward;
+        cmds["RollbackUndo"] = rollbackHistoryBack;
+        cmds["RollbackRedo"] = rollbackHistoryForward;
         cmds["ApplyLocale"] = new RelayCommand(ApplyLocale);
         cmds["PluginManager"] = new RelayCommand(PluginManager);
         cmds["AutoProfile"] = new RelayCommand(AutoProfile);
@@ -159,7 +163,6 @@ public sealed partial class FeatureCommandService
             cmds["SystemTray"] = new RelayCommand(() => _windowHost.ToggleSystemTray());
             cmds["MobileWebUI"] = new RelayCommand(MobileWebUI);
             cmds["Accessibility"] = new RelayCommand(Accessibility);
-            cmds["ThemeEngine"] = new RelayCommand(ThemeEngine);
         }
     }
 
@@ -428,7 +431,7 @@ public sealed partial class FeatureCommandService
         _vm.AddLog(_vm.Loc.Format("Cmd.ExcelExported", path), "INFO");
     }
 
-    private void RollbackUndo()
+    private void RollbackHistoryBack()
     {
         var auditPath = _vm.PopRollbackUndo();
         if (auditPath is null)
@@ -436,7 +439,7 @@ public sealed partial class FeatureCommandService
         _vm.AddLog(_vm.Loc.Format("Cmd.RollbackUndone", Path.GetFileName(auditPath)), "INFO");
     }
 
-    private void RollbackRedo()
+    private void RollbackHistoryForward()
     {
         var auditPath = _vm.PopRollbackRedo();
         if (auditPath is null)

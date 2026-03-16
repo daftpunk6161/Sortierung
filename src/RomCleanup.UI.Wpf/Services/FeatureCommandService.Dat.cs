@@ -62,7 +62,11 @@ public sealed partial class FeatureCommandService
         bool IsNoIntroPack(Infrastructure.Dat.DatCatalogEntry e) =>
             string.Equals(e.Format, "nointro-pack", StringComparison.OrdinalIgnoreCase);
 
-        var autoMissing = missing.Where(e => CanAutoDownload(e) && !IsNoIntroPack(e)).ToList();
+        // Redump requires login → exclude from auto-download
+        bool IsRedump(Infrastructure.Dat.DatCatalogEntry e) =>
+            e.Group.Equals("Redump", StringComparison.OrdinalIgnoreCase);
+
+        var autoMissing = missing.Where(e => CanAutoDownload(e) && !IsNoIntroPack(e) && !IsRedump(e)).ToList();
         var noIntroMissing = missing.Where(IsNoIntroPack).ToList();
         var otherManual = missing.Where(e => !CanAutoDownload(e) && !IsNoIntroPack(e)).ToList();
 
@@ -78,7 +82,7 @@ public sealed partial class FeatureCommandService
             var entry = catalog.FirstOrDefault(e =>
                 e.Id.Equals(stem, StringComparison.OrdinalIgnoreCase)
                 || e.ConsoleKey.Equals(stem, StringComparison.OrdinalIgnoreCase));
-            if (entry is not null && CanAutoDownload(entry) && !IsNoIntroPack(entry))
+            if (entry is not null && CanAutoDownload(entry) && !IsNoIntroPack(entry) && !IsRedump(entry))
                 toDownload.Add((entry.Id, entry.Url, Path.GetFileName(staleFile), entry.Format, entry.Group));
         }
 
@@ -107,7 +111,11 @@ public sealed partial class FeatureCommandService
             {
                 var autoCount = g.Count(e => CanAutoDownload(e) && !IsNoIntroPack(e));
                 var packCount = g.Count(IsNoIntroPack);
-                if (autoCount > 0) sb.AppendLine($"  {g.Key}: {autoCount} automatisch ladbar");
+                var manualOnly = g.Key.Equals("Redump", StringComparison.OrdinalIgnoreCase);
+                if (autoCount > 0 && manualOnly)
+                    sb.AppendLine($"  {g.Key}: {autoCount} (erfordert Login auf redump.org → manuell herunterladen)");
+                else if (autoCount > 0)
+                    sb.AppendLine($"  {g.Key}: {autoCount} automatisch ladbar");
                 if (packCount > 0) sb.AppendLine($"  {g.Key}: {packCount} via lokalem Pack-Import");
             }
         }
@@ -115,18 +123,30 @@ public sealed partial class FeatureCommandService
         // ── No-Intro Pack-Import anbieten ──────────────────────────────
         if (noIntroMissing.Count > 0)
         {
-            sb.AppendLine($"\n{noIntroMissing.Count} No-Intro/Non-Redump DATs können aus lokalem Ordner importiert werden.");
+            sb.AppendLine($"\n{noIntroMissing.Count} No-Intro DATs können aus lokalem Ordner importiert werden.");
             sb.AppendLine("Lade DAT-Packs von datomatic.no-intro.org herunter und wähle den Ordner.");
         }
 
+        // ── Redump-Hinweis ─────────────────────────────────────────────
+        var redumpMissing = missing.Where(e => e.Group.Equals("Redump", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (redumpMissing.Count > 0)
+        {
+            sb.AppendLine($"\nHinweis: Redump-DATs erfordern manuellen Download:");
+            sb.AppendLine("  1. Einloggen auf redump.org");
+            sb.AppendLine("  2. ZIP-Dateien herunterladen und entpacken");
+            sb.AppendLine($"  3. .dat-Dateien nach {_vm.DatRoot} kopieren");
+        }
+
         // ── Download oder nur Info ─────────────────────────────────────
-        bool hasWork = toDownload.Count > 0 || noIntroMissing.Count > 0;
+        bool hasWork = toDownload.Count > 0 || noIntroMissing.Count > 0 || redumpMissing.Count > 0;
         if (hasWork)
         {
             if (toDownload.Count > 0)
-                sb.AppendLine($"\n{toDownload.Count} DATs jetzt herunterladen?");
+                sb.AppendLine($"\n{toDownload.Count} DATs jetzt herunterladen? (FBNEO, Non-Redump u.a.)");
             if (noIntroMissing.Count > 0)
-                sb.AppendLine("No-Intro Packs danach aus lokalem Ordner importieren?");
+                sb.AppendLine("No-Intro Packs aus lokalem Ordner importieren?");
+            if (redumpMissing.Count > 0)
+                sb.AppendLine($"Redump-DATs aus lokalem Ordner importieren? ({redumpMissing.Count} fehlend)");
 
             if (!_dialog.Confirm(sb.ToString(), "DAT Auto-Update"))
                 return;
@@ -162,6 +182,12 @@ public sealed partial class FeatureCommandService
                                 _vm.AddLog($"  ✗ {id}: Download fehlgeschlagen", "WARN");
                             }
                         }
+                        catch (InvalidOperationException ex) when (ex.Message.Contains("HTML"))
+                        {
+                            failed++;
+                            failedIds.Add(id);
+                            _vm.AddLog($"  ✗ {id}: Quelle erfordert manuellen Download (Login-Seite erhalten)", "WARN");
+                        }
                         catch (Exception ex)
                         {
                             failed++;
@@ -185,6 +211,18 @@ public sealed partial class FeatureCommandService
                     using var datService = new Infrastructure.Dat.DatSourceService(_vm.DatRoot);
                     var imported = datService.ImportLocalDatPacks(packDir, catalog);
                     _vm.AddLog($"No-Intro Pack-Import: {imported} DATs importiert aus {packDir}", imported > 0 ? "INFO" : "WARN");
+                }
+            }
+
+            // ── Redump lokaler Import ──────────────────────────────────
+            if (redumpMissing.Count > 0)
+            {
+                var redumpDir = _dialog.BrowseFolder("Redump DAT-Ordner auswählen (enthält .dat/.xml Dateien von redump.org)");
+                if (!string.IsNullOrWhiteSpace(redumpDir) && Directory.Exists(redumpDir))
+                {
+                    using var datService = new Infrastructure.Dat.DatSourceService(_vm.DatRoot);
+                    var imported = datService.ImportLocalDatPacks(redumpDir, catalog);
+                    _vm.AddLog($"Redump Import: {imported} DATs importiert aus {redumpDir}", imported > 0 ? "INFO" : "WARN");
                 }
             }
         }

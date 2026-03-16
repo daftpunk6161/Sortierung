@@ -188,10 +188,175 @@ public class RunManagerTests
         Assert.Null(request.PreferRegions);
     }
 
+    [Fact]
+    public void TryCreateOrReuse_SameIdempotencyKey_ReusesExistingRun()
+    {
+        var mgr = CreateManager();
+        var request = new RunRequest { Roots = new[] { GetTestRoot() }, Mode = "DryRun" };
+
+        var first = mgr.TryCreateOrReuse(request, "DryRun", "idem-001");
+        var second = mgr.TryCreateOrReuse(request, "DryRun", "idem-001");
+
+        Assert.Equal(RunCreateDisposition.Created, first.Disposition);
+        Assert.Equal(RunCreateDisposition.Reused, second.Disposition);
+        Assert.Equal(first.Run!.RunId, second.Run!.RunId);
+    }
+
+    [Fact]
+    public void TryCreateOrReuse_SameIdempotencyKey_SameWindowsPathDifferentCase_ReusesExistingRun()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var mgr = CreateManager();
+        var root = GetTestRoot();
+
+        var first = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { root }, Mode = "DryRun" }, "DryRun", "idem-001-case");
+        var second = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { ToMixedCasePath(root) }, Mode = "DryRun" }, "DryRun", "idem-001-case");
+
+        Assert.Equal(RunCreateDisposition.Created, first.Disposition);
+        Assert.Equal(RunCreateDisposition.Reused, second.Disposition);
+        Assert.Equal(first.Run!.RunId, second.Run!.RunId);
+    }
+
+    [Fact]
+    public void TryCreateOrReuse_SameIdempotencyKey_DifferentRequest_ReturnsConflict()
+    {
+        var mgr = CreateManager();
+        var first = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "DryRun", "idem-002");
+        var second = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar) } }, "Move", "idem-002");
+
+        Assert.Equal(RunCreateDisposition.IdempotencyConflict, second.Disposition);
+        Assert.Equal(first.Run!.RunId, second.Run!.RunId);
+    }
+
+    [Fact]
+    public async Task WaitForCompletion_CancellationToken_DoesNotCancelUnderlyingRun()
+    {
+        var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (_, _, _, ct) =>
+        {
+            Task.Delay(150, ct).GetAwaiter().GetResult();
+            return new RunExecutionOutcome("completed", new ApiRunResult { Status = "ok", ExitCode = 0 });
+        });
+
+        var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "DryRun", "idem-003").Run!;
+
+        using var cts = new CancellationTokenSource(20);
+        var waitResult = await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(5), cancellationToken: cts.Token);
+
+        Assert.Equal(RunWaitDisposition.ClientDisconnected, waitResult.Disposition);
+        Assert.Equal("running", mgr.Get(run.RunId)!.Status);
+
+        var finalWait = await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(2));
+        Assert.Equal(RunWaitDisposition.Completed, finalWait.Disposition);
+        Assert.Equal("completed", mgr.Get(run.RunId)!.Status);
+    }
+
+    [Fact]
+    public async Task CancelledRun_ExposesAuditRollbackRecoveryState()
+    {
+        var auditPath = Path.Combine(Path.GetTempPath(), $"api-recovery-{Guid.NewGuid():N}.csv");
+        File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n");
+
+        try
+        {
+            var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (_, _, _, _) =>
+                new RunExecutionOutcome("cancelled", new ApiRunResult
+                {
+                    Status = "cancelled",
+                    ExitCode = 2,
+                    AuditPath = auditPath
+                }));
+
+            var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "Move", "idem-004").Run!;
+            await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(1));
+
+            var completed = mgr.Get(run.RunId)!;
+            Assert.Equal("partial-rollback-available", completed.RecoveryState);
+            Assert.True(completed.CanRollback);
+            Assert.False(completed.ResumeSupported);
+            Assert.Equal("audit-rollback-only", completed.RecoveryModel);
+        }
+        finally
+        {
+            try { File.Delete(auditPath); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task FailedRun_WithAudit_ExposesPartialRollbackRecoveryState()
+    {
+        var auditPath = Path.Combine(Path.GetTempPath(), $"api-failure-{Guid.NewGuid():N}.csv");
+        File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n");
+
+        try
+        {
+            var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (_, _, _, _) =>
+                new RunExecutionOutcome("failed", new ApiRunResult
+                {
+                    Status = "failed",
+                    ExitCode = 1,
+                    AuditPath = auditPath
+                }));
+
+            var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "Move", "idem-005").Run!;
+            await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(1));
+
+            var completed = mgr.Get(run.RunId)!;
+            Assert.Equal("partial-rollback-available", completed.RecoveryState);
+            Assert.True(completed.CanRollback);
+            Assert.True(completed.CanRetry);
+            Assert.False(completed.ResumeSupported);
+            Assert.Equal("audit-rollback-only", completed.RecoveryModel);
+            Assert.Equal("not-persisted", completed.RestartRecovery);
+        }
+        finally
+        {
+            try { File.Delete(auditPath); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task RestartAfterFailure_DoesNotResumeOrPersistPreviousRunState()
+    {
+        var firstManager = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (_, _, _, _) =>
+            new RunExecutionOutcome("failed", new ApiRunResult
+            {
+                Status = "failed",
+                ExitCode = 1,
+                Error = "Simulated crash"
+            }));
+
+        var firstRun = firstManager.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "Move", "idem-006").Run!;
+        await firstManager.WaitForCompletion(firstRun.RunId, timeout: TimeSpan.FromSeconds(1));
+
+        var restartedManager = CreateManager();
+
+        Assert.NotNull(firstManager.Get(firstRun.RunId));
+        Assert.Null(restartedManager.Get(firstRun.RunId));
+        Assert.Null(restartedManager.GetActive());
+    }
+
     private static string GetTestRoot()
     {
         // Return a path that exists for run creation, even if it will fail during scan
         return Path.GetTempPath();
+    }
+
+    private static string ToMixedCasePath(string path)
+    {
+        var chars = path.ToCharArray();
+        for (var index = 0; index < chars.Length; index++)
+        {
+            if (!char.IsLetter(chars[index]))
+                continue;
+
+            chars[index] = index % 2 == 0
+                ? char.ToUpperInvariant(chars[index])
+                : char.ToLowerInvariant(chars[index]);
+        }
+
+        return new string(chars);
     }
 
     private static string CreateTempDir()

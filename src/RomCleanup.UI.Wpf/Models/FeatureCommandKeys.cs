@@ -56,6 +56,8 @@ public static class FeatureCommandKeys
     public const string PatchEngine = "PatchEngine";
     public const string HeaderRepair = "HeaderRepair";
     public const string RollbackQuick = "RollbackQuick";
+    public const string RollbackHistoryBack = "RollbackHistoryBack";
+    public const string RollbackHistoryForward = "RollbackHistoryForward";
     public const string RollbackUndo = "RollbackUndo";
     public const string RollbackRedo = "RollbackRedo";
 
@@ -95,7 +97,6 @@ public static class FeatureCommandKeys
 
     // ── UI & Erscheinungsbild ──
     public const string Accessibility = "Accessibility";
-    public const string ThemeEngine = "ThemeEngine";
 
     // ── Funktionale Buttons (Settings/Config) ──
     public const string ExportLog = "ExportLog";

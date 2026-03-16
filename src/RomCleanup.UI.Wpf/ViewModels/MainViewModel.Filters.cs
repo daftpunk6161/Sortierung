@@ -229,8 +229,8 @@ public sealed partial class MainViewModel
             ("PatchEngine",        "Patch-Engine",               "Sicherheit & Integrität",   "ROM-Patches anwenden",                         "\xE70F", false),
             ("HeaderRepair",       "Header-Reparatur",           "Sicherheit & Integrität",   "ROM-Header reparieren",                        "\xE90F", false),
             ("RollbackQuick",      "Schnell-Rollback",           "Sicherheit & Integrität",   "Letzten Lauf rückgängig machen",               "\xE777", false),
-            ("RollbackUndo",       "Rollback Undo",              "Sicherheit & Integrität",   "Rollback rückgängig machen",                   "\xE7A7", false),
-            ("RollbackRedo",       "Rollback Redo",              "Sicherheit & Integrität",   "Rollback wiederherstellen",                    "\xE7A6", false),
+            ("RollbackHistoryBack",   "Rollback-Verlauf zurück",    "Sicherheit & Integrität",   "Vorherigen Rollback-Verlaufseintrag auswählen", "\xE7A7", false),
+            ("RollbackHistoryForward","Rollback-Verlauf vor",       "Sicherheit & Integrität",   "Nächsten Rollback-Verlaufseintrag auswählen",   "\xE7A6", false),
 
             // Workflow & Automatisierung
             ("CommandPalette",     "Command-Palette",            "Workflow & Automatisierung", "Befehle suchen und ausführen",                 "\xE721", false),
@@ -268,7 +268,6 @@ public sealed partial class MainViewModel
 
             // UI & Erscheinungsbild
             ("Accessibility",      "Barrierefreiheit",           "UI & Erscheinungsbild",      "Schriftgröße/Kontrast anpassen",               "\xE7F8", false),
-            ("ThemeEngine",        "Theme-Engine",               "UI & Erscheinungsbild",      "Theme-Optionen",                               "\xE771", false),
         };
         foreach (var (key, display, cat, desc, icon, needsResult) in items)
         {

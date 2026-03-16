@@ -97,6 +97,42 @@ public sealed class CliProgramTests : IDisposable
     }
 
     [Fact]
+    public void ParseArgs_EmptyRoot_ReturnsExitCode3()
+    {
+        var (opts, exitCode, stdout, stderr) = ParseArgsWithCapturedConsole(new[] { "--roots", ";" });
+
+        Assert.Null(opts);
+        Assert.Equal(3, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("No valid root paths", stderr, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("   ")]
+    [InlineData(" ; ")]
+    [InlineData(" ; ; ")]
+    public void ParseArgs_DegenerateRoots_ReturnExitCode3_AndWriteOnlyStderr(string rootsArg)
+    {
+        var (opts, exitCode, stdout, stderr) = ParseArgsWithCapturedConsole(new[] { "--roots", rootsArg });
+
+        Assert.Null(opts);
+        Assert.Equal(3, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("No valid root paths", stderr, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ParseArgs_MissingRootsValue_ReturnsExitCode3_AndWriteOnlyStderr()
+    {
+        var (opts, exitCode, stdout, stderr) = ParseArgsWithCapturedConsole(new[] { "--roots" });
+
+        Assert.Null(opts);
+        Assert.Equal(3, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("Missing value for --roots", stderr, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ParseArgs_MultipleRoots_SemicolonSeparated()
     {
         var dir2 = Path.Combine(Path.GetTempPath(), $"cli_test2_{Guid.NewGuid():N}");
@@ -120,14 +156,6 @@ public sealed class CliProgramTests : IDisposable
         var (opts, exitCode) = CliProgram.ParseArgs(new[] { "--roots", fakePath });
         Assert.Null(opts);
         Assert.Equal(3, exitCode);
-    }
-
-    [Fact]
-    public void ParseArgs_EmptyRoot_ReturnsExitCode3()
-    {
-        var (opts, exitCode) = CliProgram.ParseArgs(new[] { "--roots", ";" });
-        // After splitting by ';' with RemoveEmptyEntries, Roots is empty → returns (null, 0) i.e. no roots
-        Assert.Null(opts);
     }
 
     // ═══ ParseArgs: System path protection ═════════════════════════════
@@ -167,11 +195,11 @@ public sealed class CliProgramTests : IDisposable
     }
 
     [Fact]
-    public void ParseArgs_DefaultRegions_EuUsWorldJp()
+    public void ParseArgs_NoPreferOverride_LeavesRegionsEmptyForSettingsFallback()
     {
         var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir });
         Assert.NotNull(opts);
-        Assert.Equal(new[] { "EU", "US", "WORLD", "JP" }, opts!.PreferRegions);
+        Assert.Empty(opts!.PreferRegions);
     }
 
     // ═══ ParseArgs: Extensions ═════════════════════════════════════════
@@ -409,5 +437,26 @@ public sealed class CliProgramTests : IDisposable
         Assert.Null(opts.AuditPath);
         Assert.Null(opts.LogPath);
         Assert.Equal("Info", opts.LogLevel);
+    }
+
+    private static (CliProgram.CliOptions? Options, int ExitCode, string Stdout, string Stderr) ParseArgsWithCapturedConsole(string[] args)
+    {
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+
+        try
+        {
+            Console.SetOut(stdout);
+            Console.SetError(stderr);
+            var (options, exitCode) = CliProgram.ParseArgs(args);
+            return (options, exitCode, stdout.ToString(), stderr.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+        }
     }
 }

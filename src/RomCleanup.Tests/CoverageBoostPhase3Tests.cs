@@ -2282,16 +2282,6 @@ public class FcsCommandDeepTests
         ExecCommand(vm, "CommandPalette");
     }
 
-    // ── ThemeEngine (requires windowHost) ────────────────────────
-
-    [Fact]
-    public void FCS_ThemeEngine_WithHost_ShowsOptions()
-    {
-        var (fcs, vm, dialog) = SetupFcsWithHost();
-        dialog.NextYesNoCancel = ConfirmResult.Cancel;
-        ExecCommand(vm, "ThemeEngine");
-    }
-
     // ── Accessibility (requires windowHost) ──────────────────────
 
     [Fact]

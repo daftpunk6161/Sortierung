@@ -1129,16 +1129,6 @@ public class FcsDeepBranchTests
         finally { File.Delete(tmpFile); }
     }
 
-    // ── ThemeEngine toggle ───────────────────────────────────────
-
-    [Fact]
-    public void FCS_ThemeEngine_ToggleDark_SwitchesTheme()
-    {
-        var (_, vm, dialog) = SetupFcsWithHost();
-        dialog.NextYesNoCancel = ConfirmResult.Yes; // Toggle theme
-        ExecCommand(vm, "ThemeEngine");
-    }
-
     // ── RuleEngine with candidates ───────────────────────────────
 
     [Fact]

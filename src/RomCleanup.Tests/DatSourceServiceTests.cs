@@ -251,10 +251,12 @@ public class DatSourceServiceTests : IDisposable
                     Content = new StringContent(hex)
                 });
             }
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            var resp = new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(content)
-            });
+                Content = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(content))
+            };
+            resp.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/xml");
+            return Task.FromResult(resp);
         }
     }
 

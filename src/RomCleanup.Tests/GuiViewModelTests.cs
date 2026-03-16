@@ -932,7 +932,10 @@ public class GuiViewModelTests
     public void ShowStartMoveButton_True_AfterCompletedDryRun()
     {
         var vm = new MainViewModel();
-        SetRunStateViaValidPath(vm, RunState.CompletedDryRun);
+        vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = true;
+        vm.TransitionTo(RunState.Preflight);
+        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
         Assert.True(vm.ShowStartMoveButton);
     }
 
@@ -950,6 +953,21 @@ public class GuiViewModelTests
         var vm = new MainViewModel();
         vm.CurrentRunState = RunState.Idle;
         Assert.False(vm.ShowStartMoveButton);
+    }
+
+    [Fact]
+    public void ShowStartMoveButton_False_WhenPreviewConfigChanged()
+    {
+        var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = true;
+        vm.TransitionTo(RunState.Preflight);
+        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
+
+        vm.AggressiveJunk = true;
+
+        Assert.False(vm.ShowStartMoveButton);
+        Assert.False(vm.StartMoveCommand.CanExecute(null));
     }
 
     // ═══ ExtensionFilters (UX-004) ══════════════════════════════════════
@@ -1171,6 +1189,7 @@ public class GuiViewModelTests
     public void DryRun_VMStateTransitions_FollowCorrectSequence()
     {
         var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
 
         // Simulate the DryRun flow that MainWindow.xaml.cs executes
         Assert.Equal(RunState.Idle, vm.CurrentRunState);
@@ -1204,6 +1223,7 @@ public class GuiViewModelTests
     public void DryRun_VMStateTransitions_MovePhaseFollowsDryRun()
     {
         var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
 
         // First: complete a DryRun
         vm.DryRun = true;
@@ -1950,18 +1970,114 @@ public class GuiViewModelTests
     }
 
     [Fact]
-    public void StartMoveCommand_CanExecute_WhenRootsExistAndNotBusy()
+    public void StartMoveCommand_CanExecute_AfterMatchingPreview()
     {
         var vm = new MainViewModel();
         vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = true;
+        vm.TransitionTo(RunState.Preflight);
+        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
         Assert.True(vm.StartMoveCommand.CanExecute(null));
     }
 
     [Fact]
-    public void StartMoveCommand_CannotExecute_WhenNoRoots()
+    public void StartMoveCommand_CannotExecute_WithoutPreview()
     {
         var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
         Assert.False(vm.StartMoveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void RunCommand_CannotExecute_InMoveModeWithoutPreview()
+    {
+        var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = false;
+
+        Assert.False(vm.RunCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void RunCommand_CanExecute_InMoveModeAfterMatchingPreview()
+    {
+        var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = true;
+        vm.TransitionTo(RunState.Preflight);
+        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
+        vm.DryRun = false;
+
+        Assert.True(vm.RunCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void RunCommand_CannotExecute_WhenBlockingValidationErrorExists()
+    {
+        var vm = new MainViewModel();
+        var root = Path.Combine(Path.GetTempPath(), $"run_block_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            vm.Roots.Add(root);
+            vm.AuditRoot = $"bad{'\0'}path";
+
+            Assert.True(vm.HasBlockingValidationErrors);
+            Assert.False(vm.RunCommand.CanExecute(null));
+            Assert.Equal(StatusLevel.Blocked, vm.ReadyStatusLevel);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public void RunCommand_CanExecute_WhenOnlyValidationWarningExists()
+    {
+        var vm = new MainViewModel();
+        var root = Path.Combine(Path.GetTempPath(), $"run_warn_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            vm.Roots.Add(root);
+            vm.ToolChdman = @"C:\nonexistent\path\chdman.exe";
+
+            Assert.True(vm.HasErrors);
+            Assert.False(vm.HasBlockingValidationErrors);
+            Assert.True(vm.RunCommand.CanExecute(null));
+            Assert.Equal(StatusLevel.Warning, vm.ReadyStatusLevel);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public void StartMoveCommand_CannotExecute_WhenBlockingValidationErrorExists()
+    {
+        var vm = new MainViewModel();
+        var root = Path.Combine(Path.GetTempPath(), $"move_block_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            vm.Roots.Add(root);
+            vm.DryRun = true;
+            vm.TransitionTo(RunState.Preflight);
+            vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
+            vm.AuditRoot = $"bad{'\0'}path";
+
+            Assert.True(vm.HasBlockingValidationErrors);
+            Assert.False(vm.StartMoveCommand.CanExecute(null));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
     }
 
     [Fact]
@@ -2698,6 +2814,7 @@ public class GuiViewModelTests
         var tempDir = Path.Combine(Path.GetTempPath(), "RomCleanup_Rollback_" + Guid.NewGuid().ToString("N"));
         var srcDir = Path.Combine(tempDir, "src");
         var destDir = Path.Combine(tempDir, "dest");
+        var keyPath = Path.Combine(tempDir, "audit-signing.key");
         Directory.CreateDirectory(srcDir);
         Directory.CreateDirectory(destDir);
 
@@ -2709,11 +2826,12 @@ public class GuiViewModelTests
 
             // Write audit CSV manually (as AuditCsvStore would)
             var auditPath = Path.Combine(tempDir, "audit.csv");
-            var audit = new RomCleanup.Infrastructure.Audit.AuditCsvStore();
+            var audit = new RomCleanup.Infrastructure.Audit.AuditCsvStore(keyFilePath: keyPath);
             audit.AppendAuditRow(auditPath, tempDir, srcFile, destFile, "Move", "GAME", "", "test");
+            audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object> { ["Mode"] = "Move" });
 
             // Execute rollback: should move destFile back to srcFile
-            var restored = RollbackService.Execute(auditPath, new[] { tempDir });
+            var restored = RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
 
             Assert.Equal(1, restored.RolledBack);
             Assert.True(File.Exists(srcFile), "Source file should be restored");
@@ -2743,6 +2861,42 @@ public class GuiViewModelTests
 
             var restored = RollbackService.Execute(auditPath, new[] { tempDir });
             Assert.Equal(0, restored.RolledBack);
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void RollbackService_Execute_BlocksTamperedSignedAudit()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "RomCleanup_Rollback3_" + Guid.NewGuid().ToString("N"));
+        var srcDir = Path.Combine(tempDir, "src");
+        var destDir = Path.Combine(tempDir, "dest");
+        var keyPath = Path.Combine(tempDir, "audit-signing.key");
+        Directory.CreateDirectory(srcDir);
+        Directory.CreateDirectory(destDir);
+
+        try
+        {
+            var srcFile = Path.Combine(srcDir, "game.rom");
+            var destFile = Path.Combine(destDir, "game.rom");
+            File.WriteAllText(destFile, "ROM-DATA");
+
+            var auditPath = Path.Combine(tempDir, "audit.csv");
+            var audit = new RomCleanup.Infrastructure.Audit.AuditCsvStore(keyFilePath: keyPath);
+            audit.AppendAuditRow(auditPath, tempDir, srcFile, destFile, "Move", "GAME", "", "test");
+            audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object> { ["Mode"] = "Move" });
+
+            File.AppendAllText(auditPath, "tampered\n");
+
+            var restored = RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
+
+            Assert.Equal(0, restored.RolledBack);
+            Assert.Equal(1, restored.Failed);
+            Assert.False(File.Exists(srcFile));
+            Assert.True(File.Exists(destFile));
         }
         finally
         {

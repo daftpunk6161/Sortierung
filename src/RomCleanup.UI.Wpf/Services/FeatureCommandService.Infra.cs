@@ -289,28 +289,4 @@ public sealed partial class FeatureCommandService
             _vm.AddLog($"Ungültige Schriftgröße: {input} (erlaubt: 10-24)", "WARN");
         }
     }
-
-    private void ThemeEngine()
-    {
-        var result = _dialog.YesNoCancel(
-            $"Aktuelles Theme: {(_vm.ThemeToggleText.Contains("Dark") ? "Light" : "Dark")}\n\n" +
-            "JA = Dark Theme\nNEIN = Light Theme\nAbbrechen = High-Contrast",
-            "Theme-Engine");
-
-        switch (result)
-        {
-            case ConfirmResult.Yes:
-                _vm.ThemeToggleCommand.Execute(null);
-                _vm.AddLog("Theme gewechselt: Dark", "INFO");
-                break;
-            case ConfirmResult.No:
-                _vm.ThemeToggleCommand.Execute(null);
-                _vm.AddLog("Theme gewechselt: Light", "INFO");
-                break;
-            case ConfirmResult.Cancel:
-                _vm.ThemeToggleCommand.Execute(null);
-                _vm.AddLog("Theme gewechselt (Toggle)", "INFO");
-                break;
-        }
-    }
 }

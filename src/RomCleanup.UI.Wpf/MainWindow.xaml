@@ -145,6 +145,17 @@
               <TextBlock Text="{Binding Loc[Start.RollbackButton]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
             </StackPanel>
           </Button>
+          <!-- Convert Only -->
+          <Button Command="{Binding ConvertOnlyCommand}"
+                  Width="130" Height="52" Margin="{DynamicResource SpaceRightXS}"
+                  BorderBrush="{DynamicResource BrushSuccess}" Foreground="{DynamicResource BrushSuccess}"
+                  Background="{DynamicResource BrushSuccessBg}" BorderThickness="2"
+                  ToolTip="{Binding Loc[Start.ConvertOnlyTip]}" AutomationProperties.Name="{Binding Loc[Start.ConvertOnlyButton]}" TabIndex="4">
+            <StackPanel HorizontalAlignment="Center">
+              <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8AB;" FontSize="20" HorizontalAlignment="Center"/>
+              <TextBlock Text="{Binding Loc[Start.ConvertOnlyButton]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+            </StackPanel>
+          </Button>
           <Rectangle Width="1" Height="40" Fill="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="{DynamicResource SpaceDivider}"/>
           <TextBlock Text="{Binding BusyHint}" Style="{StaticResource CaptionText}"
                      VerticalAlignment="Center" Margin="4,0"/>
@@ -277,7 +288,7 @@
                 <TextBlock Text="{Binding Loc[Shortcuts.SectionRun]}" FontWeight="SemiBold"
                            Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,0,8"/>
                 <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2"><Run FontWeight="Bold" Text="F5"/><Run Text="  Preview starten"/></TextBlock>
-                <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2"><Run FontWeight="Bold" Text="Ctrl+M"/><Run Text="  Move ausführen"/></TextBlock>
+                <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2"><Run FontWeight="Bold" Text="Ctrl+M"/><Run Text="  Move ausführen (nur nach Vorschau)"/></TextBlock>
                 <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2"><Run FontWeight="Bold" Text="Ctrl+D"/><Run Text="  Quick Preview"/></TextBlock>
                 <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2"><Run FontWeight="Bold" Text="Esc"/><Run Text="  Abbrechen"/></TextBlock>
                 <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2"><Run FontWeight="Bold" Text="Ctrl+Z"/><Run Text="  Rollback"/></TextBlock>

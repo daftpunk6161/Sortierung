@@ -122,6 +122,14 @@ public sealed class ConsoleDetector
             }
         }
 
+        // Fallback: check the root folder's own name (e.g. root = "Y:\Games\Sega CD")
+        var rootName = Path.GetFileName(rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        if (!string.IsNullOrEmpty(rootName) && _folderMap.TryGetValue(rootName, out var rootConsole))
+        {
+            _folderDetectCache.Set(cacheKey, rootConsole);
+            return rootConsole;
+        }
+
         _folderDetectCache.Set(cacheKey, "");
         return null;
     }

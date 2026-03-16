@@ -4,7 +4,11 @@
   "trashRoot": "",
   "auditRoot": "",
   "extensions": ".zip,.7z,.rar,.chd,.iso,.rvz,.cso,.gcz,.wbfs,.nsp,.xci,.3ds,.cia,.nes,.sfc,.smc,.gba,.gb,.gbc,.gen,.sms,.gg,.n64,.z64,.pce,.lnx,.nds,.ngp,.ngc,.a26,.col,.bin,.cue,.gdi,.ccd,.m3u,.pbp",
-  "logLevel": "info",
+  "preferredRegions": ["EU", "US", "JP", "WORLD"],
+  "logLevel": "Info",
+  "useDat": true,
+  "hashType": "SHA1",
+  "datFallback": true,
   "theme": "dark",
   "locale": "de"
 }

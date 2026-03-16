@@ -8,6 +8,52 @@ namespace RomCleanup.UI.Wpf.ViewModels;
 
 public sealed partial class MainViewModel
 {
+    // ═══ AUTO-SAVE (debounced 2s after last persisted property change) ═══
+    private System.Threading.Timer? _autoSaveTimer;
+    private bool _settingsLoaded;
+
+    private static readonly HashSet<string> AutoSavePropertyNames = new(StringComparer.Ordinal)
+    {
+        nameof(TrashRoot), nameof(DatRoot), nameof(AuditRoot), nameof(Ps3DupesRoot),
+        nameof(ToolChdman), nameof(ToolDolphin), nameof(Tool7z), nameof(ToolPsxtract), nameof(ToolCiso),
+        nameof(UseDat), nameof(DatHashType), nameof(DatFallback),
+        nameof(SortConsole), nameof(AliasKeying), nameof(AggressiveJunk),
+        nameof(DryRun), nameof(ConvertEnabled), nameof(ConfirmMove), nameof(ConflictPolicy),
+        nameof(PreferEU), nameof(PreferUS), nameof(PreferJP), nameof(PreferWORLD),
+        nameof(PreferDE), nameof(PreferFR), nameof(PreferIT), nameof(PreferES),
+        nameof(PreferAU), nameof(PreferASIA), nameof(PreferKR), nameof(PreferCN),
+        nameof(PreferBR), nameof(PreferNL), nameof(PreferSE), nameof(PreferSCAN),
+        nameof(LogLevel), nameof(MinimizeToTray),
+    };
+
+    /// <summary>Schedule an auto-save 2 seconds after the last persisted property change.</summary>
+    private void ScheduleAutoSave()
+    {
+        if (!_settingsLoaded) return;
+        _autoSaveTimer?.Dispose();
+        _autoSaveTimer = new System.Threading.Timer(
+            _ =>
+            {
+                // Must run on UI thread — SaveFrom reads ObservableCollection<string> Roots
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher is null) return;
+                dispatcher.BeginInvoke(() =>
+                {
+                    try
+                    {
+                        SaveSettings();
+                        AddLog("Einstellungen automatisch gespeichert.", "DEBUG");
+                    }
+                    catch (Exception ex)
+                    {
+                        AddLog($"Auto-Save fehlgeschlagen: {ex.Message}", "WARN");
+                    }
+                });
+            },
+            null,
+            TimeSpan.FromSeconds(2),
+            System.Threading.Timeout.InfiniteTimeSpan);
+    }
     // ═══ PATH PROPERTIES (persisted) ════════════════════════════════════
     private string _trashRoot = "";
     public string TrashRoot { get => _trashRoot; set { if (SetProperty(ref _trashRoot, value)) ValidateDirectoryPath(value, nameof(TrashRoot)); } }
@@ -55,6 +101,9 @@ public sealed partial class MainViewModel
 
     private bool _convertEnabled;
     public bool ConvertEnabled { get => _convertEnabled; set { if (SetProperty(ref _convertEnabled, value)) RefreshStatus(); } }
+
+    /// <summary>Transient flag — set by ConvertOnlyCommand, reset after run completes. Not persisted.</summary>
+    public bool ConvertOnly { get; set; }
 
     [ObservableProperty]
     private bool _confirmMove = true;
@@ -361,7 +410,20 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(CurrentThemeName));
         }
 
+        // Enable auto-save AFTER initial load so property writes during load don't trigger saves
+        _settingsLoaded = true;
+
+        // Subscribe to property changes for auto-save
+        PropertyChanged += OnAutoSavePropertyChanged;
+        Roots.CollectionChanged += (_, _) => ScheduleAutoSave();
+
         RefreshStatus();
+    }
+
+    private void OnAutoSavePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not null && AutoSavePropertyNames.Contains(e.PropertyName))
+            ScheduleAutoSave();
     }
 
     /// <summary>Save settings (called from code-behind on close / timer).</summary>

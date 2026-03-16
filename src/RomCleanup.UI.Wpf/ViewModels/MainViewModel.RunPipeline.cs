@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
+using System.Text;
 using System.Windows.Input;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Orchestration;
@@ -11,6 +13,42 @@ namespace RomCleanup.UI.Wpf.ViewModels;
 
 public sealed partial class MainViewModel
 {
+    private static readonly HashSet<string> PreviewRelevantPropertyNames =
+    [
+        nameof(SortConsole),
+        nameof(AliasKeying),
+        nameof(AggressiveJunk),
+        nameof(UseDat),
+        nameof(DatRoot),
+        nameof(DatHashType),
+        nameof(ConvertEnabled),
+        nameof(TrashRoot),
+        nameof(AuditRoot),
+        nameof(ToolChdman),
+        nameof(ToolDolphin),
+        nameof(Tool7z),
+        nameof(ToolPsxtract),
+        nameof(ToolCiso),
+        nameof(ConflictPolicy),
+        nameof(PreferEU),
+        nameof(PreferUS),
+        nameof(PreferJP),
+        nameof(PreferWORLD),
+        nameof(PreferDE),
+        nameof(PreferFR),
+        nameof(PreferIT),
+        nameof(PreferES),
+        nameof(PreferAU),
+        nameof(PreferASIA),
+        nameof(PreferKR),
+        nameof(PreferCN),
+        nameof(PreferBR),
+        nameof(PreferNL),
+        nameof(PreferSE),
+        nameof(PreferSCAN),
+        nameof(DryRun)
+    ];
+
     // ═══ RUN RESULT STATE ═══════════════════════════════════════════════
     private int _runLogStartIndex;
     private ObservableCollection<RomCandidate> _lastCandidates = [];
@@ -40,6 +78,25 @@ public sealed partial class MainViewModel
         get => _lastAuditPath;
         set { _lastAuditPath = value; OnPropertyChanged(); }
     }
+
+    private string? _lastSuccessfulPreviewFingerprint;
+    public bool CanStartCurrentRun =>
+        !IsBusy &&
+        Roots.Count > 0 &&
+        !HasBlockingValidationErrors &&
+        (DryRun || CanStartMoveWithCurrentPreview);
+
+    public bool CanStartMoveWithCurrentPreview =>
+        !IsBusy &&
+        Roots.Count > 0 &&
+        _runState == RunState.CompletedDryRun &&
+        string.Equals(_lastSuccessfulPreviewFingerprint, BuildPreviewConfigurationFingerprint(), StringComparison.Ordinal);
+
+    public string MoveApplyGateText => CanStartMoveWithCurrentPreview
+        ? "Danger-Zone freigeschaltet: Diese exakte Konfiguration wurde bereits als Vorschau geprüft. Move ist jetzt erlaubt."
+        : string.IsNullOrEmpty(_lastSuccessfulPreviewFingerprint)
+            ? "Move gesperrt: Führe zuerst eine Vorschau für die aktuelle Konfiguration aus."
+            : "Move gesperrt: Die Konfiguration wurde seit der letzten Vorschau geändert. Bitte Vorschau erneut ausführen.";
 
     // ═══ RUN STATE (UX-002: explicit state machine) ════════════════════
     private RunState _runState = RunState.Idle;
@@ -96,7 +153,7 @@ public sealed partial class MainViewModel
         or RunState.Deduplicating or RunState.Sorting or RunState.Moving or RunState.Converting;
     public bool IsIdle => !IsBusy;
 
-    public bool ShowStartMoveButton => _runState == RunState.CompletedDryRun && !IsBusy;
+    public bool ShowStartMoveButton => CanStartMoveWithCurrentPreview;
 
     public bool HasRunResult => _runState is RunState.Completed or RunState.CompletedDryRun;
 
@@ -325,9 +382,26 @@ public sealed partial class MainViewModel
 
     private void OnRun()
     {
+        if (HasBlockingValidationErrors)
+        {
+            var blockingValidationMessage = GetBlockingValidationMessage();
+            AddLog(blockingValidationMessage, "WARN");
+            _dialog.Info(blockingValidationMessage, "Start gesperrt");
+            DeferCommandRequery();
+            return;
+        }
+
+        if (!DryRun && !ConvertOnly && !CanStartMoveWithCurrentPreview)
+        {
+            AddLog(MoveApplyGateText, "WARN");
+            _dialog.Info(MoveApplyGateText, "Move gesperrt");
+            DeferCommandRequery();
+            return;
+        }
+
         CurrentRunState = RunState.Preflight;
-        BusyHint = DryRun ? (IsSimpleMode ? "Vorschau läuft…" : "DryRun läuft…") : "Move läuft…";
-        DashMode = DryRun ? (IsSimpleMode ? "Vorschau" : "DryRun") : "Move";
+        BusyHint = ConvertOnly ? "Konvertierung läuft…" : DryRun ? (IsSimpleMode ? "Vorschau läuft…" : "DryRun läuft…") : "Move läuft…";
+        DashMode = ConvertOnly ? "Convert" : DryRun ? (IsSimpleMode ? "Vorschau" : "DryRun") : "Move";
         Progress = 0;
         ProgressText = "0%";
         PerfPhase = "Phase: –";
@@ -407,10 +481,11 @@ public sealed partial class MainViewModel
     public void CompleteRun(bool success, string? reportPath = null)
     {
         BusyHint = "";
-        if (reportPath is not null)
-            LastReportPath = reportPath;
+        ConvertOnly = false; // Reset transient flag
+        LastReportPath = reportPath ?? string.Empty;
         if (success && DryRun)
         {
+            _lastSuccessfulPreviewFingerprint = BuildPreviewConfigurationFingerprint();
             CurrentRunState = RunState.CompletedDryRun;
         }
         else if (success && !DryRun)
@@ -424,6 +499,7 @@ public sealed partial class MainViewModel
             CurrentRunState = RunState.Failed;
         }
         RefreshStatus();
+        OnMovePreviewGateChanged();
     }
 
     /// <summary>Set up a new CancellationTokenSource for a run.</summary>
@@ -462,7 +538,7 @@ public sealed partial class MainViewModel
         bool hasPsxtract = !string.IsNullOrWhiteSpace(ToolPsxtract) && File.Exists(ToolPsxtract);
         bool hasCiso = !string.IsNullOrWhiteSpace(ToolCiso) && File.Exists(ToolCiso);
         bool anyToolSpecified = !string.IsNullOrWhiteSpace(ToolChdman) || !string.IsNullOrWhiteSpace(Tool7z);
-        int toolCount = (hasChdman ? 1 : 0) + (has7z ? 1 : 0) + (hasDolphin ? 1 : 0);
+        int toolCount = (hasChdman ? 1 : 0) + (has7z ? 1 : 0) + (hasDolphin ? 1 : 0) + (hasPsxtract ? 1 : 0) + (hasCiso ? 1 : 0);
         ToolsStatusLevel = (hasChdman || has7z) ? StatusLevel.Ok
             : (anyToolSpecified || ConvertEnabled) ? StatusLevel.Warning
             : StatusLevel.Missing;
@@ -486,8 +562,9 @@ public sealed partial class MainViewModel
             : DatStatusLevel == StatusLevel.Warning ? "DAT-Pfad ungültig" : "DAT deaktiviert";
 
         // Overall readiness
-        ReadyStatusLevel = !hasRoots ? StatusLevel.Blocked
-            : ToolsStatusLevel == StatusLevel.Warning ? StatusLevel.Warning
+        var validationSummary = GetValidationSummary();
+        ReadyStatusLevel = !hasRoots || validationSummary.HasBlockers ? StatusLevel.Blocked
+            : ToolsStatusLevel == StatusLevel.Warning || DatStatusLevel == StatusLevel.Warning || validationSummary.HasWarnings ? StatusLevel.Warning
             : StatusLevel.Ok;
         StatusReady = ReadyStatusLevel switch
         {
@@ -529,7 +606,7 @@ public sealed partial class MainViewModel
     /// <summary>Execute the full run pipeline (scan, dedupe, sort, convert, move).</summary>
     public async Task ExecuteRunAsync()
     {
-        if (!DryRun && ConfirmMove && !ConfirmMoveDialog())
+        if (!DryRun && !ConvertOnly && ConfirmMove && !ConfirmMoveDialog())
         {
             CurrentRunState = RunState.Idle;
             return;
@@ -579,7 +656,7 @@ public sealed partial class MainViewModel
             if (!ct.IsCancellationRequested)
             {
                 AddLog("Lauf abgeschlossen.", "INFO");
-                CompleteRun(true, reportPath);
+                CompleteRun(true, svcResult.ReportPath);
                 PopulateErrorSummary();
             }
             else
@@ -820,5 +897,57 @@ public sealed partial class MainViewModel
         MoveConsequenceText = result.LoserCount > 0
             ? $"{result.LoserCount} Dateien werden in den Papierkorb verschoben"
             : "Keine Dateien zum Verschieben";
+
+        OnMovePreviewGateChanged();
+    }
+
+    private void WirePreviewGateObservers()
+    {
+        foreach (var filter in ExtensionFilters)
+            filter.PropertyChanged += OnExtensionFilterChanged;
+    }
+
+    private void OnExtensionFilterChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(Models.ExtensionFilterItem.IsChecked))
+            OnMovePreviewGateChanged();
+    }
+
+    private void OnConfigurationPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not null && PreviewRelevantPropertyNames.Contains(e.PropertyName))
+            OnMovePreviewGateChanged();
+    }
+
+    private string BuildPreviewConfigurationFingerprint()
+    {
+        var builder = new StringBuilder();
+        builder.Append("roots=").AppendJoin(";", Roots).Append('|');
+        builder.Append("regions=").AppendJoin(";", GetPreferredRegions()).Append('|');
+        builder.Append("extensions=").AppendJoin(";", GetSelectedExtensions()).Append('|');
+        builder.Append("sortConsole=").Append(SortConsole).Append('|');
+        builder.Append("aliasKeying=").Append(AliasKeying).Append('|');
+        builder.Append("aggressiveJunk=").Append(AggressiveJunk).Append('|');
+        builder.Append("useDat=").Append(UseDat).Append('|');
+        builder.Append("datRoot=").Append(DatRoot).Append('|');
+        builder.Append("datHashType=").Append(DatHashType).Append('|');
+        builder.Append("convertEnabled=").Append(ConvertEnabled).Append('|');
+        builder.Append("trashRoot=").Append(TrashRoot).Append('|');
+        builder.Append("auditRoot=").Append(AuditRoot).Append('|');
+        builder.Append("toolChdman=").Append(ToolChdman).Append('|');
+        builder.Append("toolDolphin=").Append(ToolDolphin).Append('|');
+        builder.Append("tool7z=").Append(Tool7z).Append('|');
+        builder.Append("toolPsxtract=").Append(ToolPsxtract).Append('|');
+        builder.Append("toolCiso=").Append(ToolCiso).Append('|');
+        builder.Append("conflictPolicy=").Append(ConflictPolicy);
+        return builder.ToString();
+    }
+
+    private void OnMovePreviewGateChanged()
+    {
+        OnPropertyChanged(nameof(CanStartMoveWithCurrentPreview));
+        OnPropertyChanged(nameof(ShowStartMoveButton));
+        OnPropertyChanged(nameof(MoveApplyGateText));
+        DeferCommandRequery();
     }
 }

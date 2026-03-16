@@ -117,20 +117,20 @@
                        Margin="0,0,0,8"/>
             <TextBlock Text="{Binding Loc[Wizard.Step2Desc]}" Style="{StaticResource CaptionText}"
                        HorizontalAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,20"/>
-            <!-- GUI-082: Locale-based region recommendation shown -->
+            <!-- GUI-082: Locale-based region recommendation shown (multi-select) -->
             <StackPanel HorizontalAlignment="Center">
-              <RadioButton GroupName="WizRegion" Content="Europe (EU)" Padding="12,6" Margin="0,4"
-                           IsChecked="{Binding PreferEU}" FontSize="14"
-                           AutomationProperties.Name="Region Europa bevorzugen"/>
-              <RadioButton GroupName="WizRegion" Content="USA (US)" Padding="12,6" Margin="0,4"
-                           IsChecked="{Binding PreferUS}" FontSize="14"
-                           AutomationProperties.Name="Region USA bevorzugen"/>
-              <RadioButton GroupName="WizRegion" Content="Japan (JP)" Padding="12,6" Margin="0,4"
-                           IsChecked="{Binding PreferJP}" FontSize="14"
-                           AutomationProperties.Name="Region Japan bevorzugen"/>
-              <RadioButton GroupName="WizRegion" Content="World" Padding="12,6" Margin="0,4"
-                           IsChecked="{Binding PreferWORLD}" FontSize="14"
-                           AutomationProperties.Name="Region World bevorzugen"/>
+              <CheckBox Content="Europe (EU)" Padding="12,6" Margin="0,4"
+                        IsChecked="{Binding PreferEU}" FontSize="14"
+                        AutomationProperties.Name="Region Europa bevorzugen"/>
+              <CheckBox Content="USA (US)" Padding="12,6" Margin="0,4"
+                        IsChecked="{Binding PreferUS}" FontSize="14"
+                        AutomationProperties.Name="Region USA bevorzugen"/>
+              <CheckBox Content="Japan (JP)" Padding="12,6" Margin="0,4"
+                        IsChecked="{Binding PreferJP}" FontSize="14"
+                        AutomationProperties.Name="Region Japan bevorzugen"/>
+              <CheckBox Content="World" Padding="12,6" Margin="0,4"
+                        IsChecked="{Binding PreferWORLD}" FontSize="14"
+                        AutomationProperties.Name="Region World bevorzugen"/>
             </StackPanel>
           </StackPanel>
 

@@ -50,27 +50,35 @@ public sealed class ToolRunnerAdapter : IToolRunner
             {
                 Path.Combine(programFiles, "MAME", "chdman.exe"),
                 Path.Combine(programFilesX86, "MAME", "chdman.exe"),
-                Path.Combine(localAppData, "MAME", "chdman.exe")
+                Path.Combine(localAppData, "MAME", "chdman.exe"),
+                Path.Combine(programFiles, "chdman", "chdman.exe"),
+                Path.Combine(programFilesX86, "chdman", "chdman.exe"),
+                Path.Combine(programFiles, "chdman.exe"),
             },
             "dolphintool" => new[]
             {
                 Path.Combine(programFiles, "Dolphin", "DolphinTool.exe"),
-                Path.Combine(programFilesX86, "Dolphin", "DolphinTool.exe")
+                Path.Combine(programFilesX86, "Dolphin", "DolphinTool.exe"),
+                Path.Combine(programFiles, "DolphinTool.exe"),
             },
             "7z" => new[]
             {
                 Path.Combine(programFiles, "7-Zip", "7z.exe"),
-                Path.Combine(programFilesX86, "7-Zip", "7z.exe")
+                Path.Combine(programFilesX86, "7-Zip", "7z.exe"),
             },
             "psxtract" => new[]
             {
                 Path.Combine(localAppData, "RomCleanup", "tools", "psxtract.exe"),
-                Path.Combine(programFiles, "psxtract", "psxtract.exe")
+                Path.Combine(programFiles, "psxtract", "psxtract.exe"),
+                Path.Combine(programFilesX86, "psxtract", "psxtract.exe"),
+                Path.Combine(programFiles, "psxtract.exe"),
             },
             "ciso" => new[]
             {
                 Path.Combine(localAppData, "RomCleanup", "tools", "ciso.exe"),
-                Path.Combine(programFiles, "ciso", "ciso.exe")
+                Path.Combine(programFiles, "ciso", "ciso.exe"),
+                Path.Combine(programFilesX86, "ciso", "ciso.exe"),
+                Path.Combine(programFiles, "ciso.exe"),
             },
             _ => Array.Empty<string>()
         };

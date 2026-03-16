@@ -408,7 +408,7 @@ public sealed class RunViewModel : ObservableObject
         bool hasPsxtract = !string.IsNullOrWhiteSpace(setup.ToolPsxtract) && File.Exists(setup.ToolPsxtract);
         bool hasCiso = !string.IsNullOrWhiteSpace(setup.ToolCiso) && File.Exists(setup.ToolCiso);
         bool anyToolSpecified = !string.IsNullOrWhiteSpace(setup.ToolChdman) || !string.IsNullOrWhiteSpace(setup.Tool7z);
-        int toolCount = (hasChdman ? 1 : 0) + (has7z ? 1 : 0) + (hasDolphin ? 1 : 0);
+        int toolCount = (hasChdman ? 1 : 0) + (has7z ? 1 : 0) + (hasDolphin ? 1 : 0) + (hasPsxtract ? 1 : 0) + (hasCiso ? 1 : 0);
         ToolsStatusLevel = (hasChdman || has7z) ? StatusLevel.Ok
             : (anyToolSpecified || setup.ConvertEnabled) ? StatusLevel.Warning
             : StatusLevel.Missing;

@@ -184,8 +184,8 @@ public sealed class ToolsViewModel : ObservableObject
             ("PatchEngine",        "Security",       "\xE70F", false),
             ("HeaderRepair",       "Security",       "\xE90F", false),
             ("RollbackQuick",      "Security",       "\xE777", false),
-            ("RollbackUndo",       "Security",       "\xE7A7", false),
-            ("RollbackRedo",       "Security",       "\xE7A6", false),
+            ("RollbackHistoryBack",    "Security",       "\xE7A7", false),
+            ("RollbackHistoryForward", "Security",       "\xE7A6", false),
 
             // Workflow
             ("CommandPalette",     "Workflow",       "\xE721", false),
@@ -223,7 +223,6 @@ public sealed class ToolsViewModel : ObservableObject
 
             // UI
             ("Accessibility",      "UI",             "\xE7F8", false),
-            ("ThemeEngine",        "UI",             "\xE771", false),
         };
         foreach (var (key, catKey, icon, needsResult) in items)
         {

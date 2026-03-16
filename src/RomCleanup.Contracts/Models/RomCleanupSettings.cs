@@ -24,7 +24,7 @@ public sealed class GeneralSettings
     public string LogLevel { get; set; } = "Info";
 
     [JsonPropertyName("preferredRegions")]
-    public List<string> PreferredRegions { get; set; } = new() { "EU", "US", "JP" };
+    public List<string> PreferredRegions { get; set; } = new() { "EU", "US", "JP", "WORLD" };
 
     [JsonPropertyName("aggressiveJunk")]
     public bool AggressiveJunk { get; set; }

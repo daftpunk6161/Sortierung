@@ -66,8 +66,8 @@ public sealed class FeatureCommandServiceTests : IDisposable
     [InlineData("DuplicateExport")]
     [InlineData("ExportCsv")]
     [InlineData("ExportExcel")]
-    [InlineData("RollbackUndo")]
-    [InlineData("RollbackRedo")]
+    [InlineData("RollbackHistoryBack")]
+    [InlineData("RollbackHistoryForward")]
     [InlineData("ApplyLocale")]
     [InlineData("PluginManager")]
     [InlineData("AutoProfile")]
@@ -139,7 +139,6 @@ public sealed class FeatureCommandServiceTests : IDisposable
     [InlineData("SystemTray")]
     [InlineData("MobileWebUI")]
     [InlineData("Accessibility")]
-    [InlineData("ThemeEngine")]
     public void RegisterCommands_WithWindowHost_ContainsWindowCommands(string commandKey)
     {
         _sut.RegisterCommands();
@@ -156,7 +155,6 @@ public sealed class FeatureCommandServiceTests : IDisposable
         Assert.False(_vm.FeatureCommands.ContainsKey("SystemTray"));
         Assert.False(_vm.FeatureCommands.ContainsKey("MobileWebUI"));
         Assert.False(_vm.FeatureCommands.ContainsKey("Accessibility"));
-        Assert.False(_vm.FeatureCommands.ContainsKey("ThemeEngine"));
     }
 
     [Fact]
@@ -728,19 +726,48 @@ public sealed class FeatureCommandServiceTests : IDisposable
     // ═══ ROLLBACK UNDO / REDO ═══════════════════════════════════════════
 
     [Fact]
-    public void RollbackUndo_NoHistory_DoesNotThrow()
+    public void RollbackHistoryBack_NoHistory_LogsWarning()
     {
         _sut.RegisterCommands();
-        _vm.FeatureCommands["RollbackUndo"].Execute(null);
-        // No exception
+        _vm.FeatureCommands["RollbackHistoryBack"].Execute(null);
+
+        Assert.Contains(_vm.LogEntries, entry => entry.Level == "WARN" && entry.Text.Contains("rollback", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    public void RollbackRedo_NoHistory_DoesNotThrow()
+    public void RollbackHistoryForward_NoHistory_LogsWarning()
     {
         _sut.RegisterCommands();
-        _vm.FeatureCommands["RollbackRedo"].Execute(null);
-        // No exception
+        _vm.FeatureCommands["RollbackHistoryForward"].Execute(null);
+
+        Assert.Contains(_vm.LogEntries, entry => entry.Level == "WARN" && entry.Text.Contains("rollback", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void RollbackHistoryBack_WithHistory_MovesEntryToRedoStack()
+    {
+        _sut.RegisterCommands();
+        _vm.PushRollbackUndo("audit-001.csv");
+
+        _vm.FeatureCommands["RollbackHistoryBack"].Execute(null);
+
+        Assert.False(_vm.HasRollbackUndo);
+        Assert.True(_vm.HasRollbackRedo);
+        Assert.Contains(_vm.LogEntries, entry => entry.Level == "INFO" && entry.Text.Contains("RollbackUndone", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void RollbackHistoryForward_WithRedoHistory_MovesEntryBackToUndoStack()
+    {
+        _sut.RegisterCommands();
+        _vm.PushRollbackUndo("audit-002.csv");
+        _vm.FeatureCommands["RollbackHistoryBack"].Execute(null);
+
+        _vm.FeatureCommands["RollbackHistoryForward"].Execute(null);
+
+        Assert.True(_vm.HasRollbackUndo);
+        Assert.False(_vm.HasRollbackRedo);
+        Assert.Contains(_vm.LogEntries, entry => entry.Level == "INFO" && entry.Text.Contains("RollbackRedone", StringComparison.OrdinalIgnoreCase));
     }
 
     // ═══ IDEMPOTENCY ════════════════════════════════════════════════════

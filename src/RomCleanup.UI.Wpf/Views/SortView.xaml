@@ -206,17 +206,19 @@
                   Background="{DynamicResource BrushSuccessBg}" BorderBrush="{DynamicResource BrushSuccess}" BorderThickness="1"
                   CornerRadius="6"
                   Visibility="{Binding DryRun, Converter={StaticResource BoolToVis}}">
-            <StackPanel Orientation="Horizontal">
+            <StackPanel>
               <TextBlock Text="{Binding Loc[Sort.DryRunBanner]}"
                          Foreground="{DynamicResource BrushSuccess}" FontWeight="SemiBold" TextWrapping="Wrap"
                          VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding MoveApplyGateText}" Margin="0,6,0,0" TextWrapping="Wrap"
+                         Foreground="{DynamicResource BrushTextPrimary}"/>
               <Button Content="{Binding Loc[Sort.StartMoveNow]}"
                       Command="{Binding StartMoveCommand}"
-                      Margin="16,0,0,0" Padding="12,4" FontWeight="SemiBold"
+                      Margin="0,10,0,0" Padding="12,4" FontWeight="SemiBold" HorizontalAlignment="Left"
                       Background="{DynamicResource BrushDangerBg}" Foreground="{DynamicResource BrushDanger}" BorderBrush="{DynamicResource BrushDanger}"
                       BorderThickness="1" Cursor="Hand"
                       Visibility="{Binding ShowStartMoveButton, Converter={StaticResource BoolToVis}}"
-                      ToolTip="{Binding Loc[Sort.StartMoveTip]}"
+                      ToolTip="{Binding MoveApplyGateText}"
                       AutomationProperties.Name="{Binding Loc[Sort.StartMoveNow]}"/>
             </StackPanel>
           </Border>

@@ -66,6 +66,7 @@ public partial class MainWindow : Window, IWindowHost
         if (_vm.MinimizeToTray && !_vm.IsBusy)
         {
             e.Cancel = true;
+            _vm.SaveSettings();
             _trayService ??= new TrayService(this, _vm);
             Hide();
             _trayService.ShowBalloonTip(_vm.Loc["App.Title"], _vm.Loc["Tray.Minimized"]);

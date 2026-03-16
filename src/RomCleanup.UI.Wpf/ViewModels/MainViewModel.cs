@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -67,9 +68,10 @@ public sealed partial class MainViewModel : ObservableObject
 
         // Wire collection changes to status refresh
         Roots.CollectionChanged += OnRootsChanged;
+        PropertyChanged += OnConfigurationPropertyChanged;
 
         // ── Commands (CommunityToolkit.Mvvm.Input) ────────────────────
-        RunCommand = new RelayCommand(OnRun, () => !IsBusy && Roots.Count > 0);
+        RunCommand = new RelayCommand(OnRun, () => CanStartCurrentRun);
         CancelCommand = new RelayCommand(OnCancel, () => IsBusy);
         RollbackCommand = new AsyncRelayCommand(OnRollbackAsync, () => !IsBusy && CanRollback);
         AddRootCommand = new RelayCommand(OnAddRoot, () => !IsBusy);
@@ -96,10 +98,32 @@ public sealed partial class MainViewModel : ObservableObject
         // Quick workflow commands
         QuickPreviewCommand = new RelayCommand(
             () => { DryRun = true; RunCommand.Execute(null); },
-            () => Roots.Count > 0 && !IsBusy);
+            () => Roots.Count > 0 && !IsBusy && !HasBlockingValidationErrors);
+        ConvertOnlyCommand = new RelayCommand(
+            () => { ConvertOnly = true; DryRun = false; RunCommand.Execute(null); },
+            () => Roots.Count > 0 && !IsBusy && !HasBlockingValidationErrors);
         StartMoveCommand = new RelayCommand(
-            () => { DryRun = false; RunCommand.Execute(null); },
-            () => Roots.Count > 0 && !IsBusy);
+            () =>
+            {
+                if (HasBlockingValidationErrors)
+                {
+                    var blockingValidationMessage = GetBlockingValidationMessage();
+                    AddLog(blockingValidationMessage, "WARN");
+                    _dialog.Info(blockingValidationMessage, "Start gesperrt");
+                    return;
+                }
+
+                if (!CanStartMoveWithCurrentPreview)
+                {
+                    AddLog(MoveApplyGateText, "WARN");
+                    _dialog.Info(MoveApplyGateText, "Move gesperrt");
+                    return;
+                }
+
+                DryRun = false;
+                RunCommand.Execute(null);
+            },
+            () => CanStartMoveWithCurrentPreview && !HasBlockingValidationErrors);
 
         // GUI-063: Navigation history commands
         NavBackCommand = new RelayCommand(NavGoBack, () => CanNavBack);
@@ -115,6 +139,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         // Extension filter collection (UX-004)
         InitExtensionFilters();
+        WirePreviewGateObservers();
 
         // Console filter collection (Runde 7: replaces 30 x:Name checkboxes)
         InitConsoleFilters();
@@ -260,10 +285,12 @@ public sealed partial class MainViewModel : ObservableObject
     {
         get
         {
-            if (PreferEU) return "EU";
-            if (PreferUS) return "US";
-            if (PreferJP) return "JP";
-            return "World";
+            var parts = new List<string>();
+            if (PreferEU) parts.Add("EU");
+            if (PreferUS) parts.Add("US");
+            if (PreferJP) parts.Add("JP");
+            if (PreferWORLD) parts.Add("World");
+            return parts.Count > 0 ? string.Join(", ", parts) : "–";
         }
     }
 
@@ -311,10 +338,10 @@ public sealed partial class MainViewModel : ObservableObject
             "JA" => "JP",
             _ => "US"
         };
-        PreferEU = region == "EU";
-        PreferUS = region == "US";
-        PreferJP = region == "JP";
-        PreferWORLD = false;
+        // Set detected locale region to true; leave others at their defaults (all true).
+        if (region == "EU") PreferEU = true;
+        else if (region == "US") PreferUS = true;
+        else if (region == "JP") PreferJP = true;
     }
 
     // ═══ GUI-101: SHORTCUT CHEATSHEET OVERLAY ═══════════════════════════
@@ -366,6 +393,7 @@ public sealed partial class MainViewModel : ObservableObject
     public IRelayCommand BrowseToolPathCommand { get; }
     public IRelayCommand BrowseFolderPathCommand { get; }
     public IRelayCommand QuickPreviewCommand { get; }
+    public IRelayCommand ConvertOnlyCommand { get; }
     public IRelayCommand StartMoveCommand { get; }
     public IRelayCommand SaveSettingsCommand { get; }
     public IRelayCommand LoadSettingsCommand { get; }
@@ -485,6 +513,7 @@ public sealed partial class MainViewModel : ObservableObject
         GameKeyPreviewCommand.NotifyCanExecuteChanged();
         WatchApplyCommand.NotifyCanExecuteChanged();
         QuickPreviewCommand.NotifyCanExecuteChanged();
+        ConvertOnlyCommand.NotifyCanExecuteChanged();
         StartMoveCommand.NotifyCanExecuteChanged();
     }
 

@@ -197,7 +197,10 @@ public sealed class WpfNewTests : IDisposable
     public void ShowStartMoveButton_AfterCompletedDryRun_True()
     {
         var vm = new MainViewModel();
-        SetRunStateViaValidPath(vm, RunState.CompletedDryRun);
+        vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = true;
+        vm.TransitionTo(RunState.Preflight);
+        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
         Assert.True(vm.ShowStartMoveButton);
     }
 
@@ -495,6 +498,20 @@ public sealed class WpfNewTests : IDisposable
         SetRunStateViaValidPath(vm, RunState.Scanning);
         vm.CompleteRun(true, "/path/to/report.html");
         Assert.Equal("/path/to/report.html", vm.LastReportPath);
+    }
+
+    [Fact]
+    public void CompleteRun_WithoutReportPath_ClearsLastReportPath()
+    {
+        var vm = new MainViewModel();
+        vm.DryRun = true;
+        SetRunStateViaValidPath(vm, RunState.Scanning);
+        vm.CompleteRun(true, "/path/to/report.html");
+
+        SetRunStateViaValidPath(vm, RunState.Scanning);
+        vm.CompleteRun(true);
+
+        Assert.Equal(string.Empty, vm.LastReportPath);
     }
 
     // ═══ MainViewModel — CTS Cancellation ═══════════════════════════════

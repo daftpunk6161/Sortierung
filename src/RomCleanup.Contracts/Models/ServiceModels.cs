@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using RomCleanup.Contracts.Errors;
 
 namespace RomCleanup.Contracts.Models;
@@ -90,6 +92,8 @@ public sealed class AuditMetadata
     public int RowCount { get; init; }
     public string CreatedUtc { get; init; } = "";
     public string? HmacSha256 { get; init; }
+    [JsonExtensionData]
+    public IDictionary<string, JsonElement>? AdditionalMetadata { get; init; }
 }
 
 /// <summary>

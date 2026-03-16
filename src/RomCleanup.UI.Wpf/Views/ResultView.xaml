@@ -243,12 +243,19 @@
                   BorderThickness="1" CornerRadius="8" Padding="20,16" Margin="0,0,0,12"
                   Visibility="{Binding ShowStartMoveButton, Converter={StaticResource BoolToVis}}">
             <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="Danger-Zone: Apply (Move)" FontSize="15" FontWeight="Bold"
+               Foreground="{DynamicResource BrushDanger}" HorizontalAlignment="Center"
+               Margin="0,0,0,6"/>
+                <TextBlock Text="{Binding MoveApplyGateText}" FontSize="12" TextWrapping="Wrap"
+               Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center"
+               TextAlignment="Center" Margin="0,0,0,8" MaxWidth="520"/>
               <TextBlock Text="{Binding MoveConsequenceText}" FontSize="14" FontWeight="SemiBold"
                          Foreground="{DynamicResource BrushWarning}" HorizontalAlignment="Center"
                          Margin="0,0,0,8"/>
               <Button Command="{Binding StartMoveCommand}" MinWidth="260" Height="44" Cursor="Hand"
                       Background="{DynamicResource BrushDangerBg}" Foreground="{DynamicResource BrushDanger}"
                       BorderBrush="{DynamicResource BrushDanger}" BorderThickness="2" FontSize="16" FontWeight="Bold"
+                  ToolTip="{Binding MoveApplyGateText}"
                       AutomationProperties.Name="{Binding Loc[Result.BtnCleanup]}">
                 <StackPanel Orientation="Horizontal">
                   <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" Margin="0,0,8,0"/>

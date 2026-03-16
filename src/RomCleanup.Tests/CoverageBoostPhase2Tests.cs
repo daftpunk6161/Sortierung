@@ -1597,37 +1597,6 @@ public sealed class CoverageBoostPhase2Tests : IDisposable
 
     #endregion
 
-    #region FCS - ThemeEngine
-
-    [Fact]
-    public void FCS_ThemeEngine_YesResult_Toggles()
-    {
-        var (vm, dialog, _) = SetupFcsWithHost();
-        dialog.NextYesNoCancel = ConfirmResult.Yes;
-        ExecCommand(vm, "ThemeEngine");
-        Assert.True(vm.LogEntries.Count > 0 || dialog.ShowTextCalls.Count > 0);
-    }
-
-    [Fact]
-    public void FCS_ThemeEngine_NoResult_Toggles()
-    {
-        var (vm, dialog, _) = SetupFcsWithHost();
-        dialog.NextYesNoCancel = ConfirmResult.No;
-        ExecCommand(vm, "ThemeEngine");
-        Assert.True(vm.LogEntries.Count > 0 || dialog.ShowTextCalls.Count > 0);
-    }
-
-    [Fact]
-    public void FCS_ThemeEngine_CancelResult_Toggles()
-    {
-        var (vm, dialog, _) = SetupFcsWithHost();
-        dialog.NextYesNoCancel = ConfirmResult.Cancel;
-        ExecCommand(vm, "ThemeEngine");
-        Assert.True(vm.LogEntries.Count > 0 || dialog.ShowTextCalls.Count > 0);
-    }
-
-    #endregion
-
     #region FeatureService - TryRegexMatch
 
     [Fact]
