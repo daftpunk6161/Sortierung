@@ -1,5 +1,7 @@
 using System.IO;
 using System.Text.Json;
+using RomCleanup.Contracts.Models;
+using RomCleanup.Infrastructure.Configuration;
 using RomCleanup.UI.Wpf.ViewModels;
 
 namespace RomCleanup.UI.Wpf.Services;
@@ -29,7 +31,14 @@ public sealed class SettingsService : ISettingsService
     /// <summary>RF-010: Load settings from disk as DTO (decoupled from ViewModel).</summary>
     public SettingsDto? Load()
     {
-        if (!File.Exists(SettingsPath)) return null;
+        var dto = CreateDefaultDto();
+
+        if (!File.Exists(SettingsPath))
+        {
+            LastAuditPath = dto.LastAuditPath;
+            LastTheme = dto.Theme;
+            return dto;
+        }
 
         try
         {
@@ -37,7 +46,16 @@ public sealed class SettingsService : ISettingsService
             var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
-            var dto = new SettingsDto();
+            // GUI-060: Check schema version and migrate if needed
+            var fileVersion = 0;
+            if (root.TryGetProperty("version", out var versionEl) && versionEl.ValueKind == JsonValueKind.Number)
+                fileVersion = versionEl.GetInt32();
+
+            if (fileVersion > CurrentVersion)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[WARN] Settings version {fileVersion} is newer than supported {CurrentVersion}. Using defaults for unknown fields.");
+            }
 
             if (root.TryGetProperty("general", out var general))
             {
@@ -137,8 +155,44 @@ public sealed class SettingsService : ISettingsService
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
-            return null;
+            return dto;
         }
+    }
+
+    private static SettingsDto CreateDefaultDto()
+    {
+        var settings = SettingsLoader.LoadDefaultsOnly(SettingsLoader.ResolveDefaultsJsonPath());
+        return MapToDto(settings);
+    }
+
+    private static SettingsDto MapToDto(RomCleanupSettings settings)
+    {
+        return new SettingsDto
+        {
+            LogLevel = settings.General.LogLevel,
+            AggressiveJunk = settings.General.AggressiveJunk,
+            AliasKeying = settings.General.AliasEditionKeying,
+            PreferredRegions = [.. settings.General.PreferredRegions],
+            ToolChdman = settings.ToolPaths.Chdman,
+            ToolDolphin = settings.ToolPaths.DolphinTool,
+            Tool7z = settings.ToolPaths.SevenZip,
+            UseDat = settings.Dat.UseDat,
+            DatRoot = settings.Dat.DatRoot,
+            DatHashType = settings.Dat.HashType,
+            DatFallback = settings.Dat.DatFallback,
+            DryRun = string.Equals(settings.General.Mode, "DryRun", StringComparison.OrdinalIgnoreCase),
+            Theme = ToThemeName(settings.General.Theme)
+        };
+    }
+
+    private static string ToThemeName(string? theme)
+    {
+        return theme?.Trim().ToLowerInvariant() switch
+        {
+            "light" => "Light",
+            "highcontrast" => "HighContrast",
+            _ => "Dark"
+        };
     }
 
     /// <summary>Load settings from disk into the ViewModel (delegates to Load).</summary>

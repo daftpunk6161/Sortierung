@@ -128,7 +128,7 @@ public static class DialogService
     }
 
     /// <summary>
-    /// Themed input dialog replacing Microsoft.VisualBasic.Interaction.InputBox.
+    /// GUI-053: Themed XAML-based input dialog replacing programmatic Window construction.
     /// Returns user input, or empty string if cancelled.
     /// </summary>
     public static string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "", Window? owner = null)
@@ -136,63 +136,22 @@ public static class DialogService
         return InvokeOnUiThread(() =>
         {
             var previousFocus = Keyboard.FocusedElement;
-            var dlg = new Window
-            {
-                Title = title,
-                Width = 420,
-                Height = 180,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = owner ?? GetMainWindow(),
-                ResizeMode = ResizeMode.NoResize,
-                WindowStyle = WindowStyle.ToolWindow,
-                Background = Application.Current.TryFindResource("BrushBackground") as System.Windows.Media.Brush
-                    ?? System.Windows.Media.Brushes.White,
-            };
+            var result = InputDialog.Show(prompt, title, defaultValue, owner ?? GetMainWindow());
+            (previousFocus as UIElement)?.Focus();
+            return result;
+        });
+    }
 
-            var grid = new Grid { Margin = new Thickness(16) };
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-            var label = new TextBlock
-            {
-                Text = prompt,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 0, 0, 8),
-                Foreground = Application.Current.TryFindResource("BrushTextPrimary") as System.Windows.Media.Brush
-                    ?? System.Windows.Media.Brushes.Black,
-            };
-            Grid.SetRow(label, 0);
-
-            var textBox = new TextBox
-            {
-                Text = defaultValue,
-                Margin = new Thickness(0, 0, 0, 12),
-                Padding = new Thickness(6, 4, 6, 4),
-                FontFamily = new System.Windows.Media.FontFamily("Consolas"),
-            };
-            Grid.SetRow(textBox, 1);
-
-            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-            var btnOk = new Button { Content = "OK", Width = 80, Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
-            var btnCancel = new Button { Content = "Abbrechen", Width = 80, IsCancel = true };
-            buttonPanel.Children.Add(btnOk);
-            buttonPanel.Children.Add(btnCancel);
-            Grid.SetRow(buttonPanel, 2);
-
-            string result = "";
-            btnOk.Click += (_, _) => { result = textBox.Text; dlg.DialogResult = true; };
-            btnCancel.Click += (_, _) => { dlg.DialogResult = false; };
-
-            grid.Children.Add(label);
-            grid.Children.Add(textBox);
-            grid.Children.Add(buttonPanel);
-            dlg.Content = grid;
-
-            textBox.SelectAll();
-            textBox.Focus();
-
-            dlg.ShowDialog();
+    /// <summary>
+    /// GUI-054: Danger-Confirm dialog requiring typed confirmation text.
+    /// Returns true only if user typed the confirmation and clicked confirm.
+    /// </summary>
+    public static bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen", Window? owner = null)
+    {
+        return InvokeOnUiThread(() =>
+        {
+            var previousFocus = Keyboard.FocusedElement;
+            var result = DangerConfirmDialog.Show(title, message, confirmText, buttonLabel, owner ?? GetMainWindow());
             (previousFocus as UIElement)?.Focus();
             return result;
         });

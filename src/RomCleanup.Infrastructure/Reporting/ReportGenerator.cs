@@ -37,6 +37,9 @@ public sealed record ReportSummary
     public int JunkCount { get; init; }
     public int BiosCount { get; init; }
     public int DatMatches { get; init; }
+    public int ConvertedCount { get; init; }
+    public int ErrorCount { get; init; }
+    public int SkippedCount { get; init; }
     public long SavedBytes { get; init; }
     public int GroupCount { get; init; }
     public TimeSpan Duration { get; init; }
@@ -185,6 +188,10 @@ tr:hover { background: rgba(137,180,250,0.05); }
         AppendCard(sb, "junk", s.JunkCount.ToString(), "Junk");
         AppendCard(sb, "bios", s.BiosCount.ToString(), "BIOS");
         AppendCard(sb, "dat", s.DatMatches.ToString(), "DAT Matches");
+        if (s.ConvertedCount > 0)
+            AppendCard(sb, "", s.ConvertedCount.ToString(), "Konvertiert");
+        if (s.ErrorCount > 0)
+            AppendCard(sb, "junk", s.ErrorCount.ToString(), "Fehler");
         AppendCard(sb, "", FormatSize(s.SavedBytes), "Gespart");
         AppendCard(sb, "", s.TotalFiles.ToString(), "Gescannt");
         AppendCard(sb, "", s.Duration.ToString(@"mm\:ss"), "Laufzeit");

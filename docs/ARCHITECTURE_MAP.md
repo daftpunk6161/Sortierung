@@ -1,6 +1,6 @@
 # Architektur-Map & Modul-Verantwortlichkeiten
 
-Stand: 2026-03-11
+Stand: 2026-03-15
 Plattform: C# .NET 10 (net10.0, LangVersion 14)
 Referenzen: ADR 0002 (Ports/Services), ADR 0004 (Clean Architecture)
 
@@ -24,7 +24,7 @@ Referenzen: ADR 0002 (Ports/Services), ADR 0004 (Clean Architecture)
 │  Audit/             AuditCsvStore, AuditSigningService             │
 │  Dat/               DatRepositoryAdapter, DatSourceService         │
 │  Hashing/           FileHashService, Crc32, ArchiveHash, Parallel  │
-│  Conversion/        FormatConverterAdapter, ConversionPipeline     │
+│  Conversion/        FormatConverterAdapter                         │
 │  Tools/             ToolRunnerAdapter (Hash-Verify, Process)       │
 │  Logging/           JsonlLogWriter (JSONL, Rotation)               │
 │  Reporting/         ReportGenerator (HTML, CSV)                    │
@@ -93,7 +93,7 @@ src/
 ├── RomCleanup.CLI/            ← Headless Entry Point
 ├── RomCleanup.Api/            ← ASP.NET Core Minimal API
 ├── RomCleanup.UI.Wpf/         ← WPF GUI (MVVM, net10.0-windows)
-└── RomCleanup.Tests/          ← xUnit Tests (789+ Tests)
+└── RomCleanup.Tests/          ← xUnit Tests (3090+ Tests, 72 Testdateien)
 ```
 
 ---
@@ -143,7 +143,7 @@ src/
 | `Audit/` | `AuditCsvStore`, `AuditSigningService` | CSV-Audit (SHA256-signiert), Rollback, CSV-Injection-Schutz |
 | `Dat/` | `DatRepositoryAdapter`, `DatSourceService` | DAT-XML-Parsing (XXE-Schutz), Download mit SHA256-Sidecar |
 | `Hashing/` | `FileHashService`, `Crc32`, `ArchiveHashService`, `ParallelHasher` | Streaming-Hashing, CRC32, Archiv-Inhalts-Hashing, Multi-Thread |
-| `Conversion/` | `FormatConverterAdapter`, `ConversionPipeline` | CHD/RVZ/ZIP-Konvertierung, Batch-Pipeline |
+| `Conversion/` | `FormatConverterAdapter` | CHD/RVZ/ZIP-Konvertierung |
 | `Tools/` | `ToolRunnerAdapter` | SHA256-Hash-Verifizierung, Process-Execution, Exit-Codes |
 | `Logging/` | `JsonlLogWriter` | Strukturiertes JSONL, Rotation, CorrelationId |
 | `Reporting/` | `ReportGenerator` | HTML (CSP-Header), CSV (Injection-Schutz) |
@@ -218,6 +218,6 @@ src/
 
 ## 6 — Tests
 
-789+ xUnit-Tests in 46 Testdateien (`src/RomCleanup.Tests/`).
+3090+ xUnit-Tests in 72 Testdateien (`src/RomCleanup.Tests/`).
 
 Detaillierte Teststrategie: siehe `docs/TEST_STRATEGY.md`.

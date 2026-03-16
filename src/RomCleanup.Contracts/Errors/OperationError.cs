@@ -1,9 +1,12 @@
+using System.Text.Json.Serialization;
+
 namespace RomCleanup.Contracts.Errors;
 
 /// <summary>
 /// Error classification for structured error handling.
 /// Maps to PowerShell ErrorContracts.ps1 classes.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ErrorKind>))]
 public enum ErrorKind
 {
     /// <summary>Automatic retry eligible.</summary>

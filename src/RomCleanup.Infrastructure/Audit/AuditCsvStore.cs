@@ -1,16 +1,23 @@
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.FileSystem;
 
 namespace RomCleanup.Infrastructure.Audit;
 
 /// <summary>
-/// CSV-based audit store with SHA256 sidecar verification.
+/// CSV-based audit store with HMAC-signed sidecar verification.
 /// Port of AuditStore from PortInterfaces.ps1 / Logging.ps1.
 /// </summary>
 public sealed class AuditCsvStore : IAuditStore
 {
+    private readonly AuditSigningService _signingService;
+
+    public AuditCsvStore(IFileSystem? fs = null, Action<string>? log = null, string? keyFilePath = null)
+    {
+        _signingService = new AuditSigningService(fs ?? new FileSystemAdapter(), log, keyFilePath);
+    }
+
     /// <summary>CSV injection prevention: blocks leading =, +, -, @ characters.</summary>
     private static string SanitizeCsvField(string value) => AuditCsvParser.SanitizeCsvField(value);
 
@@ -19,30 +26,24 @@ public sealed class AuditCsvStore : IAuditStore
         if (string.IsNullOrWhiteSpace(auditCsvPath))
             throw new ArgumentException("Audit CSV path must not be empty.", nameof(auditCsvPath));
 
-        var sidecarPath = auditCsvPath + ".meta.json";
-
-        var stringDict = new Dictionary<string, string?>();
-        foreach (var entry in metadata)
-            stringDict[entry.Key] = entry.Value?.ToString();
-
-        var jsonOptions = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        };
-        var json = JsonSerializer.Serialize(stringDict, jsonOptions);
-
-        var dir = Path.GetDirectoryName(sidecarPath);
-        if (!string.IsNullOrEmpty(dir))
-            Directory.CreateDirectory(dir);
-
-        File.WriteAllText(sidecarPath, json, Encoding.UTF8);
+        var rowCount = CountAuditRows(auditCsvPath);
+        _signingService.WriteMetadataSidecar(auditCsvPath, rowCount, metadata);
     }
 
     public bool TestMetadataSidecar(string auditCsvPath)
     {
         var sidecarPath = auditCsvPath + ".meta.json";
-        return File.Exists(sidecarPath);
+        if (!File.Exists(sidecarPath) || !File.Exists(auditCsvPath))
+            return false;
+
+        try
+        {
+            return _signingService.VerifyMetadataSidecar(auditCsvPath);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>    /// Flush buffered audit data to disk. Currently a no-op since AppendAuditRow
@@ -90,6 +91,10 @@ public sealed class AuditCsvStore : IAuditStore
         if (!File.Exists(auditCsvPath))
             return Array.Empty<string>();
 
+        var metaPath = auditCsvPath + ".meta.json";
+        if (File.Exists(metaPath) && !TestMetadataSidecar(auditCsvPath))
+            return Array.Empty<string>();
+
         var restoredPaths = new List<string>();
         var lines = File.ReadAllLines(auditCsvPath, Encoding.UTF8);
 
@@ -108,8 +113,10 @@ public sealed class AuditCsvStore : IAuditStore
             var newPath = parts[2];
             var action = parts[3];
 
+            // Rollback MOVE and JUNK_REMOVE actions (Issue #22)
             if (!string.Equals(action, "Move", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(action, "MOVED", StringComparison.OrdinalIgnoreCase))
+                !string.Equals(action, "MOVED", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, "JUNK_REMOVE", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             // Validate paths within allowed roots
@@ -120,28 +127,112 @@ public sealed class AuditCsvStore : IAuditStore
 
             if (!dryRun && File.Exists(newPath))
             {
-                var destDir = Path.GetDirectoryName(oldPath);
-                if (!string.IsNullOrEmpty(destDir))
-                    Directory.CreateDirectory(destDir);
+                // BUG-FIX: Block reparse points on source/destination to prevent symlink attacks
+                // from crafted audit CSV entries.
+                try
+                {
+                    var newAttrs = File.GetAttributes(newPath);
+                    if ((newAttrs & FileAttributes.ReparsePoint) != 0)
+                        continue; // Skip: source is a symlink/junction
+                }
+                catch { continue; } // Skip inaccessible files
 
-                File.Move(newPath, oldPath);
+                var fullOldPath = Path.GetFullPath(oldPath);
+                var destDir = Path.GetDirectoryName(fullOldPath);
+                if (!string.IsNullOrEmpty(destDir))
+                {
+                    // Block reparse point on destination parent
+                    if (Directory.Exists(destDir))
+                    {
+                        try
+                        {
+                            var destDirInfo = new DirectoryInfo(destDir);
+                            if ((destDirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+                                continue;
+                        }
+                        catch { continue; }
+                    }
+                    Directory.CreateDirectory(destDir);
+                }
+
+                // Use overwrite:false to prevent clobbering existing files
+                if (File.Exists(fullOldPath))
+                    continue; // Skip: destination already exists
+
+                // Issue #22: TOCTOU-Schutz — try/catch with single retry
+                try
+                {
+                    File.Move(newPath, fullOldPath);
+                }
+                catch (IOException) when (RetryFileMove(newPath, fullOldPath))
+                {
+                    // Retry succeeded
+                }
+                catch (IOException)
+                {
+                    continue; // Both attempts failed — skip this entry
+                }
             }
 
             restoredPaths.Add(oldPath);
         }
 
+        // Issue #22: Write rollback trail
+        WriteRollbackTrail(auditCsvPath, restoredPaths);
+
         return restoredPaths;
+    }
+
+    private static bool RetryFileMove(string source, string dest)
+    {
+        Thread.Sleep(50);
+        try
+        {
+            if (!File.Exists(source) || File.Exists(dest))
+                return false;
+            File.Move(source, dest);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void WriteRollbackTrail(string auditCsvPath, IReadOnlyList<string> restoredPaths)
+    {
+        if (restoredPaths.Count == 0)
+            return;
+
+        var trailPath = Path.ChangeExtension(auditCsvPath, ".rollback-trail.csv");
+        var sb = new StringBuilder();
+        sb.AppendLine("RestoredPath,Timestamp");
+        var timestamp = DateTime.UtcNow.ToString("o");
+        foreach (var p in restoredPaths)
+            sb.AppendLine($"{SanitizeCsvField(p)},{timestamp}");
+        File.WriteAllText(trailPath, sb.ToString(), Encoding.UTF8);
     }
 
     private static bool IsWithinAnyRoot(string path, string[] roots)
     {
-        var fullPath = Path.GetFullPath(path);
+        // Issue #21: NFC normalization for macOS HFS+ paths
+        var fullPath = Path.GetFullPath(path).Normalize(System.Text.NormalizationForm.FormC);
         foreach (var root in roots)
         {
-            var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var normalizedRoot = Path.GetFullPath(root).Normalize(System.Text.NormalizationForm.FormC)
+                .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
             if (fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
         return false;
+    }
+
+    private static int CountAuditRows(string auditCsvPath)
+    {
+        if (!File.Exists(auditCsvPath))
+            return 0;
+
+        var lineCount = File.ReadLines(auditCsvPath, Encoding.UTF8).Count();
+        return Math.Max(0, lineCount - 1);
     }
 }

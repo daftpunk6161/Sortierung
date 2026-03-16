@@ -465,157 +465,6 @@ public sealed class FormatConverterVerifyTests : IDisposable
 }
 
 // =============================================================================
-//  3) ConversionPipeline – DryRun, cancellation, tool errors, BuildCsoToChdPipeline
-// =============================================================================
-public sealed class ConversionPipelineBranchTests : IDisposable
-{
-    private readonly string _tmpDir = Path.Combine(Path.GetTempPath(), "cpipe_" + Guid.NewGuid().ToString("N")[..8]);
-
-    public ConversionPipelineBranchTests() => Directory.CreateDirectory(_tmpDir);
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_tmpDir)) Directory.Delete(_tmpDir, true);
-    }
-
-    [Fact]
-    public void BuildCsoToChdPipeline_ProducesCorrectSteps()
-    {
-        var src = Path.Combine(_tmpDir, "game.cso");
-        var pipeline = ConversionPipeline.BuildCsoToChdPipeline(src, _tmpDir);
-
-        Assert.Equal(2, pipeline.Steps.Count);
-        Assert.Equal("ciso", pipeline.Steps[0].Tool);
-        Assert.Equal("decompress", pipeline.Steps[0].Action);
-        Assert.True(pipeline.Steps[0].IsTemp);
-        Assert.Equal("chdman", pipeline.Steps[1].Tool);
-        Assert.Equal("createcd", pipeline.Steps[1].Action);
-        Assert.False(pipeline.Steps[1].IsTemp);
-        Assert.EndsWith(".iso", pipeline.Steps[0].Output);
-        Assert.EndsWith(".chd", pipeline.Steps[1].Output);
-    }
-
-    [Fact]
-    public void Execute_DryRun_ReportsAllSteps()
-    {
-        var src = Path.Combine(_tmpDir, "game.cso");
-        File.WriteAllText(src, "data");
-
-        var tools = new FakeToolRunner(findResult: "ciso.exe");
-        var fs = new InMemoryFs();
-        var pipeline = new ConversionPipeline(tools, fs);
-
-        var def = ConversionPipeline.BuildCsoToChdPipeline(src, _tmpDir);
-        var result = pipeline.Execute(def, mode: "DryRun");
-
-        Assert.Equal("completed", result.Status);
-        Assert.Equal(2, result.Steps.Count);
-        Assert.All(result.Steps, s => Assert.Equal("dryrun", s.Status));
-    }
-
-    [Fact]
-    public void Execute_Cancellation_StopsEarly()
-    {
-        var src = Path.Combine(_tmpDir, "game.cso");
-        File.WriteAllText(src, "data");
-
-        var tools = new FakeToolRunner(findResult: "tool.exe",
-            processResult: new ToolResult(0, "ok", true));
-        var fs = new InMemoryFs();
-        var pipeline = new ConversionPipeline(tools, fs);
-
-        using var cts = new CancellationTokenSource();
-        cts.Cancel(); // immediately cancelled
-
-        var def = ConversionPipeline.BuildCsoToChdPipeline(src, _tmpDir);
-        var result = pipeline.Execute(def, mode: "Move", ct: cts.Token);
-
-        Assert.Contains(result.Steps, s => s.Status == "cancelled");
-    }
-
-    [Fact]
-    public void Execute_ToolNotFound_FailsStep()
-    {
-        var src = Path.Combine(_tmpDir, "game.cso");
-        File.WriteAllText(src, new string('x', 100)); // small file for disk space check
-
-        var tools = new FakeToolRunner(findResult: null); // no tools
-        var fs = new InMemoryFs();
-        var pipeline = new ConversionPipeline(tools, fs);
-
-        var def = new ConversionPipelineDef
-        {
-            SourcePath = src,
-            Steps =
-            [
-                new ConversionPipelineStep
-                {
-                    Tool = "ciso",
-                    Action = "decompress",
-                    Input = src,
-                    Output = Path.Combine(_tmpDir, "out.iso")
-                }
-            ]
-        };
-
-        var result = pipeline.Execute(def, mode: "Move");
-        Assert.Equal("failed", result.Status);
-        Assert.Contains(result.Steps, s => s.Status == "error" && s.Error!.Contains("not found"));
-    }
-
-    [Fact]
-    public void CheckDiskSpace_SourceNotFound_ReturnsNotOk()
-    {
-        var result = ConversionPipeline.CheckDiskSpace(@"C:\nonexistent.iso", _tmpDir);
-        Assert.False(result.Ok);
-        Assert.Contains("not found", result.Reason, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void CheckDiskSpace_ValidFile_ReturnsOk()
-    {
-        var src = Path.Combine(_tmpDir, "small.dat");
-        File.WriteAllBytes(src, new byte[1024]);
-
-        var result = ConversionPipeline.CheckDiskSpace(src, _tmpDir);
-        Assert.True(result.Ok);
-        Assert.Equal(3072, result.RequiredBytes); // 1024 * 3.0
-        Assert.True(result.AvailableBytes > 0);
-    }
-
-    [Fact]
-    public void BuildToolArguments_UnknownTool_ThrowsInvalidOperation()
-    {
-        var tools = new FakeToolRunner(findResult: "tool.exe",
-            processResult: new ToolResult(0, "", true));
-        var fs = new InMemoryFs();
-        var pipeline = new ConversionPipeline(tools, fs);
-
-        var src = Path.Combine(_tmpDir, "game.bin");
-        File.WriteAllText(src, new string('x', 100));
-
-        var def = new ConversionPipelineDef
-        {
-            SourcePath = src,
-            Steps =
-            [
-                new ConversionPipelineStep
-                {
-                    Tool = "unknowntool",
-                    Action = "convert",
-                    Input = src,
-                    Output = Path.Combine(_tmpDir, "out.bin")
-                }
-            ]
-        };
-
-        // BuildToolArguments throws InvalidOperationException for unknown tools
-        // which propagates through ExecuteStep
-        Assert.Throws<InvalidOperationException>(() => pipeline.Execute(def, mode: "Move"));
-    }
-}
-
-// =============================================================================
 //  4) RateLimiter – disabled, window reset, eviction
 // =============================================================================
 public sealed class RateLimiterCoverageTests
@@ -1324,7 +1173,7 @@ file sealed class InMemoryFs : IFileSystem
     public bool TestPath(string literalPath, string pathType = "Any") => true;
     public string EnsureDirectory(string path) { Directory.CreateDirectory(path); return path; }
     public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? extensions = null) => _files;
-    public bool MoveItemSafely(string src, string dest) => true;
+    public string? MoveItemSafely(string src, string dest) => dest;
     public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
         => Path.Combine(rootPath, relativePath);
     public bool IsReparsePoint(string path) => false;
@@ -1341,7 +1190,7 @@ file sealed class MultiRootFs : IFileSystem
     public string EnsureDirectory(string path) => path;
     public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? extensions = null)
         => _rootFiles.TryGetValue(root, out var files) ? files : [];
-    public bool MoveItemSafely(string src, string dest) => true;
+    public string? MoveItemSafely(string src, string dest) => dest;
     public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
         => Path.Combine(rootPath, relativePath);
     public bool IsReparsePoint(string path) => false;

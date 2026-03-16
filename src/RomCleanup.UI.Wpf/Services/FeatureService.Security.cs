@@ -104,7 +104,7 @@ public static partial class FeatureService
     {
         var history = LoadTrendHistory();
         history.Add(new TrendSnapshot(DateTime.Now, totalFiles, sizeBytes, verified, dupes, junk,
-            totalFiles > 0 ? (int)(100.0 * verified / totalFiles) : 0));
+            CalculateHealthScore(totalFiles, dupes, junk, verified)));
         if (history.Count > 365) history.RemoveRange(0, history.Count - 365);
         Directory.CreateDirectory(Path.GetDirectoryName(TrendFile)!);
         File.WriteAllText(TrendFile, JsonSerializer.Serialize(history, new JsonSerializerOptions { WriteIndented = true }));
@@ -156,6 +156,8 @@ public static partial class FeatureService
     public static async Task<Dictionary<string, IntegrityEntry>> CreateBaseline(
         IReadOnlyList<string> filePaths, IProgress<string>? progress = null, CancellationToken ct = default)
     {
+        if (filePaths.Count == 0)
+            return new Dictionary<string, IntegrityEntry>(StringComparer.OrdinalIgnoreCase);
         var commonRoot = FindCommonRoot(filePaths) ?? Path.GetDirectoryName(filePaths[0]) ?? "";
         var baseline = new System.Collections.Concurrent.ConcurrentDictionary<string, IntegrityEntry>(StringComparer.OrdinalIgnoreCase);
         int completed = 0;

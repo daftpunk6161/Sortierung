@@ -98,6 +98,29 @@ public sealed partial class MainViewModel
 
         ConsoleFiltersView = CollectionViewSource.GetDefaultView(ConsoleFilters);
         ConsoleFiltersView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(ConsoleFilterItem.Category)));
+        ConsoleFiltersView.Filter = FilterConsoleItem;
+    }
+
+    // GUI-087: Console filter search text
+    private string _consoleFilterText = string.Empty;
+    public string ConsoleFilterText
+    {
+        get => _consoleFilterText;
+        set
+        {
+            if (_consoleFilterText == value) return;
+            _consoleFilterText = value;
+            OnPropertyChanged();
+            ConsoleFiltersView.Refresh();
+        }
+    }
+
+    private bool FilterConsoleItem(object obj)
+    {
+        if (string.IsNullOrWhiteSpace(_consoleFilterText)) return true;
+        if (obj is not ConsoleFilterItem item) return false;
+        return item.DisplayName.Contains(_consoleFilterText, StringComparison.OrdinalIgnoreCase)
+            || item.Key.Contains(_consoleFilterText, StringComparison.OrdinalIgnoreCase);
     }
 
     // ═══ TOOL ITEMS (RD-004: Smart Werkzeuge layout with Quick Access, Recents, Expander categories) ═══
@@ -124,7 +147,7 @@ public sealed partial class MainViewModel
         get => _toolFilterText;
         set
         {
-            if (SetField(ref _toolFilterText, value))
+            if (SetProperty(ref _toolFilterText, value))
             {
                 ToolItemsView?.Refresh();
                 OnPropertyChanged(nameof(IsToolSearchActive));
@@ -206,8 +229,8 @@ public sealed partial class MainViewModel
             ("PatchEngine",        "Patch-Engine",               "Sicherheit & Integrität",   "ROM-Patches anwenden",                         "\xE70F", false),
             ("HeaderRepair",       "Header-Reparatur",           "Sicherheit & Integrität",   "ROM-Header reparieren",                        "\xE90F", false),
             ("RollbackQuick",      "Schnell-Rollback",           "Sicherheit & Integrität",   "Letzten Lauf rückgängig machen",               "\xE777", false),
-            ("RollbackUndo",       "Rollback Undo",              "Sicherheit & Integrität",   "Rollback rückgängig machen",                   "\xE7A7", false),
-            ("RollbackRedo",       "Rollback Redo",              "Sicherheit & Integrität",   "Rollback wiederherstellen",                    "\xE7A6", false),
+            ("RollbackHistoryBack",   "Rollback-Verlauf zurück",    "Sicherheit & Integrität",   "Vorherigen Rollback-Verlaufseintrag auswählen", "\xE7A7", false),
+            ("RollbackHistoryForward","Rollback-Verlauf vor",       "Sicherheit & Integrität",   "Nächsten Rollback-Verlaufseintrag auswählen",   "\xE7A6", false),
 
             // Workflow & Automatisierung
             ("CommandPalette",     "Command-Palette",            "Workflow & Automatisierung", "Befehle suchen und ausführen",                 "\xE721", false),
@@ -245,7 +268,6 @@ public sealed partial class MainViewModel
 
             // UI & Erscheinungsbild
             ("Accessibility",      "Barrierefreiheit",           "UI & Erscheinungsbild",      "Schriftgröße/Kontrast anpassen",               "\xE7F8", false),
-            ("ThemeEngine",        "Theme-Engine",               "UI & Erscheinungsbild",      "Theme-Optionen",                               "\xE771", false),
         };
         foreach (var (key, display, cat, desc, icon, needsResult) in items)
         {

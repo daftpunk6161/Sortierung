@@ -152,7 +152,7 @@ public sealed class ConsoleSorter
             var primaryDest = ResolveMoveDestination(root, primaryPath, destDir);
             if (primaryDest is null) return (false, 0);
             _fs.EnsureDirectory(destDir);
-            if (!_fs.MoveItemSafely(primaryPath, primaryDest))
+            if (_fs.MoveItemSafely(primaryPath, primaryDest) is null)
                 return (false, 0);
             completedMoves.Add((primaryPath, primaryDest));
 
@@ -164,7 +164,7 @@ public sealed class ConsoleSorter
                     throw new InvalidOperationException(
                         $"Path traversal blocked for set member: {member}");
 
-                if (!_fs.MoveItemSafely(member, memberDest))
+                if (_fs.MoveItemSafely(member, memberDest) is null)
                     throw new InvalidOperationException(
                         $"Move failed for set member: {member}");
                 completedMoves.Add((member, memberDest));
@@ -182,7 +182,7 @@ public sealed class ConsoleSorter
                 {
                     var actualDest = FindActualDestination(dest);
                     if (actualDest is not null && File.Exists(actualDest))
-                        _fs.MoveItemSafely(actualDest, source);
+                        _ = _fs.MoveItemSafely(actualDest, source);
                 }
                 catch (Exception rbEx)
                 {
@@ -244,7 +244,7 @@ public sealed class ConsoleSorter
 
         if (destPath is null) return false; // path traversal blocked
 
-        return _fs.MoveItemSafely(sourcePath, destPath);
+        return _fs.MoveItemSafely(sourcePath, destPath) is not null;
     }
 
     private static void BuildSetMemberships(

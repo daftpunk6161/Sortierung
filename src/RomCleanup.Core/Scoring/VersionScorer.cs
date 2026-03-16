@@ -16,7 +16,7 @@ public sealed class VersionScorer
     private readonly Regex _rxVersion;
     private readonly Regex _rxLang;
 
-    private static readonly TimeSpan RxTimeout = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan RxTimeout = TimeSpan.FromMilliseconds(500);
 
     // Pre-compiled patterns for revision parsing (TASK-154)
     private static readonly Regex RxPureLetters = new(@"^[a-z]+$", RegexOptions.Compiled, RxTimeout);
@@ -87,20 +87,9 @@ public sealed class VersionScorer
                         suffixScore = (suffixScore * 26) + (ch - 'a' + 1);
                     }
                 }
-                // V2-BUG-H03: Parse remaining segments after first numeric+suffix group
-                var remainder = rev.Substring(numericMatch.Length);
-                long remainderScore = 0;
-                if (remainder.Length > 0)
-                {
-                    foreach (var ch in remainder.ToLowerInvariant())
-                    {
-                        if (char.IsDigit(ch))
-                            remainderScore = (remainderScore * 10) + (ch - '0');
-                        else if (ch >= 'a' && ch <= 'z')
-                            remainderScore = (remainderScore * 26) + (ch - 'a' + 1);
-                    }
-                }
-                score += (numeric * 10L) + suffixScore + remainderScore;
+                // BUG-FIX: Removed dead remainder code — RxNumericSuffix is anchored (^...$)
+                // so numericMatch.Length == rev.Length, meaning remainder was always empty.
+                score += (numeric * 10L) + suffixScore;
             }
             else if (RxLeadingDigits.IsMatch(rev))
             {

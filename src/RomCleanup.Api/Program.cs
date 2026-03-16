@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using RomCleanup.Api;
+using RomCleanup.Contracts.Errors;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +20,11 @@ if (bindAddress != "127.0.0.1" && bindAddress != "localhost" && bindAddress != "
 }
 
 builder.Services.AddSingleton<RomCleanup.Contracts.Ports.IFileSystem, RomCleanup.Infrastructure.FileSystem.FileSystemAdapter>();
-builder.Services.AddSingleton<RomCleanup.Contracts.Ports.IAuditStore, RomCleanup.Infrastructure.Audit.AuditCsvStore>();
+builder.Services.AddSingleton<RomCleanup.Contracts.Ports.IAuditStore>(sp =>
+    new RomCleanup.Infrastructure.Audit.AuditCsvStore(
+        sp.GetRequiredService<RomCleanup.Contracts.Ports.IFileSystem>(),
+        Console.WriteLine,
+        RomCleanup.Infrastructure.Audit.AuditSecurityPaths.GetDefaultSigningKeyPath()));
 builder.Services.AddSingleton<RunManager>();
 
 var app = builder.Build();
@@ -83,8 +88,7 @@ app.Use(async (ctx, next) =>
     var clientIp = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     if (!rateLimiter.TryAcquire(clientIp))
     {
-        ctx.Response.StatusCode = 429;
-        await ctx.Response.WriteAsJsonAsync(new { error = "Too many requests." });
+        await WriteApiError(ctx, 429, "RUN-RATE-LIMIT", "Too many requests.", ErrorKind.Transient);
         return;
     }
 
@@ -92,8 +96,7 @@ app.Use(async (ctx, next) =>
     var providedKey = ctx.Request.Headers["X-Api-Key"].FirstOrDefault();
     if (!FixedTimeEquals(apiKey, providedKey))
     {
-        ctx.Response.StatusCode = 401;
-        await ctx.Response.WriteAsJsonAsync(new { error = "Unauthorized" });
+        await WriteApiError(ctx, 401, "AUTH-UNAUTHORIZED", "Unauthorized", ErrorKind.Critical);
         return;
     }
 
@@ -138,12 +141,12 @@ app.MapPost("/runs", async (HttpContext ctx, RunManager mgr) =>
     // Validate Content-Type
     var contentType = ctx.Request.ContentType;
     if (contentType is null || !contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
-        return Results.BadRequest(new { error = "Content-Type must be application/json." });
+        return ApiError(400, "RUN-INVALID-CONTENT-TYPE", "Content-Type must be application/json.");
 
     // Read and validate body (max 1MB)
     ctx.Request.EnableBuffering();
     if (ctx.Request.ContentLength is > 1_048_576)
-        return Results.BadRequest(new { error = "Request body too large (max 1MB)." });
+        return ApiError(400, "RUN-BODY-TOO-LARGE", "Request body too large (max 1MB).", ErrorKind.Transient);
 
     string body;
     using (var reader = new StreamReader(ctx.Request.Body, Encoding.UTF8, leaveOpen: true))
@@ -152,7 +155,7 @@ app.MapPost("/runs", async (HttpContext ctx, RunManager mgr) =>
         var buffer = new char[1_048_577];
         var charsRead = await reader.ReadBlockAsync(buffer, 0, buffer.Length);
         if (charsRead > 1_048_576)
-            return Results.BadRequest(new { error = "Request body too large (max 1MB)." });
+            return ApiError(400, "RUN-BODY-TOO-LARGE", "Request body too large (max 1MB).", ErrorKind.Transient);
         body = new string(buffer, 0, charsRead);
     }
 
@@ -164,26 +167,26 @@ app.MapPost("/runs", async (HttpContext ctx, RunManager mgr) =>
     }
     catch (JsonException)
     {
-        return Results.BadRequest(new { error = "Invalid JSON." });
+        return ApiError(400, "RUN-INVALID-JSON", "Invalid JSON.");
     }
 
     if (request is null || request.Roots is null || request.Roots.Length == 0)
-        return Results.BadRequest(new { error = "roots[] is required." });
+        return ApiError(400, "RUN-ROOTS-REQUIRED", "roots[] is required.");
 
     // Validate roots
     foreach (var root in request.Roots)
     {
         if (string.IsNullOrWhiteSpace(root))
-            return Results.BadRequest(new { error = "Empty root path." });
+            return ApiError(400, "RUN-ROOT-EMPTY", "Empty root path.");
         if (!Directory.Exists(root))
-            return Results.BadRequest(new { error = $"Root not found: {root}" });
+            return ApiError(400, "IO-ROOT-NOT-FOUND", $"Root not found: {root}");
 
         // P2-API-07: Block symlinks/junctions as roots (bypass system-dir check)
         try
         {
             var dirInfo = new DirectoryInfo(root);
             if ((dirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
-                return Results.BadRequest(new { error = $"Symlink/junction not allowed as root: {root}" });
+                return ApiError(400, "SEC-ROOT-REPARSE-POINT", $"Symlink/junction not allowed as root: {root}", ErrorKind.Critical);
         }
         catch { /* if we can't check attributes, let subsequent validation handle it */ }
 
@@ -201,20 +204,30 @@ app.MapPost("/runs", async (HttpContext ctx, RunManager mgr) =>
             var normalizedSys = sys.TrimEnd(Path.DirectorySeparatorChar);
             if (full.Equals(normalizedSys, StringComparison.OrdinalIgnoreCase) ||
                 full.StartsWith(normalizedSys + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-                return Results.BadRequest(new { error = $"System directory not allowed: {root}" });
+                return ApiError(400, "SEC-SYSTEM-DIRECTORY-ROOT", $"System directory not allowed: {root}", ErrorKind.Critical);
         }
         // Block drive root
         if (full.Length <= 3)
-            return Results.BadRequest(new { error = $"Drive root not allowed: {root}" });
+            return ApiError(400, "SEC-DRIVE-ROOT-NOT-ALLOWED", $"Drive root not allowed: {root}", ErrorKind.Critical);
     }
 
     var mode = request.Mode ?? "DryRun";
     if (!mode.Equals("DryRun", StringComparison.OrdinalIgnoreCase) &&
         !mode.Equals("Move", StringComparison.OrdinalIgnoreCase))
-        return Results.BadRequest(new { error = "mode must be DryRun or Move." });
+        return ApiError(400, "RUN-INVALID-MODE", "mode must be DryRun or Move.");
 
     // Normalize to canonical casing
     mode = mode.Equals("Move", StringComparison.OrdinalIgnoreCase) ? "Move" : "DryRun";
+
+    var idempotencyKey = ctx.Request.Headers["X-Idempotency-Key"].FirstOrDefault();
+    if (!string.IsNullOrWhiteSpace(idempotencyKey))
+    {
+        if (idempotencyKey.Length > 128 ||
+            !idempotencyKey.All(c => char.IsLetterOrDigit(c) || c is '-' or '_' or '.'))
+        {
+            return ApiError(400, "RUN-INVALID-IDEMPOTENCY-KEY", "Invalid X-Idempotency-Key. Use max 128 chars from [A-Za-z0-9-_.].");
+        }
+    }
 
     // TASK-200: Validate PreferRegions to prevent injection
     if (request.PreferRegions is { Length: > 0 })
@@ -223,92 +236,113 @@ app.MapPost("/runs", async (HttpContext ctx, RunManager mgr) =>
         {
             if (string.IsNullOrWhiteSpace(region) || region.Length > 10 ||
                 !region.All(c => char.IsLetterOrDigit(c) || c == '-'))
-                return Results.BadRequest(new { error = $"Invalid region: '{region}'. Only alphanumeric and '-' allowed." });
+                return ApiError(400, "RUN-INVALID-REGION", $"Invalid region: '{region}'. Only alphanumeric and '-' allowed.");
         }
     }
 
-    var waitSync = ctx.Request.Query.ContainsKey("wait");
+    var waitSync = ctx.Request.Query.TryGetValue("wait", out var waitValue)
+        ? !string.Equals(waitValue.ToString(), "false", StringComparison.OrdinalIgnoreCase)
+        : false;
 
-    var run = mgr.TryCreate(request, mode);
-    if (run is null)
-        return Results.Conflict(new { error = "A run is already active." });
+    var waitTimeoutMs = 600_000;
+    if (ctx.Request.Query.TryGetValue("waitTimeoutMs", out var waitTimeoutValue))
+    {
+        if (!int.TryParse(waitTimeoutValue, out waitTimeoutMs) || waitTimeoutMs < 1 || waitTimeoutMs > 1_800_000)
+            return ApiError(400, "RUN-INVALID-WAIT-TIMEOUT", "waitTimeoutMs must be an integer between 1 and 1800000.");
+    }
+
+    var create = mgr.TryCreateOrReuse(request, mode, idempotencyKey);
+    if (create.Disposition == RunCreateDisposition.ActiveConflict)
+        return ApiError(409, "RUN-ACTIVE-CONFLICT", create.Error ?? "Another run is already active.", runId: create.Run?.RunId, meta: CreateMeta(("activeRun", create.Run)));
+    if (create.Disposition == RunCreateDisposition.IdempotencyConflict)
+        return ApiError(409, "RUN-IDEMPOTENCY-CONFLICT", create.Error ?? "Idempotency key reuse with different payload is not allowed.", runId: create.Run?.RunId, meta: CreateMeta(("run", create.Run)));
+
+    var run = create.Run!;
 
     if (waitSync)
     {
-        // Block until run completes, respecting client disconnect and 10-minute timeout
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ctx.RequestAborted);
-        cts.CancelAfter(TimeSpan.FromMinutes(10));
-        try
+        var waitResult = await mgr.WaitForCompletion(
+            run.RunId,
+            timeout: TimeSpan.FromMilliseconds(waitTimeoutMs),
+            cancellationToken: ctx.RequestAborted);
+
+        if (waitResult.Disposition == RunWaitDisposition.ClientDisconnected)
+            return Results.Empty;
+
+        var current = mgr.Get(run.RunId);
+        if (waitResult.Disposition == RunWaitDisposition.TimedOut)
         {
-            while (true)
+            return Results.Accepted($"/runs/{run.RunId}", new
             {
-                var current = mgr.Get(run.RunId);
-                if (current is null || current.Status != "running")
-                    break;
-                await Task.Delay(250, cts.Token);
-            }
+                run = current,
+                reused = create.Disposition == RunCreateDisposition.Reused,
+                waitTimedOut = true
+            });
         }
-        catch (OperationCanceledException)
+
+        return Results.Ok(new
         {
-            return Results.StatusCode(504); // Gateway Timeout
-        }
-        var completedRun = mgr.Get(run.RunId);
-        return Results.Ok(new { run = completedRun, result = completedRun?.Result });
+            run = current,
+            result = current?.Result,
+            reused = create.Disposition == RunCreateDisposition.Reused
+        });
     }
 
-    return Results.Accepted($"/runs/{run.RunId}", new { run });
+    if (create.Disposition == RunCreateDisposition.Reused && run.Status != "running")
+        return Results.Ok(new { run, result = run.Result, reused = true });
+
+    return Results.Accepted($"/runs/{run.RunId}", new { run, reused = create.Disposition == RunCreateDisposition.Reused });
 });
 
 app.MapGet("/runs/{runId}", (string runId, RunManager mgr) =>
 {
     if (!Guid.TryParse(runId, out _))
-        return Results.BadRequest(new { error = "Invalid run ID format." });
+        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
     var run = mgr.Get(runId);
     return run is null
-        ? Results.NotFound(new { error = "Run not found.", runId })
+        ? ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId)
         : Results.Ok(new { run });
 });
 
 app.MapGet("/runs/{runId}/result", (string runId, RunManager mgr) =>
 {
     if (!Guid.TryParse(runId, out _))
-        return Results.BadRequest(new { error = "Invalid run ID format." });
+        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
     var run = mgr.Get(runId);
     if (run is null)
-        return Results.NotFound(new { error = "Run not found.", runId });
+        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
     if (run.Status == "running")
-        return Results.Conflict(new { error = "Run still in progress.", runId });
+        return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
     return Results.Ok(new { run, result = run.Result });
 });
 
 app.MapPost("/runs/{runId}/cancel", (string runId, RunManager mgr) =>
 {
     if (!Guid.TryParse(runId, out _))
-        return Results.BadRequest(new { error = "Invalid run ID format." });
-    var run = mgr.Get(runId);
-    if (run is null)
-        return Results.NotFound(new { error = "Run not found.", runId });
-    if (run.Status != "running")
-        return Results.Conflict(new { error = "Run is not active.", runId });
-
-    mgr.Cancel(runId);
+        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+    var cancel = mgr.Cancel(runId);
+    if (cancel.Disposition == RunCancelDisposition.NotFound)
+        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
     var updated = mgr.Get(runId);
-    return Results.Ok(new { run = updated });
+    return Results.Ok(new
+    {
+        run = updated,
+        cancelAccepted = cancel.Disposition == RunCancelDisposition.Accepted,
+        idempotent = cancel.Disposition != RunCancelDisposition.Accepted
+    });
 });
 
 app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunManager mgr) =>
 {
     if (!Guid.TryParse(runId, out _))
     {
-        ctx.Response.StatusCode = 400;
-        await ctx.Response.WriteAsJsonAsync(new { error = "Invalid run ID format." });
+        await WriteApiError(ctx, 400, "RUN-INVALID-ID", "Invalid run ID format.");
         return;
     }
     var run = mgr.Get(runId);
     if (run is null)
     {
-        ctx.Response.StatusCode = 404;
-        await ctx.Response.WriteAsJsonAsync(new { error = "Run not found.", runId });
+        await WriteApiError(ctx, 404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
         return;
     }
 
@@ -335,7 +369,7 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunMana
             var current = mgr.Get(runId);
             if (current is null)
             {
-                await WriteSseEvent(writer, encoding, "error", new { error = "Run not found.", runId });
+                await WriteSseEvent(writer, encoding, "error", CreateErrorResponse("RUN-NOT-FOUND", "Run not found.", ErrorKind.Recoverable, runId));
                 break;
             }
 
@@ -431,6 +465,52 @@ static async Task WriteSseEvent(Stream stream, Encoding encoding, string eventNa
     var payload = $"event: {eventName}\ndata: {json}\n\n";
     await stream.WriteAsync(encoding.GetBytes(payload));
     await stream.FlushAsync();
+}
+
+static IResult ApiError(
+    int statusCode,
+    string code,
+    string message,
+    ErrorKind kind = ErrorKind.Recoverable,
+    string? runId = null,
+    IDictionary<string, object>? meta = null)
+{
+    return Results.Json(CreateErrorResponse(code, message, kind, runId, meta), statusCode: statusCode);
+}
+
+static Task WriteApiError(
+    HttpContext context,
+    int statusCode,
+    string code,
+    string message,
+    ErrorKind kind = ErrorKind.Recoverable,
+    string? runId = null,
+    IDictionary<string, object>? meta = null)
+{
+    context.Response.StatusCode = statusCode;
+    return context.Response.WriteAsJsonAsync(CreateErrorResponse(code, message, kind, runId, meta));
+}
+
+static OperationErrorResponse CreateErrorResponse(
+    string code,
+    string message,
+    ErrorKind kind = ErrorKind.Recoverable,
+    string? runId = null,
+    IDictionary<string, object>? meta = null)
+{
+    return new OperationErrorResponse(new OperationError(code, message, kind, "API"), runId, meta);
+}
+
+static IDictionary<string, object> CreateMeta(params (string Key, object? Value)[] entries)
+{
+    var meta = new Dictionary<string, object>(StringComparer.Ordinal);
+    foreach (var (key, value) in entries)
+    {
+        if (value is not null)
+            meta[key] = value;
+    }
+
+    return meta;
 }
 
 public partial class Program

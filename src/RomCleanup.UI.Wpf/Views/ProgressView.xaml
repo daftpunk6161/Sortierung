@@ -1,0 +1,168 @@
+<UserControl x:Class="RomCleanup.UI.Wpf.Views.ProgressView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+
+  <Grid Margin="24,20">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <!-- ── GUI-077: Pipeline Stepper (large) ── -->
+    <TextBlock Grid.Row="0" Text="{Binding Loc[Progress.Title]}" Style="{StaticResource SectionHeader}"
+               Margin="{DynamicResource SpaceBottomMD}" FontSize="18"/>
+    <Border Grid.Row="1" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}"
+            BorderThickness="1" CornerRadius="{DynamicResource RadiusLG}" Padding="20,16" Margin="{DynamicResource SpaceBottomLG}">
+      <ItemsControl>
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="13"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <!-- Phase 1: Preflight -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
+                    ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=1}">
+          <Ellipse Width="28" Height="28" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
+                   Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=1}"
+                   VerticalAlignment="Center" Margin="0,0,6,0"
+                   AutomationProperties.Name="{Binding Loc[Phase.Preflight]}" AutomationProperties.LiveSetting="Polite"/>
+          <TextBlock Text="{Binding Loc[Phase.Preflight]}" FontSize="11" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+        </StackPanel>
+        <Border Height="3" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=2}" Margin="2,0"/>
+        <!-- Phase 2: Scan -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
+                    ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=2}">
+          <Ellipse Width="28" Height="28" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
+                   Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=2}"
+                   VerticalAlignment="Center" Margin="0,0,6,0"
+                   AutomationProperties.Name="{Binding Loc[Phase.Scan]}" AutomationProperties.LiveSetting="Polite"/>
+          <TextBlock Text="{Binding Loc[Phase.Scan]}" FontSize="11" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+        </StackPanel>
+        <Border Height="3" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=3}" Margin="2,0"/>
+        <!-- Phase 3: Dedupe -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
+                    ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=3}">
+          <Ellipse Width="28" Height="28" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
+                   Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=3}"
+                   VerticalAlignment="Center" Margin="0,0,6,0"
+                   AutomationProperties.Name="{Binding Loc[Phase.Dedupe]}" AutomationProperties.LiveSetting="Polite"/>
+          <TextBlock Text="{Binding Loc[Phase.Dedupe]}" FontSize="11" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+        </StackPanel>
+        <Border Height="3" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=4}" Margin="2,0"/>
+        <!-- Phase 4: Sort -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
+                    ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=4}">
+          <Ellipse Width="28" Height="28" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
+                   Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=4}"
+                   VerticalAlignment="Center" Margin="0,0,6,0"
+                   AutomationProperties.Name="{Binding Loc[Phase.Sort]}" AutomationProperties.LiveSetting="Polite"/>
+          <TextBlock Text="{Binding Loc[Phase.Sort]}" FontSize="11" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+        </StackPanel>
+        <Border Height="3" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=5}" Margin="2,0"/>
+        <!-- Phase 5: Move -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
+                    ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=5}">
+          <Ellipse Width="28" Height="28" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
+                   Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=5}"
+                   VerticalAlignment="Center" Margin="0,0,6,0"
+                   AutomationProperties.Name="{Binding Loc[Phase.Move]}" AutomationProperties.LiveSetting="Polite"/>
+          <TextBlock Text="{Binding Loc[Phase.Move]}" FontSize="11" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+        </StackPanel>
+        <Border Height="3" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=6}" Margin="2,0"/>
+        <!-- Phase 6: Convert -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
+                    ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=6}">
+          <Ellipse Width="28" Height="28" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
+                   Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=6}"
+                   VerticalAlignment="Center" Margin="0,0,6,0"
+                   AutomationProperties.Name="{Binding Loc[Phase.Convert]}" AutomationProperties.LiveSetting="Polite"/>
+          <TextBlock Text="{Binding Loc[Phase.Convert]}" FontSize="11" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+        </StackPanel>
+        <Border Height="3" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=7}" Margin="2,0"/>
+        <!-- Phase 7: Done -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
+                    ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=7}">
+          <Ellipse Width="28" Height="28" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
+                   Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=7}"
+                   VerticalAlignment="Center" Margin="0,0,6,0"
+                   AutomationProperties.Name="{Binding Loc[Phase.Done]}" AutomationProperties.LiveSetting="Polite"/>
+          <TextBlock Text="{Binding Loc[Phase.Done]}" FontSize="11" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+        </StackPanel>
+      </ItemsControl>
+    </Border>
+
+    <!-- ── GUI-078: Detail Box ── -->
+    <Border Grid.Row="2" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}"
+            BorderThickness="1" CornerRadius="{DynamicResource RadiusLG}" Padding="20,16" Margin="{DynamicResource SpaceBottomLG}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0">
+          <TextBlock Text="{Binding PerfPhase}" FontSize="14" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrushTextPrimary}" Margin="{DynamicResource SpaceBottomXS}"/>
+          <TextBlock Text="{Binding PerfFile}" Foreground="{DynamicResource BrushTextMuted}"
+                     FontSize="12" TextTrimming="CharacterEllipsis"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="24,0">
+          <TextBlock Text="{Binding ProgressText}" FontSize="28" FontWeight="Bold"
+                     Foreground="{DynamicResource BrushAccentCyan}" HorizontalAlignment="Center"/>
+        </StackPanel>
+        <Button Grid.Column="2" Command="{Binding CancelCommand}" Style="{StaticResource DangerButton}"
+                Width="80" Height="44" VerticalAlignment="Center"
+                AutomationProperties.Name="{Binding Loc[Start.CancelButton]}"
+                AutomationProperties.AcceleratorKey="Esc">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71A;" FontSize="18" HorizontalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Start.CancelButton]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- ── GUI-078: Progress Bar ── -->
+    <ProgressBar Grid.Row="2" Height="6" Margin="0,0,0,12" VerticalAlignment="Bottom"
+                 Maximum="100" Value="{Binding Progress}"
+                 AutomationProperties.Name="{Binding Loc[Progress.Bar]}" AutomationProperties.LiveSetting="Polite"/>
+
+    <!-- ── GUI-080: Minimize-to-tray hint ── -->
+    <TextBlock Grid.Row="2" Text="{Binding Loc[Progress.MinimizeHint]}" FontSize="11"
+               Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Right"
+               VerticalAlignment="Top" Margin="0,0,0,0"/>
+
+    <!-- ── GUI-079: Live Ticker (warnings/important events) ── -->
+    <Border Grid.Row="3" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}"
+            BorderThickness="1" CornerRadius="{DynamicResource RadiusLG}" Padding="12,8">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[Progress.LiveLog]}" FontSize="12" FontWeight="SemiBold"
+                   Foreground="{DynamicResource BrushTextMuted}" Margin="{DynamicResource SpaceBottomXS}"/>
+        <ListBox ItemsSource="{Binding LogEntries}" 
+                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                 ScrollViewer.CanContentScroll="True" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 BorderThickness="0" Background="Transparent"
+                 AutomationProperties.Name="{Binding Loc[Progress.LiveLog]}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Text}" FontFamily="Consolas" FontSize="11"
+                         Foreground="{Binding Level, Converter={StaticResource LogLevelToBrush}}"
+                         TextTrimming="CharacterEllipsis"/>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+  </Grid>
+</UserControl>

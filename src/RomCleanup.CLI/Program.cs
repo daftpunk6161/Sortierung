@@ -10,6 +10,7 @@ using RomCleanup.Infrastructure.FileSystem;
 using RomCleanup.Infrastructure.Hashing;
 using RomCleanup.Infrastructure.Logging;
 using RomCleanup.Infrastructure.Orchestration;
+using RomCleanup.Infrastructure.Paths;
 using RomCleanup.Infrastructure.Reporting;
 using RomCleanup.Infrastructure.Tools;
 
@@ -22,8 +23,6 @@ namespace RomCleanup.CLI;
 /// </summary>
 internal static class Program
 {
-    private static readonly string[] DefaultRegions = { "EU", "US", "WORLD", "JP" };
-
     private static int Main(string[] args)
     {
         try
@@ -71,7 +70,7 @@ internal static class Program
         };
 
         var fs = new FileSystemAdapter();
-        var audit = new AuditCsvStore();
+        var audit = new AuditCsvStore(fs, Console.Error.WriteLine, AuditSecurityPaths.GetDefaultSigningKeyPath());
 
         // JSONL logging
         JsonlLogWriter? log = null;
@@ -145,7 +144,7 @@ internal static class Program
             if (consoleMap.Count > 0)
             {
                 datIndex = datRepo.GetDatIndex(datRoot, consoleMap, hashType);
-                Console.WriteLine($"[DAT] Loaded {datIndex.TotalEntries} hashes for {datIndex.ConsoleCount} consoles");
+                Console.Error.WriteLine($"[DAT] Loaded {datIndex.TotalEntries} hashes for {datIndex.ConsoleCount} consoles");
                 log?.Info("CLI", "dat-loaded",
                     $"{datIndex.TotalEntries} hashes for {datIndex.ConsoleCount} consoles (hashType={hashType})", "init");
             }
@@ -163,7 +162,7 @@ internal static class Program
         var auditPath = opts.AuditPath;
         if (string.IsNullOrEmpty(auditPath) && opts.Mode == "Move")
         {
-            var auditDir = GetSiblingDirectory(opts.Roots[0], "audit-logs");
+            var auditDir = ArtifactPathResolver.GetArtifactDirectory(opts.Roots, "audit-logs");
             auditPath = Path.Combine(Path.GetFullPath(auditDir),
                 $"audit-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv");
         }
@@ -182,13 +181,14 @@ internal static class Program
             HashType = hashType,
             ConvertFormat = opts.ConvertFormat ? "auto" : null,
             TrashRoot = opts.TrashRoot,
-            AuditPath = auditPath
+            AuditPath = auditPath,
+            ReportPath = opts.ReportPath
         };
 
         log?.Info("CLI", "start", $"Run started: Mode={opts.Mode}, Roots={string.Join(";", opts.Roots)}", "scan");
 
         var orchestrator = new RunOrchestrator(fs, audit, consoleDetector, hashService,
-            converter, datIndex, onProgress: msg => Console.WriteLine($"[{msg}]"));
+            converter, datIndex, onProgress: msg => Console.Error.WriteLine(msg));
 
         var result = orchestrator.Execute(runOptions, cts.Token);
 
@@ -234,10 +234,10 @@ internal static class Program
         else if (opts.Mode == "Move")
         {
             var mr = result.MoveResult;
-            Console.WriteLine($"[Done] Moved {mr?.MoveCount ?? 0} files ({mr?.SavedBytes ?? 0:N0} bytes saved), {mr?.FailCount ?? 0} failed");
+            Console.Error.WriteLine($"[Done] Moved {mr?.MoveCount ?? 0} files ({mr?.SavedBytes ?? 0:N0} bytes saved), {mr?.FailCount ?? 0} failed");
 
             if (result.ConvertedCount > 0)
-                Console.WriteLine($"[Convert] {result.ConvertedCount} files converted");
+                Console.Error.WriteLine($"[Convert] {result.ConvertedCount} files converted");
 
             // Write final audit sidecar
             if (!string.IsNullOrEmpty(auditPath) && File.Exists(auditPath))
@@ -251,32 +251,19 @@ internal static class Program
                     ["keep"] = result.WinnerCount,
                     ["move"] = result.LoserCount
                 });
-                Console.WriteLine($"[Audit] {auditPath}");
+                Console.Error.WriteLine($"[Audit] {auditPath}");
             }
         }
 
-        // Generate reports
-        if (!string.IsNullOrEmpty(opts.ReportPath))
+        if (!string.IsNullOrEmpty(opts.ReportPath) && !string.IsNullOrEmpty(result.ReportPath))
         {
-            var reportEntries = BuildReportEntries(result);
-            var reportSummary = BuildReportSummary(result, opts.Mode);
-
-            var reportDir = Path.GetDirectoryName(opts.ReportPath);
-            if (!string.IsNullOrEmpty(reportDir) && !Directory.Exists(reportDir))
-                Directory.CreateDirectory(reportDir);
-
-            if (opts.ReportPath.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
-            {
-                var csv = ReportGenerator.GenerateCsv(reportEntries);
-                File.WriteAllText(opts.ReportPath, csv, System.Text.Encoding.UTF8);
-            }
-            else
-            {
-                var html = ReportGenerator.GenerateHtml(reportSummary, reportEntries);
-                File.WriteAllText(opts.ReportPath, html, System.Text.Encoding.UTF8);
-            }
-            Console.WriteLine($"[Report] {opts.ReportPath}");
-            log?.Info("CLI", "report", $"Report written: {opts.ReportPath}", "report");
+            Console.Error.WriteLine($"[Report] {result.ReportPath}");
+            log?.Info("CLI", "report", $"Report written: {result.ReportPath}", "report");
+        }
+        else if (!string.IsNullOrEmpty(opts.ReportPath))
+        {
+            Console.Error.WriteLine("[Warning] Report requested but not written");
+            log?.Warning("CLI", "Report requested but not written", "report");
         }
 
         // Log finalize + rotation
@@ -291,97 +278,15 @@ internal static class Program
         return result.ExitCode;
     }
 
-    private static List<ReportEntry> BuildReportEntries(RunResult result)
-    {
-        var entries = new List<ReportEntry>();
-        foreach (var group in result.DedupeGroups)
-        {
-            entries.Add(new ReportEntry
-            {
-                GameKey = group.GameKey,
-                Action = "KEEP",
-                Category = group.Winner.Category,
-                Region = group.Winner.Region,
-                FilePath = group.Winner.MainPath,
-                FileName = Path.GetFileName(group.Winner.MainPath),
-                Extension = group.Winner.Extension,
-                SizeBytes = group.Winner.SizeBytes,
-                RegionScore = group.Winner.RegionScore,
-                FormatScore = group.Winner.FormatScore,
-                VersionScore = (int)group.Winner.VersionScore,
-                Console = group.Winner.ConsoleKey ?? "",
-                DatMatch = group.Winner.DatMatch
-            });
+    internal static int RunForTests(CliOptions opts) => Run(opts);
 
-            foreach (var loser in group.Losers)
-            {
-                entries.Add(new ReportEntry
-                {
-                    GameKey = group.GameKey,
-                    Action = "MOVE",
-                    Category = loser.Category,
-                    Region = loser.Region,
-                    FilePath = loser.MainPath,
-                    FileName = Path.GetFileName(loser.MainPath),
-                    Extension = loser.Extension,
-                    SizeBytes = loser.SizeBytes,
-                    RegionScore = loser.RegionScore,
-                    FormatScore = loser.FormatScore,
-                    VersionScore = (int)loser.VersionScore,
-                    Console = loser.ConsoleKey ?? "",
-                    DatMatch = loser.DatMatch
-                });
-            }
-        }
-
-        // Junk/BIOS entries
-        foreach (var c in result.AllCandidates.Where(c => c.Category is "JUNK" or "BIOS"))
-        {
-            entries.Add(new ReportEntry
-            {
-                GameKey = c.GameKey,
-                Action = c.Category,
-                Category = c.Category,
-                Region = c.Region,
-                FilePath = c.MainPath,
-                FileName = Path.GetFileName(c.MainPath),
-                Extension = c.Extension,
-                SizeBytes = c.SizeBytes,
-                Console = c.ConsoleKey ?? ""
-            });
-        }
-        return entries;
-    }
-
-    private static ReportSummary BuildReportSummary(RunResult result, string mode)
-    {
-        var junkCount = result.AllCandidates.Count(c => c.Category == "JUNK");
-        var biosCount = result.AllCandidates.Count(c => c.Category == "BIOS");
-        var datMatchCount = result.AllCandidates.Count(c => c.DatMatch);
-        long savedBytes = result.MoveResult?.SavedBytes ?? 0;
-
-        return new ReportSummary
-        {
-            Mode = mode,
-            Timestamp = DateTime.UtcNow,
-            TotalFiles = result.TotalFilesScanned,
-            KeepCount = result.WinnerCount,
-            MoveCount = result.LoserCount,
-            JunkCount = junkCount,
-            BiosCount = biosCount,
-            DatMatches = datMatchCount,
-            SavedBytes = savedBytes,
-            GroupCount = result.GroupCount,
-            Duration = TimeSpan.FromMilliseconds(result.DurationMs)
-        };
-    }
-
-    private static (CliOptions?, int exitCode) ParseArgs(string[] args)
+    internal static (CliOptions?, int exitCode) ParseArgs(string[] args)
     {
         if (args.Length == 0)
             return (null, 0);
 
         var opts = new CliOptions();
+        var rootsSpecified = false;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -389,20 +294,35 @@ internal static class Program
             switch (arg.ToLowerInvariant())
             {
                 case "-roots" or "--roots":
-                    if (++i < args.Length)
-                        opts.Roots = args[i].Split(';', StringSplitOptions.RemoveEmptyEntries);
+                    rootsSpecified = true;
+                    if (++i >= args.Length)
+                    {
+                        Console.Error.WriteLine("[Error] Missing value for --roots.");
+                        return (null, 3);
+                    }
+
+                    if (!TryParseRootsArgument(args[i], out var parsedRoots, out var rootsError))
+                    {
+                        Console.Error.WriteLine($"[Error] {rootsError}");
+                        return (null, 3);
+                    }
+
+                    opts.Roots = parsedRoots;
                     break;
 
                 case "-mode" or "--mode":
                     if (++i < args.Length)
                     {
                         var modeVal = args[i];
-                        if (modeVal != "DryRun" && modeVal != "Move")
+                        if (string.Equals(modeVal, "DryRun", StringComparison.OrdinalIgnoreCase))
+                            opts.Mode = "DryRun";
+                        else if (string.Equals(modeVal, "Move", StringComparison.OrdinalIgnoreCase))
+                            opts.Mode = "Move";
+                        else
                         {
                             Console.Error.WriteLine($"[Error] Invalid mode '{modeVal}'. Must be DryRun or Move.");
                             return (null, 3);
                         }
-                        opts.Mode = modeVal;
                     }
                     break;
 
@@ -429,6 +349,10 @@ internal static class Program
 
                 case "-removejunk" or "--removejunk":
                     opts.RemoveJunk = true;
+                    break;
+
+                case "-no-removejunk" or "--no-removejunk":
+                    opts.RemoveJunk = false;
                     break;
 
                 case "-aggressivejunk" or "--aggressivejunk":
@@ -498,7 +422,15 @@ internal static class Program
         }
 
         if (opts.Roots.Length == 0)
+        {
+            if (rootsSpecified)
+            {
+                Console.Error.WriteLine("[Error] No valid root paths were provided.");
+                return (null, 3);
+            }
+
             return (null, 0);
+        }
 
         // Validate root directories exist
         foreach (var root in opts.Roots)
@@ -540,6 +472,33 @@ internal static class Program
         return (opts, 0);
     }
 
+    private static bool TryParseRootsArgument(string rawValue, out string[] roots, out string? error)
+    {
+        roots = Array.Empty<string>();
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            error = "No valid root paths were provided.";
+            return false;
+        }
+
+        var parsedRoots = rawValue
+            .Split(';', StringSplitOptions.None)
+            .Select(part => part.Trim())
+            .Where(part => !string.IsNullOrWhiteSpace(part))
+            .ToArray();
+
+        if (parsedRoots.Length == 0)
+        {
+            error = "No valid root paths were provided.";
+            return false;
+        }
+
+        roots = parsedRoots;
+        return true;
+    }
+
     private static void PrintUsage()
     {
         Console.WriteLine(@"ROM Cleanup CLI — Region Deduplication
@@ -573,15 +532,15 @@ Exit codes:
   3  Preflight / validation failure");
     }
 
-    private sealed class CliOptions
+    internal sealed class CliOptions
     {
         public string[] Roots { get; set; } = Array.Empty<string>();
         public string Mode { get; set; } = "DryRun";
-        public string[] PreferRegions { get; set; } = DefaultRegions;
+        public string[] PreferRegions { get; set; } = Array.Empty<string>();
         public HashSet<string> Extensions { get; set; } = new(RunOptions.DefaultExtensions, StringComparer.OrdinalIgnoreCase);
         public bool ExtensionsExplicit { get; set; }
         public string? TrashRoot { get; set; }
-        public bool RemoveJunk { get; set; }
+        public bool RemoveJunk { get; set; } = true;
         public bool AggressiveJunk { get; set; }
         public bool SortConsole { get; set; }
         public bool EnableDat { get; set; }
@@ -689,19 +648,5 @@ Exit codes:
 
         // Fallback: return the first candidate path even if it doesn't exist
         return Path.GetFullPath(candidates[0]);
-    }
-
-    /// <summary>
-    /// Resolve a sibling directory next to the given root path.
-    /// UNC-safe: uses Path.GetDirectoryName instead of Path.Combine(.., name)
-    /// which breaks on UNC share roots like \\server\share.
-    /// </summary>
-    private static string GetSiblingDirectory(string rootPath, string siblingName)
-    {
-        var fullRoot = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var parent = Path.GetDirectoryName(fullRoot);
-        if (string.IsNullOrEmpty(parent))
-            return Path.Combine(fullRoot, siblingName);
-        return Path.Combine(parent, siblingName);
     }
 }

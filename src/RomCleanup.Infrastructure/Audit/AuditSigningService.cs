@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 
@@ -138,7 +139,7 @@ public sealed class AuditSigningService
     /// <summary>
     /// Write an audit metadata sidecar (.meta.json) with HMAC signature.
     /// </summary>
-    public string? WriteMetadataSidecar(string auditCsvPath, int rowCount)
+    public string? WriteMetadataSidecar(string auditCsvPath, int rowCount, IDictionary<string, object>? metadata = null)
     {
         if (!File.Exists(auditCsvPath))
         {
@@ -154,18 +155,19 @@ public sealed class AuditSigningService
             var payload = BuildSignaturePayload(auditFileName, csvSha256, rowCount, createdUtc);
             var hmac = ComputeHmacSha256(payload);
 
-            var metadata = new AuditMetadata
+            var auditMetadata = new AuditMetadata
             {
                 Version = "v1",
                 AuditFileName = auditFileName,
                 CsvSha256 = csvSha256,
                 RowCount = rowCount,
                 CreatedUtc = createdUtc,
-                HmacSha256 = hmac
+                HmacSha256 = hmac,
+                AdditionalMetadata = ToJsonExtensionData(metadata)
             };
 
             var metaPath = auditCsvPath + ".meta.json";
-            var json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(auditMetadata, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(metaPath, json, Encoding.UTF8);
 
             _log?.Invoke($"Audit sidecar written: {metaPath}");
@@ -271,11 +273,14 @@ public sealed class AuditSigningService
         }
 
         // Pre-cache normalized root paths to avoid Path.GetFullPath per root per row (expensive on UNC)
+        // Issue #21: NFC normalization for macOS HFS+ paths
         var normalizedCurrentRoots = allowedCurrentRoots
-            .Select(r => Path.GetFullPath(r).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar)
+            .Select(r => Path.GetFullPath(r).Normalize(NormalizationForm.FormC)
+                .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar)
             .ToArray();
         var normalizedRestoreRoots = allowedRestoreRoots
-            .Select(r => Path.GetFullPath(r).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar)
+            .Select(r => Path.GetFullPath(r).Normalize(NormalizationForm.FormC)
+                .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar)
             .ToArray();
 
         // Process rows in reverse order (undo last moves first)
@@ -293,16 +298,17 @@ public sealed class AuditSigningService
             var newPath = fields.Length > 2 ? fields[2] : "";
             var action = fields.Length > 3 ? fields[3] : "";
 
-            // Only rollback MOVE actions
+            // Rollback MOVE and JUNK_REMOVE actions (Issue #22)
             if (!string.Equals(action, "MOVE", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(action, "MOVED", StringComparison.OrdinalIgnoreCase))
+                !string.Equals(action, "MOVED", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, "JUNK_REMOVE", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             eligible++;
 
             // Safety: check the current location (newPath) is within allowed roots
-            var fullNewPath = Path.GetFullPath(newPath);
-            var fullOldPath = Path.GetFullPath(oldPath);
+            var fullNewPath = Path.GetFullPath(newPath).Normalize(NormalizationForm.FormC);
+            var fullOldPath = Path.GetFullPath(oldPath).Normalize(NormalizationForm.FormC);
             var inAllowedCurrent = normalizedCurrentRoots.Any(nr =>
                 fullNewPath.StartsWith(nr, StringComparison.OrdinalIgnoreCase));
             var inAllowedRestore = normalizedRestoreRoots.Any(nr =>
@@ -342,7 +348,7 @@ public sealed class AuditSigningService
                     if (parentDir is not null)
                         _fs.EnsureDirectory(parentDir);
 
-                    if (_fs.MoveItemSafely(newPath, oldPath))
+                    if (_fs.MoveItemSafely(newPath, oldPath) is not null)
                     {
                         rolledBack++;
                         _log?.Invoke($"Rolled back: {newPath} -> {oldPath}");
@@ -383,6 +389,18 @@ public sealed class AuditSigningService
     /// Sanitize a CSV field to prevent CSV injection.
     /// </summary>
     public static string SanitizeCsvField(string value) => AuditCsvParser.SanitizeCsvField(value);
+
+    private static IDictionary<string, JsonElement>? ToJsonExtensionData(IDictionary<string, object>? metadata)
+    {
+        if (metadata is null || metadata.Count == 0)
+            return null;
+
+        var extensionData = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in metadata)
+            extensionData[entry.Key] = JsonSerializer.SerializeToElement(entry.Value);
+
+        return extensionData;
+    }
 
     private static void AppendRollbackRow(string path, string action, string from, string to, string status)
     {

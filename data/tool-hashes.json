@@ -3,8 +3,8 @@
   "Tools": {
     "7z.exe": "4a41aa37786c7eae7451e81c2c97458d5d1ae5a3a8154637a0d5f77adc05e619",
     "psxtract.exe": "061c0d6c06d15b83f82063693b756422dcd43df9dce8ecd9b8c5bb74c938b93d",
-    "chdman.exe": "PLACEHOLDER_REPLACE_WITH_ACTUAL_SHA256_HASH",
-    "dolphintool.exe": "PLACEHOLDER_REPLACE_WITH_ACTUAL_SHA256_HASH",
-    "ciso.exe": "PLACEHOLDER_REPLACE_WITH_ACTUAL_SHA256_HASH"
+    "chdman.exe": "01f7d5d37a5e213aa1397c160aa4e6d3eabe92222a4e087658f3d71d2c09b8c6",
+    "dolphintool.exe": "a3da496b5d67d82123426e07c97e9bae18c53268e17bda3c7d5e2adde68064c3",
+    "ciso.exe": "e2e3be773ff0e5145ac1e4b2bce370ccb87bebf7fb4bd8278b22ef04b2e6a5d2"
   }
 }

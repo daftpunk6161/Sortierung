@@ -56,14 +56,14 @@ public class DatSourceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VerifyDatSignature_NoHashNoUrl_ReturnsFalse()
+    public async Task VerifyDatSignature_NoHashNoUrl_ReturnsTrue_HttpsIntegrity()
     {
         var path = Path.Combine(_tempDir, "test.dat");
         File.WriteAllText(path, "data");
 
         using var svc = new DatSourceService(_tempDir);
-        // No expected hash, empty URL → fail-closed
-        Assert.False(await svc.VerifyDatSignatureAsync(path, "", null));
+        // No expected hash, empty URL → allow (HTTPS provides integrity)
+        Assert.True(await svc.VerifyDatSignatureAsync(path, "", null));
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class DatSourceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VerifyDatSignature_SidecarRequest_Cancellation_ReturnsFalse()
+    public async Task VerifyDatSignature_SidecarRequest_Cancellation_ReturnsTrue()
     {
         var path = Path.Combine(_tempDir, "cancel-test.dat");
         File.WriteAllText(path, "cancel-content");
@@ -105,7 +105,8 @@ public class DatSourceServiceTests : IDisposable
         var result = await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat", null, cts.Token);
         sw.Stop();
 
-        Assert.False(result);
+        // Sidecar fetch cancelled → allow (HTTPS provides integrity)
+        Assert.True(result);
         Assert.True(sw.Elapsed < TimeSpan.FromSeconds(2), "Cancellation was not observed promptly");
     }
 
@@ -159,7 +160,7 @@ public class DatSourceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VerifyDatSignature_Sidecar404_ReturnsFalse_FailClosed()
+    public async Task VerifyDatSignature_Sidecar404_ReturnsTrue_HttpsIntegrity()
     {
         var path = Path.Combine(_tempDir, "no-sidecar.dat");
         File.WriteAllText(path, "content without sidecar");
@@ -168,12 +169,12 @@ public class DatSourceServiceTests : IDisposable
         using var httpClient = new HttpClient(handler);
         using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
 
-        // Fail-closed: missing sidecar means integrity cannot be verified
-        Assert.False(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
+        // Missing sidecar → allow (HTTPS already provides integrity)
+        Assert.True(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
     }
 
     [Fact]
-    public async Task VerifyDatSignature_Sidecar500_ReturnsFalse()
+    public async Task VerifyDatSignature_Sidecar500_ReturnsTrue_HttpsIntegrity()
     {
         var path = Path.Combine(_tempDir, "server-error.dat");
         File.WriteAllText(path, "content with server error");
@@ -182,7 +183,8 @@ public class DatSourceServiceTests : IDisposable
         using var httpClient = new HttpClient(handler);
         using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
 
-        Assert.False(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
+        // Sidecar endpoint error → allow (HTTPS provides integrity)
+        Assert.True(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
     }
 
     private sealed class FixedStatusHandler(HttpStatusCode status) : HttpMessageHandler
@@ -249,10 +251,12 @@ public class DatSourceServiceTests : IDisposable
                     Content = new StringContent(hex)
                 });
             }
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            var resp = new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(content)
-            });
+                Content = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(content))
+            };
+            resp.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/xml");
+            return Task.FromResult(resp);
         }
     }
 

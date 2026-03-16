@@ -106,6 +106,25 @@ public class SettingsLoaderTests : IDisposable
     }
 
     [Fact]
+    public void Load_WithRepoDefaultsPath_UsesRepoDefaultParity()
+    {
+        var defaultsPath = SettingsLoader.ResolveDefaultsJsonPath();
+
+        Assert.False(string.IsNullOrWhiteSpace(defaultsPath));
+
+        var settings = SettingsLoader.LoadDefaultsOnly(defaultsPath);
+
+        Assert.Equal("DryRun", settings.General.Mode);
+        Assert.Equal("Info", settings.General.LogLevel);
+        Assert.Equal(new[] { "EU", "US", "JP", "WORLD" }, settings.General.PreferredRegions);
+        Assert.True(settings.Dat.UseDat);
+        Assert.True(settings.Dat.DatFallback);
+        Assert.Equal("SHA1", settings.Dat.HashType);
+        Assert.Equal("dark", settings.General.Theme);
+        Assert.Equal("de", settings.General.Locale);
+    }
+
+    [Fact]
     public void UserSettingsPath_ContainsAppData()
     {
         var path = SettingsLoader.UserSettingsPath;

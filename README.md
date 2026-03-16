@@ -135,7 +135,7 @@ src/
 │   ├── Services/                #   ThemeService, DialogService, SettingsService
 │   ├── Converters/              #   WPF Value Converters
 │   └── Themes/                  #   ResourceDictionary (Dark + Neon Accent)
-└── RomCleanup.Tests/            # xUnit Tests (789+ Tests, 44 Testdateien)
+└── RomCleanup.Tests/            # xUnit Tests (3090+ Tests, 72 Testdateien)
 ```
 
 ---
@@ -172,7 +172,7 @@ Clean Architecture (Ports & Adapters). Abhängigkeiten nur abwärts:
 # Build
 dotnet build src/RomCleanup.sln
 
-# Alle Tests (789+)
+# Alle Tests (3090+)
 dotnet test src/RomCleanup.sln
 
 # Einzelnes Testprojekt

@@ -1,17 +1,56 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using RomCleanup.Contracts.Ports;
+using RomCleanup.UI.Wpf.Services;
+using RomCleanup.UI.Wpf.ViewModels;
 using Application = System.Windows.Application;
 
 namespace RomCleanup.UI.Wpf;
 
 public partial class App : Application
 {
+    public IServiceProvider Services { get; private set; } = null!;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        var services = new ServiceCollection();
+        ConfigureServices(services);
+        Services = services.BuildServiceProvider();
+
+        var mainWindow = Services.GetRequiredService<MainWindow>();
+        mainWindow.Show();
+
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
+    }
+
+    private static void ConfigureServices(IServiceCollection services)
+    {
+        // Services
+        services.AddSingleton<IThemeService, ThemeService>();
+        services.AddSingleton<ILocalizationService, LocalizationService>();
+        services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddTransient<IDialogService, WpfDialogService>();
+
+        // Feature domain services (GUI-034 to GUI-040)
+        services.AddSingleton<IHealthAnalyzer, HealthAnalyzer>();
+        services.AddSingleton<ICollectionService, CollectionService>();
+        services.AddSingleton<IConversionEstimator, ConversionEstimator>();
+        services.AddSingleton<IExportService, ExportService>();
+        services.AddSingleton<IDatManagementService, DatManagementService>();
+        services.AddSingleton<IHeaderService, HeaderSecurityService>();
+        services.AddSingleton<IWorkflowService, WorkflowService>();
+        services.AddSingleton<IRunService, RunService>();
+
+        // ViewModel
+        services.AddSingleton<MainViewModel>();
+
+        // Windows
+        services.AddSingleton<MainWindow>();
     }
 
     private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

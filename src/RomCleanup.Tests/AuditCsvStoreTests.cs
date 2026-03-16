@@ -6,13 +6,15 @@ namespace RomCleanup.Tests;
 public class AuditCsvStoreTests : IDisposable
 {
     private readonly string _tempDir;
+    private readonly string _keyPath;
     private readonly AuditCsvStore _audit;
 
     public AuditCsvStoreTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "RomCleanup_AuditTest_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
-        _audit = new AuditCsvStore();
+        _keyPath = Path.Combine(_tempDir, "audit-signing.key");
+        _audit = new AuditCsvStore(keyFilePath: _keyPath);
     }
 
     public void Dispose()
@@ -25,6 +27,11 @@ public class AuditCsvStoreTests : IDisposable
     public void WriteMetadataSidecar_CreatesJsonFile()
     {
         var csvPath = Path.Combine(_tempDir, "audit.csv");
+        File.WriteAllLines(csvPath, [
+            "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
+            $"{_tempDir},{Path.Combine(_tempDir, "old.rom")},{Path.Combine(_tempDir, "new.rom")},Move,GAME,,,2025-01-01T00:00:00Z"
+        ]);
+
         var metadata = new Dictionary<string, object>
         {
             ["RunId"] = "abc-123",
@@ -39,15 +46,35 @@ public class AuditCsvStoreTests : IDisposable
         var content = File.ReadAllText(sidecar);
         Assert.Contains("abc-123", content);
         Assert.Contains("DryRun", content);
+        Assert.Contains("CsvSha256", content);
     }
 
     [Fact]
-    public void TestMetadataSidecar_ReturnsTrueIfExists()
+    public void TestMetadataSidecar_ReturnsTrueIfSidecarIsValid()
     {
         var csvPath = Path.Combine(_tempDir, "audit.csv");
-        File.WriteAllText(csvPath + ".meta.json", "{}");
+        File.WriteAllLines(csvPath, [
+            "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
+            $"{_tempDir},{Path.Combine(_tempDir, "old.rom")},{Path.Combine(_tempDir, "new.rom")},Move,GAME,,,2025-01-01T00:00:00Z"
+        ]);
+        _audit.WriteMetadataSidecar(csvPath, new Dictionary<string, object>());
 
         Assert.True(_audit.TestMetadataSidecar(csvPath));
+    }
+
+    [Fact]
+    public void TestMetadataSidecar_ReturnsFalseIfTampered()
+    {
+        var csvPath = Path.Combine(_tempDir, "audit.csv");
+        File.WriteAllLines(csvPath, [
+            "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
+            $"{_tempDir},{Path.Combine(_tempDir, "old.rom")},{Path.Combine(_tempDir, "new.rom")},Move,GAME,,,2025-01-01T00:00:00Z"
+        ]);
+        _audit.WriteMetadataSidecar(csvPath, new Dictionary<string, object>());
+
+        File.AppendAllText(csvPath, "tampered\n");
+
+        Assert.False(_audit.TestMetadataSidecar(csvPath));
     }
 
     [Fact]
@@ -103,6 +130,7 @@ public class AuditCsvStoreTests : IDisposable
             "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
             $"{_tempDir},{oldPath},{newPath},Move,GAME,abc,dedupe,2025-01-01"
         });
+        _audit.WriteMetadataSidecar(csvPath, new Dictionary<string, object> { ["Mode"] = "Move" });
 
         var result = _audit.Rollback(csvPath,
             allowedRestoreRoots: new[] { _tempDir },

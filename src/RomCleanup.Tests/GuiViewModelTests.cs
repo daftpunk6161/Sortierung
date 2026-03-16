@@ -550,23 +550,33 @@ public class GuiViewModelTests
     [Fact]
     public void GetPreferredRegions_SimpleMode_Index0_ReturnsEuropaOrder()
     {
-        var vm = new MainViewModel { IsSimpleMode = true, SimpleRegionIndex = 0 };
+        var vm = new MainViewModel { IsSimpleMode = true };
+        vm.PreferEU = true; vm.PreferDE = true; vm.PreferWORLD = true; vm.PreferUS = true; vm.PreferJP = true;
         var regions = vm.GetPreferredRegions();
-        Assert.Equal("EU", regions[0]);
+        Assert.Contains("EU", regions);
         Assert.Contains("DE", regions);
         Assert.Contains("WORLD", regions);
     }
 
     [Theory]
-    [InlineData(0, "EU")]
-    [InlineData(1, "US")]
-    [InlineData(2, "JP")]
-    [InlineData(3, "WORLD")]
-    public void GetPreferredRegions_SimpleMode_FirstRegionCorrect(int index, string expectedFirst)
+    [InlineData("EU")]
+    [InlineData("US")]
+    [InlineData("JP")]
+    [InlineData("WORLD")]
+    public void GetPreferredRegions_SimpleMode_FirstRegionCorrect(string region)
     {
-        var vm = new MainViewModel { IsSimpleMode = true, SimpleRegionIndex = index };
+        var vm = new MainViewModel { IsSimpleMode = true };
+        vm.PreferEU = false; vm.PreferUS = false; vm.PreferJP = false; vm.PreferWORLD = false;
+        switch (region)
+        {
+            case "EU": vm.PreferEU = true; break;
+            case "US": vm.PreferUS = true; break;
+            case "JP": vm.PreferJP = true; break;
+            case "WORLD": vm.PreferWORLD = true; break;
+        }
         var regions = vm.GetPreferredRegions();
-        Assert.Equal(expectedFirst, regions[0]);
+        Assert.Single(regions);
+        Assert.Equal(region, regions[0]);
     }
 
     [Fact]
@@ -922,7 +932,10 @@ public class GuiViewModelTests
     public void ShowStartMoveButton_True_AfterCompletedDryRun()
     {
         var vm = new MainViewModel();
-        SetRunStateViaValidPath(vm, RunState.CompletedDryRun);
+        vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = true;
+        vm.TransitionTo(RunState.Preflight);
+        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
         Assert.True(vm.ShowStartMoveButton);
     }
 
@@ -940,6 +953,21 @@ public class GuiViewModelTests
         var vm = new MainViewModel();
         vm.CurrentRunState = RunState.Idle;
         Assert.False(vm.ShowStartMoveButton);
+    }
+
+    [Fact]
+    public void ShowStartMoveButton_False_WhenPreviewConfigChanged()
+    {
+        var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = true;
+        vm.TransitionTo(RunState.Preflight);
+        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
+
+        vm.AggressiveJunk = true;
+
+        Assert.False(vm.ShowStartMoveButton);
+        Assert.False(vm.StartMoveCommand.CanExecute(null));
     }
 
     // ═══ ExtensionFilters (UX-004) ══════════════════════════════════════
@@ -1161,6 +1189,7 @@ public class GuiViewModelTests
     public void DryRun_VMStateTransitions_FollowCorrectSequence()
     {
         var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
 
         // Simulate the DryRun flow that MainWindow.xaml.cs executes
         Assert.Equal(RunState.Idle, vm.CurrentRunState);
@@ -1194,6 +1223,7 @@ public class GuiViewModelTests
     public void DryRun_VMStateTransitions_MovePhaseFollowsDryRun()
     {
         var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
 
         // First: complete a DryRun
         vm.DryRun = true;
@@ -1223,14 +1253,14 @@ public class GuiViewModelTests
     [Fact]
     public void RunService_GetSiblingDirectory_ReturnsParentSibling()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\Games\Roms", "reports");
+        var result = new RunService().GetSiblingDirectory(@"C:\Games\Roms", "reports");
         Assert.Equal(Path.Combine(@"C:\Games", "reports"), result);
     }
 
     [Fact]
     public void RunService_GetSiblingDirectory_DriveRoot_FallsBackToSubdirectory()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\", "reports");
+        var result = new RunService().GetSiblingDirectory(@"C:\", "reports");
         Assert.Equal(Path.Combine(@"C:\", "reports"), result);
     }
 
@@ -1332,7 +1362,7 @@ public class GuiViewModelTests
         var result = RollbackService.Execute(
             Path.Combine(Path.GetTempPath(), "nonexistent_audit.csv"),
             new[] { @"C:\Games" });
-        Assert.Empty(result);
+        Assert.Equal(0, result.RolledBack);
     }
 
     // ═══ ProfileService tests ═══════════════════════════════════════════
@@ -1940,18 +1970,114 @@ public class GuiViewModelTests
     }
 
     [Fact]
-    public void StartMoveCommand_CanExecute_WhenRootsExistAndNotBusy()
+    public void StartMoveCommand_CanExecute_AfterMatchingPreview()
     {
         var vm = new MainViewModel();
         vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = true;
+        vm.TransitionTo(RunState.Preflight);
+        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
         Assert.True(vm.StartMoveCommand.CanExecute(null));
     }
 
     [Fact]
-    public void StartMoveCommand_CannotExecute_WhenNoRoots()
+    public void StartMoveCommand_CannotExecute_WithoutPreview()
     {
         var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
         Assert.False(vm.StartMoveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void RunCommand_CannotExecute_InMoveModeWithoutPreview()
+    {
+        var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = false;
+
+        Assert.False(vm.RunCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void RunCommand_CanExecute_InMoveModeAfterMatchingPreview()
+    {
+        var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = true;
+        vm.TransitionTo(RunState.Preflight);
+        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
+        vm.DryRun = false;
+
+        Assert.True(vm.RunCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void RunCommand_CannotExecute_WhenBlockingValidationErrorExists()
+    {
+        var vm = new MainViewModel();
+        var root = Path.Combine(Path.GetTempPath(), $"run_block_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            vm.Roots.Add(root);
+            vm.AuditRoot = $"bad{'\0'}path";
+
+            Assert.True(vm.HasBlockingValidationErrors);
+            Assert.False(vm.RunCommand.CanExecute(null));
+            Assert.Equal(StatusLevel.Blocked, vm.ReadyStatusLevel);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public void RunCommand_CanExecute_WhenOnlyValidationWarningExists()
+    {
+        var vm = new MainViewModel();
+        var root = Path.Combine(Path.GetTempPath(), $"run_warn_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            vm.Roots.Add(root);
+            vm.ToolChdman = @"C:\nonexistent\path\chdman.exe";
+
+            Assert.True(vm.HasErrors);
+            Assert.False(vm.HasBlockingValidationErrors);
+            Assert.True(vm.RunCommand.CanExecute(null));
+            Assert.Equal(StatusLevel.Warning, vm.ReadyStatusLevel);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public void StartMoveCommand_CannotExecute_WhenBlockingValidationErrorExists()
+    {
+        var vm = new MainViewModel();
+        var root = Path.Combine(Path.GetTempPath(), $"move_block_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            vm.Roots.Add(root);
+            vm.DryRun = true;
+            vm.TransitionTo(RunState.Preflight);
+            vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
+            vm.AuditRoot = $"bad{'\0'}path";
+
+            Assert.True(vm.HasBlockingValidationErrors);
+            Assert.False(vm.StartMoveCommand.CanExecute(null));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
     }
 
     [Fact]
@@ -1999,6 +2125,7 @@ public class GuiViewModelTests
         public ConfirmResult YesNoCancel(string message, string title = "Frage") => ConfirmResult.Yes;
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => defaultValue;
         public void ShowText(string title, string content) { }
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 
     // ═══ XAML Binding Validation (VERIFY-001) ═══════════════════════════
@@ -2040,7 +2167,9 @@ public class GuiViewModelTests
             "IsExpanded", "IsLocked", "IsPinned", "IsPlanned", "Items",
             // Werkzeuge/Features tab DataTemplate models
             "HasRecentTools", "IsToolSearchActive", "QuickAccessItems",
-            "RecentToolItems", "ToolCategories"
+            "RecentToolItems", "ToolCategories",
+            // NotificationItem model + RelativeSource ancestor bindings
+            "DataContext", "Message", "Type"
         };
 
         var missing = new List<string>();
@@ -2340,11 +2469,13 @@ public class GuiViewModelTests
         var xamlContent = ReadAllWpfXaml();
 
         // Profile buttons should use MinWidth, not fixed Width
-        var profileA11yNames = new[] { "Profil speichern", "Profil laden", "Profil löschen", "Profil importieren", "Config-Diff anzeigen" };
-        foreach (var a11yName in profileA11yNames)
+        // AutomationProperties.Name is now a binding key (e.g. Settings.ProfileSaveTip)
+        var profileBindingKeys = new[] { "Settings.ProfileSaveTip", "Settings.ProfileLoadTip", "Settings.ProfileDeleteTip", "Settings.ProfileImportTip", "Settings.ProfileDiffTip" };
+        foreach (var key in profileBindingKeys)
         {
-            var idx = xamlContent.IndexOf($"AutomationProperties.Name=\"{a11yName}\"", StringComparison.Ordinal);
-            Assert.True(idx >= 0, $"Button with AutomationProperties.Name='{a11yName}' not found in XAML");
+            var pattern = $"Loc[{key}]";
+            var idx = xamlContent.IndexOf(pattern, StringComparison.Ordinal);
+            Assert.True(idx >= 0, $"Button with AutomationProperties.Name binding for '{key}' not found in XAML");
 
             // Extract the Button tag containing this automation name
             var tagStart = xamlContent.LastIndexOf("<Button", idx, StringComparison.Ordinal);
@@ -2356,7 +2487,7 @@ public class GuiViewModelTests
             // Should NOT have fixed Width= (only MinWidth=)
             var hasFixedWidth = System.Text.RegularExpressions.Regex.IsMatch(
                 buttonTag, @"(?<!\bMin)Width=""");
-            Assert.False(hasFixedWidth, $"Button '{a11yName}' still uses fixed Width instead of MinWidth");
+            Assert.False(hasFixedWidth, $"Button '{key}' still uses fixed Width instead of MinWidth");
         }
     }
 
@@ -2683,6 +2814,7 @@ public class GuiViewModelTests
         var tempDir = Path.Combine(Path.GetTempPath(), "RomCleanup_Rollback_" + Guid.NewGuid().ToString("N"));
         var srcDir = Path.Combine(tempDir, "src");
         var destDir = Path.Combine(tempDir, "dest");
+        var keyPath = Path.Combine(tempDir, "audit-signing.key");
         Directory.CreateDirectory(srcDir);
         Directory.CreateDirectory(destDir);
 
@@ -2694,14 +2826,14 @@ public class GuiViewModelTests
 
             // Write audit CSV manually (as AuditCsvStore would)
             var auditPath = Path.Combine(tempDir, "audit.csv");
-            var audit = new RomCleanup.Infrastructure.Audit.AuditCsvStore();
+            var audit = new RomCleanup.Infrastructure.Audit.AuditCsvStore(keyFilePath: keyPath);
             audit.AppendAuditRow(auditPath, tempDir, srcFile, destFile, "Move", "GAME", "", "test");
+            audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object> { ["Mode"] = "Move" });
 
             // Execute rollback: should move destFile back to srcFile
-            var restored = RollbackService.Execute(auditPath, new[] { tempDir });
+            var restored = RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
 
-            Assert.Single(restored);
-            Assert.Equal(srcFile, restored[0]);
+            Assert.Equal(1, restored.RolledBack);
             Assert.True(File.Exists(srcFile), "Source file should be restored");
             Assert.False(File.Exists(destFile), "Dest file should be gone after rollback");
             Assert.Equal("ROM-DATA", File.ReadAllText(srcFile));
@@ -2728,7 +2860,43 @@ public class GuiViewModelTests
                 "Skip", "GAME", "", "test");
 
             var restored = RollbackService.Execute(auditPath, new[] { tempDir });
-            Assert.Empty(restored);
+            Assert.Equal(0, restored.RolledBack);
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void RollbackService_Execute_BlocksTamperedSignedAudit()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "RomCleanup_Rollback3_" + Guid.NewGuid().ToString("N"));
+        var srcDir = Path.Combine(tempDir, "src");
+        var destDir = Path.Combine(tempDir, "dest");
+        var keyPath = Path.Combine(tempDir, "audit-signing.key");
+        Directory.CreateDirectory(srcDir);
+        Directory.CreateDirectory(destDir);
+
+        try
+        {
+            var srcFile = Path.Combine(srcDir, "game.rom");
+            var destFile = Path.Combine(destDir, "game.rom");
+            File.WriteAllText(destFile, "ROM-DATA");
+
+            var auditPath = Path.Combine(tempDir, "audit.csv");
+            var audit = new RomCleanup.Infrastructure.Audit.AuditCsvStore(keyFilePath: keyPath);
+            audit.AppendAuditRow(auditPath, tempDir, srcFile, destFile, "Move", "GAME", "", "test");
+            audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object> { ["Mode"] = "Move" });
+
+            File.AppendAllText(auditPath, "tampered\n");
+
+            var restored = RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
+
+            Assert.Equal(0, restored.RolledBack);
+            Assert.Equal(1, restored.Failed);
+            Assert.False(File.Exists(srcFile));
+            Assert.True(File.Exists(destFile));
         }
         finally
         {

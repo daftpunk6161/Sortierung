@@ -8,6 +8,7 @@ using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.FileSystem;
 using RomCleanup.Infrastructure.Hashing;
 using RomCleanup.Infrastructure.Orchestration;
+using RomCleanup.Infrastructure.Paths;
 using RomCleanup.Infrastructure.Reporting;
 using RomCleanup.Infrastructure.Tools;
 using RomCleanup.UI.Wpf.ViewModels;
@@ -20,7 +21,7 @@ namespace RomCleanup.UI.Wpf.Services;
 /// All methods run on a background thread (no Dispatcher calls).
 /// RF-003 from gui-ux-deep-audit.md.
 /// </summary>
-public sealed class RunService
+public sealed class RunService : IRunService
 {
     /// <summary>Result of a single pipeline run.</summary>
     public sealed class RunServiceResult
@@ -34,14 +35,16 @@ public sealed class RunService
     /// Build infrastructure and RunOptions from current ViewModel state.
     /// Must be called on a background thread — performs file I/O.
     /// </summary>
-    public static (RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)
+    public (RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)
         BuildOrchestrator(MainViewModel vm, Action<string>? onProgress = null)
     {
+        onProgress?.Invoke("[Init] Initialisiere Infrastruktur…");
         var fs = new FileSystemAdapter();
-        var audit = new AuditCsvStore();
+        var audit = new AuditCsvStore(fs, onProgress, AuditSecurityPaths.GetDefaultSigningKeyPath());
 
         var dataDir = FeatureService.ResolveDataDirectory()
                       ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
+        onProgress?.Invoke($"[Init] Datenverzeichnis: {dataDir}");
 
         var toolHashesPath = Path.Combine(dataDir, "tool-hashes.json");
         var toolRunner = new ToolRunnerAdapter(File.Exists(toolHashesPath) ? toolHashesPath : null);
@@ -53,6 +56,11 @@ public sealed class RunService
         {
             var consolesJson = File.ReadAllText(consolesJsonPath);
             consoleDetector = ConsoleDetector.LoadFromJson(consolesJson, discHeaderDetector);
+            onProgress?.Invoke($"[Init] Konsolen-Datenbank geladen: {consoleDetector.AllConsoleKeys.Count} Konsolen");
+        }
+        else
+        {
+            onProgress?.Invoke("[Init] Warnung: consoles.json nicht gefunden — Konsolen-Erkennung deaktiviert");
         }
 
         DatIndex? datIndex = null;
@@ -75,26 +83,29 @@ public sealed class RunService
         }
 
         FormatConverterAdapter? converter = null;
-        if (vm.ConvertEnabled)
+        if (vm.ConvertEnabled || vm.ConvertOnly)
+        {
             converter = new FormatConverterAdapter(toolRunner);
+            onProgress?.Invoke("[Init] Formatkonvertierung aktiviert");
+        }
 
         string? auditPath = null;
-        if (!vm.DryRun && vm.Roots.Count > 0)
+        if ((!vm.DryRun || vm.ConvertOnly) && vm.Roots.Count > 0)
         {
             var auditDir = !string.IsNullOrWhiteSpace(vm.AuditRoot)
                 ? vm.AuditRoot
-                : GetSiblingDirectory(vm.Roots[0], "audit-logs");
+                : ArtifactPathResolver.GetArtifactDirectory(vm.Roots, "audit-logs");
             auditDir = Path.GetFullPath(auditDir);
-            auditPath = Path.Combine(auditDir, $"audit-{DateTime.Now:yyyyMMdd-HHmmss}.csv");
+            auditPath = Path.Combine(auditDir, $"audit-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv");
         }
 
         string? reportPath = null;
         if (vm.Roots.Count > 0)
         {
-            var reportDir = GetSiblingDirectory(vm.Roots[0], "reports");
+            var reportDir = ArtifactPathResolver.GetArtifactDirectory(vm.Roots, "reports");
             reportDir = Path.GetFullPath(reportDir);
             Directory.CreateDirectory(reportDir);
-            reportPath = Path.Combine(reportDir, $"report-{DateTime.Now:yyyyMMdd-HHmmss}.html");
+            reportPath = Path.Combine(reportDir, $"report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.html");
         }
 
         var selectedExts = vm.GetSelectedExtensions();
@@ -109,12 +120,15 @@ public sealed class RunService
             SortConsole = vm.SortConsole,
             EnableDat = vm.UseDat,
             HashType = vm.DatHashType,
-            ConvertFormat = vm.ConvertEnabled ? "auto" : null,
+            ConvertFormat = (vm.ConvertEnabled || vm.ConvertOnly) ? "auto" : null,
+            ConvertOnly = vm.ConvertOnly,
             TrashRoot = string.IsNullOrWhiteSpace(vm.TrashRoot) ? null : vm.TrashRoot,
             AuditPath = auditPath,
             ReportPath = reportPath,
             ConflictPolicy = vm.ConflictPolicy.ToString()
         };
+
+        onProgress?.Invoke($"[Init] Konfiguration: Modus={runOptions.Mode}, {runOptions.Extensions.Count} Extension(s), {runOptions.Roots.Count} Root(s)");
 
         var orchestrator = new RunOrchestrator(
             fs, audit, consoleDetector, hashService, converter, datIndex, onProgress);
@@ -123,10 +137,10 @@ public sealed class RunService
     }
 
     /// <summary>
-    /// Execute the pipeline and generate the HTML report.
+    /// Execute the pipeline.
     /// Must be called on a background thread.
     /// </summary>
-    public static RunServiceResult ExecuteRun(
+    public RunServiceResult ExecuteRun(
         RunOrchestrator orchestrator,
         RunOptions options,
         string? auditPath,
@@ -135,61 +149,11 @@ public sealed class RunService
     {
         var result = orchestrator.Execute(options, ct);
 
-        if (reportPath is not null && result.DedupeGroups.Count > 0)
-        {
-            try
-            {
-                var entries = result.DedupeGroups.SelectMany(g =>
-                {
-                    var list = new List<ReportEntry>();
-                    list.Add(new ReportEntry
-                    {
-                        GameKey = g.Winner.GameKey, Action = "KEEP", Category = g.Winner.Category,
-                        Region = g.Winner.Region, FilePath = g.Winner.MainPath,
-                        FileName = Path.GetFileName(g.Winner.MainPath),
-                        Extension = g.Winner.Extension, SizeBytes = g.Winner.SizeBytes,
-                        RegionScore = g.Winner.RegionScore, FormatScore = g.Winner.FormatScore,
-                        VersionScore = (int)g.Winner.VersionScore, DatMatch = g.Winner.DatMatch
-                    });
-                    foreach (var l in g.Losers)
-                        list.Add(new ReportEntry
-                        {
-                            GameKey = l.GameKey, Action = "MOVE", Category = l.Category,
-                            Region = l.Region, FilePath = l.MainPath,
-                            FileName = Path.GetFileName(l.MainPath),
-                            Extension = l.Extension, SizeBytes = l.SizeBytes,
-                            RegionScore = l.RegionScore, FormatScore = l.FormatScore,
-                            VersionScore = (int)l.VersionScore, DatMatch = l.DatMatch
-                        });
-                    return list;
-                }).ToList();
-
-                var summary = new ReportSummary
-                {
-                    Mode = options.Mode,
-                    TotalFiles = result.TotalFilesScanned,
-                    KeepCount = result.WinnerCount,
-                    MoveCount = result.LoserCount,
-                    JunkCount = result.AllCandidates.Count(c => c.Category == "JUNK"),
-                    BiosCount = result.AllCandidates.Count(c => c.Category == "BIOS"),
-                    GroupCount = result.GroupCount,
-                    Duration = TimeSpan.FromMilliseconds(result.DurationMs)
-                };
-
-                ReportGenerator.WriteHtmlToFile(
-                    reportPath, Path.GetDirectoryName(reportPath) ?? ".", summary, entries);
-            }
-            catch
-            {
-                // Report generation failure is non-fatal; caller handles logging
-            }
-        }
-
         return new RunServiceResult
         {
             Result = result,
             AuditPath = auditPath,
-            ReportPath = reportPath
+            ReportPath = result.ReportPath
         };
     }
 
@@ -197,20 +161,17 @@ public sealed class RunService
     /// Get a directory at the same level as <paramref name="rootPath"/>.
     /// Falls back to a subdirectory within root for drive roots (C:\).
     /// </summary>
-    public static string GetSiblingDirectory(string rootPath, string siblingName)
+    public string GetSiblingDirectory(string rootPath, string siblingName)
     {
-        var fullRoot = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var parent = Path.GetDirectoryName(fullRoot);
-        if (string.IsNullOrEmpty(parent))
-            return Path.Combine(fullRoot, siblingName);
-        return Path.Combine(parent, siblingName);
+        var fullRoot = ArtifactPathResolver.NormalizeRoot(rootPath);
+        return ArtifactPathResolver.GetSiblingDirectory(fullRoot, siblingName);
     }
 
     /// <summary>
     /// Build console-key → DAT-file mapping using dat-catalog.json and filesystem scan.
     /// Matches CLI BuildConsoleMap logic: catalog-based mapping first, then fallback scan.
     /// </summary>
-    private static Dictionary<string, string> BuildConsoleMap(string dataDir, string datRoot)
+    private Dictionary<string, string> BuildConsoleMap(string dataDir, string datRoot)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 

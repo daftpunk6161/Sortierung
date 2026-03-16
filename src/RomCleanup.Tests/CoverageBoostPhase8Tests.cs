@@ -399,7 +399,7 @@ internal sealed class AuditTestFs : IFileSystem
     public string EnsureDirectory(string path) { Directory.CreateDirectory(path); return path; }
     public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? allowedExtensions = null)
         => Directory.Exists(root) ? Directory.GetFiles(root) : [];
-    public bool MoveItemSafely(string source, string destination) { File.Move(source, destination); return true; }
+    public string? MoveItemSafely(string source, string destination) { File.Move(source, destination); return destination; }
     public bool MoveDirectorySafely(string source, string destination)
     {
         if (Directory.Exists(source)) { Directory.Move(source, destination); return true; }
@@ -870,7 +870,7 @@ file sealed class TrackingFs : IFileSystem
     public string EnsureDirectory(string path) { CreatedDirs.Add(path); Directory.CreateDirectory(path); return path; }
     public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? allowedExtensions = null)
         => Directory.Exists(root) ? Directory.GetFiles(root) : [];
-    public bool MoveItemSafely(string source, string destination) { Moves.Add((source, destination)); return MoveResult; }
+    public string? MoveItemSafely(string source, string destination) { Moves.Add((source, destination)); return MoveResult ? destination : null; }
     public bool MoveDirectorySafely(string source, string destination) { Moves.Add((source, destination)); return MoveResult; }
     public string? ResolveChildPathWithinRoot(string root, string relativePath)
     {

@@ -37,6 +37,8 @@
   "Start.ConvertCheck": "Convert winners after move (CHD/RVZ/ZIP)",
   "Start.ExpertMode": "Expert Mode",
   "Start.ConfirmMove": "I understand the consequences – unlock Move mode",
+  "Start.WatchToggle": "Mode surveillance",
+  "Start.WatchToggleTip": "Surveiller les dossiers – DryRun automatique lors de changements (Ctrl+W)",
   "Rules.Intro": "Region priority, cleanup rules, JP policy and file extensions.",
   "Rules.JunkRemove": "Remove unwanted files (Demo, Beta, Hack, Tool...)",
   "Config.SortConsole": "Organize folders by console",

@@ -32,13 +32,7 @@ public sealed class SettingsLoader
     /// </summary>
     public static RomCleanupSettings Load(string? defaultsJsonPath = null)
     {
-        var settings = new RomCleanupSettings();
-
-        // Try loading defaults.json first
-        if (defaultsJsonPath is not null && File.Exists(defaultsJsonPath))
-        {
-            MergeFromDefaults(settings, defaultsJsonPath);
-        }
+        var settings = LoadDefaultsOnly(defaultsJsonPath);
 
         // Then overlay user settings (higher priority)
         var userPath = UserSettingsPath;
@@ -48,6 +42,50 @@ public sealed class SettingsLoader
         }
 
         return settings;
+    }
+
+    /// <summary>
+    /// Load only repo defaults.json on top of hardcoded fallbacks, without user overlay.
+    /// </summary>
+    public static RomCleanupSettings LoadDefaultsOnly(string? defaultsJsonPath = null)
+    {
+        var settings = new RomCleanupSettings();
+        defaultsJsonPath ??= ResolveDefaultsJsonPath();
+
+        if (defaultsJsonPath is not null && File.Exists(defaultsJsonPath))
+            MergeFromDefaults(settings, defaultsJsonPath);
+
+        return settings;
+    }
+
+    /// <summary>
+    /// Resolve data/defaults.json from the current application or workspace layout.
+    /// </summary>
+    public static string? ResolveDefaultsJsonPath()
+    {
+        var searchRoots = new[]
+        {
+            AppContext.BaseDirectory,
+            Directory.GetCurrentDirectory()
+        }
+        .Where(path => !string.IsNullOrWhiteSpace(path))
+        .Select(Path.GetFullPath)
+        .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var root in searchRoots)
+        {
+            var current = new DirectoryInfo(root);
+            while (current is not null)
+            {
+                var candidate = Path.Combine(current.FullName, "data", "defaults.json");
+                if (File.Exists(candidate))
+                    return candidate;
+
+                current = current.Parent;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -167,17 +205,35 @@ public sealed class SettingsLoader
             var root = doc.RootElement;
 
             if (root.TryGetProperty("mode", out var mode))
-                settings.General.Mode = mode.GetString() ?? "DryRun";
+                settings.General.Mode = ValidateEnum(mode.GetString(), AllowedModes, settings.General.Mode);
             if (root.TryGetProperty("extensions", out var ext))
                 settings.General.Extensions = ext.GetString() ?? settings.General.Extensions;
             if (root.TryGetProperty("logLevel", out var ll))
-                settings.General.LogLevel = ll.GetString() ?? "Info";
+                settings.General.LogLevel = ValidateEnum(ll.GetString(), AllowedLogLevels, settings.General.LogLevel);
             if (root.TryGetProperty("theme", out var theme))
                 settings.General.Theme = theme.GetString() ?? "dark";
             if (root.TryGetProperty("locale", out var locale))
                 settings.General.Locale = locale.GetString() ?? "de";
+            if (root.TryGetProperty("preferredRegions", out var preferredRegions) && preferredRegions.ValueKind == JsonValueKind.Array)
+            {
+                var parsedRegions = preferredRegions
+                    .EnumerateArray()
+                    .Select(value => value.GetString())
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value!.Trim().ToUpperInvariant())
+                    .ToList();
+
+                if (parsedRegions.Count > 0)
+                    settings.General.PreferredRegions = parsedRegions;
+            }
             if (root.TryGetProperty("datRoot", out var dr))
                 settings.Dat.DatRoot = dr.GetString() ?? "";
+            if (root.TryGetProperty("useDat", out var useDat) && (useDat.ValueKind is JsonValueKind.True or JsonValueKind.False))
+                settings.Dat.UseDat = useDat.GetBoolean();
+            if (root.TryGetProperty("hashType", out var hashType))
+                settings.Dat.HashType = ValidateEnum(hashType.GetString(), AllowedHashTypes, settings.Dat.HashType);
+            if (root.TryGetProperty("datFallback", out var datFallback) && (datFallback.ValueKind is JsonValueKind.True or JsonValueKind.False))
+                settings.Dat.DatFallback = datFallback.GetBoolean();
         }
         catch (JsonException)
         {
@@ -258,8 +314,8 @@ public sealed class SettingsLoader
         { ".exe", ".bat", ".cmd" };
 
     /// <summary>V2-H06: Returns value if it is in allowedValues, otherwise returns fallback.</summary>
-    private static string ValidateEnum(string value, HashSet<string> allowedValues, string fallback)
-        => allowedValues.Contains(value) ? value : fallback;
+    private static string ValidateEnum(string? value, HashSet<string> allowedValues, string fallback)
+        => !string.IsNullOrWhiteSpace(value) && allowedValues.Contains(value) ? value : fallback;
 
     private static string ValidateToolPath(string path)
     {

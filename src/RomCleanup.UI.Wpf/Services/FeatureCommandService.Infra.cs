@@ -57,7 +57,7 @@ public sealed partial class FeatureCommandService
             _dialog.ShowText("FTP-Quelle", sb.ToString());
             _vm.AddLog($"FTP-Quelle registriert: {uri.Host}{uri.AbsolutePath}", "INFO");
         }
-        catch (Exception ex) { _vm.AddLog($"FTP-URL ungültig: {ex.Message}", "ERROR"); }
+        catch (Exception ex) { LogError("GUI-FTP", $"FTP-URL ungültig: {ex.Message}"); }
     }
 
     private void CloudSync()
@@ -108,7 +108,7 @@ public sealed partial class FeatureCommandService
                     sb.AppendLine($"  [{type}] {name} v{ver}");
                     sb.AppendLine($"         {Path.GetDirectoryName(manifest)}");
                 }
-                catch { sb.AppendLine($"  [?] {Path.GetFileName(manifest)} (manifest ungültig)"); }
+                catch (Exception ex) { LogWarning("GUI-PLUGIN", $"Manifest ungültig: {Path.GetFileName(manifest)} – {ex.Message}"); sb.AppendLine($"  [?] {Path.GetFileName(manifest)} (manifest ungültig)"); }
             }
             if (dlls.Length > 0) { sb.AppendLine($"\n  DLLs:"); foreach (var dll in dlls) sb.AppendLine($"    {Path.GetFileName(dll)}"); }
         }
@@ -287,30 +287,6 @@ public sealed partial class FeatureCommandService
         else
         {
             _vm.AddLog($"Ungültige Schriftgröße: {input} (erlaubt: 10-24)", "WARN");
-        }
-    }
-
-    private void ThemeEngine()
-    {
-        var result = _dialog.YesNoCancel(
-            $"Aktuelles Theme: {(_vm.ThemeToggleText.Contains("Dark") ? "Light" : "Dark")}\n\n" +
-            "JA = Dark Theme\nNEIN = Light Theme\nAbbrechen = High-Contrast",
-            "Theme-Engine");
-
-        switch (result)
-        {
-            case ConfirmResult.Yes:
-                _vm.ThemeToggleCommand.Execute(null);
-                _vm.AddLog("Theme gewechselt: Dark", "INFO");
-                break;
-            case ConfirmResult.No:
-                _vm.ThemeToggleCommand.Execute(null);
-                _vm.AddLog("Theme gewechselt: Light", "INFO");
-                break;
-            case ConfirmResult.Cancel:
-                _vm.ThemeToggleCommand.Execute(null);
-                _vm.AddLog("Theme gewechselt (Toggle)", "INFO");
-                break;
         }
     }
 }

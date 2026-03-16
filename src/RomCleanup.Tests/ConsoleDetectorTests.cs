@@ -74,6 +74,26 @@ public class ConsoleDetectorTests
         Assert.Equal("PS1", detector.DetectByFolder(@"D:\Roms\Ps1\game.bin", @"D:\Roms"));
     }
 
+    [Theory]
+    [InlineData(@"D:\Roms\PS1\game.bin", @"D:\Roms\PS1", "PS1")]
+    [InlineData(@"D:\Roms\psx\game.bin", @"D:\Roms\psx", "PS1")]
+    [InlineData(@"D:\Roms\NES\Super Mario.nes", @"D:\Roms\NES", "NES")]
+    [InlineData(@"Y:\Games\genesis\Sonic.md", @"Y:\Games\genesis", "MD")]
+    public void DetectByFolder_RootItselfIsConsoleFolder(string filePath, string root, string expected)
+    {
+        var detector = CreateDetector();
+        Assert.Equal(expected, detector.DetectByFolder(filePath, root));
+    }
+
+    [Fact]
+    public void DetectByFolder_RootIsConsoleFolder_CaseInsensitive()
+    {
+        var detector = CreateDetector();
+        Assert.Equal("PS1", detector.DetectByFolder(@"D:\PS1\game.bin", @"D:\PS1"));
+        Assert.Equal("PS1", detector.DetectByFolder(@"D:\ps1\game.bin", @"D:\ps1"));
+        Assert.Equal("PS1", detector.DetectByFolder(@"D:\Ps1\game.bin", @"D:\Ps1"));
+    }
+
     // ── Extension detection ─────────────────────────────────────────────
 
     [Theory]
@@ -154,6 +174,21 @@ public class ConsoleDetectorTests
     {
         var detector = CreateDetector();
         Assert.Equal("UNKNOWN", detector.Detect(@"D:\Roms\game.iso", @"D:\Roms"));
+    }
+
+    [Fact]
+    public void Detect_RootIsConsoleFolder_DetectsCorrectly()
+    {
+        // Scenario: root IS the console folder (e.g. Y:\Games\Sega CD)
+        // Files are directly in root — no subfolder to check
+        var consoles = new[]
+        {
+            new ConsoleInfo("SCD", "Sega CD", true,
+                Array.Empty<string>(), new[] { ".chd" },
+                new[] { "scd", "sega cd", "megacd", "mega-cd" }),
+        };
+        var detector = new ConsoleDetector(consoles);
+        Assert.Equal("SCD", detector.Detect(@"Y:\Games\Sega CD\game.chd", @"Y:\Games\Sega CD"));
     }
 
     // ── Console registry ────────────────────────────────────────────────

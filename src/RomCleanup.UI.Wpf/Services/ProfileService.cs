@@ -31,6 +31,15 @@ public sealed class ProfileService
         if (doc.RootElement.ValueKind != JsonValueKind.Object)
             throw new InvalidOperationException("Profile must be a JSON object.");
 
+        // GUI-059: Validate required top-level properties from settings schema
+        var root = doc.RootElement;
+        string[] requiredProperties = ["general", "toolPaths", "dat"];
+        foreach (var prop in requiredProperties)
+        {
+            if (!root.TryGetProperty(prop, out _))
+                throw new InvalidOperationException($"Profile is missing required section: \"{prop}\".");
+        }
+
         Directory.CreateDirectory(SettingsDir);
         if (File.Exists(SettingsPath))
         {

@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 
@@ -68,10 +69,12 @@ public sealed class FormatConverterAdapter : IFormatConverter
         return BestFormats.TryGetValue(consoleKey.Trim(), out var target) ? target : null;
     }
 
-    public ConversionResult Convert(string sourcePath, ConversionTarget target)
+    public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
     {
         if (!File.Exists(sourcePath))
             return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "source-not-found");
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         var toolPath = _tools.FindTool(target.ToolName);
         if (toolPath is null)
@@ -95,6 +98,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
             "chdman" => ConvertWithChdman(sourcePath, targetPath, toolPath, target.Command),
             "dolphintool" => ConvertWithDolphinTool(sourcePath, targetPath, toolPath, sourceExt),
             "7z" => ConvertWithSevenZip(sourcePath, targetPath, toolPath),
+            "psxtract" => ConvertWithPsxtract(sourcePath, targetPath, toolPath, target.Command),
             _ => new ConversionResult(sourcePath, null, ConversionOutcome.Error, $"unknown-tool:{target.ToolName}")
         };
     }
@@ -149,20 +153,126 @@ public sealed class FormatConverterAdapter : IFormatConverter
 
     private ConversionResult ConvertWithChdman(string sourcePath, string targetPath, string toolPath, string command)
     {
+        var sourceExt = Path.GetExtension(sourcePath).ToLowerInvariant();
+
+        // ZIP/7Z containing .cue/.bin → extract first, then convert the .cue
+        if (sourceExt is ".zip" or ".7z")
+            return ConvertArchiveToChdman(sourcePath, targetPath, toolPath, command, sourceExt);
+
+        // chdman only accepts .cue, .gdi, .iso, .bin as direct input
+        if (sourceExt is not (".cue" or ".gdi" or ".iso" or ".bin" or ".img"))
+            return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped,
+                $"chdman-unsupported-source:{sourceExt}");
+
         var args = new[] { command, "-i", sourcePath, "-o", targetPath };
         var result = _tools.InvokeProcess(toolPath, args, "chdman");
 
         if (!result.Success)
         {
             CleanupPartialOutput(targetPath);
+            var detail = string.IsNullOrWhiteSpace(result.Output) ? "" : $" ({result.Output.Trim().Split('\n')[0]})";
             return new ConversionResult(sourcePath, null, ConversionOutcome.Error,
-                "chdman-failed", result.ExitCode);
+                $"chdman-failed{detail}", result.ExitCode);
         }
 
         if (!File.Exists(targetPath))
             return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "output-not-created");
 
         return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success);
+    }
+
+    /// <summary>
+    /// Extract a ZIP/7Z archive, find the .cue file inside, convert to CHD, then clean up.
+    /// Handles the common case of disc-based ROMs distributed as ZIP containing .bin/.cue.
+    /// </summary>
+    private ConversionResult ConvertArchiveToChdman(
+        string sourcePath, string targetPath, string toolPath, string command, string sourceExt)
+    {
+        var dir = Path.GetDirectoryName(sourcePath)!;
+        var baseName = Path.GetFileNameWithoutExtension(sourcePath);
+        var extractDir = Path.Combine(dir, $"_extract_{baseName}_{Guid.NewGuid():N}");
+
+        try
+        {
+            // Step 1: Extract archive
+            if (sourceExt == ".zip")
+            {
+                ZipFile.ExtractToDirectory(sourcePath, extractDir);
+            }
+            else
+            {
+                // .7z — use 7z tool to extract
+                var sevenZipPath = _tools.FindTool("7z");
+                if (sevenZipPath is null)
+                    return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped, "tool-not-found:7z");
+
+                Directory.CreateDirectory(extractDir);
+                var extractResult = _tools.InvokeProcess(sevenZipPath,
+                    new[] { "x", "-y", $"-o{extractDir}", sourcePath }, "7z extract");
+                if (!extractResult.Success)
+                    return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "7z-extract-failed");
+            }
+
+            // Step 2: Find the .cue file (preferred) or .gdi, or fall back to .iso/.bin
+            var cueFiles = Directory.GetFiles(extractDir, "*.cue", SearchOption.AllDirectories);
+            var gdiFiles = Directory.GetFiles(extractDir, "*.gdi", SearchOption.AllDirectories);
+            var isoFiles = Directory.GetFiles(extractDir, "*.iso", SearchOption.AllDirectories);
+
+            // Path traversal guard: Ensure all extracted files are within extractDir
+            static bool IsWithinDir(string filePath, string baseDir)
+            {
+                var fullBase = Path.GetFullPath(baseDir) + Path.DirectorySeparatorChar;
+                return Path.GetFullPath(filePath).StartsWith(fullBase, StringComparison.OrdinalIgnoreCase);
+            }
+
+            string? inputFile = null;
+            if (cueFiles.Length > 0 && IsWithinDir(cueFiles[0], extractDir))
+                inputFile = cueFiles[0];
+            else if (gdiFiles.Length > 0 && IsWithinDir(gdiFiles[0], extractDir))
+                inputFile = gdiFiles[0];
+            else if (isoFiles.Length > 0 && IsWithinDir(isoFiles[0], extractDir))
+                inputFile = isoFiles[0];
+
+            if (inputFile is null)
+                return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped,
+                    "archive-no-disc-image");
+
+            // Step 3: Convert via chdman
+            var args = new[] { command, "-i", inputFile, "-o", targetPath };
+            var result = _tools.InvokeProcess(toolPath, args, "chdman");
+
+            if (!result.Success)
+            {
+                CleanupPartialOutput(targetPath);
+                var detail = string.IsNullOrWhiteSpace(result.Output) ? "" : $" ({result.Output.Trim().Split('\n')[0]})";
+                return new ConversionResult(sourcePath, null, ConversionOutcome.Error,
+                    $"chdman-failed{detail}", result.ExitCode);
+            }
+
+            if (!File.Exists(targetPath))
+                return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "output-not-created");
+
+            return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success);
+        }
+        catch (InvalidDataException)
+        {
+            return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "archive-corrupt");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new ConversionResult(sourcePath, null, ConversionOutcome.Error,
+                $"extract-failed:{ex.Message}");
+        }
+        finally
+        {
+            // Clean up extracted files
+            try
+            {
+                if (Directory.Exists(extractDir))
+                    Directory.Delete(extractDir, recursive: true);
+            }
+            catch { /* best-effort cleanup */ }
+        }
     }
 
     private ConversionResult ConvertWithDolphinTool(string sourcePath, string targetPath, string toolPath, string sourceExt)
@@ -201,6 +311,24 @@ public sealed class FormatConverterAdapter : IFormatConverter
             CleanupPartialOutput(targetPath);
             return new ConversionResult(sourcePath, null, ConversionOutcome.Error,
                 "7z-failed", result.ExitCode);
+        }
+
+        if (!File.Exists(targetPath))
+            return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "output-not-created");
+
+        return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success);
+    }
+
+    private ConversionResult ConvertWithPsxtract(string sourcePath, string targetPath, string toolPath, string command)
+    {
+        var args = new[] { command, "-i", sourcePath, "-o", targetPath };
+        var result = _tools.InvokeProcess(toolPath, args, "psxtract");
+
+        if (!result.Success)
+        {
+            CleanupPartialOutput(targetPath);
+            return new ConversionResult(sourcePath, null, ConversionOutcome.Error,
+                "psxtract-failed", result.ExitCode);
         }
 
         if (!File.Exists(targetPath))

@@ -26,7 +26,9 @@ public static class OpenApiSpec
       ""post"": {
         ""summary"": ""Create and execute a deduplication run"",
         ""parameters"": [
-          { ""name"": ""wait"", ""in"": ""query"", ""schema"": { ""type"": ""boolean"" }, ""description"": ""Block until run completes"" }
+          { ""name"": ""wait"", ""in"": ""query"", ""schema"": { ""type"": ""boolean"" }, ""description"": ""Wait for completion without cancelling the server-side run on client disconnect"" },
+          { ""name"": ""waitTimeoutMs"", ""in"": ""query"", ""schema"": { ""type"": ""integer"", ""minimum"": 1, ""maximum"": 1800000 }, ""description"": ""Maximum wait time before returning 202 with the current run state"" },
+          { ""name"": ""X-Idempotency-Key"", ""in"": ""header"", ""schema"": { ""type"": ""string"" }, ""description"": ""Reuse the same run for retries of the same request"" }
         ],
         ""requestBody"": {
           ""required"": true,
@@ -46,7 +48,7 @@ public static class OpenApiSpec
         },
         ""responses"": {
           ""202"": { ""description"": ""Run created (async)"" },
-          ""200"": { ""description"": ""Run completed (wait=true)"" },
+          ""200"": { ""description"": ""Run completed or an existing completed idempotent run was reused"" },
           ""400"": { ""description"": ""Validation error"" },
           ""409"": { ""description"": ""Run already active"" }
         }
@@ -75,12 +77,11 @@ public static class OpenApiSpec
     },
     ""/runs/{runId}/cancel"": {
       ""post"": {
-        ""summary"": ""Cancel a running process"",
+        ""summary"": ""Cancel a run idempotently"",
         ""parameters"": [{ ""name"": ""runId"", ""in"": ""path"", ""required"": true, ""schema"": { ""type"": ""string"" } }],
         ""responses"": {
-          ""200"": { ""description"": ""Run cancelled"" },
-          ""404"": { ""description"": ""Run not found"" },
-          ""409"": { ""description"": ""Run is not active"" }
+          ""200"": { ""description"": ""Cancel accepted or no-op for an already terminal run"" },
+          ""404"": { ""description"": ""Run not found"" }
         }
       }
     },

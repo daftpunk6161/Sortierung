@@ -31,9 +31,13 @@ public sealed partial class FeatureCommandService
             GroupCount = _vm.LastDedupeGroups.Count,
             Duration = TimeSpan.FromMilliseconds(_vm.LastRunResult?.DurationMs ?? 0)
         };
+        var loserPaths = new HashSet<string>(
+            _vm.LastDedupeGroups.SelectMany(g => g.Losers.Select(l => l.MainPath)),
+            StringComparer.OrdinalIgnoreCase);
         var entries = _vm.LastCandidates.Select(c => new ReportEntry
         {
-            GameKey = c.GameKey, Action = c.Category == "JUNK" ? "JUNK" : "KEEP",
+            GameKey = c.GameKey,
+            Action = c.Category == "JUNK" ? "JUNK" : loserPaths.Contains(c.MainPath) ? "MOVE" : "KEEP",
             Category = c.Category, Region = c.Region, FilePath = c.MainPath,
             FileName = Path.GetFileName(c.MainPath), Extension = c.Extension,
             SizeBytes = c.SizeBytes, RegionScore = c.RegionScore, FormatScore = c.FormatScore,
@@ -45,7 +49,7 @@ public sealed partial class FeatureCommandService
             _vm.AddLog($"Report erstellt: {path} (Im Browser drucken → PDF)", "INFO");
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
         }
-        catch (Exception ex) { _vm.AddLog($"Report-Fehler: {ex.Message}", "ERROR"); }
+        catch (Exception ex) { LogError("GUI-REPORT", $"Report-Fehler: {ex.Message}"); }
     }
 
     private void LauncherIntegration()
@@ -72,13 +76,13 @@ public sealed partial class FeatureCommandService
         {
             var safeName = Path.GetFileName(path);
             var targetPath = Path.GetFullPath(Path.Combine(_vm.DatRoot, safeName));
-            if (!targetPath.StartsWith(Path.GetFullPath(_vm.DatRoot), StringComparison.OrdinalIgnoreCase))
+            if (!targetPath.StartsWith(Path.GetFullPath(_vm.DatRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             { _vm.AddLog("DAT-Import blockiert: Pfad außerhalb des DatRoot.", "ERROR"); return; }
             File.Copy(path, targetPath, overwrite: true);
             _vm.AddLog($"DAT importiert nach: {targetPath}", "INFO");
             _dialog.Info($"DAT erfolgreich importiert:\n\n  Quelle: {path}\n  Ziel: {targetPath}", "Tool-Import");
         }
-        catch (Exception ex) { _vm.AddLog($"DAT-Import fehlgeschlagen: {ex.Message}", "ERROR"); }
+        catch (Exception ex) { LogError("DAT-IMPORT", $"DAT-Import fehlgeschlagen: {ex.Message}"); }
     }
 
 }

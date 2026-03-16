@@ -1,4 +1,6 @@
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Configuration;
+using RomCleanup.Infrastructure.Paths;
 using RomCleanup.UI.Wpf.Models;
 using RomCleanup.UI.Wpf.Services;
 using RomCleanup.UI.Wpf.ViewModels;
@@ -30,29 +32,89 @@ public sealed class RunServiceAndSettingsTests : IDisposable
     [Fact]
     public void GetSiblingDirectory_NormalPath_ReturnsSiblingAtSameLevel()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\Games\Roms", "audit-logs");
+        var result = new RunService().GetSiblingDirectory(@"C:\Games\Roms", "audit-logs");
         Assert.Equal(Path.GetFullPath(@"C:\Games\audit-logs"), result);
     }
 
     [Fact]
     public void GetSiblingDirectory_DriveRoot_ReturnsSubdirectory()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\", "reports");
+        var result = new RunService().GetSiblingDirectory(@"C:\", "reports");
         Assert.Equal(Path.GetFullPath(@"C:\reports"), result);
     }
 
     [Fact]
     public void GetSiblingDirectory_TrailingSlash_NormalizedCorrectly()
     {
-        var result = RunService.GetSiblingDirectory(@"C:\Games\Roms\", "trash");
+        var result = new RunService().GetSiblingDirectory(@"C:\Games\Roms\", "trash");
         Assert.Equal(Path.GetFullPath(@"C:\Games\trash"), result);
     }
 
     [Fact]
     public void GetSiblingDirectory_NestedPath_CorrectSibling()
     {
-        var result = RunService.GetSiblingDirectory(@"D:\Data\Retro\ROMs", "backups");
+        var result = new RunService().GetSiblingDirectory(@"D:\Data\Retro\ROMs", "backups");
         Assert.Equal(Path.GetFullPath(@"D:\Data\Retro\backups"), result);
+    }
+
+    [Fact]
+    public void ArtifactPathResolver_MultiRoot_OrderInvariant()
+    {
+        var rootA = Path.Combine(_tempDir, "RootA");
+        var rootB = Path.Combine(_tempDir, "RootB");
+        Directory.CreateDirectory(rootA);
+        Directory.CreateDirectory(rootB);
+
+        var first = ArtifactPathResolver.GetArtifactDirectory([rootA, rootB], "audit-logs");
+        var second = ArtifactPathResolver.GetArtifactDirectory([rootB, rootA], "audit-logs");
+
+        Assert.Equal(first, second);
+        Assert.Contains("multi-root-", first, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ArtifactPathResolver_MultiRoot_WindowsPathCaseInvariant()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var rootA = Path.Combine(_tempDir, "CaseRootA");
+        var rootB = Path.Combine(_tempDir, "CaseRootB");
+        Directory.CreateDirectory(rootA);
+        Directory.CreateDirectory(rootB);
+
+        var first = ArtifactPathResolver.GetArtifactDirectory([rootA, rootB], "audit-logs");
+        var second = ArtifactPathResolver.GetArtifactDirectory([ToMixedCasePath(rootA), ToMixedCasePath(rootB)], "audit-logs");
+
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
+    public void RunService_BuildOrchestrator_MultiRoot_OrderInvariantArtifactDirectories()
+    {
+        var rootA = Path.Combine(_tempDir, "ConsoleA");
+        var rootB = Path.Combine(_tempDir, "ConsoleB");
+        Directory.CreateDirectory(rootA);
+        Directory.CreateDirectory(rootB);
+
+        var firstVm = CreateTestVM();
+        firstVm.Roots.Add(rootA);
+        firstVm.Roots.Add(rootB);
+        firstVm.DryRun = false;
+
+        var secondVm = CreateTestVM();
+        secondVm.Roots.Add(rootB);
+        secondVm.Roots.Add(rootA);
+        secondVm.DryRun = false;
+
+        var runService = new RunService();
+        var (_, firstOptions, firstAuditPath, firstReportPath) = runService.BuildOrchestrator(firstVm);
+        var (_, secondOptions, secondAuditPath, secondReportPath) = runService.BuildOrchestrator(secondVm);
+
+        Assert.Equal(Path.GetDirectoryName(firstAuditPath), Path.GetDirectoryName(secondAuditPath));
+        Assert.Equal(Path.GetDirectoryName(firstReportPath), Path.GetDirectoryName(secondReportPath));
+        Assert.Equal(firstOptions.AuditPath is not null, secondOptions.AuditPath is not null);
+        Assert.Equal(Path.GetDirectoryName(firstOptions.ReportPath), Path.GetDirectoryName(secondOptions.ReportPath));
     }
 
     // ═══ SettingsDto record tests ═══════════════════════════════════════
@@ -75,6 +137,23 @@ public sealed class RunServiceAndSettingsTests : IDisposable
         Assert.Equal(ConflictPolicy.Rename, dto.ConflictPolicy);
         Assert.Equal("Dark", dto.Theme);
         Assert.Empty(dto.Roots);
+    }
+
+    [Fact]
+    public void SettingsService_Load_WithoutUserFile_UsesRepoDefaults()
+    {
+        var svc = new SettingsService();
+        var expected = SettingsLoader.Load(SettingsLoader.ResolveDefaultsJsonPath());
+
+        var dto = svc.Load();
+
+        Assert.NotNull(dto);
+        Assert.Equal(expected.General.LogLevel, dto!.LogLevel);
+        Assert.Equal(expected.General.PreferredRegions, dto.PreferredRegions);
+        Assert.Equal(expected.Dat.UseDat, dto.UseDat);
+        Assert.Equal(expected.Dat.HashType, dto.DatHashType);
+        Assert.Equal(string.Equals(expected.General.Mode, "DryRun", StringComparison.OrdinalIgnoreCase), dto.DryRun);
+        Assert.Equal("Dark", dto.Theme);
     }
 
     [Fact]
@@ -328,6 +407,22 @@ public sealed class RunServiceAndSettingsTests : IDisposable
         return new MainViewModel(new StubThemeService(), new StubDialogService());
     }
 
+    private static string ToMixedCasePath(string path)
+    {
+        var chars = path.ToCharArray();
+        for (var index = 0; index < chars.Length; index++)
+        {
+            if (!char.IsLetter(chars[index]))
+                continue;
+
+            chars[index] = index % 2 == 0
+                ? char.ToUpperInvariant(chars[index])
+                : char.ToLowerInvariant(chars[index]);
+        }
+
+        return new string(chars);
+    }
+
     private sealed class StubThemeService : IThemeService
     {
         public AppTheme Current => AppTheme.Dark;
@@ -348,5 +443,6 @@ public sealed class RunServiceAndSettingsTests : IDisposable
         public ConfirmResult YesNoCancel(string message, string title = "Frage") => ConfirmResult.Yes;
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => defaultValue;
         public void ShowText(string title, string content) { }
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
     }
 }

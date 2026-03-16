@@ -12,7 +12,7 @@
    ```bash
    dotnet build src/RomCleanup.sln
    ```
-3. Tests ausführen (789+ xUnit-Tests):
+3. Tests ausführen (3090+ xUnit-Tests):
    ```bash
    dotnet test src/RomCleanup.sln
    ```
@@ -37,7 +37,7 @@ Produktivcode liegt in `src/` (7 Projekte). Die PowerShell-Version ist archivier
 | **RomCleanup.CLI** | Headless Entry Point |
 | **RomCleanup.Api** | ASP.NET Core Minimal API (REST + SSE, API-Key-Auth, Rate-Limiting) |
 | **RomCleanup.UI.Wpf** | WPF GUI (MVVM, Dark-Theme, net10.0-windows) |
-| **RomCleanup.Tests** | xUnit Tests (789+ Tests, 44 Testdateien) |
+| **RomCleanup.Tests** | xUnit Tests (3090+ Tests, 72 Testdateien) |
 
 ## Coding Standards
 

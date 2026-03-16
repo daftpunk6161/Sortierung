@@ -283,8 +283,8 @@ public class RunOrchestratorTests : IDisposable
         orch.Execute(options);
 
         Assert.Contains(messages, m => m.Contains("Preflight"));
-        Assert.Contains(messages, m => m.Contains("Scanning"));
-        Assert.Contains(messages, m => m.Contains("Deduplicating"));
+        Assert.Contains(messages, m => m.Contains("[Scan]"));
+        Assert.Contains(messages, m => m.Contains("[Dedupe]"));
     }
 
     [Fact]
@@ -307,6 +307,54 @@ public class RunOrchestratorTests : IDisposable
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(1, result.TotalFilesScanned);
         Assert.True(result.DurationMs > 0, "Duration should be positive for a real execution");
+    }
+
+    [Fact]
+    public void Execute_WithReportPath_SetsVerifiedReportPath()
+    {
+        CreateFile("Game (USA).zip", 100);
+        CreateFile("Game (Europe).zip", 100);
+
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var audit = new FakeAuditStore();
+        var orch = new RunOrchestrator(fs, audit);
+        var reportPath = Path.Combine(_tempDir, "reports", "result.html");
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = "DryRun",
+            ReportPath = reportPath
+        };
+
+        var result = orch.Execute(options);
+
+        Assert.Equal(Path.GetFullPath(reportPath), result.ReportPath);
+        Assert.True(File.Exists(reportPath));
+    }
+
+    [Fact]
+    public void Execute_WithInvalidReportPath_LeavesReportPathNull()
+    {
+        CreateFile("Game (USA).zip", 100);
+
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var audit = new FakeAuditStore();
+        var orch = new RunOrchestrator(fs, audit);
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = "DryRun",
+            ReportPath = Path.Combine(_tempDir, "bad\0report.html")
+        };
+
+        var result = orch.Execute(options);
+
+        Assert.Null(result.ReportPath);
+        Assert.Equal("ok", result.Status);
     }
 
     // ── Move Phase Tests ──────────────────────────────────────────
@@ -421,10 +469,10 @@ public class RunOrchestratorTests : IDisposable
             return Array.Empty<string>();
         }
 
-        public bool MoveItemSafely(string sourcePath, string destinationPath)
+        public string? MoveItemSafely(string sourcePath, string destinationPath)
         {
             MoveLog.Add((sourcePath, destinationPath));
-            return true;
+            return destinationPath;
         }
 
         public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
@@ -469,7 +517,7 @@ public class RunOrchestratorTests : IDisposable
             return null;
         }
 
-        public ConversionResult Convert(string sourcePath, ConversionTarget target)
+        public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
         {
             ConvertedPaths.Add(sourcePath);
             return new ConversionResult(sourcePath, sourcePath + ".chd", ConversionOutcome.Success);

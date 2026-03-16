@@ -1,13 +1,7 @@
 <UserControl x:Class="RomCleanup.UI.Wpf.Views.ToolsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:conv="clr-namespace:RomCleanup.UI.Wpf.Converters">
-  <UserControl.Resources>
-    <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
-    <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
-    <conv:InverseBoolConverter x:Key="InverseBool"/>
-    <conv:StringEqualsToVisibilityConverter x:Key="StrEqualsToVis"/>
-  </UserControl.Resources>
+>
 
   <Grid>
     <Grid.ColumnDefinitions>
@@ -20,12 +14,12 @@
     <Border Grid.Column="0" Background="{DynamicResource BrushSurface}" Padding="0,12">
       <ListBox Background="Transparent" BorderThickness="0"
                SelectedValue="{Binding SelectedToolsSection, Mode=TwoWay}"
-               SelectedValuePath="Content"
+               SelectedValuePath="Tag"
                ItemContainerStyle="{DynamicResource SidebarNavItem}"
-               AutomationProperties.Name="Werkzeugkategorien">
-        <ListBoxItem Content="Schnellzugriff" AutomationProperties.Name="Navigation: Schnellzugriff"/>
-        <ListBoxItem Content="Zuletzt verwendet" AutomationProperties.Name="Navigation: Zuletzt verwendet"/>
-        <ListBoxItem Content="Alle Werkzeuge" AutomationProperties.Name="Navigation: Alle Werkzeuge"/>
+               AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavCategoriesLabel], RelativeSource={RelativeSource AncestorType=Window}}">
+        <ListBoxItem Tag="Schnellzugriff" Content="{Binding DataContext.Loc[Tools.NavQuickAccess], RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavQuickAccess], RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <ListBoxItem Tag="Zuletzt verwendet" Content="{Binding DataContext.Loc[Tools.NavRecent], RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavRecent], RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <ListBoxItem Tag="Alle Werkzeuge" Content="{Binding DataContext.Loc[Tools.NavAll], RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavAll], RelativeSource={RelativeSource AncestorType=Window}}"/>
       </ListBox>
     </Border>
 
@@ -47,8 +41,8 @@
                      Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
           <TextBox Grid.Column="1" Text="{Binding ToolFilterText, UpdateSourceTrigger=PropertyChanged}"
                    MinWidth="200" VerticalAlignment="Center"
-                   ToolTip="Werkzeuge filtern (Name, Kategorie, Beschreibung)"
-                   AutomationProperties.Name="Werkzeuge-Filter"/>
+                   ToolTip="{Binding DataContext.Loc[Tools.FilterTip], RelativeSource={RelativeSource AncestorType=Window}}"
+                   AutomationProperties.Name="{Binding DataContext.Loc[Tools.FilterLabel], RelativeSource={RelativeSource AncestorType=Window}}"/>
           <TextBlock Grid.Column="2" Text="{Binding ToolItems.Count, StringFormat='{}{0} Werkzeuge'}"
                      Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="{DynamicResource SpaceLeftSM}" FontSize="11"/>
         </Grid>
@@ -85,10 +79,10 @@
                   <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="11"
                              Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="6,0,0,0"
                              Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}}"
-                             ToolTip="Gesperrt – starte eine Vorschau oder einen Run im Start-Tab"/>
+                             ToolTip="{Binding DataContext.Loc[Tools.LockedTip], RelativeSource={RelativeSource AncestorType=Window}}"/>
                   <Border Background="{DynamicResource BrushWarning}" CornerRadius="3" Padding="4,1" Margin="6,0,0,0"
                           Visibility="{Binding IsPlanned, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="Geplant" FontSize="9" FontWeight="SemiBold" Foreground="#1a1a2e"/>
+                    <TextBlock Text="{Binding DataContext.Loc[Tools.BadgePlanned], RelativeSource={RelativeSource AncestorType=Window}}" FontSize="9" FontWeight="SemiBold" Foreground="#1a1a2e"/>
                   </Border>
                 </StackPanel>
               </Button>
@@ -116,12 +110,8 @@
               <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="16"
                          Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="0,0,10,0"/>
               <TextBlock TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{DynamicResource BrushTextPrimary}">
-                <Run FontWeight="SemiBold">Einige Werkzeuge sind gesperrt.</Run>
-                <Run> Starte zuerst einen </Run>
-                <Run FontWeight="SemiBold" Foreground="{DynamicResource BrushAccentCyan}">Quick-Preview</Run>
-                <Run> oder </Run>
-                <Run FontWeight="SemiBold" Foreground="{DynamicResource BrushAccentCyan}">Vorschau</Run>
-                <Run> im Start-Tab, um alle Analyse- und Export-Werkzeuge freizuschalten.</Run>
+                <Run FontWeight="SemiBold" Text="{Binding DataContext.Loc[Tools.LockedInfo], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"/>
+                <Run Text="{Binding DataContext.Loc[Tools.LockedAction], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"/>
               </TextBlock>
             </StackPanel>
           </Border>
@@ -129,7 +119,7 @@
           <!-- ── Schnellzugriff ── -->
           <StackPanel Visibility="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Schnellzugriff}"
                       Margin="0,52,0,0">
-            <TextBlock Text="SCHNELLZUGRIFF" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+            <TextBlock Text="{Binding DataContext.Loc[Tools.SectionQuickAccess], RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
             <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomSM}">
               <ItemsControl ItemsSource="{Binding QuickAccessItems}">
                 <ItemsControl.ItemsPanel>
@@ -155,7 +145,7 @@
                         <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="10"
                                    Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="6,0,0,0"
                                    Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}}"
-                                   ToolTip="Gesperrt – starte eine Vorschau oder einen Run im Start-Tab"/>
+                                   ToolTip="{Binding DataContext.Loc[Tools.LockedTip], RelativeSource={RelativeSource AncestorType=Window}}"/>
                       </StackPanel>
                     </Button>
                   </DataTemplate>
@@ -167,7 +157,7 @@
           <!-- ── Zuletzt verwendet ── -->
           <StackPanel Visibility="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Zuletzt verwendet}"
                       Margin="0,52,0,0">
-            <TextBlock Text="ZULETZT VERWENDET" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+            <TextBlock Text="{Binding DataContext.Loc[Tools.SectionRecent], RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
             <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomSM}">
               <ItemsControl ItemsSource="{Binding RecentToolItems}">
                 <ItemsControl.ItemsPanel>
@@ -197,7 +187,7 @@
           <!-- ── Alle Werkzeuge ── -->
           <StackPanel Visibility="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Alle Werkzeuge}"
                       Margin="0,52,0,0">
-            <TextBlock Text="ALLE WERKZEUGE" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+            <TextBlock Text="{Binding DataContext.Loc[Tools.SectionAll], RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
             <ItemsControl ItemsSource="{Binding ToolCategories}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -236,10 +226,10 @@
                                 <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="10"
                                            Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="6,0,0,0"
                                            Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}}"
-                                           ToolTip="Gesperrt – starte eine Vorschau oder einen Run im Start-Tab"/>
+                                           ToolTip="{Binding DataContext.Loc[Tools.LockedTip], RelativeSource={RelativeSource AncestorType=Window}}"/>
                                 <Border Background="{DynamicResource BrushWarning}" CornerRadius="3" Padding="4,1" Margin="6,0,0,0"
                                         Visibility="{Binding IsPlanned, Converter={StaticResource BoolToVis}}">
-                                  <TextBlock Text="Geplant" FontSize="9" FontWeight="SemiBold" Foreground="#1a1a2e"/>
+                                  <TextBlock Text="{Binding DataContext.Loc[Tools.BadgePlanned], RelativeSource={RelativeSource AncestorType=Window}}" FontSize="9" FontWeight="SemiBold" Foreground="#1a1a2e"/>
                                 </Border>
                               </StackPanel>
                             </Button>

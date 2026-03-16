@@ -1,6 +1,6 @@
 # ROM Cleanup – Test-Strategie
 
-**Stand:** 2026-03-11  
+**Stand:** 2026-03-15  
 **Framework:** xUnit (.NET 10, `src/RomCleanup.Tests/`)  
 **Grundsatz:** Kein Alibi-Test. Jeder Test hat eine **Failure-First-Anforderung** – er muss ohne den zu testenden Code rot werden.
 
@@ -12,16 +12,16 @@
         ┌──────────────────┐
         │   Integration    │  RunOrchestrator, API-RunManager, FileSystem-Ops
         ├──────────────────┤
-        │   Unit           │  44 Testdateien, 789+ Tests
+        │   Unit           │  72 Testdateien, 3090+ Tests
         └──────────────────┘
-        Gesamt: 789+ Tests (xUnit, alle grün)
+        Gesamt: 3090+ Tests (xUnit, alle grün)
 ```
 
 ---
 
 ## 2. Testdateien-Übersicht
 
-Alle Tests liegen in `src/RomCleanup.Tests/` (xUnit, 44 Testdateien):
+Alle Tests liegen in `src/RomCleanup.Tests/` (xUnit, 72 Testdateien):
 
 ### 2.1 Core-/Engine-Tests
 
@@ -57,7 +57,6 @@ Alle Tests liegen in `src/RomCleanup.Tests/` (xUnit, 44 Testdateien):
 | `DatSourceServiceTests.cs` | DAT-Download, SHA256-Sidecar-Verifizierung |
 | `ReportGeneratorTests.cs` | HTML/CSV-Reports, CSP-Header, HTML-Encoding |
 | `FormatConverterAdapterTests.cs` | Format-Konvertierung (CHD/RVZ/ZIP) |
-| `ConversionPipelineTests.cs` | Konvertierungs-Pipeline |
 | `SortingTests.cs` | Konsolen-Sortierung |
 | `LruCacheTests.cs` | LRU-Cache (Thread-Safety, Eviction) |
 | `AppStateStoreTests.cs` | App-State, Undo/Redo, Watch-Pattern |

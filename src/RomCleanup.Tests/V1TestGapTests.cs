@@ -84,11 +84,11 @@ public sealed class FolderDeduplicatorMoveTests : IDisposable
         public bool TestPath(string path, string pathType = "Any") => Directory.Exists(path) || File.Exists(path);
         public string EnsureDirectory(string path) { Directory.CreateDirectory(path); return path; }
         public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? exts = null) => Array.Empty<string>();
-        public bool MoveItemSafely(string src, string dst)
+        public string? MoveItemSafely(string src, string dst)
         {
-            if (File.Exists(src)) { File.Move(src, dst); return true; }
-            if (Directory.Exists(src)) { Directory.Move(src, dst); return true; }
-            return false;
+            if (File.Exists(src)) { File.Move(src, dst); return dst; }
+            if (Directory.Exists(src)) { Directory.Move(src, dst); return dst; }
+            return null;
         }
         public string? ResolveChildPathWithinRoot(string root, string rel)
         {
@@ -98,83 +98,6 @@ public sealed class FolderDeduplicatorMoveTests : IDisposable
         public bool IsReparsePoint(string path) => false;
         public void DeleteFile(string path) { if (File.Exists(path)) File.Delete(path); }
         public void CopyFile(string src, string dst, bool overwrite = false) => File.Copy(src, dst, overwrite);
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// TEST-02: ConversionPipeline Move-Mode Tests
-// ═══════════════════════════════════════════════════════════════
-
-public sealed class ConversionPipelineMoveTests : IDisposable
-{
-    private readonly string _tempDir;
-
-    public ConversionPipelineMoveTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), "cpipe_test_" + Guid.NewGuid().ToString("N")[..8]);
-        Directory.CreateDirectory(_tempDir);
-    }
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
-    }
-
-    [Fact]
-    public void CheckDiskSpace_SufficientSpace_ReturnsOk()
-    {
-        var testFile = Path.Combine(_tempDir, "test.bin");
-        File.WriteAllBytes(testFile, new byte[1024]);
-        var result = ConversionPipeline.CheckDiskSpace(testFile, _tempDir);
-        Assert.True(result.Ok);
-    }
-
-    [Fact]
-    public void BuildCsoToChdPipeline_ReturnsCorrectSteps()
-    {
-        var testFile = Path.Combine(_tempDir, "game.cso");
-        File.WriteAllBytes(testFile, new byte[100]);
-        var pipeline = ConversionPipeline.BuildCsoToChdPipeline(testFile, _tempDir);
-        Assert.NotNull(pipeline);
-        Assert.True(pipeline.Steps.Count >= 1);
-    }
-
-    [Fact]
-    public void Execute_WithMockToolRunner_HandlesFailedConversion()
-    {
-        var tools = new FailingToolRunner();
-        var fs = new MinimalFs();
-        var pipeline = new ConversionPipeline(tools, fs);
-
-        var testFile = Path.Combine(_tempDir, "game.cso");
-        File.WriteAllBytes(testFile, new byte[100]);
-        var def = ConversionPipeline.BuildCsoToChdPipeline(testFile, _tempDir);
-
-        var result = pipeline.Execute(def, "DryRun");
-        Assert.NotNull(result);
-        // Result should contain at least one non-ok step
-        Assert.Contains(result.Steps, s => s.Status != "ok");
-    }
-
-    private sealed class FailingToolRunner : IToolRunner
-    {
-        public string? FindTool(string toolName) => @"C:\fake\tool.exe";
-        public ToolResult InvokeProcess(string filePath, string[] arguments, string? errorLabel = null)
-            => new(1, "error", false);
-        public ToolResult Invoke7z(string sevenZipPath, string[] arguments) => new(1, "error", false);
-    }
-
-    private sealed class MinimalFs : IFileSystem
-    {
-        public bool TestPath(string path, string type = "Any") => true;
-        public string EnsureDirectory(string path) => path;
-        public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? exts = null) => Array.Empty<string>();
-        public bool MoveItemSafely(string src, string dst) => true;
-        public string? ResolveChildPathWithinRoot(string root, string rel) => Path.Combine(root, rel);
-        public bool IsReparsePoint(string path) => false;
-        public void DeleteFile(string path) { }
-        public void CopyFile(string src, string dst, bool overwrite = false) { }
     }
 }
 
@@ -263,7 +186,7 @@ public sealed class AuditSigningNegativeTests : IDisposable
         public bool TestPath(string path, string type = "Any") => true;
         public string EnsureDirectory(string path) => path;
         public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? exts = null) => Array.Empty<string>();
-        public bool MoveItemSafely(string src, string dst) => true;
+        public string? MoveItemSafely(string src, string dst) => dst;
         public string? ResolveChildPathWithinRoot(string root, string rel) => Path.Combine(root, rel);
         public bool IsReparsePoint(string path) => false;
         public void DeleteFile(string path) { }

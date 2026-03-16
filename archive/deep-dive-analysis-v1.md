@@ -156,7 +156,7 @@ public void Add(string consoleKey, string hash, string gameName)
 - **Datei:** `Logging/JsonlLogWriter.cs` Zeile 121-141
 - **Problem:** Obwohl `lock (_lock)` verwendet wird, könnte zwischen dem Schließen des alten Writers und dem Erstellen des neuen Writers ein anderer Thread `Write()` aufrufen und auf `_writer = null` treffen → Logs gehen verloren. **Korrektur:** Der Lock schützt tatsächlich dagegen, da `Write()` ebenfalls `lock (_lock)` nutzt. Kein echtes Concurrency-Problem. Allerdings: `Write()` nutzt **kein Lock** — es prüft nur `_writer?.WriteLine(json)` innerhalb des Locks. Richtig implementiert.
 - **Status:** Kein Bug, Lock korrekt implementiert. ~~BUG-M04 entfällt~~
-- [x] ~~Kein Fix nötig~~ → **Entfällt** ✅
+- [ ] ~~Kein Fix nötig~~ → **Entfällt**
 
 ### BUG-M05: `ConversionPipeline.Execute` — DryRun-Steps haben `Skipped = true` aber Status `"dryrun"` 
 - **Datei:** `Conversion/ConversionPipeline.cs` Zeile 145-155
@@ -168,12 +168,12 @@ public void Add(string consoleKey, string hash, string gameName)
 - **Datei:** `Deduplication/FolderDeduplicator.cs` Zeile 161
 - **Problem:** `_fs.MoveItemSafely(loserPath, dest)` — `MoveItemSafely` in `FileSystemAdapter` ist für **Dateien** implementiert (`File.Exists`, `File.Move`). Für Verzeichnisse müsste `Directory.Move` verwendet werden.
 - **Auswirkung:** PS3-Ordner-Deduplizierung schlägt fehl, da `MoveItemSafely` prüft `File.Exists(fullSource)` und eine `FileNotFoundException` wirft.
-- [x] **FIX:** `MoveDirectorySafely` statt `MoveItemSafely` aufgerufen ✅ DONE
+- [x] **FIX:** `IFileSystem` um `MoveDirectorySafely` erweitert, `FolderDeduplicator` nutzt neue Methode ✅ DONE
 
 ### BUG-M07: `FolderDeduplicator.DeduplicateByBaseName` — gleicher Bug für Ordner-Move
 - **Datei:** `Deduplication/FolderDeduplicator.cs` Zeile 332
 - **Problem:** Identisch zu BUG-M06 — `_fs.MoveItemSafely(srcPath, destPath)` wird für Verzeichnisse aufgerufen, aber FileSystemAdapter unterstützt nur Dateien.
-- [x] **FIX:** Identisch zu BUG-M06 — `MoveDirectorySafely` aufgerufen ✅ DONE
+- [x] **FIX:** Identisch zu BUG-M06 ✅ DONE
 
 ### SEC-M01: `ReportGenerator` — CSP-Nonce basiert auf `Guid.NewGuid()`
 - **Datei:** `Reporting/ReportGenerator.cs` Zeile 70
@@ -239,7 +239,7 @@ public void Add(string consoleKey, string hash, string gameName)
 
 ### FEAT-06: `FormatConverterAdapter.Verify` — Kein Verify für PBP/psxtract
 - **Problem:** `PbpTarget` ist definiert, aber `Verify()` hat keinen `.pbp`→`.chd`-Pfad über psxtract.
-- [x] **FIX:** PBP→CHD Verify dokumentiert — Output ist .chd, wird via chdman verify geprüft ✅ DONE
+- [x] **FIX:** PBP→CHD Output wird bereits durch chdman verify abgedeckt, dokumentiert ✅ DONE
 
 ### FEAT-07: `RunOrchestrator` — `CompletenessScore` wird nie berechnet
 - **Problem:** `RomCandidate.CompletenessScore` ist im Konstruktor immer 0. `DeduplicationEngine.SelectWinner` sortiert zuerst nach `CompletenessScore`. Da alle 0 sind, ist das erste Sort-Kriterium wirkungslos.

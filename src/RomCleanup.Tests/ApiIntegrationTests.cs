@@ -5,6 +5,11 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using RomCleanup.Api;
+using RomCleanup.Contracts.Errors;
+using RomCleanup.Infrastructure.Audit;
+using RomCleanup.Infrastructure.FileSystem;
 using Xunit;
 
 namespace RomCleanup.Tests;
@@ -22,6 +27,8 @@ public sealed class ApiIntegrationTests
         var response = await client.GetAsync("/health");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        AssertError(doc.RootElement, "AUTH-UNAUTHORIZED", ErrorKind.Critical, "Unauthorized");
     }
 
     [Fact]
@@ -75,6 +82,8 @@ public sealed class ApiIntegrationTests
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         Assert.Equal(HttpStatusCode.OK, second.StatusCode);
         Assert.Equal((HttpStatusCode)429, third.StatusCode);
+        using var doc = JsonDocument.Parse(await third.Content.ReadAsStringAsync());
+        AssertError(doc.RootElement, "RUN-RATE-LIMIT", ErrorKind.Transient, "Too many requests");
     }
 
     [Fact]
@@ -97,8 +106,8 @@ public sealed class ApiIntegrationTests
             var response = await client.PostAsync("/runs", content);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.Contains("Invalid region", body, StringComparison.OrdinalIgnoreCase);
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            AssertError(doc.RootElement, "RUN-INVALID-REGION", ErrorKind.Recoverable, "Invalid region");
         }
         finally
         {
@@ -186,7 +195,124 @@ public sealed class ApiIntegrationTests
             Assert.Equal("text/event-stream", streamResponse.Content.Headers.ContentType!.MediaType);
 
             var cancelResponse = await client.PostAsync($"/runs/{runId}/cancel", null);
-            Assert.Equal(HttpStatusCode.Conflict, cancelResponse.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, cancelResponse.StatusCode);
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Runs_IdempotencyKey_RetryReusesCompletedRun()
+    {
+        using var factory = CreateFactory();
+        using var client = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        try
+        {
+            client.DefaultRequestHeaders.Remove("X-Idempotency-Key");
+            client.DefaultRequestHeaders.Add("X-Idempotency-Key", "api-retry-001");
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                roots = new[] { root },
+                mode = "DryRun"
+            });
+
+            using var firstContent = new StringContent(payload, Encoding.UTF8, "application/json");
+            var firstResponse = await client.PostAsync("/runs?wait=true", firstContent);
+            Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+
+            using var secondContent = new StringContent(payload, Encoding.UTF8, "application/json");
+            var secondResponse = await client.PostAsync("/runs", secondContent);
+            Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+
+            using var firstDoc = JsonDocument.Parse(await firstResponse.Content.ReadAsStringAsync());
+            using var secondDoc = JsonDocument.Parse(await secondResponse.Content.ReadAsStringAsync());
+
+            var firstRunId = firstDoc.RootElement.GetProperty("run").GetProperty("runId").GetString();
+            var secondRunId = secondDoc.RootElement.GetProperty("run").GetProperty("runId").GetString();
+
+            Assert.Equal(firstRunId, secondRunId);
+            Assert.True(secondDoc.RootElement.GetProperty("reused").GetBoolean());
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Runs_IdempotencyKey_DifferentPayload_ReturnsConflict()
+    {
+        using var factory = CreateFactory();
+        using var client = CreateClientWithApiKey(factory);
+
+        var root1 = CreateTempRoot();
+        var root2 = CreateTempRoot();
+        try
+        {
+            client.DefaultRequestHeaders.Remove("X-Idempotency-Key");
+            client.DefaultRequestHeaders.Add("X-Idempotency-Key", "api-retry-002");
+
+            var firstPayload = JsonSerializer.Serialize(new { roots = new[] { root1 }, mode = "DryRun" });
+            using var firstContent = new StringContent(firstPayload, Encoding.UTF8, "application/json");
+            var firstResponse = await client.PostAsync("/runs?wait=true", firstContent);
+            Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+
+            var secondPayload = JsonSerializer.Serialize(new { roots = new[] { root2 }, mode = "DryRun" });
+            using var secondContent = new StringContent(secondPayload, Encoding.UTF8, "application/json");
+            var secondResponse = await client.PostAsync("/runs", secondContent);
+            Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
+
+            using var doc = JsonDocument.Parse(await secondResponse.Content.ReadAsStringAsync());
+            AssertError(doc.RootElement, "RUN-IDEMPOTENCY-CONFLICT", ErrorKind.Recoverable, "Idempotency");
+            Assert.Equal(doc.RootElement.GetProperty("runId").GetString(), doc.RootElement.GetProperty("meta").GetProperty("run").GetProperty("runId").GetString());
+        }
+        finally
+        {
+            SafeDeleteDirectory(root1);
+            SafeDeleteDirectory(root2);
+        }
+    }
+
+    [Fact]
+    public async Task Runs_WaitTimeout_ReturnsAccepted_AndRunContinues()
+    {
+        using var factory = CreateFactory(executor: (_, _, _, ct) =>
+        {
+            Task.Delay(1_500, ct).GetAwaiter().GetResult();
+            return new RunExecutionOutcome("completed", new ApiRunResult
+            {
+                Status = "ok",
+                ExitCode = 0,
+                TotalFiles = 1,
+                Groups = 1,
+                Keep = 1,
+                Move = 0,
+                DurationMs = 1_500
+            });
+        });
+        using var client = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        try
+        {
+            var payload = JsonSerializer.Serialize(new { roots = new[] { root }, mode = "DryRun" });
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+            var response = await client.PostAsync("/runs?wait=true&waitTimeoutMs=5", content);
+            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var runId = doc.RootElement.GetProperty("run").GetProperty("runId").GetString();
+            Assert.True(doc.RootElement.GetProperty("waitTimedOut").GetBoolean());
+
+            await Task.Delay(1_700);
+            var resultResponse = await client.GetAsync($"/runs/{runId}/result");
+            Assert.Equal(HttpStatusCode.OK, resultResponse.StatusCode);
         }
         finally
         {
@@ -212,7 +338,9 @@ public sealed class ApiIntegrationTests
         Assert.Contains("\"security\": [{ \"ApiKey\": [] }]", json, StringComparison.Ordinal);
     }
 
-    private static WebApplicationFactory<Program> CreateFactory(Dictionary<string, string?>? overrides = null)
+    private static WebApplicationFactory<Program> CreateFactory(
+        Dictionary<string, string?>? overrides = null,
+        Func<RunRecord, RomCleanup.Contracts.Ports.IFileSystem, RomCleanup.Contracts.Ports.IAuditStore, CancellationToken, RunExecutionOutcome>? executor = null)
     {
         var settings = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {
@@ -237,6 +365,13 @@ public sealed class ApiIntegrationTests
                 {
                     config.AddInMemoryCollection(settings);
                 });
+                if (executor is not null)
+                {
+                    builder.ConfigureServices(services =>
+                    {
+                        services.AddSingleton(new RunManager(new FileSystemAdapter(), new AuditCsvStore(), executor));
+                    });
+                }
             });
     }
 
@@ -351,12 +486,18 @@ public sealed class ApiIntegrationTests
         var validGuid = Guid.NewGuid().ToString();
         var response = await client.GetAsync($"/runs/{validGuid}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        using var responseDoc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        AssertError(responseDoc.RootElement, "RUN-NOT-FOUND", ErrorKind.Recoverable, "Run not found", validGuid);
 
         var resultResponse = await client.GetAsync($"/runs/{validGuid}/result");
         Assert.Equal(HttpStatusCode.NotFound, resultResponse.StatusCode);
+        using var resultDoc = JsonDocument.Parse(await resultResponse.Content.ReadAsStringAsync());
+        AssertError(resultDoc.RootElement, "RUN-NOT-FOUND", ErrorKind.Recoverable, "Run not found", validGuid);
 
         var cancelResponse = await client.PostAsync($"/runs/{validGuid}/cancel", null);
         Assert.Equal(HttpStatusCode.NotFound, cancelResponse.StatusCode);
+        using var cancelDoc = JsonDocument.Parse(await cancelResponse.Content.ReadAsStringAsync());
+        AssertError(cancelDoc.RootElement, "RUN-NOT-FOUND", ErrorKind.Recoverable, "Run not found", validGuid);
     }
 
     [Fact]
@@ -416,5 +557,18 @@ public sealed class ApiIntegrationTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(response.Headers.TryGetValues("X-Api-Version", out var versions));
         Assert.Contains("1.0", versions);
+    }
+
+    private static void AssertError(JsonElement root, string expectedCode, ErrorKind expectedKind, string expectedMessageFragment, string? expectedRunId = null)
+    {
+        var error = root.GetProperty("error");
+        Assert.Equal(expectedCode, error.GetProperty("code").GetString());
+        Assert.Equal(expectedKind.ToString(), error.GetProperty("kind").GetString());
+        Assert.Equal("API", error.GetProperty("module").GetString());
+        Assert.Contains(expectedMessageFragment, error.GetProperty("message").GetString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(expectedKind == ErrorKind.Transient, root.GetProperty("retryable").GetBoolean());
+
+        if (expectedRunId is not null)
+            Assert.Equal(expectedRunId, root.GetProperty("runId").GetString());
     }
 }

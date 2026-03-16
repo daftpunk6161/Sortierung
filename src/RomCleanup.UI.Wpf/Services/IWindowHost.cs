@@ -9,7 +9,7 @@ public interface IWindowHost
     /// <summary>Get or set the Window font size (for Accessibility handler).</summary>
     double FontSize { get; set; }
 
-    /// <summary>Navigate to a tab by index (for CommandPalette → "settings").</summary>
+    /// <summary>Navigate to a screen by index (for CommandPalette → "settings").</summary>
     void SelectTab(int index);
 
     /// <summary>Show a modal text dialog (ResultDialog wrapper).</summary>

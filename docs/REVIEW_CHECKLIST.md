@@ -1,6 +1,6 @@
 # PR-Review-Checklist — C# .NET 10
 
-> Stand: 2026-03-11 | Ref: `.github/copilot-instructions.md`, `docs/ARCHITECTURE_MAP.md`
+> Stand: 2026-03-15 | Ref: `.github/copilot-instructions.md`, `docs/ARCHITECTURE_MAP.md`
 
 ---
 

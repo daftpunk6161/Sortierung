@@ -632,7 +632,7 @@ sealed class SortTestFs : IFileSystem
         return files.Where(f => exts.Contains(Path.GetExtension(f))).ToArray();
     }
 
-    public bool MoveItemSafely(string sourcePath, string destinationPath)
+    public string? MoveItemSafely(string sourcePath, string destinationPath)
     {
         if (MoveThrows) throw new IOException("Simulated move failure");
         Moves.Add((sourcePath, destinationPath));
@@ -642,7 +642,7 @@ sealed class SortTestFs : IFileSystem
             if (dir is not null) Directory.CreateDirectory(dir);
             File.Move(sourcePath, destinationPath);
         }
-        return MoveResult;
+        return MoveResult ? destinationPath : null;
     }
 
     public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
@@ -908,7 +908,7 @@ public sealed class FileSystemAdapterPhase9Tests : IDisposable
         var dst = Path.Combine(_tmp, "mvd.txt");
         File.WriteAllText(src, "data");
 
-        Assert.True(_fs.MoveItemSafely(src, dst));
+        Assert.NotNull(_fs.MoveItemSafely(src, dst));
         Assert.False(File.Exists(src));
         Assert.True(File.Exists(dst));
     }
@@ -921,7 +921,7 @@ public sealed class FileSystemAdapterPhase9Tests : IDisposable
         File.WriteAllText(src, "src");
         File.WriteAllText(dst, "existing");
 
-        Assert.True(_fs.MoveItemSafely(src, dst));
+        Assert.NotNull(_fs.MoveItemSafely(src, dst));
         Assert.True(File.Exists(Path.Combine(_tmp, "dup_dst__DUP1.txt")));
     }
 

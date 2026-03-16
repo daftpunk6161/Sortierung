@@ -30,7 +30,7 @@ public sealed partial class FeatureCommandService
                 var baseline = await FeatureService.CreateBaseline(paths, progress);
                 _vm.AddLog($"Baseline erstellt: {baseline.Count} Dateien", "INFO");
             }
-            catch (Exception ex) { _vm.AddLog($"Baseline-Fehler: {ex.Message}", "ERROR"); }
+            catch (Exception ex) { LogError("SEC-BASELINE", $"Baseline-Fehler: {ex.Message}"); }
         }
         else
         {
@@ -43,7 +43,7 @@ public sealed partial class FeatureCommandService
                     $"Intakt: {check.Intact.Count}\nGeändert: {check.Changed.Count}\nFehlend: {check.Missing.Count}\n" +
                     $"Bit-Rot-Risiko: {(check.BitRotRisk ? "⚠ JA" : "Nein")}");
             }
-            catch (Exception ex) { _vm.AddLog($"Integritäts-Fehler: {ex.Message}", "ERROR"); }
+            catch (Exception ex) { LogError("SEC-INTEGRITY", $"Integritäts-Fehler: {ex.Message}"); }
         }
     }
 
@@ -60,7 +60,7 @@ public sealed partial class FeatureCommandService
             var sessionDir = FeatureService.CreateBackup(winners, backupRoot, "winners");
             _vm.AddLog($"Backup erstellt: {sessionDir} ({winners.Count} Dateien)", "INFO");
         }
-        catch (Exception ex) { _vm.AddLog($"Backup-Fehler: {ex.Message}", "ERROR"); }
+        catch (Exception ex) { LogError("SEC-BACKUP", $"Backup-Fehler: {ex.Message}"); }
     }
 
     private void Quarantine()
@@ -82,7 +82,7 @@ public sealed partial class FeatureCommandService
     private void RuleEngine()
     {
         try { _dialog.ShowText("Regel-Engine", FeatureService.BuildRuleEngineReport()); }
-        catch (Exception ex) { _vm.AddLog($"Fehler beim Laden der Regeln: {ex.Message}", "ERROR"); }
+        catch (Exception ex) { LogError("SEC-RULES", $"Fehler beim Laden der Regeln: {ex.Message}"); }
     }
 
     private void PatchEngine()
@@ -142,7 +142,7 @@ public sealed partial class FeatureCommandService
                 else
                     _dialog.Info($"NES-Header ist sauber. Keine Reparatur nötig.\n\n{header.Details}", "Header-Reparatur");
             }
-            catch (Exception ex) { _vm.AddLog($"Header-Reparatur fehlgeschlagen: {ex.Message}", "ERROR"); }
+            catch (Exception ex) { LogError("SEC-HEADER", $"Header-Reparatur fehlgeschlagen: {ex.Message}"); }
             return;
         }
 
@@ -181,7 +181,7 @@ public sealed partial class FeatureCommandService
                 else
                     _dialog.Info($"SNES-ROM hat keinen Copier-Header. Keine Reparatur nötig.\n\n{header.Details}", "Header-Reparatur");
             }
-            catch (Exception ex) { _vm.AddLog($"Header-Reparatur fehlgeschlagen: {ex.Message}", "ERROR"); }
+            catch (Exception ex) { LogError("SEC-HEADER", $"Header-Reparatur fehlgeschlagen: {ex.Message}"); }
             return;
         }
 

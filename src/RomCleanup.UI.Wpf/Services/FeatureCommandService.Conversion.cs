@@ -43,7 +43,7 @@ public sealed partial class FeatureCommandService
         }
         catch (Exception ex)
         {
-            _vm.AddLog($"NKit-Tool-Suche fehlgeschlagen: {ex.Message}", "WARN");
+            LogWarning("GUI-NKIT", $"NKit-Tool-Suche fehlgeschlagen: {ex.Message}");
             _dialog.Info($"NKit-Image: {Path.GetFileName(path)}\n\nKonvertierung nach ISO/RVZ erfordert das Tool 'NKit'.\nDownload: https://vimm.net/vault/nkit", "NKit-Konvertierung");
         }
     }

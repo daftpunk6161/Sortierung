@@ -17,7 +17,7 @@ public interface IFormatConverter
     /// <summary>
     /// Convert a file to its target format.
     /// </summary>
-    ConversionResult Convert(string sourcePath, ConversionTarget target);
+    ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Verify a converted file using the appropriate tool.

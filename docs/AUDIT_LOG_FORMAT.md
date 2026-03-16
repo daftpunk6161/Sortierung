@@ -30,6 +30,8 @@ Beispiel: `audit-dedupe-20260306-120000.csv`
 | `KEEP` | Datei wurde behalten (Winner) |
 | `SKIP` | Datei wurde übersprungen |
 | `ERROR` | Fehler bei der Verarbeitung |
+| `JUNK_REMOVE` | Junk-Datei wurde entfernt (Move in Trash) |
+| `CONVERT` | Datei wurde konvertiert (CHD/RVZ/ZIP) |
 | `PERF-METRIC` | Performance-Metrik (Source = `metric:Name`, Dest = Wert) |
 
 ## Sidecar-Metadaten
@@ -58,5 +60,15 @@ var moves = lines.Skip(1) // Header überspringen
 ## Sicherheit
 
 - CSV-Werte werden gegen CSV-Injection-Angriffe bereinigt (keine Formeln mit `=`, `+`, `-`, `@` am Anfang)
+- Pfade werden NFC-normalisiert für konsistente Vergleiche
+
+## Rollback-Trail
+
+Bei einem Rollback (`AuditCsvStore.Rollback()`) wird zusätzlich eine `.rollback-trail.csv` geschrieben.
+Diese enthält alle rückgängig gemachten Operationen mit TOCTOU-Schutz (try/catch + retry).
+
+## Partial Sidecar
+
+Bei Abbruch (Cancel) wird ein Sidecar mit `"Status": "partial"` geschrieben, um unvollständige Läufe zu kennzeichnen.
 - Implementiert in `AuditCsvStore.SanitizeCsvField()`
 - SHA256-Signierung via `AuditSigningService`
