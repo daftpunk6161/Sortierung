@@ -36,6 +36,8 @@ public sealed record SettingsDto
     // UI
     public bool SortConsole { get; init; }
     public bool RemoveJunk { get; init; } = true;
+    public bool OnlyGames { get; init; }
+    public bool KeepUnknownWhenOnlyGames { get; init; } = true;
     public bool DryRun { get; init; } = true;
     public bool ConvertEnabled { get; init; }
     public bool ConfirmMove { get; init; } = true;

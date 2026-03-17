@@ -127,6 +127,8 @@ public sealed class SettingsService : ISettingsService
                 {
                     SortConsole = GetBool(ui, "sortConsole"),
                     RemoveJunk = GetBool(ui, "removeJunk", true),
+                    OnlyGames = GetBool(ui, "onlyGames"),
+                    KeepUnknownWhenOnlyGames = GetBool(ui, "keepUnknownWhenOnlyGames", true),
                     DryRun = GetBool(ui, "dryRun", true),
                     ConvertEnabled = GetBool(ui, "convertEnabled"),
                     ConfirmMove = GetBool(ui, "confirmMove", true),
@@ -252,6 +254,8 @@ public sealed class SettingsService : ISettingsService
         // UI
         vm.SortConsole = dto.SortConsole;
         vm.RemoveJunk = dto.RemoveJunk;
+        vm.OnlyGames = dto.OnlyGames;
+        vm.KeepUnknownWhenOnlyGames = dto.KeepUnknownWhenOnlyGames;
         vm.DryRun = dto.DryRun;
         vm.ConvertEnabled = dto.ConvertEnabled;
         vm.ConfirmMove = dto.ConfirmMove;
@@ -307,6 +311,8 @@ public sealed class SettingsService : ISettingsService
                 {
                     sortConsole = vm.SortConsole,
                     removeJunk = vm.RemoveJunk,
+                    onlyGames = vm.OnlyGames,
+                    keepUnknownWhenOnlyGames = vm.KeepUnknownWhenOnlyGames,
                     dryRun = vm.DryRun,
                     convertEnabled = vm.ConvertEnabled,
                     confirmMove = vm.ConfirmMove,

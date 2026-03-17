@@ -43,6 +43,16 @@ public static class FileClassifier
         @"\b(work\s*in\s*progress|wip|playtest|test\s*build|dev\s*build|qa\s*build|review\s*build|internal\s*build|preview\s*build|not\s*for\s*distribution)\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
 
+    private static readonly Regex RxNonGameTags = new(
+        @"\((driver|tool|tools|utility|utilities|editor|assembler|compiler|monitor|debugger|devkit|sdk|workbench|workbench\s*disk|system\s*disk|operating\s*system|os|desktop|database|encyclopedia|reference|manual|documentation|docs|guide|tutorial|music\s*disk|sound\s*tool|tracker|composer|paint|drawing|office|word\s*processor|spreadsheet|terminal|shell|diagnostic)\)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
+
+    private static readonly Regex RxNonGameWords = new(
+        @"\b(driver|utility|utilities|tool|editor|workbench|operating\s*system|encyclopedia|reference|manual|documentation|tutorial|music\s*disk|tracker|composer|word\s*processor|spreadsheet|database|desktop\s*publishing|paint\s*program)\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
+
+    public sealed record ClassificationDecision(FileCategory Category, int Confidence, string ReasonCode);
+
     /// <summary>
     /// Classifies a ROM filename (without extension) into GAME, BIOS or JUNK.
     /// </summary>
@@ -50,33 +60,46 @@ public static class FileClassifier
     /// <param name="aggressiveJunk">When true, additional patterns flag WIP/dev builds as JUNK.</param>
     /// <returns>The file category.</returns>
     public static FileCategory Classify(string baseName, bool aggressiveJunk = false)
+        => Analyze(baseName, aggressiveJunk).Category;
+
+    /// <summary>
+    /// Returns classification category plus confidence and a machine-readable reason code.
+    /// </summary>
+    public static ClassificationDecision Analyze(string baseName, bool aggressiveJunk = false)
     {
         // V2-BUG-M05: Return Unknown for empty inputs instead of misclassifying as Game
         if (string.IsNullOrWhiteSpace(baseName))
-            return FileCategory.Unknown;
+            return new ClassificationDecision(FileCategory.Unknown, 5, "empty-basename");
 
         // 1. BIOS — highest priority
         if (RxBios.IsMatch(baseName))
-            return FileCategory.Bios;
+            return new ClassificationDecision(FileCategory.Bios, 98, "bios-tag");
 
         // 2. Standard junk tags (parenthesized/bracketed)
         if (RxJunkTags.IsMatch(baseName))
-            return FileCategory.Junk;
+            return new ClassificationDecision(FileCategory.Junk, 95, "junk-tag");
 
         // 3. Standard junk words (unparenthesized keywords)
         if (RxJunkWords.IsMatch(baseName))
-            return FileCategory.Junk;
+            return new ClassificationDecision(FileCategory.Junk, 90, "junk-word");
+
+        // 3b. Explicit non-game software/content
+        if (RxNonGameTags.IsMatch(baseName))
+            return new ClassificationDecision(FileCategory.NonGame, 85, "non-game-tag");
+
+        if (RxNonGameWords.IsMatch(baseName))
+            return new ClassificationDecision(FileCategory.NonGame, 75, "non-game-word");
 
         // 4. Aggressive junk (only when enabled)
         if (aggressiveJunk)
         {
             if (RxJunkTagsAggressive.IsMatch(baseName))
-                return FileCategory.Junk;
+                return new ClassificationDecision(FileCategory.Junk, 88, "junk-aggressive-tag");
 
             if (RxJunkWordsAggressive.IsMatch(baseName))
-                return FileCategory.Junk;
+                return new ClassificationDecision(FileCategory.Junk, 82, "junk-aggressive-word");
         }
 
-        return FileCategory.Game;
+        return new ClassificationDecision(FileCategory.Game, 90, "game-default");
     }
 }

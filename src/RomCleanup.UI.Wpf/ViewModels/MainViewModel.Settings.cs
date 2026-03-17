@@ -17,7 +17,7 @@ public sealed partial class MainViewModel
         nameof(TrashRoot), nameof(DatRoot), nameof(AuditRoot), nameof(Ps3DupesRoot),
         nameof(ToolChdman), nameof(ToolDolphin), nameof(Tool7z), nameof(ToolPsxtract), nameof(ToolCiso),
         nameof(UseDat), nameof(DatHashType), nameof(DatFallback),
-        nameof(SortConsole), nameof(RemoveJunk), nameof(AliasKeying), nameof(AggressiveJunk),
+        nameof(SortConsole), nameof(RemoveJunk), nameof(OnlyGames), nameof(KeepUnknownWhenOnlyGames), nameof(AliasKeying), nameof(AggressiveJunk),
         nameof(DryRun), nameof(ConvertEnabled), nameof(ConfirmMove), nameof(ConflictPolicy),
         nameof(PreferEU), nameof(PreferUS), nameof(PreferJP), nameof(PreferWORLD),
         nameof(PreferDE), nameof(PreferFR), nameof(PreferIT), nameof(PreferES),
@@ -89,6 +89,12 @@ public sealed partial class MainViewModel
 
     [ObservableProperty]
     private bool _removeJunk = true;
+
+    [ObservableProperty]
+    private bool _onlyGames;
+
+    [ObservableProperty]
+    private bool _keepUnknownWhenOnlyGames = true;
 
     [ObservableProperty]
     private bool _aliasKeying;

@@ -271,6 +271,10 @@ app.MapPost("/runs", async (HttpContext ctx, RunManager mgr) =>
         }
     }
 
+    // OnlyGames policy guard
+    if (!request.OnlyGames && !request.KeepUnknownWhenOnlyGames)
+        return ApiError(400, "RUN-INVALID-UNKNOWN-POLICY", "keepUnknownWhenOnlyGames can only be set when onlyGames is true.");
+
     var waitSync = ctx.Request.Query.TryGetValue("wait", out var waitValue)
         ? !string.Equals(waitValue.ToString(), "false", StringComparison.OrdinalIgnoreCase)
         : false;

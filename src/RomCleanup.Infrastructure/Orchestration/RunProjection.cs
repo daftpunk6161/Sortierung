@@ -15,6 +15,7 @@ public sealed record RunProjection(
     int Keep,
     int Dupes,
     int Games,
+    int Unknown,
     int Junk,
     int Bios,
     int DatMatches,
@@ -22,6 +23,7 @@ public sealed record RunProjection(
     int ConvertErrorCount,
     int ConvertSkippedCount,
     int JunkRemovedCount,
+    int FilteredNonGameCount,
     int MoveCount,
     int SkipCount,
     int JunkFailCount,
@@ -41,6 +43,7 @@ public static class RunProjectionFactory
         var junk = candidates.Count(c => c.Category == FileCategory.Junk);
         var bios = candidates.Count(c => c.Category == FileCategory.Bios);
         var games = result.DedupeGroups.Count;
+        var unknown = candidates.Count(c => c.Category == FileCategory.Unknown);
         var datMatches = candidates.Count(c => c.DatMatch);
         var failCount = (result.MoveResult?.FailCount ?? 0) + result.ConvertErrorCount;
         var savedBytes = result.MoveResult?.SavedBytes ?? 0;
@@ -61,6 +64,7 @@ public static class RunProjectionFactory
             Keep: result.WinnerCount,
             Dupes: result.LoserCount,
             Games: games,
+            Unknown: unknown,
             Junk: junk,
             Bios: bios,
             DatMatches: datMatches,
@@ -68,6 +72,7 @@ public static class RunProjectionFactory
             ConvertErrorCount: result.ConvertErrorCount,
             ConvertSkippedCount: result.ConvertSkippedCount,
             JunkRemovedCount: result.JunkRemovedCount,
+            FilteredNonGameCount: result.FilteredNonGameCount,
             MoveCount: moveCount,
             SkipCount: skipCount,
             JunkFailCount: junkFailCount,

@@ -148,6 +148,28 @@ public class FileClassifierTests
         Assert.Equal(FileCategory.Game, FileClassifier.Classify(name));
     }
 
+    [Theory]
+    [InlineData("Workbench (System Disk)")]
+    [InlineData("Workbench (Operating System)")]
+    public void NonGameTags_AreDetected(string name)
+    {
+        var decision = FileClassifier.Analyze(name);
+
+        Assert.Equal(FileCategory.NonGame, decision.Category);
+        Assert.Equal("non-game-tag", decision.ReasonCode);
+        Assert.True(decision.Confidence >= 80);
+    }
+
+    [Fact]
+    public void NonGameWords_AreDetected()
+    {
+        var decision = FileClassifier.Analyze("Amiga workbench utility pack");
+
+        Assert.Equal(FileCategory.NonGame, decision.Category);
+        Assert.Equal("non-game-word", decision.ReasonCode);
+        Assert.True(decision.Confidence >= 70);
+    }
+
     // ── Edge cases ──────────────────────────────────────────────────────
 
     [Fact]

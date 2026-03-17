@@ -110,6 +110,8 @@ public sealed class RunManager
                 AggressiveJunk = request.AggressiveJunk,
                 SortConsole = request.SortConsole,
                 EnableDat = request.EnableDat,
+                OnlyGames = request.OnlyGames,
+                KeepUnknownWhenOnlyGames = request.KeepUnknownWhenOnlyGames,
                 HashType = normalizedHashType,
                 ConvertFormat = string.IsNullOrWhiteSpace(request.ConvertFormat) ? null : request.ConvertFormat.Trim(),
                 TrashRoot = string.IsNullOrWhiteSpace(request.TrashRoot) ? null : request.TrashRoot.Trim(),
@@ -305,6 +307,8 @@ public sealed class RunManager
             AggressiveJunk = run.AggressiveJunk,
             SortConsole = run.SortConsole,
             EnableDat = run.EnableDat,
+            OnlyGames = run.OnlyGames,
+            KeepUnknownWhenOnlyGames = run.KeepUnknownWhenOnlyGames,
             HashType = run.HashType,
             ConvertFormat = run.ConvertFormat,
             TrashRoot = run.TrashRoot,
@@ -336,6 +340,7 @@ public sealed class RunManager
                 Keep = projection.Keep,
                 Dupes = projection.Dupes,
                 Games = projection.Games,
+                Unknown = projection.Unknown,
                 Junk = projection.Junk,
                 Bios = projection.Bios,
                 DatMatches = projection.DatMatches,
@@ -344,6 +349,7 @@ public sealed class RunManager
                 ConvertErrorCount = projection.ConvertErrorCount,
                 ConvertSkippedCount = projection.ConvertSkippedCount,
                 JunkRemovedCount = projection.JunkRemovedCount,
+                FilteredNonGameCount = projection.FilteredNonGameCount,
                 JunkFailCount = projection.JunkFailCount,
                 MoveCount = projection.MoveCount,
                 SkipCount = projection.SkipCount,
@@ -391,6 +397,8 @@ public sealed class RunManager
             request.AggressiveJunk ? "1" : "0",
             request.SortConsole ? "1" : "0",
             request.EnableDat ? "1" : "0",
+            request.OnlyGames ? "1" : "0",
+            request.KeepUnknownWhenOnlyGames ? "1" : "0",
             string.IsNullOrWhiteSpace(request.HashType) ? "SHA1" : request.HashType.Trim().ToUpperInvariant(),
             string.IsNullOrWhiteSpace(request.ConvertFormat) ? "" : request.ConvertFormat.Trim().ToUpperInvariant(),
             string.IsNullOrWhiteSpace(request.TrashRoot) ? "" : ArtifactPathResolver.NormalizeRootForIdentity(request.TrashRoot),
@@ -448,6 +456,8 @@ public sealed class RunRequest
     public bool AggressiveJunk { get; set; }
     public bool SortConsole { get; set; }
     public bool EnableDat { get; set; }
+    public bool OnlyGames { get; set; }
+    public bool KeepUnknownWhenOnlyGames { get; set; } = true;
     public string? HashType { get; set; }
     public string? ConvertFormat { get; set; }
     public string? TrashRoot { get; set; }
@@ -479,6 +489,8 @@ public sealed class RunRecord
     public bool AggressiveJunk { get; init; }
     public bool SortConsole { get; init; }
     public bool EnableDat { get; init; }
+    public bool OnlyGames { get; init; }
+    public bool KeepUnknownWhenOnlyGames { get; init; } = true;
     public string HashType { get; init; } = "SHA1";
     public string? ConvertFormat { get; init; }
     public string? TrashRoot { get; init; }
@@ -532,6 +544,7 @@ public sealed class ApiRunResult
     /// In DryRun mode this is the count of files that *would* be moved, not actually moved files.</summary>
     public int Dupes { get; init; }
     public int Games { get; init; }
+    public int Unknown { get; init; }
     public int Junk { get; init; }
     public int Bios { get; init; }
     public int DatMatches { get; init; }
@@ -540,6 +553,7 @@ public sealed class ApiRunResult
     public int ConvertErrorCount { get; init; }
     public int ConvertSkippedCount { get; init; }
     public int JunkRemovedCount { get; init; }
+    public int FilteredNonGameCount { get; init; }
     public int JunkFailCount { get; init; }
     public int MoveCount { get; init; }
     public int SkipCount { get; init; }

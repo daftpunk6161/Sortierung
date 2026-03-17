@@ -45,6 +45,8 @@ public static class OpenApiSpec
                   ""aggressiveJunk"": { ""type"": ""boolean"", ""default"": false },
                   ""sortConsole"": { ""type"": ""boolean"", ""default"": false },
                   ""enableDat"": { ""type"": ""boolean"", ""default"": false },
+                  ""onlyGames"": { ""type"": ""boolean"", ""default"": false },
+                  ""keepUnknownWhenOnlyGames"": { ""type"": ""boolean"", ""default"": true },
                   ""hashType"": { ""type"": ""string"", ""enum"": [""SHA1"", ""SHA256"", ""MD5""], ""default"": ""SHA1"" },
                   ""convertFormat"": { ""type"": ""string"", ""nullable"": true, ""description"": ""Target conversion mode, e.g. 'auto'"" },
                   ""trashRoot"": { ""type"": ""string"", ""nullable"": true },

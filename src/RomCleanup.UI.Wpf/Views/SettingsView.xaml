@@ -46,6 +46,10 @@
                       IsChecked="{Binding AggressiveJunk}" ToolTip="{Binding Loc[Settings.AggressiveJunkTip]}"/>
             <CheckBox Content="{Binding Loc[Settings.AliasKeying]}" Margin="0,4,24,4"
                       IsChecked="{Binding AliasKeying}" ToolTip="{Binding Loc[Settings.AliasKeyingTip]}"/>
+            <CheckBox Content="{Binding Loc[Settings.OnlyGames]}" Margin="0,4,24,4"
+                      IsChecked="{Binding OnlyGames}" ToolTip="{Binding Loc[Settings.OnlyGamesTip]}"/>
+            <CheckBox Content="{Binding Loc[Settings.KeepUnknownWhenOnlyGames]}" Margin="0,4,24,4"
+                      IsChecked="{Binding KeepUnknownWhenOnlyGames}" ToolTip="{Binding Loc[Settings.KeepUnknownWhenOnlyGamesTip]}"/>
           </WrapPanel>
         </StackPanel>
 

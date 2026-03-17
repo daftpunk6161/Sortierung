@@ -152,6 +152,28 @@ public sealed class RunOrchestrator
             new EnrichmentPhaseInput(scannedFiles, _consoleDetector, _hashService, _datIndex),
             scanContext,
             cancellationToken);
+
+        var unknownReasonCounts = candidates
+            .Where(c => c.Category == FileCategory.Unknown)
+            .GroupBy(c => string.IsNullOrWhiteSpace(c.ClassificationReasonCode) ? "unknown" : c.ClassificationReasonCode,
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+        result.UnknownCount = candidates.Count(c => c.Category == FileCategory.Unknown);
+        result.UnknownReasonCounts = unknownReasonCounts;
+
+        var processingCandidates = candidates;
+        if (options.OnlyGames)
+        {
+            var keepUnknown = options.KeepUnknownWhenOnlyGames;
+            processingCandidates = candidates
+                .Where(c => c.Category == FileCategory.Game || (keepUnknown && c.Category == FileCategory.Unknown))
+                .ToList();
+
+            result.FilteredNonGameCount = candidates.Count - processingCandidates.Count;
+            _onProgress?.Invoke($"[Filter] OnlyGames aktiv: {result.FilteredNonGameCount} Nicht-Spiel-Dateien ausgeschlossen (KeepUnknown={keepUnknown})");
+        }
+
         scanSw.Stop();
         result.TotalFilesScanned = candidates.Count;
         _onProgress?.Invoke($"[Scan] Abgeschlossen: {candidates.Count} Dateien in {scanSw.ElapsedMilliseconds}ms");
@@ -161,10 +183,11 @@ public sealed class RunOrchestrator
         if (candidates.Count > 100_000)
             _onProgress?.Invoke($"WARNING: {candidates.Count:N0} files scanned — high memory usage. Consider scanning fewer roots.");
 
-        if (candidates.Count == 0)
+        if (processingCandidates.Count == 0)
         {
             result.Status = RunOutcome.Ok.ToStatusString();
             result.ExitCode = 0;
+            result.AllCandidates = candidates;
             return result.Build();
         }
 
@@ -173,7 +196,7 @@ public sealed class RunOrchestrator
         // ConvertOnly mode: skip Dedupe/Junk/Move/Sort — go straight to conversion
         if (options.ConvertOnly && _converter is not null)
         {
-            ExecuteConvertOnlyPhase(candidates, options, result, metrics, cancellationToken);
+            ExecuteConvertOnlyPhase(processingCandidates, options, result, metrics, cancellationToken);
             result.AllCandidates = candidates;
             result.TotalFilesScanned = candidates.Count;
 
@@ -189,7 +212,7 @@ public sealed class RunOrchestrator
         }
 
         // Phase 3: Deduplicate
-        var (groups, gameGroups) = ExecuteDedupePhase(candidates, options, result, metrics, cancellationToken);
+        var (groups, gameGroups) = ExecuteDedupePhase(processingCandidates, candidates, options, result, metrics, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -325,6 +348,7 @@ public sealed class RunOrchestrator
 
     private (IReadOnlyList<DedupeResult> Groups, List<DedupeResult> GameGroups) ExecuteDedupePhase(
         IReadOnlyList<RomCandidate> candidates,
+        IReadOnlyList<RomCandidate> allCandidates,
         RunOptions options,
         RunResultBuilder result,
         PhaseMetricsCollector metrics,
@@ -345,7 +369,7 @@ public sealed class RunOrchestrator
         result.GroupCount = output.GameGroups.Count;
         result.WinnerCount = output.GameGroups.Count;
         result.LoserCount = output.LoserCount;
-        result.AllCandidates = candidates;
+        result.AllCandidates = allCandidates;
         result.DedupeGroups = output.GameGroups;
 
         return (output.Groups, output.GameGroups);
@@ -462,6 +486,8 @@ public sealed class RunOptions
     public string[] PreferRegions { get; init; } = { "EU", "US", "WORLD", "JP" };
     public IReadOnlyList<string> Extensions { get; init; } = Array.Empty<string>();
     public bool RemoveJunk { get; init; } = true;
+    public bool OnlyGames { get; init; }
+    public bool KeepUnknownWhenOnlyGames { get; init; } = true;
     public bool AggressiveJunk { get; init; }
     public bool SortConsole { get; init; }
     public bool EnableDat { get; init; }
@@ -489,6 +515,9 @@ public sealed class RunResult
     public MovePhaseResult? JunkMoveResult { get; init; }
     public ConsoleSortResult? ConsoleSortResult { get; init; }
     public int JunkRemovedCount { get; init; }
+    public int FilteredNonGameCount { get; init; }
+    public int UnknownCount { get; init; }
+    public IReadOnlyDictionary<string, int> UnknownReasonCounts { get; init; } = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
     public int ConvertedCount { get; init; }
     public int ConvertErrorCount { get; init; }
     public int ConvertSkippedCount { get; init; }
@@ -521,6 +550,9 @@ public sealed class RunResultBuilder
     public MovePhaseResult? JunkMoveResult { get; set; }
     public ConsoleSortResult? ConsoleSortResult { get; set; }
     public int JunkRemovedCount { get; set; }
+    public int FilteredNonGameCount { get; set; }
+    public int UnknownCount { get; set; }
+    public IReadOnlyDictionary<string, int> UnknownReasonCounts { get; set; } = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
     public int ConvertedCount { get; set; }
     public int ConvertErrorCount { get; set; }
     public int ConvertSkippedCount { get; set; }
@@ -543,6 +575,9 @@ public sealed class RunResultBuilder
         JunkMoveResult = JunkMoveResult,
         ConsoleSortResult = ConsoleSortResult,
         JunkRemovedCount = JunkRemovedCount,
+        FilteredNonGameCount = FilteredNonGameCount,
+        UnknownCount = UnknownCount,
+        UnknownReasonCounts = UnknownReasonCounts,
         ConvertedCount = ConvertedCount,
         ConvertErrorCount = ConvertErrorCount,
         ConvertSkippedCount = ConvertSkippedCount,

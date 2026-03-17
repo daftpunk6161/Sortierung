@@ -281,6 +281,23 @@ public sealed class CliProgramTests : IDisposable
         Assert.True(opts!.ConvertFormat);
     }
 
+    [Fact]
+    public void ParseArgs_GamesOnly_SetsFlag()
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--gamesonly" });
+        Assert.NotNull(opts);
+        Assert.True(opts!.OnlyGames);
+    }
+
+    [Fact]
+    public void ParseArgs_DropUnknown_DisablesUnknownKeepPolicy()
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--gamesonly", "--dropunknown" });
+        Assert.NotNull(opts);
+        Assert.True(opts!.OnlyGames);
+        Assert.False(opts.KeepUnknownWhenOnlyGames);
+    }
+
     // ═══ ParseArgs: Path options ═══════════════════════════════════════
 
     [Fact]

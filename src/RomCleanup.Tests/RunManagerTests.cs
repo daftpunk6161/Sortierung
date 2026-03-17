@@ -353,6 +353,8 @@ public class RunManagerTests
             HashType = "sha256",
             ConvertFormat = "auto",
             TrashRoot = GetTestRoot(),
+            OnlyGames = true,
+            KeepUnknownWhenOnlyGames = false,
             Extensions = new[] { "chd", ".rvz" }
         };
 
@@ -367,6 +369,8 @@ public class RunManagerTests
         Assert.Equal("SHA256", run.HashType);
         Assert.Equal("auto", run.ConvertFormat);
         Assert.Equal(GetTestRoot(), run.TrashRoot);
+        Assert.True(run.OnlyGames);
+        Assert.False(run.KeepUnknownWhenOnlyGames);
         Assert.Contains(".chd", run.Extensions);
         Assert.Contains(".rvz", run.Extensions);
 
@@ -392,7 +396,9 @@ public class RunManagerTests
             Roots = new[] { GetTestRoot() },
             EnableDat = true,
             HashType = "SHA256",
-            RemoveJunk = false
+            RemoveJunk = false,
+            OnlyGames = true,
+            KeepUnknownWhenOnlyGames = false
         }, "DryRun", key);
 
         Assert.Equal(RunCreateDisposition.Created, first.Disposition);

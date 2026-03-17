@@ -22,7 +22,9 @@ public static class CandidateFactory
         int completenessScore,
         long sizeTieBreakScore,
         bool datMatch,
-        string consoleKey)
+        string consoleKey,
+        string classificationReasonCode = "game-default",
+        int classificationConfidence = 100)
     {
         var effectiveGameKey = category == FileCategory.Bios
             ? $"__BIOS__{gameKey}"
@@ -43,7 +45,9 @@ public static class CandidateFactory
             SizeBytes = sizeBytes,
             Extension = extension,
             DatMatch = datMatch,
-            ConsoleKey = consoleKey
+            ConsoleKey = consoleKey,
+            ClassificationReasonCode = classificationReasonCode,
+            ClassificationConfidence = classificationConfidence
         };
     }
 }

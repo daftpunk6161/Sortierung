@@ -29,7 +29,8 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             var ext = file.Extension;
             var fileName = Path.GetFileNameWithoutExtension(filePath);
             var gameKey = GameKeyNormalizer.Normalize(fileName);
-            var category = FileClassifier.Classify(fileName, context.Options.AggressiveJunk);
+            var classification = FileClassifier.Analyze(fileName, context.Options.AggressiveJunk);
+            var category = classification.Category;
 
             string consoleKey = "";
             if (input.ConsoleDetector is not null)
@@ -103,7 +104,9 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                 completenessScore: completeness,
                 sizeTieBreakScore: sizeTieBreak,
                 datMatch: datMatch,
-                consoleKey: consoleKey));
+                consoleKey: consoleKey,
+                classificationReasonCode: classification.ReasonCode,
+                classificationConfidence: classification.Confidence));
         }
 
         return candidates;

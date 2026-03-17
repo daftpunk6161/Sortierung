@@ -16,6 +16,8 @@ public sealed partial class MainViewModel
     private static readonly HashSet<string> PreviewRelevantPropertyNames =
     [
         nameof(RemoveJunk),
+        nameof(OnlyGames),
+        nameof(KeepUnknownWhenOnlyGames),
         nameof(SortConsole),
         nameof(AliasKeying),
         nameof(AggressiveJunk),
@@ -951,6 +953,8 @@ public sealed partial class MainViewModel
         builder.Append("regions=").AppendJoin(";", GetPreferredRegions()).Append('|');
         builder.Append("extensions=").AppendJoin(";", GetSelectedExtensions()).Append('|');
         builder.Append("removeJunk=").Append(RemoveJunk).Append('|');
+        builder.Append("onlyGames=").Append(OnlyGames).Append('|');
+        builder.Append("keepUnknownWhenOnlyGames=").Append(KeepUnknownWhenOnlyGames).Append('|');
         builder.Append("sortConsole=").Append(SortConsole).Append('|');
         builder.Append("aliasKeying=").Append(AliasKeying).Append('|');
         builder.Append("aggressiveJunk=").Append(AggressiveJunk).Append('|');

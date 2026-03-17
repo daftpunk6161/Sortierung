@@ -20,6 +20,8 @@ public sealed class RomCandidate
     public string ConsoleKey { get; init; } = "";
     public bool DatMatch { get; init; }
     public FileCategory Category { get; init; } = FileCategory.Game;
+    public string ClassificationReasonCode { get; init; } = "game-default";
+    public int ClassificationConfidence { get; init; } = 100;
 }
 
 /// <summary>

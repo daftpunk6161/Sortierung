@@ -179,6 +179,8 @@ internal static class Program
             PreferRegions = opts.PreferRegions,
             Extensions = opts.Extensions.ToArray(),
             RemoveJunk = opts.RemoveJunk,
+            OnlyGames = opts.OnlyGames,
+            KeepUnknownWhenOnlyGames = opts.KeepUnknownWhenOnlyGames,
             AggressiveJunk = opts.AggressiveJunk,
             SortConsole = opts.SortConsole,
             EnableDat = enableDat,
@@ -216,6 +218,7 @@ internal static class Program
                 Keep = projection.Keep,
                 Dupes = projection.Dupes,
                 Games = projection.Games,
+                Unknown = projection.Unknown,
                 Junk = projection.Junk,
                 Bios = projection.Bios,
                 DatMatches = projection.DatMatches,
@@ -224,6 +227,7 @@ internal static class Program
                 ConvertErrorCount = projection.ConvertErrorCount,
                 ConvertSkippedCount = projection.ConvertSkippedCount,
                 JunkRemovedCount = projection.JunkRemovedCount,
+                FilteredNonGameCount = projection.FilteredNonGameCount,
                 MoveCount = projection.MoveCount,
                 SkipCount = projection.SkipCount,
                 JunkFailCount = projection.JunkFailCount,
@@ -375,6 +379,18 @@ internal static class Program
                     opts.RemoveJunk = false;
                     break;
 
+                case "-gamesonly" or "--gamesonly":
+                    opts.OnlyGames = true;
+                    break;
+
+                case "-keepunknown" or "--keepunknown":
+                    opts.KeepUnknownWhenOnlyGames = true;
+                    break;
+
+                case "-dropunknown" or "--dropunknown":
+                    opts.KeepUnknownWhenOnlyGames = false;
+                    break;
+
                 case "-aggressivejunk" or "--aggressivejunk":
                     opts.AggressiveJunk = true;
                     break;
@@ -489,6 +505,12 @@ internal static class Program
             return (null, 3);
         }
 
+        if (!opts.OnlyGames && !opts.KeepUnknownWhenOnlyGames)
+        {
+            SafeErrorWriteLine("[Error] --dropunknown requires --gamesonly.");
+            return (null, 3);
+        }
+
         return (opts, 0);
     }
 
@@ -533,6 +555,9 @@ Options:
   -Extensions <exts> Comma-separated extensions filter
   -TrashRoot <path>  Custom trash folder for duplicates
   -RemoveJunk        Move junk files (demos, betas, hacks) to trash
+    -GamesOnly         Keep only GAME category files in dedupe pipeline
+    -KeepUnknown       With -GamesOnly, keep UNKNOWN files for manual review (default)
+    -DropUnknown       With -GamesOnly, exclude UNKNOWN files as well
   -AggressiveJunk    Also flag WIP/dev builds as junk
   -SortConsole       Sort winners into console-specific subfolders
   -EnableDat         Enable DAT verification (hash-match against No-Intro/Redump)
@@ -606,6 +631,8 @@ Exit codes:
         public bool ExtensionsExplicit { get; set; }
         public string? TrashRoot { get; set; }
         public bool RemoveJunk { get; set; } = true;
+        public bool OnlyGames { get; set; }
+        public bool KeepUnknownWhenOnlyGames { get; set; } = true;
         public bool AggressiveJunk { get; set; }
         public bool SortConsole { get; set; }
         public bool EnableDat { get; set; }

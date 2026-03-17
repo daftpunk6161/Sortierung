@@ -427,6 +427,64 @@ public class RunOrchestratorTests : IDisposable
         Assert.Equal(FileCategory.Game, normalCandidate!.Category);
     }
 
+    [Fact]
+    public void Execute_OnlyGames_FiltersNonGameCandidates()
+    {
+        CreateFile("Super Mario (USA).zip", 80);
+        CreateFile("Workbench (System Disk).zip", 40);
+
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var audit = new FakeAuditStore();
+        var orch = new RunOrchestrator(fs, audit);
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = "DryRun",
+            OnlyGames = true,
+            KeepUnknownWhenOnlyGames = true
+        };
+
+        var result = orch.Execute(options);
+
+        Assert.Equal("ok", result.Status);
+        Assert.Equal(2, result.TotalFilesScanned);
+        Assert.Equal(1, result.FilteredNonGameCount);
+        Assert.Single(result.DedupeGroups);
+        Assert.Equal("supermario", result.DedupeGroups[0].GameKey);
+    }
+
+    [Fact]
+    public void Execute_OnlyGames_DropUnknown_RemovesUnknownFromProcessing()
+    {
+        CreateFile(".zip", 10);
+        CreateFile("Valid Game (USA).zip", 50);
+
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var audit = new FakeAuditStore();
+        var orch = new RunOrchestrator(fs, audit);
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = "DryRun",
+            OnlyGames = true,
+            KeepUnknownWhenOnlyGames = false
+        };
+
+        var result = orch.Execute(options);
+
+        Assert.Equal("ok", result.Status);
+        Assert.Equal(2, result.TotalFilesScanned);
+        Assert.Equal(1, result.UnknownCount);
+        Assert.Equal(1, result.FilteredNonGameCount);
+        Assert.True(result.UnknownReasonCounts.ContainsKey("empty-basename"));
+        Assert.Single(result.DedupeGroups);
+        Assert.Equal("validgame", result.DedupeGroups[0].GameKey);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────
 
     private string CreateFile(string name, int sizeBytes)

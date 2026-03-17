@@ -116,6 +116,8 @@ public sealed class RunService : IRunService
             PreferRegions = vm.GetPreferredRegions(),
             Extensions = selectedExts.Length > 0 ? selectedExts : RunOptions.DefaultExtensions,
             RemoveJunk = vm.RemoveJunk,
+            OnlyGames = vm.OnlyGames,
+            KeepUnknownWhenOnlyGames = vm.KeepUnknownWhenOnlyGames,
             AggressiveJunk = vm.AggressiveJunk,
             SortConsole = vm.SortConsole,
             EnableDat = vm.UseDat,
