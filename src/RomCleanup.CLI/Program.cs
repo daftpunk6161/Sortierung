@@ -263,9 +263,17 @@ internal static class Program
     }
 
     private static bool IsNonInteractiveExecution()
-        => NonInteractiveOverride.Value
-           ?? Console.IsInputRedirected
-           || !Environment.UserInteractive;
+    {
+        if (NonInteractiveOverride.Value is bool forced)
+            return forced;
+
+        // Test harnesses use console overrides for deterministic capture;
+        // do not treat that as non-interactive unless explicitly forced.
+        if (ConsoleOverrideEnabled.Value)
+            return false;
+
+        return Console.IsInputRedirected || !Environment.UserInteractive;
+    }
 
     /// <summary>
     /// Backward-compatible CliOptions class. Wraps CliRunOptions for test compatibility.

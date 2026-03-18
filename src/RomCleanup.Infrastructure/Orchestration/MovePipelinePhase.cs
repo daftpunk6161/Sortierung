@@ -15,17 +15,22 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
         int failCount = 0;
         int skipCount = 0;
         long savedBytes = 0;
+        var totalLosers = input.Groups.Sum(g => g.Losers.Count);
+        var processedLosers = 0;
 
         foreach (var group in input.Groups)
         {
             foreach (var loser in group.Losers)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                processedLosers++;
 
                 var root = PipelinePhaseHelpers.FindRootForPath(loser.MainPath, input.Options.Roots);
                 if (root is null)
                 {
                     failCount++;
+                    if (processedLosers % 100 == 0 || processedLosers == totalLosers)
+                        context.OnProgress?.Invoke($"[Move] Fortschritt: {processedLosers}/{totalLosers} (moved={moveCount}, skipped={skipCount}, failed={failCount})");
                     continue;
                 }
 
@@ -40,6 +45,8 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                 if (destPath is null)
                 {
                     failCount++;
+                    if (processedLosers % 100 == 0 || processedLosers == totalLosers)
+                        context.OnProgress?.Invoke($"[Move] Fortschritt: {processedLosers}/{totalLosers} (moved={moveCount}, skipped={skipCount}, failed={failCount})");
                     continue;
                 }
 
@@ -54,6 +61,8 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                     }
 
                     skipCount++;
+                    if (processedLosers % 100 == 0 || processedLosers == totalLosers)
+                        context.OnProgress?.Invoke($"[Move] Fortschritt: {processedLosers}/{totalLosers} (moved={moveCount}, skipped={skipCount}, failed={failCount})");
                     continue;
                 }
 
@@ -83,6 +92,9 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                 {
                     failCount++;
                 }
+
+                if (processedLosers % 100 == 0 || processedLosers == totalLosers)
+                    context.OnProgress?.Invoke($"[Move] Fortschritt: {processedLosers}/{totalLosers} (moved={moveCount}, skipped={skipCount}, failed={failCount})");
             }
         }
 

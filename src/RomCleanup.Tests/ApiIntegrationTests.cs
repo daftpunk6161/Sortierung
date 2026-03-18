@@ -415,6 +415,9 @@ public sealed class ApiIntegrationTests
 
             Assert.True(result.TryGetProperty("candidates", out _));
             Assert.True(result.TryGetProperty("games", out _));
+            Assert.True(result.TryGetProperty("winners", out _));
+            Assert.True(result.TryGetProperty("losers", out _));
+            Assert.True(result.TryGetProperty("duplicates", out _));
             Assert.True(result.TryGetProperty("junk", out _));
             Assert.True(result.TryGetProperty("bios", out _));
             Assert.True(result.TryGetProperty("datMatches", out _));

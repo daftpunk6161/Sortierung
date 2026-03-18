@@ -33,7 +33,10 @@ internal static class CliOutputWriter
             Candidates = projection.Candidates,
             Groups = projection.Groups,
             Keep = projection.Keep,
+            Winners = projection.Keep,
             Dupes = projection.Dupes,
+            Losers = projection.Dupes,
+            Duplicates = projection.Dupes,
             Games = projection.Games,
             Unknown = projection.Unknown,
             Junk = projection.Junk,
@@ -108,6 +111,7 @@ Options:
   -DatRoot <path>    DAT file directory (overrides settings.json)
   -HashType <type>   Hash algorithm: SHA1|SHA256|MD5 (default: SHA1)
   -ConvertFormat     Convert winners to optimal format (CHD/RVZ/ZIP)
+    -Yes               Confirm destructive Move in non-interactive runs
   -Report <path>     Output HTML or CSV report (.html or .csv)
   -Audit <path>      Write audit CSV log for Move operations
   -Log <path>        Write structured JSONL log file
@@ -142,7 +146,10 @@ internal sealed class CliDryRunOutput
     public int Candidates { get; init; }
     public int Groups { get; init; }
     public int Keep { get; init; }
+    public int Winners { get; init; }
     public int Dupes { get; init; }
+    public int Losers { get; init; }
+    public int Duplicates { get; init; }
     public int Games { get; init; }
     public int Unknown { get; init; }
     public int Junk { get; init; }

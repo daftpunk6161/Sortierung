@@ -282,6 +282,14 @@ public sealed class CliProgramTests : IDisposable
     }
 
     [Fact]
+    public void ParseArgs_Yes_SetsFlag()
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--yes" });
+        Assert.NotNull(opts);
+        Assert.True(opts!.Yes);
+    }
+
+    [Fact]
     public void ParseArgs_GamesOnly_SetsFlag()
     {
         var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--gamesonly" });
@@ -511,6 +519,7 @@ public sealed class CliProgramTests : IDisposable
         Assert.False(opts.SortConsole);
         Assert.False(opts.EnableDat);
         Assert.False(opts.ConvertFormat);
+        Assert.False(opts.Yes);
         Assert.Null(opts.TrashRoot);
         Assert.Null(opts.DatRoot);
         Assert.Null(opts.HashType);
@@ -518,6 +527,37 @@ public sealed class CliProgramTests : IDisposable
         Assert.Null(opts.AuditPath);
         Assert.Null(opts.LogPath);
         Assert.Equal("Info", opts.LogLevel);
+    }
+
+    [Fact]
+    public void RunForTests_MoveNonInteractive_WithoutYes_ReturnsExitCode3()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var originalOut = Console.Out;
+        var originalErr = Console.Error;
+
+        try
+        {
+            Console.SetOut(stdout);
+            Console.SetError(stderr);
+            CliProgram.SetNonInteractiveOverride(true);
+
+            var exitCode = CliProgram.RunForTests(new CliProgram.CliOptions
+            {
+                Roots = new[] { _tempDir },
+                Mode = "Move"
+            });
+
+            Assert.Equal(3, exitCode);
+            Assert.Contains("requires --yes", stderr.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            CliProgram.SetNonInteractiveOverride(null);
+            Console.SetOut(originalOut);
+            Console.SetError(originalErr);
+        }
     }
 
     private static (CliProgram.CliOptions? Options, int ExitCode, string Stdout, string Stderr) ParseArgsWithCapturedConsole(string[] args)

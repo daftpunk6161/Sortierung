@@ -18,20 +18,31 @@ public sealed class WinnerConversionPipelinePhase : IPipelinePhase<WinnerConvers
         int converted = 0;
         int convertErrors = 0;
         int convertSkipped = 0;
+        var totalGroups = input.GameGroups.Count;
+        var processedGroups = 0;
 
         foreach (var group in input.GameGroups)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            processedGroups++;
 
             var winnerPath = group.Winner.MainPath;
             if (input.JunkRemovedPaths.Contains(winnerPath) || !File.Exists(winnerPath))
+            {
+                if (processedGroups % 25 == 0 || processedGroups == totalGroups)
+                    context.OnProgress?.Invoke($"[Convert] Fortschritt: {processedGroups}/{totalGroups} Gruppen (ok={converted}, skip={convertSkipped}, err={convertErrors})");
                 continue;
+            }
 
             var ext = Path.GetExtension(winnerPath).ToLowerInvariant();
             var consoleKey = group.Winner.ConsoleKey ?? "";
             var target = input.Converter.GetTargetFormat(consoleKey, ext);
             if (target is null)
+            {
+                if (processedGroups % 25 == 0 || processedGroups == totalGroups)
+                    context.OnProgress?.Invoke($"[Convert] Fortschritt: {processedGroups}/{totalGroups} Gruppen (ok={converted}, skip={convertSkipped}, err={convertErrors})");
                 continue;
+            }
 
             var convResult = input.Converter.Convert(winnerPath, target, cancellationToken);
             if (convResult.Outcome == ConversionOutcome.Success)
@@ -66,6 +77,9 @@ public sealed class WinnerConversionPipelinePhase : IPipelinePhase<WinnerConvers
                 context.OnProgress?.Invoke($"WARNING: Conversion failed for {winnerPath}: {convResult.Reason}");
                 PipelinePhaseHelpers.AppendConversionErrorAudit(context, input.Options, winnerPath, convResult.Reason);
             }
+
+            if (processedGroups % 25 == 0 || processedGroups == totalGroups)
+                context.OnProgress?.Invoke($"[Convert] Fortschritt: {processedGroups}/{totalGroups} Gruppen (ok={converted}, skip={convertSkipped}, err={convertErrors})");
         }
 
         context.OnProgress?.Invoke($"[Convert] Abgeschlossen: {converted} konvertiert, {convertSkipped} übersprungen, {convertErrors} Fehler");

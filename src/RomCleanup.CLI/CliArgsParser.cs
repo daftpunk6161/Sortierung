@@ -163,6 +163,10 @@ internal static class CliArgsParser
                     opts.ConvertFormat = true;
                     break;
 
+                case "-yes" or "--yes" or "-y":
+                    opts.Yes = true;
+                    break;
+
                 case "-help" or "--help" or "-h" or "-?":
                     return CliParseResult.Help();
 
@@ -372,6 +376,7 @@ internal sealed class CliRunOptions
     public string? DatRoot { get; set; }
     public string? HashType { get; set; }
     public bool ConvertFormat { get; set; }
+    public bool Yes { get; set; }
     public string? ReportPath { get; set; }
     public string? AuditPath { get; set; }
     public string? LogPath { get; set; }

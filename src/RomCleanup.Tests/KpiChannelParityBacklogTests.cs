@@ -113,7 +113,10 @@ public sealed class KpiChannelParityBacklogTests : IDisposable
         Assert.Equal(projection.Candidates, cliJson.RootElement.GetProperty("Candidates").GetInt32());
         Assert.Equal(projection.Groups, cliJson.RootElement.GetProperty("Groups").GetInt32());
         Assert.Equal(projection.Keep, cliJson.RootElement.GetProperty("Keep").GetInt32());
+        Assert.Equal(projection.Keep, cliJson.RootElement.GetProperty("Winners").GetInt32());
         Assert.Equal(projection.Dupes, cliJson.RootElement.GetProperty("Dupes").GetInt32());
+        Assert.Equal(projection.Dupes, cliJson.RootElement.GetProperty("Losers").GetInt32());
+        Assert.Equal(projection.Dupes, cliJson.RootElement.GetProperty("Duplicates").GetInt32());
         Assert.Equal(projection.Games, cliJson.RootElement.GetProperty("Games").GetInt32());
         Assert.Equal(projection.Junk, cliJson.RootElement.GetProperty("Junk").GetInt32());
         Assert.Equal(projection.Bios, cliJson.RootElement.GetProperty("Bios").GetInt32());
@@ -138,7 +141,10 @@ public sealed class KpiChannelParityBacklogTests : IDisposable
         Assert.Equal(projection.Candidates, api.Candidates);
         Assert.Equal(projection.Groups, api.Groups);
         Assert.Equal(projection.Keep, api.Keep);
+        Assert.Equal(projection.Keep, api.Winners);
         Assert.Equal(projection.Dupes, api.Dupes);
+        Assert.Equal(projection.Dupes, api.Losers);
+        Assert.Equal(projection.Dupes, api.Duplicates);
         Assert.Equal(projection.Games, api.Games);
         Assert.Equal(projection.Junk, api.Junk);
         Assert.Equal(projection.Bios, api.Bios);

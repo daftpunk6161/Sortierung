@@ -18,14 +18,21 @@ public sealed class ConvertOnlyPipelinePhase : IPipelinePhase<ConvertOnlyPhaseIn
         int converted = 0;
         int convertErrors = 0;
         int convertSkipped = 0;
+        var totalCandidates = input.Candidates.Count;
+        var processedCandidates = 0;
 
         foreach (var candidate in input.Candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            processedCandidates++;
 
             var path = candidate.MainPath;
             if (!File.Exists(path))
+            {
+                if (processedCandidates % 25 == 0 || processedCandidates == totalCandidates)
+                    context.OnProgress?.Invoke($"[Convert] Fortschritt: {processedCandidates}/{totalCandidates} Dateien (ok={converted}, skip={convertSkipped}, err={convertErrors})");
                 continue;
+            }
 
             var ext = Path.GetExtension(path).ToLowerInvariant();
             var consoleKey = candidate.ConsoleKey ?? "";
@@ -33,12 +40,16 @@ public sealed class ConvertOnlyPipelinePhase : IPipelinePhase<ConvertOnlyPhaseIn
             if (target is null)
             {
                 convertSkipped++;
+                if (processedCandidates % 25 == 0 || processedCandidates == totalCandidates)
+                    context.OnProgress?.Invoke($"[Convert] Fortschritt: {processedCandidates}/{totalCandidates} Dateien (ok={converted}, skip={convertSkipped}, err={convertErrors})");
                 continue;
             }
 
             if (string.Equals(ext, target.Extension, StringComparison.OrdinalIgnoreCase))
             {
                 convertSkipped++;
+                if (processedCandidates % 25 == 0 || processedCandidates == totalCandidates)
+                    context.OnProgress?.Invoke($"[Convert] Fortschritt: {processedCandidates}/{totalCandidates} Dateien (ok={converted}, skip={convertSkipped}, err={convertErrors})");
                 continue;
             }
 
@@ -76,6 +87,9 @@ public sealed class ConvertOnlyPipelinePhase : IPipelinePhase<ConvertOnlyPhaseIn
                 context.OnProgress?.Invoke($"WARNING: Conversion failed for {path}: {convResult.Reason}");
                 PipelinePhaseHelpers.AppendConversionErrorAudit(context, input.Options, path, convResult.Reason);
             }
+
+            if (processedCandidates % 25 == 0 || processedCandidates == totalCandidates)
+                context.OnProgress?.Invoke($"[Convert] Fortschritt: {processedCandidates}/{totalCandidates} Dateien (ok={converted}, skip={convertSkipped}, err={convertErrors})");
         }
 
         context.OnProgress?.Invoke($"[Convert] Abgeschlossen: {converted} konvertiert, {convertSkipped} übersprungen, {convertErrors} Fehler");

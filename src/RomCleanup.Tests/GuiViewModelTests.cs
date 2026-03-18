@@ -1187,6 +1187,66 @@ public class GuiViewModelTests
         Assert.Single(vm.LastDedupeGroups);
     }
 
+    [Fact]
+    public async Task ExecuteRunAsync_CancelledRun_ShowsPartialResultsInDashboard()
+    {
+        var winner = new RomCandidate
+        {
+            MainPath = @"C:\Roms\Game (USA).zip",
+            GameKey = "game",
+            Region = "US",
+            Category = FileCategory.Game,
+            SizeBytes = 1024,
+            Extension = ".zip"
+        };
+
+        var loser = new RomCandidate
+        {
+            MainPath = @"C:\Roms\Game (EU).zip",
+            GameKey = "game",
+            Region = "EU",
+            Category = FileCategory.Game,
+            SizeBytes = 1000,
+            Extension = ".zip"
+        };
+
+        var partialCancelledResult = new RunResult
+        {
+            Status = "cancelled",
+            ExitCode = 2,
+            TotalFilesScanned = 2,
+            GroupCount = 1,
+            WinnerCount = 1,
+            LoserCount = 1,
+            AllCandidates = new[] { winner, loser },
+            DedupeGroups = new[]
+            {
+                new DedupeResult
+                {
+                    GameKey = "game",
+                    Winner = winner,
+                    Losers = new[] { loser }
+                }
+            }
+        };
+
+        var fakeRunService = new FakeRunService(partialCancelledResult);
+        var vm = new MainViewModel(new ThemeService(), new StubDialogService(), runService: fakeRunService);
+        vm.Roots.Add(Path.GetTempPath());
+        vm.TransitionTo(RunState.Preflight);
+
+        await vm.ExecuteRunAsync();
+
+        Assert.Equal(RunState.Cancelled, vm.CurrentRunState);
+        Assert.NotNull(vm.LastRunResult);
+        Assert.Equal("cancelled", vm.LastRunResult!.Status);
+        Assert.Equal("1", vm.DashWinners);
+        Assert.Equal("1", vm.DashDupes);
+        Assert.Equal("1", vm.DashGames);
+        Assert.Equal(2, vm.LastCandidates.Count);
+        Assert.Single(vm.LastDedupeGroups);
+    }
+
     // ═══ TEST-007: DryRun E2E Smoke-Test ════════════════════════════════
 
     [Fact]
@@ -2180,6 +2240,50 @@ public class GuiViewModelTests
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => defaultValue;
         public void ShowText(string title, string content) { }
         public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
+    }
+
+    private sealed class FakeRunService : IRunService
+    {
+        private readonly RunResult _result;
+
+        public FakeRunService(RunResult result)
+        {
+            _result = result;
+        }
+
+        public (RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)
+            BuildOrchestrator(MainViewModel vm, Action<string>? onProgress = null)
+        {
+            onProgress?.Invoke("[Init] FakeRunService bereit");
+            var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+            var audit = new RomCleanup.Infrastructure.Audit.AuditCsvStore();
+            var orchestrator = new RunOrchestrator(fs, audit, onProgress: onProgress);
+            var options = new RunOptions
+            {
+                Roots = vm.Roots.ToList(),
+                Mode = vm.DryRun ? "DryRun" : "Move",
+                Extensions = new[] { ".zip" }
+            };
+            return (orchestrator, options, null, null);
+        }
+
+        public RunService.RunServiceResult ExecuteRun(
+            RunOrchestrator orchestrator,
+            RunOptions options,
+            string? auditPath,
+            string? reportPath,
+            CancellationToken ct)
+        {
+            return new RunService.RunServiceResult
+            {
+                Result = _result,
+                AuditPath = auditPath,
+                ReportPath = reportPath
+            };
+        }
+
+        public string GetSiblingDirectory(string rootPath, string siblingName)
+            => Path.Combine(Path.GetDirectoryName(rootPath) ?? rootPath, siblingName);
     }
 
     // ═══ XAML Binding Validation (VERIFY-001) ═══════════════════════════
