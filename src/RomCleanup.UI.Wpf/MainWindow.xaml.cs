@@ -118,8 +118,11 @@ public partial class MainWindow : Window, IWindowHost
     /// <summary>Release all resources — called from both OnClosing paths (normal + busy-cancel).</summary>
     private void CleanupResources()
     {
-        // Stop periodic save timer
+        // Stop periodic save timer first to prevent concurrent saves
         _settingsTimer.Dispose();
+
+        // F-04 FIX: Synchronous final save to ensure settings are persisted before exit
+        try { _vm.SaveSettings(); } catch { /* best effort */ }
 
         // GUI-115: Unsubscribe all VM events to prevent leaks
         _vm.RunRequested -= OnRunRequested;

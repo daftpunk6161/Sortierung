@@ -56,15 +56,24 @@ public static class RunReportWriter
             }
         }
 
-        foreach (var candidate in result.AllCandidates.Where(c => c.Category is FileCategory.Junk or FileCategory.Bios))
+        // Add remaining candidates not yet covered by dedupe groups.
+        // When no dedupe ran (ConvertOnly, empty processingCandidates), this captures all files.
+        foreach (var candidate in result.AllCandidates)
         {
             if (!seenPaths.Add(candidate.MainPath))
                 continue;
 
+            var action = candidate.Category switch
+            {
+                FileCategory.Junk => "JUNK",
+                FileCategory.Bios => "BIOS",
+                _ => "KEEP"
+            };
+
             entries.Add(new ReportEntry
             {
                 GameKey = candidate.GameKey,
-                Action = ToReportCategory(candidate.Category),
+                Action = action,
                 Category = ToReportCategory(candidate.Category),
                 Region = candidate.Region,
                 FilePath = candidate.MainPath,
@@ -96,26 +105,28 @@ public static class RunReportWriter
         var biosCount = projection.Bios;
 
         // Invariant: report breakdown must account for all scanned files.
-        // Junk/bios candidates that are also dedupe losers are counted in both Dupes
-        // and Junk/Bios, so subtract the overlap to avoid double-counting.
-        // Unknown and FilteredNonGame candidates are not in any dedupe group.
-        var groupedJunkBios = result.DedupeGroups
-            .SelectMany(g => g.Losers.Append(g.Winner))
-            .Count(c => c.Category is FileCategory.Junk or FileCategory.Bios);
-        var ungroupedJunkBios = Math.Max(0, junkCount + biosCount - groupedJunkBios);
-        var accountedTotal = projection.Keep + projection.Dupes + ungroupedJunkBios
-                           + projection.Unknown + projection.FilteredNonGameCount;
-        if (projection.TotalFiles > 0 && accountedTotal > projection.TotalFiles)
-            throw new InvalidOperationException($"Report summary invariant failed: accounted={accountedTotal} > scanned={projection.TotalFiles}");
-        // Soft warning instead of hard failure for under-count — edge cases with
-        // overlapping categories can cause small discrepancies that are not bugs.
-        // Only throw on significant gaps (>1% of total).
-        if (projection.TotalFiles > 0 && accountedTotal < projection.TotalFiles)
+        // Only validate when dedupe actually ran — ConvertOnly and empty-scan paths
+        // skip deduplication, so Keep/Dupes are both 0 by design.
+        if (result.DedupeGroups.Count > 0)
         {
-            var gap = projection.TotalFiles - accountedTotal;
-            var threshold = Math.Max(1, projection.TotalFiles / 100);
-            if (gap > threshold)
-                throw new InvalidOperationException($"Report summary invariant failed: accounted={accountedTotal} < scanned={projection.TotalFiles} — {gap} candidates unaccounted");
+            var groupedJunkBios = result.DedupeGroups
+                .SelectMany(g => g.Losers.Append(g.Winner))
+                .Count(c => c.Category is FileCategory.Junk or FileCategory.Bios);
+            var ungroupedJunkBios = Math.Max(0, junkCount + biosCount - groupedJunkBios);
+            var accountedTotal = projection.Keep + projection.Dupes + ungroupedJunkBios
+                               + projection.Unknown + projection.FilteredNonGameCount;
+            if (projection.TotalFiles > 0 && accountedTotal > projection.TotalFiles)
+                throw new InvalidOperationException($"Report summary invariant failed: accounted={accountedTotal} > scanned={projection.TotalFiles}");
+            // Soft warning instead of hard failure for under-count — edge cases with
+            // overlapping categories can cause small discrepancies that are not bugs.
+            // Only throw on significant gaps (>1% of total).
+            if (projection.TotalFiles > 0 && accountedTotal < projection.TotalFiles)
+            {
+                var gap = projection.TotalFiles - accountedTotal;
+                var threshold = Math.Max(1, projection.TotalFiles / 100);
+                if (gap > threshold)
+                    throw new InvalidOperationException($"Report summary invariant failed: accounted={accountedTotal} < scanned={projection.TotalFiles} — {gap} candidates unaccounted");
+            }
         }
 
         var totalErrorCount = projection.FailCount + projection.JunkFailCount + projection.ConsoleSortFailed;

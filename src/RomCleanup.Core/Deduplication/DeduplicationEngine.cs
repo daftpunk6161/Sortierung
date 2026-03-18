@@ -40,11 +40,12 @@ public static class DeduplicationEngine
     {
         return candidate.Category switch
         {
-            FileCategory.Game => 4,
-            FileCategory.Bios => 3,
+            FileCategory.Game => 5,
+            FileCategory.Bios => 4,
+            FileCategory.NonGame => 3,
             FileCategory.Junk => 2,
             FileCategory.Unknown => 1,
-            _ => 1
+            _ => 0
         };
     }
 

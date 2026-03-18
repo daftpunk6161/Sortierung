@@ -96,9 +96,9 @@ public sealed class ConsoleDetector
     /// </summary>
     public string? DetectByFolder(string filePath, string rootPath)
     {
-        // Cache key: directory of the file relative to root
+        // Cache key: directory of the file relative to root (normalized for case-insensitive match)
         var dir = Path.GetDirectoryName(filePath) ?? "";
-        var cacheKey = $"{rootPath}|{dir}";
+        var cacheKey = $"{rootPath.ToUpperInvariant()}|{dir.ToUpperInvariant()}";
         if (_folderDetectCache.TryGet(cacheKey, out var cached))
             return cached.Length > 0 ? cached : null;
 

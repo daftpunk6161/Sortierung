@@ -139,6 +139,9 @@ public sealed class FileSystemAdapter : IFileSystem
         }
 
         // TASK-169: Deterministic ordering for reproducible results
+        // F-06 FIX: NFC-normalize before sort for consistent ordering on HFS+/NFD volumes
+        for (int i = 0; i < results.Count; i++)
+            results[i] = results[i].Normalize(System.Text.NormalizationForm.FormC);
         results.Sort(StringComparer.OrdinalIgnoreCase);
         return results;
     }

@@ -188,6 +188,16 @@ public sealed class RunOrchestrator
             result.Status = RunOutcome.Ok.ToStatusString();
             result.ExitCode = 0;
             result.AllCandidates = candidates;
+            sw.Stop();
+            result.DurationMs = sw.ElapsedMilliseconds;
+            result.PhaseMetrics = metrics.GetMetrics();
+            if (!string.IsNullOrEmpty(options.ReportPath))
+            {
+                _onProgress?.Invoke("[Report] Generiere HTML-Report…");
+                result.ReportPath = GenerateReport(result, options);
+                if (!string.IsNullOrEmpty(result.ReportPath))
+                    _onProgress?.Invoke($"[Report] Report erstellt: {result.ReportPath}");
+            }
             return result.Build();
         }
 
@@ -460,7 +470,9 @@ public sealed class RunOrchestrator
         }
         catch (Exception ex)
         {
-            _onProgress?.Invoke($"WARNING: Report generation failed: {ex.Message}");
+            // Log full error details — the throttled _onProgress may swallow short-lived messages
+            _onProgress?.Invoke($"ERROR: Report generation failed: {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Report generation failed: {ex}");
             return null;
         }
     }

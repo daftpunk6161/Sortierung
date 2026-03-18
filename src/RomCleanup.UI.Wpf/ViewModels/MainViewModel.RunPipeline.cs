@@ -448,13 +448,11 @@ public sealed partial class MainViewModel
 
     private void OnCancel()
     {
-        // V2-THR-H02: Use lock to prevent race between Cancel and CreateRunCancellation/Dispose
-        CancellationTokenSource? cts;
+        // F-02 FIX: Cancel under lock to prevent race with CreateRunCancellation/Dispose
         lock (_ctsLock)
         {
-            cts = _cts;
+            try { _cts?.Cancel(); } catch (ObjectDisposedException) { }
         }
-        try { cts?.Cancel(); } catch (ObjectDisposedException) { }
         CurrentRunState = RunState.Cancelled;
         BusyHint = "Abbruch angefordert…";
         ShowMoveCompleteBanner = false;
@@ -583,6 +581,7 @@ public sealed partial class MainViewModel
             oldCts = _cts;
             _cts = newCts;
         }
+        // Dispose outside lock — old CTS is no longer reachable from OnCancel
         try { oldCts?.Dispose(); } catch (ObjectDisposedException) { }
         return newCts.Token;
     }

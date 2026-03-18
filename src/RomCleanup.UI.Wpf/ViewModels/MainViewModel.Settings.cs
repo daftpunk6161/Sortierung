@@ -13,6 +13,7 @@ public sealed partial class MainViewModel
     // ═══ AUTO-SAVE (debounced 2s after last persisted property change) ═══
     private System.Threading.Timer? _autoSaveTimer;
     private bool _settingsLoaded;
+    private readonly object _settingsSaveLock = new();
 
     private static readonly HashSet<string> AutoSavePropertyNames = new(StringComparer.Ordinal)
     {
@@ -437,8 +438,14 @@ public sealed partial class MainViewModel
             ScheduleAutoSave();
     }
 
-    /// <summary>Save settings (called from code-behind on close / timer).</summary>
-    public void SaveSettings() => _settings.SaveFrom(this, LastAuditPath);
+    /// <summary>Save settings (called from code-behind on close / timer). Thread-safe.</summary>
+    public void SaveSettings()
+    {
+        lock (_settingsSaveLock)
+        {
+            _settings.SaveFrom(this, LastAuditPath);
+        }
+    }
 
     private void OnThemeToggle()
     {

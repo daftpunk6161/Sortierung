@@ -10,13 +10,21 @@ var builder = WebApplication.CreateBuilder(args);
 // Bind to loopback only (security: no network exposure)
 var port = builder.Configuration.GetValue("Port", 7878);
 var bindAddress = builder.Configuration.GetValue("BindAddress", "127.0.0.1");
+var allowInsecureNetwork = builder.Configuration.GetValue("AllowInsecureNetwork", false);
 builder.WebHost.UseUrls($"http://{bindAddress}:{port}");
 
-// V2-H08: Warn if binding to non-loopback address
+// F-05 FIX: Hard-fail if binding to non-loopback address without explicit opt-in
 if (bindAddress != "127.0.0.1" && bindAddress != "localhost" && bindAddress != "::1")
 {
-    Console.WriteLine($"WARNING: API bound to non-loopback address '{bindAddress}'. " +
-        "This exposes the API to the network. Ensure firewall rules and TLS are configured.");
+    if (!allowInsecureNetwork)
+    {
+        throw new InvalidOperationException(
+            $"Refusing to bind to non-loopback address '{bindAddress}' over plain HTTP. " +
+            "API key would be transmitted in cleartext. " +
+            "Set --AllowInsecureNetwork=true to override (NOT recommended for production).");
+    }
+    Console.WriteLine($"WARNING: API bound to non-loopback address '{bindAddress}' with --AllowInsecureNetwork. " +
+        "API key is transmitted in cleartext. Ensure firewall rules and TLS are configured.");
 }
 
 builder.Services.AddSingleton<RomCleanup.Contracts.Ports.IFileSystem, RomCleanup.Infrastructure.FileSystem.FileSystemAdapter>();
