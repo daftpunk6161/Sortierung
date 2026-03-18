@@ -66,9 +66,11 @@ internal static class CliOptionsMapper
             DatRoot = datRoot,
             HashType = hashType,
             ConvertFormat = cli.ConvertFormat ? "auto" : null,
+            ConvertOnly = cli.ConvertOnly,
             TrashRoot = cli.TrashRoot,
             AuditPath = auditPath,
-            ReportPath = cli.ReportPath
+            ReportPath = cli.ReportPath,
+            ConflictPolicy = cli.ConflictPolicy
         };
 
         return (runOptions, null);

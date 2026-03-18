@@ -22,7 +22,7 @@
 			"args": [
 				"-NoProfile",
 				"-File",
-				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
 				"-Stage",
 				"unit",
 				"-PesterOutput",
@@ -45,7 +45,7 @@
 			"args": [
 				"-NoProfile",
 				"-File",
-				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
 				"-Stage",
 				"integration",
 				"-PesterOutput",
@@ -68,7 +68,7 @@
 			"args": [
 				"-NoProfile",
 				"-File",
-				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
 				"-Stage",
 				"e2e",
 				"-PesterOutput",
@@ -91,7 +91,7 @@
 			"args": [
 				"-NoProfile",
 				"-File",
-				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
 				"-Stage",
 				"all",
 				"-PesterOutput",
@@ -114,7 +114,7 @@
 			"args": [
 				"-NoProfile",
 				"-File",
-				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
 				"-Stage",
 				"all",
 				"-PesterOutput",
@@ -140,7 +140,7 @@
 			"args": [
 				"-NoProfile",
 				"-File",
-				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
 				"-Stage",
 				"e2e",
 				"-PesterOutput",
@@ -164,7 +164,7 @@
 			"args": [
 				"-NoProfile",
 				"-File",
-				"${workspaceFolder}/dev/tools/pipeline/Invoke-TestPipeline.ps1",
+				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
 				"-Stage",
 				"e2e",
 				"-PesterOutput",
@@ -188,7 +188,7 @@
 			"args": [
 				"-NoProfile",
 				"-Command",
-				"Invoke-Pester -Path './dev/tests/integration/WpfSmoke.Tests.ps1' -Output Detailed"
+				"Invoke-Pester -Path './archive/powershell/dev/tests/integration/WpfSmoke.Tests.ps1' -Output Detailed"
 			],
 			"group": "test"
 		},
@@ -199,7 +199,7 @@
 			"args": [
 				"-NoProfile",
 				"-Command",
-				"& { Invoke-Pester -Path './dev/tests/integration/WpfSmoke.Tests.ps1' -Output Detailed }"
+				"& { Invoke-Pester -Path './archive/powershell/dev/tests/integration/WpfSmoke.Tests.ps1' -Output Detailed }"
 			],
 			"group": "test"
 		},
@@ -209,7 +209,7 @@
 			"command": "Invoke-Pester",
 			"args": [
 				"-Path",
-				"./dev/tests/integration/WpfSmoke.Tests.ps1",
+				"./archive/powershell/dev/tests/integration/WpfSmoke.Tests.ps1",
 				"-Output",
 				"Detailed"
 			],
@@ -218,7 +218,7 @@
 		{
 			"label": "tests: smoke wpf quick",
 			"type": "shell",
-			"command": "Invoke-Pester -Path \"./dev/tests/integration/WpfSmoke.Tests.ps1\" -Output Detailed",
+			"command": "Invoke-Pester -Path \"./archive/powershell/dev/tests/integration/WpfSmoke.Tests.ps1\" -Output Detailed",
 			"group": "test"
 		},
 		{

@@ -205,7 +205,7 @@ public sealed class CliRedPhaseTests : IDisposable
     {
         File.WriteAllText(Path.Combine(_tempDir, "Game (USA).zip"), "data");
 
-        var opts = new CliProgram.CliOptions
+        var opts = new CliRunOptions
         {
             Roots = [_tempDir],
             Mode = "DryRun"
@@ -229,7 +229,7 @@ public sealed class CliRedPhaseTests : IDisposable
         File.WriteAllText(Path.Combine(_tempDir, "Game (USA).zip"), "data");
         File.WriteAllText(Path.Combine(_tempDir, "Game (Europe).zip"), "eu");
 
-        var opts = new CliProgram.CliOptions
+        var opts = new CliRunOptions
         {
             Roots = [_tempDir],
             Mode = "Move",
@@ -258,7 +258,7 @@ public sealed class CliRedPhaseTests : IDisposable
         File.WriteAllText(Path.Combine(_tempDir, "Game (Europe).zip"), "eu");
 
         var auditPath = Path.Combine(_tempDir, "audit-test.csv");
-        var opts = new CliProgram.CliOptions
+        var opts = new CliRunOptions
         {
             Roots = [_tempDir],
             Mode = "Move",
@@ -281,7 +281,7 @@ public sealed class CliRedPhaseTests : IDisposable
         File.WriteAllText(Path.Combine(_tempDir, "Game (USA).zip"), "usa");
 
         var reportPath = Path.Combine(_tempDir, "report-test.html");
-        var opts = new CliProgram.CliOptions
+        var opts = new CliRunOptions
         {
             Roots = [_tempDir],
             Mode = "DryRun",
@@ -308,7 +308,7 @@ public sealed class CliRedPhaseTests : IDisposable
     {
         File.WriteAllText(Path.Combine(_tempDir, "Game (USA).zip"), "data");
 
-        var opts = new CliProgram.CliOptions
+        var opts = new CliRunOptions
         {
             Roots = [_tempDir],
             Mode = "DryRun"
@@ -337,6 +337,29 @@ public sealed class CliRedPhaseTests : IDisposable
         }
     }
 
+    [Fact]
+    public void CliDryRunJson_AliasFieldsMatchCanonicalCounters_Issue9()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "Game (USA).zip"), "usa");
+        File.WriteAllText(Path.Combine(_tempDir, "Game (Europe).zip"), "eu");
+
+        var opts = new CliRunOptions
+        {
+            Roots = [_tempDir],
+            Mode = "DryRun"
+        };
+
+        var (exitCode, stdout, _) = RunCliCapture(opts);
+        Assert.Equal(0, exitCode);
+
+        using var doc = JsonDocument.Parse(stdout.Trim());
+        var root = doc.RootElement;
+
+        Assert.Equal(root.GetProperty("Keep").GetInt32(), root.GetProperty("Winners").GetInt32());
+        Assert.Equal(root.GetProperty("Dupes").GetInt32(), root.GetProperty("Losers").GetInt32());
+        Assert.Equal(root.GetProperty("Dupes").GetInt32(), root.GetProperty("Duplicates").GetInt32());
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     //  F: Determinism — 1 test
     //
@@ -350,7 +373,7 @@ public sealed class CliRedPhaseTests : IDisposable
         File.WriteAllText(Path.Combine(_tempDir, "Game (USA).zip"), "usa");
         File.WriteAllText(Path.Combine(_tempDir, "Game (Europe).zip"), "eu");
 
-        var opts = new CliProgram.CliOptions
+        var opts = new CliRunOptions
         {
             Roots = [_tempDir],
             Mode = "DryRun",
@@ -381,7 +404,7 @@ public sealed class CliRedPhaseTests : IDisposable
     //  Helpers
     // ═══════════════════════════════════════════════════════════════════
 
-    private static (CliProgram.CliOptions? Options, int ExitCode, string Stdout, string Stderr)
+    private static (CliRunOptions? Options, int ExitCode, string Stdout, string Stderr)
         ParseArgsCapture(string[] args)
     {
         lock (ConsoleLock)
@@ -402,7 +425,7 @@ public sealed class CliRedPhaseTests : IDisposable
     }
 
     private static (int ExitCode, string Stdout, string Stderr)
-        RunCliCapture(CliProgram.CliOptions options)
+        RunCliCapture(CliRunOptions options)
     {
         lock (ConsoleLock)
         {

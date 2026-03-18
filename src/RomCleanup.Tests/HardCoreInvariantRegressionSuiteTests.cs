@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using RomCleanup.CLI;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Classification;
@@ -788,7 +789,7 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
         var core = orchestrator.Execute(options);
         var guiProjection = RunProjectionFactory.Create(core);
 
-        var (cliCode, cliStdout, _) = RunCli(new CliProgram.CliOptions
+        var (cliCode, cliStdout, _) = RunCli(new CliRunOptions
         {
             Roots = new[] { root },
             Mode = "DryRun",
@@ -856,7 +857,7 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
     private static ConsoleDetector BuildDetector(IEnumerable<ConsoleInfo> infos)
         => new(infos.ToArray());
 
-    private static (int ExitCode, string Stdout, string Stderr) RunCli(CliProgram.CliOptions options)
+    private static (int ExitCode, string Stdout, string Stderr) RunCli(CliRunOptions options)
     {
         lock (ConsoleLock)
         {

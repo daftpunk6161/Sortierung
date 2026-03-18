@@ -111,6 +111,8 @@ Options:
   -DatRoot <path>    DAT file directory (overrides settings.json)
   -HashType <type>   Hash algorithm: SHA1|SHA256|MD5 (default: SHA1)
   -ConvertFormat     Convert winners to optimal format (CHD/RVZ/ZIP)
+    -ConvertOnly       Convert all candidates only (skip dedupe/move)
+    -ConflictPolicy    Move conflict handling: Rename|Skip|Overwrite (default: Rename)
     -Yes               Confirm destructive Move in non-interactive runs
   -Report <path>     Output HTML or CSV report (.html or .csv)
   -Audit <path>      Write audit CSV log for Move operations

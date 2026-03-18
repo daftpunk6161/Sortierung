@@ -93,7 +93,7 @@ internal static class Program
         JsonlLogWriter? log = null;
         if (!string.IsNullOrEmpty(cliOpts.LogPath))
         {
-            var logLevel = Enum.TryParse<LogLevel>(cliOpts.LogLevel, true, out var lvl) ? lvl : LogLevel.Info;
+            var logLevel = Enum.Parse<LogLevel>(cliOpts.LogLevel, ignoreCase: true);
             log = new JsonlLogWriter(cliOpts.LogPath, logLevel);
         }
 
@@ -161,14 +161,14 @@ internal static class Program
 
     // --- Backward-compatible delegates for tests ---
 
-    internal static int RunForTests(CliOptions opts)
+    internal static int RunForTests(CliRunOptions opts)
     {
         StdoutOverride.Value = Console.Out;
         StderrOverride.Value = Console.Error;
         ConsoleOverrideEnabled.Value = true;
         try
         {
-            return Run(opts.ToCliRunOptions());
+            return Run(opts);
         }
         finally
         {
@@ -181,15 +181,13 @@ internal static class Program
     /// <summary>
     /// Backward-compatible ParseArgs: delegates to CliArgsParser.Parse + converts back.
     /// </summary>
-    internal static (CliOptions?, int exitCode) ParseArgs(string[] args)
+    internal static (CliRunOptions?, int exitCode) ParseArgs(string[] args)
     {
         var result = CliArgsParser.Parse(args);
 
-        // Map CliParseResult back to legacy (CliOptions?, int) tuple
         switch (result.Command)
         {
             case CliCommand.Help when result.Errors.Count > 0:
-                // Validation errors: write to stderr for backward compat, return (null, exitCode)
                 foreach (var err in result.Errors)
                     SafeErrorWriteLine(err);
                 return (null, result.ExitCode);
@@ -206,7 +204,7 @@ internal static class Program
                 return (null, result.ExitCode);
 
             case CliCommand.Run:
-                return (CliOptions.FromCliRunOptions(result.Options!), 0);
+                return (result.Options!, 0);
 
             default:
                 return (null, result.ExitCode);
@@ -275,78 +273,4 @@ internal static class Program
         return Console.IsInputRedirected || !Environment.UserInteractive;
     }
 
-    /// <summary>
-    /// Backward-compatible CliOptions class. Wraps CliRunOptions for test compatibility.
-    /// </summary>
-    internal sealed class CliOptions
-    {
-        public string[] Roots { get; set; } = Array.Empty<string>();
-        public string Mode { get; set; } = "DryRun";
-        public string[] PreferRegions { get; set; } = Array.Empty<string>();
-        public HashSet<string> Extensions { get; set; } = new(RunOptions.DefaultExtensions, StringComparer.OrdinalIgnoreCase);
-        public bool ExtensionsExplicit { get; set; }
-        public string? TrashRoot { get; set; }
-        public bool RemoveJunk { get; set; } = true;
-        public bool OnlyGames { get; set; }
-        public bool KeepUnknownWhenOnlyGames { get; set; } = true;
-        public bool AggressiveJunk { get; set; }
-        public bool SortConsole { get; set; }
-        public bool EnableDat { get; set; }
-        public string? DatRoot { get; set; }
-        public string? HashType { get; set; }
-        public bool ConvertFormat { get; set; }
-        public bool Yes { get; set; }
-        public string? ReportPath { get; set; }
-        public string? AuditPath { get; set; }
-        public string? LogPath { get; set; }
-        public string LogLevel { get; set; } = "Info";
-
-        internal CliRunOptions ToCliRunOptions() => new()
-        {
-            Roots = Roots,
-            Mode = Mode,
-            PreferRegions = PreferRegions,
-            Extensions = new HashSet<string>(Extensions, StringComparer.OrdinalIgnoreCase),
-            ExtensionsExplicit = ExtensionsExplicit,
-            TrashRoot = TrashRoot,
-            RemoveJunk = RemoveJunk,
-            OnlyGames = OnlyGames,
-            KeepUnknownWhenOnlyGames = KeepUnknownWhenOnlyGames,
-            AggressiveJunk = AggressiveJunk,
-            SortConsole = SortConsole,
-            EnableDat = EnableDat,
-            DatRoot = DatRoot,
-            HashType = HashType,
-            ConvertFormat = ConvertFormat,
-            Yes = Yes,
-            ReportPath = ReportPath,
-            AuditPath = AuditPath,
-            LogPath = LogPath,
-            LogLevel = LogLevel
-        };
-
-        internal static CliOptions FromCliRunOptions(CliRunOptions src) => new()
-        {
-            Roots = src.Roots,
-            Mode = src.Mode,
-            PreferRegions = src.PreferRegions,
-            Extensions = new HashSet<string>(src.Extensions, StringComparer.OrdinalIgnoreCase),
-            ExtensionsExplicit = src.ExtensionsExplicit,
-            TrashRoot = src.TrashRoot,
-            RemoveJunk = src.RemoveJunk,
-            OnlyGames = src.OnlyGames,
-            KeepUnknownWhenOnlyGames = src.KeepUnknownWhenOnlyGames,
-            AggressiveJunk = src.AggressiveJunk,
-            SortConsole = src.SortConsole,
-            EnableDat = src.EnableDat,
-            DatRoot = src.DatRoot,
-            HashType = src.HashType,
-            ConvertFormat = src.ConvertFormat,
-            Yes = src.Yes,
-            ReportPath = src.ReportPath,
-            AuditPath = src.AuditPath,
-            LogPath = src.LogPath,
-            LogLevel = src.LogLevel
-        };
-    }
 }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using RomCleanup.CLI;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Orchestration;
@@ -175,7 +176,7 @@ public sealed class HardRegressionInvariantTests : IDisposable
         var directResult = orch.Execute(options);
 
         // Run CLI
-        var cliOptions = new CliProgram.CliOptions
+        var cliOptions = new CliRunOptions
         {
             Roots = new[] { root },
             Mode = "DryRun",
@@ -773,7 +774,7 @@ public sealed class HardRegressionInvariantTests : IDisposable
         var guiGames = int.Parse(vm.DashGames);
 
         // CLI JSON
-        var cliOptions = new CliProgram.CliOptions
+        var cliOptions = new CliRunOptions
         {
             Roots = new[] { root },
             Mode = "DryRun",
@@ -955,7 +956,7 @@ public sealed class HardRegressionInvariantTests : IDisposable
         });
     }
 
-    private static (int ExitCode, string Stdout, string Stderr) RunCli(CliProgram.CliOptions options)
+    private static (int ExitCode, string Stdout, string Stderr) RunCli(CliRunOptions options)
     {
         var origOut = Console.Out;
         var origErr = Console.Error;

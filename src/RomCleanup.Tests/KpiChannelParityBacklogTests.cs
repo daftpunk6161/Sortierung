@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using RomCleanup.Api;
+using RomCleanup.CLI;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.FileSystem;
@@ -83,7 +84,7 @@ public sealed class KpiChannelParityBacklogTests : IDisposable
         var reportSummary = RunReportWriter.BuildSummary(wpfExecution.Result, "DryRun");
 
         // CLI JSON
-        var cliOptions = new CliProgram.CliOptions
+        var cliOptions = new CliRunOptions
         {
             Roots = [root],
             Mode = "DryRun",
@@ -192,7 +193,7 @@ public sealed class KpiChannelParityBacklogTests : IDisposable
         Assert.Equal(projection.FailCount + projection.JunkFailCount + projection.ConsoleSortFailed, reportSummary.ErrorCount);
     }
 
-    private static (int ExitCode, string Stdout, string Stderr) RunCliWithCapturedConsole(CliProgram.CliOptions options)
+    private static (int ExitCode, string Stdout, string Stderr) RunCliWithCapturedConsole(CliRunOptions options)
     {
         var originalOut = Console.Out;
         var originalError = Console.Error;

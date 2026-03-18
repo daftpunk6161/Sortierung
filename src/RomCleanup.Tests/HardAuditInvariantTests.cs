@@ -1,4 +1,5 @@
 using System.Text.Json;
+using RomCleanup.CLI;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Orchestration;
@@ -604,7 +605,7 @@ public sealed class HardAuditInvariantTests : IDisposable
         var trashRoot = Path.Combine(_tempDir, "trash");
         Directory.CreateDirectory(trashRoot);
 
-        var cliOptions = new CliProgram.CliOptions
+        var cliOptions = new CliRunOptions
         {
             Roots = [root],
             Mode = "Move",
@@ -652,7 +653,7 @@ public sealed class HardAuditInvariantTests : IDisposable
             "Sidecar enthält CLI-only Feld 'timestamp' — CLI hat Orchestrator-Sidecar überschrieben");
     }
 
-    private static void RunCliSilent(CliProgram.CliOptions options)
+    private static void RunCliSilent(CliRunOptions options)
     {
         var originalOut = Console.Out;
         var originalError = Console.Error;

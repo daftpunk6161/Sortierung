@@ -1,5 +1,6 @@
 using System.Text.Json;
 using RomCleanup.Api;
+using RomCleanup.CLI;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.FileSystem;
@@ -44,7 +45,7 @@ public sealed class ReportParityTests : IDisposable
         File.WriteAllText(Path.Combine(root, "Other (Japan).zip"), "jp");
 
         var cliReportPath = Path.Combine(_tempDir, "cli-report.html");
-        var cliOptions = new CliProgram.CliOptions
+        var cliOptions = new CliRunOptions
         {
             Roots = [root],
             Mode = "DryRun",
@@ -129,7 +130,7 @@ public sealed class ReportParityTests : IDisposable
         var wpfExecution = runService.ExecuteRun(orchestrator, options, auditPath, reportPath, CancellationToken.None);
         var projection = RomCleanup.Infrastructure.Orchestration.RunProjectionFactory.Create(wpfExecution.Result);
 
-        var cliOptions = new CliProgram.CliOptions
+        var cliOptions = new CliRunOptions
         {
             Roots = [root],
             Mode = "DryRun",
@@ -197,7 +198,7 @@ public sealed class ReportParityTests : IDisposable
         File.WriteAllText(Path.Combine(root, "Title (Europe).zip"), "2");
         File.WriteAllText(Path.Combine(root, "Title (Beta).zip"), "3");
 
-        var cliOptions = new CliProgram.CliOptions
+        var cliOptions = new CliRunOptions
         {
             Roots = [root],
             Mode = "DryRun",
@@ -257,7 +258,7 @@ public sealed class ReportParityTests : IDisposable
         File.WriteAllText(Path.Combine(root, "Game (USA).zip"), "usa");
         File.WriteAllText(Path.Combine(root, "Game (Europe).zip"), "eu");
 
-        var cliOptions = new CliProgram.CliOptions
+        var cliOptions = new CliRunOptions
         {
             Roots = [root],
             Mode = "DryRun",
@@ -273,7 +274,7 @@ public sealed class ReportParityTests : IDisposable
         Assert.DoesNotContain("[Report] " + cliOptions.ReportPath, cliStderr, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static (int ExitCode, string Stdout, string Stderr) RunCliWithCapturedConsole(CliProgram.CliOptions options)
+    private static (int ExitCode, string Stdout, string Stderr) RunCliWithCapturedConsole(CliRunOptions options)
     {
         var originalOut = Console.Out;
         var originalError = Console.Error;

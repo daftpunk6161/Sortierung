@@ -1,5 +1,6 @@
 using System.Text;
 using RomCleanup.Api;
+using RomCleanup.CLI;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Deduplication;
@@ -103,7 +104,7 @@ public sealed class AuditFindingsFixTests : IDisposable
 
     private static readonly object ConsoleLock = new();
 
-    private static (int ExitCode, string Stdout, string Stderr) RunCli(CliProgram.CliOptions options)
+    private static (int ExitCode, string Stdout, string Stderr) RunCli(CliRunOptions options)
     {
         lock (ConsoleLock)
         {
@@ -134,7 +135,7 @@ public sealed class AuditFindingsFixTests : IDisposable
         File.WriteAllText(Path.Combine(root, "game (EU).zip"), "test");
         File.WriteAllText(Path.Combine(root, "game (US).zip"), "test");
 
-        var options = new CliProgram.CliOptions
+        var options = new CliRunOptions
         {
             Roots = new[] { root },
             Mode = "DryRun",
@@ -152,7 +153,7 @@ public sealed class AuditFindingsFixTests : IDisposable
     public void Cli_NonExistentRoot_ReturnsExitCode3_PreflightFailed()
     {
         var nonExistent = Path.Combine(_tempDir, "does_not_exist_" + Guid.NewGuid().ToString("N"));
-        var options = new CliProgram.CliOptions
+        var options = new CliRunOptions
         {
             Roots = new[] { nonExistent },
             Mode = "DryRun",
