@@ -265,6 +265,7 @@ public sealed class AuditSigningService
         int rolledBack = 0, dryRunPlanned = 0;
         int skippedMissingDest = 0, skippedCollision = 0, failed = 0;
         string? rollbackAuditPath = null;
+        string? rollbackTrailPath = null;
         var restoredPaths = new List<string>();
         var plannedPaths = new List<string>();
 
@@ -272,6 +273,9 @@ public sealed class AuditSigningService
         {
             rollbackAuditPath = Path.ChangeExtension(auditCsvPath, ".rollback-audit.csv");
             File.WriteAllText(rollbackAuditPath, "Timestamp,Action,OldPath,NewPath,Status\n", Encoding.UTF8);
+
+            rollbackTrailPath = Path.ChangeExtension(auditCsvPath, ".rollback-trail.csv");
+            File.WriteAllText(rollbackTrailPath, "RestoredPath,RestoredFrom,OriginalAction,Timestamp\n", Encoding.UTF8);
         }
 
         // Pre-cache normalized root paths to avoid Path.GetFullPath per root per row (expensive on UNC)
@@ -359,6 +363,7 @@ public sealed class AuditSigningService
                         restoredPaths.Add(oldPath);
                         _log?.Invoke($"Rolled back: {newPath} -> {oldPath}");
                         AppendRollbackRow(rollbackAuditPath!, "ROLLBACK", newPath, oldPath, "OK");
+                        AppendRollbackTrailRow(rollbackTrailPath!, oldPath, newPath, action);
                     }
                     else
                     {
@@ -388,6 +393,7 @@ public sealed class AuditSigningService
             Failed = failed,
             DryRun = dryRun,
             RollbackAuditPath = rollbackAuditPath,
+            RollbackTrailPath = rollbackTrailPath,
             RestoredPaths = restoredPaths,
             PlannedPaths = plannedPaths
         };
@@ -414,6 +420,13 @@ public sealed class AuditSigningService
     {
         var timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
         var line = $"{SanitizeCsvField(timestamp)},{SanitizeCsvField(action)},{SanitizeCsvField(from)},{SanitizeCsvField(to)},{SanitizeCsvField(status)}\n";
+        File.AppendAllText(path, line, Encoding.UTF8);
+    }
+
+    private static void AppendRollbackTrailRow(string path, string restoredPath, string restoredFrom, string originalAction)
+    {
+        var timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+        var line = $"{SanitizeCsvField(restoredPath)},{SanitizeCsvField(restoredFrom)},{SanitizeCsvField(originalAction)},{SanitizeCsvField(timestamp)}\n";
         File.AppendAllText(path, line, Encoding.UTF8);
     }
 }

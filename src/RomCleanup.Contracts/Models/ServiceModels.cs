@@ -112,6 +112,7 @@ public sealed class AuditRollbackResult
     public int Failed { get; init; }
     public bool DryRun { get; init; }
     public string? RollbackAuditPath { get; init; }
+    public string? RollbackTrailPath { get; init; }
     public IReadOnlyList<string> RestoredPaths { get; init; } = [];
     public IReadOnlyList<string> PlannedPaths { get; init; } = [];
 }

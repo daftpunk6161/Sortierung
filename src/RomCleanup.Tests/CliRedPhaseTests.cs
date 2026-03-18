@@ -429,21 +429,17 @@ public sealed class CliRedPhaseTests : IDisposable
     {
         lock (ConsoleLock)
         {
-            var origOut = Console.Out;
-            var origErr = Console.Error;
             using var stdout = new StringWriter();
             using var stderr = new StringWriter();
             try
             {
-                Console.SetOut(stdout);
-                Console.SetError(stderr);
+                CliProgram.SetConsoleOverrides(stdout, stderr);
                 var exitCode = CliProgram.RunForTests(options);
                 return (exitCode, stdout.ToString(), stderr.ToString());
             }
             finally
             {
-                Console.SetOut(origOut);
-                Console.SetError(origErr);
+                CliProgram.SetConsoleOverrides(null, null);
             }
         }
     }

@@ -6,6 +6,7 @@ using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Deduplication;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.FileSystem;
+using RomCleanup.Infrastructure.Orchestration;
 using Xunit;
 using CliProgram = RomCleanup.CLI.Program;
 
@@ -302,5 +303,47 @@ public sealed class AuditFindingsFixTests : IDisposable
 
         // Should be allowed again
         Assert.True(limiter.TryAcquire("client"));
+    }
+
+    [Fact]
+    public void SidecarSigning_AfterConsoleSort_ContainsConsoleSortRows()
+    {
+        var root = Path.Combine(_tempDir, "sort_sidecar");
+        Directory.CreateDirectory(root);
+        File.WriteAllText(Path.Combine(root, "Title (USA).sfc"), "usa");
+        File.WriteAllText(Path.Combine(root, "Title (Europe).sfc"), "eu");
+
+        var dataDir = RunEnvironmentBuilder.ResolveDataDir();
+        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+        var auditPath = Path.Combine(_tempDir, "audit", "sort-sidecar.csv");
+        Directory.CreateDirectory(Path.GetDirectoryName(auditPath)!);
+
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Mode = "Move",
+            PreferRegions = new[] { "US", "EU" },
+            Extensions = new[] { ".sfc" },
+            RemoveJunk = false,
+            SortConsole = true,
+            AuditPath = auditPath
+        };
+
+        var env = RunEnvironmentBuilder.Build(options, settings, dataDir);
+        var orchestrator = new RunOrchestrator(env.FileSystem, env.Audit, env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex);
+
+        var result = orchestrator.Execute(options);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.True(File.Exists(auditPath));
+        Assert.True(File.Exists(auditPath + ".meta.json"));
+        Assert.True(env.Audit.TestMetadataSidecar(auditPath));
+
+        var lines = File.ReadAllLines(auditPath);
+        Assert.Contains(lines, l => l.Contains(",CONSOLE_SORT,", StringComparison.OrdinalIgnoreCase));
+
+        var sidecarJson = File.ReadAllText(auditPath + ".meta.json");
+        Assert.Contains("\"RowCount\"", sidecarJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"ConsoleSortMoved\"", sidecarJson, StringComparison.OrdinalIgnoreCase);
     }
 }

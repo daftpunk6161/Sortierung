@@ -284,7 +284,16 @@ public sealed class RunOrchestrator
         result.DurationMs = sw.ElapsedMilliseconds;
         result.PhaseMetrics = metrics.GetMetrics();
 
-        // FEAT-03: Write final audit sidecar with HMAC signature
+        // FEAT-02: Generate report at end of pipeline
+        if (!string.IsNullOrEmpty(options.ReportPath))
+        {
+            _onProgress?.Invoke("[Report] Generiere HTML-Report…");
+            result.ReportPath = GenerateReport(result, options);
+            if (!string.IsNullOrEmpty(result.ReportPath))
+                _onProgress?.Invoke($"[Report] Report erstellt: {result.ReportPath}");
+        }
+
+        // FEAT-03: Write final audit sidecar with HMAC signature after all phases.
         _onProgress?.Invoke("[Audit] Schreibe Audit-Sidecar…");
         if (!string.IsNullOrEmpty(options.AuditPath) && File.Exists(options.AuditPath))
         {
@@ -305,17 +314,10 @@ public sealed class RunOrchestrator
                 ["JunkRemovedCount"] = result.JunkRemovedCount,
                 ["ConvertedCount"] = result.ConvertedCount,
                 ["ConvertErrorCount"] = result.ConvertErrorCount,
+                ["ConsoleSortMoved"] = result.ConsoleSortResult?.Moved ?? 0,
+                ["ConsoleSortFailed"] = result.ConsoleSortResult?.Failed ?? 0,
                 ["DurationMs"] = sw.ElapsedMilliseconds
             });
-        }
-
-        // FEAT-02: Generate report at end of pipeline
-        if (!string.IsNullOrEmpty(options.ReportPath))
-        {
-            _onProgress?.Invoke("[Report] Generiere HTML-Report…");
-            result.ReportPath = GenerateReport(result, options);
-            if (!string.IsNullOrEmpty(result.ReportPath))
-                _onProgress?.Invoke($"[Report] Report erstellt: {result.ReportPath}");
         }
 
         _onProgress?.Invoke($"[Fertig] Pipeline abgeschlossen in {sw.ElapsedMilliseconds}ms — {result.TotalFilesScanned} Dateien, {result.GroupCount} Gruppen");

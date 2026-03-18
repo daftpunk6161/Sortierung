@@ -163,18 +163,34 @@ internal static class Program
 
     internal static int RunForTests(CliRunOptions opts)
     {
-        StdoutOverride.Value = Console.Out;
-        StderrOverride.Value = Console.Error;
-        ConsoleOverrideEnabled.Value = true;
+        var hadOverrides = ConsoleOverrideEnabled.Value;
+        var previousStdout = StdoutOverride.Value;
+        var previousStderr = StderrOverride.Value;
+
+        if (!hadOverrides)
+        {
+            StdoutOverride.Value = Console.Out;
+            StderrOverride.Value = Console.Error;
+            ConsoleOverrideEnabled.Value = true;
+        }
+
         try
         {
             return Run(opts);
         }
         finally
         {
-            ConsoleOverrideEnabled.Value = false;
-            StdoutOverride.Value = null;
-            StderrOverride.Value = null;
+            if (!hadOverrides)
+            {
+                ConsoleOverrideEnabled.Value = false;
+                StdoutOverride.Value = null;
+                StderrOverride.Value = null;
+            }
+            else
+            {
+                StdoutOverride.Value = previousStdout;
+                StderrOverride.Value = previousStderr;
+            }
         }
     }
 
