@@ -370,6 +370,32 @@ public sealed class ApiSecurityTests : IDisposable
         Assert.False(run.TryGetProperty("idempotencyKey", out _));
         Assert.False(run.TryGetProperty("requestFingerprint", out _));
         Assert.False(run.TryGetProperty("ownerClientId", out _));
+        Assert.False(run.TryGetProperty("auditPath", out _));
+        Assert.False(run.TryGetProperty("reportPath", out _));
+    }
+
+    [Fact]
+    public async Task RunResult_DoesNotExpose_ArtifactFileSystemPaths()
+    {
+        using var factory = CreateFactory();
+        using var client = CreateAuthClient(factory, "owner-redact-result");
+        var root = CreateTempRoot();
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            roots = new[] { root },
+            mode = "DryRun"
+        });
+
+        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        var createResponse = await client.PostAsync("/runs?wait=true", content);
+        Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+
+        using var doc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
+        var result = doc.RootElement.GetProperty("result");
+
+        Assert.False(result.TryGetProperty("auditPath", out _));
+        Assert.False(result.TryGetProperty("reportPath", out _));
     }
 
     [Fact]

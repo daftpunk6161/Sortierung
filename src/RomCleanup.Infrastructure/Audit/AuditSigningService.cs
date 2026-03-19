@@ -231,7 +231,8 @@ public sealed class AuditSigningService
             };
         }
 
-        // Verify audit file integrity before executing rollback
+        // SEC-ROLLBACK-03: Verify audit file integrity before executing rollback.
+        // DryRun is safe without sidecar (no files moved). Execute requires verified sidecar.
         var metaPath = auditCsvPath + ".meta.json";
         if (File.Exists(metaPath))
         {
@@ -249,6 +250,21 @@ public sealed class AuditSigningService
                     Failed = 1
                 };
             }
+        }
+        else if (!dryRun)
+        {
+            // Execute-mode rollback without sidecar is blocked — cannot verify audit integrity
+            _log?.Invoke("Rollback blocked: No integrity sidecar (.meta.json) found. Cannot verify audit integrity for execute-mode rollback.");
+            return new AuditRollbackResult
+            {
+                AuditCsvPath = auditCsvPath,
+                DryRun = dryRun,
+                Failed = 1
+            };
+        }
+        else
+        {
+            _log?.Invoke("DryRun rollback proceeding without sidecar verification (no changes will be made).");
         }
 
         var lines = File.ReadAllLines(auditCsvPath, Encoding.UTF8);
@@ -344,12 +360,28 @@ public sealed class AuditSigningService
 
             if (dryRun)
             {
+                // SEC-ROLLBACK-01: In dry run, check reparse points → count as failed (unsafe to plan)
+                if (_fs.IsReparsePoint(newPath))
+                {
+                    failed++;
+                    _log?.Invoke($"DRYRUN rollback blocked (reparse point): {newPath}");
+                    continue;
+                }
+
                 dryRunPlanned++;
                 plannedPaths.Add(oldPath);
                 _log?.Invoke($"DRYRUN rollback: {newPath} -> {oldPath}");
             }
             else
             {
+                // SEC-ROLLBACK-02: In execute, check reparse points → skip as unsafe
+                if (_fs.IsReparsePoint(newPath))
+                {
+                    skippedUnsafe++;
+                    _log?.Invoke($"Rollback skipped (reparse point): {newPath}");
+                    continue;
+                }
+
                 try
                 {
                     // Ensure parent directory exists

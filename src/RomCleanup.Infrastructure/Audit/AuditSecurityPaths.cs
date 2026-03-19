@@ -10,4 +10,16 @@ public static class AuditSecurityPaths
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         return Path.Combine(appData, "RomCleanupRegionDedupe", "security", "audit-signing.key");
     }
+
+    public static string GetDefaultAuditDirectory()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        return Path.Combine(appData, "RomCleanupRegionDedupe", "audit");
+    }
+
+    public static string GetDefaultReportDirectory()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        return Path.Combine(appData, "RomCleanupRegionDedupe", "reports");
+    }
 }

@@ -1,0 +1,491 @@
+using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Metrics;
+using RomCleanup.Infrastructure.Orchestration;
+using Xunit;
+
+namespace RomCleanup.Tests;
+
+public sealed class PipelinePhaseIsolationTests : IDisposable
+{
+    private readonly string _tempDir;
+
+    public PipelinePhaseIsolationTests()
+    {
+        _tempDir = Path.Combine(Path.GetTempPath(), "PipelineIso_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_tempDir);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
+    }
+
+    [Fact]
+    public void FindRootForPath_DoesNotMatchPrefixCollision()
+    {
+        var roots = new[] { @"C:\Roms", @"C:\Other" };
+
+        var matched = PipelinePhaseHelpers.FindRootForPath(@"C:\Roms-Other\game.zip", roots);
+
+        Assert.Null(matched);
+    }
+
+    [Fact]
+    public void FindRootForPath_ReturnsContainingRoot()
+    {
+        var root = Path.Combine(_tempDir, "roms");
+        Directory.CreateDirectory(root);
+        var path = Path.Combine(root, "sub", "game.zip");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "x");
+
+        var matched = PipelinePhaseHelpers.FindRootForPath(path, new[] { root });
+
+        Assert.Equal(root, matched);
+    }
+
+    [Fact]
+    public void ScanPhase_RemovesReferencedCueSetMembers_AndBlocklistedPaths()
+    {
+        var root = Path.Combine(_tempDir, "scan");
+        var trashDir = Path.Combine(root, "_TRASH_REGION_DEDUPE");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(trashDir);
+
+        var cuePath = Path.Combine(root, "disc.cue");
+        var binPath = Path.Combine(root, "track01.bin");
+        var zipPath = Path.Combine(root, "other.zip");
+        var blocklisted = Path.Combine(trashDir, "old.zip");
+
+        File.WriteAllText(cuePath, "FILE \"track01.bin\" BINARY");
+        File.WriteAllText(binPath, "track");
+        File.WriteAllText(zipPath, "zip");
+        File.WriteAllText(blocklisted, "trash");
+
+        var fs = new TestFileSystem();
+        fs.SetFiles(root, cuePath, binPath, zipPath, blocklisted);
+
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".cue", ".bin", ".zip" }
+        };
+
+        var phase = new ScanPipelinePhase();
+        var result = phase.Execute(options, CreateContext(options, fs), CancellationToken.None);
+
+        Assert.Contains(result, e => e.Path == Path.GetFullPath(cuePath));
+        Assert.Contains(result, e => e.Path == Path.GetFullPath(zipPath));
+        Assert.DoesNotContain(result, e => e.Path == Path.GetFullPath(binPath));
+        Assert.DoesNotContain(result, e => e.Path == Path.GetFullPath(blocklisted));
+    }
+
+    [Fact]
+    public void DeduplicatePhase_FiltersOutJunkOnlyGroups_ForGameGroupsOutput()
+    {
+        var gameUs = Candidate("C:/roms/game (US).zip", "game", "US", 1000, FileCategory.Game);
+        var gameEu = Candidate("C:/roms/game (EU).zip", "game", "EU", 900, FileCategory.Game);
+        var junk = Candidate("C:/roms/demo.zip", "demo", "UNKNOWN", 100, FileCategory.Junk);
+
+        var options = new RunOptions { Roots = new[] { "C:/roms" }, Extensions = new[] { ".zip" } };
+        var phase = new DeduplicatePipelinePhase();
+
+        var result = phase.Execute(new[] { gameUs, gameEu, junk }, CreateContext(options, new TestFileSystem()), CancellationToken.None);
+
+        Assert.Equal(2, result.Groups.Count);
+        Assert.Single(result.GameGroups);
+        Assert.Equal(1, result.LoserCount);
+    }
+
+    [Fact]
+    public void MovePhase_ProducesExpectedCounts_AndAuditRows()
+    {
+        var root = Path.Combine(_tempDir, "move-root");
+        Directory.CreateDirectory(root);
+
+        var moveLoser = Path.Combine(root, "move.zip");
+        var skipLoser = Path.Combine(root, "skip.zip");
+        var failLoser = Path.Combine(_tempDir, "outside", "fail.zip");
+        Directory.CreateDirectory(Path.GetDirectoryName(failLoser)!);
+
+        File.WriteAllText(moveLoser, "a");
+        File.WriteAllText(skipLoser, "b");
+        File.WriteAllText(failLoser, "c");
+
+        var expectedSkipDest = Path.Combine(root, "_TRASH_REGION_DEDUPE", "skip.zip");
+        Directory.CreateDirectory(Path.GetDirectoryName(expectedSkipDest)!);
+        File.WriteAllText(expectedSkipDest, "already-there");
+
+        var fs = new TestFileSystem();
+        fs.MoveResults[moveLoser] = Path.Combine(root, "_TRASH_REGION_DEDUPE", "move.zip");
+
+        var audit = new TrackingAuditStore();
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".zip" },
+            Mode = "Move",
+            ConflictPolicy = "Skip",
+            AuditPath = Path.Combine(_tempDir, "audit.csv")
+        };
+
+        var group = new DedupeResult
+        {
+            GameKey = "game",
+            Winner = Candidate(Path.Combine(root, "winner.zip"), "game", "US", 1000, FileCategory.Game),
+            Losers = new[]
+            {
+                Candidate(moveLoser, "game", "EU", 900, FileCategory.Game),
+                Candidate(skipLoser, "game", "JP", 800, FileCategory.Game),
+                Candidate(failLoser, "game", "WORLD", 700, FileCategory.Game)
+            }
+        };
+
+        var phase = new MovePipelinePhase();
+        var result = phase.Execute(
+            new MovePhaseInput(new[] { group }, options),
+            CreateContext(options, fs, audit),
+            CancellationToken.None);
+
+        Assert.Equal(1, result.MoveCount);
+        Assert.Equal(1, result.SkipCount);
+        Assert.Equal(1, result.FailCount);
+        Assert.Equal(group.Losers.Count, result.MoveCount + result.SkipCount + result.FailCount);
+
+        Assert.Contains(audit.Rows, r => r.Action == "Move");
+        Assert.Contains(audit.Rows, r => r.Action == "SKIP");
+    }
+
+    [Fact]
+    public void JunkRemovalPhase_RemovesOnlyStandaloneJunkWinners()
+    {
+        var root = Path.Combine(_tempDir, "junk-root");
+        Directory.CreateDirectory(root);
+
+        var junkStandalone = Path.Combine(root, "junk1.zip");
+        var junkNotStandalone = Path.Combine(root, "junk2.zip");
+        File.WriteAllText(junkStandalone, "junk");
+        File.WriteAllText(junkNotStandalone, "junk");
+
+        var fs = new TestFileSystem();
+        fs.MoveResults[junkStandalone] = Path.Combine(root, "_TRASH_JUNK", "junk1.zip");
+        fs.MoveResults[junkNotStandalone] = Path.Combine(root, "_TRASH_JUNK", "junk2.zip");
+
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".zip" },
+            Mode = "Move"
+        };
+
+        var groups = new[]
+        {
+            new DedupeResult
+            {
+                GameKey = "junk-1",
+                Winner = Candidate(junkStandalone, "junk-1", "UNKNOWN", 100, FileCategory.Junk),
+                Losers = Array.Empty<RomCandidate>()
+            },
+            new DedupeResult
+            {
+                GameKey = "junk-2",
+                Winner = Candidate(junkNotStandalone, "junk-2", "UNKNOWN", 100, FileCategory.Junk),
+                Losers = new[] { Candidate(Path.Combine(root, "other.zip"), "junk-2", "UNKNOWN", 90, FileCategory.Junk) }
+            }
+        };
+
+        var phase = new JunkRemovalPipelinePhase();
+        var result = phase.Execute(new JunkRemovalPhaseInput(groups, options), CreateContext(options, fs), CancellationToken.None);
+
+        Assert.Equal(1, result.MoveResult.MoveCount);
+        Assert.Contains(junkStandalone, result.RemovedPaths);
+        Assert.DoesNotContain(junkNotStandalone, result.RemovedPaths);
+    }
+
+    [Fact]
+    public void ConvertOnlyPhase_TracksConvertedSkippedAndErrors()
+    {
+        var root = Path.Combine(_tempDir, "convert-root");
+        Directory.CreateDirectory(root);
+        var noTarget = Path.Combine(root, "a.bin");
+        var sameExt = Path.Combine(root, "b.chd");
+        var ok = Path.Combine(root, "c.zip");
+        var error = Path.Combine(root, "d.zip");
+        File.WriteAllText(noTarget, "1");
+        File.WriteAllText(sameExt, "2");
+        File.WriteAllText(ok, "3");
+        File.WriteAllText(error, "4");
+
+        var convertedTarget = Path.Combine(root, "c.chd");
+        File.WriteAllText(convertedTarget, "converted");
+
+        var converter = new TestFormatConverter(
+            targetByExtension: new Dictionary<string, ConversionTarget>(StringComparer.OrdinalIgnoreCase)
+            {
+                [".chd"] = new ConversionTarget(".chd", "noop", "noop"),
+                [".zip"] = new ConversionTarget(".chd", "noop", "noop")
+            },
+            convertResults: new Dictionary<string, ConversionResult>(StringComparer.OrdinalIgnoreCase)
+            {
+                [ok] = new ConversionResult(ok, convertedTarget, ConversionOutcome.Success),
+                [error] = new ConversionResult(error, null, ConversionOutcome.Error, "tool-failed", 1)
+            },
+            verifyResults: new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
+            {
+                [convertedTarget] = true
+            },
+            noTargetExtensions: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".bin" });
+
+        var fs = new TestFileSystem();
+        fs.MoveResults[ok] = Path.Combine(root, "_TRASH_CONVERTED", "c.zip");
+
+        var audit = new TrackingAuditStore();
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".zip", ".chd", ".bin" },
+            ConvertOnly = true,
+            ConvertFormat = "chd",
+            AuditPath = Path.Combine(_tempDir, "audit.csv")
+        };
+
+        var phase = new ConvertOnlyPipelinePhase();
+        var output = phase.Execute(
+            new ConvertOnlyPhaseInput(
+                new[]
+                {
+                    Candidate(noTarget, "a", "US", 100, FileCategory.Game),
+                    Candidate(sameExt, "b", "US", 100, FileCategory.Game),
+                    Candidate(ok, "c", "US", 100, FileCategory.Game),
+                    Candidate(error, "d", "US", 100, FileCategory.Game)
+                },
+                options,
+                converter),
+            CreateContext(options, fs, audit),
+            CancellationToken.None);
+
+        Assert.Equal(1, output.Converted);
+        Assert.Equal(2, output.ConvertSkipped);
+        Assert.Equal(1, output.ConvertErrors);
+        Assert.Contains(audit.Rows, r => r.Action == "CONVERT");
+        Assert.Contains(audit.Rows, r => r.Action == "CONVERT_ERROR");
+    }
+
+    [Fact]
+    public void WinnerConversionPhase_VerifyFailure_IncrementsError_AndWritesFailedAudit()
+    {
+        var root = Path.Combine(_tempDir, "winner-convert");
+        Directory.CreateDirectory(root);
+        var winner = Path.Combine(root, "winner.zip");
+        File.WriteAllText(winner, "winner");
+
+        var targetPath = Path.Combine(root, "winner.chd");
+        File.WriteAllText(targetPath, "bad-conversion");
+
+        var converter = new TestFormatConverter(
+            targetByExtension: new Dictionary<string, ConversionTarget>(StringComparer.OrdinalIgnoreCase)
+            {
+                [".zip"] = new ConversionTarget(".chd", "noop", "noop")
+            },
+            convertResults: new Dictionary<string, ConversionResult>(StringComparer.OrdinalIgnoreCase)
+            {
+                [winner] = new ConversionResult(winner, targetPath, ConversionOutcome.Success)
+            },
+            verifyResults: new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
+            {
+                [targetPath] = false
+            });
+
+        var fs = new TestFileSystem();
+        var audit = new TrackingAuditStore();
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".zip" },
+            ConvertFormat = "chd",
+            AuditPath = Path.Combine(_tempDir, "audit.csv")
+        };
+
+        var group = new DedupeResult
+        {
+            GameKey = "winner",
+            Winner = Candidate(winner, "winner", "US", 1000, FileCategory.Game),
+            Losers = Array.Empty<RomCandidate>()
+        };
+
+        var phase = new WinnerConversionPipelinePhase();
+        var output = phase.Execute(
+            new WinnerConversionPhaseInput(new[] { group }, options, new HashSet<string>(StringComparer.OrdinalIgnoreCase), converter),
+            CreateContext(options, fs, audit),
+            CancellationToken.None);
+
+        Assert.Equal(0, output.Converted);
+        Assert.Equal(0, output.ConvertSkipped);
+        Assert.Equal(1, output.ConvertErrors);
+        Assert.Contains(audit.Rows, r => r.Action == "CONVERT_FAILED");
+        Assert.False(File.Exists(targetPath));
+    }
+
+    private static PipelineContext CreateContext(RunOptions options, IFileSystem fileSystem, IAuditStore? auditStore = null)
+    {
+        var metrics = new PhaseMetricsCollector();
+        metrics.Initialize();
+        return new PipelineContext
+        {
+            Options = options,
+            FileSystem = fileSystem,
+            AuditStore = auditStore ?? new TrackingAuditStore(),
+            Metrics = metrics,
+            OnProgress = _ => { }
+        };
+    }
+
+    private static RomCandidate Candidate(string path, string gameKey, string region, int regionScore, FileCategory category)
+    {
+        return new RomCandidate
+        {
+            MainPath = path,
+            GameKey = gameKey,
+            Region = region,
+            RegionScore = regionScore,
+            FormatScore = 100,
+            VersionScore = 100,
+            HeaderScore = 0,
+            CompletenessScore = 0,
+            SizeTieBreakScore = 0,
+            SizeBytes = 1024,
+            Extension = Path.GetExtension(path),
+            ConsoleKey = "PSX",
+            DatMatch = false,
+            Category = category,
+            ClassificationReasonCode = "test",
+            ClassificationConfidence = 100
+        };
+    }
+
+    private sealed class TestFileSystem : IFileSystem
+    {
+        private readonly Dictionary<string, IReadOnlyList<string>> _filesByRoot = new(StringComparer.OrdinalIgnoreCase);
+
+        public Dictionary<string, string> MoveResults { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public void SetFiles(string root, params string[] files)
+        {
+            _filesByRoot[root] = files;
+        }
+
+        public bool TestPath(string literalPath, string pathType = "Any") => true;
+
+        public string EnsureDirectory(string path)
+        {
+            Directory.CreateDirectory(path);
+            return path;
+        }
+
+        public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? allowedExtensions = null)
+        {
+            if (!_filesByRoot.TryGetValue(root, out var all))
+                return Array.Empty<string>();
+
+            if (allowedExtensions is null)
+                return all;
+
+            var allowed = new HashSet<string>(allowedExtensions, StringComparer.OrdinalIgnoreCase);
+            return all.Where(f => allowed.Contains(Path.GetExtension(f))).ToArray();
+        }
+
+        public string? MoveItemSafely(string sourcePath, string destinationPath)
+        {
+            if (MoveResults.TryGetValue(sourcePath, out var actual))
+                return actual;
+
+            return null;
+        }
+
+        public bool MoveDirectorySafely(string sourcePath, string destinationPath)
+            => true;
+
+        public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
+            => Path.GetFullPath(Path.Combine(rootPath, relativePath));
+
+        public bool IsReparsePoint(string path)
+            => false;
+
+        public void DeleteFile(string path)
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+
+        public void CopyFile(string sourcePath, string destinationPath, bool overwrite = false)
+            => File.Copy(sourcePath, destinationPath, overwrite);
+    }
+
+    private sealed class TrackingAuditStore : IAuditStore
+    {
+        public List<AuditRow> Rows { get; } = new();
+
+        public void WriteMetadataSidecar(string auditCsvPath, IDictionary<string, object> metadata)
+        {
+        }
+
+        public bool TestMetadataSidecar(string auditCsvPath) => true;
+
+        public void Flush(string auditCsvPath)
+        {
+        }
+
+        public IReadOnlyList<string> Rollback(string auditCsvPath, string[] allowedRestoreRoots, string[] allowedCurrentRoots, bool dryRun = false)
+            => Array.Empty<string>();
+
+        public void AppendAuditRow(string auditCsvPath, string rootPath, string oldPath, string newPath, string action, string category = "", string hash = "", string reason = "")
+        {
+            Rows.Add(new AuditRow(action, oldPath, newPath, reason));
+        }
+    }
+
+    private sealed record AuditRow(string Action, string OldPath, string NewPath, string Reason);
+
+    private sealed class TestFormatConverter : IFormatConverter
+    {
+        private readonly IReadOnlyDictionary<string, ConversionTarget> _targetByExtension;
+        private readonly IReadOnlyDictionary<string, ConversionResult> _convertResults;
+        private readonly IReadOnlyDictionary<string, bool> _verifyResults;
+        private readonly ISet<string> _noTargetExtensions;
+
+        public TestFormatConverter(
+            IReadOnlyDictionary<string, ConversionTarget> targetByExtension,
+            IReadOnlyDictionary<string, ConversionResult> convertResults,
+            IReadOnlyDictionary<string, bool>? verifyResults = null,
+            ISet<string>? noTargetExtensions = null)
+        {
+            _targetByExtension = targetByExtension;
+            _convertResults = convertResults;
+            _verifyResults = verifyResults ?? new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            _noTargetExtensions = noTargetExtensions ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        public ConversionTarget? GetTargetFormat(string consoleKey, string sourceExtension)
+        {
+            if (_noTargetExtensions.Contains(sourceExtension))
+                return null;
+
+            return _targetByExtension.TryGetValue(sourceExtension, out var target)
+                ? target
+                : null;
+        }
+
+        public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
+        {
+            if (_convertResults.TryGetValue(sourcePath, out var result))
+                return result;
+
+            return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped, "no-mapping", 0);
+        }
+
+        public bool Verify(string targetPath, ConversionTarget target)
+            => _verifyResults.TryGetValue(targetPath, out var ok) && ok;
+    }
+}

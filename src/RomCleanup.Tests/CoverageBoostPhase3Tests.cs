@@ -2100,6 +2100,34 @@ public class FcsCommandDeepTests
         ExecCommand(vm, "PdfReport");
     }
 
+    [Fact]
+    public void FCS_PdfReport_UnsafeExtension_IsBlocked()
+    {
+        var (fcs, vm, dialog) = SetupFcs();
+        vm.LastCandidates = new ObservableCollection<RomCandidate>
+        {
+            MakeCandidate("SafeGame")
+        };
+        vm.LastDedupeGroups = new ObservableCollection<DedupeResult>
+        {
+            new() { Winner = vm.LastCandidates[0], Losers = new List<RomCandidate>(), GameKey = "safe-key" }
+        };
+
+        var tempPath = Path.Combine(Path.GetTempPath(), $"report_{Guid.NewGuid():N}.bat");
+        dialog.NextSaveFile = tempPath;
+
+        try
+        {
+            ExecCommand(vm, "PdfReport");
+            Assert.Contains(vm.LogEntries, entry => entry.Text.Contains("blockiert", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+    }
+
     // ── DatAutoUpdate with candidates ────────────────────────────
 
     [Fact]

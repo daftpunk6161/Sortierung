@@ -203,8 +203,10 @@ public sealed class AuditFindingsFixTests : IDisposable
 
         var fs = new FileSystemAdapter();
         var service = new AuditSigningService(fs);
+        // SEC-ROLLBACK-03: Execute-mode rollback requires sidecar
+        service.WriteMetadataSidecar(csvPath, 3);
 
-        // Act: Execute rollback (non-dry-run, no sidecar verification needed since no .meta.json)
+        // Act: Execute rollback (non-dry-run, sidecar verifies audit integrity)
         var result = service.Rollback(csvPath,
             allowedRestoreRoots: new[] { srcDir },
             allowedCurrentRoots: new[] { trashDir },

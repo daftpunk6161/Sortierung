@@ -47,7 +47,7 @@ public sealed partial class FeatureCommandService
         {
             ReportGenerator.WriteHtmlToFile(path, Path.GetDirectoryName(path) ?? ".", summary, entries);
             _vm.AddLog($"Report erstellt: {path} (Im Browser drucken → PDF)", "INFO");
-            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            TryOpenWithShell(path, "Report");
         }
         catch (Exception ex) { LogError("GUI-REPORT", $"Report-Fehler: {ex.Message}"); }
     }

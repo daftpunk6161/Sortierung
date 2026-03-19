@@ -1,3 +1,4 @@
+using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Orchestration;
 using System.IO;
 

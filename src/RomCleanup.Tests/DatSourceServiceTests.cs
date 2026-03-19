@@ -313,6 +313,28 @@ public class DatSourceServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DownloadDatByFormatAsync_ZipDat_ExistingTarget_CreatesBackupAndReplaces()
+    {
+        var oldContent = "<datafile><header><name>Old</name></header></datafile>";
+        var newContent = "<datafile><header><name>New</name></header></datafile>";
+        var targetPath = Path.Combine(_tempDir, "redump-ps1.dat");
+        File.WriteAllText(targetPath, oldContent);
+
+        var zipBytes = CreateZipWithDat("Sony - PlayStation.dat", newContent);
+        var handler = new ByteContentHandler(zipBytes);
+        using var httpClient = new HttpClient(handler);
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+
+        var result = await svc.DownloadDatByFormatAsync(
+            "https://redump.org/datfile/ps1/", "redump-ps1.dat", "zip-dat");
+
+        Assert.Equal(targetPath, result);
+        Assert.Equal(newContent, File.ReadAllText(targetPath));
+        Assert.True(File.Exists(targetPath + ".bak"));
+        Assert.Equal(oldContent, File.ReadAllText(targetPath + ".bak"));
+    }
+
+    [Fact]
     public async Task DownloadDatByFormatAsync_ZipDat_EmptyZip_ReturnsNull()
     {
         // ZIP with no .dat/.xml files
@@ -370,6 +392,53 @@ public class DatSourceServiceTests : IDisposable
         Assert.Null(result);
     }
 
+    [Fact]
+    public void ImportLocalDatPacks_ExistingTarget_CreatesBackupAndReplaces()
+    {
+        var sourceDir = Path.Combine(_tempDir, "source");
+        Directory.CreateDirectory(sourceDir);
+
+        var sourceDat = Path.Combine(sourceDir, "Nintendo - Game Boy.dat");
+        File.WriteAllText(sourceDat, "new-pack-content");
+
+        var targetPath = Path.Combine(_tempDir, "nointro-gb.dat");
+        File.WriteAllText(targetPath, "old-pack-content");
+
+        var catalog = new List<DatCatalogEntry>
+        {
+            new()
+            {
+                Id = "nointro-gb",
+                Group = "No-Intro",
+                System = "Nintendo - Game Boy",
+                Format = "nointro-pack",
+                PackMatch = "Nintendo*"
+            }
+        };
+
+        using var svc = new DatSourceService(_tempDir);
+        var imported = svc.ImportLocalDatPacks(sourceDir, catalog);
+
+        Assert.Equal(1, imported);
+        Assert.Equal("new-pack-content", File.ReadAllText(targetPath));
+        Assert.True(File.Exists(targetPath + ".bak"));
+        Assert.Equal("old-pack-content", File.ReadAllText(targetPath + ".bak"));
+    }
+
+    [Fact]
+    public async Task DownloadDatByFormatAsync_ZipDat_ZipSlipEntry_ReturnsNull()
+    {
+        var zipBytes = CreateZipWithEntries(("../escape.dat", "<datafile/>"), ("safe.dat", "<datafile/>"));
+        var handler = new ByteContentHandler(zipBytes);
+        using var httpClient = new HttpClient(handler);
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+
+        var result = await svc.DownloadDatByFormatAsync(
+            "https://example.invalid/", "redump-ps1.dat", "zip-dat");
+
+        Assert.Null(result);
+    }
+
     private static byte[] CreateZipWithDat(string entryName, string content, string? overrideName = null)
     {
         using var ms = new MemoryStream();
@@ -378,6 +447,21 @@ public class DatSourceServiceTests : IDisposable
             var entry = archive.CreateEntry(overrideName ?? entryName);
             using var writer = new StreamWriter(entry.Open());
             writer.Write(content);
+        }
+        return ms.ToArray();
+    }
+
+    private static byte[] CreateZipWithEntries(params (string Name, string Content)[] entries)
+    {
+        using var ms = new MemoryStream();
+        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (name, content) in entries)
+            {
+                var entry = archive.CreateEntry(name);
+                using var writer = new StreamWriter(entry.Open());
+                writer.Write(content);
+            }
         }
         return ms.ToArray();
     }

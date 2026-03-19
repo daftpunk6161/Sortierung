@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Collections.Concurrent;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.FileSystem;
 
@@ -12,6 +13,7 @@ namespace RomCleanup.Infrastructure.Audit;
 public sealed class AuditCsvStore : IAuditStore
 {
     private readonly AuditSigningService _signingService;
+    private static readonly ConcurrentDictionary<string, object> FileLocks = new(StringComparer.OrdinalIgnoreCase);
 
     public AuditCsvStore(IFileSystem? fs = null, Action<string>? log = null, string? keyFilePath = null)
     {
@@ -66,23 +68,31 @@ public sealed class AuditCsvStore : IAuditStore
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
-        bool writeHeader = !File.Exists(auditCsvPath);
+        var lockObj = FileLocks.GetOrAdd(auditCsvPath, static _ => new object());
+        lock (lockObj)
+        {
+            bool writeHeader = !File.Exists(auditCsvPath);
 
-        using var sw = new StreamWriter(auditCsvPath, append: true, Encoding.UTF8);
-        if (writeHeader)
-            sw.WriteLine("RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp");
+            // REC-03: Use explicit file stream + Flush(true) for crash-safe durability.
+            using var fs = new FileStream(auditCsvPath, FileMode.Append, FileAccess.Write, FileShare.Read);
+            using var sw = new StreamWriter(fs, Encoding.UTF8);
+            if (writeHeader)
+                sw.WriteLine("RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp");
 
-        // V2-L07: Consistent UTC timestamps across CLI and API
-        var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
-        sw.WriteLine(string.Join(",",
-            SanitizeCsvField(rootPath),
-            SanitizeCsvField(oldPath),
-            SanitizeCsvField(newPath),
-            SanitizeCsvField(action),
-            SanitizeCsvField(category),
-            SanitizeCsvField(hash),
-            SanitizeCsvField(reason),
-            SanitizeCsvField(timestamp)));
+            // V2-L07: Consistent UTC timestamps across CLI and API
+            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+            sw.WriteLine(string.Join(",",
+                SanitizeCsvField(rootPath),
+                SanitizeCsvField(oldPath),
+                SanitizeCsvField(newPath),
+                SanitizeCsvField(action),
+                SanitizeCsvField(category),
+                SanitizeCsvField(hash),
+                SanitizeCsvField(reason),
+                SanitizeCsvField(timestamp)));
+            sw.Flush();
+            fs.Flush(flushToDisk: true);
+        }
     }
 
     public IReadOnlyList<string> Rollback(string auditCsvPath, string[] allowedRestoreRoots,

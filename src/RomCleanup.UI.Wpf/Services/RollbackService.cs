@@ -20,27 +20,27 @@ public static class RollbackService
     public static AuditRollbackResult Execute(string auditPath, IReadOnlyList<string> roots, string? keyFilePath = null)
     {
         var fs = new FileSystemAdapter();
-        var store = new AuditCsvStore(fs, keyFilePath: keyFilePath ?? AuditSecurityPaths.GetDefaultSigningKeyPath());
+        var signingService = new AuditSigningService(fs, keyFilePath: keyFilePath ?? AuditSecurityPaths.GetDefaultSigningKeyPath());
         var rootArray = roots is string[] arr ? arr : roots.ToArray();
 
         // Preserve explicit integrity failure semantics used by UI/tests.
-        if (File.Exists(auditPath + ".meta.json") && !store.TestMetadataSidecar(auditPath))
+        if (File.Exists(auditPath + ".meta.json"))
         {
-            return new AuditRollbackResult
+            try
             {
-                AuditCsvPath = auditPath,
-                Failed = 1,
-                DryRun = false
-            };
+                signingService.VerifyMetadataSidecar(auditPath);
+            }
+            catch
+            {
+                return new AuditRollbackResult
+                {
+                    AuditCsvPath = auditPath,
+                    Failed = 1,
+                    DryRun = false
+                };
+            }
         }
 
-        var restored = store.Rollback(auditPath, rootArray, rootArray, dryRun: false);
-        return new AuditRollbackResult
-        {
-            AuditCsvPath = auditPath,
-            RolledBack = restored.Count,
-            DryRun = false,
-            RestoredPaths = restored
-        };
+        return signingService.Rollback(auditPath, rootArray, rootArray, dryRun: false);
     }
 }

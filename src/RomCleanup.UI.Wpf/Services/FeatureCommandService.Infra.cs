@@ -114,7 +114,7 @@ public sealed partial class FeatureCommandService
         }
         _dialog.ShowText("Plugin-Manager", sb.ToString());
         if (_dialog.Confirm($"Plugin-Verzeichnis im Explorer öffnen?\n\n{pluginDir}", "Plugins"))
-            Process.Start(new ProcessStartInfo(pluginDir) { UseShellExecute = true });
+            TryOpenWithShell(pluginDir, "Plugin-Verzeichnis", allowDirectory: true);
     }
 
     private void PortableMode()

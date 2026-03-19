@@ -1,3 +1,4 @@
+using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 
 namespace RomCleanup.Infrastructure.Orchestration;

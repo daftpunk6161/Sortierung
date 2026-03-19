@@ -7,6 +7,7 @@ using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Paths;
 using RomCleanup.Infrastructure.Orchestration;
+using RomCleanup.Infrastructure.Audit;
 
 namespace RomCleanup.Api;
 
@@ -216,8 +217,18 @@ public sealed class RunManager
 
         if (task is not null)
         {
-            try { await task.WaitAsync(TimeSpan.FromSeconds(10)); }
-            catch { /* timeout or already completed */ }
+            try
+            {
+                await task.WaitAsync(TimeSpan.FromSeconds(10));
+            }
+            catch (TimeoutException)
+            {
+                TryWriteEmergencyShutdownSidecar(activeId);
+            }
+            catch
+            {
+                TryWriteEmergencyShutdownSidecar(activeId);
+            }
         }
     }
 
@@ -231,6 +242,7 @@ public sealed class RunManager
             var outcome = _executor(run, _fs, _audit, ct);
             run.Status = outcome.Status;
             run.Result = outcome.Result;
+            run.ProgressPercent = 100;
             // SEC: If run completed despite cancellation request, clear misleading CancelledAtUtc
             if (run.Status is "completed" or "completed_with_errors" && run.CancelledAtUtc is not null)
                 run.CancelledAtUtc = null;
@@ -243,10 +255,9 @@ public sealed class RunManager
             {
                 OrchestratorStatus = "cancelled",
                 ExitCode = 2,
-                DurationMs = elapsedMs,
-                AuditPath = File.Exists(auditPath) ? auditPath : null,
-                ReportPath = File.Exists(reportPath) ? reportPath : null
+                DurationMs = elapsedMs
             };
+            run.ProgressPercent = 100;
         }
         catch (Exception ex)
         {
@@ -257,13 +268,14 @@ public sealed class RunManager
             {
                 OrchestratorStatus = "failed",
                 ExitCode = 1,
-                Error = new OperationError("RUN-INTERNAL-ERROR", "An internal error occurred during execution.", ErrorKind.Critical, "API"),
-                AuditPath = File.Exists(auditPath) ? auditPath : null,
-                ReportPath = File.Exists(reportPath) ? reportPath : null
+                Error = new OperationError("RUN-INTERNAL-ERROR", "An internal error occurred during execution.", ErrorKind.Critical, "API")
             };
+            run.ProgressPercent = 100;
         }
         finally
         {
+            run.AuditPath = File.Exists(auditPath) ? auditPath : run.AuditPath;
+            run.ReportPath = File.Exists(reportPath) ? reportPath : run.ReportPath;
             run.CompletedUtc = DateTime.UtcNow;
             UpdateRecoveryState(run);
             run.CancellationSource.Dispose();
@@ -303,11 +315,36 @@ public sealed class RunManager
 
     private static (string AuditPath, string ReportPath) GetArtifactPaths(string runId)
     {
-        var auditDir = Path.Combine(Path.GetTempPath(), "RomCleanup", "audit");
+        var auditDir = AuditSecurityPaths.GetDefaultAuditDirectory();
+        var reportDir = AuditSecurityPaths.GetDefaultReportDirectory();
         Directory.CreateDirectory(auditDir);
+        Directory.CreateDirectory(reportDir);
         return (
             Path.Combine(auditDir, $"audit-{runId}.csv"),
-            Path.Combine(auditDir, $"report-{runId}.html"));
+            Path.Combine(reportDir, $"report-{runId}.html"));
+    }
+
+    private void TryWriteEmergencyShutdownSidecar(string? runId)
+    {
+        if (string.IsNullOrWhiteSpace(runId))
+            return;
+
+        var (auditPath, _) = GetArtifactPaths(runId);
+        if (!File.Exists(auditPath))
+            return;
+
+        try
+        {
+            _audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object>
+            {
+                ["Status"] = "emergency-shutdown",
+                ["ShutdownUtc"] = DateTime.UtcNow.ToString("o")
+            });
+        }
+        catch
+        {
+            // best effort during host shutdown
+        }
     }
 
     private static RunExecutionOutcome ExecuteWithOrchestrator(
@@ -350,15 +387,15 @@ public sealed class RunManager
             onWarning: msg =>
             {
                 run.ProgressMessage = msg;
-                run.ProgressPercent = CalculateProgressPercent(msg);
+                run.ProgressPercent = EstimateProgressPercent(msg);
             });
 
-        var orchestrator = new RunOrchestrator(fs, audit,
+        var orchestrator = new RunOrchestrator(env.FileSystem, env.Audit,
             env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex,
             onProgress: msg =>
             {
                 run.ProgressMessage = msg;
-                run.ProgressPercent = CalculateProgressPercent(msg);
+                run.ProgressPercent = EstimateProgressPercent(msg);
             });
 
         var result = orchestrator.Execute(options, ct);
@@ -382,11 +419,8 @@ public sealed class RunManager
                 TotalFiles = projection.TotalFiles,
                 Candidates = projection.Candidates,
                 Groups = projection.Groups,
-                Keep = projection.Keep,
                 Winners = projection.Keep,
-                Dupes = projection.Dupes,
                 Losers = projection.Dupes,
-                Duplicates = projection.Dupes,
                 Games = projection.Games,
                 Unknown = projection.Unknown,
                 Junk = projection.Junk,
@@ -408,74 +442,70 @@ public sealed class RunManager
                 DurationMs = projection.DurationMs,
                 PreflightWarnings = result.Preflight?.Warnings?.ToArray() ?? Array.Empty<string>(),
                 PhaseMetrics = BuildPhaseMetricsPayload(result.PhaseMetrics),
-                DedupeGroups = BuildDedupeGroupsPayload(result.DedupeGroups),
-                AuditPath = File.Exists(auditPath) ? auditPath : null,
-                ReportPath = result.ReportPath
+                DedupeGroups = BuildDedupeGroupsPayload(result.DedupeGroups)
             });
     }
 
-    private static int CalculateProgressPercent(string? message)
+    private static int EstimateProgressPercent(string? message)
     {
         if (string.IsNullOrWhiteSpace(message))
             return 0;
 
-        var phaseIndex = message.IndexOf("Phase ", StringComparison.OrdinalIgnoreCase);
-        if (phaseIndex < 0)
-            return 0;
+        if (message.StartsWith("[Preflight]", StringComparison.OrdinalIgnoreCase)) return 5;
+        if (message.StartsWith("[Scan]", StringComparison.OrdinalIgnoreCase)) return 20;
+        if (message.StartsWith("[Filter]", StringComparison.OrdinalIgnoreCase)) return 30;
+        if (message.StartsWith("[Dedupe]", StringComparison.OrdinalIgnoreCase)) return 45;
+        if (message.StartsWith("[Junk]", StringComparison.OrdinalIgnoreCase)) return 60;
+        if (message.StartsWith("[Move]", StringComparison.OrdinalIgnoreCase)) return 75;
+        if (message.StartsWith("[Sort]", StringComparison.OrdinalIgnoreCase)) return 85;
+        if (message.StartsWith("[Convert]", StringComparison.OrdinalIgnoreCase)) return 92;
+        if (message.StartsWith("[Report]", StringComparison.OrdinalIgnoreCase)) return 97;
 
-        var part = message[phaseIndex..];
-        var slashIndex = part.IndexOf('/');
-        if (slashIndex <= 6)
-            return 0;
-
-        var left = part[6..slashIndex].Trim();
-        var rightChars = new string(part[(slashIndex + 1)..].TakeWhile(char.IsDigit).ToArray());
-        if (!int.TryParse(left, out var current) || !int.TryParse(rightChars, out var total) || total <= 0)
-            return 0;
-
-        var pct = (int)Math.Round(current * 100d / total);
-        return Math.Clamp(pct, 0, 100);
+        return 0;
     }
 
-    private static object BuildPhaseMetricsPayload(PhaseMetricsResult? metrics)
+    private static ApiPhaseMetrics BuildPhaseMetricsPayload(PhaseMetricsResult? metrics)
     {
         if (metrics is null)
-            return new { phases = Array.Empty<object>() };
-
-        return new
-        {
-            runId = metrics.RunId,
-            startedAt = metrics.StartedAt,
-            totalDurationMs = (long)metrics.TotalDuration.TotalMilliseconds,
-            phases = metrics.Phases.Select(phase => new
+            return new ApiPhaseMetrics
             {
-                phase = phase.Phase,
-                startedAt = phase.StartedAt,
-                durationMs = (long)phase.Duration.TotalMilliseconds,
-                itemCount = phase.ItemCount,
-                itemsPerSec = phase.ItemsPerSec,
-                percentOfTotal = phase.PercentOfTotal,
-                status = phase.Status
+                Phases = Array.Empty<ApiPhaseMetric>()
+            };
+
+        return new ApiPhaseMetrics
+        {
+            RunId = metrics.RunId,
+            StartedAt = metrics.StartedAt,
+            TotalDurationMs = (long)metrics.TotalDuration.TotalMilliseconds,
+            Phases = metrics.Phases.Select(phase => new ApiPhaseMetric
+            {
+                Phase = phase.Phase,
+                StartedAt = phase.StartedAt,
+                DurationMs = (long)phase.Duration.TotalMilliseconds,
+                ItemCount = phase.ItemCount,
+                ItemsPerSec = phase.ItemsPerSec,
+                PercentOfTotal = phase.PercentOfTotal,
+                Status = phase.Status
             }).ToArray()
         };
     }
 
-    private static object[] BuildDedupeGroupsPayload(IReadOnlyList<DedupeResult> dedupeGroups)
+    private static ApiDedupeGroup[] BuildDedupeGroupsPayload(IReadOnlyList<DedupeResult> dedupeGroups)
     {
         if (dedupeGroups.Count == 0)
-            return Array.Empty<object>();
+            return Array.Empty<ApiDedupeGroup>();
 
-        return dedupeGroups.Select(group => new
+        return dedupeGroups.Select(group => new ApiDedupeGroup
         {
-            gameKey = group.GameKey,
-            winner = group.Winner,
-            losers = group.Losers
-        }).Cast<object>().ToArray();
+            GameKey = group.GameKey,
+            Winner = group.Winner,
+            Losers = group.Losers.ToArray()
+        }).ToArray();
     }
 
     private static void UpdateRecoveryState(RunRecord run)
     {
-        var hasAudit = !string.IsNullOrWhiteSpace(run.Result?.AuditPath);
+        var hasAudit = !string.IsNullOrWhiteSpace(run.AuditPath);
         run.RecoveryState = run.Status switch
         {
             "running" => "in-progress",
@@ -651,11 +681,15 @@ public sealed class RunRecord
     }
     public int ProgressPercent { get; set; }
     public DateTime? CancelledAtUtc { get; set; }
+    [JsonIgnore]
+    public string? AuditPath { get; set; }
+    [JsonIgnore]
+    public string? ReportPath { get; set; }
     public string RecoveryModel { get; init; } = "audit-rollback-only";
     public string RestartRecovery { get; init; } = "not-persisted";
     public bool ResumeSupported => false;
     public bool CanRetry => Status != "running";
-    public bool CanRollback => !string.IsNullOrWhiteSpace(Result?.AuditPath);
+    public bool CanRollback => !string.IsNullOrWhiteSpace(AuditPath);
     public string RecoveryState
     {
         get { lock (_lock) return _recoveryState; }
@@ -679,13 +713,10 @@ public sealed class ApiRunResult
     public int TotalFiles { get; init; }
     public int Candidates { get; init; }
     public int Groups { get; init; }
-    public int Keep { get; init; }
     public int Winners { get; init; }
     /// <summary>Number of duplicate ROMs identified (losers in deduplication).
     /// In DryRun mode this is the count of files that *would* be moved, not actually moved files.</summary>
-    public int Dupes { get; init; }
     public int Losers { get; init; }
-    public int Duplicates { get; init; }
     public int Games { get; init; }
     public int Unknown { get; init; }
     public int Junk { get; init; }
@@ -706,9 +737,103 @@ public sealed class ApiRunResult
     public long SavedBytes { get; init; }
     public long DurationMs { get; init; }
     public string[] PreflightWarnings { get; init; } = Array.Empty<string>();
-    public object PhaseMetrics { get; init; } = new { phases = Array.Empty<object>() };
-    public object[] DedupeGroups { get; init; } = Array.Empty<object>();
+    public ApiPhaseMetrics PhaseMetrics { get; init; } = new() { Phases = Array.Empty<ApiPhaseMetric>() };
+    public ApiDedupeGroup[] DedupeGroups { get; init; } = Array.Empty<ApiDedupeGroup>();
     public OperationError? Error { get; init; }
-    public string? AuditPath { get; init; }
-    public string? ReportPath { get; init; }
+}
+
+public sealed class ApiPhaseMetrics
+{
+    public string? RunId { get; init; }
+    public DateTime? StartedAt { get; init; }
+    public long TotalDurationMs { get; init; }
+    public ApiPhaseMetric[] Phases { get; init; } = Array.Empty<ApiPhaseMetric>();
+}
+
+public sealed class ApiPhaseMetric
+{
+    public string Phase { get; init; } = string.Empty;
+    public DateTime StartedAt { get; init; }
+    public long DurationMs { get; init; }
+    public int ItemCount { get; init; }
+    public double ItemsPerSec { get; init; }
+    public double PercentOfTotal { get; init; }
+    public string Status { get; init; } = string.Empty;
+}
+
+public sealed class ApiDedupeGroup
+{
+    public string GameKey { get; init; } = string.Empty;
+    public RomCandidate Winner { get; init; } = new();
+    public RomCandidate[] Losers { get; init; } = Array.Empty<RomCandidate>();
+}
+
+public sealed class RunStatusDto
+{
+    public string RunId { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
+    public string Mode { get; init; } = "DryRun";
+    public string[] PreferRegions { get; init; } = Array.Empty<string>();
+    public bool RemoveJunk { get; init; }
+    public bool AggressiveJunk { get; init; }
+    public bool SortConsole { get; init; }
+    public bool EnableDat { get; init; }
+    public bool OnlyGames { get; init; }
+    public bool KeepUnknownWhenOnlyGames { get; init; }
+    public string HashType { get; init; } = "SHA1";
+    public string? ConvertFormat { get; init; }
+    public bool ConvertOnly { get; init; }
+    public string ConflictPolicy { get; init; } = "Rename";
+    public string[] Extensions { get; init; } = Array.Empty<string>();
+    public DateTime StartedUtc { get; init; }
+    public DateTime? CompletedUtc { get; init; }
+    public long ElapsedMs { get; init; }
+    public int ProgressPercent { get; init; }
+    public string? ProgressMessage { get; init; }
+    public DateTime? CancelledAtUtc { get; init; }
+    public string RecoveryModel { get; init; } = "audit-rollback-only";
+    public string RestartRecovery { get; init; } = "not-persisted";
+    public bool ResumeSupported { get; init; }
+    public bool CanRetry { get; init; }
+    public bool CanRollback { get; init; }
+    public string RecoveryState { get; init; } = "in-progress";
+    public bool CancellationRequested { get; init; }
+}
+
+public static class RunStatusDtoMapper
+{
+    public static RunStatusDto ToDto(this RunRecord run)
+    {
+        return new RunStatusDto
+        {
+            RunId = run.RunId,
+            Status = run.Status,
+            Mode = run.Mode,
+            PreferRegions = run.PreferRegions,
+            RemoveJunk = run.RemoveJunk,
+            AggressiveJunk = run.AggressiveJunk,
+            SortConsole = run.SortConsole,
+            EnableDat = run.EnableDat,
+            OnlyGames = run.OnlyGames,
+            KeepUnknownWhenOnlyGames = run.KeepUnknownWhenOnlyGames,
+            HashType = run.HashType,
+            ConvertFormat = run.ConvertFormat,
+            ConvertOnly = run.ConvertOnly,
+            ConflictPolicy = run.ConflictPolicy,
+            Extensions = run.Extensions,
+            StartedUtc = run.StartedUtc,
+            CompletedUtc = run.CompletedUtc,
+            ElapsedMs = run.ElapsedMs,
+            ProgressPercent = run.ProgressPercent,
+            ProgressMessage = run.ProgressMessage,
+            CancelledAtUtc = run.CancelledAtUtc,
+            RecoveryModel = run.RecoveryModel,
+            RestartRecovery = run.RestartRecovery,
+            ResumeSupported = run.ResumeSupported,
+            CanRetry = run.CanRetry,
+            CanRollback = run.CanRollback,
+            RecoveryState = run.RecoveryState,
+            CancellationRequested = run.CancellationRequested
+        };
+    }
 }

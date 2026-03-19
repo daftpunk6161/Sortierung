@@ -515,13 +515,44 @@ public sealed partial class MainViewModel
 
     private void OnOpenReport()
     {
-        if (!string.IsNullOrEmpty(LastReportPath) && System.IO.File.Exists(LastReportPath))
+        if (string.IsNullOrWhiteSpace(LastReportPath) || !System.IO.File.Exists(LastReportPath))
+            return;
+
+        string fullPath;
+        try
+        {
+            fullPath = Path.GetFullPath(LastReportPath);
+        }
+        catch
+        {
+            AddLog("Report-Öffnen blockiert: ungültiger Pfad.", "WARN");
+            return;
+        }
+
+        var extension = Path.GetExtension(fullPath);
+        if (!string.Equals(extension, ".html", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(extension, ".htm", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(extension, ".csv", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(extension, ".xml", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(extension, ".txt", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(extension, ".log", StringComparison.OrdinalIgnoreCase))
+        {
+            AddLog($"Report-Öffnen blockiert: Dateityp '{extension}' nicht erlaubt.", "WARN");
+            return;
+        }
+
+        try
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName = LastReportPath,
+                FileName = fullPath,
                 UseShellExecute = true
             });
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Report konnte nicht geöffnet werden: {ex.Message}", "WARN");
         }
     }
 

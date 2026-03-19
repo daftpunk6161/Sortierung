@@ -292,6 +292,8 @@ public sealed class AuditSigningServiceTests : IDisposable
             Encoding.UTF8);
 
         var service = new AuditSigningService(new MinimalFs());
+        // SEC-ROLLBACK-03: Execute-mode rollback requires sidecar
+        service.WriteMetadataSidecar(csvPath, 1);
         var result = service.Rollback(csvPath,
             allowedRestoreRoots: [restoreDir],
             allowedCurrentRoots: [currentDir],
@@ -327,6 +329,8 @@ public sealed class AuditSigningServiceTests : IDisposable
             Encoding.UTF8);
 
         var service = new AuditSigningService(new MinimalFs());
+        // SEC-ROLLBACK-03: Execute-mode rollback requires sidecar
+        service.WriteMetadataSidecar(csvPath, 1);
         var result = service.Rollback(csvPath,
             allowedRestoreRoots: [root],
             allowedCurrentRoots: [root],

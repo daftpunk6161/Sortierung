@@ -552,8 +552,8 @@ public sealed class HardAuditInvariantTests : IDisposable
                         ExitCode = 0,
                         TotalFiles = 10,
                         Groups = 5,
-                        Keep = 5,
-                        Dupes = 5
+                        Winners = 5,
+                        Losers = 5
                     });
             });
 

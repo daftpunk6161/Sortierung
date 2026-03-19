@@ -201,6 +201,9 @@ public sealed class FormatConverterAdapter : IFormatConverter
     /// <summary>Maximum total uncompressed size for archive extraction (10 GB, generous for DVD images).</summary>
     private const long MaxExtractedTotalBytes = 10L * 1024 * 1024 * 1024;
 
+    /// <summary>SEC-CONV-04: Maximum allowed compression ratio per entry (zip bomb protection).</summary>
+    internal static readonly double MaxCompressionRatio = 50.0;
+
     /// <summary>
     /// Extract a ZIP/7Z archive, find the .cue file inside, convert to CHD, then clean up.
     /// Handles the common case of disc-based ROMs distributed as ZIP containing .bin/.cue.
@@ -387,6 +390,12 @@ public sealed class FormatConverterAdapter : IFormatConverter
             totalUncompressed += entry.Length;
             if (totalUncompressed > MaxExtractedTotalBytes)
                 return "archive-extraction-size-exceeded";
+
+            // SEC-CONV-04: Per-entry compression ratio check (zip bomb detection)
+            // Only check entries >1 MB uncompressed to avoid false positives on small legitimate files
+            if (entry.CompressedLength > 0 && entry.Length > 1_048_576 &&
+                entry.Length / (double)entry.CompressedLength > MaxCompressionRatio)
+                return "archive-compression-ratio-exceeded";
         }
 
         foreach (var entry in archive.Entries)

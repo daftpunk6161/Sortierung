@@ -83,7 +83,13 @@ public sealed class SafetyValidator
     public static string? NormalizePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
-        try { return Path.GetFullPath(path.Trim()); }
+
+        // SEC-PATH-03: Reject extended-length/device path prefixes (bypass for path normalization)
+        var trimmed = path.Trim();
+        if (trimmed.StartsWith(@"\\?\") || trimmed.StartsWith(@"\\.\"))
+            return null;
+
+        try { return Path.GetFullPath(trimmed); }
         catch { return null; }
     }
 

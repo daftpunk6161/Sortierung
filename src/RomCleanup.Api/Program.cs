@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.Json;
 using RomCleanup.Api;
 using RomCleanup.Contracts.Errors;
+using RomCleanup.Infrastructure.Audit;
+using RomCleanup.Infrastructure.FileSystem;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -143,7 +145,6 @@ app.Use(async (ctx, next) =>
     var correlationId = ctx.Items.TryGetValue("CorrelationId", out var storedCorrelationId)
         ? storedCorrelationId?.ToString() ?? Guid.NewGuid().ToString("N")[..16]
         : ctx.Request.Headers["X-Correlation-ID"].FirstOrDefault() ?? Guid.NewGuid().ToString("N")[..16];
-    ctx.Response.Headers["X-Correlation-ID"] = correlationId;
 
     var start = DateTime.UtcNow;
     await next();
@@ -360,14 +361,14 @@ app.MapPost("/runs", async (HttpContext ctx, RunManager mgr) =>
     {
         if (create.Run is not null && !CanAccessRun(create.Run, ownerClientId))
             return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: create.Run.RunId);
-        return ApiError(409, "RUN-ACTIVE-CONFLICT", create.Error ?? "Another run is already active.", runId: create.Run?.RunId, meta: CreateMeta(("activeRun", create.Run)));
+        return ApiError(409, "RUN-ACTIVE-CONFLICT", create.Error ?? "Another run is already active.", runId: create.Run?.RunId, meta: CreateMeta(("activeRun", create.Run is null ? null : create.Run.ToDto())));
     }
 
     if (create.Disposition == RunCreateDisposition.IdempotencyConflict)
     {
         if (create.Run is not null && !CanAccessRun(create.Run, ownerClientId))
             return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: create.Run.RunId);
-        return ApiError(409, "RUN-IDEMPOTENCY-CONFLICT", create.Error ?? "Idempotency key reuse with different payload is not allowed.", runId: create.Run?.RunId, meta: CreateMeta(("run", create.Run)));
+        return ApiError(409, "RUN-IDEMPOTENCY-CONFLICT", create.Error ?? "Idempotency key reuse with different payload is not allowed.", runId: create.Run?.RunId, meta: CreateMeta(("run", create.Run is null ? null : create.Run.ToDto())));
     }
 
     var run = create.Run!;
@@ -389,7 +390,7 @@ app.MapPost("/runs", async (HttpContext ctx, RunManager mgr) =>
         {
             return Results.Accepted($"/runs/{run.RunId}", new
             {
-                run = current,
+                run = current is null ? null : current.ToDto(),
                 reused = create.Disposition == RunCreateDisposition.Reused,
                 waitTimedOut = true
             });
@@ -399,16 +400,16 @@ app.MapPost("/runs", async (HttpContext ctx, RunManager mgr) =>
 
         return Results.Ok(new
         {
-            run = current,
+            run = current is null ? null : current.ToDto(),
             result = current?.Result,
             reused = create.Disposition == RunCreateDisposition.Reused
         });
     }
 
     if (create.Disposition == RunCreateDisposition.Reused && run.Status != "running")
-        return Results.Ok(new { run, result = run.Result, reused = true });
+        return Results.Ok(new { run = run.ToDto(), result = run.Result, reused = true });
 
-    return Results.Accepted($"/runs/{run.RunId}", new { run, reused = create.Disposition == RunCreateDisposition.Reused });
+    return Results.Accepted($"/runs/{run.RunId}", new { run = run.ToDto(), reused = create.Disposition == RunCreateDisposition.Reused });
 });
 
 app.MapGet("/runs/{runId}", (string runId, HttpContext ctx, RunManager mgr) =>
@@ -422,7 +423,7 @@ app.MapGet("/runs/{runId}", (string runId, HttpContext ctx, RunManager mgr) =>
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
         return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
-    return Results.Ok(new { run });
+    return Results.Ok(new { run = run.ToDto() });
 });
 
 app.MapGet("/runs/{runId}/result", (string runId, HttpContext ctx, RunManager mgr) =>
@@ -436,7 +437,7 @@ app.MapGet("/runs/{runId}/result", (string runId, HttpContext ctx, RunManager mg
         return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
     if (run.Status == "running")
         return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
-    return Results.Ok(new { run, result = run.Result });
+    return Results.Ok(new { run = run.ToDto(), result = run.Result });
 });
 
 app.MapPost("/runs/{runId}/cancel", (string runId, HttpContext ctx, RunManager mgr) =>
@@ -455,10 +456,43 @@ app.MapPost("/runs/{runId}/cancel", (string runId, HttpContext ctx, RunManager m
     var updated = mgr.Get(runId);
     return Results.Ok(new
     {
-        run = updated,
+        run = updated is null ? null : updated.ToDto(),
         cancelAccepted = cancel.Disposition == RunCancelDisposition.Accepted,
         idempotent = cancel.Disposition != RunCancelDisposition.Accepted,
         cancelledAtUtc = updated?.CancelledAtUtc?.ToString("o")
+    });
+});
+
+app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, RunManager mgr) =>
+{
+    if (!Guid.TryParse(runId, out _))
+        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+
+    var run = mgr.Get(runId);
+    if (run is null)
+        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+
+    if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
+        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+
+    if (run.Status == "running")
+        return ApiError(409, "RUN-IN-PROGRESS", "Rollback is only available for completed runs.", runId: runId);
+
+    if (string.IsNullOrWhiteSpace(run.AuditPath) || !File.Exists(run.AuditPath))
+        return ApiError(409, "RUN-ROLLBACK-NOT-AVAILABLE", "No audit artifact available for rollback.", runId: runId);
+
+    var restoreRoots = run.Roots ?? Array.Empty<string>();
+    var currentRoots = string.IsNullOrWhiteSpace(run.TrashRoot)
+        ? restoreRoots
+        : restoreRoots.Append(run.TrashRoot).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+    var signing = new AuditSigningService(new FileSystemAdapter(), keyFilePath: AuditSecurityPaths.GetDefaultSigningKeyPath());
+    var rollback = signing.Rollback(run.AuditPath, restoreRoots, currentRoots, dryRun: false);
+
+    return Results.Ok(new
+    {
+        run = run.ToDto(),
+        rollback
     });
 });
 
@@ -491,7 +525,7 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunMana
 
     var timeout = TimeSpan.FromSeconds(sseTimeoutSeconds);
     var start = DateTime.UtcNow;
-    string? lastJson = null;
+    string? lastStateJson = null;
     var lastHeartbeat = DateTime.UtcNow;
 
     try
@@ -508,11 +542,21 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunMana
                 break;
             }
 
-            var json = JsonSerializer.Serialize(current);
-
-            if (!string.Equals(json, lastJson, StringComparison.Ordinal))
+            var stateSnapshot = new
             {
-                lastJson = json;
+                current.Status,
+                current.ProgressPercent,
+                current.ProgressMessage,
+                current.CancellationRequested,
+                current.CancelledAtUtc,
+                current.CompletedUtc,
+                current.RecoveryState
+            };
+            var stateJson = JsonSerializer.Serialize(stateSnapshot);
+
+            if (!string.Equals(stateJson, lastStateJson, StringComparison.Ordinal))
+            {
+                lastStateJson = stateJson;
                 lastHeartbeat = DateTime.UtcNow;
                 if (current.Status != "running")
                 {
@@ -523,10 +567,10 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunMana
                         "completed_with_errors" => "completed_with_errors",
                         _ => "completed"
                     };
-                    await WriteSseEvent(writer, encoding, terminalEvent, new { run = current, result = current.Result });
+                    await WriteSseEvent(writer, encoding, terminalEvent, new { run = current.ToDto(), result = current.Result });
                     break;
                 }
-                await WriteSseEvent(writer, encoding, "status", current);
+                await WriteSseEvent(writer, encoding, "status", current.ToDto());
             }
             else if ((DateTime.UtcNow - lastHeartbeat).TotalSeconds >= sseHeartbeatSeconds)
             {

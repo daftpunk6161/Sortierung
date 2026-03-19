@@ -153,6 +153,11 @@ public sealed class FileSystemAdapter : IFileSystem
         if (string.IsNullOrWhiteSpace(destinationPath))
             throw new ArgumentException("Destination path must not be empty.", nameof(destinationPath));
 
+        // SEC-MOVE-01: Block directory traversal in destination path
+        var destSegments = destinationPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (destSegments.Any(s => s == ".."))
+            throw new InvalidOperationException("Blocked: Destination path contains directory traversal.");
+
         var fullSource = NormalizePathNfc(sourcePath);
         var fullDest = NormalizePathNfc(destinationPath);
 
@@ -183,6 +188,23 @@ public sealed class FileSystemAdapter : IFileSystem
             Directory.CreateDirectory(destDir);
         }
 
+        // SEC-IO-01: Catch locked-file/IO errors gracefully → return null
+        try
+        {
+            return MoveItemSafelyCore(fullSource, fullDest);
+        }
+        catch (IOException) when (File.Exists(fullSource))
+        {
+            // Source still in place (locked/inaccessible) — graceful null return
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Core move logic with collision handling. Separated for IOException catch scope.
+    /// </summary>
+    private static string MoveItemSafelyCore(string fullSource, string fullDest)
+    {
         // Collision handling with __DUP suffix (V2-H07: try/catch eliminates TOCTOU)
         var finalDest = fullDest;
         if (File.Exists(finalDest))
@@ -316,6 +338,18 @@ public sealed class FileSystemAdapter : IFileSystem
         if (string.IsNullOrWhiteSpace(rootPath))
             return null;
 
+        // SEC-PATH-01: Block NTFS Alternate Data Streams (colon in filename portion)
+        if (relativePath.Contains(':'))
+            return null;
+
+        // SEC-PATH-02: Block segments with trailing dots/spaces (Windows silently strips them → path bypass)
+        var segments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        foreach (var seg in segments)
+        {
+            if (seg.Length > 0 && (seg[^1] == '.' || seg[^1] == ' '))
+                return null;
+        }
+
         try
         {
             var candidate = Path.IsPathRooted(relativePath)
@@ -400,6 +434,10 @@ public sealed class FileSystemAdapter : IFileSystem
         var attrs = File.GetAttributes(fullPath);
         if ((attrs & FileAttributes.ReparsePoint) != 0)
             throw new InvalidOperationException("Blocked: Target is a reparse point.");
+
+        // SEC-IO-02: Clear ReadOnly attribute before delete to handle protected files robustly
+        if ((attrs & FileAttributes.ReadOnly) != 0)
+            File.SetAttributes(fullPath, attrs & ~FileAttributes.ReadOnly);
 
         File.Delete(fullPath);
     }

@@ -126,21 +126,31 @@ public sealed class DatSourceService : IDisposable
 
             // Extract ZIP — use safe extraction with Zip-Slip protection
             Directory.CreateDirectory(tempExtract);
+            var normalizedExtractRoot = Path.GetFullPath(tempExtract).TrimEnd(Path.DirectorySeparatorChar)
+                                      + Path.DirectorySeparatorChar;
             using (var archive = ZipFile.OpenRead(tempZip))
             {
                 foreach (var entry in archive.Entries)
                 {
                     if (string.IsNullOrEmpty(entry.Name)) continue; // Skip directories
-                    var destPath = Path.GetFullPath(Path.Combine(tempExtract, entry.Name));
-                    if (!destPath.StartsWith(Path.GetFullPath(tempExtract), StringComparison.OrdinalIgnoreCase))
-                        continue; // Zip-Slip protection
-                    entry.ExtractToFile(destPath, overwrite: true);
+
+                    // Preserve archive structure and fail closed on Zip-Slip attempts.
+                    var destPath = Path.GetFullPath(Path.Combine(tempExtract, entry.FullName));
+                    if (!destPath.StartsWith(normalizedExtractRoot, StringComparison.OrdinalIgnoreCase))
+                        return null;
+
+                    var parentDir = Path.GetDirectoryName(destPath);
+                    if (!string.IsNullOrEmpty(parentDir))
+                        Directory.CreateDirectory(parentDir);
+
+                    // Do not overwrite extracted files to avoid ambiguous archive collisions.
+                    entry.ExtractToFile(destPath, overwrite: false);
                 }
             }
 
             // Find first .dat or .xml file in extracted contents
-            var datFile = Directory.GetFiles(tempExtract, "*.dat", SearchOption.TopDirectoryOnly).FirstOrDefault()
-                       ?? Directory.GetFiles(tempExtract, "*.xml", SearchOption.TopDirectoryOnly).FirstOrDefault();
+            var datFile = Directory.GetFiles(tempExtract, "*.dat", SearchOption.AllDirectories).FirstOrDefault()
+                       ?? Directory.GetFiles(tempExtract, "*.xml", SearchOption.AllDirectories).FirstOrDefault();
             if (datFile is null)
                 return null;
 
@@ -149,7 +159,7 @@ public sealed class DatSourceService : IDisposable
                 && !finalPath.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
                 finalPath = Path.ChangeExtension(finalPath, ".dat");
 
-            File.Copy(datFile, finalPath, overwrite: true);
+            ReplaceWithBackup(datFile, finalPath);
             return finalPath;
         }
         catch (HttpRequestException) { return null; }
@@ -340,7 +350,7 @@ public sealed class DatSourceService : IDisposable
                 && !targetPath.Equals(datRoot, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            File.Copy(match, targetPath, overwrite: true);
+            ReplaceWithBackup(match, targetPath);
             imported++;
         }
 
@@ -378,6 +388,41 @@ public sealed class DatSourceService : IDisposable
         using var stream = File.OpenRead(path);
         var hashBytes = sha256.ComputeHash(stream);
         return Convert.ToHexString(hashBytes).ToLowerInvariant();
+    }
+
+    private static void ReplaceWithBackup(string sourcePath, string destinationPath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+            throw new ArgumentException("Source path must not be empty.", nameof(sourcePath));
+        if (string.IsNullOrWhiteSpace(destinationPath))
+            throw new ArgumentException("Destination path must not be empty.", nameof(destinationPath));
+
+        var backupPath = destinationPath + ".bak";
+        var hadExistingTarget = File.Exists(destinationPath);
+
+        if (hadExistingTarget)
+        {
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
+
+            File.Move(destinationPath, backupPath, overwrite: true);
+        }
+
+        try
+        {
+            File.Copy(sourcePath, destinationPath, overwrite: false);
+        }
+        catch
+        {
+            // Restore previous file if replacement fails mid-flight.
+            if (hadExistingTarget && File.Exists(backupPath) && !File.Exists(destinationPath))
+            {
+                try { File.Move(backupPath, destinationPath, overwrite: true); }
+                catch { /* best-effort restore */ }
+            }
+
+            throw;
+        }
     }
 
     public void Dispose()

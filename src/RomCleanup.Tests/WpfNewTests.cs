@@ -514,6 +514,31 @@ public sealed class WpfNewTests : IDisposable
         Assert.Equal(string.Empty, vm.LastReportPath);
     }
 
+    [Fact]
+    public void OpenReportCommand_UnsafeExtension_IsBlockedAndLogged()
+    {
+        var vm = new MainViewModel();
+        var tempPath = Path.Combine(Path.GetTempPath(), $"unsafe_report_{Guid.NewGuid():N}.bat");
+        File.WriteAllText(tempPath, "@echo off");
+
+        try
+        {
+            vm.LastReportPath = tempPath;
+
+            Assert.True(vm.OpenReportCommand.CanExecute(null));
+            vm.OpenReportCommand.Execute(null);
+
+            Assert.Contains(vm.LogEntries, entry =>
+                entry.Text.Contains("blockiert", StringComparison.OrdinalIgnoreCase)
+                && entry.Level == "WARN");
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+    }
+
     // ═══ MainViewModel — CTS Cancellation ═══════════════════════════════
 
     [Fact]

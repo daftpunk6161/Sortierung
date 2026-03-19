@@ -26,6 +26,14 @@ public static class OpenApiSpec
     "/runs": {
       "post": {
         "summary": "Create and execute a deduplication run",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RunRequest" }
+            }
+          }
+        },
         "parameters": [
           { "name": "wait", "in": "query", "schema": { "type": "boolean" }, "description": "Wait for completion without cancelling the server-side run on client disconnect" },
           { "name": "waitTimeoutMs", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 1800000 }, "description": "Maximum wait time before returning 202 with the current run state" },
@@ -94,16 +102,111 @@ public static class OpenApiSpec
           "module": { "type": "string", "nullable": true }
         }
       },
+      "RunRequest": {
+        "type": "object",
+        "properties": {
+          "roots": { "type": "array", "items": { "type": "string" } },
+          "mode": { "type": "string", "enum": ["DryRun", "Move"] },
+          "preferRegions": { "type": "array", "items": { "type": "string" } },
+          "removeJunk": { "type": "boolean" },
+          "aggressiveJunk": { "type": "boolean" },
+          "sortConsole": { "type": "boolean" },
+          "enableDat": { "type": "boolean" },
+          "datRoot": { "type": "string", "nullable": true },
+          "onlyGames": { "type": "boolean" },
+          "keepUnknownWhenOnlyGames": { "type": "boolean" },
+          "hashType": { "type": "string", "enum": ["SHA1", "SHA256", "MD5"] },
+          "convertFormat": { "type": "string", "enum": ["auto", "chd", "rvz", "zip", "7z"] },
+          "convertOnly": { "type": "boolean" },
+          "conflictPolicy": { "type": "string", "enum": ["Rename", "Skip", "Overwrite"] },
+          "trashRoot": { "type": "string", "nullable": true },
+          "extensions": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["roots"]
+      },
       "ApiRunResult": {
         "type": "object",
         "properties": {
+          "orchestratorStatus": { "type": "string" },
+          "exitCode": { "type": "integer" },
+          "totalFiles": { "type": "integer" },
+          "candidates": { "type": "integer" },
+          "groups": { "type": "integer" },
+          "winners": { "type": "integer" },
+          "losers": { "type": "integer" },
+          "games": { "type": "integer" },
+          "unknown": { "type": "integer" },
+          "junk": { "type": "integer" },
+          "bios": { "type": "integer" },
+          "datMatches": { "type": "integer" },
+          "healthScore": { "type": "integer" },
+          "convertedCount": { "type": "integer" },
+          "convertErrorCount": { "type": "integer" },
+          "convertSkippedCount": { "type": "integer" },
+          "junkRemovedCount": { "type": "integer" },
+          "filteredNonGameCount": { "type": "integer" },
+          "junkFailCount": { "type": "integer" },
+          "moveCount": { "type": "integer" },
+          "skipCount": { "type": "integer" },
+          "consoleSortMoved": { "type": "integer" },
+          "consoleSortFailed": { "type": "integer" },
+          "failCount": { "type": "integer" },
+          "savedBytes": { "type": "integer", "format": "int64" },
+          "durationMs": { "type": "integer", "format": "int64" },
           "preflightWarnings": { "type": "array", "items": { "type": "string" } },
-          "phaseMetrics": { "type": "object" },
-          "dedupeGroups": { "type": "array", "items": { "type": "object" } },
-          "error": { "$ref": "#/components/schemas/OperationError" },
-          "conflictPolicy": { "type": "string", "enum": ["Rename", "Skip", "Overwrite"] },
-          "convertOnly": { "type": "boolean" },
-          "convertFormat": { "type": "string", "enum": ["auto", "chd", "rvz", "zip", "7z"] }
+          "phaseMetrics": { "$ref": "#/components/schemas/ApiPhaseMetrics" },
+          "dedupeGroups": { "type": "array", "items": { "$ref": "#/components/schemas/ApiDedupeGroup" } },
+          "error": { "$ref": "#/components/schemas/OperationError" }
+        }
+      },
+      "ApiPhaseMetrics": {
+        "type": "object",
+        "properties": {
+          "runId": { "type": "string", "nullable": true },
+          "startedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "totalDurationMs": { "type": "integer", "format": "int64" },
+          "phases": { "type": "array", "items": { "$ref": "#/components/schemas/ApiPhaseMetric" } }
+        }
+      },
+      "ApiPhaseMetric": {
+        "type": "object",
+        "properties": {
+          "phase": { "type": "string" },
+          "startedAt": { "type": "string", "format": "date-time" },
+          "durationMs": { "type": "integer", "format": "int64" },
+          "itemCount": { "type": "integer" },
+          "itemsPerSec": { "type": "number", "format": "double" },
+          "percentOfTotal": { "type": "number", "format": "double" },
+          "status": { "type": "string" }
+        }
+      },
+      "ApiDedupeGroup": {
+        "type": "object",
+        "properties": {
+          "gameKey": { "type": "string" },
+          "winner": { "$ref": "#/components/schemas/RomCandidate" },
+          "losers": { "type": "array", "items": { "$ref": "#/components/schemas/RomCandidate" } }
+        }
+      },
+      "RomCandidate": {
+        "type": "object",
+        "properties": {
+          "mainPath": { "type": "string" },
+          "gameKey": { "type": "string" },
+          "region": { "type": "string" },
+          "regionScore": { "type": "integer" },
+          "formatScore": { "type": "integer" },
+          "versionScore": { "type": "integer", "format": "int64" },
+          "headerScore": { "type": "integer" },
+          "completenessScore": { "type": "integer" },
+          "sizeTieBreakScore": { "type": "integer", "format": "int64" },
+          "sizeBytes": { "type": "integer", "format": "int64" },
+          "extension": { "type": "string" },
+          "consoleKey": { "type": "string" },
+          "datMatch": { "type": "boolean" },
+          "category": { "type": "string" },
+          "classificationReasonCode": { "type": "string" },
+          "classificationConfidence": { "type": "integer" }
         }
       }
     },

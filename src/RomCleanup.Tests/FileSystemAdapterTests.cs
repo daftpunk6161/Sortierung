@@ -173,16 +173,17 @@ public class FileSystemAdapterTests : IDisposable
     }
 
     [Fact]
-    public void MoveItemSafely_LockedFile_ThrowsIOException()
+    public void MoveItemSafely_LockedFile_ReturnsNull()
     {
-        // Issue #23: Verify locked files produce a meaningful IOException, not silent failure
+        // SEC-IO-01: Locked files should return null gracefully instead of throwing
         var src = Path.Combine(_tempDir, "locked.rom");
         var dst = Path.Combine(_tempDir, "dest.rom");
         File.WriteAllText(src, "data");
 
         // Lock the source file by holding it open with FileShare.None
         using var lockHandle = new FileStream(src, FileMode.Open, FileAccess.Read, FileShare.None);
-        Assert.Throws<IOException>(() => _fs.MoveItemSafely(src, dst));
+        var result = _fs.MoveItemSafely(src, dst);
+        Assert.Null(result);
     }
 
     // --- ResolveChildPathWithinRoot ---

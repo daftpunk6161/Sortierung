@@ -1,3 +1,4 @@
+using RomCleanup.Contracts.Models;
 using RomCleanup.Core.SetParsing;
 
 namespace RomCleanup.Infrastructure.Orchestration;

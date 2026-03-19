@@ -261,13 +261,15 @@ public class RunManagerTests
 
         try
         {
-            var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (_, _, _, _) =>
-                new RunExecutionOutcome("cancelled", new ApiRunResult
+            var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (run, _, _, _) =>
+            {
+                run.AuditPath = auditPath;
+                return new RunExecutionOutcome("cancelled", new ApiRunResult
                 {
                     OrchestratorStatus = "cancelled",
-                    ExitCode = 2,
-                    AuditPath = auditPath
-                }));
+                    ExitCode = 2
+                });
+            });
 
             var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "Move", "idem-004").Run!;
             await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(1));
@@ -292,13 +294,15 @@ public class RunManagerTests
 
         try
         {
-            var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (_, _, _, _) =>
-                new RunExecutionOutcome("failed", new ApiRunResult
+            var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (run, _, _, _) =>
+            {
+                run.AuditPath = auditPath;
+                return new RunExecutionOutcome("failed", new ApiRunResult
                 {
                     OrchestratorStatus = "failed",
-                    ExitCode = 1,
-                    AuditPath = auditPath
-                }));
+                    ExitCode = 1
+                });
+            });
 
             var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "Move", "idem-005").Run!;
             await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(1));

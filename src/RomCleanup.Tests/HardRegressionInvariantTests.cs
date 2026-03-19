@@ -238,9 +238,9 @@ public sealed class HardRegressionInvariantTests : IDisposable
         // Cross-Parity
         Assert.Equal(directResult.TotalFilesScanned, api.TotalFiles);
         Assert.Equal(directResult.GroupCount, api.Groups);
-        Assert.Equal(directResult.WinnerCount, api.Keep);
+        Assert.Equal(directResult.WinnerCount, api.Winners);
         // Dupes (API) = LoserCount (Orchestrator) — nach Reconciliation
-        Assert.Equal(directResult.LoserCount, api.Dupes);
+        Assert.Equal(directResult.LoserCount, api.Losers);
     }
 
     // ═══════════════════════════════════════════════════════════════════

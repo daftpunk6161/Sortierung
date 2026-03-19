@@ -601,6 +601,8 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
 
         var auditPath = Path.Combine(_tempDir, "audit", "rollback.csv");
         audit.AppendAuditRow(auditPath, root, original, trash, "Move", "GAME", "", "test");
+        // SEC-ROLLBACK-03: Execute-mode rollback requires sidecar
+        audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object> { ["Mode"] = "Move" });
 
         var restored = audit.Rollback(auditPath, new[] { root }, new[] { root }, dryRun: false);
 
@@ -621,6 +623,8 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
         var audit = new AuditCsvStore(fs);
         var auditPath = Path.Combine(_tempDir, "audit", "rollback_partial.csv");
         audit.AppendAuditRow(auditPath, root, oldPath, newPath, "Move", "GAME", "", "test");
+        // SEC-ROLLBACK-03: Execute-mode rollback requires sidecar
+        audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object> { ["Mode"] = "Move" });
 
         var restored = audit.Rollback(auditPath, new[] { root }, new[] { root }, dryRun: false);
 
@@ -822,8 +826,8 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
 
         Assert.Equal(guiProjection.Status, api.OrchestratorStatus);
         Assert.Equal(guiProjection.Groups, api.Groups);
-        Assert.Equal(guiProjection.Keep, api.Keep);
-        Assert.Equal(guiProjection.Dupes, api.Dupes);
+        Assert.Equal(guiProjection.Keep, api.Winners);
+        Assert.Equal(guiProjection.Dupes, api.Losers);
     }
 
     // Helpers

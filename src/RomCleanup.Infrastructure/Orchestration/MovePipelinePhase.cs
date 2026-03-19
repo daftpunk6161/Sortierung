@@ -78,7 +78,7 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                             "Move", loser.Category.ToString().ToUpperInvariant(), "", "region-dedupe");
                     }
 
-                    if (moveCount % 50 == 0 && !string.IsNullOrEmpty(input.Options.AuditPath))
+                    if (moveCount % 10 == 0 && !string.IsNullOrEmpty(input.Options.AuditPath))
                     {
                         context.AuditStore.Flush(input.Options.AuditPath);
                         context.AuditStore.WriteMetadataSidecar(input.Options.AuditPath, new Dictionary<string, object>

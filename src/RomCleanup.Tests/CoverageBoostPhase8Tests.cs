@@ -632,6 +632,8 @@ public sealed class AuditSigningPhase8Tests : IDisposable
         File.WriteAllText(csv, sb.ToString());
 
         var svc = new AuditSigningService(_fs);
+        // SEC-ROLLBACK-03: Execute-mode rollback requires sidecar
+        svc.WriteMetadataSidecar(csv, 1);
         var result = svc.Rollback(csv, [root], [root], dryRun: false);
         Assert.Equal(1, result.RolledBack);
         Assert.True(File.Exists(origFile));
@@ -656,6 +658,8 @@ public sealed class AuditSigningPhase8Tests : IDisposable
         File.WriteAllText(csv, sb.ToString());
 
         var svc = new AuditSigningService(_fs);
+        // SEC-ROLLBACK-03: Execute-mode rollback requires sidecar
+        svc.WriteMetadataSidecar(csv, 1);
         var result = svc.Rollback(csv, [root], [root], dryRun: false);
         Assert.Equal(1, result.SkippedCollision);
     }
@@ -678,6 +682,8 @@ public sealed class AuditSigningPhase8Tests : IDisposable
         File.WriteAllText(csv, sb.ToString());
 
         var svc = new AuditSigningService(_fs);
+        // SEC-ROLLBACK-03: Execute-mode rollback requires sidecar
+        svc.WriteMetadataSidecar(csv, 1);
         // allowedCurrentRoots does not include otherRoot
         var result = svc.Rollback(csv, [root], [root], dryRun: false);
         Assert.Equal(1, result.SkippedUnsafe);
@@ -717,6 +723,8 @@ public sealed class AuditSigningPhase8Tests : IDisposable
         File.WriteAllText(csv, sb.ToString());
 
         var svc = new AuditSigningService(_fs);
+        // SEC-ROLLBACK-03: Execute-mode rollback requires sidecar
+        svc.WriteMetadataSidecar(csv, 1);
         var result = svc.Rollback(csv, [root], [root], dryRun: false);
         Assert.Equal(1, result.RolledBack);
     }

@@ -228,6 +228,7 @@ public sealed class SafetyIoSecurityRedPhaseTests : IDisposable
 
         var fakeFs = new FakeRollbackFileSystem();
         var service = new AuditSigningService(fakeFs);
+        service.WriteMetadataSidecar(auditPath, 1);
 
         var result = service.Rollback(
             auditPath,

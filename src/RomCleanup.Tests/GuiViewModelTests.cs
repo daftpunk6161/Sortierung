@@ -1270,7 +1270,7 @@ public class GuiViewModelTests
             var orch = new RomCleanup.Infrastructure.Orchestration.RunOrchestrator(fs, audit);
 
             // Act: DryRun
-            var options = new RomCleanup.Infrastructure.Orchestration.RunOptions
+            var options = new RomCleanup.Contracts.Models.RunOptions
             {
                 Roots = new[] { tempDir },
                 Extensions = new[] { ".zip" },

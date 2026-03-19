@@ -141,11 +141,8 @@ public sealed class KpiChannelParityBacklogTests : IDisposable
         Assert.Equal(projection.TotalFiles, api.TotalFiles);
         Assert.Equal(projection.Candidates, api.Candidates);
         Assert.Equal(projection.Groups, api.Groups);
-        Assert.Equal(projection.Keep, api.Keep);
         Assert.Equal(projection.Keep, api.Winners);
-        Assert.Equal(projection.Dupes, api.Dupes);
         Assert.Equal(projection.Dupes, api.Losers);
-        Assert.Equal(projection.Dupes, api.Duplicates);
         Assert.Equal(projection.Games, api.Games);
         Assert.Equal(projection.Junk, api.Junk);
         Assert.Equal(projection.Bios, api.Bios);

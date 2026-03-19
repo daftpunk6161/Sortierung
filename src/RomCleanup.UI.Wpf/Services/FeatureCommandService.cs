@@ -21,6 +21,11 @@ namespace RomCleanup.UI.Wpf.Services;
 /// </summary>
 public sealed partial class FeatureCommandService
 {
+    private static readonly HashSet<string> SafeShellFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".html", ".htm", ".csv", ".json", ".xml", ".txt", ".log", ".lpl"
+    };
+
     private readonly MainViewModel _vm;
     private readonly ISettingsService _settings;
     private readonly IDialogService _dialog;
@@ -47,6 +52,88 @@ public sealed partial class FeatureCommandService
     {
         _vm.AddLog(message, "WARN");
         _vm.ErrorSummaryItems.Add(new UiError(code, message, UiErrorSeverity.Warning, fixHint));
+    }
+
+    private void TryOpenWithShell(string path, string purpose, bool allowDirectory = false)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        string fullPath;
+        try
+        {
+            fullPath = Path.GetFullPath(path);
+        }
+        catch
+        {
+            LogWarning("SEC-SHELL-OPEN", $"{purpose} blockiert: ungültiger Pfad.");
+            return;
+        }
+
+        if (allowDirectory && Directory.Exists(fullPath))
+        {
+            try
+            {
+                var dirInfo = new DirectoryInfo(fullPath);
+                if ((dirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    LogWarning("SEC-SHELL-OPEN", $"{purpose} blockiert: Reparse-Point-Verzeichnis nicht erlaubt.");
+                    return;
+                }
+            }
+            catch
+            {
+                LogWarning("SEC-SHELL-OPEN", $"{purpose} blockiert: Verzeichnisattribute konnten nicht geprüft werden.");
+                return;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo(fullPath) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                LogWarning("GUI-SHELL", $"{purpose} konnte nicht geöffnet werden: {ex.Message}");
+            }
+            return;
+        }
+
+        if (!File.Exists(fullPath))
+        {
+            LogWarning("SEC-SHELL-OPEN", $"{purpose} blockiert: Datei nicht gefunden.");
+            return;
+        }
+
+        try
+        {
+            var attrs = File.GetAttributes(fullPath);
+            if ((attrs & FileAttributes.ReparsePoint) != 0)
+            {
+                LogWarning("SEC-SHELL-OPEN", $"{purpose} blockiert: Reparse-Point-Datei nicht erlaubt.");
+                return;
+            }
+        }
+        catch
+        {
+            LogWarning("SEC-SHELL-OPEN", $"{purpose} blockiert: Dateiattribute konnten nicht geprüft werden.");
+            return;
+        }
+
+        var extension = Path.GetExtension(fullPath);
+        if (!SafeShellFileExtensions.Contains(extension))
+        {
+            LogWarning("SEC-SHELL-OPEN", $"{purpose} blockiert: Dateityp '{extension}' nicht erlaubt.");
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(fullPath) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            LogWarning("GUI-SHELL", $"{purpose} konnte nicht geöffnet werden: {ex.Message}");
+        }
     }
 
     public void RegisterCommands()
