@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="holo62" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="33%" stop-color="#8B5CF6"/>
+      <stop offset="66%" stop-color="#EC4899"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#F8F8F8"/>
+  <!-- Light theme! -->
+  <!-- Prism — dark stroke on light bg -->
+  <polygon points="128,30 62,148 194,148" fill="none" stroke="#18181B" stroke-width="2"/>
+  <!-- White beam -->
+  <line x1="0" y1="98" x2="76" y2="98" stroke="#18181B" stroke-width="1.5" opacity="0.2"/>
+  <!-- Rainbow rays -->
+  <line x1="182" y1="88" x2="255" y2="55" stroke="#EF4444" stroke-width="2" opacity="0.7"/>
+  <line x1="184" y1="98" x2="255" y2="72" stroke="#F97316" stroke-width="2" opacity="0.7"/>
+  <line x1="186" y1="108" x2="255" y2="90" stroke="#FBBF24" stroke-width="2" opacity="0.7"/>
+  <line x1="188" y1="118" x2="255" y2="108" stroke="#22C55E" stroke-width="2" opacity="0.7"/>
+  <line x1="189" y1="128" x2="255" y2="126" stroke="#3B82F6" stroke-width="2" opacity="0.7"/>
+  <line x1="190" y1="138" x2="254" y2="145" stroke="#8B5CF6" stroke-width="2" opacity="0.7"/>
+  <!-- Wolf — dark on light -->
+  <g transform="translate(128,94) scale(0.42)">
+    <polygon points="0,-68 -50,-12 -34,48 0,28 34,48 50,-12" fill="#18181B" opacity="0.85"/>
+    <polygon points="-38,-8 -58,-50 -18,-28" fill="#18181B" opacity="0.85"/>
+    <polygon points="38,-8 58,-50 18,-28" fill="#18181B" opacity="0.85"/>
+  </g>
+  <text x="128" y="186" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="28" font-weight="600" fill="#18181B" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="208" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="8" fill="#9CA3AF" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

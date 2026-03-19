@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="holo72" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="25%" stop-color="#06B6D4"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="75%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#001A12"/>
+  <!-- Deep ocean/teal palette -->
+  <!-- Prism -->
+  <polygon points="128,30 62,148 194,148" fill="none" stroke="url(#holo72)" stroke-width="2.5"/>
+  <!-- Beam — teal tint -->
+  <line x1="0" y1="98" x2="76" y2="98" stroke="#CCFBF1" stroke-width="2" opacity="0.25"/>
+  <!-- Cool-spectrum rays (aqua→blue→indigo) -->
+  <line x1="182" y1="82" x2="255" y2="48" stroke="#06B6D4" stroke-width="2.2" opacity="0.7"/>
+  <line x1="184" y1="92" x2="255" y2="65" stroke="#0EA5E9" stroke-width="2.2" opacity="0.7"/>
+  <line x1="186" y1="102" x2="255" y2="82" stroke="#3B82F6" stroke-width="2.2" opacity="0.7"/>
+  <line x1="188" y1="112" x2="255" y2="100" stroke="#6366F1" stroke-width="2.2" opacity="0.7"/>
+  <line x1="189" y1="122" x2="255" y2="118" stroke="#8B5CF6" stroke-width="2.2" opacity="0.7"/>
+  <line x1="190" y1="132" x2="255" y2="136" stroke="#34D399" stroke-width="2.2" opacity="0.7"/>
+  <line x1="191" y1="142" x2="254" y2="154" stroke="#10B981" stroke-width="2.2" opacity="0.7"/>
+  <!-- Wolf — mint/white -->
+  <g transform="translate(128,92) scale(0.43)">
+    <polygon points="0,-68 -50,-12 -34,48 0,28 34,48 50,-12" fill="#ECFDF5" opacity="0.9"/>
+    <polygon points="-38,-8 -58,-50 -18,-28" fill="#ECFDF5" opacity="0.9"/>
+    <polygon points="38,-8 58,-50 18,-28" fill="#ECFDF5" opacity="0.9"/>
+  </g>
+  <text x="128" y="186" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="28" font-weight="600" fill="url(#holo72)" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="208" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="8" fill="#34D399" letter-spacing="3" opacity="0.5">YOUR COLLECTION, PERFECTED.</text>
+</svg>

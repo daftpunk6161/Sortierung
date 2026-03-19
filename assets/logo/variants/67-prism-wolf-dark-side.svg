@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="holo67" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="25%" stop-color="#8B5CF6"/>
+      <stop offset="50%" stop-color="#EC4899"/>
+      <stop offset="75%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#0A0A0A"/>
+  <!-- Prism with thick glowing border -->
+  <polygon points="128,28 60,148 196,148" fill="none" stroke="url(#holo67)" stroke-width="4" stroke-linejoin="round"/>
+  <!-- Glass refraction fill — subtle -->
+  <polygon points="128,28 60,148 196,148" fill="url(#holo67)" opacity="0.04"/>
+  <!-- No beam — pure dark side of the moon style -->
+  <!-- Single concentrated white beam OUT splits into rainbow -->
+  <line x1="128" y1="148" x2="128" y2="175" stroke="white" stroke-width="2" opacity="0.3"/>
+  <!-- Rainbow rays fan downward from base -->
+  <line x1="128" y1="175" x2="48" y2="240" stroke="#EF4444" stroke-width="2.4" opacity="0.7"/>
+  <line x1="128" y1="175" x2="72" y2="245" stroke="#F97316" stroke-width="2.4" opacity="0.7"/>
+  <line x1="128" y1="175" x2="96" y2="248" stroke="#FBBF24" stroke-width="2.4" opacity="0.7"/>
+  <line x1="128" y1="175" x2="128" y2="250" stroke="#22C55E" stroke-width="2.4" opacity="0.7"/>
+  <line x1="128" y1="175" x2="160" y2="248" stroke="#3B82F6" stroke-width="2.4" opacity="0.7"/>
+  <line x1="128" y1="175" x2="184" y2="245" stroke="#8B5CF6" stroke-width="2.4" opacity="0.7"/>
+  <line x1="128" y1="175" x2="208" y2="240" stroke="#A855F7" stroke-width="2.4" opacity="0.7"/>
+  <!-- Wolf large, prominent, white -->
+  <g transform="translate(128,90) scale(0.45)">
+    <polygon points="0,-68 -50,-12 -34,48 0,28 34,48 50,-12" fill="white" opacity="0.92"/>
+    <polygon points="-38,-8 -58,-50 -18,-28" fill="white" opacity="0.92"/>
+    <polygon points="38,-8 58,-50 18,-28" fill="white" opacity="0.92"/>
+  </g>
+  <!-- Text above rainbow fan -->
+  <text x="128" y="170" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="26" font-weight="600" fill="url(#holo67)" letter-spacing="6">ROMULUS</text>
+</svg>

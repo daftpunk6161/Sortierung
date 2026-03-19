@@ -561,7 +561,10 @@ public sealed partial class MainViewModel
     {
         BusyHint = "";
         ConvertOnly = false; // Reset transient flag
-        LastReportPath = reportPath ?? string.Empty;
+        var resolvedReportPath = reportPath;
+        if (string.IsNullOrWhiteSpace(resolvedReportPath) || !File.Exists(resolvedReportPath))
+            resolvedReportPath = TryFindLatestReportPath();
+        LastReportPath = resolvedReportPath ?? string.Empty;
         CanRollback = !string.IsNullOrEmpty(LastAuditPath) && File.Exists(LastAuditPath);
         if (success && DryRun)
         {
@@ -600,6 +603,44 @@ public sealed partial class MainViewModel
         }
         RefreshStatus();
         OnMovePreviewGateChanged();
+    }
+
+    private static string? TryFindLatestReportPath()
+    {
+        var dirs = new[]
+        {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RomCleanupRegionDedupe", "reports"),
+            Path.Combine(Directory.GetCurrentDirectory(), "reports")
+        };
+
+        string? bestFile = null;
+        DateTime bestTime = DateTime.MinValue;
+
+        foreach (var dir in dirs)
+        {
+            if (!Directory.Exists(dir))
+                continue;
+
+            try
+            {
+                var files = Directory.GetFiles(dir, "*.html", SearchOption.TopDirectoryOnly);
+                foreach (var file in files)
+                {
+                    var mtime = File.GetLastWriteTimeUtc(file);
+                    if (mtime > bestTime)
+                    {
+                        bestTime = mtime;
+                        bestFile = file;
+                    }
+                }
+            }
+            catch
+            {
+                // best effort only
+            }
+        }
+
+        return bestFile;
     }
 
     /// <summary>Set up a new CancellationTokenSource for a run.</summary>

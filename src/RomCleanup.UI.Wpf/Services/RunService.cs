@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Paths;
@@ -104,13 +105,56 @@ public sealed class RunService : IRunService
         CancellationToken ct)
     {
         var result = orchestrator.Execute(options, ct);
+        var effectiveReportPath = ResolveReportPath(result.ReportPath, reportPath);
 
         return new RunServiceResult
         {
             Result = result,
             AuditPath = auditPath,
-            ReportPath = result.ReportPath
+            ReportPath = effectiveReportPath
         };
+    }
+
+    private static string? ResolveReportPath(string? actualReportPath, string? plannedReportPath)
+    {
+        if (!string.IsNullOrWhiteSpace(actualReportPath) && File.Exists(actualReportPath))
+            return Path.GetFullPath(actualReportPath);
+
+        if (!string.IsNullOrWhiteSpace(plannedReportPath) && File.Exists(plannedReportPath))
+            return Path.GetFullPath(plannedReportPath);
+
+        var candidateDirs = new List<string>();
+        if (!string.IsNullOrWhiteSpace(plannedReportPath))
+        {
+            var plannedDir = Path.GetDirectoryName(plannedReportPath);
+            if (!string.IsNullOrWhiteSpace(plannedDir) && Directory.Exists(plannedDir))
+                candidateDirs.Add(plannedDir);
+        }
+
+        var fallbackDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "RomCleanupRegionDedupe",
+            "reports");
+        if (Directory.Exists(fallbackDir))
+            candidateDirs.Add(fallbackDir);
+
+        foreach (var dir in candidateDirs.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var latest = Directory.GetFiles(dir, "*.html", SearchOption.TopDirectoryOnly)
+                    .OrderByDescending(File.GetLastWriteTimeUtc)
+                    .FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(latest) && File.Exists(latest))
+                    return Path.GetFullPath(latest);
+            }
+            catch
+            {
+                // best-effort lookup only
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

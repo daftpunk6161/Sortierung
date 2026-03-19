@@ -118,8 +118,9 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                     }
                     else
                     {
+                            var hashHint = hash.Length >= 12 ? hash[..12] : hash;
                         context.OnProgress?.Invoke(
-                            $"[DAT] Kein Match fuer UNKNOWN-Konsole: {Path.GetFileName(filePath)}");
+                                $"[DAT] Kein Match fuer UNKNOWN-Konsole: {Path.GetFileName(filePath)} (hash={hashHint})");
                     }
                 }
                 else

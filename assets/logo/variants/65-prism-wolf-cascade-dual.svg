@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="holo65a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="50%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+    <linearGradient id="holo65b" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="50%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#0C0816"/>
+  <!-- Two prisms side by side — cascade refraction -->
+  <polygon points="88,35 40,128 136,128" fill="none" stroke="url(#holo65a)" stroke-width="2"/>
+  <polygon points="168,35 120,128 216,128" fill="none" stroke="url(#holo65b)" stroke-width="2"/>
+  <!-- Beam enters left prism -->
+  <line x1="0" y1="88" x2="50" y2="88" stroke="white" stroke-width="2" opacity="0.3"/>
+  <!-- Partial spectrum between prisms -->
+  <line x1="125" y1="80" x2="138" y2="80" stroke="#EF4444" stroke-width="1.2" opacity="0.5"/>
+  <line x1="126" y1="88" x2="137" y2="88" stroke="#FBBF24" stroke-width="1.2" opacity="0.5"/>
+  <line x1="127" y1="96" x2="136" y2="96" stroke="#3B82F6" stroke-width="1.2" opacity="0.5"/>
+  <!-- Full rainbow from right prism -->
+  <line x1="204" y1="72" x2="255" y2="40" stroke="#EF4444" stroke-width="2" opacity="0.65"/>
+  <line x1="206" y1="82" x2="255" y2="58" stroke="#F97316" stroke-width="2" opacity="0.65"/>
+  <line x1="208" y1="92" x2="255" y2="76" stroke="#FBBF24" stroke-width="2" opacity="0.65"/>
+  <line x1="210" y1="102" x2="255" y2="94" stroke="#22C55E" stroke-width="2" opacity="0.65"/>
+  <line x1="211" y1="112" x2="255" y2="112" stroke="#3B82F6" stroke-width="2" opacity="0.65"/>
+  <line x1="212" y1="122" x2="254" y2="130" stroke="#8B5CF6" stroke-width="2" opacity="0.65"/>
+  <!-- Large wolf spanning both prisms -->
+  <g transform="translate(128,82) scale(0.42)">
+    <polygon points="0,-68 -50,-12 -34,48 0,28 34,48 50,-12" fill="white" opacity="0.82"/>
+    <polygon points="-38,-8 -58,-50 -18,-28" fill="white" opacity="0.82"/>
+    <polygon points="38,-8 58,-50 18,-28" fill="white" opacity="0.82"/>
+  </g>
+  <text x="128" y="168" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="26" font-weight="600" fill="url(#holo65a)" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="188" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="8" fill="#6B7280" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

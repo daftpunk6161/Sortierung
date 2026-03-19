@@ -102,34 +102,35 @@ public sealed class FileHashService
             if (stream.Length < 0x54)
                 return false;
 
-            Span<byte> header = stackalloc byte[0x54];
+            Span<byte> header = stackalloc byte[0x80];
             var read = stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false);
-            if (read < header.Length)
+            if (read < 0x54)
                 return false;
 
             if (!header[..8].SequenceEqual("MComprHD"u8))
                 return false;
 
             var version = BinaryPrimitives.ReadUInt32BigEndian(header.Slice(12, 4));
-            if (version != 5)
-                return false;
-
-            var rawSha1 = header.Slice(0x40, 20);
-            var allZero = true;
-            for (var i = 0; i < rawSha1.Length; i++)
+            // v5: raw sha1 at 0x40.
+            if (version == 5)
             {
-                if (rawSha1[i] != 0)
-                {
-                    allZero = false;
-                    break;
-                }
+                if (TryReadSha1AtOffset(header, 0x40, out sha1))
+                    return true;
+                return false;
             }
 
-            if (allZero)
+            // v3/v4: many dumps store raw sha1 around 0x50 and parent sha1 at 0x64.
+            // We prefer 0x50 and fall back to 0x64 if needed.
+            if (version is 3 or 4)
+            {
+                if (TryReadSha1AtOffset(header, 0x50, out sha1))
+                    return true;
+                if (TryReadSha1AtOffset(header, 0x64, out sha1))
+                    return true;
                 return false;
+            }
 
-            sha1 = Convert.ToHexString(rawSha1).ToLowerInvariant();
-            return true;
+            return false;
         }
         catch (IOException)
         {
@@ -139,6 +140,25 @@ public sealed class FileHashService
         {
             return false;
         }
+    }
+
+    private static bool TryReadSha1AtOffset(ReadOnlySpan<byte> data, int offset, out string? sha1)
+    {
+        sha1 = null;
+        if (offset < 0 || data.Length < offset + 20)
+            return false;
+
+        var shaSpan = data.Slice(offset, 20);
+        for (var i = 0; i < shaSpan.Length; i++)
+        {
+            if (shaSpan[i] != 0)
+            {
+                sha1 = Convert.ToHexString(shaSpan).ToLowerInvariant();
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Normalize hash type aliases to canonical form for consistent cache keys.</summary>

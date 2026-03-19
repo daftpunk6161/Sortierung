@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="holo73" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="25%" stop-color="#8B5CF6"/>
+      <stop offset="50%" stop-color="#EC4899"/>
+      <stop offset="75%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <linearGradient id="wolfFade73" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="white" stop-opacity="1"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#111118"/>
+  <!-- Prism -->
+  <polygon points="128,30 62,148 194,148" fill="none" stroke="url(#holo73)" stroke-width="2.5"/>
+  <!-- Beam -->
+  <line x1="0" y1="98" x2="76" y2="98" stroke="white" stroke-width="2" opacity="0.3"/>
+  <!-- Rainbow rays -->
+  <line x1="182" y1="85" x2="255" y2="50" stroke="#EF4444" stroke-width="2" opacity="0.65"/>
+  <line x1="184" y1="95" x2="255" y2="68" stroke="#F97316" stroke-width="2" opacity="0.65"/>
+  <line x1="186" y1="105" x2="255" y2="86" stroke="#FBBF24" stroke-width="2" opacity="0.65"/>
+  <line x1="188" y1="115" x2="255" y2="104" stroke="#22C55E" stroke-width="2" opacity="0.65"/>
+  <line x1="189" y1="125" x2="255" y2="122" stroke="#3B82F6" stroke-width="2" opacity="0.65"/>
+  <line x1="190" y1="135" x2="254" y2="140" stroke="#8B5CF6" stroke-width="2" opacity="0.65"/>
+  <!-- Wolf fading from top (solid) to bottom (transparent) -->
+  <g transform="translate(128,92) scale(0.44)">
+    <polygon points="0,-68 -50,-12 -34,48 0,28 34,48 50,-12" fill="url(#wolfFade73)"/>
+    <polygon points="-38,-8 -58,-50 -18,-28" fill="url(#wolfFade73)"/>
+    <polygon points="38,-8 58,-50 18,-28" fill="url(#wolfFade73)"/>
+  </g>
+  <!-- Stars scattered around -->
+  <circle cx="30" cy="30" r="1" fill="white" opacity="0.4"/>
+  <circle cx="222" cy="22" r="1.2" fill="white" opacity="0.5"/>
+  <circle cx="42" cy="180" r="0.8" fill="white" opacity="0.35"/>
+  <circle cx="210" cy="195" r="1" fill="white" opacity="0.4"/>
+  <circle cx="18" cy="120" r="0.8" fill="white" opacity="0.3"/>
+  <circle cx="240" cy="178" r="1" fill="white" opacity="0.45"/>
+  <text x="128" y="186" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="28" font-weight="600" fill="url(#holo73)" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="208" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="8" fill="#6B7280" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Romulus Logo-Galerie — 50 Varianten</title>
+<title>Romulus Logo-Galerie — 80 Varianten</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0A0118; color: #E5E7EB; font-family: 'Segoe UI', sans-serif; padding: 2rem; }
@@ -36,8 +36,9 @@
 <p class="subtitle">Logo-Varianten Galerie — Klicke zum Auswählen, dann vergleichen</p>
 
 <div class="filters">
-  <button class="active" onclick="filterAll()">Alle (50)</button>
+  <button class="active" onclick="filterAll()">Alle (80)</button>
   <button onclick="filterTag('wolf')">Wolf</button>
+  <button onclick="filterTag('prism')">Prism</button>
   <button onclick="filterTag('pixel')">Pixel Art</button>
   <button onclick="filterTag('tier')">Andere Tiere</button>
   <button onclick="filterTag('retro')">Retro</button>
@@ -58,7 +59,7 @@
   <button onclick="clearSelection()">Auswahl leeren</button>
 </div>
 
-<footer>Romulus Rebranding — 50 Logo-Varianten zum Vergleichen und Auswählen</footer>
+<footer>Romulus Rebranding — 80 Logo-Varianten zum Vergleichen und Auswählen</footer>
 
 <script>
 const variants = [
@@ -111,7 +112,37 @@ const variants = [
   { num: "47", name: "Heraldic Crest Wolf", file: "47-heraldic-crest-wolf.svg", tags: ["wolf", "roman", "luxury"] },
   { num: "48", name: "Sci-Fi Helmet HUD", file: "48-scifi-helmet-hud.svg", tags: ["wolf", "neon", "objekt"] },
   { num: "49", name: "Gameboy DMG Wolf", file: "49-gameboy-dmg-wolf.svg", tags: ["pixel", "retro", "objekt"] },
-  { num: "50", name: "Synthwave Wolf Ultimate", file: "50-synthwave-wolf-ultimate.svg", tags: ["wolf", "neon", "retro"] }
+  { num: "50", name: "Synthwave Wolf Ultimate", file: "50-synthwave-wolf-ultimate.svg", tags: ["wolf", "neon", "retro"] },
+  { num: "51", name: "Prism Wolf Big", file: "51-prism-wolf-big.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "52", name: "Prism Wolf Gradient Fill", file: "52-prism-wolf-gradient-fill.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "53", name: "Prism Wolf Double Glow Eyes", file: "53-prism-wolf-double-glow-eyes.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "54", name: "Prism Wolf Warm Spectrum", file: "54-prism-wolf-warm-spectrum.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "55", name: "Prism Wolf Dual Rays", file: "55-prism-wolf-dual-rays.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "56", name: "Prism Wolf Outline Only", file: "56-prism-wolf-outline-only.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "57", name: "Prism Wolf Diamond", file: "57-prism-wolf-diamond.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "58", name: "Prism Wolf Shattered", file: "58-prism-wolf-shattered.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "59", name: "Prism Wolf Inverted", file: "59-prism-wolf-inverted.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "60", name: "Prism Wolf Hexagon", file: "60-prism-wolf-hexagon.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "61", name: "Prism Wolf Howling", file: "61-prism-wolf-howling.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "62", name: "Prism Wolf Light Theme", file: "62-prism-wolf-light-theme.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "63", name: "Prism Wolf Triple Nested", file: "63-prism-wolf-triple-nested.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "64", name: "Prism Wolf Half-Fill", file: "64-prism-wolf-half-fill.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "65", name: "Prism Wolf Cascade Dual", file: "65-prism-wolf-cascade-dual.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "66", name: "Prism Wolf IS Prism", file: "66-prism-wolf-IS-prism.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "67", name: "Prism Wolf Dark Side", file: "67-prism-wolf-dark-side.svg", tags: ["wolf", "prism"] },
+  { num: "68", name: "Prism Wolf Violet Dream", file: "68-prism-wolf-violet-dream.svg", tags: ["wolf", "prism", "luxury"] },
+  { num: "69", name: "Prism Wolf Pentagon", file: "69-prism-wolf-pentagon.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "70", name: "Prism Wolf Dashed", file: "70-prism-wolf-dashed.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "71", name: "Prism Wolf Curved Rays", file: "71-prism-wolf-curved-rays.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "72", name: "Prism Wolf Ocean Teal", file: "72-prism-wolf-ocean-teal.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "73", name: "Prism Wolf Fade Stars", file: "73-prism-wolf-fade-stars.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "74", name: "Prism Wolf Rotation Echo", file: "74-prism-wolf-rotation-echo.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "75", name: "Prism Wolf Fire Ember", file: "75-prism-wolf-fire-ember.svg", tags: ["wolf", "prism", "luxury"] },
+  { num: "76", name: "Prism Wolf Side Profile", file: "76-prism-wolf-side-profile.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "77", name: "Prism Wolf Bold Minimal", file: "77-prism-wolf-bold-minimal.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "78", name: "Prism Wolf Circle Frame", file: "78-prism-wolf-circle-frame.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "79", name: "Prism Wolf Ultra Dark", file: "79-prism-wolf-ultra-dark.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "80", name: "Prism Wolf Perfect Balance", file: "80-prism-wolf-perfect-balance.svg", tags: ["wolf", "prism", "neon"] }
 ];
 
 const selected = new Set();

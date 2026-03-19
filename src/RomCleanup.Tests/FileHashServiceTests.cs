@@ -69,6 +69,22 @@ public class FileHashServiceTests : IDisposable
     }
 
     [Fact]
+    public void GetHash_ChdV4Sha1_UsesLegacyEmbeddedSha1()
+    {
+        var chd = new byte[512];
+        "MComprHD"u8.CopyTo(chd);
+        BinaryPrimitives.WriteUInt32BigEndian(chd.AsSpan(12, 4), 4);
+
+        var expectedBytes = Enumerable.Range(20, 20).Select(i => (byte)i).ToArray();
+        expectedBytes.CopyTo(chd, 0x50);
+
+        var file = CreateTestFile("game-v4.chd", chd);
+        var hash = _svc.GetHash(file, "SHA1");
+
+        Assert.Equal(Convert.ToHexString(expectedBytes).ToLowerInvariant(), hash);
+    }
+
+    [Fact]
     public void GetHash_NonExistent_ReturnsNull()
     {
         Assert.Null(_svc.GetHash(Path.Combine(_tempDir, "nope.bin"), "SHA1"));
