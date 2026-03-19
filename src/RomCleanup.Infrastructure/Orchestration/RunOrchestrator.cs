@@ -27,6 +27,7 @@ public sealed class RunOrchestrator
     private readonly IFormatConverter? _converter;
     private readonly DatIndex? _datIndex;
     private readonly Action<string>? _onProgress;
+    private readonly IPhasePlanBuilder _phasePlanBuilder;
 
     public RunOrchestrator(
         IFileSystem fs,
@@ -35,7 +36,8 @@ public sealed class RunOrchestrator
         FileHashService? hashService = null,
         IFormatConverter? converter = null,
         DatIndex? datIndex = null,
-        Action<string>? onProgress = null)
+        Action<string>? onProgress = null,
+        IPhasePlanBuilder? phasePlanBuilder = null)
     {
         _fs = fs;
         _audit = audit;
@@ -44,6 +46,7 @@ public sealed class RunOrchestrator
         _converter = converter;
         _datIndex = datIndex;
         _onProgress = onProgress;
+        _phasePlanBuilder = phasePlanBuilder ?? new PhasePlanBuilder();
     }
 
     /// <summary>
@@ -104,6 +107,7 @@ public sealed class RunOrchestrator
     {
         var result = new RunResultBuilder();
         var sw = System.Diagnostics.Stopwatch.StartNew();
+        var pipelineState = new PipelineState();
 
         // V2-M09: Structured phase metrics collection
         var metrics = new PhaseMetricsCollector();
@@ -182,6 +186,8 @@ public sealed class RunOrchestrator
         if (candidates.Count > 100_000)
             _onProgress?.Invoke($"WARNING: {candidates.Count:N0} files scanned — high memory usage. Consider scanning fewer roots.");
 
+        pipelineState.SetScanOutput(candidates, processingCandidates);
+
         if (processingCandidates.Count == 0)
         {
             result.Status = RunOutcome.Ok.ToStatusString();
@@ -192,8 +198,13 @@ public sealed class RunOrchestrator
             result.PhaseMetrics = metrics.GetMetrics();
             if (!string.IsNullOrEmpty(options.ReportPath))
             {
-                _onProgress?.Invoke("[Report] Generiere HTML-Report…");
-                result.ReportPath = GenerateReport(result, options);
+                var reportStep = new ReportPhaseStep(() =>
+                {
+                    _onProgress?.Invoke("[Report] Generiere HTML-Report…");
+                    return GenerateReport(result, options);
+                });
+                var reportOutcome = reportStep.Execute(pipelineState, cancellationToken);
+                result.ReportPath = reportOutcome.TypedResult as string;
                 if (!string.IsNullOrEmpty(result.ReportPath))
                     _onProgress?.Invoke($"[Report] Report erstellt: {result.ReportPath}");
             }
@@ -201,7 +212,8 @@ public sealed class RunOrchestrator
         }
 
         // Integrate deferred services in a non-destructive analysis pass.
-        ExecuteDeferredServiceAnalysis(processingCandidates, options, cancellationToken);
+        new DeferredAnalysisPhaseStep((state, ct) => ExecuteDeferredServiceAnalysis(state, options, ct))
+            .Execute(pipelineState, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -215,7 +227,8 @@ public sealed class RunOrchestrator
             sw.Stop();
             result.DurationMs = sw.ElapsedMilliseconds;
             result.PhaseMetrics = metrics.GetMetrics();
-            result.ReportPath = GenerateReport(result, options);
+            result.ReportPath = new ReportPhaseStep(() => GenerateReport(result, options))
+                .Execute(pipelineState, cancellationToken).TypedResult as string;
             var convertOnlyHasErrors = result.ConvertErrorCount > 0;
             var convertOnlyOutcome = convertOnlyHasErrors ? RunOutcome.CompletedWithErrors : RunOutcome.Ok;
             result.Status = convertOnlyOutcome.ToStatusString();
@@ -223,32 +236,76 @@ public sealed class RunOrchestrator
             return result.Build();
         }
 
-        IReadOnlyList<DedupeResult> groups = Array.Empty<DedupeResult>();
-        var gameGroups = new List<DedupeResult>();
-        IReadOnlySet<string> junkRemovedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        var phasePlan = BuildStandardPhasePlan(
-            processingCandidates,
-            candidates,
-            options,
-            result,
-            metrics,
-            cancellationToken,
-            setDedupeOutput: output =>
+        var phasePlan = _phasePlanBuilder.BuildStandard(options, new StandardPhaseStepActions
+        {
+            Deduplicate = (state, ct) =>
             {
-                groups = output.Groups;
-                gameGroups = output.GameGroups;
+                var output = ExecuteDedupePhase(state.ProcessingCandidates!, state.AllCandidates!, options, result, metrics, ct);
+                state.SetDedupeOutput(output.Groups, output.GameGroups);
+                return PhaseStepResult.Ok(output.GameGroups.Count, output);
             },
-            setJunkPaths: removed => junkRemovedPaths = removed,
-            getAllGroups: () => groups,
-            getGameGroups: () => gameGroups,
-            getJunkPaths: () => junkRemovedPaths);
+            JunkRemoval = (state, ct) =>
+            {
+                var removed = ExecuteJunkPhaseIfEnabled(state.AllGroups ?? Array.Empty<DedupeResult>(), options, result, metrics, ct);
+                state.SetJunkPaths(removed);
+                return PhaseStepResult.Ok(removed.Count, removed);
+            },
+            Move = (state, ct) =>
+            {
+                metrics.StartPhase("Move");
+                var groups = state.GameGroups ?? Array.Empty<DedupeResult>();
+                var totalLosers = groups.Sum(g => g.Losers.Count);
+                _onProgress?.Invoke($"[Move] Verschiebe {totalLosers} Duplikate in Trash…");
+                var movePhase = new MovePipelinePhase();
+                var moveContext = new PipelineContext
+                {
+                    Options = options,
+                    FileSystem = _fs,
+                    AuditStore = _audit,
+                    Metrics = metrics,
+                    OnProgress = _onProgress
+                };
+                var moveResult = movePhase.Execute(new MovePhaseInput(groups, options), moveContext, ct);
+                _onProgress?.Invoke($"[Move] Abgeschlossen: {moveResult.MoveCount} verschoben, {moveResult.FailCount} Fehler");
+                result.MoveResult = moveResult;
+                metrics.CompletePhase(moveResult.MoveCount);
+                return PhaseStepResult.Ok(moveResult.MoveCount, moveResult);
+            },
+            ConsoleSort = (_, ct) =>
+            {
+                if (!options.SortConsole || options.Mode != "Move" || _consoleDetector is null)
+                    return PhaseStepResult.Skipped();
+
+                metrics.StartPhase("ConsoleSort");
+                _onProgress?.Invoke("[Sort] Sortiere Dateien nach Konsole…");
+                var sorter = new ConsoleSorter(_fs, _consoleDetector, _audit, options.AuditPath);
+                result.ConsoleSortResult = sorter.Sort(
+                    options.Roots, options.Extensions, dryRun: false, ct);
+                _onProgress?.Invoke("[Sort] Konsolen-Sortierung abgeschlossen");
+                metrics.CompletePhase();
+                return PhaseStepResult.Ok(result.ConsoleSortResult?.Moved ?? 0, result.ConsoleSortResult);
+            },
+            WinnerConversion = (state, ct) =>
+            {
+                if (options.ConvertFormat is null || options.Mode != "Move" || _converter is null)
+                    return PhaseStepResult.Skipped();
+
+                ExecuteWinnerConversionPhase(
+                    state.GameGroups ?? Array.Empty<DedupeResult>(),
+                    options,
+                    state.JunkRemovedPaths ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+                    result,
+                    metrics,
+                    ct);
+                return PhaseStepResult.Ok(result.ConvertedCount);
+            }
+        });
 
         foreach (var phase in phasePlan)
         {
             cancellationToken.ThrowIfCancellationRequested();
             _onProgress?.Invoke($"[Plan] Phase: {phase.Name}");
-            phase.Execute();
+            phase.Execute(pipelineState, cancellationToken);
         }
 
         sw.Stop();
@@ -265,38 +322,19 @@ public sealed class RunOrchestrator
         // FEAT-02: Generate report at end of pipeline
         if (!string.IsNullOrEmpty(options.ReportPath))
         {
-            _onProgress?.Invoke("[Report] Generiere HTML-Report…");
-            result.ReportPath = GenerateReport(result, options);
+            var reportStep = new ReportPhaseStep(() =>
+            {
+                _onProgress?.Invoke("[Report] Generiere HTML-Report…");
+                return GenerateReport(result, options);
+            });
+            result.ReportPath = reportStep.Execute(pipelineState, cancellationToken).TypedResult as string;
             if (!string.IsNullOrEmpty(result.ReportPath))
                 _onProgress?.Invoke($"[Report] Report erstellt: {result.ReportPath}");
         }
 
         // FEAT-03: Write final audit sidecar with HMAC signature after all phases.
-        _onProgress?.Invoke("[Audit] Schreibe Audit-Sidecar…");
-        if (!string.IsNullOrEmpty(options.AuditPath) && File.Exists(options.AuditPath))
-        {
-            var auditLines = File.ReadAllLines(options.AuditPath);
-            var rowCount = Math.Max(0, auditLines.Length - 1); // exclude header
-            _audit.WriteMetadataSidecar(options.AuditPath, new Dictionary<string, object>
-            {
-                ["RowCount"] = rowCount,
-                ["Mode"] = options.Mode,
-                ["Status"] = "completed",
-                ["TotalFilesScanned"] = result.TotalFilesScanned,
-                ["GroupCount"] = result.GroupCount,
-                ["WinnerCount"] = result.WinnerCount,
-                ["LoserCount"] = result.LoserCount,
-                ["MoveCount"] = result.MoveResult?.MoveCount ?? 0,
-                ["FailCount"] = result.MoveResult?.FailCount ?? 0,
-                ["SkipCount"] = result.MoveResult?.SkipCount ?? 0,
-                ["JunkRemovedCount"] = result.JunkRemovedCount,
-                ["ConvertedCount"] = result.ConvertedCount,
-                ["ConvertErrorCount"] = result.ConvertErrorCount,
-                ["ConsoleSortMoved"] = result.ConsoleSortResult?.Moved ?? 0,
-                ["ConsoleSortFailed"] = result.ConsoleSortResult?.Failed ?? 0,
-                ["DurationMs"] = sw.ElapsedMilliseconds
-            });
-        }
+        new AuditSealPhaseStep(() => WriteCompletedAuditSidecar(options, result, sw.ElapsedMilliseconds))
+            .Execute(pipelineState, cancellationToken);
 
         _onProgress?.Invoke($"[Fertig] Pipeline abgeschlossen in {sw.ElapsedMilliseconds}ms — {result.TotalFilesScanned} Dateien, {result.GroupCount} Gruppen");
         return result.Build();
@@ -310,120 +348,20 @@ public sealed class RunOrchestrator
             result.PhaseMetrics = metrics.GetMetrics();
 
             // Issue #19: Write partial audit sidecar so rollback is possible after cancel
-            if (!string.IsNullOrEmpty(options.AuditPath) && File.Exists(options.AuditPath))
-            {
-                var auditLines = File.ReadAllLines(options.AuditPath);
-                var rowCount = Math.Max(0, auditLines.Length - 1);
-                _audit.WriteMetadataSidecar(options.AuditPath, new Dictionary<string, object>
-                {
-                    ["RowCount"] = rowCount,
-                    ["Mode"] = options.Mode,
-                    ["Status"] = "partial",
-                    ["CancelledAtUtc"] = DateTime.UtcNow.ToString("o"),
-                    ["LastPhase"] = metrics.GetCurrentPhaseName() ?? "unknown",
-                    ["PhaseProgressPct"] = result.PhaseMetrics?.Phases.LastOrDefault()?.PercentOfTotal ?? 0,
-                    ["TotalFilesScanned"] = result.TotalFilesScanned,
-                    ["GroupCount"] = result.GroupCount,
-                    ["MoveCount"] = result.MoveResult?.MoveCount ?? 0,
-                    ["FailCount"] = result.MoveResult?.FailCount ?? 0,
-                    ["ConvertedCount"] = result.ConvertedCount,
-                    ["ConvertErrorCount"] = result.ConvertErrorCount,
-                    ["DurationMs"] = sw.ElapsedMilliseconds
-                });
-            }
+            WritePartialAuditSidecar(options, result, metrics, sw.ElapsedMilliseconds);
 
             return result.Build();
         }
     }
 
-    private IReadOnlyList<PlannedPhase> BuildStandardPhasePlan(
-        IReadOnlyList<RomCandidate> processingCandidates,
-        IReadOnlyList<RomCandidate> allCandidates,
-        RunOptions options,
-        RunResultBuilder result,
-        PhaseMetricsCollector metrics,
-        CancellationToken cancellationToken,
-        Action<(IReadOnlyList<DedupeResult> Groups, List<DedupeResult> GameGroups)> setDedupeOutput,
-        Action<IReadOnlySet<string>> setJunkPaths,
-        Func<IReadOnlyList<DedupeResult>> getAllGroups,
-        Func<List<DedupeResult>> getGameGroups,
-        Func<IReadOnlySet<string>> getJunkPaths)
-    {
-        var phases = new List<PlannedPhase>
-        {
-            new(
-                "Deduplicate",
-                () =>
-                {
-                    var output = ExecuteDedupePhase(processingCandidates, allCandidates, options, result, metrics, cancellationToken);
-                    setDedupeOutput(output);
-                }),
-            new(
-                "JunkRemoval",
-                () =>
-                {
-                    var output = ExecuteJunkPhaseIfEnabled(getAllGroups(), options, result, metrics, cancellationToken);
-                    setJunkPaths(output);
-                })
-        };
-
-        if (options.Mode == "Move")
-        {
-            phases.Add(new PlannedPhase(
-                "Move",
-                () =>
-                {
-                    metrics.StartPhase("Move");
-                    var totalLosers = getGameGroups().Sum(g => g.Losers.Count);
-                    _onProgress?.Invoke($"[Move] Verschiebe {totalLosers} Duplikate in Trash…");
-                    var movePhase = new MovePipelinePhase();
-                    var moveContext = new PipelineContext
-                    {
-                        Options = options,
-                        FileSystem = _fs,
-                        AuditStore = _audit,
-                        Metrics = metrics,
-                        OnProgress = _onProgress
-                    };
-                    var moveResult = movePhase.Execute(new MovePhaseInput(getGameGroups(), options), moveContext, cancellationToken);
-                    _onProgress?.Invoke($"[Move] Abgeschlossen: {moveResult.MoveCount} verschoben, {moveResult.FailCount} Fehler");
-                    result.MoveResult = moveResult;
-                    metrics.CompletePhase(moveResult.MoveCount);
-                }));
-        }
-
-        if (options.SortConsole && options.Mode == "Move" && _consoleDetector is not null)
-        {
-            phases.Add(new PlannedPhase(
-                "ConsoleSort",
-                () =>
-                {
-                    metrics.StartPhase("ConsoleSort");
-                    _onProgress?.Invoke("[Sort] Sortiere Dateien nach Konsole…");
-                    var sorter = new ConsoleSorter(_fs, _consoleDetector, _audit, options.AuditPath);
-                    result.ConsoleSortResult = sorter.Sort(
-                        options.Roots, options.Extensions, dryRun: false, cancellationToken);
-                    _onProgress?.Invoke("[Sort] Konsolen-Sortierung abgeschlossen");
-                    metrics.CompletePhase();
-                }));
-        }
-
-        if (options.ConvertFormat is not null && options.Mode == "Move" && _converter is not null)
-        {
-            phases.Add(new PlannedPhase(
-                "WinnerConversion",
-                () => ExecuteWinnerConversionPhase(getGameGroups(), options, getJunkPaths(), result, metrics, cancellationToken)));
-        }
-
-        return phases;
-    }
-
     private void ExecuteDeferredServiceAnalysis(
-        IReadOnlyList<RomCandidate> candidates,
+        PipelineState state,
         RunOptions options,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        var candidates = state.ProcessingCandidates ?? Array.Empty<RomCandidate>();
 
         try
         {
@@ -460,6 +398,64 @@ public sealed class RunOrchestrator
         {
             _onProgress?.Invoke($"[Hardlink] Analyse übersprungen: {ex.Message}");
         }
+    }
+
+    private void WriteCompletedAuditSidecar(RunOptions options, RunResultBuilder result, long elapsedMs)
+    {
+        _onProgress?.Invoke("[Audit] Schreibe Audit-Sidecar…");
+        if (string.IsNullOrEmpty(options.AuditPath) || !File.Exists(options.AuditPath))
+            return;
+
+        var auditLines = File.ReadAllLines(options.AuditPath);
+        var rowCount = Math.Max(0, auditLines.Length - 1);
+        _audit.WriteMetadataSidecar(options.AuditPath, new Dictionary<string, object>
+        {
+            ["RowCount"] = rowCount,
+            ["Mode"] = options.Mode,
+            ["Status"] = "completed",
+            ["TotalFilesScanned"] = result.TotalFilesScanned,
+            ["GroupCount"] = result.GroupCount,
+            ["WinnerCount"] = result.WinnerCount,
+            ["LoserCount"] = result.LoserCount,
+            ["MoveCount"] = result.MoveResult?.MoveCount ?? 0,
+            ["FailCount"] = result.MoveResult?.FailCount ?? 0,
+            ["SkipCount"] = result.MoveResult?.SkipCount ?? 0,
+            ["JunkRemovedCount"] = result.JunkRemovedCount,
+            ["ConvertedCount"] = result.ConvertedCount,
+            ["ConvertErrorCount"] = result.ConvertErrorCount,
+            ["ConsoleSortMoved"] = result.ConsoleSortResult?.Moved ?? 0,
+            ["ConsoleSortFailed"] = result.ConsoleSortResult?.Failed ?? 0,
+            ["DurationMs"] = elapsedMs
+        });
+    }
+
+    private void WritePartialAuditSidecar(
+        RunOptions options,
+        RunResultBuilder result,
+        PhaseMetricsCollector metrics,
+        long elapsedMs)
+    {
+        if (string.IsNullOrEmpty(options.AuditPath) || !File.Exists(options.AuditPath))
+            return;
+
+        var auditLines = File.ReadAllLines(options.AuditPath);
+        var rowCount = Math.Max(0, auditLines.Length - 1);
+        _audit.WriteMetadataSidecar(options.AuditPath, new Dictionary<string, object>
+        {
+            ["RowCount"] = rowCount,
+            ["Mode"] = options.Mode,
+            ["Status"] = "partial",
+            ["CancelledAtUtc"] = DateTime.UtcNow.ToString("o"),
+            ["LastPhase"] = metrics.GetCurrentPhaseName() ?? "unknown",
+            ["PhaseProgressPct"] = result.PhaseMetrics?.Phases.LastOrDefault()?.PercentOfTotal ?? 0,
+            ["TotalFilesScanned"] = result.TotalFilesScanned,
+            ["GroupCount"] = result.GroupCount,
+            ["MoveCount"] = result.MoveResult?.MoveCount ?? 0,
+            ["FailCount"] = result.MoveResult?.FailCount ?? 0,
+            ["ConvertedCount"] = result.ConvertedCount,
+            ["ConvertErrorCount"] = result.ConvertErrorCount,
+            ["DurationMs"] = elapsedMs
+        });
     }
 
     private void ExecuteFolderDedupePreview(
@@ -738,8 +734,6 @@ public sealed class RunOrchestrator
         }
     }
 }
-
-public sealed record PlannedPhase(string Name, Action Execute);
 
 /// <summary>Options for a run execution.</summary>
 /// <summary>

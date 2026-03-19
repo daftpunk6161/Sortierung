@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using RomCleanup.Api;
 using RomCleanup.Contracts.Errors;
+using RomCleanup.Infrastructure;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.FileSystem;
 
@@ -29,12 +30,7 @@ if (bindAddress != "127.0.0.1" && bindAddress != "localhost" && bindAddress != "
         "API key is transmitted in cleartext. Ensure firewall rules and TLS are configured.");
 }
 
-builder.Services.AddSingleton<RomCleanup.Contracts.Ports.IFileSystem, RomCleanup.Infrastructure.FileSystem.FileSystemAdapter>();
-builder.Services.AddSingleton<RomCleanup.Contracts.Ports.IAuditStore>(sp =>
-    new RomCleanup.Infrastructure.Audit.AuditCsvStore(
-        sp.GetRequiredService<RomCleanup.Contracts.Ports.IFileSystem>(),
-        Console.WriteLine,
-        RomCleanup.Infrastructure.Audit.AuditSecurityPaths.GetDefaultSigningKeyPath()));
+builder.Services.AddRomCleanupCore();
 builder.Services.AddSingleton<RunManager>();
 
 var app = builder.Build();

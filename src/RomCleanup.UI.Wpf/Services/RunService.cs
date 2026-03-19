@@ -18,10 +18,17 @@ namespace RomCleanup.UI.Wpf.Services;
 public sealed class RunService : IRunService
 {
     private readonly IAppState _appState;
+    private readonly IRunOptionsFactory _runOptionsFactory;
+    private readonly IRunEnvironmentFactory _runEnvironmentFactory;
 
-    public RunService(IAppState? appState = null)
+    public RunService(
+        IAppState? appState = null,
+        IRunOptionsFactory? runOptionsFactory = null,
+        IRunEnvironmentFactory? runEnvironmentFactory = null)
     {
         _appState = appState ?? new AppStateStore();
+        _runOptionsFactory = runOptionsFactory ?? new RunOptionsFactory();
+        _runEnvironmentFactory = runEnvironmentFactory ?? new RunEnvironmentFactory();
     }
 
     /// <summary>Result of a single pipeline run.</summary>
@@ -64,27 +71,8 @@ public sealed class RunService : IRunService
         }
 
         var selectedExts = vm.GetSelectedExtensions();
-        var runOptions = new RunOptions
-        {
-            Roots = vm.Roots.ToList(),
-            Mode = vm.DryRun ? "DryRun" : "Move",
-            PreferRegions = vm.GetPreferredRegions(),
-            Extensions = selectedExts.Length > 0 ? selectedExts : RunOptions.DefaultExtensions,
-            RemoveJunk = vm.RemoveJunk,
-            OnlyGames = vm.OnlyGames,
-            KeepUnknownWhenOnlyGames = vm.KeepUnknownWhenOnlyGames,
-            AggressiveJunk = vm.AggressiveJunk,
-            SortConsole = vm.SortConsole,
-            EnableDat = vm.UseDat,
-            DatRoot = string.IsNullOrWhiteSpace(vm.DatRoot) ? null : vm.DatRoot,
-            HashType = vm.DatHashType,
-            ConvertFormat = (vm.ConvertEnabled || vm.ConvertOnly) ? "auto" : null,
-            ConvertOnly = vm.ConvertOnly,
-            TrashRoot = string.IsNullOrWhiteSpace(vm.TrashRoot) ? null : vm.TrashRoot,
-            AuditPath = auditPath,
-            ReportPath = reportPath,
-            ConflictPolicy = vm.ConflictPolicy.ToString()
-        };
+        var source = new ViewModelRunOptionsSource(vm, selectedExts);
+        var runOptions = _runOptionsFactory.Create(source, auditPath, reportPath);
 
         onProgress?.Invoke($"[Init] Konfiguration: Modus={runOptions.Mode}, {runOptions.Extensions.Count} Extension(s), {runOptions.Roots.Count} Root(s)");
 
@@ -92,15 +80,10 @@ public sealed class RunService : IRunService
                       ?? RunEnvironmentBuilder.ResolveDataDir();
         onProgress?.Invoke($"[Init] Datenverzeichnis: {dataDir}");
 
-        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
-        settings.Dat.UseDat = vm.UseDat;
-        settings.Dat.DatRoot = vm.DatRoot ?? settings.Dat.DatRoot;
-        settings.Dat.HashType = vm.DatHashType;
-
-        var env = RunEnvironmentBuilder.Build(runOptions, settings, dataDir, onWarning: onProgress);
+        var env = _runEnvironmentFactory.Create(runOptions, onProgress);
 
         var orchestrator = new RunOrchestrator(
-            env.FileSystem, env.Audit, env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex, onProgress);
+            env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex, onProgress);
 
         _appState.SetValue("run.build.completedUtc", DateTime.UtcNow);
         _appState.SetValue("run.auditPath", auditPath);
@@ -190,6 +173,46 @@ public sealed class RunService : IRunService
     {
         var fullRoot = ArtifactPathResolver.NormalizeRoot(rootPath);
         return ArtifactPathResolver.GetSiblingDirectory(fullRoot, siblingName);
+    }
+
+    private sealed class ViewModelRunOptionsSource : IRunOptionsSource
+    {
+        public ViewModelRunOptionsSource(MainViewModel vm, IReadOnlyList<string> selectedExtensions)
+        {
+            Roots = vm.Roots.ToList();
+            Mode = vm.DryRun ? "DryRun" : "Move";
+            PreferRegions = vm.GetPreferredRegions();
+            Extensions = selectedExtensions.Count > 0 ? selectedExtensions : RunOptions.DefaultExtensions;
+            RemoveJunk = vm.RemoveJunk;
+            OnlyGames = vm.OnlyGames;
+            KeepUnknownWhenOnlyGames = vm.KeepUnknownWhenOnlyGames;
+            AggressiveJunk = vm.AggressiveJunk;
+            SortConsole = vm.SortConsole;
+            EnableDat = vm.UseDat;
+            DatRoot = string.IsNullOrWhiteSpace(vm.DatRoot) ? null : vm.DatRoot;
+            HashType = string.IsNullOrWhiteSpace(vm.DatHashType) ? "SHA1" : vm.DatHashType;
+            ConvertFormat = (vm.ConvertEnabled || vm.ConvertOnly) ? "auto" : null;
+            ConvertOnly = vm.ConvertOnly;
+            TrashRoot = string.IsNullOrWhiteSpace(vm.TrashRoot) ? null : vm.TrashRoot;
+            ConflictPolicy = vm.ConflictPolicy.ToString();
+        }
+
+        public IReadOnlyList<string> Roots { get; }
+        public string Mode { get; }
+        public string[] PreferRegions { get; }
+        public IReadOnlyList<string> Extensions { get; }
+        public bool RemoveJunk { get; }
+        public bool OnlyGames { get; }
+        public bool KeepUnknownWhenOnlyGames { get; }
+        public bool AggressiveJunk { get; }
+        public bool SortConsole { get; }
+        public bool EnableDat { get; }
+        public string? DatRoot { get; }
+        public string HashType { get; }
+        public string? ConvertFormat { get; }
+        public bool ConvertOnly { get; }
+        public string? TrashRoot { get; }
+        public string ConflictPolicy { get; }
     }
 
 }

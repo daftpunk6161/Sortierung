@@ -1,0 +1,167 @@
+using RomCleanup.Contracts.Models;
+
+namespace RomCleanup.Infrastructure.Orchestration;
+
+public interface IPhaseStep
+{
+    string Name { get; }
+    PhaseStepResult Execute(PipelineState state, CancellationToken cancellationToken);
+}
+
+public interface IPhasePlanBuilder
+{
+    IReadOnlyList<IPhaseStep> BuildStandard(RunOptions options, StandardPhaseStepActions actions);
+}
+
+public sealed class PhaseStepResult
+{
+    public required string Status { get; init; }
+    public required int ItemCount { get; init; }
+    public object? TypedResult { get; init; }
+    public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
+
+    public static PhaseStepResult Ok(int itemCount = 0, object? typedResult = null)
+        => new() { Status = "ok", ItemCount = itemCount, TypedResult = typedResult };
+
+    public static PhaseStepResult Skipped(object? typedResult = null)
+        => new() { Status = "skipped", ItemCount = 0, TypedResult = typedResult };
+}
+
+public sealed class PipelineState
+{
+    public IReadOnlyList<RomCandidate>? AllCandidates { get; private set; }
+    public IReadOnlyList<RomCandidate>? ProcessingCandidates { get; private set; }
+    public IReadOnlyList<DedupeResult>? AllGroups { get; private set; }
+    public IReadOnlyList<DedupeResult>? GameGroups { get; private set; }
+    public IReadOnlySet<string>? JunkRemovedPaths { get; private set; }
+
+    public void SetScanOutput(IReadOnlyList<RomCandidate> allCandidates, IReadOnlyList<RomCandidate> processingCandidates)
+    {
+        if (AllCandidates is not null || ProcessingCandidates is not null)
+            throw new InvalidOperationException("Scan output was already assigned.");
+
+        AllCandidates = allCandidates;
+        ProcessingCandidates = processingCandidates;
+    }
+
+    public void SetDedupeOutput(IReadOnlyList<DedupeResult> allGroups, IReadOnlyList<DedupeResult> gameGroups)
+    {
+        if (AllGroups is not null || GameGroups is not null)
+            throw new InvalidOperationException("Dedupe output was already assigned.");
+
+        AllGroups = allGroups;
+        GameGroups = gameGroups;
+    }
+
+    public void SetJunkPaths(IReadOnlySet<string> junkRemovedPaths)
+    {
+        if (JunkRemovedPaths is not null)
+            throw new InvalidOperationException("Junk output was already assigned.");
+
+        JunkRemovedPaths = junkRemovedPaths;
+    }
+}
+
+public sealed class StandardPhaseStepActions
+{
+    public required Func<PipelineState, CancellationToken, PhaseStepResult> Deduplicate { get; init; }
+    public required Func<PipelineState, CancellationToken, PhaseStepResult> JunkRemoval { get; init; }
+    public required Func<PipelineState, CancellationToken, PhaseStepResult> Move { get; init; }
+    public required Func<PipelineState, CancellationToken, PhaseStepResult> ConsoleSort { get; init; }
+    public required Func<PipelineState, CancellationToken, PhaseStepResult> WinnerConversion { get; init; }
+}
+
+public sealed class DelegatePhaseStep : IPhaseStep
+{
+    private readonly Func<PipelineState, CancellationToken, PhaseStepResult> _execute;
+
+    public DelegatePhaseStep(string name, Func<PipelineState, CancellationToken, PhaseStepResult> execute)
+    {
+        Name = name;
+        _execute = execute;
+    }
+
+    public string Name { get; }
+
+    public PhaseStepResult Execute(PipelineState state, CancellationToken cancellationToken)
+        => _execute(state, cancellationToken);
+}
+
+public sealed class PhasePlanBuilder : IPhasePlanBuilder
+{
+    public IReadOnlyList<IPhaseStep> BuildStandard(RunOptions options, StandardPhaseStepActions actions)
+    {
+        var phases = new List<IPhaseStep>
+        {
+            new DelegatePhaseStep("Deduplicate", actions.Deduplicate),
+            new DelegatePhaseStep("JunkRemoval", actions.JunkRemoval)
+        };
+
+        if (options.Mode == "Move")
+            phases.Add(new DelegatePhaseStep("Move", actions.Move));
+
+        if (options.SortConsole && options.Mode == "Move")
+            phases.Add(new DelegatePhaseStep("ConsoleSort", actions.ConsoleSort));
+
+        if (options.ConvertFormat is not null && options.Mode == "Move")
+            phases.Add(new DelegatePhaseStep("WinnerConversion", actions.WinnerConversion));
+
+        return phases;
+    }
+}
+
+public sealed class DeferredAnalysisPhaseStep : IPhaseStep
+{
+    private readonly Action<PipelineState, CancellationToken> _execute;
+
+    public DeferredAnalysisPhaseStep(Action<PipelineState, CancellationToken> execute)
+    {
+        _execute = execute;
+    }
+
+    public string Name => "DeferredAnalysis";
+
+    public PhaseStepResult Execute(PipelineState state, CancellationToken cancellationToken)
+    {
+        _execute(state, cancellationToken);
+        return PhaseStepResult.Ok();
+    }
+}
+
+public sealed class ReportPhaseStep : IPhaseStep
+{
+    private readonly Func<string?> _execute;
+
+    public ReportPhaseStep(Func<string?> execute)
+    {
+        _execute = execute;
+    }
+
+    public string Name => "Report";
+
+    public PhaseStepResult Execute(PipelineState state, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var reportPath = _execute();
+        return PhaseStepResult.Ok(reportPath is null ? 0 : 1, reportPath);
+    }
+}
+
+public sealed class AuditSealPhaseStep : IPhaseStep
+{
+    private readonly Action _execute;
+
+    public AuditSealPhaseStep(Action execute)
+    {
+        _execute = execute;
+    }
+
+    public string Name => "AuditSeal";
+
+    public PhaseStepResult Execute(PipelineState state, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        _execute();
+        return PhaseStepResult.Ok();
+    }
+}

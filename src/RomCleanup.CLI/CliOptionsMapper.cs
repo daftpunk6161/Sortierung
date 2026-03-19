@@ -50,30 +50,84 @@ internal static class CliOptionsMapper
                 $"audit-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.csv");
         }
 
-        var runOptions = new RunOptions
-        {
-            Roots = cli.Roots,
-            Mode = cli.Mode,
-            PreferRegions = cli.PreferRegions.Length > 0
+        var source = new CliRunOptionsSource(
+            roots: cli.Roots,
+            mode: cli.Mode,
+            preferRegions: cli.PreferRegions.Length > 0
                 ? cli.PreferRegions
                 : settings.General.PreferredRegions.ToArray(),
-            Extensions = cli.Extensions.ToArray(),
-            RemoveJunk = cli.RemoveJunk,
-            OnlyGames = cli.OnlyGames,
-            KeepUnknownWhenOnlyGames = cli.KeepUnknownWhenOnlyGames,
-            AggressiveJunk = cli.AggressiveJunk,
-            SortConsole = cli.SortConsole,
-            EnableDat = enableDat,
-            DatRoot = datRoot,
-            HashType = hashType,
-            ConvertFormat = cli.ConvertFormat ? "auto" : null,
-            ConvertOnly = cli.ConvertOnly,
-            TrashRoot = cli.TrashRoot,
-            AuditPath = auditPath,
-            ReportPath = cli.ReportPath,
-            ConflictPolicy = cli.ConflictPolicy
-        };
+            extensions: cli.Extensions.ToArray(),
+            removeJunk: cli.RemoveJunk,
+            onlyGames: cli.OnlyGames,
+            keepUnknownWhenOnlyGames: cli.KeepUnknownWhenOnlyGames,
+            aggressiveJunk: cli.AggressiveJunk,
+            sortConsole: cli.SortConsole,
+            enableDat: enableDat,
+            datRoot: datRoot,
+            hashType: hashType,
+            convertFormat: cli.ConvertFormat ? "auto" : null,
+            convertOnly: cli.ConvertOnly,
+            trashRoot: cli.TrashRoot,
+            conflictPolicy: cli.ConflictPolicy);
+
+        var runOptions = new RunOptionsFactory().Create(source, auditPath, cli.ReportPath);
 
         return (runOptions, null);
+    }
+
+    private sealed class CliRunOptionsSource : IRunOptionsSource
+    {
+        public CliRunOptionsSource(
+            IReadOnlyList<string> roots,
+            string mode,
+            string[] preferRegions,
+            IReadOnlyList<string> extensions,
+            bool removeJunk,
+            bool onlyGames,
+            bool keepUnknownWhenOnlyGames,
+            bool aggressiveJunk,
+            bool sortConsole,
+            bool enableDat,
+            string? datRoot,
+            string hashType,
+            string? convertFormat,
+            bool convertOnly,
+            string? trashRoot,
+            string conflictPolicy)
+        {
+            Roots = roots;
+            Mode = mode;
+            PreferRegions = preferRegions;
+            Extensions = extensions;
+            RemoveJunk = removeJunk;
+            OnlyGames = onlyGames;
+            KeepUnknownWhenOnlyGames = keepUnknownWhenOnlyGames;
+            AggressiveJunk = aggressiveJunk;
+            SortConsole = sortConsole;
+            EnableDat = enableDat;
+            DatRoot = datRoot;
+            HashType = hashType;
+            ConvertFormat = convertFormat;
+            ConvertOnly = convertOnly;
+            TrashRoot = trashRoot;
+            ConflictPolicy = conflictPolicy;
+        }
+
+        public IReadOnlyList<string> Roots { get; }
+        public string Mode { get; }
+        public string[] PreferRegions { get; }
+        public IReadOnlyList<string> Extensions { get; }
+        public bool RemoveJunk { get; }
+        public bool OnlyGames { get; }
+        public bool KeepUnknownWhenOnlyGames { get; }
+        public bool AggressiveJunk { get; }
+        public bool SortConsole { get; }
+        public bool EnableDat { get; }
+        public string? DatRoot { get; }
+        public string HashType { get; }
+        public string? ConvertFormat { get; }
+        public bool ConvertOnly { get; }
+        public string? TrashRoot { get; }
+        public string ConflictPolicy { get; }
     }
 }

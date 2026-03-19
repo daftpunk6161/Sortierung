@@ -112,11 +112,11 @@ internal static class Program
             log?.Info("CLI", "convert-init", "Format conversion enabled", "init");
 
         // Build environment (DAT, ConsoleDetector, Converter, etc.)
-        var env = RunEnvironmentBuilder.Build(runOptions, settings, dataDir, onWarning: SafeErrorWriteLine);
+        var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
 
         log?.Info("CLI", "start", $"Run started: Mode={cliOpts.Mode}, Roots={string.Join(";", cliOpts.Roots)}", "scan");
 
-        var orchestrator = new RunOrchestrator(env.FileSystem, env.Audit, env.ConsoleDetector, env.HashService,
+        var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
             env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine);
 
         var result = orchestrator.Execute(runOptions, cts.Token);

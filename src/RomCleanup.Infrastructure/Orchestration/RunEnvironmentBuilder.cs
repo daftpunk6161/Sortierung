@@ -1,5 +1,6 @@
 using System.Text.Json;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Classification;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.Configuration;
@@ -211,12 +212,14 @@ public sealed class RunEnvironmentBuilder
 /// All runtime dependencies needed to execute a run.
 /// </summary>
 public sealed class RunEnvironment
+    : IRunEnvironment
 {
-    public FileSystemAdapter FileSystem { get; }
-    public AuditCsvStore Audit { get; }
+    public IFileSystem FileSystem { get; }
+    public IAuditStore AuditStore { get; }
+    public AuditCsvStore Audit => (AuditCsvStore)AuditStore;
     public ConsoleDetector? ConsoleDetector { get; }
     public FileHashService? HashService { get; }
-    public FormatConverterAdapter? Converter { get; }
+    public IFormatConverter? Converter { get; }
     public DatIndex? DatIndex { get; }
 
     public RunEnvironment(FileSystemAdapter fileSystem, AuditCsvStore audit,
@@ -224,7 +227,7 @@ public sealed class RunEnvironment
         FormatConverterAdapter? converter, DatIndex? datIndex)
     {
         FileSystem = fileSystem;
-        Audit = audit;
+        AuditStore = audit;
         ConsoleDetector = consoleDetector;
         HashService = hashService;
         Converter = converter;

@@ -355,35 +355,8 @@ public sealed class RunManager
     {
         var (auditPath, reportPath) = GetArtifactPaths(run.RunId);
 
-        var options = new RunOptions
-        {
-            Roots = run.Roots,
-            Mode = run.Mode,
-            PreferRegions = run.PreferRegions,
-            Extensions = run.Extensions,
-            RemoveJunk = run.RemoveJunk,
-            AggressiveJunk = run.AggressiveJunk,
-            SortConsole = run.SortConsole,
-            EnableDat = run.EnableDat,
-            DatRoot = run.DatRoot,
-            OnlyGames = run.OnlyGames,
-            KeepUnknownWhenOnlyGames = run.KeepUnknownWhenOnlyGames,
-            HashType = run.HashType,
-            ConvertFormat = run.ConvertFormat,
-            ConvertOnly = run.ConvertOnly,
-            ConflictPolicy = run.ConflictPolicy,
-            TrashRoot = run.TrashRoot,
-            AuditPath = auditPath,
-            ReportPath = reportPath
-        };
-
-        // Shared setup path with CLI/WPF for DAT/Converter/ConsoleDetector.
-        var dataDir = RunEnvironmentBuilder.ResolveDataDir();
-        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
-        settings.Dat.UseDat = run.EnableDat;
-        settings.Dat.HashType = run.HashType;
-
-        var env = RunEnvironmentBuilder.Build(options, settings, dataDir,
+        var options = new RunOptionsFactory().Create(new RunRecordOptionsSource(run), auditPath, reportPath);
+        var env = new RunEnvironmentFactory().Create(options,
             onWarning: msg =>
             {
                 run.ProgressMessage = msg;
@@ -555,6 +528,48 @@ public sealed class RunManager
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
         return Convert.ToHexString(hash);
     }
+}
+
+internal sealed class RunRecordOptionsSource : IRunOptionsSource
+{
+    public RunRecordOptionsSource(RunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        Roots = run.Roots;
+        Mode = run.Mode;
+        PreferRegions = run.PreferRegions;
+        Extensions = run.Extensions;
+        RemoveJunk = run.RemoveJunk;
+        OnlyGames = run.OnlyGames;
+        KeepUnknownWhenOnlyGames = run.KeepUnknownWhenOnlyGames;
+        AggressiveJunk = run.AggressiveJunk;
+        SortConsole = run.SortConsole;
+        EnableDat = run.EnableDat;
+        DatRoot = run.DatRoot;
+        HashType = run.HashType;
+        ConvertFormat = run.ConvertFormat;
+        ConvertOnly = run.ConvertOnly;
+        TrashRoot = run.TrashRoot;
+        ConflictPolicy = run.ConflictPolicy;
+    }
+
+    public IReadOnlyList<string> Roots { get; }
+    public string Mode { get; }
+    public string[] PreferRegions { get; }
+    public IReadOnlyList<string> Extensions { get; }
+    public bool RemoveJunk { get; }
+    public bool OnlyGames { get; }
+    public bool KeepUnknownWhenOnlyGames { get; }
+    public bool AggressiveJunk { get; }
+    public bool SortConsole { get; }
+    public bool EnableDat { get; }
+    public string? DatRoot { get; }
+    public string HashType { get; }
+    public string? ConvertFormat { get; }
+    public bool ConvertOnly { get; }
+    public string? TrashRoot { get; }
+    public string ConflictPolicy { get; }
 }
 
 public enum RunCreateDisposition

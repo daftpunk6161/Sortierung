@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure;
 using RomCleanup.Infrastructure.State;
 using RomCleanup.UI.Wpf.Services;
 using RomCleanup.UI.Wpf.ViewModels;
@@ -31,6 +32,8 @@ public partial class App : Application
 
     private static void ConfigureServices(IServiceCollection services)
     {
+        services.AddRomCleanupCore();
+
         // Services
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
