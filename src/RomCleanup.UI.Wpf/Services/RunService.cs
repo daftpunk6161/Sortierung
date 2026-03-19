@@ -1,8 +1,10 @@
 using System.IO;
 using System.Linq;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Paths;
+using RomCleanup.Infrastructure.State;
 using RomCleanup.UI.Wpf.ViewModels;
 
 namespace RomCleanup.UI.Wpf.Services;
@@ -15,6 +17,13 @@ namespace RomCleanup.UI.Wpf.Services;
 /// </summary>
 public sealed class RunService : IRunService
 {
+    private readonly IAppState _appState;
+
+    public RunService(IAppState? appState = null)
+    {
+        _appState = appState ?? new AppStateStore();
+    }
+
     /// <summary>Result of a single pipeline run.</summary>
     public sealed class RunServiceResult
     {
@@ -30,6 +39,9 @@ public sealed class RunService : IRunService
     public (RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)
         BuildOrchestrator(MainViewModel vm, Action<string>? onProgress = null)
     {
+        _appState.SetValue("run.build.startedUtc", DateTime.UtcNow);
+        _appState.SetValue("run.mode", vm.DryRun ? "DryRun" : "Move");
+
         onProgress?.Invoke("[Init] Initialisiere Infrastruktur…");
 
         string? auditPath = null;
@@ -90,6 +102,10 @@ public sealed class RunService : IRunService
         var orchestrator = new RunOrchestrator(
             env.FileSystem, env.Audit, env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex, onProgress);
 
+        _appState.SetValue("run.build.completedUtc", DateTime.UtcNow);
+        _appState.SetValue("run.auditPath", auditPath);
+        _appState.SetValue("run.reportPath", reportPath);
+
         return (orchestrator, runOptions, auditPath, reportPath);
     }
 
@@ -104,8 +120,17 @@ public sealed class RunService : IRunService
         string? reportPath,
         CancellationToken ct)
     {
+        _appState.SetValue("run.execute.startedUtc", DateTime.UtcNow);
+        _appState.SetValue("run.execute.cancelRequested", ct.IsCancellationRequested);
+
         var result = orchestrator.Execute(options, ct);
         var effectiveReportPath = ResolveReportPath(result.ReportPath, reportPath);
+
+        _appState.SetValue("run.execute.completedUtc", DateTime.UtcNow);
+        _appState.SetValue("run.execute.status", result.Status);
+        _appState.SetValue("run.execute.exitCode", result.ExitCode);
+        _appState.SetValue("run.execute.durationMs", result.DurationMs);
+        _appState.SetValue("run.execute.reportPath", effectiveReportPath);
 
         return new RunServiceResult
         {

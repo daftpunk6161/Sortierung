@@ -20,10 +20,10 @@ namespace RomCleanup.Infrastructure.Orchestration;
 public sealed class RunEnvironmentBuilder
 {
     /// <summary>
-    /// Resolve the data/ directory by searching multiple candidate locations.
-    /// Priority: next to executable → workspace root → current working directory.
+    /// Try to resolve the data/ directory without throwing.
+    /// Returns null when no candidate directory exists.
     /// </summary>
-    public static string ResolveDataDir()
+    public static string? TryResolveDataDir()
     {
         var candidates = new[]
         {
@@ -39,6 +39,27 @@ public sealed class RunEnvironmentBuilder
             if (Directory.Exists(full))
                 return full;
         }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Resolve the data/ directory by searching multiple candidate locations.
+    /// Priority: next to executable → workspace root → current working directory.
+    /// </summary>
+    public static string ResolveDataDir()
+    {
+        var resolved = TryResolveDataDir();
+        if (resolved is not null)
+            return resolved;
+
+        var candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "data"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "data"),
+            Path.Combine(Directory.GetCurrentDirectory(), "data")
+        };
 
         throw new DirectoryNotFoundException(
             "Could not locate required data directory. Checked: " +

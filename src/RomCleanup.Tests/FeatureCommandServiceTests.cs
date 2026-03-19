@@ -753,7 +753,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
 
         Assert.False(_vm.HasRollbackUndo);
         Assert.True(_vm.HasRollbackRedo);
-        Assert.Contains(_vm.LogEntries, entry => entry.Level == "INFO" && entry.Text.Contains("RollbackUndone", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(_vm.LogEntries, entry => entry.Level == "INFO" && entry.Text.Contains("Rollback-Verlauf", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -767,7 +767,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
 
         Assert.True(_vm.HasRollbackUndo);
         Assert.False(_vm.HasRollbackRedo);
-        Assert.Contains(_vm.LogEntries, entry => entry.Level == "INFO" && entry.Text.Contains("RollbackRedone", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(_vm.LogEntries, entry => entry.Level == "INFO" && entry.Text.Contains("Rollback-Verlauf", StringComparison.OrdinalIgnoreCase));
     }
 
     // ═══ IDEMPOTENCY ════════════════════════════════════════════════════

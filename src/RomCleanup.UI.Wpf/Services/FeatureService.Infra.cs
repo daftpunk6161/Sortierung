@@ -63,27 +63,15 @@ public static partial class FeatureService
     /// <summary>Resolve the data/ subdirectory, probing from BaseDirectory upward (max 5 levels).</summary>
     internal static string? ResolveDataDirectory(string? subFolder = null)
     {
-        var candidates = new[]
-        {
-            Path.Combine(Directory.GetCurrentDirectory(), "data"),
-            Path.Combine(AppContext.BaseDirectory, "data"),
-        };
+        var baseDataDir = RunEnvironmentBuilder.TryResolveDataDir();
+        if (string.IsNullOrWhiteSpace(baseDataDir))
+            return null;
 
-        // Also probe upward from BaseDirectory (for dev layouts)
-        var dir = AppContext.BaseDirectory;
-        for (int i = 0; i < 5 && dir is not null; i++)
-        {
-            var probe = Path.Combine(dir, "data");
-            if (Directory.Exists(probe))
-                return subFolder is not null ? Path.Combine(probe, subFolder) : probe;
-            dir = Path.GetDirectoryName(dir);
-        }
+        if (subFolder is null)
+            return baseDataDir;
 
-        foreach (var c in candidates)
-            if (Directory.Exists(c))
-                return subFolder is not null ? Path.Combine(c, subFolder) : c;
-
-        return null;
+        var resolvedSubFolder = Path.Combine(baseDataDir, subFolder);
+        return Directory.Exists(resolvedSubFolder) ? resolvedSubFolder : null;
     }
 
 

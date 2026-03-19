@@ -1,21 +1,17 @@
-using System.IO;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.FileSystem;
-using RomCleanup.Infrastructure.Audit;
 
-namespace RomCleanup.UI.Wpf.Services;
+namespace RomCleanup.Infrastructure.Audit;
 
 /// <summary>
-/// Extracted from MainWindow.xaml.cs — handles audit-based rollback.
-/// RF-004 from gui-ux-deep-audit.md.
-/// Uses AuditCsvStore as the single rollback entry point.
+/// Audit-based rollback service.
+/// Lives in Infrastructure so CLI/API/WPF can share the same rollback behavior.
 /// </summary>
 public static class RollbackService
 {
     /// <summary>
     /// Execute a rollback from the given audit CSV file.
-    /// Must be called from a background thread (performs file I/O).
-    /// Returns the rollback result with integrity-verified statistics.
+    /// Returns a rollback result with integrity-verified statistics.
     /// </summary>
     public static AuditRollbackResult Execute(string auditPath, IReadOnlyList<string> roots, string? keyFilePath = null)
     {

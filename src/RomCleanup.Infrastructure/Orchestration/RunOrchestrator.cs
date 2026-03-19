@@ -3,7 +3,10 @@ using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Classification;
 using RomCleanup.Core.Deduplication;
 using RomCleanup.Infrastructure.Hashing;
+using RomCleanup.Infrastructure.Deduplication;
+using RomCleanup.Infrastructure.Linking;
 using RomCleanup.Infrastructure.Metrics;
+using RomCleanup.Infrastructure.Quarantine;
 using RomCleanup.Infrastructure.Reporting;
 using RomCleanup.Infrastructure.Sorting;
 
@@ -197,6 +200,9 @@ public sealed class RunOrchestrator
             return result.Build();
         }
 
+        // Integrate deferred services in a non-destructive analysis pass.
+        ExecuteDeferredServiceAnalysis(processingCandidates, options, cancellationToken);
+
         cancellationToken.ThrowIfCancellationRequested();
 
         // ConvertOnly mode: skip Dedupe/Junk/Move/Sort — go straight to conversion
@@ -217,57 +223,33 @@ public sealed class RunOrchestrator
             return result.Build();
         }
 
-        // Phase 3: Deduplicate
-        var (groups, gameGroups) = ExecuteDedupePhase(processingCandidates, candidates, options, result, metrics, cancellationToken);
+        IReadOnlyList<DedupeResult> groups = Array.Empty<DedupeResult>();
+        var gameGroups = new List<DedupeResult>();
+        IReadOnlySet<string> junkRemovedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Phase 3b: Remove junk (if enabled)
-        var junkRemovedPaths = ExecuteJunkPhaseIfEnabled(groups, options, result, metrics, cancellationToken);
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Phase 4: Move (if Mode=Move)
-        if (options.Mode == "Move")
-        {
-            metrics.StartPhase("Move");
-            var totalLosers = gameGroups.Sum(g => g.Losers.Count);
-            _onProgress?.Invoke($"[Move] Verschiebe {totalLosers} Duplikate in Trash…");
-            var movePhase = new MovePipelinePhase();
-            var moveContext = new PipelineContext
+        var phasePlan = BuildStandardPhasePlan(
+            processingCandidates,
+            candidates,
+            options,
+            result,
+            metrics,
+            cancellationToken,
+            setDedupeOutput: output =>
             {
-                Options = options,
-                FileSystem = _fs,
-                AuditStore = _audit,
-                Metrics = metrics,
-                OnProgress = _onProgress
-            };
-            var moveResult = movePhase.Execute(new MovePhaseInput(gameGroups, options), moveContext, cancellationToken);
-            _onProgress?.Invoke($"[Move] Abgeschlossen: {moveResult.MoveCount} verschoben, {moveResult.FailCount} Fehler");
-            result.MoveResult = moveResult;
-            metrics.CompletePhase(moveResult.MoveCount);
-        }
+                groups = output.Groups;
+                gameGroups = output.GameGroups;
+            },
+            setJunkPaths: removed => junkRemovedPaths = removed,
+            getAllGroups: () => groups,
+            getGameGroups: () => gameGroups,
+            getJunkPaths: () => junkRemovedPaths);
 
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Phase 5: Console Sort (optional, Move mode only)
-        if (options.SortConsole && options.Mode == "Move" && _consoleDetector is not null)
+        foreach (var phase in phasePlan)
         {
-            metrics.StartPhase("ConsoleSort");
-            _onProgress?.Invoke("[Sort] Sortiere Dateien nach Konsole…");
-            var sorter = new ConsoleSorter(_fs, _consoleDetector, _audit, options.AuditPath);
-            result.ConsoleSortResult = sorter.Sort(
-                options.Roots, options.Extensions, dryRun: false, cancellationToken);
-            _onProgress?.Invoke($"[Sort] Konsolen-Sortierung abgeschlossen");
-            metrics.CompletePhase();
+            cancellationToken.ThrowIfCancellationRequested();
+            _onProgress?.Invoke($"[Plan] Phase: {phase.Name}");
+            phase.Execute();
         }
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Phase 6: Format Conversion (optional, Move mode only)
-        // Issue #16: Use actual file paths — after Sort, files may have moved.
-        if (options.ConvertFormat is not null && options.Mode == "Move" && _converter is not null)
-            ExecuteWinnerConversionPhase(gameGroups, options, junkRemovedPaths, result, metrics, cancellationToken);
 
         sw.Stop();
         // Derive status based on actual errors
@@ -352,6 +334,236 @@ public sealed class RunOrchestrator
 
             return result.Build();
         }
+    }
+
+    private IReadOnlyList<PlannedPhase> BuildStandardPhasePlan(
+        IReadOnlyList<RomCandidate> processingCandidates,
+        IReadOnlyList<RomCandidate> allCandidates,
+        RunOptions options,
+        RunResultBuilder result,
+        PhaseMetricsCollector metrics,
+        CancellationToken cancellationToken,
+        Action<(IReadOnlyList<DedupeResult> Groups, List<DedupeResult> GameGroups)> setDedupeOutput,
+        Action<IReadOnlySet<string>> setJunkPaths,
+        Func<IReadOnlyList<DedupeResult>> getAllGroups,
+        Func<List<DedupeResult>> getGameGroups,
+        Func<IReadOnlySet<string>> getJunkPaths)
+    {
+        var phases = new List<PlannedPhase>
+        {
+            new(
+                "Deduplicate",
+                () =>
+                {
+                    var output = ExecuteDedupePhase(processingCandidates, allCandidates, options, result, metrics, cancellationToken);
+                    setDedupeOutput(output);
+                }),
+            new(
+                "JunkRemoval",
+                () =>
+                {
+                    var output = ExecuteJunkPhaseIfEnabled(getAllGroups(), options, result, metrics, cancellationToken);
+                    setJunkPaths(output);
+                })
+        };
+
+        if (options.Mode == "Move")
+        {
+            phases.Add(new PlannedPhase(
+                "Move",
+                () =>
+                {
+                    metrics.StartPhase("Move");
+                    var totalLosers = getGameGroups().Sum(g => g.Losers.Count);
+                    _onProgress?.Invoke($"[Move] Verschiebe {totalLosers} Duplikate in Trash…");
+                    var movePhase = new MovePipelinePhase();
+                    var moveContext = new PipelineContext
+                    {
+                        Options = options,
+                        FileSystem = _fs,
+                        AuditStore = _audit,
+                        Metrics = metrics,
+                        OnProgress = _onProgress
+                    };
+                    var moveResult = movePhase.Execute(new MovePhaseInput(getGameGroups(), options), moveContext, cancellationToken);
+                    _onProgress?.Invoke($"[Move] Abgeschlossen: {moveResult.MoveCount} verschoben, {moveResult.FailCount} Fehler");
+                    result.MoveResult = moveResult;
+                    metrics.CompletePhase(moveResult.MoveCount);
+                }));
+        }
+
+        if (options.SortConsole && options.Mode == "Move" && _consoleDetector is not null)
+        {
+            phases.Add(new PlannedPhase(
+                "ConsoleSort",
+                () =>
+                {
+                    metrics.StartPhase("ConsoleSort");
+                    _onProgress?.Invoke("[Sort] Sortiere Dateien nach Konsole…");
+                    var sorter = new ConsoleSorter(_fs, _consoleDetector, _audit, options.AuditPath);
+                    result.ConsoleSortResult = sorter.Sort(
+                        options.Roots, options.Extensions, dryRun: false, cancellationToken);
+                    _onProgress?.Invoke("[Sort] Konsolen-Sortierung abgeschlossen");
+                    metrics.CompletePhase();
+                }));
+        }
+
+        if (options.ConvertFormat is not null && options.Mode == "Move" && _converter is not null)
+        {
+            phases.Add(new PlannedPhase(
+                "WinnerConversion",
+                () => ExecuteWinnerConversionPhase(getGameGroups(), options, getJunkPaths(), result, metrics, cancellationToken)));
+        }
+
+        return phases;
+    }
+
+    private void ExecuteDeferredServiceAnalysis(
+        IReadOnlyList<RomCandidate> candidates,
+        RunOptions options,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            ExecuteCrossRootPreview(candidates, options);
+        }
+        catch (Exception ex)
+        {
+            _onProgress?.Invoke($"[CrossRoot] Analyse übersprungen: {ex.Message}");
+        }
+
+        try
+        {
+            ExecuteFolderDedupePreview(options, candidates, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _onProgress?.Invoke($"[FolderDedupe] Analyse übersprungen: {ex.Message}");
+        }
+
+        try
+        {
+            ExecuteQuarantinePreview(candidates);
+        }
+        catch (Exception ex)
+        {
+            _onProgress?.Invoke($"[Quarantine] Analyse übersprungen: {ex.Message}");
+        }
+
+        try
+        {
+            ExecuteHardlinkSupportPreview(options);
+        }
+        catch (Exception ex)
+        {
+            _onProgress?.Invoke($"[Hardlink] Analyse übersprungen: {ex.Message}");
+        }
+    }
+
+    private void ExecuteFolderDedupePreview(
+        RunOptions options,
+        IReadOnlyList<RomCandidate> candidates,
+        CancellationToken cancellationToken)
+    {
+        if (options.Roots.Count == 0)
+            return;
+
+        var candidatesByRoot = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var root in options.Roots)
+        {
+            var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var consoleKey = candidates
+                .Where(c =>
+                {
+                    var fullPath = Path.GetFullPath(c.MainPath);
+                    return fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
+                })
+                .Select(c => c.ConsoleKey)
+                .FirstOrDefault(k => !string.IsNullOrWhiteSpace(k));
+
+            candidatesByRoot[root] = consoleKey;
+        }
+
+        var dedupe = new FolderDeduplicator(_fs, msg => _onProgress?.Invoke($"[FolderDedupe] {msg}"));
+        var preview = dedupe.AutoDeduplicate(
+            options.Roots,
+            mode: "DryRun",
+            consoleKeyDetector: root => candidatesByRoot.TryGetValue(root, out var key) ? key : null,
+            ct: cancellationToken);
+
+        _onProgress?.Invoke(
+            $"[FolderDedupe] Preview: {preview.Results.Count} Analyse-Ergebnis(se), PS3-Roots={preview.Ps3Roots.Count}, BaseName-Roots={preview.FolderRoots.Count}");
+    }
+
+    private void ExecuteCrossRootPreview(IReadOnlyList<RomCandidate> candidates, RunOptions options)
+    {
+        if (_hashService is null || options.Roots.Count < 2)
+            return;
+
+        var sample = candidates
+            .Where(c => !string.IsNullOrWhiteSpace(c.MainPath) && File.Exists(c.MainPath))
+            .Take(400)
+            .Select(c =>
+            {
+                var root = PipelinePhaseHelpers.FindRootForPath(c.MainPath, options.Roots) ?? string.Empty;
+                var hash = _hashService.GetHash(c.MainPath, options.HashType);
+                return new CrossRootFile
+                {
+                    Path = c.MainPath,
+                    Root = root,
+                    Hash = hash ?? string.Empty,
+                    Extension = c.Extension,
+                    SizeBytes = c.SizeBytes
+                };
+            })
+            .Where(f => !string.IsNullOrWhiteSpace(f.Root) && !string.IsNullOrWhiteSpace(f.Hash))
+            .ToList();
+
+        if (sample.Count == 0)
+            return;
+
+        var groups = CrossRootDeduplicator.FindDuplicates(sample);
+        _onProgress?.Invoke($"[CrossRoot] Preview: {groups.Count} root-übergreifende Hash-Gruppen (Sample={sample.Count})");
+    }
+
+    private void ExecuteQuarantinePreview(IReadOnlyList<RomCandidate> candidates)
+    {
+        if (candidates.Count == 0)
+            return;
+
+        var service = new QuarantineService(_fs);
+        var sample = candidates.Take(2000);
+        var quarantineCandidates = 0;
+
+        foreach (var candidate in sample)
+        {
+            var result = service.TestCandidate(new QuarantineItem
+            {
+                FilePath = candidate.MainPath,
+                Console = string.IsNullOrWhiteSpace(candidate.ConsoleKey) ? "Unknown" : candidate.ConsoleKey,
+                Format = candidate.Extension,
+                DatStatus = candidate.DatMatch ? "Match" : "NoMatch",
+                Category = candidate.Category.ToString().ToUpperInvariant(),
+                HeaderStatus = "Ok"
+            });
+
+            if (result.IsCandidate)
+                quarantineCandidates++;
+        }
+
+        _onProgress?.Invoke(
+            $"[Quarantine] Preview: {quarantineCandidates} verdächtige Datei(en) im Sample von {sample.Count()} Kandidaten");
+    }
+
+    private void ExecuteHardlinkSupportPreview(RunOptions options)
+    {
+        if (options.Roots.Count == 0)
+            return;
+
+        var supportedRoots = options.Roots.Count(HardlinkService.IsHardlinkSupported);
+        _onProgress?.Invoke($"[Hardlink] NTFS-Hardlink support: {supportedRoots}/{options.Roots.Count} Root(s)");
     }
 
     private List<RomCandidate> MaterializeEnrichedCandidates(
@@ -526,6 +738,8 @@ public sealed class RunOrchestrator
         }
     }
 }
+
+public sealed record PlannedPhase(string Name, Action Execute);
 
 /// <summary>Options for a run execution.</summary>
 /// <summary>

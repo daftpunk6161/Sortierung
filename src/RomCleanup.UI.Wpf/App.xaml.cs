@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.State;
 using RomCleanup.UI.Wpf.Services;
 using RomCleanup.UI.Wpf.ViewModels;
 using Application = System.Windows.Application;
@@ -34,6 +35,7 @@ public partial class App : Application
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<IAppState, AppStateStore>();
         services.AddTransient<IDialogService, WpfDialogService>();
 
         // Feature domain services (GUI-034 to GUI-040)

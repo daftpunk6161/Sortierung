@@ -478,7 +478,7 @@ public sealed partial class MainViewModel
         {
             var auditPathCopy = LastAuditPath;
             var roots = Roots.ToList();
-            var restored = await Task.Run(() => RollbackService.Execute(auditPathCopy, roots));
+            var restored = await Task.Run(() => RomCleanup.Infrastructure.Audit.RollbackService.Execute(auditPathCopy, roots));
             AddLog($"Rollback: wiederhergestellt={restored.RolledBack}, fehlend={restored.SkippedMissingDest}, Kollisionen={restored.SkippedCollision}, Fehler={restored.Failed}.",
                 restored.Failed > 0 ? "WARN" : "INFO");
             CanRollback = false;

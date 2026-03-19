@@ -1,6 +1,4 @@
 using RomCleanup.Contracts.Models;
-using RomCleanup.Core.SetParsing;
-
 namespace RomCleanup.Infrastructure.Orchestration;
 
 /// <summary>
@@ -12,60 +10,21 @@ public sealed class ScanPipelinePhase : IPipelinePhase<RunOptions, List<ScannedF
 
     public List<ScannedFileEntry> Execute(RunOptions input, PipelineContext context, CancellationToken cancellationToken)
     {
+        var streaming = new StreamingScanPipelinePhase(context)
+            .EnumerateFilesAsync(input.Roots, input.Extensions, cancellationToken);
+
         var scannedFiles = new List<ScannedFileEntry>();
-        var seenCandidatePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var setMemberPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var root in input.Roots)
+        var enumerator = streaming.GetAsyncEnumerator(cancellationToken);
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            context.OnProgress?.Invoke($"[Scan] {root}: Dateien sammeln…");
-
-            var files = context.FileSystem.GetFilesSafe(root, input.Extensions);
-            context.OnProgress?.Invoke($"[Scan] {root}: {files.Count} Dateien gefunden");
-
-            int processed = 0;
-            int fileCount = files.Count;
-            foreach (var filePath in files)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var normalizedPath = Path.GetFullPath(filePath);
-                if (!seenCandidatePaths.Add(normalizedPath))
-                    continue;
-
-                if (ExecutionHelpers.IsBlocklisted(filePath))
-                    continue;
-
-                processed++;
-                if (processed % 500 == 0)
-                    context.OnProgress?.Invoke($"[Scan] {processed}/{fileCount} Dateien verarbeitet…");
-
-                var ext = Path.GetExtension(filePath).ToLowerInvariant();
-                var setMembers = GetSetMembers(filePath, ext);
-                foreach (var member in setMembers)
-                    setMemberPaths.Add(Path.GetFullPath(member));
-
-                scannedFiles.Add(new ScannedFileEntry(root, normalizedPath, ext));
-            }
+            while (enumerator.MoveNextAsync().AsTask().GetAwaiter().GetResult())
+                scannedFiles.Add(enumerator.Current);
+        }
+        finally
+        {
+            enumerator.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
 
-        if (setMemberPaths.Count > 0)
-            scannedFiles.RemoveAll(f => setMemberPaths.Contains(f.Path));
-
         return scannedFiles;
-    }
-
-    private static IReadOnlyList<string> GetSetMembers(string filePath, string ext)
-    {
-        return ext switch
-        {
-            ".cue" => CueSetParser.GetRelatedFiles(filePath),
-            ".gdi" => GdiSetParser.GetRelatedFiles(filePath),
-            ".ccd" => CcdSetParser.GetRelatedFiles(filePath),
-            // Keep playlist targets as first-class scan candidates for DAT/hash matching.
-            ".m3u" => Array.Empty<string>(),
-            _ => Array.Empty<string>()
-        };
     }
 }

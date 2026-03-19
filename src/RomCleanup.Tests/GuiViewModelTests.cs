@@ -1498,7 +1498,7 @@ public class GuiViewModelTests
     [Fact]
     public void RollbackService_Execute_NoAuditFile_ReturnsEmpty()
     {
-        var result = RollbackService.Execute(
+        var result = RomCleanup.Infrastructure.Audit.RollbackService.Execute(
             Path.Combine(Path.GetTempPath(), "nonexistent_audit.csv"),
             new[] { @"C:\Games" });
         Assert.Equal(0, result.RolledBack);
@@ -3014,7 +3014,7 @@ public class GuiViewModelTests
             audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object> { ["Mode"] = "Move" });
 
             // Execute rollback: should move destFile back to srcFile
-            var restored = RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
+            var restored = RomCleanup.Infrastructure.Audit.RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
 
             Assert.Equal(1, restored.RolledBack);
             Assert.True(File.Exists(srcFile), "Source file should be restored");
@@ -3042,7 +3042,7 @@ public class GuiViewModelTests
                 Path.Combine(tempDir, "b.rom"),
                 "Skip", "GAME", "", "test");
 
-            var restored = RollbackService.Execute(auditPath, new[] { tempDir });
+            var restored = RomCleanup.Infrastructure.Audit.RollbackService.Execute(auditPath, new[] { tempDir });
             Assert.Equal(0, restored.RolledBack);
         }
         finally
@@ -3074,7 +3074,7 @@ public class GuiViewModelTests
 
             File.AppendAllText(auditPath, "tampered\n");
 
-            var restored = RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
+            var restored = RomCleanup.Infrastructure.Audit.RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
 
             Assert.Equal(0, restored.RolledBack);
             Assert.Equal(1, restored.Failed);

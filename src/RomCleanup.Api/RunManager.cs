@@ -390,7 +390,7 @@ public sealed class RunManager
                 run.ProgressPercent = EstimateProgressPercent(msg);
             });
 
-        var orchestrator = new RunOrchestrator(env.FileSystem, env.Audit,
+        var orchestrator = new RunOrchestrator(fs, audit,
             env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex,
             onProgress: msg =>
             {
