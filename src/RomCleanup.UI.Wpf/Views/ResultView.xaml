@@ -117,7 +117,7 @@
           </UniformGrid>
 
           <!-- Secondary Metrics (expandable) -->
-          <Expander Header="{Binding Loc[Result.PerfDetails]}" IsExpanded="{Binding IsResultPerfDetailsExpanded, Mode=TwoWay}" Margin="0,0,0,12">
+          <Expander Header="{Binding Loc[Result.PerfDetails], Mode=OneWay}" IsExpanded="{Binding IsResultPerfDetailsExpanded, Mode=TwoWay}" Margin="0,0,0,12">
             <WrapPanel Margin="0,8,0,0" MaxWidth="1200">
               <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
                 <StackPanel HorizontalAlignment="Center">
@@ -288,16 +288,6 @@
               <TextBlock Text="{Binding MoveConsequenceText}" FontSize="14" FontWeight="SemiBold"
                          Foreground="{DynamicResource BrushWarning}" HorizontalAlignment="Center"
                          Margin="0,0,0,8"/>
-              <Button Command="{Binding StartMoveCommand}" MinWidth="260" Height="44" Cursor="Hand"
-                      Background="{DynamicResource BrushDangerBg}" Foreground="{DynamicResource BrushDanger}"
-                      BorderBrush="{DynamicResource BrushDanger}" BorderThickness="2" FontSize="16" FontWeight="Bold"
-                  ToolTip="{Binding MoveApplyGateText}"
-                      AutomationProperties.Name="{Binding Loc[Result.BtnCleanup]}">
-                <StackPanel Orientation="Horizontal">
-                  <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="18" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                  <TextBlock Text="{Binding Loc[Result.BtnCleanup]}" VerticalAlignment="Center"/>
-                </StackPanel>
-              </Button>
               <!-- GUI-075: Trust signal -->
               <TextBlock Text="{Binding Loc[Result.TrustSignal]}" Style="{StaticResource CaptionText}"
                          HorizontalAlignment="Center" Margin="0,8,0,0" Opacity="0.8"

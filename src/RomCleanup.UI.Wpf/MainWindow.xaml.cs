@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.UI.Wpf.Services;
@@ -11,6 +13,9 @@ namespace RomCleanup.UI.Wpf;
 
 public partial class MainWindow : Window, IWindowHost
 {
+    private const double ContextPanelMinWindowWidth = 1200;
+    private const double ContextPanelDefaultWidth = 280;
+
     private readonly MainViewModel _vm;
     private readonly ISettingsService _settings;
     private readonly System.Threading.Timer _settingsTimer;
@@ -30,6 +35,7 @@ public partial class MainWindow : Window, IWindowHost
         DataContext = _vm;
 
         InitializeComponent();
+        ApplyRuntimeWindowIcon();
 
         // GUI-088: Periodic settings save every 5 minutes on background timer (not UI-thread)
         _settingsTimer = new System.Threading.Timer(
@@ -39,6 +45,7 @@ public partial class MainWindow : Window, IWindowHost
             TimeSpan.FromMinutes(5));
 
         Loaded += OnLoaded;
+        SizeChanged += OnWindowSizeChanged;
         Closing += OnClosing;
 
         // Wire orchestration events
@@ -54,12 +61,67 @@ public partial class MainWindow : Window, IWindowHost
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        _vm.LoadInitialSettings();
-        if (_vm.Roots.Count == 0)
+        try
         {
-            _vm.ApplyLocaleRegionDefaults();
-            _vm.ShowFirstRunWizard = true;
-            _vm.WizardStep = 0;
+            _vm.LoadInitialSettings();
+            UpdateContextPanelWidth();
+            if (_vm.Roots.Count == 0)
+            {
+                _vm.ApplyLocaleRegionDefaults();
+                _vm.ShowFirstRunWizard = true;
+                _vm.WizardStep = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            _vm.AddLog($"Startup-Fehler: {ex.Message}", "ERROR");
+            MessageBox.Show(
+                $"Ein Startfehler wurde abgefangen:\n\n{ex.Message}\n\nDie Anwendung bleibt geöffnet, aber einige Einstellungen wurden nicht geladen.",
+                "Romulus – Startwarnung",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
+    private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateContextPanelWidth();
+    }
+
+    private void UpdateContextPanelWidth()
+    {
+        var targetWidth = ActualWidth >= ContextPanelMinWindowWidth
+            ? ContextPanelDefaultWidth
+            : 0d;
+
+        if (contextColumn.Width.GridUnitType != GridUnitType.Pixel ||
+            Math.Abs(contextColumn.Width.Value - targetWidth) > 0.1)
+        {
+            contextColumn.Width = new GridLength(targetWidth, GridUnitType.Pixel);
+        }
+    }
+
+    private void ApplyRuntimeWindowIcon()
+    {
+        try
+        {
+            var logo = new Views.RomulusLogoMark
+            {
+                Width = 64,
+                Height = 64
+            };
+
+            logo.Measure(new Size(64, 64));
+            logo.Arrange(new Rect(0, 0, 64, 64));
+            logo.UpdateLayout();
+
+            var rtb = new RenderTargetBitmap(64, 64, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(logo);
+            Icon = rtb;
+        }
+        catch
+        {
+            // Keep static app icon fallback if runtime icon rendering fails.
         }
     }
 
@@ -127,6 +189,7 @@ public partial class MainWindow : Window, IWindowHost
         // GUI-115: Unsubscribe all VM events to prevent leaks
         _vm.RunRequested -= OnRunRequested;
         Loaded -= OnLoaded;
+        SizeChanged -= OnWindowSizeChanged;
         Closing -= OnClosing;
 
         // System tray

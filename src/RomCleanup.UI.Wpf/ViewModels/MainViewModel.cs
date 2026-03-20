@@ -102,9 +102,16 @@ public sealed partial class MainViewModel : ObservableObject
         ConvertOnlyCommand = new RelayCommand(
             () => { ConvertOnly = true; DryRun = false; RunCommand.Execute(null); },
             () => Roots.Count > 0 && !IsBusy && !HasBlockingValidationErrors);
+        RequestStartMoveCommand = new RelayCommand(
+            () => ShowMoveInlineConfirm = true,
+            () => ShowStartMoveButton && !ShowMoveInlineConfirm);
+        CancelStartMoveCommand = new RelayCommand(
+            () => ShowMoveInlineConfirm = false,
+            () => ShowMoveInlineConfirm);
         StartMoveCommand = new RelayCommand(
             () =>
             {
+                ShowMoveInlineConfirm = false;
                 if (HasBlockingValidationErrors)
                 {
                     var blockingValidationMessage = GetBlockingValidationMessage();
@@ -162,7 +169,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     // ═══ NAVIGATION (GUI-061) ═══════════════════════════════════════════
     private int _selectedNavIndex;
-    /// <summary>GUI-061: Active sidebar navigation index (0=Start, 1=Analyse, 2=Setup, 3=Tools, 4=Log).</summary>
+    /// <summary>GUI-061: Active sidebar navigation index (0=Start, 1=Analyse, 2=Setup, 3=System).</summary>
     public int SelectedNavIndex
     {
         get => _selectedNavIndex;
@@ -185,8 +192,7 @@ public sealed partial class MainViewModel : ObservableObject
             0 => "Start",
             1 => "Analyse",
             2 => "Setup",
-            3 => "Tools",
-            4 => "Log",
+            3 => "System",
             _ => "Start"
         };
         set
@@ -196,8 +202,9 @@ public sealed partial class MainViewModel : ObservableObject
                 "Start" => 0,
                 "Analyse" => 1,
                 "Setup" => 2,
+                "System" => 3,
                 "Tools" => 3,
-                "Log" => 4,
+                "Log" => 3,
                 _ => 0
             };
             SelectedNavIndex = idx;
@@ -220,8 +227,9 @@ public sealed partial class MainViewModel : ObservableObject
             "Start" => 0,
             "Analyse" => 1,
             "Setup" => 2,
+            "System" => 3,
             "Tools" => 3,
-            "Log" => 4,
+            "Log" => 3,
             _ => 0
         };
 
@@ -354,6 +362,17 @@ public sealed partial class MainViewModel : ObservableObject
         set => SetProperty(ref _showShortcutSheet, value);
     }
 
+    private bool _showMoveInlineConfirm;
+    public bool ShowMoveInlineConfirm
+    {
+        get => _showMoveInlineConfirm;
+        set
+        {
+            if (SetProperty(ref _showMoveInlineConfirm, value))
+                DeferCommandRequery();
+        }
+    }
+
     public RelayCommand ToggleShortcutSheetCommand { get; private set; } = null!;
 
     // ═══ NOTIFICATIONS (GUI-055) ════════════════════════════════════════
@@ -396,6 +415,8 @@ public sealed partial class MainViewModel : ObservableObject
     public IRelayCommand BrowseFolderPathCommand { get; }
     public IRelayCommand QuickPreviewCommand { get; }
     public IRelayCommand ConvertOnlyCommand { get; }
+    public IRelayCommand RequestStartMoveCommand { get; }
+    public IRelayCommand CancelStartMoveCommand { get; }
     public IRelayCommand StartMoveCommand { get; }
     public IRelayCommand SaveSettingsCommand { get; }
     public IRelayCommand LoadSettingsCommand { get; }
@@ -524,6 +545,8 @@ public sealed partial class MainViewModel : ObservableObject
         WatchApplyCommand.NotifyCanExecuteChanged();
         QuickPreviewCommand.NotifyCanExecuteChanged();
         ConvertOnlyCommand.NotifyCanExecuteChanged();
+        RequestStartMoveCommand.NotifyCanExecuteChanged();
+        CancelStartMoveCommand.NotifyCanExecuteChanged();
         StartMoveCommand.NotifyCanExecuteChanged();
     }
 

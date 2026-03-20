@@ -448,6 +448,7 @@ public sealed partial class MainViewModel
 
     private void OnCancel()
     {
+        ShowMoveInlineConfirm = false;
         // F-02 FIX: Cancel under lock to prevent race with CreateRunCancellation/Dispose
         lock (_ctsLock)
         {
@@ -559,6 +560,7 @@ public sealed partial class MainViewModel
     /// <summary>Complete a run (call from UI thread when orchestration finishes).</summary>
     public void CompleteRun(bool success, string? reportPath = null, bool cancelled = false)
     {
+        ShowMoveInlineConfirm = false;
         BusyHint = "";
         ConvertOnly = false; // Reset transient flag
         var resolvedReportPath = string.IsNullOrWhiteSpace(reportPath) ? null : reportPath;

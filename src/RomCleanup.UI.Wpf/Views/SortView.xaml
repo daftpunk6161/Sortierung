@@ -60,38 +60,6 @@
         </StackPanel>
       </Border>
 
-      <!-- Mode Toggle -->
-      <Border CornerRadius="6" BorderBrush="{DynamicResource BrushAccentCyan}"
-              BorderThickness="1.5" Margin="{DynamicResource SpaceBottomSM}" HorizontalAlignment="Left"
-              Background="{DynamicResource BrushSurface}">
-        <Grid>
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="Auto"/>
-          </Grid.ColumnDefinitions>
-          <RadioButton Grid.Column="0" GroupName="UiMode"
-                       IsChecked="{Binding IsSimpleMode}" Padding="16,8" MinWidth="120" Cursor="Hand"
-                       ToolTip="{Binding Loc[Sort.SimpleTip]}"
-                       AutomationProperties.Name="{Binding Loc[Sort.SimpleMode]}" TabIndex="20">
-            <StackPanel Orientation="Horizontal">
-              <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FC;" FontSize="14"
-                         VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
-              <AccessText Text="{Binding Loc[Sort.SimpleAccess]}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            </StackPanel>
-          </RadioButton>
-          <RadioButton Grid.Column="1" GroupName="UiMode"
-                       IsChecked="{Binding IsExpertMode, Mode=OneWay}" Padding="16,8" MinWidth="120" Cursor="Hand"
-                       ToolTip="{Binding Loc[Sort.ExpertTip]}"
-                       AutomationProperties.Name="{Binding Loc[Sort.ExpertMode]}" TabIndex="21">
-            <StackPanel Orientation="Horizontal">
-              <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE713;" FontSize="14"
-                         VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
-              <AccessText Text="{Binding Loc[Sort.ExpertAccess]}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            </StackPanel>
-          </RadioButton>
-        </Grid>
-      </Border>
-
       <!-- Simple Mode Panel -->
       <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}"
               Visibility="{Binding IsSimpleMode, Converter={StaticResource BoolToVis}}">
@@ -212,14 +180,6 @@
                          VerticalAlignment="Center"/>
               <TextBlock Text="{Binding MoveApplyGateText}" Margin="0,6,0,0" TextWrapping="Wrap"
                          Foreground="{DynamicResource BrushTextPrimary}"/>
-              <Button Content="{Binding Loc[Sort.StartMoveNow]}"
-                      Command="{Binding StartMoveCommand}"
-                      Margin="0,10,0,0" Padding="12,4" FontWeight="SemiBold" HorizontalAlignment="Left"
-                      Background="{DynamicResource BrushDangerBg}" Foreground="{DynamicResource BrushDanger}" BorderBrush="{DynamicResource BrushDanger}"
-                      BorderThickness="1" Cursor="Hand"
-                      Visibility="{Binding ShowStartMoveButton, Converter={StaticResource BoolToVis}}"
-                      ToolTip="{Binding MoveApplyGateText}"
-                      AutomationProperties.Name="{Binding Loc[Sort.StartMoveNow]}"/>
             </StackPanel>
           </Border>
           <!-- Move Complete Banner -->
@@ -263,7 +223,7 @@
             <CheckBox Content="WORLD" Margin="0,0,12,4" IsChecked="{Binding PreferWORLD}" ToolTip="{Binding Loc[Sort.RegionToolTipWORLD]}" AutomationProperties.Name="{Binding Loc[Sort.RegionToolTipWORLD]}"/>
             <CheckBox Content="JP"    Margin="0,0,12,4" IsChecked="{Binding PreferJP}"    ToolTip="{Binding Loc[Sort.RegionToolTipJP]}" AutomationProperties.Name="{Binding Loc[Sort.RegionToolTipJP]}"/>
           </WrapPanel>
-          <Expander Header="{Binding Loc[Sort.MoreRegions]}" IsExpanded="False" Margin="0,2,0,0">
+          <Expander Header="{Binding Loc[Sort.MoreRegions], Mode=OneWay}" IsExpanded="False" Margin="0,2,0,0">
             <WrapPanel Margin="0,4,0,0">
               <CheckBox Content="DE"   Margin="0,0,12,4" IsChecked="{Binding PreferDE}"   ToolTip="Deutschland" AutomationProperties.Name="Region Deutschland bevorzugen"/>
               <CheckBox Content="FR"   Margin="0,0,12,4" IsChecked="{Binding PreferFR}"   ToolTip="Frankreich" AutomationProperties.Name="Region Frankreich bevorzugen"/>

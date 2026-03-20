@@ -1,6 +1,7 @@
 <UserControl x:Class="RomCleanup.UI.Wpf.Views.StartView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:views="clr-namespace:RomCleanup.UI.Wpf.Views"
 >
 
   <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -22,6 +23,12 @@
           <!-- Empty state -->
           <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                       Visibility="{Binding HasNoRoots, Converter={StaticResource BoolToVis}}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+              <Border Width="34" Height="34" CornerRadius="8" BorderBrush="{DynamicResource BrushAccentCyan}" BorderThickness="1.5" Background="#0B2230" Margin="0,0,8,0">
+                <views:RomulusLogoMark Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <TextBlock Text="{Binding Loc[App.Title]}" Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            </StackPanel>
             <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="48"
                        Foreground="{DynamicResource BrushAccentCyan}" HorizontalAlignment="Center"
                        Margin="{DynamicResource SpaceBottomSM}" Opacity="0.7"/>
@@ -147,80 +154,119 @@
         </StackPanel>
       </Button>
 
-      <!-- Guided workflow: Roots -> Optionen -> Preview -> Confirm -> Run -> Report/Undo -->
+      <!-- Guided workflow redesigned: compact stepper cards -->
       <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
         <StackPanel>
           <TextBlock Text="{Binding Loc[Start.FlowTitle]}" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomSM}"/>
           <TextBlock Text="{Binding Loc[Start.FlowDesc]}" Style="{StaticResource CaptionText}" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
-          <Grid Margin="0,2,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="24"/>
-              <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="1." FontWeight="Bold"/>
-            <TextBlock Grid.Column="1" Text="{Binding Loc[Start.FlowStep1]}"/>
-            <TextBlock Grid.Column="2" Text="{Binding Roots.Count, StringFormat='{}{0}'}" Foreground="{DynamicResource BrushTextMuted}"/>
-          </Grid>
+          <UniformGrid Columns="2" Margin="0,4,0,0">
+            <Border Style="{StaticResource SectionCard}" Margin="0,0,6,6">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="30"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource BrushAccentCyan}" VerticalAlignment="Top">
+                  <TextBlock Text="1" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                  <TextBlock Text="{Binding Loc[Start.FlowStep1]}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding Loc[Start.StepRootsHint]}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="{Binding Roots.Count, StringFormat='{}{0}'}" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+              </Grid>
+            </Border>
 
-          <Grid Margin="0,6,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="24"/>
-              <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="2." FontWeight="Bold"/>
-            <TextBlock Grid.Column="1" Text="{Binding Loc[Start.FlowStep2]}"/>
-            <Button Grid.Column="2" Command="{Binding GoToSetupCommand}" Content="{Binding Loc[Start.FlowOpenSetup]}" Padding="10,4"/>
-          </Grid>
+            <Border Style="{StaticResource SectionCard}" Margin="6,0,0,6">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="30"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource BrushAccentCyan}" VerticalAlignment="Top">
+                  <TextBlock Text="2" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                  <TextBlock Text="{Binding Loc[Start.FlowStep2]}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding Loc[Start.StepSetupHint]}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="2" Command="{Binding GoToSetupCommand}" Content="{Binding Loc[Start.FlowOpenSetup]}" Padding="10,4" VerticalAlignment="Center"/>
+              </Grid>
+            </Border>
 
-          <Grid Margin="0,6,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="24"/>
-              <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="3." FontWeight="Bold"/>
-            <TextBlock Grid.Column="1" Text="{Binding Loc[Start.FlowStep3]}"/>
-            <Button Grid.Column="2" Command="{Binding QuickPreviewCommand}" Content="{Binding Loc[Start.FlowRunPreview]}" Padding="10,4"/>
-          </Grid>
+            <Border Style="{StaticResource SectionCard}" Margin="0,6,6,6">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="30"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource BrushAccentCyan}" VerticalAlignment="Top">
+                  <TextBlock Text="3" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                  <TextBlock Text="{Binding Loc[Start.FlowStep3]}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding Loc[Start.StepPreviewHint]}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="2" Command="{Binding QuickPreviewCommand}" Content="{Binding Loc[Start.FlowRunPreview]}" Padding="10,4" VerticalAlignment="Center"/>
+              </Grid>
+            </Border>
 
-          <Grid Margin="0,6,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="24"/>
-              <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="4." FontWeight="Bold"/>
-            <TextBlock Grid.Column="1" Text="{Binding Loc[Start.FlowStep4]}" TextWrapping="Wrap"/>
-            <TextBlock Grid.Column="2" Text="{Binding MoveApplyGateText}" Foreground="{DynamicResource BrushTextMuted}" FontSize="11" MaxWidth="320" TextWrapping="Wrap"/>
-          </Grid>
+            <Border Style="{StaticResource SectionCard}" Margin="6,6,0,6">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="30"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource BrushAccentCyan}" VerticalAlignment="Top">
+                  <TextBlock Text="4" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                  <TextBlock Text="{Binding Loc[Start.FlowStep4]}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding MoveApplyGateText}" Foreground="{DynamicResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Grid>
+            </Border>
 
-          <Grid Margin="0,6,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="24"/>
-              <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="5." FontWeight="Bold"/>
-            <TextBlock Grid.Column="1" Text="{Binding Loc[Start.FlowStep5]}"/>
-            <Button Grid.Column="2" Command="{Binding StartMoveCommand}" Content="{Binding Loc[Start.FlowRunMove]}" Padding="10,4"/>
-          </Grid>
+            <Border Style="{StaticResource SectionCard}" Margin="0,6,6,0">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="30"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource BrushAccentCyan}" VerticalAlignment="Top">
+                  <TextBlock Text="5" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                  <TextBlock Text="{Binding Loc[Start.FlowStep5]}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding MoveApplyGateText}" Foreground="{DynamicResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Grid>
+            </Border>
 
-          <Grid Margin="0,6,0,0">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="24"/>
-              <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="6." FontWeight="Bold"/>
-            <TextBlock Grid.Column="1" Text="{Binding Loc[Start.FlowStep6]}"/>
-            <StackPanel Grid.Column="2" Orientation="Horizontal">
-              <Button Command="{Binding GoToAnalyseCommand}" Content="{Binding Loc[Start.FlowOpenAnalyse]}" Padding="10,4" Margin="0,0,6,0"/>
-              <Button Command="{Binding RollbackCommand}" Content="{Binding Loc[Start.RollbackButton]}" Padding="10,4"/>
-            </StackPanel>
-          </Grid>
+            <Border Style="{StaticResource SectionCard}" Margin="6,6,0,0">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="30"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource BrushAccentCyan}" VerticalAlignment="Top">
+                  <TextBlock Text="6" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                  <TextBlock Text="{Binding Loc[Start.FlowStep6]}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding Loc[Start.StepReportHint]}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="2" Command="{Binding GoToAnalyseCommand}" Content="{Binding Loc[Start.FlowOpenAnalyse]}" Padding="10,4" VerticalAlignment="Center"/>
+              </Grid>
+            </Border>
+          </UniformGrid>
         </StackPanel>
       </Border>
 
@@ -263,7 +309,7 @@
               <TextBlock Text="&#xE783;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                          Foreground="{DynamicResource BrushDanger}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
               <TextBlock Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center">
-                <Run Text="{Binding DashJunk, Mode=OneWay}"/><Run Text=" Junk"/>
+                <Run Text="{Binding DashJunk, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Loc[Report.Junk], Mode=OneWay}"/>
               </TextBlock>
             </StackPanel>
             <StackPanel Orientation="Horizontal">

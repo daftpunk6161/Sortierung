@@ -2627,10 +2627,6 @@ public class GuiViewModelTests
         Assert.Contains(11, indices);
         Assert.Contains(12, indices);
 
-        // Mode toggle group (20-21)
-        Assert.Contains(20, indices);
-        Assert.Contains(21, indices);
-
         // Simple mode group (30-33)
         Assert.Contains(30, indices);
         Assert.Contains(31, indices);
@@ -2639,9 +2635,9 @@ public class GuiViewModelTests
         Assert.Contains(40, indices);
         Assert.Contains(41, indices);
 
-        // At least 12 controls with explicit TabIndex
-        Assert.True(indices.Count >= 12,
-            $"Expected at least 12 controls with TabIndex, found {indices.Count}");
+        // At least 10 controls with explicit TabIndex
+        Assert.True(indices.Count >= 10,
+            $"Expected at least 10 controls with TabIndex, found {indices.Count}");
     }
 
     // ═══ TASK-127: Feature Buttons use MinWidth not Width ═══════════════

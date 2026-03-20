@@ -6,7 +6,11 @@ namespace RomCleanup.UI.Wpf.Services;
 public interface ILocalizationService : INotifyPropertyChanged
 {
     /// <summary>XAML-bindable indexer: {Binding Loc[Key]}.</summary>
-    string this[string key] { get; }
+    /// <remarks>
+    /// Setter exists for WPF binding compatibility when controls default to TwoWay.
+    /// Implementations may ignore writes.
+    /// </remarks>
+    string this[string key] { get; set; }
 
     /// <summary>Current locale code (de, en, fr).</summary>
     string CurrentLocale { get; }

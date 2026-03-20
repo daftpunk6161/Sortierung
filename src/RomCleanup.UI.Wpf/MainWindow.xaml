@@ -65,8 +65,12 @@
           </Button>
         </StackPanel>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" ClipToBounds="True">
-          <TextBlock Text="ROMULUS" Style="{StaticResource TitleText}"
-                     VerticalAlignment="Center" Margin="8,0,24,0"/>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,24,0">
+            <Border Width="28" Height="28" CornerRadius="7" BorderBrush="{DynamicResource BrushAccentCyan}" BorderThickness="1.5" Background="#0B2230" Margin="0,0,8,0">
+              <views:RomulusLogoMark Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="{Binding Loc[App.Title]}" Style="{StaticResource TitleText}" VerticalAlignment="Center"/>
+          </StackPanel>
           <Rectangle Width="1" Height="16" Fill="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
           <!-- Status dots bound to ViewModel StatusLevel via converter -->
           <Ellipse Width="12" Height="12" VerticalAlignment="Center" Margin="{DynamicResource SpaceDotInline}"
@@ -99,75 +103,14 @@
     </Border>
 
     <!-- ═══ FOOTER ACTION BAR ═════════════════════════════════════════════ -->
-    <Border DockPanel.Dock="Bottom"
-            Background="{DynamicResource BrushSurfaceAlt}" BorderBrush="{DynamicResource BrushBorder}"
-            BorderThickness="0,1,0,0" Padding="{DynamicResource PaddingBar}">
-      <DockPanel>
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-          <ProgressBar MinWidth="120" Width="200" Height="8" Maximum="100"
-                       Value="{Binding Progress}" Margin="{DynamicResource SpaceLeftSM}" VerticalAlignment="Center"
-                       AutomationProperties.Name="Fortschritt" AutomationProperties.LiveSetting="Polite"/>
-          <TextBlock Text="{Binding ProgressText}" Foreground="{DynamicResource BrushTextMuted}"
-                     VerticalAlignment="Center" FontSize="11" Margin="{DynamicResource SpaceLeftSM}"
-                     AutomationProperties.Name="Fortschrittstext" AutomationProperties.LiveSetting="Polite"/>
-        </StackPanel>
-        <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
-          <!-- Start -->
-          <Button Command="{Binding RunCommand}" Style="{StaticResource PrimaryButton}"
-                  Width="140" Height="52" Margin="{DynamicResource SpaceRightXS}"
-                  ToolTip="{Binding Loc[Start.RunTip]}" AutomationProperties.Name="{Binding Loc[Start.RunButton]}"
-                  AutomationProperties.AcceleratorKey="F5" TabIndex="1">
-            <StackPanel HorizontalAlignment="Center">
-              <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE768;" FontSize="20" HorizontalAlignment="Center"/>
-              <TextBlock Text="{Binding Loc[Start.RunButton]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-            </StackPanel>
-          </Button>
-          <!-- Cancel -->
-          <Button Command="{Binding CancelCommand}" Style="{StaticResource DangerButton}"
-                  Width="60" Height="52" Margin="{DynamicResource SpaceRightXS}"
-                  AutomationProperties.AcceleratorKey="Esc"
-                  ToolTip="{Binding Loc[Start.CancelTip]}" AutomationProperties.Name="{Binding Loc[Start.CancelButton]}" TabIndex="2">
-            <StackPanel HorizontalAlignment="Center">
-              <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71A;" FontSize="20" HorizontalAlignment="Center"/>
-              <TextBlock Text="{Binding Loc[Start.CancelButton]}" FontSize="11" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-            </StackPanel>
-          </Button>
-          <Rectangle Width="1" Height="40" Fill="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="{DynamicResource SpaceDivider}"/>
-          <!-- Rollback -->
-          <Button Command="{Binding RollbackCommand}"
-                  Width="110" Height="52" Margin="{DynamicResource SpaceRightXS}"
-                  BorderBrush="{DynamicResource BrushAccentPurple}" Foreground="{DynamicResource BrushAccentPurple}"
-                  AutomationProperties.AcceleratorKey="Ctrl+Z"
-                  Background="{DynamicResource BrushDangerBg}" BorderThickness="2"
-              ToolTip="{Binding Loc[Start.RollbackTip]}" AutomationProperties.Name="{Binding Loc[Start.RollbackButton]}" TabIndex="3">
-            <StackPanel HorizontalAlignment="Center">
-              <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE777;" FontSize="20" HorizontalAlignment="Center"/>
-              <TextBlock Text="{Binding Loc[Start.RollbackButton]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-            </StackPanel>
-          </Button>
-          <!-- Convert Only -->
-          <Button Command="{Binding ConvertOnlyCommand}"
-                  Width="130" Height="52" Margin="{DynamicResource SpaceRightXS}"
-                  BorderBrush="{DynamicResource BrushSuccess}" Foreground="{DynamicResource BrushSuccess}"
-                  Background="{DynamicResource BrushSuccessBg}" BorderThickness="2"
-                  ToolTip="{Binding Loc[Start.ConvertOnlyTip]}" AutomationProperties.Name="{Binding Loc[Start.ConvertOnlyButton]}" TabIndex="4">
-            <StackPanel HorizontalAlignment="Center">
-              <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8AB;" FontSize="20" HorizontalAlignment="Center"/>
-              <TextBlock Text="{Binding Loc[Start.ConvertOnlyButton]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-            </StackPanel>
-          </Button>
-          <Rectangle Width="1" Height="40" Fill="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="{DynamicResource SpaceDivider}"/>
-          <TextBlock Text="{Binding BusyHint}" Style="{StaticResource CaptionText}"
-                     VerticalAlignment="Center" Margin="4,0"/>
-        </WrapPanel>
-      </DockPanel>
-    </Border>
+    <views:SmartActionBar DockPanel.Dock="Bottom"/>
 
     <!-- ═══ MAIN CONTENT: SIDEBAR + VIEWS ════════════════════════════════ -->
     <Grid>
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="84"/>
         <ColumnDefinition Width="*"/>
+        <ColumnDefinition x:Name="contextColumn" Width="280"/>
       </Grid.ColumnDefinitions>
 
       <!-- ═══ GUI-061: Vertical Sidebar Navigation ═══════════════════════ -->
@@ -202,22 +145,13 @@
                 <TextBlock Text="{Binding Loc[Nav.Setup]}" FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource BrushTextMuted}"/>
               </StackPanel>
             </RadioButton>
-            <!-- Tools -->
-            <RadioButton GroupName="Nav" IsChecked="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Tools}"
-                         Style="{StaticResource NavButton}" ToolTip="{Binding Loc[Nav.Tools]}" TabIndex="53"
-                         AutomationProperties.Name="{Binding Loc[Nav.Tools]}">
+            <!-- System (Tools + Settings) -->
+            <RadioButton GroupName="Nav" IsChecked="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=System}"
+                         Style="{StaticResource NavButton}" ToolTip="{Binding Loc[Nav.System]}" TabIndex="53"
+                         AutomationProperties.Name="{Binding Loc[Nav.System]}">
               <StackPanel HorizontalAlignment="Center">
                 <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE90F;" FontSize="18" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Binding Loc[Nav.Tools]}" FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource BrushTextMuted}"/>
-              </StackPanel>
-            </RadioButton>
-            <!-- Log -->
-            <RadioButton GroupName="Nav" IsChecked="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Log}"
-                         Style="{StaticResource NavButton}" ToolTip="{Binding Loc[Nav.Log]}" TabIndex="54"
-                         AutomationProperties.Name="{Binding Loc[Nav.Log]}">
-              <StackPanel HorizontalAlignment="Center">
-                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE81C;" FontSize="18" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Binding Loc[Nav.Log]}" FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource BrushTextMuted}"/>
+                <TextBlock Text="{Binding Loc[Nav.System]}" FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource BrushTextMuted}"/>
               </StackPanel>
             </RadioButton>
           </StackPanel>
@@ -234,10 +168,19 @@
           <views:StartView Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Start}"/>
           <views:ResultView x:Name="resultView" Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Analyse}"/>
           <views:SortView Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Setup}"/>
-          <views:ToolsView DataContext="{Binding Tools}" Visibility="{Binding DataContext.SelectedNavTag, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}"/>
-          <views:SettingsView Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Log}"/>
+          <TabControl Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=System}">
+            <TabItem Header="{Binding Loc[System.ToolsTab], Mode=OneWay}">
+              <views:ToolsView DataContext="{Binding Tools}"/>
+            </TabItem>
+            <TabItem Header="{Binding Loc[System.SettingsTab], Mode=OneWay}">
+              <views:SettingsView/>
+            </TabItem>
+          </TabControl>
         </Grid>
       </Grid>
+
+      <!-- ═══ CONTEXT PANEL (Hybrid Dashboard foundation) ═══════════════ -->
+      <views:ContextPanel Grid.Column="2" Visibility="{Binding IsBusy, Converter={StaticResource InverseBoolToVis}}"/>
 
       <!-- ═══ GUI-055: Toast/Notification overlay ═════════════════════════ -->
       <ItemsControl Grid.Column="1" ItemsSource="{Binding Notifications}"
@@ -274,12 +217,12 @@
       </ItemsControl>
 
       <!-- ═══ GUI-081: First-Run-Wizard overlay ═══════════════════════════ -->
-      <views:WizardView Grid.Column="0" Grid.ColumnSpan="2"
+      <views:WizardView Grid.Column="0" Grid.ColumnSpan="3"
                         Visibility="{Binding ShowFirstRunWizard, Converter={StaticResource BoolToVis}}"
                         AutomationProperties.Name="{Binding Loc[Wizard.Title]}"/>
 
       <!-- ═══ GUI-101: Shortcut Cheatsheet overlay ══════════════════════ -->
-      <Border Grid.Column="0" Grid.ColumnSpan="2"
+      <Border Grid.Column="0" Grid.ColumnSpan="3"
               Background="#CC181825" IsHitTestVisible="True"
               Visibility="{Binding ShowShortcutSheet, Converter={StaticResource BoolToVis}}"
               MouseDown="OnShortcutOverlayClick">
