@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using RomCleanup.Infrastructure.Audit;
 
 namespace RomCleanup.Infrastructure.Reporting;
 
@@ -298,16 +299,15 @@ tr:hover { background: rgba(137,180,250,0.05); }
     private static string Enc(string value) =>
         WebUtility.HtmlEncode(value ?? "");
 
-    /// <summary>CSV-safe value: quote if needed, prevent CSV injection.</summary>
+    /// <summary>CSV-safe value: delegates to central AuditCsvParser for consistent CSV injection prevention.</summary>
     private static string CsvSafe(string value)
     {
         if (string.IsNullOrEmpty(value)) return "\"\"";
-        // CSV injection prevention: strip leading =, +, -, @
-        var safe = value;
-        if (safe.Length > 0 && "=+-@".Contains(safe[0]))
-            safe = "'" + safe;
-        // Quote and escape internal quotes
-        return "\"" + safe.Replace("\"", "\"\"") + "\"";
+        var sanitized = AuditCsvParser.SanitizeCsvField(value);
+        // Ensure quoted for CSV consistency
+        if (!sanitized.StartsWith('"'))
+            return "\"" + sanitized.Replace("\"", "\"\"") + "\"";
+        return sanitized;
     }
 
     private static string FormatSize(long bytes)

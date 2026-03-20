@@ -457,4 +457,122 @@ public sealed class SafetyIoRecoveryTests : IDisposable
 
         public bool Verify(string targetPath, ConversionTarget target) => false;
     }
+
+    // ════════════════════════════════════════════════════════════════════
+    // S-1: SEC-MOVE-01 parity — MoveDirectorySafely traversal guard
+    // ════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void MoveDirectorySafely_DestinationWithTraversal_Throws()
+    {
+        var sourceDir = Path.Combine(_tempDir, "src_dir");
+        Directory.CreateDirectory(sourceDir);
+
+        var destWithTraversal = Path.Combine(_tempDir, "safe", "..", "escaped_dir");
+
+        var fs = new FileSystemAdapter();
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            fs.MoveDirectorySafely(sourceDir, destWithTraversal));
+        Assert.Contains("directory traversal", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // S-2: SEC-PATH-03 — Windows reserved device name blocking
+    // ════════════════════════════════════════════════════════════════════
+
+    [Theory]
+    [InlineData("CON")]
+    [InlineData("PRN")]
+    [InlineData("AUX")]
+    [InlineData("NUL")]
+    [InlineData("COM1")]
+    [InlineData("COM9")]
+    [InlineData("LPT1")]
+    [InlineData("LPT9")]
+    [InlineData("con")]
+    [InlineData("nul")]
+    public void ResolveChildPathWithinRoot_ReservedDeviceName_ReturnsNull(string deviceName)
+    {
+        var fs = new FileSystemAdapter();
+        var result = fs.ResolveChildPathWithinRoot(_tempDir, deviceName);
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData("CON.txt")]
+    [InlineData("NUL.zip")]
+    [InlineData("COM1.rom")]
+    [InlineData("LPT3.dat")]
+    public void ResolveChildPathWithinRoot_ReservedDeviceNameWithExtension_ReturnsNull(string fileName)
+    {
+        var fs = new FileSystemAdapter();
+        var result = fs.ResolveChildPathWithinRoot(_tempDir, fileName);
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData("CONSOLE")]
+    [InlineData("NULLIFY")]
+    [InlineData("PRINTER")]
+    [InlineData("COMRADES")]
+    [InlineData("LPTOP")]
+    [InlineData("game.rom")]
+    public void ResolveChildPathWithinRoot_NonReservedName_ReturnsPath(string fileName)
+    {
+        var fs = new FileSystemAdapter();
+        var result = fs.ResolveChildPathWithinRoot(_tempDir, fileName);
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public void ResolveChildPathWithinRoot_ReservedNameInSubdirectory_ReturnsNull()
+    {
+        var fs = new FileSystemAdapter();
+        var result = fs.ResolveChildPathWithinRoot(_tempDir, Path.Combine("games", "CON", "file.rom"));
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void IsWindowsReservedDeviceName_ValidatesCorrectly()
+    {
+        // Positive cases
+        Assert.True(FileSystemAdapter.IsWindowsReservedDeviceName("CON"));
+        Assert.True(FileSystemAdapter.IsWindowsReservedDeviceName("con"));
+        Assert.True(FileSystemAdapter.IsWindowsReservedDeviceName("NUL"));
+        Assert.True(FileSystemAdapter.IsWindowsReservedDeviceName("COM1"));
+        Assert.True(FileSystemAdapter.IsWindowsReservedDeviceName("LPT9"));
+        Assert.True(FileSystemAdapter.IsWindowsReservedDeviceName("NUL.txt"));
+        Assert.True(FileSystemAdapter.IsWindowsReservedDeviceName("COM3.rom"));
+
+        // Negative cases
+        Assert.False(FileSystemAdapter.IsWindowsReservedDeviceName(""));
+        Assert.False(FileSystemAdapter.IsWindowsReservedDeviceName("CONSOLE"));
+        Assert.False(FileSystemAdapter.IsWindowsReservedDeviceName("game.rom"));
+        Assert.False(FileSystemAdapter.IsWindowsReservedDeviceName("COMA"));
+        Assert.False(FileSystemAdapter.IsWindowsReservedDeviceName("LPT"));
+        Assert.False(FileSystemAdapter.IsWindowsReservedDeviceName("COMX"));
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // S-4: MoveDirectorySafely TOCTOU — try/catch collision handling
+    // ════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void MoveDirectorySafely_CollisionHandling_UsesDupSuffix()
+    {
+        var sourceDir = Path.Combine(_tempDir, "collision_src");
+        var destDir = Path.Combine(_tempDir, "collision_dest");
+        Directory.CreateDirectory(sourceDir);
+        File.WriteAllText(Path.Combine(sourceDir, "test.txt"), "content");
+        Directory.CreateDirectory(destDir); // Pre-existing — triggers DUP
+
+        var fs = new FileSystemAdapter();
+        var result = fs.MoveDirectorySafely(sourceDir, destDir);
+
+        Assert.True(result);
+        Assert.False(Directory.Exists(sourceDir));
+        Assert.True(Directory.Exists(destDir)); // Original still exists
+        Assert.True(Directory.Exists(destDir + "__DUP1")); // DUP created
+        Assert.True(File.Exists(Path.Combine(destDir + "__DUP1", "test.txt")));
+    }
 }

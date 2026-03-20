@@ -277,6 +277,11 @@ public sealed class FileSystemAdapter : IFileSystem
         if (string.IsNullOrWhiteSpace(destinationPath))
             throw new ArgumentException("Destination path must not be empty.", nameof(destinationPath));
 
+        // SEC-MOVE-01: Block directory traversal in destination path (parity with MoveItemSafely)
+        var destSegments = destinationPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (destSegments.Any(s => s == ".."))
+            throw new InvalidOperationException("Blocked: Destination path contains directory traversal.");
+
         // SEC-MOVE-02: Use NFC normalization consistent with MoveItemSafely
         var fullSource = NormalizePathNfc(sourcePath);
         var fullDest = NormalizePathNfc(destinationPath);
@@ -311,11 +316,15 @@ public sealed class FileSystemAdapter : IFileSystem
             for (int i = 1; i <= MaxDuplicateAttempts; i++)
             {
                 finalDest = Path.Combine(parentDir, $"{dirName}__DUP{i}");
-                if (!Directory.Exists(finalDest))
+                try
                 {
                     Directory.Move(fullSource, finalDest);
                     moved = true;
                     break;
+                }
+                catch (IOException)
+                {
+                    // Slot already taken — try next index (eliminates TOCTOU with Directory.Exists)
                 }
             }
 
@@ -324,7 +333,35 @@ public sealed class FileSystemAdapter : IFileSystem
         }
         else
         {
-            Directory.Move(fullSource, finalDest);
+            try
+            {
+                Directory.Move(fullSource, finalDest);
+            }
+            catch (IOException) when (Directory.Exists(finalDest))
+            {
+                // Race: directory appeared between our check and move — use DUP suffix logic
+                var dirName = Path.GetFileName(fullDest);
+                var parentDir = Path.GetDirectoryName(fullDest) ?? "";
+
+                bool moved = false;
+                for (int i = 1; i <= MaxDuplicateAttempts; i++)
+                {
+                    finalDest = Path.Combine(parentDir, $"{dirName}__DUP{i}");
+                    try
+                    {
+                        Directory.Move(fullSource, finalDest);
+                        moved = true;
+                        break;
+                    }
+                    catch (IOException)
+                    {
+                        // Slot already taken — try next index
+                    }
+                }
+
+                if (!moved)
+                    throw new IOException($"Could not find free DUP slot after {MaxDuplicateAttempts} attempts.");
+            }
         }
 
         return true;
@@ -347,6 +384,10 @@ public sealed class FileSystemAdapter : IFileSystem
         foreach (var seg in segments)
         {
             if (seg.Length > 0 && (seg[^1] == '.' || seg[^1] == ' '))
+                return null;
+
+            // SEC-PATH-03: Block Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+            if (IsWindowsReservedDeviceName(seg))
                 return null;
         }
 
@@ -374,6 +415,33 @@ public sealed class FileSystemAdapter : IFileSystem
         {
             return null; // fail-safe
         }
+    }
+
+    /// <summary>
+    /// SEC-PATH-03: Check if a filename (without extension) matches a Windows reserved device name.
+    /// Reserved names: CON, PRN, AUX, NUL, COM0-COM9, LPT0-LPT9.
+    /// These are reserved regardless of extension (e.g., "NUL.txt" is still reserved).
+    /// </summary>
+    internal static bool IsWindowsReservedDeviceName(string segment)
+    {
+        if (string.IsNullOrEmpty(segment))
+            return false;
+
+        // Strip extension if present (e.g., "NUL.txt" → "NUL")
+        var dotIndex = segment.IndexOf('.');
+        var nameOnly = dotIndex >= 0 ? segment[..dotIndex] : segment;
+
+        return nameOnly.Length switch
+        {
+            3 => nameOnly.Equals("CON", StringComparison.OrdinalIgnoreCase)
+              || nameOnly.Equals("PRN", StringComparison.OrdinalIgnoreCase)
+              || nameOnly.Equals("AUX", StringComparison.OrdinalIgnoreCase)
+              || nameOnly.Equals("NUL", StringComparison.OrdinalIgnoreCase),
+            4 => (nameOnly.StartsWith("COM", StringComparison.OrdinalIgnoreCase)
+                  || nameOnly.StartsWith("LPT", StringComparison.OrdinalIgnoreCase))
+                 && char.IsAsciiDigit(nameOnly[3]),
+            _ => false
+        };
     }
 
     private static bool HasReparsePointInAncestry(string path, string stopAtRoot)

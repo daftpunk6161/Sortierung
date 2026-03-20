@@ -157,11 +157,19 @@ public sealed class FolderDeduplicator
                     var loserName = Path.GetFileName(loserPath);
                     var dest = Path.Combine(dupeBase, loserName!);
 
-                    // Path traversal check
+                    // Path traversal check — source AND destination
                     var resolvedSrc = _fs.ResolveChildPathWithinRoot(root, Path.GetRelativePath(root, loserPath));
                     if (resolvedSrc is null)
                     {
                         _log?.Invoke($"    BLOCKED: {loserName} - außerhalb Root");
+                        continue;
+                    }
+
+                    // SEC-DEDUP-01: Validate destination path within dupeBase
+                    var resolvedDest = _fs.ResolveChildPathWithinRoot(dupeBase, loserName!);
+                    if (resolvedDest is null)
+                    {
+                        _log?.Invoke($"    BLOCKED: {loserName} - Ziel außerhalb Dupe-Root");
                         continue;
                     }
 
