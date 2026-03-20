@@ -95,6 +95,44 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
     }
 
     [Fact]
+    public void Scan_RootOrderPermutation_ProducesSameOrderedEnumeration()
+    {
+        var root = Path.Combine(_tempDir, "scan_order_root");
+        var child = Path.Combine(root, "child");
+        Directory.CreateDirectory(child);
+
+        var parentFile = CreateFileAt(root, "A_parent.zip", 10);
+        var childFile = CreateFileAt(child, "B_child.zip", 10);
+
+        var scan = new ScanPipelinePhase();
+
+        var forwardOptions = new RunOptions
+        {
+            Roots = new[] { root, child },
+            Extensions = new[] { ".zip" },
+            Mode = "DryRun"
+        };
+
+        var reverseOptions = new RunOptions
+        {
+            Roots = new[] { child, root },
+            Extensions = new[] { ".zip" },
+            Mode = "DryRun"
+        };
+
+        var forward = scan.Execute(forwardOptions, CreateContext(forwardOptions), CancellationToken.None)
+            .Select(s => s.Path)
+            .ToArray();
+
+        var reverse = scan.Execute(reverseOptions, CreateContext(reverseOptions), CancellationToken.None)
+            .Select(s => s.Path)
+            .ToArray();
+
+        Assert.Equal(new[] { Path.GetFullPath(parentFile), Path.GetFullPath(childFile) }, forward);
+        Assert.Equal(forward, reverse);
+    }
+
+    [Fact]
     public void Scan_M3uReferencedChd_RemainsInCandidates()
     {
         var root = Path.Combine(_tempDir, "m3u_chd_scan");
@@ -589,6 +627,37 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
         Assert.Equal(1, result.ConvertSkipped);
     }
 
+    [Fact]
+    public void Conversion_ErrorWithPartialTarget_DeletesPartialOutput()
+    {
+        var root = Path.Combine(_tempDir, "conv_partial_error_cleanup");
+        Directory.CreateDirectory(root);
+        var source = CreateFileAt(root, "broken.iso", 6);
+
+        var converter = new PartialErrorConverter();
+        var candidate = new RomCandidate
+        {
+            MainPath = source,
+            GameKey = "broken",
+            Category = FileCategory.Game,
+            ConsoleKey = "PS2",
+            Extension = ".iso"
+        };
+        var group = new DedupeResult { Winner = candidate, Losers = Array.Empty<RomCandidate>(), GameKey = "broken" };
+        var options = new RunOptions { Roots = new[] { root }, Mode = "Move" };
+
+        var phase = new WinnerConversionPipelinePhase();
+        var output = phase.Execute(
+            new WinnerConversionPhaseInput(new[] { group }, options, new HashSet<string>(), converter),
+            CreateContext(options),
+            CancellationToken.None);
+
+        Assert.Equal(0, output.Converted);
+        Assert.Equal(1, output.ConvertErrors);
+        Assert.True(File.Exists(source));
+        Assert.False(File.Exists(source + ".chd"));
+    }
+
     // 8) Move / Restore / Undo
 
     [Fact]
@@ -657,6 +726,34 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
 
         Assert.Empty(restored);
         Assert.False(File.Exists(oldPath));
+    }
+
+    [Fact]
+    public void Rollback_MissingCurrentFile_IsCountedAsFailure_NotOnlySkipped()
+    {
+        var root = Path.Combine(_tempDir, "rollback_missing_visible");
+        Directory.CreateDirectory(root);
+
+        var oldPath = Path.Combine(root, "old.zip");
+        var missingCurrentPath = Path.Combine(root, "_TRASH_REGION_DEDUPE", "old.zip");
+
+        var fs = new FileSystemAdapter();
+        var audit = new AuditCsvStore(fs);
+        var auditPath = Path.Combine(_tempDir, "audit", "rollback_missing_visible.csv");
+        audit.AppendAuditRow(auditPath, root, oldPath, missingCurrentPath, "Move", "GAME", "", "test-missing-current");
+
+        var keyPath = Path.Combine(_tempDir, "rollback_missing_visible.key");
+        var signing = new AuditSigningService(fs, keyFilePath: keyPath);
+        signing.WriteMetadataSidecar(auditPath, 1, new Dictionary<string, object> { ["Mode"] = "Move" });
+
+        var rollbackResult = signing.Rollback(
+            auditPath,
+            allowedRestoreRoots: new[] { root },
+            allowedCurrentRoots: new[] { root },
+            dryRun: false);
+
+        Assert.Equal(0, rollbackResult.RolledBack);
+        Assert.True(rollbackResult.Failed > 0);
     }
 
     // 9) Orchestrator
@@ -746,6 +843,39 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
                     new SuccessfulConverter()),
                 context,
                 cancelled));
+    }
+
+    [Fact]
+    public void Orchestrator_CancelDuringScan_WritesPartialAuditSidecarForTraceability()
+    {
+        var root = Path.Combine(_tempDir, "cancel_scan_trace");
+        Directory.CreateDirectory(root);
+        CreateFileAt(root, "one.zip", 10);
+        CreateFileAt(root, "two.zip", 10);
+
+        var auditPath = Path.Combine(_tempDir, "audit", "cancel_scan_trace.csv");
+        using var cts = new CancellationTokenSource();
+
+        var orch = new RunOrchestrator(
+            new FileSystemAdapter(),
+            new AuditCsvStore(),
+            onProgress: msg =>
+            {
+                if (msg.Contains("[Scan]", StringComparison.OrdinalIgnoreCase))
+                    cts.Cancel();
+            });
+
+        var result = orch.Execute(new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".zip" },
+            Mode = "Move",
+            AuditPath = auditPath
+        }, cts.Token);
+
+        Assert.Equal("cancelled", result.Status);
+        Assert.Equal(2, result.ExitCode);
+        Assert.True(File.Exists(auditPath + ".meta.json"));
     }
 
     // P2-04: DAT matching skip for UNKNOWN console must emit warning
@@ -984,5 +1114,22 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
 
         public bool Verify(string targetPath, ConversionTarget target) =>
             !targetPath.Contains("g2", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed class PartialErrorConverter : IFormatConverter
+    {
+        public ConversionTarget? GetTargetFormat(string consoleKey, string sourceExtension)
+            => sourceExtension.Equals(".iso", StringComparison.OrdinalIgnoreCase)
+                ? new ConversionTarget(".chd", "fake", "fake")
+                : null;
+
+        public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
+        {
+            var targetPath = sourcePath + target.Extension;
+            File.WriteAllText(targetPath, "partial-corrupt-output");
+            return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Error, "tool-failed-partial", 1);
+        }
+
+        public bool Verify(string targetPath, ConversionTarget target) => false;
     }
 }
