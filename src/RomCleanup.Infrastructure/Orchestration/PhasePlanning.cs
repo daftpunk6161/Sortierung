@@ -71,17 +71,76 @@ public sealed class StandardPhaseStepActions
     public required Func<PipelineState, CancellationToken, PhaseStepResult> WinnerConversion { get; init; }
 }
 
-public sealed class DelegatePhaseStep : IPhaseStep
+public sealed class DeduplicatePhaseStep : IPhaseStep
 {
     private readonly Func<PipelineState, CancellationToken, PhaseStepResult> _execute;
 
-    public DelegatePhaseStep(string name, Func<PipelineState, CancellationToken, PhaseStepResult> execute)
+    public DeduplicatePhaseStep(Func<PipelineState, CancellationToken, PhaseStepResult> execute)
     {
-        Name = name;
         _execute = execute;
     }
 
-    public string Name { get; }
+    public string Name => "Deduplicate";
+
+    public PhaseStepResult Execute(PipelineState state, CancellationToken cancellationToken)
+        => _execute(state, cancellationToken);
+}
+
+public sealed class JunkRemovalPhaseStep : IPhaseStep
+{
+    private readonly Func<PipelineState, CancellationToken, PhaseStepResult> _execute;
+
+    public JunkRemovalPhaseStep(Func<PipelineState, CancellationToken, PhaseStepResult> execute)
+    {
+        _execute = execute;
+    }
+
+    public string Name => "JunkRemoval";
+
+    public PhaseStepResult Execute(PipelineState state, CancellationToken cancellationToken)
+        => _execute(state, cancellationToken);
+}
+
+public sealed class MovePhaseStep : IPhaseStep
+{
+    private readonly Func<PipelineState, CancellationToken, PhaseStepResult> _execute;
+
+    public MovePhaseStep(Func<PipelineState, CancellationToken, PhaseStepResult> execute)
+    {
+        _execute = execute;
+    }
+
+    public string Name => "Move";
+
+    public PhaseStepResult Execute(PipelineState state, CancellationToken cancellationToken)
+        => _execute(state, cancellationToken);
+}
+
+public sealed class ConsoleSortPhaseStep : IPhaseStep
+{
+    private readonly Func<PipelineState, CancellationToken, PhaseStepResult> _execute;
+
+    public ConsoleSortPhaseStep(Func<PipelineState, CancellationToken, PhaseStepResult> execute)
+    {
+        _execute = execute;
+    }
+
+    public string Name => "ConsoleSort";
+
+    public PhaseStepResult Execute(PipelineState state, CancellationToken cancellationToken)
+        => _execute(state, cancellationToken);
+}
+
+public sealed class WinnerConversionPhaseStep : IPhaseStep
+{
+    private readonly Func<PipelineState, CancellationToken, PhaseStepResult> _execute;
+
+    public WinnerConversionPhaseStep(Func<PipelineState, CancellationToken, PhaseStepResult> execute)
+    {
+        _execute = execute;
+    }
+
+    public string Name => "WinnerConversion";
 
     public PhaseStepResult Execute(PipelineState state, CancellationToken cancellationToken)
         => _execute(state, cancellationToken);
@@ -93,18 +152,18 @@ public sealed class PhasePlanBuilder : IPhasePlanBuilder
     {
         var phases = new List<IPhaseStep>
         {
-            new DelegatePhaseStep("Deduplicate", actions.Deduplicate),
-            new DelegatePhaseStep("JunkRemoval", actions.JunkRemoval)
+            new DeduplicatePhaseStep(actions.Deduplicate),
+            new JunkRemovalPhaseStep(actions.JunkRemoval)
         };
 
         if (options.Mode == "Move")
-            phases.Add(new DelegatePhaseStep("Move", actions.Move));
+            phases.Add(new MovePhaseStep(actions.Move));
 
         if (options.SortConsole && options.Mode == "Move")
-            phases.Add(new DelegatePhaseStep("ConsoleSort", actions.ConsoleSort));
+            phases.Add(new ConsoleSortPhaseStep(actions.ConsoleSort));
 
         if (options.ConvertFormat is not null && options.Mode == "Move")
-            phases.Add(new DelegatePhaseStep("WinnerConversion", actions.WinnerConversion));
+            phases.Add(new WinnerConversionPhaseStep(actions.WinnerConversion));
 
         return phases;
     }
