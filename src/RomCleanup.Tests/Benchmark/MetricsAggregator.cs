@@ -4,6 +4,14 @@ internal sealed record SystemMetrics(double Precision, double Recall, double F1,
 
 internal sealed record ConfusionEntry(string ExpectedSystem, string ActualSystem, int Count);
 
+internal sealed record CalibrationBucket(int LowerBound, int UpperBound, int SampleCount, int CorrectCount, double Accuracy, double Error);
+
+internal sealed record ConfidenceCalibrationResult(double ExpectedCalibrationError, IReadOnlyList<CalibrationBucket> Buckets);
+
+internal sealed record CategoryConfusionEntry(string ExpectedCategory, string ActualCategory, int Count);
+
+internal sealed record ConsoleConfusionPair(string SystemA, string SystemB, double Rate, int Count);
+
 internal static class MetricsAggregator
 {
     private const int FalseConfidenceThreshold = 80;
@@ -102,5 +110,218 @@ internal static class MetricsAggregator
             .Select(g => new ConfusionEntry(g.Key.Expected, g.Key.Actual, g.Count()))
             .OrderByDescending(x => x.Count)
             .ToList();
+    }
+
+    /// <summary>
+    /// M9: Category Confusion Rate — rate of off-diagonal entries in the category confusion matrix.
+    /// Includes specific sub-rates: gameAsJunk (M9a), biosAsGame, junkAsGame.
+    /// </summary>
+    public static IReadOnlyDictionary<string, double> CalculateCategoryConfusion(IReadOnlyList<BenchmarkSampleResult> results)
+    {
+        int total = results.Count;
+        if (total == 0)
+            return new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+
+        int offDiagonal = results.Count(r =>
+            !string.IsNullOrWhiteSpace(r.ExpectedCategory) &&
+            !string.IsNullOrWhiteSpace(r.ActualCategory) &&
+            !string.Equals(r.ExpectedCategory, r.ActualCategory, StringComparison.OrdinalIgnoreCase));
+
+        int totalExpectedGame = results.Count(r =>
+            string.Equals(r.ExpectedCategory, "Game", StringComparison.OrdinalIgnoreCase));
+        int gameAsJunk = results.Count(r =>
+            string.Equals(r.ExpectedCategory, "Game", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(r.ActualCategory, "Junk", StringComparison.OrdinalIgnoreCase));
+        int totalExpectedBios = results.Count(r =>
+            string.Equals(r.ExpectedCategory, "BIOS", StringComparison.OrdinalIgnoreCase));
+        int biosAsGame = results.Count(r =>
+            string.Equals(r.ExpectedCategory, "BIOS", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(r.ActualCategory, "Game", StringComparison.OrdinalIgnoreCase));
+        int totalExpectedJunk = results.Count(r =>
+            string.Equals(r.ExpectedCategory, "Junk", StringComparison.OrdinalIgnoreCase));
+        int junkAsGame = results.Count(r =>
+            string.Equals(r.ExpectedCategory, "Junk", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(r.ActualCategory, "Game", StringComparison.OrdinalIgnoreCase));
+
+        return new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["categoryConfusionRate"] = (double)offDiagonal / total,
+            ["gameAsJunkRate"] = totalExpectedGame == 0 ? 0 : (double)gameAsJunk / totalExpectedGame,
+            ["biosAsGameRate"] = totalExpectedBios == 0 ? 0 : (double)biosAsGame / totalExpectedBios,
+            ["junkAsGameRate"] = totalExpectedJunk == 0 ? 0 : (double)junkAsGame / totalExpectedJunk,
+        };
+    }
+
+    /// <summary>
+    /// M9 detail: Builds the full category confusion matrix.
+    /// </summary>
+    public static IReadOnlyList<CategoryConfusionEntry> BuildCategoryConfusionMatrix(IReadOnlyList<BenchmarkSampleResult> results)
+    {
+        return results
+            .Where(r => !string.IsNullOrWhiteSpace(r.ExpectedCategory) && !string.IsNullOrWhiteSpace(r.ActualCategory))
+            .GroupBy(r => (Expected: r.ExpectedCategory!, Actual: r.ActualCategory!), new CategoryKeyComparer())
+            .Select(g => new CategoryConfusionEntry(g.Key.Expected, g.Key.Actual, g.Count()))
+            .OrderByDescending(x => x.Count)
+            .ToList();
+    }
+
+    /// <summary>
+    /// M10: Console Confusion Rate — identifies systematic cross-system misidentification pairs.
+    /// Returns pairs above the specified threshold rate.
+    /// </summary>
+    public static IReadOnlyList<ConsoleConfusionPair> CalculateConsoleConfusionPairs(
+        IReadOnlyList<BenchmarkSampleResult> results, double thresholdRate = 0.02)
+    {
+        var byExpected = results
+            .Where(r => !string.IsNullOrWhiteSpace(r.ExpectedConsoleKey))
+            .GroupBy(r => r.ExpectedConsoleKey!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        var pairs = new List<ConsoleConfusionPair>();
+
+        foreach (var (expected, entries) in byExpected)
+        {
+            int totalForSystem = entries.Count;
+            if (totalForSystem == 0) continue;
+
+            var wrongByActual = entries
+                .Where(r => r.Verdict is BenchmarkVerdict.Wrong or BenchmarkVerdict.FalsePositive)
+                .Where(r => !string.IsNullOrWhiteSpace(r.ActualConsoleKey) &&
+                            !string.Equals(r.ActualConsoleKey, expected, StringComparison.OrdinalIgnoreCase))
+                .GroupBy(r => r.ActualConsoleKey!, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var group in wrongByActual)
+            {
+                double rate = (double)group.Count() / totalForSystem;
+                if (rate >= thresholdRate)
+                {
+                    pairs.Add(new ConsoleConfusionPair(expected, group.Key, rate, group.Count()));
+                }
+            }
+        }
+
+        return pairs.OrderByDescending(p => p.Rate).ToList();
+    }
+
+    /// <summary>
+    /// M10 aggregate: Maximum confusion rate across all system pairs.
+    /// </summary>
+    public static double CalculateMaxConsoleConfusionRate(IReadOnlyList<BenchmarkSampleResult> results)
+    {
+        var pairs = CalculateConsoleConfusionPairs(results, thresholdRate: 0);
+        return pairs.Count == 0 ? 0 : pairs.Max(p => p.Rate);
+    }
+
+    /// <summary>
+    /// M11: DAT Exact Match Rate — proportion of DatVerified sort decisions among all entries.
+    /// </summary>
+    public static double CalculateDatExactMatchRate(IReadOnlyList<BenchmarkSampleResult> results)
+    {
+        int total = results.Count;
+        if (total == 0) return 0;
+        int datVerified = results.Count(r =>
+            r.ActualSortDecision == RomCleanup.Core.Classification.SortDecision.DatVerified);
+        return (double)datVerified / total;
+    }
+
+    /// <summary>
+    /// M13: Ambiguous Match Rate — proportion of results with HasConflict=true.
+    /// </summary>
+    public static double CalculateAmbiguousMatchRate(IReadOnlyList<BenchmarkSampleResult> results)
+    {
+        int total = results.Count;
+        if (total == 0) return 0;
+        int ambiguous = results.Count(r => r.ActualHasConflict);
+        return (double)ambiguous / total;
+    }
+
+    /// <summary>
+    /// M14: Repair-Safe Match Rate — proportion of results that are safe for destructive ops
+    /// (correct match with Confidence ≥ 95 and no conflict).
+    /// </summary>
+    public static double CalculateRepairSafeRate(IReadOnlyList<BenchmarkSampleResult> results)
+    {
+        int total = results.Count;
+        if (total == 0) return 0;
+        int repairSafe = results.Count(r =>
+            r.Verdict is BenchmarkVerdict.Correct or BenchmarkVerdict.Acceptable &&
+            r.ActualConfidence >= 95 &&
+            !r.ActualHasConflict);
+        return (double)repairSafe / total;
+    }
+
+    /// <summary>
+    /// Aggregated extended metrics M8-M14 keyed for JSON output.
+    /// Merges into the existing aggregate dictionary.
+    /// </summary>
+    public static IReadOnlyDictionary<string, double> CalculateExtendedAggregate(IReadOnlyList<BenchmarkSampleResult> results)
+    {
+        var basic = CalculateAggregate(results);
+        var catConfusion = CalculateCategoryConfusion(results);
+        var dict = new Dictionary<string, double>(basic, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var kv in catConfusion)
+            dict[kv.Key] = kv.Value;
+
+        dict["maxConsoleConfusionRate"] = CalculateMaxConsoleConfusionRate(results);
+        dict["datExactMatchRate"] = CalculateDatExactMatchRate(results);
+        dict["ambiguousMatchRate"] = CalculateAmbiguousMatchRate(results);
+        dict["repairSafeRate"] = CalculateRepairSafeRate(results);
+
+        return dict;
+    }
+
+    /// <summary>
+    /// M16 Confidence Calibration: Measures how well the confidence scores
+    /// correlate with actual correctness within fixed buckets.
+    /// Returns bucket-level stats and an overall calibration error (ECE).
+    /// </summary>
+    public static ConfidenceCalibrationResult CalculateConfidenceCalibration(
+        IReadOnlyList<BenchmarkSampleResult> results, int bucketWidth = 10)
+    {
+        var buckets = new List<CalibrationBucket>();
+        double weightedErrorSum = 0;
+        int totalSamples = 0;
+
+        for (int lower = 0; lower <= 100 - bucketWidth; lower += bucketWidth)
+        {
+            int upper = lower + bucketWidth;
+            var inBucket = results
+                .Where(r => r.ActualConfidence >= lower && r.ActualConfidence < upper)
+                .ToList();
+
+            if (inBucket.Count == 0)
+            {
+                buckets.Add(new CalibrationBucket(lower, upper, 0, 0, 0, 0));
+                continue;
+            }
+
+            int correct = inBucket.Count(r =>
+                r.Verdict is BenchmarkVerdict.Correct or BenchmarkVerdict.Acceptable);
+            double accuracy = (double)correct / inBucket.Count;
+            double midpoint = (lower + upper) / 2.0 / 100.0;
+            double error = Math.Abs(accuracy - midpoint);
+
+            buckets.Add(new CalibrationBucket(lower, upper, inBucket.Count, correct, accuracy, error));
+            weightedErrorSum += error * inBucket.Count;
+            totalSamples += inBucket.Count;
+        }
+
+        double ece = totalSamples == 0 ? 0 : weightedErrorSum / totalSamples;
+        return new ConfidenceCalibrationResult(ece, buckets);
+    }
+
+    private sealed class CategoryKeyComparer : IEqualityComparer<(string Expected, string Actual)>
+    {
+        // Anonymous types use structural equality, but we need case-insensitive comparison
+        // for the GroupBy in BuildCategoryConfusionMatrix.
+        public bool Equals((string Expected, string Actual) x, (string Expected, string Actual) y) =>
+            string.Equals(x.Expected, y.Expected, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.Actual, y.Actual, StringComparison.OrdinalIgnoreCase);
+
+        public int GetHashCode((string Expected, string Actual) obj) =>
+            HashCode.Combine(
+                StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Expected),
+                StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Actual));
     }
 }

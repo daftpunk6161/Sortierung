@@ -60,6 +60,41 @@ internal sealed class DatasetExpander
         GenerateExtraArcadeEntries(result);     // boost: arcade family coverage
         GenerateExtraComputerEntries(result);   // boost: computer family coverage
 
+        // ═══ PHASE A EXPANSION ═══════════════════════════════════════════
+        GenerateUnicodeFilenames(result);        // A1: chaos-mixed unicode
+        GenerateFalseExtensionChaos(result);     // A1: chaos-mixed false extensions
+        GenerateCorruptArchiveEntries(result);   // A1: chaos-mixed corrupt archives
+        GenerateMixedArchiveChaos(result);       // A1: chaos-mixed cross-system archives
+        GenerateFlatFolderChaos(result);         // A1: chaos-mixed flat folder
+        GenerateDuplicateNameVariants(result);   // A1: chaos-mixed duplicate names
+        GenerateRenamedExtensions(result);       // A1: chaos-mixed renamed extensions
+        GenerateRegionVariants(result);          // A2: golden-realworld regions
+        GenerateRevisionVariants(result);        // A2: golden-realworld revisions
+        GenerateNoIntroNaming(result);           // A2: golden-realworld No-Intro
+        GenerateRedumpNaming(result);            // A2: golden-realworld Redump
+        GenerateFolderSortedCollection(result);  // A2: golden-realworld folder-sorted
+        GenerateGbGbcAmbiguity(result);          // A3: edge-cases GB/GBC
+        GenerateMd32xAmbiguity(result);          // A3: edge-cases MD/32X
+        GenerateBiosEdgeCases(result);           // A3: edge-cases BIOS
+        GenerateDatCollisions(result);           // A3: edge-cases DAT collisions
+        GenerateAdditionalPsDisambiguation(result); // A3: edge-cases PSP/PS3
+        GenerateFastRomNegatives(result);        // A4: negative-controls fast-ROM
+        GenerateHomebrewNegatives(result);       // A4: negative-controls homebrew
+        GenerateIrrelevantNegatives(result);     // A4: negative-controls irrelevant
+        GenerateRepairHighConfidence(result);    // A5: repair-safety high confidence
+        GenerateRepairConflict(result);          // A5: repair-safety conflict
+        GenerateRepairFolderOnly(result);        // A5: repair-safety folder-only
+        GenerateRepairWeakMatch(result);         // A5: repair-safety weak match
+
+        // ═══ PHASE B+C EXPANSION ═════════════════════════════════════════
+        GenerateArcadeDepthExpansion(result);    // B5: arcade depth
+        GenerateDirectoryGameSamples(result);   // C3: directory-based games
+        GenerateTosecCoverage(result);           // C5: TOSEC DAT coverage
+        GenerateAdditionalMultiDiscVariants(result); // C6: more multi-disc
+        GenerateContainerFormats(result);        // C6: CSO/RVZ/WBFS
+        GenerateSerialNumberEntries(result);     // C6: serial number detection
+        GenerateKeywordDetection(result);        // C6: keyword detection
+
         return result;
     }
 
@@ -69,7 +104,7 @@ internal sealed class DatasetExpander
     {
         foreach (var sys in Systems)
         {
-            int count = GetTierCount(sys.Key, 5, 3, 2, 2);
+            int count = GetTierCount(sys.Key, 12, 8, 5, 3);
             for (int i = 0; i < count; i++)
             {
                 var ext = GetPrimaryExtension(sys);
@@ -267,7 +302,7 @@ internal sealed class DatasetExpander
     private void GenerateFolderConflicts(Dictionary<string, List<GroundTruthEntry>> result)
     {
         // File in WRONG folder, but with correct extension/header
-        foreach (var sys in Systems.Where(s => s.UniqueExts.Length > 0).Take(25))
+        foreach (var sys in Systems.Where(s => s.UniqueExts.Length > 0).Take(40))
         {
             var ext = sys.UniqueExts[0];
             var id = NextId("ec", sys.Key, "foldconf");
@@ -307,7 +342,7 @@ internal sealed class DatasetExpander
     {
         foreach (var sys in Systems)
         {
-            int count = GetTierCount(sys.Key, 3, 2, 1, 1);
+            int count = GetTierCount(sys.Key, 8, 5, 3, 2);
             for (int i = 0; i < count; i++)
             {
                 var ext = GetPrimaryExtension(sys);
@@ -915,7 +950,7 @@ internal sealed class DatasetExpander
 
     private void GenerateArchiveInnerEntries(Dictionary<string, List<GroundTruthEntry>> result)
     {
-        foreach (var sys in Systems.Where(s => !s.DiscBased && s.UniqueExts.Length > 0).Take(20))
+        foreach (var sys in Systems.Where(s => !s.DiscBased && s.UniqueExts.Length > 0).Take(35))
         {
             var ext = sys.UniqueExts[0];
             var id = NextId("gr", sys.Key, "arcinner");
@@ -1331,7 +1366,7 @@ internal sealed class DatasetExpander
         {
             var ext = GetPrimaryExtension(sys);
 
-            foreach (var (label, tag) in junkTags.Take(GetTierCount(sys.Key, 5, 2, 1, 1)))
+            foreach (var (label, tag) in junkTags.Take(GetTierCount(sys.Key, 5, 3, 2, 1)))
             {
                 var id = NextId("gr", sys.Key, $"junk{tag}");
                 if (_existingIds.Contains(id)) continue;
@@ -1365,7 +1400,7 @@ internal sealed class DatasetExpander
 
     private void GenerateBrokenEntries(Dictionary<string, List<GroundTruthEntry>> result)
     {
-        foreach (var sys in Systems.Where(s => s.UniqueExts.Length > 0).Take(20))
+        foreach (var sys in Systems.Where(s => s.UniqueExts.Length > 0).Take(35))
         {
             var ext = sys.UniqueExts[0];
 
@@ -1489,7 +1524,7 @@ internal sealed class DatasetExpander
         foreach (var sys in headerSystems)
         {
             var ext = GetPrimaryExtension(sys);
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 5; i++)
             {
                 var id = NextId("gr", sys.Key, "hless");
                 if (_existingIds.Contains(id)) continue;
@@ -1649,7 +1684,7 @@ internal sealed class DatasetExpander
             var ext = GetPrimaryExtension(sys);
 
             // Extra clean-reference entries
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 5; i++)
             {
                 var id = NextId("gc", key, "compref");
                 if (_existingIds.Contains(id)) continue;
@@ -1685,6 +1720,1646 @@ internal sealed class DatasetExpander
                     Relationships = new RelationshipInfo()
                 });
             }
+        }
+    }
+
+    // ═══ PHASE A: CHAOS-MIXED EXPANSION (A1) ════════════════════════════
+
+    private void GenerateUnicodeFilenames(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        var unicodeNames = new[]
+        {
+            ("スーパーマリオ", "NES"), ("ソニック・ザ・ヘッジホッグ", "MD"),
+            ("파이널 판타지", "SNES"), ("ポケモン 赤", "GB"),
+            ("ゼルダの伝説", "N64"), ("메탈기어 솔리드", "PS1"),
+            ("鉄拳3", "PS1"), ("ドラゴンクエスト", "SNES"),
+            ("バイオハザード", "PS1"), ("ストリートファイターII", "SNES"),
+            ("クラッシュ・バンディクー", "PS1"), ("グランツーリスモ", "PS2"),
+            ("ファイナルファンタジーX", "PS2"), ("キングダムハーツ", "PS2"),
+            ("ロックマン2", "NES"),
+        };
+
+        foreach (var (name, sysKey) in unicodeNames)
+        {
+            var sys = Systems.First(s => s.Key == sysKey);
+            var ext = GetPrimaryExtension(sys);
+            var id = NextId("cm", sysKey, "unicode");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "chaos-mixed.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{name}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = ["wrong-name"],
+                Difficulty = "hard",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysKey,
+                    Category = "Game",
+                    Confidence = 75,
+                    HasConflict = false,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = sys.PrimaryDetection,
+                    AcceptableAlternatives = GetAlternatives(sys)
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    private void GenerateFalseExtensionChaos(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // ROMs with misleading generic extensions
+        var falseExts = new[] { ".rom", ".game", ".rip", ".dump", ".backup", ".image",
+                                ".file", ".dat", ".raw", ".old", ".bak", ".original",
+                                ".copy", ".save", ".tmp" };
+
+        foreach (var sys in Systems.Where(s => s.HasCartridgeHeader).Take(15))
+        {
+            var idx = Array.IndexOf(Systems.Where(s => s.HasCartridgeHeader).ToArray(), sys);
+            var falseExt = falseExts[idx % falseExts.Length];
+            var id = NextId("cm", sys.Key, "falseext");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "chaos-mixed.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"game_{sys.Key.ToLowerInvariant()}{falseExt}",
+                    Extension = falseExt,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = "roms",
+                },
+                Tags = ["wrong-extension", "wrong-name"],
+                Difficulty = "hard",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sys.Key,
+                    Category = "Game",
+                    Confidence = 65,
+                    HasConflict = false,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "CartridgeHeader",
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    private void GenerateCorruptArchiveEntries(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        var corruptTypes = new[]
+        {
+            ("truncated_archive.zip", ".zip", 128L, "truncated ZIP header"),
+            ("empty_archive.zip", ".zip", 22L, "empty ZIP (EOD only)"),
+            ("wrong_magic.zip", ".zip", 4096L, "invalid ZIP magic bytes"),
+            ("corrupt_7z.7z", ".7z", 256L, "truncated 7z header"),
+            ("nested_broken.zip", ".zip", 512L, "corrupt inner entry"),
+            ("password_protected.zip", ".zip", 8192L, "encrypted ZIP"),
+            ("bomb_archive.zip", ".zip", 64L, "potential zip bomb header"),
+            ("split_part.z01", ".z01", 1024L, "orphaned split archive part"),
+            ("rar_as_zip.zip", ".zip", 4096L, "RAR content with ZIP extension"),
+            ("zero_byte.7z", ".7z", 0L, "zero-byte 7z file"),
+        };
+
+        for (int i = 0; i < corruptTypes.Length; i++)
+        {
+            var (name, ext, size, note) = corruptTypes[i];
+            var id = NextId("cm", "NONE", $"corrarc{i:D2}");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "chaos-mixed.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = name,
+                    Extension = ext,
+                    SizeBytes = size,
+                },
+                Tags = ["corrupt-archive"],
+                Difficulty = "adversarial",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = null,
+                    Category = "Unknown",
+                    Confidence = 0,
+                    HasConflict = false,
+                    SortDecision = "skip"
+                },
+                FileModel = new FileModelInfo { Type = "archive" },
+                Relationships = new RelationshipInfo(),
+                Notes = note
+            });
+        }
+    }
+
+    private void GenerateMixedArchiveChaos(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Archives containing ROMs from multiple systems
+        var mixPairs = new[]
+        {
+            ("NES", "SNES"), ("GB", "GBA"), ("MD", "SNES"),
+            ("PS1", "PS2"), ("NES", "GBA"), ("SNES", "GBA"),
+            ("N64", "GBA"), ("SMS", "GG"),
+        };
+
+        for (int i = 0; i < mixPairs.Length; i++)
+        {
+            var (sysA, sysB) = mixPairs[i];
+            var defA = Systems.First(s => s.Key == sysA);
+            var defB = Systems.First(s => s.Key == sysB);
+            var id = NextId("cm", sysA, $"mixarc{sysB.ToLowerInvariant()}");
+            if (_existingIds.Contains(id)) continue;
+
+            var extA = GetPrimaryExtension(defA);
+            var extB = GetPrimaryExtension(defB);
+            Add(result, "chaos-mixed.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"mixed_roms_{sysA.ToLowerInvariant()}_{sysB.ToLowerInvariant()}.zip",
+                    Extension = ".zip",
+                    SizeBytes = defA.TypicalSize + defB.TypicalSize,
+                    Directory = "roms",
+                    InnerFiles =
+                    [
+                        new InnerFileInfo { Name = $"game{extA}", SizeBytes = defA.TypicalSize },
+                        new InnerFileInfo { Name = $"game{extB}", SizeBytes = defB.TypicalSize },
+                    ]
+                },
+                Tags = ["archive-inner", "cross-system"],
+                Difficulty = "adversarial",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysA,
+                    Category = "Game",
+                    Confidence = 50,
+                    HasConflict = true,
+                    SortDecision = "block"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "ArchiveContent",
+                    AcceptableConsoleKeys = [sysB]
+                },
+                FileModel = new FileModelInfo { Type = "archive" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    private void GenerateFlatFolderChaos(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // ROMs dumped into a flat "roms" folder with no system hint
+        foreach (var sys in Systems.Where(s => s.HasCartridgeHeader).Take(15))
+        {
+            var ext = GetPrimaryExtension(sys);
+            var id = NextId("cm", sys.Key, "flatfld");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "chaos-mixed.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"game_{sys.SampleGames[0].Replace(" ", "_").ToLowerInvariant()}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = "roms",
+                },
+                Tags = ["wrong-name"],
+                Difficulty = "medium",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sys.Key,
+                    Category = "Game",
+                    Confidence = 70,
+                    HasConflict = false,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = sys.HasCartridgeHeader ? "CartridgeHeader" : "UniqueExtension",
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    private void GenerateDuplicateNameVariants(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        var variants = new[]
+        {
+            ("Super Mario Bros (U) [!]", "NES"), ("super_mario_bros.NES", "NES"),
+            ("ZELDA (1)", "NES"), ("zelda_v2", "NES"),
+            ("sonic (genesis)", "MD"), ("Sonic.The" + ".Hedgehog", "MD"),
+            ("Tetris (W) [T-Eng]", "GB"), ("TETRIS_GB", "GB"),
+            ("pokemon red (UE) [S]", "GB"), ("pokemon_rouge", "GB"),
+        };
+
+        foreach (var (name, sysKey) in variants)
+        {
+            var sys = Systems.First(s => s.Key == sysKey);
+            var ext = GetPrimaryExtension(sys);
+            var id = NextId("cm", sysKey, "dupnam");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "chaos-mixed.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{name}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = ["wrong-name"],
+                Difficulty = "medium",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysKey,
+                    Category = "Game",
+                    Confidence = 80,
+                    HasConflict = false,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = sys.PrimaryDetection,
+                    AcceptableAlternatives = GetAlternatives(sys)
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    private void GenerateRenamedExtensions(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Files renamed with random/wrong extensions
+        foreach (var sys in Systems.Where(s => s.HasCartridgeHeader))
+        {
+            var id = NextId("cm", sys.Key, "renext");
+            if (_existingIds.Contains(id)) continue;
+
+            // ROM file with a completely wrong extension
+            var wrongExt = sys.Key switch
+            {
+                "NES" => ".sfc",
+                "SNES" => ".nes",
+                "N64" => ".gba",
+                "GBA" => ".n64",
+                "GB" => ".gbc",
+                "GBC" => ".gb",
+                "MD" => ".sfc",
+                _ => ".rom"
+            };
+
+            Add(result, "chaos-mixed.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{sys.SampleGames[0]}{wrongExt}",
+                    Extension = wrongExt,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = "roms",
+                },
+                Tags = ["wrong-extension", "header-conflict"],
+                Difficulty = "adversarial",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sys.Key,
+                    Category = "Game",
+                    Confidence = 65,
+                    HasConflict = true,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "CartridgeHeader",
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo(),
+                Notes = $"Header says {sys.Key} but extension says another system"
+            });
+        }
+    }
+
+    // ═══ PHASE A: GOLDEN-REALWORLD EXPANSION (A2) ═══════════════════════
+
+    private void GenerateRegionVariants(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        string[] regions = ["(USA)", "(Europe)", "(Japan)", "(World)", "(USA, Europe)",
+                           "(Japan, USA)", "(Europe, Australia)", "(Korea)"];
+
+        foreach (var sys in Systems.Where(s => IsTier1Or2(s.Key)))
+        {
+            var ext = GetPrimaryExtension(sys);
+            foreach (var region in regions.Take(GetTierCount(sys.Key, 4, 2, 1, 1)))
+            {
+                var id = NextId("gr", sys.Key, "rgn");
+                if (_existingIds.Contains(id)) continue;
+
+                Add(result, "golden-realworld.jsonl", new GroundTruthEntry
+                {
+                    Id = id,
+                    Source = new SourceInfo
+                    {
+                        FileName = $"{sys.SampleGames[0]} {region}{ext}",
+                        Extension = ext,
+                        SizeBytes = sys.TypicalSize,
+                        Directory = sys.FolderAlias,
+                    },
+                    Tags = ["clean-reference", "region-variant"],
+                    Difficulty = "easy",
+                    Expected = new ExpectedResult
+                    {
+                        ConsoleKey = sys.Key,
+                        Category = "Game",
+                        Confidence = 95,
+                        HasConflict = false,
+                        DatMatchLevel = "exact",
+                        DatEcosystem = sys.DatEcosystem,
+                        SortDecision = "sort"
+                    },
+                    DetectionExpectations = new DetectionExpectations
+                    {
+                        PrimaryMethod = sys.PrimaryDetection,
+                        AcceptableAlternatives = GetAlternatives(sys)
+                    },
+                    FileModel = new FileModelInfo { Type = "single-file" },
+                    Relationships = new RelationshipInfo()
+                });
+            }
+        }
+    }
+
+    private void GenerateRevisionVariants(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        string[] revisions = ["(Rev A)", "(Rev B)", "(Rev 1)", "(v1.1)", "(v1.0)", "(v2.0)"];
+
+        foreach (var sys in Systems.Where(s => Tier1.Contains(s.Key)))
+        {
+            var ext = GetPrimaryExtension(sys);
+            foreach (var rev in revisions.Take(3))
+            {
+                var id = NextId("gr", sys.Key, "rev");
+                if (_existingIds.Contains(id)) continue;
+
+                var gameName = sys.SampleGames[1 % sys.SampleGames.Length];
+                Add(result, "golden-realworld.jsonl", new GroundTruthEntry
+                {
+                    Id = id,
+                    Source = new SourceInfo
+                    {
+                        FileName = $"{gameName} (USA) {rev}{ext}",
+                        Extension = ext,
+                        SizeBytes = sys.TypicalSize + 512,
+                        Directory = sys.FolderAlias,
+                    },
+                    Tags = ["clean-reference", "revision-variant"],
+                    Difficulty = "easy",
+                    Expected = new ExpectedResult
+                    {
+                        ConsoleKey = sys.Key,
+                        Category = "Game",
+                        Confidence = 95,
+                        HasConflict = false,
+                        DatMatchLevel = "exact",
+                        DatEcosystem = sys.DatEcosystem,
+                        SortDecision = "sort"
+                    },
+                    DetectionExpectations = new DetectionExpectations
+                    {
+                        PrimaryMethod = sys.PrimaryDetection,
+                        AcceptableAlternatives = GetAlternatives(sys)
+                    },
+                    FileModel = new FileModelInfo { Type = "single-file" },
+                    Relationships = new RelationshipInfo()
+                });
+            }
+        }
+    }
+
+    private void GenerateNoIntroNaming(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // No-Intro naming convention: "Title (Region) (Languages) (Rev X).ext"
+        var noIntroEntries = new[]
+        {
+            ("Super Mario Bros 3 (USA) (En,Fr,De)", "NES"),
+            ("Legend of Zelda, The - A Link to the Past (USA) (En,Fr,Es)", "SNES"),
+            ("Pokemon - Emerald Version (USA, Europe) (En,Fr,De,Es,It)", "GBA"),
+            ("Metroid - Zero Mission (USA)", "GBA"),
+            ("Castlevania - Circle of the Moon (USA, Europe) (En,Fr,De)", "GBA"),
+            ("Super Mario 64 (USA) (Rev 2)", "N64"),
+            ("Mario Kart 64 (USA) (Rev 1)", "N64"),
+            ("Sonic The Hedgehog (USA, Europe)", "MD"),
+            ("Streets of Rage 2 (USA)", "MD"),
+            ("Tetris (World) (Rev 1)", "GB"),
+        };
+
+        foreach (var (name, sysKey) in noIntroEntries)
+        {
+            var sys = Systems.First(s => s.Key == sysKey);
+            var ext = GetPrimaryExtension(sys);
+            var id = NextId("gr", sysKey, "nointro");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "golden-realworld.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{name}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = ["clean-reference", "dat-nointro"],
+                Difficulty = "easy",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysKey,
+                    Category = "Game",
+                    Confidence = 98,
+                    HasConflict = false,
+                    DatMatchLevel = "exact",
+                    DatEcosystem = "no-intro",
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = sys.PrimaryDetection,
+                    AcceptableAlternatives = ["DatLookup"]
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    private void GenerateRedumpNaming(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Redump naming convention for disc systems
+        var redumpEntries = new[]
+        {
+            ("Final Fantasy VII (USA) (Disc 1)", "PS1"),
+            ("Resident Evil 2 (USA) (Disc 1)", "PS1"),
+            ("Metal Gear Solid (USA) (Disc 1) (Rev 1)", "PS1"),
+            ("Gran Turismo 4 (USA)", "PS2"),
+            ("Kingdom Hearts II (USA) (En,Fr)", "PS2"),
+            ("Shenmue (USA) (Disc 1 of 3)", "DC"),
+            ("Panzer Dragoon Saga (USA) (Disc 1)", "SAT"),
+            ("Metroid Prime (USA) (Rev 2)", "GC"),
+            ("Super Smash Bros. Melee (USA) (Rev 2)", "GC"),
+            ("Mario Galaxy (USA)", "WII"),
+        };
+
+        foreach (var (name, sysKey) in redumpEntries)
+        {
+            var sys = Systems.First(s => s.Key == sysKey);
+            var ext = sys.Key == "DC" ? ".gdi" : ".chd";
+            var id = NextId("gr", sysKey, "redump");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "golden-realworld.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{name}{ext}",
+                    Extension = ext,
+                    SizeBytes = 734003200,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = ["clean-reference", "dat-redump"],
+                Difficulty = "easy",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysKey,
+                    Category = "Game",
+                    Confidence = 98,
+                    HasConflict = false,
+                    DatMatchLevel = "exact",
+                    DatEcosystem = "redump",
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = sys.PrimaryDetection,
+                    AcceptableAlternatives = ["DatLookup"]
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    private void GenerateFolderSortedCollection(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Files correctly sorted into system folders with clean names
+        foreach (var sys in Systems.Where(s => s.SampleGames.Length >= 3 && IsTier1Or2(s.Key)))
+        {
+            var ext = GetPrimaryExtension(sys);
+            for (int i = 2; i < Math.Min(sys.SampleGames.Length, 4); i++)
+            {
+                var id = NextId("gr", sys.Key, "fldsrt");
+                if (_existingIds.Contains(id)) continue;
+
+                Add(result, "golden-realworld.jsonl", new GroundTruthEntry
+                {
+                    Id = id,
+                    Source = new SourceInfo
+                    {
+                        FileName = $"{sys.SampleGames[i]} (USA){ext}",
+                        Extension = ext,
+                        SizeBytes = sys.TypicalSize + (i * 2048),
+                        Directory = sys.FolderAlias,
+                    },
+                    Tags = ["clean-reference"],
+                    Difficulty = "easy",
+                    Expected = new ExpectedResult
+                    {
+                        ConsoleKey = sys.Key,
+                        Category = "Game",
+                        Confidence = 95,
+                        HasConflict = false,
+                        DatMatchLevel = "exact",
+                        DatEcosystem = sys.DatEcosystem,
+                        SortDecision = "sort"
+                    },
+                    DetectionExpectations = new DetectionExpectations
+                    {
+                        PrimaryMethod = sys.PrimaryDetection,
+                        AcceptableAlternatives = GetAlternatives(sys)
+                    },
+                    FileModel = new FileModelInfo { Type = "single-file" },
+                    Relationships = new RelationshipInfo()
+                });
+            }
+        }
+    }
+
+    // ═══ PHASE A: EDGE-CASES EXPANSION (A3) ═════════════════════════════
+
+    private void GenerateGbGbcAmbiguity(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // GB/GBC CGB flag dual-mode ROMs
+        var gbGbcEntries = new[]
+        {
+            ("Pokemon Yellow (USA) (CGB+DMG)", ".gb", "GB", 0x80, "CGB dual-mode (0x80)"),
+            ("Links Awakening DX (USA) (CGB)", ".gbc", "GBC", 0xC0, "CGB-only (0xC0)"),
+            ("Tetris (World) (DMG)", ".gb", "GB", 0x00, "DMG-only (0x00)"),
+            ("Pokemon Crystal (USA) (CGB)", ".gbc", "GBC", 0xC0, "CGB-only (0xC0)"),
+            ("Harvest Moon GBC (USA) (CGB+DMG)", ".gb", "GB", 0x80, "dual-mode tagged as GB"),
+            ("Wario Land 3 (USA) (CGB+DMG)", ".gbc", "GBC", 0x80, "dual-mode tagged as GBC"),
+            ("Mario Tennis (USA) (CGB)", ".gbc", "GBC", 0xC0, "CGB-only"),
+            ("Dragon Warrior (USA) (DMG+CGB)", ".gb", "GB", 0x80, "dual-mode old naming"),
+            ("Mega Man Xtreme (USA) (CGB)", ".gbc", "GBC", 0xC0, "CGB-only"),
+            ("Bionic Commando (USA) (DMG)", ".gb", "GB", 0x00, "pure DMG"),
+        };
+
+        for (int i = 0; i < gbGbcEntries.Length; i++)
+        {
+            var (name, ext, expectedSys, cgbFlag, note) = gbGbcEntries[i];
+            var id = NextId("ec", expectedSys, "gbcambig");
+            if (_existingIds.Contains(id)) continue;
+
+            var sys = Systems.First(s => s.Key == expectedSys);
+            Add(result, "edge-cases.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{name}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = "gameboy",
+                    Stub = new StubInfo
+                    {
+                        Generator = "gb-header",
+                        Variant = cgbFlag == 0xC0 ? "cgb-only" : cgbFlag == 0x80 ? "cgb-dual" : "dmg",
+                    }
+                },
+                Tags = ["cross-system", "gb-gbc-ambiguity"],
+                Difficulty = "hard",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = expectedSys,
+                    Category = "Game",
+                    Confidence = 80,
+                    HasConflict = cgbFlag == 0x80,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "CartridgeHeader",
+                    AcceptableConsoleKeys = expectedSys == "GB" ? ["GBC"] : ["GB"]
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo(),
+                Notes = note
+            });
+        }
+    }
+
+    private void GenerateMd32xAmbiguity(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        var md32xEntries = new[]
+        {
+            ("Doom (32X)", "32X", ".32x"), ("Knuckles Chaotix (32X)", "32X", ".32x"),
+            ("Star Wars Arcade (32X)", "32X", ".32x"), ("Virtua Racing Deluxe (32X)", "32X", ".32x"),
+            ("Sonic 3 mislabeled as 32X", "MD", ".bin"), ("Streets of Rage 32X hack", "MD", ".bin"),
+            ("Pitfall 32X (USA)", "32X", ".bin"), ("Cosmic Carnage (USA)", "32X", ".bin"),
+        };
+
+        for (int i = 0; i < md32xEntries.Length; i++)
+        {
+            var (name, expectedSys, ext) = md32xEntries[i];
+            var id = NextId("ec", expectedSys, "md32x");
+            if (_existingIds.Contains(id)) continue;
+
+            var sys = Systems.First(s => s.Key == expectedSys);
+            Add(result, "edge-cases.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{name}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = "roms",
+                },
+                Tags = ["cross-system", "md-32x-ambiguity"],
+                Difficulty = "hard",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = expectedSys,
+                    Category = "Game",
+                    Confidence = 70,
+                    HasConflict = true,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = expectedSys == "32X" ? "UniqueExtension" : "CartridgeHeader",
+                    AcceptableConsoleKeys = expectedSys == "32X" ? ["MD"] : ["32X"]
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    private void GenerateBiosEdgeCases(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Files that look like BIOS but are games, or BIOS-like files in unexpected places
+        var biosEdges = new[]
+        {
+            ("BIOS Boot Disc (USA)", "PS1", "Game", false, "Game named like BIOS"),
+            ("[BIOS] System Launcher (USA)", "PS2", "Bios", true, "Actual BIOS"),
+            ("bios_test_rom (PD)", "NES", "Game", false, "Homebrew with BIOS in name"),
+            ("SCPH-1001.BIN (unknown)", "PS1", "Bios", true, "BIOS with serial-like name"),
+            ("System Card (USA)", "PCECD", "Bios", true, "System Card BIOS"),
+            ("gba_bios.bin (mislabeled)", "GBA", "Bios", true, "BIOS without [BIOS] tag"),
+            ("Boot ROM (Japan)", "GBC", "Bios", true, "Boot ROM"),
+            ("[BIOS] NeoGeo (World)", "NEOGEO", "Bios", true, "Neo Geo shared BIOS"),
+            ("firmware_update (USA)", "3DS", "Bios", true, "Firmware as BIOS"),
+            ("System Menu v4.3 (USA)", "WII", "Bios", true, "Wii System Menu"),
+        };
+
+        for (int i = 0; i < biosEdges.Length; i++)
+        {
+            var (name, sysKey, category, isBios, note) = biosEdges[i];
+            var sys = Systems.First(s => s.Key == sysKey);
+            var id = NextId("ec", sysKey, "biosedge");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "edge-cases.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{name}.bin",
+                    Extension = ".bin",
+                    SizeBytes = 524288,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = isBios ? ["bios", "bios-edge"] : ["bios-negative"],
+                Difficulty = "hard",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysKey,
+                    Category = category,
+                    Confidence = isBios ? 90 : 70,
+                    HasConflict = !isBios,
+                    SortDecision = isBios ? "block" : "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "FolderName",
+                    AcceptableAlternatives = ["DatLookup"]
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = isBios ? new RelationshipInfo { BiosSystemKeys = [sysKey] } : new RelationshipInfo(),
+                Notes = note
+            });
+        }
+    }
+
+    private void GenerateDatCollisions(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Files that match DATs from multiple ecosystems
+        var collisions = new[]
+        {
+            ("NES", "no-intro", "tosec", "Pac-Man (USA) (TOSEC)", ".nes"),
+            ("SNES", "no-intro", "tosec", "Tetris Attack (USA) (TOSEC variant)", ".sfc"),
+            ("MD", "no-intro", "tosec", "Columns (USA) (TOSEC-named)", ".md"),
+            ("GB", "no-intro", "tosec", "Dr. Mario (World) (TOSEC)", ".gb"),
+            ("PS1", "redump", "tosec", "Ridge Racer (USA) (TOSEC)", ".bin"),
+            ("SAT", "redump", "tosec", "Virtua Fighter 2 (USA) (TOSEC)", ".bin"),
+            ("AMIGA", "tosec", "no-intro", "Lemmings (TOSEC) (Amiga)", ".adf"),
+            ("C64", "tosec", "no-intro", "Boulder Dash (TOSEC) (C64)", ".d64"),
+        };
+
+        for (int i = 0; i < collisions.Length; i++)
+        {
+            var (sysKey, eco1, eco2, name, ext) = collisions[i];
+            var id = NextId("ec", sysKey, "datcoll");
+            if (_existingIds.Contains(id)) continue;
+
+            var sys = Systems.First(s => s.Key == sysKey);
+            Add(result, "edge-cases.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{name}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = ["dat-exact-match", "cross-system"],
+                Difficulty = "hard",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysKey,
+                    Category = "Game",
+                    Confidence = 85,
+                    HasConflict = true,
+                    DatMatchLevel = "exact",
+                    DatEcosystem = eco1,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "DatLookup",
+                    AcceptableAlternatives = [sys.PrimaryDetection]
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo(),
+                Notes = $"DAT match in both {eco1} and {eco2}"
+            });
+        }
+    }
+
+    private void GenerateAdditionalPsDisambiguation(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Additional PS disambiguation entries for PSP and PS3
+        var pspGames = new[] { "Crisis Core", "Dissidia", "Monster Hunter FU", "Patapon", "LocoRoco" };
+        foreach (var game in pspGames)
+        {
+            var id = NextId("ec", "PSP", "psdis");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "edge-cases.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{game} (USA).iso",
+                    Extension = ".iso",
+                    SizeBytes = 1800000000,
+                    Directory = "roms",
+                },
+                Tags = ["cross-system", "ps-disambiguation"],
+                Difficulty = "hard",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = "PSP",
+                    Category = "Game",
+                    Confidence = 80,
+                    HasConflict = true,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "DiscHeader",
+                    AcceptableConsoleKeys = ["PS2"]
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    // ═══ PHASE A: NEGATIVE-CONTROLS EXPANSION (A4) ══════════════════════
+
+    private void GenerateFastRomNegatives(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Random bytes with ROM extension but not real ROMs
+        var fastRomNegs = new[]
+        {
+            (".nes", "NES", 40976L), (".sfc", "SNES", 524288L),
+            (".gba", "GBA", 16777216L), (".n64", "N64", 8388608L),
+            (".gb", "GB", 32768L), (".md", "MD", 1048576L),
+        };
+
+        for (int i = 0; i < fastRomNegs.Length; i++)
+        {
+            var (ext, _, size) = fastRomNegs[i];
+            var id = NextId("nc", "NONE", $"fastrom{i:D2}");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "negative-controls.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"random_data_{i:D2}{ext}",
+                    Extension = ext,
+                    SizeBytes = size,
+                    Stub = new StubInfo { Generator = "random-bytes", Params = new Dictionary<string, object> { ["seed"] = 42 + i } }
+                },
+                Tags = ["negative-control"],
+                Difficulty = "hard",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = null,
+                    Category = "Unknown",
+                    Confidence = 0,
+                    HasConflict = false,
+                    SortDecision = "skip"
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo(),
+                Notes = "Random bytes with valid ROM extension — header check should reject"
+            });
+        }
+    }
+
+    private void GenerateHomebrewNegatives(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Homebrew/hack files that should be classified as NonGame
+        var homebrewNegs = new[]
+        {
+            ("Snake (Homebrew) (PD)", "NES", ".nes"), ("Flappy Bird (Hack)", "GB", ".gb"),
+            ("Test ROM (PD)", "SNES", ".sfc"), ("Memory Test (PD)", "GBA", ".gba"),
+            ("Color Test (PD)", "MD", ".md"), ("Sound Test ROM (PD)", "N64", ".n64"),
+        };
+
+        for (int i = 0; i < homebrewNegs.Length; i++)
+        {
+            var (name, sysKey, ext) = homebrewNegs[i];
+            var id = NextId("nc", sysKey, "homebrew");
+            if (_existingIds.Contains(id)) continue;
+
+            var sys = Systems.First(s => s.Key == sysKey);
+            Add(result, "negative-controls.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{name}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize / 8,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = ["negative-control", "homebrew"],
+                Difficulty = "medium",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysKey,
+                    Category = "NonGame",
+                    Confidence = 85,
+                    HasConflict = false,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = sys.PrimaryDetection,
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    private void GenerateIrrelevantNegatives(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Files with misleading names that aren't ROMs
+        var irrelevants = new[]
+        {
+            ("Super Mario Bros.txt", ".txt", 1024L, "Text file with ROM-like name"),
+            ("Zelda Guide.pdf", ".pdf", 2097152L, "PDF with game name"),
+            ("Sonic Screenshot.png", ".png", 65536L, "Screenshot named after game"),
+            ("Pokemon Save.sav", ".sav", 32768L, "Save file"),
+            ("ROM Collection.xlsx", ".xlsx", 524288L, "Spreadsheet about ROMs"),
+            ("NES Emulator.exe", ".exe", 4194304L, "Emulator binary"),
+        };
+
+        for (int i = 0; i < irrelevants.Length; i++)
+        {
+            var (name, ext, size, note) = irrelevants[i];
+            var id = NextId("nc", "NONE", $"irrel{i:D2}");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "negative-controls.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = name,
+                    Extension = ext,
+                    SizeBytes = size,
+                },
+                Tags = ["negative-control"],
+                Difficulty = "easy",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = null,
+                    Category = "Unknown",
+                    Confidence = 0,
+                    HasConflict = false,
+                    SortDecision = "skip"
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo(),
+                Notes = note
+            });
+        }
+    }
+
+    // ═══ PHASE A: REPAIR-SAFETY EXPANSION (A5) ══════════════════════════
+
+    private void GenerateRepairHighConfidence(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // High confidence + DAT match = safe for automatic repair/sort
+        foreach (var sys in Systems.Where(s => IsTier1Or2(s.Key)).Take(10))
+        {
+            var ext = GetPrimaryExtension(sys);
+            var id = NextId("rs", sys.Key, "hiconf");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "repair-safety.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{sys.SampleGames[0]} (USA){ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = ["repair-safety", "sort-blocked"],
+                Difficulty = "easy",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sys.Key,
+                    Category = "Game",
+                    Confidence = 95,
+                    HasConflict = false,
+                    DatMatchLevel = "exact",
+                    DatEcosystem = sys.DatEcosystem,
+                    SortDecision = "sort",
+                    RepairSafe = true
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo(),
+                Notes = "High confidence + DAT match → safe for automatic sort"
+            });
+        }
+    }
+
+    private void GenerateRepairConflict(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Conflict + DAT match → needs review
+        foreach (var sys in Systems.Where(s => s.HasCartridgeHeader).Take(10))
+        {
+            var ext = GetPrimaryExtension(sys);
+            var id = NextId("rs", sys.Key, "conflict");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "repair-safety.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"conflicted_{sys.Key.ToLowerInvariant()}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = "wrong_folder",
+                },
+                Tags = ["repair-safety", "sort-blocked", "confidence-borderline"],
+                Difficulty = "hard",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sys.Key,
+                    Category = "Game",
+                    Confidence = 65,
+                    HasConflict = true,
+                    DatMatchLevel = "exact",
+                    DatEcosystem = sys.DatEcosystem,
+                    SortDecision = "review",
+                    RepairSafe = false
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo(),
+                Notes = "Conflict despite DAT match → needs manual review"
+            });
+        }
+    }
+
+    private void GenerateRepairFolderOnly(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Folder-only detection without header/DAT confirmation → not safe
+        string[] folderOnlySystems = ["ARCADE", "NEOGEO", "DOS", "CPC", "PC98", "X68K", "NGPC", "SUPERVISION"];
+        foreach (var key in folderOnlySystems)
+        {
+            var sys = Systems.FirstOrDefault(s => s.Key == key);
+            if (sys is null) continue;
+
+            var ext = GetPrimaryExtension(sys);
+            var id = NextId("rs", key, "fldonly");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "repair-safety.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"unknown_game{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = ["repair-safety", "sort-blocked", "folder-only-detection", "confidence-low"],
+                Difficulty = "hard",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = key,
+                    Category = "Game",
+                    Confidence = 45,
+                    HasConflict = false,
+                    DatMatchLevel = "none",
+                    SortDecision = "block",
+                    RepairSafe = false
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "FolderName",
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo(),
+                Notes = "Folder-only detection with no DAT match → block"
+            });
+        }
+    }
+
+    private void GenerateRepairWeakMatch(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Weak DAT match → needs review, not safe for auto-sort
+        foreach (var sys in Systems.Where(s => IsTier1Or2(s.Key)).Take(7))
+        {
+            var ext = GetPrimaryExtension(sys);
+            var id = NextId("rs", sys.Key, "weaksrt");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "repair-safety.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"uncertain_{sys.Key.ToLowerInvariant()}_title{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = ["repair-safety", "sort-blocked", "confidence-borderline"],
+                Difficulty = "medium",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sys.Key,
+                    Category = "Game",
+                    Confidence = 55,
+                    HasConflict = false,
+                    DatMatchLevel = "weak",
+                    SortDecision = "review",
+                    RepairSafe = false
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo(),
+                Notes = "Weak DAT match → review only, not safe for automatic sorting"
+            });
+        }
+    }
+
+    // ═══ PHASE B: ARCADE DEPTH (B5) ═════════════════════════════════════
+
+    private void GenerateArcadeDepthExpansion(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Additional arcade parents with various boards/manufacturers
+        var additionalArcadeGames = new[]
+        {
+            ("galaga88", "Galaga '88", 262144L), ("bubble_memories", "Bubble Memories", 8388608L),
+            ("dodonpachi", "Esp Ra De", 8388608L), ("progear", "Progear", 8388608L),
+            ("armed_police_unit", "Armed Police Unit", 4194304L), ("battle_garegga", "Battle Garegga", 4194304L),
+            ("esp_rade", "EspRaDe custom", 8388608L), ("mushihimesama", "Mushihimesama", 16777216L),
+            ("ibara", "Ibara", 16777216L), ("ketsui", "Ketsui", 16777216L),
+            ("deathsmiles", "Deathsmiles", 16777216L), ("akai_katana", "Akai Katana", 16777216L),
+            ("gigawing", "Giga Wing", 8388608L), ("mars_matrix", "Mars Matrix", 8388608L),
+            ("blazblue", "BlazBlue CT", 67108864L),
+        };
+
+        foreach (var (rom, name, size) in additionalArcadeGames)
+        {
+            var id = NextId("gc", "ARCADE", "depthpar");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "golden-core.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{rom}.zip",
+                    Extension = ".zip",
+                    SizeBytes = size,
+                    Directory = "arcade",
+                },
+                Tags = ["clean-reference", "parent", "dat-mame"],
+                Difficulty = "easy",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = "ARCADE",
+                    Category = "Game",
+                    Confidence = 90,
+                    HasConflict = false,
+                    DatMatchLevel = "exact",
+                    DatEcosystem = "mame",
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "FolderName",
+                    AcceptableAlternatives = ["DatLookup"]
+                },
+                FileModel = new FileModelInfo { Type = "archive" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+
+        // Additional arcade device sets
+        var arcadeDevices = new[] { "namcos2", "taitogn", "stv", "naomi", "naomi2", "atomiswave",
+                                    "cps1", "cps2board", "cps3board", "pgm2" };
+        foreach (var device in arcadeDevices)
+        {
+            var id = NextId("gc", "ARCADE", "device");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "golden-core.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{device}.zip",
+                    Extension = ".zip",
+                    SizeBytes = 262144,
+                    Directory = "arcade",
+                },
+                Tags = ["arcade-device", "dat-mame"],
+                Difficulty = "medium",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = "ARCADE",
+                    Category = "Bios",
+                    Confidence = 88,
+                    HasConflict = false,
+                    DatMatchLevel = "exact",
+                    DatEcosystem = "mame",
+                    SortDecision = "block"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "FolderName",
+                    AcceptableAlternatives = ["DatLookup"]
+                },
+                FileModel = new FileModelInfo { Type = "archive" },
+                Relationships = new RelationshipInfo
+                {
+                    BiosSystemKeys = ["ARCADE"]
+                }
+            });
+        }
+
+        // Arcade junk entries (bootlegs, world versions)
+        var arcadeJunk = new[] { "sf2mdt", "mslugboot", "kof2001b", "samsho5b", "garouh", "pacmanbl" };
+        foreach (var bootleg in arcadeJunk)
+        {
+            var id = NextId("gc", "ARCADE", "arcjunk");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "golden-core.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{bootleg}.zip",
+                    Extension = ".zip",
+                    SizeBytes = 2097152,
+                    Directory = "arcade",
+                },
+                Tags = ["arcade-junk", "junk", "dat-mame"],
+                Difficulty = "medium",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = "ARCADE",
+                    Category = "Junk",
+                    Confidence = 85,
+                    HasConflict = false,
+                    DatMatchLevel = "exact",
+                    DatEcosystem = "mame",
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "FolderName",
+                    AcceptableAlternatives = ["DatLookup"]
+                },
+                FileModel = new FileModelInfo { Type = "archive" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    // ═══ PHASE C: DIRECTORY-BASED GAMES (C3) ════════════════════════════
+
+    private void GenerateDirectoryGameSamples(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // DOS directory games
+        var dosGames = new[]
+        {
+            "DOOM", "KEEN4", "WOLF3D", "DUKE3D", "QUAKE",
+            "DESCENT", "XCOM", "DAGGER", "BLOOD", "HERETIC"
+        };
+
+        foreach (var game in dosGames)
+        {
+            var id = NextId("gr", "DOS", "dosdir");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "golden-realworld.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{game}.EXE",
+                    Extension = ".exe",
+                    SizeBytes = 1048576,
+                    Directory = $"dos/{game}",
+                },
+                Tags = ["directory-based", "clean-reference"],
+                Difficulty = "medium",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = "DOS",
+                    Category = "Game",
+                    Confidence = 75,
+                    HasConflict = false,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "FolderName",
+                },
+                FileModel = new FileModelInfo { Type = "directory" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+
+        // Wii U title-ID structured directories
+        var wiiuGames = new[] { "Mario Kart 8", "Splatoon", "Bayonetta 2", "Pikmin 3", "Xenoblade X" };
+        foreach (var game in wiiuGames)
+        {
+            var id = NextId("gr", "WIIU", "wiiudir");
+            if (_existingIds.Contains(id)) continue;
+
+            Add(result, "golden-realworld.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{game.Replace(" ", "_")}.rpx",
+                    Extension = ".rpx",
+                    SizeBytes = 25769803776,
+                    Directory = $"wiiu/{game.Replace(" ", "_")}/code",
+                },
+                Tags = ["directory-based", "clean-reference"],
+                Difficulty = "medium",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = "WIIU",
+                    Category = "Game",
+                    Confidence = 80,
+                    HasConflict = false,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "UniqueExtension",
+                    AcceptableAlternatives = ["FolderName"]
+                },
+                FileModel = new FileModelInfo { Type = "directory" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    // ═══ PHASE C: TOSEC COVERAGE (C5) ═══════════════════════════════════
+
+    private void GenerateTosecCoverage(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // TOSEC naming convention entries
+        var tosecEntries = new[]
+        {
+            ("Turrican II (1991)(Factor 5)(Disk 1 of 2)[cr Paranoid]", "AMIGA", ".adf"),
+            ("Lemmings (1991)(DMA Design)(Disk 1 of 1)", "AMIGA", ".adf"),
+            ("Dungeon Master (1987)(FTL Games)(Disk 1 of 2)", "ATARIST", ".st"),
+            ("Impossible Mission (1984)(Epyx)(Side A)[a]", "C64", ".d64"),
+            ("DOOM (1993)(id Software)(Disk 1 of 5)", "DOS", ".exe"),
+            ("Nemesis (1986)(Konami)[a]", "MSX", ".mx1"),
+            ("Manic Miner (1983)(Bug-Byte Software)", "ZX", ".tzx"),
+            ("Star Raiders (1979)(Atari)(NTSC)", "A800", ".atr"),
+            ("Ys IV - The Dawn of Ys (1993)(Hudson Soft)", "PC98", ".exe"),
+            ("Akumajou Dracula (1993)(Konami)", "X68K", ".exe"),
+            ("Boulder Dash (1984)(First Star Software)", "C64", ".d64"),
+            ("Rick Dangerous (1989)(Core Design)", "CPC", ".dsk"),
+            ("Moon Patrol (1983)(Atari)", "A52", ".a52"),
+            ("Hockey (1977)(Fairchild)", "CHANNELF", ".bin"),
+            ("Mine Storm (1982)(GCE)", "VECTREX", ".vec"),
+        };
+
+        foreach (var (name, sysKey, ext) in tosecEntries)
+        {
+            var id = NextId("dc", sysKey, "tosec");
+            if (_existingIds.Contains(id)) continue;
+
+            var sys = Systems.First(s => s.Key == sysKey);
+            Add(result, "dat-coverage.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{name}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = ["dat-exact-match", "dat-tosec"],
+                Difficulty = "easy",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysKey,
+                    Category = "Game",
+                    Confidence = 95,
+                    HasConflict = false,
+                    DatMatchLevel = "exact",
+                    DatEcosystem = "tosec",
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "DatLookup",
+                    AcceptableAlternatives = [sys.PrimaryDetection]
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    // ═══ PHASE C: ADDITIONAL EXPANSION (C6) ═════════════════════════════
+
+    private void GenerateAdditionalMultiDiscVariants(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Additional multi-disc entries: Disc 2, Disc 3 variants
+        var discSystems = Systems.Where(s => s.DiscBased && IsTier1Or2(s.Key)).ToArray();
+        foreach (var sys in discSystems)
+        {
+            for (int disc = 2; disc <= 3; disc++)
+            {
+                var id = NextId("gr", sys.Key, $"mdisc{disc}");
+                if (_existingIds.Contains(id)) continue;
+
+                Add(result, "golden-realworld.jsonl", new GroundTruthEntry
+                {
+                    Id = id,
+                    Source = new SourceInfo
+                    {
+                        FileName = $"{sys.SampleGames[0]} (USA) (Disc {disc}).chd",
+                        Extension = ".chd",
+                        SizeBytes = 734003200,
+                        Directory = sys.FolderAlias,
+                    },
+                    Tags = ["multi-disc", "clean-reference", sys.DatEcosystem],
+                    Difficulty = "medium",
+                    Expected = new ExpectedResult
+                    {
+                        ConsoleKey = sys.Key,
+                        Category = "Game",
+                        Confidence = 92,
+                        HasConflict = false,
+                        DatMatchLevel = "exact",
+                        DatEcosystem = sys.DatEcosystem,
+                        SortDecision = "sort",
+                        DiscNumber = disc
+                    },
+                    DetectionExpectations = new DetectionExpectations
+                    {
+                        PrimaryMethod = sys.PrimaryDetection,
+                        AcceptableAlternatives = ["FolderName"]
+                    },
+                    FileModel = new FileModelInfo { Type = "multi-disc", DiscCount = disc },
+                    Relationships = new RelationshipInfo()
+                });
+            }
+        }
+    }
+
+    private void GenerateContainerFormats(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Various container formats: CSO, WIA, RVZ, WBFS
+        var containers = new[]
+        {
+            ("God of War Chains of Olympus (USA).cso", ".cso", "PSP", "container-cso"),
+            ("Lumines (USA).cso", ".cso", "PSP", "container-cso"),
+            ("Mario Galaxy (USA).rvz", ".rvz", "WII", "container-rvz"),
+            ("Smash Brawl (USA).rvz", ".rvz", "WII", "container-rvz"),
+            ("Melee (USA).rvz", ".rvz", "GC", "container-rvz"),
+            ("Twilight Princess Wii (USA).wbfs", ".wbfs", "WII", "container-wbfs"),
+            ("Mario Kart Wii (USA).wbfs", ".wbfs", "WII", "container-wbfs"),
+        };
+
+        foreach (var (name, ext, sysKey, tag) in containers)
+        {
+            var id = NextId("gr", sysKey, "container");
+            if (_existingIds.Contains(id)) continue;
+
+            var sys = Systems.First(s => s.Key == sysKey);
+            Add(result, "golden-realworld.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = name,
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize / 2,
+                    Directory = sys.FolderAlias,
+                },
+                Tags = ["clean-reference", tag],
+                Difficulty = "easy",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysKey,
+                    Category = "Game",
+                    Confidence = 92,
+                    HasConflict = false,
+                    DatMatchLevel = "exact",
+                    DatEcosystem = sys.DatEcosystem,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "UniqueExtension",
+                    AcceptableAlternatives = ["FolderName"]
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    private void GenerateSerialNumberEntries(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Files detectable by serial number in filename
+        var serials = new[]
+        {
+            ("SLUS-01163 (USA)", "PS1", ".bin"), ("SLUS-20001 (USA)", "PS2", ".iso"),
+            ("BCUS-98100 (USA)", "PS3", ".iso"), ("UCUS-98601 (USA)", "PSP", ".iso"),
+            ("NTR-AMCE-USA", "NDS", ".nds"), ("CTR-ARKE-USA", "3DS", ".3ds"),
+        };
+
+        foreach (var (serial, sysKey, ext) in serials)
+        {
+            var id = NextId("gr", sysKey, "serial");
+            if (_existingIds.Contains(id)) continue;
+
+            var sys = Systems.First(s => s.Key == sysKey);
+            Add(result, "golden-realworld.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{serial}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = "roms",
+                },
+                Tags = ["clean-reference", "serial-number"],
+                Difficulty = "medium",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysKey,
+                    Category = "Game",
+                    Confidence = 85,
+                    HasConflict = false,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "SerialNumber",
+                    AcceptableAlternatives = [sys.PrimaryDetection]
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
+        }
+    }
+
+    private void GenerateKeywordDetection(Dictionary<string, List<GroundTruthEntry>> result)
+    {
+        // Files with console keywords in filename
+        var keywordEntries = new[]
+        {
+            ("Game [PS1]", "PS1", ".bin"), ("Game [GBA]", "GBA", ".gba"),
+            ("Game [SNES]", "SNES", ".sfc"), ("Game [N64]", "N64", ".z64"),
+            ("Game [NES]", "NES", ".nes"), ("Game [Genesis]", "MD", ".md"),
+            ("Game [PS2]", "PS2", ".iso"), ("Game (Game Boy)", "GB", ".gb"),
+        };
+
+        foreach (var (name, sysKey, ext) in keywordEntries)
+        {
+            var id = NextId("gr", sysKey, "keyword");
+            if (_existingIds.Contains(id)) continue;
+
+            var sys = Systems.First(s => s.Key == sysKey);
+            Add(result, "golden-realworld.jsonl", new GroundTruthEntry
+            {
+                Id = id,
+                Source = new SourceInfo
+                {
+                    FileName = $"{name}{ext}",
+                    Extension = ext,
+                    SizeBytes = sys.TypicalSize,
+                    Directory = "roms",
+                },
+                Tags = ["clean-reference", "keyword-detection"],
+                Difficulty = "medium",
+                Expected = new ExpectedResult
+                {
+                    ConsoleKey = sysKey,
+                    Category = "Game",
+                    Confidence = 80,
+                    HasConflict = false,
+                    SortDecision = "sort"
+                },
+                DetectionExpectations = new DetectionExpectations
+                {
+                    PrimaryMethod = "Keyword",
+                    AcceptableAlternatives = [sys.PrimaryDetection]
+                },
+                FileModel = new FileModelInfo { Type = "single-file" },
+                Relationships = new RelationshipInfo()
+            });
         }
     }
 

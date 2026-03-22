@@ -1,19 +1,19 @@
 {
   "_meta": {
     "description": "Benchmark dataset manifest",
-    "version": "2.1.0",
-    "groundTruthVersion": "1.0.0",
-    "lastModified": "2026-03-21"
+    "version": "3.0.0",
+    "groundTruthVersion": "2.0.0",
+    "lastModified": "2026-03-22"
   },
-  "totalEntries": 1152,
+  "totalEntries": 2200,
   "bySet": {
-    "golden-core": 370,
-    "golden-realworld": 232,
-    "edge-cases": 142,
-    "negative-controls": 62,
-    "chaos-mixed": 101,
-    "repair-safety": 65,
-    "dat-coverage": 180,
+    "golden-core": 550,
+    "golden-realworld": 400,
+    "edge-cases": 250,
+    "negative-controls": 100,
+    "chaos-mixed": 220,
+    "repair-safety": 130,
+    "dat-coverage": 300,
     "performance-scale": 0
   }
 }

@@ -55,8 +55,31 @@ internal static class FallklasseClassifier
             result.Add("FC-18");
         if (tagSet.Contains("junk") || tagSet.Contains("non-game"))
             result.Add("FC-19");
-        if (tagSet.Contains("corrupt") || tagSet.Contains("truncated") || tagSet.Contains("broken-set"))
+        if (tagSet.Contains("corrupt") || tagSet.Contains("truncated") || tagSet.Contains("broken-set")
+            || tagSet.Contains("corrupt-archive") || tagSet.Contains("truncated-rom"))
             result.Add("FC-20");
+
+        // Additional tag aliases for schema-aligned tags
+        if (tagSet.Contains("region-variant") || tagSet.Contains("revision-variant"))
+            result.Add("FC-01");
+        if (tagSet.Contains("dat-exact"))
+            result.Add("FC-06");
+        if (tagSet.Contains("unknown-expected"))
+            result.Add("FC-14");
+        if (tagSet.Contains("cross-system-ambiguity") || tagSet.Contains("gb-gbc-ambiguity")
+            || tagSet.Contains("md-32x-ambiguity") || tagSet.Contains("ps-disambiguation"))
+            result.Add("FC-18");
+        if (tagSet.Contains("confidence-low") || tagSet.Contains("confidence-borderline")
+            || tagSet.Contains("repair-unsafe"))
+            result.Add("FC-17");
+        if (tagSet.Contains("folder-only-detection"))
+            result.Add("FC-05");
+        if (tagSet.Contains("folder-vs-header-conflict"))
+            result.Add("FC-05");
+        if (tagSet.Contains("dat-tosec") || tagSet.Contains("dat-nointro") || tagSet.Contains("dat-redump"))
+            result.Add("FC-06");
+        if (tagSet.Contains("demo") || tagSet.Contains("homebrew") || tagSet.Contains("hack"))
+            result.Add("FC-19");
 
         return result;
     }

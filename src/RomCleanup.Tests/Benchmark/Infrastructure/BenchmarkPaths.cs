@@ -26,7 +26,10 @@ internal static class BenchmarkPaths
     public static string CurrentConfusionConsoleCsvPath => Path.Combine(ReportsDir, "confusion-console.csv");
     public static string CurrentConfusionCategoryCsvPath => Path.Combine(ReportsDir, "confusion-category.csv");
     public static string CurrentErrorDetailsPath => Path.Combine(ReportsDir, "error-details.jsonl");
+    public static string CurrentHtmlDashboardPath => Path.Combine(ReportsDir, "benchmark-dashboard.html");
     public static string SchemaPath => Path.Combine(GroundTruthDir, "ground-truth.schema.json");
+    public static string HoldoutDir => Path.Combine(BenchmarkDir, "holdout");
+    public static string HoldoutJsonlPath => Path.Combine(HoldoutDir, "holdout.jsonl");
     public static string DataDir => Path.Combine(RepoRoot, "data");
     public static string ConsolesJsonPath => Path.Combine(DataDir, "consoles.json");
 

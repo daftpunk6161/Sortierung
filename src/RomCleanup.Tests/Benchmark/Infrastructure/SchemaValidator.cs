@@ -28,7 +28,7 @@ internal sealed class SchemaValidator
     {
         "CartridgeHeader", "DiscHeader", "FolderName", "UniqueExtension",
         "SerialNumber", "MagicBytes", "FileSize", "DatMatch", "DatLookup",
-        "ArchiveContent", "Heuristic"
+        "ArchiveContent", "Heuristic", "Keyword"
     };
 
     private static readonly HashSet<string> ValidFileModelTypes = new(StringComparer.Ordinal)
@@ -43,7 +43,7 @@ internal sealed class SchemaValidator
 
     private static readonly HashSet<string> ValidSortDecisions = new(StringComparer.Ordinal)
     {
-        "sort", "block", "skip", "manual"
+        "sort", "block", "skip", "review", "manual"
     };
 
     private readonly HashSet<string> _validConsoleKeys;

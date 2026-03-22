@@ -33,6 +33,15 @@ public sealed record GroundTruthEntry
 
     [JsonPropertyName("notes")]
     public string? Notes { get; init; }
+
+    [JsonPropertyName("schemaVersion")]
+    public string? SchemaVersion { get; init; }
+
+    [JsonPropertyName("addedInVersion")]
+    public string? AddedInVersion { get; init; }
+
+    [JsonPropertyName("lastVerified")]
+    public string? LastVerified { get; init; }
 }
 
 public sealed record SourceInfo
@@ -102,6 +111,15 @@ public sealed record ExpectedResult
 
     [JsonPropertyName("sortDecision")]
     public string? SortDecision { get; init; }
+
+    [JsonPropertyName("gameIdentity")]
+    public string? GameIdentity { get; init; }
+
+    [JsonPropertyName("discNumber")]
+    public int? DiscNumber { get; init; }
+
+    [JsonPropertyName("repairSafe")]
+    public bool? RepairSafe { get; init; }
 }
 
 public sealed record DetectionExpectations

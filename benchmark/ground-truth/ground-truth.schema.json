@@ -7,6 +7,11 @@
   "required": ["id", "source", "tags", "difficulty", "expected"],
   "additionalProperties": false,
   "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "SemVer of the ground-truth schema this entry conforms to. Optional — defaults to 1.0.0."
+    },
     "id": {
       "type": "string",
       "pattern": "^[a-z]{2,3}-[A-Z0-9]{1,10}-[a-z0-9-]+-\\d{3,4}$",
@@ -191,8 +196,21 @@
         },
         "sortDecision": {
           "type": ["string", "null"],
-          "enum": ["sort", "block", "review", null],
+          "enum": ["sort", "block", "skip", "review", null],
           "description": "Expected sorting decision based on confidence gating"
+        },
+        "gameIdentity": {
+          "type": ["string", "null"],
+          "description": "Canonical game title for deduplication grouping. null if unknown."
+        },
+        "discNumber": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Disc number in a multi-disc set. null for single-disc or non-disc entries."
+        },
+        "repairSafe": {
+          "type": ["boolean", "null"],
+          "description": "Whether this entry is safe for automatic repair/sort (confidence gating result). null if not evaluated."
         }
       }
     },
@@ -283,6 +301,16 @@
     "notes": {
       "type": "string",
       "description": "Optional human-readable notes about this test case"
+    },
+    "addedInVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Ground-truth dataset version when this entry was first added."
+    },
+    "lastVerified": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "ISO date when this entry was last verified against the detection pipeline."
     }
   }
 }

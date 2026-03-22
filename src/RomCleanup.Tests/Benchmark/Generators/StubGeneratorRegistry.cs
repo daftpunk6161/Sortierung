@@ -25,6 +25,7 @@ internal sealed class StubGeneratorRegistry
         Register(new Disc.Ps2PvdGenerator());
         Register(new Disc.SegaIpBinGenerator());
         Register(new Disc.NintendoDiscGenerator());
+        Register(new Disc.MultiFileSetGenerator());
 
         // Utility generators
         Register(new ExtOnlyGenerator());

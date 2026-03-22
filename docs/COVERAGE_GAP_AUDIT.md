@@ -1,29 +1,122 @@
 # Coverage Gap Audit & Minimum Coverage Matrix – RomCleanup
 
-> **Version:** 1.0.0  
+> **Version:** 2.0.0  
 > **Status:** Verbindlich  
+> **Aktualisiert:** 2026-03-23  
 > **Erstellt:** 2026-03-20  
-> **Bezug:** [GROUND_TRUTH_SCHEMA.md](GROUND_TRUTH_SCHEMA.md), [TESTSET_DESIGN.md](TESTSET_DESIGN.md), [RECOGNITION_QUALITY_BENCHMARK.md](RECOGNITION_QUALITY_BENCHMARK.md)
+> **Bezug:** [GROUND_TRUTH_SCHEMA.md](GROUND_TRUTH_SCHEMA.md), [TESTSET_DESIGN.md](TESTSET_DESIGN.md), [RECOGNITION_QUALITY_BENCHMARK.md](RECOGNITION_QUALITY_BENCHMARK.md), [DATASET_AUDIT_PROCESS.md](DATASET_AUDIT_PROCESS.md)
+
+---
+
+## 0. Aktueller Stand (2026-03-23)
+
+### Dataset-Größe: 2.073 Entries
+
+| Set | Ist | Ziel (ADR-017) | Status |
+|-----|-----|----------------|--------|
+| golden-core | 648 | 400 | ✅ Übertroffen |
+| golden-realworld | 493 | 350 | ✅ Übertroffen |
+| chaos-mixed | 204 | 200 | ✅ Erreicht |
+| edge-cases | 198 | 200 | ⚠️ Knapp (-2) |
+| negative-controls | 80 | 80 | ✅ Erreicht |
+| repair-safety | 100 | 100 | ✅ Erreicht |
+| dat-coverage | 350 | 200 | ✅ Übertroffen |
+| performance-scale | 0 | 5.000+ | ❌ Leer (generiert) |
+| holdout | 5 | 200 | ⚠️ Seed nur |
+| **Gesamt (manuell)** | **2.073** | **1.530** | ✅ **+35%** |
+
+### Was seit v1.0.0 geschehen ist (Phase A–C)
+
+- **+903 neue Entries** (von 1.170 → 2.073)
+- **65/65 Systeme abgedeckt** (Lücke: 0, zuvor 17 fehlend)
+- **26 neue Generator-Methoden** in DatasetExpander
+- **Schema P1-Felder** implementiert (gameIdentity, discNumber, repairSafe, primaryMethod, expectedConfidence, archiveType)
+- **Holdout-Zone** mit 5 Seed-Entries und HoldoutEvaluator
+- **Stub-Realismus** L1/L2/L3 implementiert
+- **M16 ECE Calibration** implementiert
+- **Multi-File-Set-Generatoren** (CUE+BIN, GDI+Track)
+- **Directory-based Games** (Wii U, 3DS, DOS)
+- **TOSEC-DAT-Abdeckung** ≥10 Entries
+- **Coverage Gates** (50 Tests, alle grün)
+
+### Geschlossene Lücken
+
+| # | Ehemaliger Befund (v1.0.0) | Neuer Stand | Status |
+|---|---------------------------|-------------|--------|
+| 5 | 17 Systeme fehlen ganz | 65/65 abgedeckt | ✅ Geschlossen |
+| 6 | golden-core zu dünn (70) | 648 Entries | ✅ Geschlossen |
+| 7 | golden-realworld zu klein (200) | 493 Entries | ✅ Geschlossen |
+| 1 | BIOS-Fälle zu wenig (~15) | ~60+ über mehrere Sets | ✅ Geschlossen |
+| 2 | Arcade zu schwach (80) | ~180+ mit Parent/Clone/Split-Merged | ✅ Geschlossen |
+| 3 | Redump Multi-File (~40) | ~100+ mit CUE+BIN, GDI, M3U | ✅ Geschlossen |
+| 4 | Computer/PC (100) | ~180+ mit DOS/Amiga/C64/ZX | ✅ Geschlossen |
+
+### Verbleibende offene Lücken
+
+| # | Bereich | Ist | Ziel | Delta | Priorität |
+|---|---------|-----|------|-------|-----------|
+| 1 | **edge-cases Set** | 198 | 200 | –2 | Niedrig |
+| 2 | **performance-scale** | 0 | 5.000+ | –5.000 | Mittel (generiert, kein manueller Aufwand) |
+| 3 | **holdout-Zone** | 5 | 200 | –195 | Mittel (schrittweise Erweiterung) |
+| 4 | **Cross-System Disc** | ~50 | ≥50 | ~0 | ⚠️ Verifizieren |
+| 5 | **Headerless ROMs** | ~30 | ≥40 | ~–10 | Niedrig |
+| 6 | **Hybrid-Systeme** | ~60 | ≥80 | ~–20 | Niedrig |
+
+### Metriken-Pipeline Stand
+
+| Metrik | Implementiert | Quality Gate |
+|--------|--------------|-------------|
+| M1–M3 (Precision/Recall/F1) | ✅ | Informational |
+| M4 (Wrong Match Rate) | ✅ | ≤ 0.5% (enforced in CI) |
+| M5 (Unknown Rate) | ✅ | ≤ 15% |
+| M6 (False Confidence Rate) | ✅ | ≤ 5% (enforced in CI) |
+| M7 (Unsafe Sort Rate) | ✅ | ≤ 0.3% (enforced in CI) |
+| M8 (Safe Sort Coverage) | ✅ | ≥ 80% |
+| M9 (Category Confusion Rate) | ✅ | ≤ 5% |
+| M9a (Game-as-Junk) | ✅ | ≤ 0.1% (enforced in CI) |
+| M9b (BIOS-as-Game) | ✅ | ≤ 0.5% (enforced in CI) |
+| M10 (Console Confusion) | ✅ | ≤ 2% pro Paar |
+| M11 (DAT Exact Match) | ✅ | ≥ 90% |
+| M13 (Ambiguous Match) | ✅ | ≤ 8% (enforced in CI) |
+| M14 (Repair-Safe Rate) | ✅ | ≥ 70% (informational) |
+| M15 (UNKNOWN→WRONG Migration) | ✅ | ≤ 2% pro Build-Diff |
+| M16 (ECE Calibration) | ✅ | ≤ 10% |
+
+### Infrastruktur-Stand
+
+| Komponente | Status |
+|-----------|--------|
+| HTML Benchmark Dashboard (D1) | ✅ Implementiert |
+| Jährlicher Audit-Prozess (D2) | ✅ Dokumentiert |
+| Repair Gate M14 (D3) | ✅ Implementiert (informational) |
+| Trend Dashboard (D4) | ✅ Implementiert |
+| Cross-Validation Split (D5) | ✅ Implementiert |
+| CI Benchmark Workflow | ✅ PR-Gate + Nightly + Baseline-Publish |
+| Baseline-Management | ✅ Archivierung + Vergleich |
 
 ---
 
 ## 1. Executive Verdict
 
-**Reicht die bisherige Abdeckung: NEIN.**
+> **Hinweis (2026-03-23):** Dieser Abschnitt beschreibt die **Erstbewertung vom 2026-03-20** vor Phase A–C. Viele der hier beschriebenen Lücken sind inzwischen geschlossen — siehe §0 oben für den aktuellen Stand.
 
-### Hauptprobleme
+**Reicht die bisherige Abdeckung: BEDINGT JA (zuvor: NEIN).**
 
-1. **Die Manifest-Statistik ist ein Planungsdokument, kein Testset.** `totalEntries: 720` und `systemsCovered: 52` beschreiben Wunschzahlen. Es existieren null tatsächliche JSONL-Einträge. Die Zahlen sind zu niedrig — selbst wenn sie exakt so umgesetzt würden.
+Mit 2.073 Entries, 65/65 Systemen und allen Coverage Gates grün ist das Testset jetzt **belastbar für CI-Gates** (Stufe S1 übertroffen). Für volle Production-Benchmark-Qualität (Stufe S2, ~2.500 Entries) fehlen noch ~400 Entries, insbesondere in edge-cases, holdout und performance-scale.
 
-2. **Das Schema ist strukturell stark, aber die geplanten Mengen sind in 4 von 5 Plattformfamilien zu schwach.** 720 Einträge klingen nach viel, verteilt auf 8 Dataset-Klassen, 5 Plattformfamilien, 20+ Fallklassen und 69 Systeme sind es durchschnittlich 1,3 Einträge pro System-Fallklassen-Kombination. Das reicht nicht für statistisch belastbare Aussagen.
+### Hauptprobleme (Erstbewertung, Stand 2026-03-20)
 
-3. **17 Systeme fehlen ganz.** 52 von 69 Systemen bedeutet: 25% des unterstützten Scopes haben null Testabdeckung. Jedes System ohne Testfall ist ein Blind Spot, der bei Refactors unsichtbar bricht.
+1. ~~**Die Manifest-Statistik ist ein Planungsdokument, kein Testset.**~~ ✅ **Gelöst.** 2.073 reale JSONL-Entries existieren.
 
-4. **Die gefährlichsten Bereiche sind die dünnsten.** Arcade (80 Einträge für Parent/Clone/BIOS/Split-Merged/CHD), BIOS (geschätzt <20 systemübergreifend), Computer/PC (100 Einträge für 10 Systeme) und Redump-Sonderfälle (CHD-RAW-SHA1, GDI, M3U-Sets) sind genau die Bereiche, in denen Fehlentscheidungen den grössten Schaden anrichten — und sie bekommen die wenigste Aufmerksamkeit.
+2. ~~**Das Schema ist strukturell stark, aber die geplanten Mengen sind in 4 von 5 Plattformfamilien zu schwach.**~~ ⚠️ **Teilweise gelöst.** 2.073 Einträge verteilt auf 65 Systeme → 31,9 pro System statt 1,3. Cartridge und Disc sind gut, Arcade und Computer noch ausbaufähig.
 
-### Kurzfazit
+3. ~~**17 Systeme fehlen ganz.**~~ ✅ **Gelöst.** 65/65 Systeme abgedeckt (0 fehlend).
 
-Das Schema kann alles modellieren. Aber ein Schema ist kein Testset. Die geplante Befüllung unterschreitet die in TESTSET_DESIGN.md selbst definierten Minima um Faktor 2–4 und erreicht in keiner Plattformfamilie die Tiefe, die für belastbare Metriken nötig ist. Das Testset braucht nicht nur mehr Systeme, sondern vor allem **mehr Tiefe pro System und mehr Tiefe pro Fallklasse**.
+4. ~~**Die gefährlichsten Bereiche sind die dünnsten.**~~ ⚠️ **Verbessert.** Arcade ~180+, BIOS ~60+, Computer ~180+, Redump-Sonderfälle ~100+. Noch nicht auf S2-Niveau, aber CI-belastbar.
+
+### Kurzfazit (aktualisiert 2026-03-23)
+
+Das Testset hat mit Phase A–C die Stufe S1 (Belastbar, ~1.200 Minimum) deutlich übertroffen (2.073 Entries). Alle 20 Fallklassen sind besetzt, alle 65 Systeme abgedeckt, alle Coverage Gates grün. Für Stufe S2 (Production Benchmark, ~2.500) fehlen noch edge-cases (+2), holdout (+195) und performance-scale (generiert). Die Metriken-Pipeline M1–M16 ist vollständig implementiert und CI-integriert.
 
 ---
 
@@ -403,7 +496,7 @@ Diese drei Bereiche verdienen gesonderte Übergewichtung, weil:
 | R-18 | Xbox/X360 ISO-Signatur | 4 | XBOX, X360 | MICROSOFT*XBOX*MEDIA |
 | R-19 | DAT-Miss bei seltenen Discs | 5 | PCFX, JAGCD, CD32 | Kein DAT-Eintrag für seltene Systeme |
 | R-20 | Disc-BIOS (PS1 BIOS.bin etc.) | 5 | PS1, PS2, SAT, DC | BIOS neben Disc-Spielen |
-| **Total** | | **≥143** | |
+| **Total** | | **≥143** | | |
 
 ---
 

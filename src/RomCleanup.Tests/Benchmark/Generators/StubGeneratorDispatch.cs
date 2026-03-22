@@ -102,6 +102,12 @@ internal sealed class StubGeneratorDispatch
                 kvp => kvp.Key,
                 kvp => kvp.Value?.ToString() ?? "",
                 StringComparer.OrdinalIgnoreCase);
+
+            // Check for realism level in stub params
+            var level = ParseRealismLevel(parameters);
+            if (level > StubRealismLevel.Minimal)
+                return gen.GenerateWithRealism(level, stub.Variant, parameters as IReadOnlyDictionary<string, string>);
+
             return gen.Generate(stub.Variant, parameters as IReadOnlyDictionary<string, string>);
         }
 
@@ -173,5 +179,18 @@ internal sealed class StubGeneratorDispatch
 
         // Default: minimal file
         return _registry.GetRequired("ext-only").Generate("default");
+    }
+
+    private static StubRealismLevel ParseRealismLevel(Dictionary<string, string>? parameters)
+    {
+        if (parameters is null || !parameters.TryGetValue("realism", out var value))
+            return StubRealismLevel.Minimal;
+
+        return value?.ToUpperInvariant() switch
+        {
+            "L2" or "REALISTIC" => StubRealismLevel.Realistic,
+            "L3" or "FULL" or "FULLSTRUCTURE" => StubRealismLevel.FullStructure,
+            _ => StubRealismLevel.Minimal
+        };
     }
 }

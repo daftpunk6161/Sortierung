@@ -37,19 +37,26 @@ public sealed class BaselineRegressionGateTests : IClassFixture<BenchmarkFixture
             results.AddRange(BenchmarkEvaluationRunner.EvaluateSet(_fixture, set));
         }
 
-        var aggregate = MetricsAggregator.CalculateAggregate(results);
+        var aggregate = MetricsAggregator.CalculateExtendedAggregate(results);
         var confusion = MetricsAggregator.BuildConfusionMatrix(results);
+        var perSystem = MetricsAggregator.CalculatePerSystem(results);
+        var confusionPairs = MetricsAggregator.CalculateConsoleConfusionPairs(results);
+        var categoryConfusion = MetricsAggregator.BuildCategoryConfusionMatrix(results);
+        var calibration = MetricsAggregator.CalculateConfidenceCalibration(results);
         var report = BenchmarkReportWriter.CreateReport(results, "1.0.0", aggregate, confusion);
 
         BenchmarkReportWriter.Write(report, BenchmarkPaths.CurrentBenchmarkReportPath);
 
         var regression = BaselineComparator.Compare(report, BenchmarkPaths.LatestBaselinePath);
 
+        // Write all artifacts including the full HTML dashboard (D1)
         BenchmarkArtifactWriter.WriteMetricsSummary(report, BenchmarkPaths.CurrentMetricsSummaryPath);
         BenchmarkArtifactWriter.WriteConfusionCsv(confusion, BenchmarkPaths.CurrentConfusionConsoleCsvPath);
         BenchmarkArtifactWriter.WriteCategoryConfusionCsv(results, BenchmarkPaths.CurrentConfusionCategoryCsvPath);
         BenchmarkArtifactWriter.WriteErrorDetailsJsonl(results, BenchmarkPaths.CurrentErrorDetailsPath);
         BenchmarkArtifactWriter.WriteTrendComparison(regression, BenchmarkPaths.CurrentTrendComparisonPath);
+        BenchmarkHtmlReportWriter.Write(report, BenchmarkPaths.CurrentHtmlDashboardPath,
+            perSystem, confusionPairs, categoryConfusion, calibration, regression);
 
         var updateBaseline = string.Equals(
             Environment.GetEnvironmentVariable("ROMCLEANUP_UPDATE_BASELINE"),

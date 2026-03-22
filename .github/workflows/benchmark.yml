@@ -1,0 +1,147 @@
+name: benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      update_baseline:
+        description: 'Update baseline after run'
+        type: boolean
+        default: false
+      baseline_reason:
+        description: 'Reason for baseline update'
+        type: string
+        default: ''
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'benchmark/**'
+      - 'data/**'
+      - '.github/workflows/benchmark.yml'
+  schedule:
+    # Nightly at 02:00 UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  # ── PR Gate: Fast benchmark on golden-core only ──
+  benchmark-gate:
+    if: github.event_name == 'pull_request'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'ga'
+
+      - name: NuGet Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('src/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Build
+        run: dotnet build src/RomCleanup.Tests/RomCleanup.Tests.csproj --configuration Release --nologo
+
+      - name: Coverage Gate Tests
+        run: |
+          dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --no-build --configuration Release --nologo --filter "Category=CoverageGate" --logger "trx;LogFileName=coverage-gate.trx"
+
+      - name: Quality Gate Tests (informational)
+        run: |
+          dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --no-build --configuration Release --nologo --filter "Category=QualityGate" --logger "trx;LogFileName=quality-gate.trx"
+
+      - name: Upload gate results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-gate-results
+          path: |
+            src/RomCleanup.Tests/TestResults/**/*.trx
+          retention-days: 14
+
+  # ── Nightly: Full benchmark evaluation ──
+  benchmark-full:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'ga'
+
+      - name: NuGet Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('src/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Build
+        run: dotnet build src/RomCleanup.Tests/RomCleanup.Tests.csproj --configuration Release --nologo
+
+      - name: Full Benchmark Suite
+        env:
+          ROMCLEANUP_ENFORCE_QUALITY_GATES: 'true'
+          ROMCLEANUP_UPDATE_BASELINE: ${{ github.event.inputs.update_baseline || 'false' }}
+          ROMCLEANUP_BASELINE_REASON: ${{ github.event.inputs.baseline_reason || format('Nightly {0}', github.run_id) }}
+        run: |
+          dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --no-build --configuration Release --nologo --filter "Category=Benchmark|Category=BenchmarkRegression|Category=QualityGate|Category=CoverageGate" --logger "trx;LogFileName=benchmark-full.trx"
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-reports
+          path: |
+            benchmark/reports/**
+            src/RomCleanup.Tests/TestResults/**/*.trx
+          retention-days: 90
+
+      - name: Upload HTML dashboard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-dashboard
+          path: benchmark/reports/benchmark-dashboard.html
+          retention-days: 90
+
+  # ── Baseline Publish (manual trigger only) ──
+  baseline-publish:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_baseline == 'true'
+    needs: benchmark-full
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download benchmark reports
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-reports
+          path: benchmark/reports
+
+      - name: Commit updated baseline
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add benchmark/baselines/
+          $hasChanges = git diff --cached --quiet; $LASTEXITCODE -ne 0
+          if ($hasChanges) {
+            git commit -m "chore: update benchmark baseline [skip ci]"
+            git push
+          } else {
+            Write-Host "No baseline changes to commit"
+          }

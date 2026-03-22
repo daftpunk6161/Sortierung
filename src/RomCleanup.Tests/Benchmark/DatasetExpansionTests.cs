@@ -70,7 +70,7 @@ public sealed class DatasetExpansionTests
         }
 
         // Total count check
-        Assert.True(reloaded.Count >= 970,
-            $"Expected >= 970 total entries, got {reloaded.Count}");
+        Assert.True(reloaded.Count >= 2000,
+            $"Expected >= 2000 total entries, got {reloaded.Count}");
     }
 }
