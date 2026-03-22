@@ -44,6 +44,25 @@ public sealed class BaselineRegressionGateTests : IClassFixture<BenchmarkFixture
         BenchmarkReportWriter.Write(report, BenchmarkPaths.CurrentBenchmarkReportPath);
 
         var regression = BaselineComparator.Compare(report, BenchmarkPaths.LatestBaselinePath);
+
+        BenchmarkArtifactWriter.WriteMetricsSummary(report, BenchmarkPaths.CurrentMetricsSummaryPath);
+        BenchmarkArtifactWriter.WriteConfusionCsv(confusion, BenchmarkPaths.CurrentConfusionConsoleCsvPath);
+        BenchmarkArtifactWriter.WriteCategoryConfusionCsv(results, BenchmarkPaths.CurrentConfusionCategoryCsvPath);
+        BenchmarkArtifactWriter.WriteErrorDetailsJsonl(results, BenchmarkPaths.CurrentErrorDetailsPath);
+        BenchmarkArtifactWriter.WriteTrendComparison(regression, BenchmarkPaths.CurrentTrendComparisonPath);
+
+        var updateBaseline = string.Equals(
+            Environment.GetEnvironmentVariable("ROMCLEANUP_UPDATE_BASELINE"),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (updateBaseline)
+        {
+            var reason = Environment.GetEnvironmentVariable("ROMCLEANUP_BASELINE_REASON") ?? string.Empty;
+            BaselineManager.UpdateBaseline(report, reason);
+            _output.WriteLine($"Baseline metrics updated at {BenchmarkPaths.BaselineMetricsPath}");
+        }
+
         if (!regression.HasBaseline)
         {
             _output.WriteLine($"No baseline found at {BenchmarkPaths.LatestBaselinePath}. Regression gate skipped.");
@@ -51,8 +70,15 @@ public sealed class BaselineRegressionGateTests : IClassFixture<BenchmarkFixture
         }
 
         _output.WriteLine($"WrongMatchRateDelta={regression.WrongMatchRateDelta:F6}");
+        _output.WriteLine($"UnsafeSortRateDelta={regression.UnsafeSortRateDelta:F6}");
+        _output.WriteLine($"UnknownToWrongMigrationRate={regression.UnknownToWrongMigrationRate:F6}");
+
         Assert.True(regression.WrongMatchRateDelta <= 0.001,
             $"Wrong match rate regression: {regression.WrongMatchRateDelta:P3} > 0.100% threshold");
+        Assert.True(regression.UnsafeSortRateDelta <= 0.001,
+            $"Unsafe sort rate regression: {regression.UnsafeSortRateDelta:P3} > 0.100% threshold");
+        Assert.True(regression.UnknownToWrongMigrationRate <= 0.02,
+            $"UNKNOWN->WRONG migration too high: {regression.UnknownToWrongMigrationRate:P3} > 2.000% threshold");
         Assert.True(regression.PerSystemRegressions.Count == 0,
             "Per-system regressions: " + string.Join(", ", regression.PerSystemRegressions));
     }

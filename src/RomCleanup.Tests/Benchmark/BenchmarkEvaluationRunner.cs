@@ -1,5 +1,6 @@
 using RomCleanup.Tests.Benchmark.Models;
 using RomCleanup.Tests.Benchmark.Infrastructure;
+using RomCleanup.Core.Classification;
 
 namespace RomCleanup.Tests.Benchmark;
 
@@ -17,11 +18,19 @@ internal static class BenchmarkEvaluationRunner
                 "UNKNOWN",
                 0,
                 false,
-                $"Sample file missing: {samplePath}");
+                $"Sample file missing: {samplePath}",
+                ExpectedCategory: entry.Expected.Category,
+                ActualCategory: "Unknown",
+                ActualSortDecision: SortDecision.Blocked);
         }
 
         var detection = fixture.Detector.DetectWithConfidence(samplePath, fixture.SamplesRoot);
-        return GroundTruthComparator.Compare(entry, detection);
+        var fileName = Path.GetFileNameWithoutExtension(samplePath);
+        var extension = Path.GetExtension(samplePath);
+        var sizeBytes = new FileInfo(samplePath).Length;
+        var classification = FileClassifier.Analyze(fileName, extension, sizeBytes);
+
+        return GroundTruthComparator.Compare(entry, detection, classification.Category.ToString());
     }
 
     public static List<BenchmarkSampleResult> EvaluateSet(BenchmarkFixture fixture, string setFileName)

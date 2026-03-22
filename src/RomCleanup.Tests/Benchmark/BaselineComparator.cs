@@ -3,6 +3,8 @@ namespace RomCleanup.Tests.Benchmark;
 internal sealed record RegressionReport(
     bool HasBaseline,
     double WrongMatchRateDelta,
+    double UnsafeSortRateDelta,
+    double UnknownToWrongMigrationRate,
     IReadOnlyList<string> PerSystemRegressions,
     BenchmarkReport? BaselineReport,
     BenchmarkReport CurrentReport);
@@ -16,6 +18,8 @@ internal static class BaselineComparator
             return new RegressionReport(
                 HasBaseline: false,
                 WrongMatchRateDelta: 0,
+                UnsafeSortRateDelta: 0,
+                UnknownToWrongMigrationRate: 0,
                 PerSystemRegressions: [],
                 BaselineReport: null,
                 CurrentReport: currentReport);
@@ -44,11 +48,43 @@ internal static class BaselineComparator
             }
         }
 
+        var unknownToWrongMigrationRate = CalculateUnknownToWrongMigrationRate(baseline, currentReport);
+
         return new RegressionReport(
             HasBaseline: true,
             WrongMatchRateDelta: currentReport.WrongMatchRate - baseline.WrongMatchRate,
+            UnsafeSortRateDelta: currentReport.UnsafeSortRate - baseline.UnsafeSortRate,
+            UnknownToWrongMigrationRate: unknownToWrongMigrationRate,
             PerSystemRegressions: regressions,
             BaselineReport: baseline,
             CurrentReport: currentReport);
+    }
+
+    private static double CalculateUnknownToWrongMigrationRate(BenchmarkReport baseline, BenchmarkReport current)
+    {
+        var baselineOutcomes = baseline.SampleOutcomes;
+        var currentOutcomes = current.SampleOutcomes;
+        if (baselineOutcomes is null || currentOutcomes is null)
+        {
+            return 0;
+        }
+
+        var baselineUnknownIds = baselineOutcomes
+            .Where(kv => string.Equals(kv.Value, nameof(BenchmarkVerdict.Missed), StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(kv.Value, nameof(BenchmarkVerdict.TrueNegative), StringComparison.OrdinalIgnoreCase))
+            .Select(kv => kv.Key)
+            .ToList();
+
+        if (baselineUnknownIds.Count == 0)
+        {
+            return 0;
+        }
+
+        int migrated = baselineUnknownIds.Count(id =>
+            currentOutcomes.TryGetValue(id, out var outcome)
+            && (string.Equals(outcome, nameof(BenchmarkVerdict.Wrong), StringComparison.OrdinalIgnoreCase)
+                || string.Equals(outcome, nameof(BenchmarkVerdict.FalsePositive), StringComparison.OrdinalIgnoreCase)));
+
+        return (double)migrated / baselineUnknownIds.Count;
     }
 }

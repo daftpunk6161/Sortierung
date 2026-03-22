@@ -1,3 +1,5 @@
+using RomCleanup.Core.Classification;
+
 namespace RomCleanup.Tests.Benchmark;
 
 /// <summary>
@@ -40,4 +42,7 @@ public sealed record BenchmarkSampleResult(
     string? ActualConsoleKey,
     int ActualConfidence,
     bool ActualHasConflict,
-    string? Details);
+    string? Details,
+    string ExpectedCategory = "Unknown",
+    string ActualCategory = "Unknown",
+    SortDecision ActualSortDecision = SortDecision.Blocked);

@@ -6,7 +6,10 @@ internal sealed record ConfusionEntry(string ExpectedSystem, string ActualSystem
 
 internal static class MetricsAggregator
 {
-    private const int FalseConfidenceThreshold = 90;
+    private const int FalseConfidenceThreshold = 80;
+
+    private static bool IsSortingDecision(RomCleanup.Core.Classification.SortDecision decision) =>
+        decision is RomCleanup.Core.Classification.SortDecision.Sort or RomCleanup.Core.Classification.SortDecision.DatVerified;
 
     public static IReadOnlyDictionary<string, SystemMetrics> CalculatePerSystem(IReadOnlyList<BenchmarkSampleResult> results)
     {
@@ -51,15 +54,40 @@ internal static class MetricsAggregator
         int falseConfidence = results.Count(r =>
             r.ActualConfidence >= FalseConfidenceThreshold &&
             (r.Verdict is BenchmarkVerdict.Wrong or BenchmarkVerdict.FalsePositive));
+        int totalSortDecisions = results.Count(r => IsSortingDecision(r.ActualSortDecision));
+        int wrongSortDecisions = results.Count(r =>
+            IsSortingDecision(r.ActualSortDecision) &&
+            (r.Verdict is BenchmarkVerdict.Wrong or BenchmarkVerdict.FalsePositive));
+        int correctSortDecisions = results.Count(r =>
+            IsSortingDecision(r.ActualSortDecision) &&
+            r.Verdict is BenchmarkVerdict.Correct or BenchmarkVerdict.Acceptable);
 
         return new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
         {
             ["wrongMatchRate"] = total == 0 ? 0 : (double)wrong / total,
             ["unknownRate"] = total == 0 ? 0 : (double)unknown / total,
-            ["falseConfidenceRate"] = total == 0 ? 0 : (double)falseConfidence / total,
-            ["unsafeSortRate"] = total == 0 ? 0 : (double)falseConfidence / total,
-            ["safeSortCoverage"] = total == 0 ? 0 : 1d - ((double)falseConfidence / total)
+            ["falseConfidenceRate"] = wrong == 0 ? 0 : (double)falseConfidence / wrong,
+            ["unsafeSortRate"] = totalSortDecisions == 0 ? 0 : (double)wrongSortDecisions / totalSortDecisions,
+            ["safeSortCoverage"] = total == 0 ? 0 : (double)correctSortDecisions / total,
+            ["totalSortDecisions"] = totalSortDecisions,
+            ["wrongSortDecisions"] = wrongSortDecisions,
+            ["gameAsJunkRate"] = CalculateGameAsJunkRate(results)
         };
+    }
+
+    private static double CalculateGameAsJunkRate(IReadOnlyList<BenchmarkSampleResult> results)
+    {
+        int totalExpectedGame = results.Count(r => string.Equals(r.ExpectedCategory, "Game", StringComparison.OrdinalIgnoreCase));
+        if (totalExpectedGame == 0)
+        {
+            return 0;
+        }
+
+        int gameAsJunk = results.Count(r =>
+            string.Equals(r.ExpectedCategory, "Game", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(r.ActualCategory, "Junk", StringComparison.OrdinalIgnoreCase));
+
+        return (double)gameAsJunk / totalExpectedGame;
     }
 
     public static IReadOnlyList<ConfusionEntry> BuildConfusionMatrix(IReadOnlyList<BenchmarkSampleResult> results)

@@ -21,6 +21,7 @@ public sealed class RegressionDetectionRedTests
             JunkClassified: 0,
             FalsePositive: 0,
             WrongMatchRate: 0.01,
+            UnsafeSortRate: 0.0,
             PerSystem: new Dictionary<string, BenchmarkSystemSummary>(StringComparer.OrdinalIgnoreCase)
             {
                 ["NES"] = new BenchmarkSystemSummary(99, 0, 1, 0, 0, 0, 0),
@@ -40,6 +41,7 @@ public sealed class RegressionDetectionRedTests
             JunkClassified: 0,
             FalsePositive: 1,
             WrongMatchRate: 0.02,
+            UnsafeSortRate: 0.01,
             PerSystem: new Dictionary<string, BenchmarkSystemSummary>(StringComparer.OrdinalIgnoreCase)
             {
                 ["NES"] = new BenchmarkSystemSummary(98, 0, 1, 0, 0, 0, 0),

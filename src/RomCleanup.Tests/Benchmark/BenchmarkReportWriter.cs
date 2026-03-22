@@ -16,9 +16,11 @@ internal sealed record BenchmarkReport(
     int JunkClassified,
     int FalsePositive,
     double WrongMatchRate,
+    double UnsafeSortRate,
     IReadOnlyDictionary<string, BenchmarkSystemSummary> PerSystem,
     IReadOnlyDictionary<string, double> AggregateMetrics,
-    IReadOnlyList<ConfusionEntry> ConfusionMatrix);
+    IReadOnlyList<ConfusionEntry> ConfusionMatrix,
+    IReadOnlyDictionary<string, string>? SampleOutcomes = null);
 
 internal static class BenchmarkReportWriter
 {
@@ -50,6 +52,9 @@ internal static class BenchmarkReportWriter
 
         int total = results.Count;
         int wrong = results.Count(r => r.Verdict == BenchmarkVerdict.Wrong || r.Verdict == BenchmarkVerdict.FalsePositive);
+        var aggregate = aggregateMetrics ?? new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        aggregate.TryGetValue("unsafeSortRate", out var unsafeSortRate);
+        var outcomes = results.ToDictionary(r => r.Id, r => r.Verdict.ToString(), StringComparer.Ordinal);
 
         return new BenchmarkReport(
             Timestamp: DateTimeOffset.UtcNow,
@@ -63,9 +68,11 @@ internal static class BenchmarkReportWriter
             JunkClassified: results.Count(r => r.Verdict == BenchmarkVerdict.JunkClassified),
             FalsePositive: results.Count(r => r.Verdict == BenchmarkVerdict.FalsePositive),
             WrongMatchRate: total == 0 ? 0 : (double)wrong / total,
+                UnsafeSortRate: unsafeSortRate,
             PerSystem: bySystem,
-            AggregateMetrics: aggregateMetrics ?? new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase),
-            ConfusionMatrix: confusionMatrix ?? []);
+                AggregateMetrics: aggregate,
+                ConfusionMatrix: confusionMatrix ?? [],
+                SampleOutcomes: outcomes);
     }
 
     public static void Write(BenchmarkReport report, string path)

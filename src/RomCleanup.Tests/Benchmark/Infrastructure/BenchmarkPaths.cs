@@ -18,8 +18,14 @@ internal static class BenchmarkPaths
     public static string GatesJsonPath => Path.Combine(BenchmarkDir, "gates.json");
     public static string ManifestJsonPath => Path.Combine(BenchmarkDir, "manifest.json");
     public static string LatestBaselinePath => Path.Combine(BaselinesDir, "latest-baseline.json");
+    public static string BaselineMetricsPath => Path.Combine(BaselinesDir, "baseline-metrics.json");
     public static string VersionedBaselinePath => Path.Combine(BaselinesDir, "v0.1.0-baseline.json");
     public static string CurrentBenchmarkReportPath => Path.Combine(ReportsDir, "benchmark-results.json");
+    public static string CurrentMetricsSummaryPath => Path.Combine(ReportsDir, "metrics-summary.json");
+    public static string CurrentTrendComparisonPath => Path.Combine(ReportsDir, "trend-comparison.json");
+    public static string CurrentConfusionConsoleCsvPath => Path.Combine(ReportsDir, "confusion-console.csv");
+    public static string CurrentConfusionCategoryCsvPath => Path.Combine(ReportsDir, "confusion-category.csv");
+    public static string CurrentErrorDetailsPath => Path.Combine(ReportsDir, "error-details.jsonl");
     public static string SchemaPath => Path.Combine(GroundTruthDir, "ground-truth.schema.json");
     public static string DataDir => Path.Combine(RepoRoot, "data");
     public static string ConsolesJsonPath => Path.Combine(DataDir, "consoles.json");

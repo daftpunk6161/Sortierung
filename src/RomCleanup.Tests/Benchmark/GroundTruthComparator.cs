@@ -18,7 +18,7 @@ internal static class GroundTruthComparator
     /// <summary>
     /// Compare actual detection result against expected ground truth.
     /// </summary>
-    public static BenchmarkSampleResult Compare(GroundTruthEntry entry, ConsoleDetectionResult actual)
+    public static BenchmarkSampleResult Compare(GroundTruthEntry entry, ConsoleDetectionResult actual, string actualCategory = "Unknown")
     {
         var expected = entry.Expected;
         var actualKey = actual.ConsoleKey;
@@ -32,7 +32,10 @@ internal static class GroundTruthComparator
                 return new BenchmarkSampleResult(
                     entry.Id, BenchmarkVerdict.TrueNegative,
                     expected.ConsoleKey, actualKey, actual.Confidence, actual.HasConflict,
-                    "Junk sample correctly blocked as UNKNOWN");
+                    "Junk sample correctly blocked as UNKNOWN",
+                    expected.Category,
+                    actualCategory,
+                    actual.SortDecision);
             }
 
             if (!string.IsNullOrWhiteSpace(expected.ConsoleKey) &&
@@ -41,13 +44,19 @@ internal static class GroundTruthComparator
                 return new BenchmarkSampleResult(
                     entry.Id, BenchmarkVerdict.JunkClassified,
                     expected.ConsoleKey, actualKey, actual.Confidence, actual.HasConflict,
-                    "Junk sample mapped to correct console family");
+                    "Junk sample mapped to correct console family",
+                    expected.Category,
+                    actualCategory,
+                    actual.SortDecision);
             }
 
             return new BenchmarkSampleResult(
                 entry.Id, BenchmarkVerdict.FalsePositive,
                 expected.ConsoleKey, actualKey, actual.Confidence, actual.HasConflict,
-                $"Junk sample mapped to wrong family: expected '{expected.ConsoleKey}' but got '{actualKey}'");
+                $"Junk sample mapped to wrong family: expected '{expected.ConsoleKey}' but got '{actualKey}'",
+                expected.Category,
+                actualCategory,
+                actual.SortDecision);
         }
 
         // Case 1: Negative control — expected.consoleKey is null or category is non-ROM
@@ -59,16 +68,25 @@ internal static class GroundTruthComparator
                 ? new BenchmarkSampleResult(
                     entry.Id, BenchmarkVerdict.TrueNegative,
                     expected.ConsoleKey, actualKey, actual.Confidence, actual.HasConflict,
-                    "Correctly identified as unknown/non-ROM")
+                    "Correctly identified as unknown/non-ROM",
+                    expected.Category,
+                    actualCategory,
+                    actual.SortDecision)
                 : softOnlyDetection
                     ? new BenchmarkSampleResult(
                         entry.Id, BenchmarkVerdict.TrueNegative,
                         expected.ConsoleKey, "UNKNOWN", actual.Confidence, actual.HasConflict,
-                    $"Blocked soft-only detection ('{actualKey}')")
+                    $"Blocked soft-only detection ('{actualKey}')",
+                        expected.Category,
+                        actualCategory,
+                        actual.SortDecision)
                 : new BenchmarkSampleResult(
                     entry.Id, BenchmarkVerdict.FalsePositive,
                     expected.ConsoleKey, actualKey, actual.Confidence, actual.HasConflict,
-                    $"False positive: expected unknown but got '{actualKey}'");
+                    $"False positive: expected unknown but got '{actualKey}'",
+                    expected.Category,
+                    actualCategory,
+                    actual.SortDecision);
         }
 
         // Case 2: Expected a specific console → check exact match
@@ -77,7 +95,10 @@ internal static class GroundTruthComparator
             return new BenchmarkSampleResult(
                 entry.Id, BenchmarkVerdict.Correct,
                 expected.ConsoleKey, actualKey, actual.Confidence, actual.HasConflict,
-                null);
+                null,
+                expected.Category,
+                actualCategory,
+                actual.SortDecision);
         }
 
         // Case 3: Check acceptable alternatives
@@ -88,7 +109,10 @@ internal static class GroundTruthComparator
             return new BenchmarkSampleResult(
                 entry.Id, BenchmarkVerdict.Acceptable,
                 expected.ConsoleKey, actualKey, actual.Confidence, actual.HasConflict,
-                $"Matched acceptable alternative '{actualKey}'");
+                $"Matched acceptable alternative '{actualKey}'",
+                expected.Category,
+                actualCategory,
+                actual.SortDecision);
         }
 
         // Case 4: Detection missed (returned UNKNOWN for a known console)
@@ -97,13 +121,19 @@ internal static class GroundTruthComparator
             return new BenchmarkSampleResult(
                 entry.Id, BenchmarkVerdict.Missed,
                 expected.ConsoleKey, actualKey, actual.Confidence, actual.HasConflict,
-                $"Expected '{expected.ConsoleKey}' but got UNKNOWN");
+                $"Expected '{expected.ConsoleKey}' but got UNKNOWN",
+                expected.Category,
+                actualCategory,
+                actual.SortDecision);
         }
 
         // Case 5: Wrong detection
         return new BenchmarkSampleResult(
             entry.Id, BenchmarkVerdict.Wrong,
             expected.ConsoleKey, actualKey, actual.Confidence, actual.HasConflict,
-            $"Expected '{expected.ConsoleKey}' but got '{actualKey}'");
+            $"Expected '{expected.ConsoleKey}' but got '{actualKey}'",
+            expected.Category,
+            actualCategory,
+            actual.SortDecision);
     }
 }
