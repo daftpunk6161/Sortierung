@@ -17,7 +17,7 @@
 
         <!-- Mission Control (🏠 Home) -->
         <RadioButton GroupName="Nav"
-                     IsChecked="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=MissionControl}"
+                     IsChecked="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=MissionControl}"
                      Style="{StaticResource NavButton}"
                      ToolTip="{Binding Loc[Nav.MissionControl]}" TabIndex="50"
                      AutomationProperties.Name="{Binding Loc[Nav.MissionControl]}">
@@ -30,7 +30,7 @@
 
         <!-- Library & Review (📊) -->
         <RadioButton GroupName="Nav"
-                     IsChecked="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Library}"
+                     IsChecked="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Library}"
                      Style="{StaticResource NavButton}"
                      ToolTip="{Binding Loc[Nav.Library]}" TabIndex="51"
                      AutomationProperties.Name="{Binding Loc[Nav.Library]}">
@@ -43,7 +43,7 @@
 
         <!-- Config (⚙) -->
         <RadioButton GroupName="Nav"
-                     IsChecked="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Config}"
+                     IsChecked="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Config}"
                      Style="{StaticResource NavButton}"
                      ToolTip="{Binding Loc[Nav.Config]}" TabIndex="52"
                      AutomationProperties.Name="{Binding Loc[Nav.Config]}">
@@ -56,7 +56,7 @@
 
         <!-- Tools (🔧) -->
         <RadioButton GroupName="Nav"
-                     IsChecked="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Tools}"
+                     IsChecked="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Tools}"
                      Style="{StaticResource NavButton}"
                      ToolTip="{Binding Loc[Nav.Tools]}" TabIndex="53"
                      AutomationProperties.Name="{Binding Loc[Nav.Tools]}">
@@ -69,7 +69,7 @@
 
         <!-- System (💻) -->
         <RadioButton GroupName="Nav"
-                     IsChecked="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=System}"
+                     IsChecked="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=System}"
                      Style="{StaticResource NavButton}"
                      ToolTip="{Binding Loc[Nav.System]}" TabIndex="54"
                      AutomationProperties.Name="{Binding Loc[Nav.System]}">
@@ -86,7 +86,7 @@
         <RadioButton GroupName="Nav" IsChecked="False"
                      Style="{StaticResource NavButton}"
                      ToolTip="{Binding Loc[Shortcuts.Title]}" TabIndex="55"
-                     Command="{Binding ToggleShortcutSheetCommand}"
+                     Command="{Binding Shell.ToggleShortcutSheetCommand}"
                      AutomationProperties.Name="{Binding Loc[Shortcuts.Title]}">
           <StackPanel HorizontalAlignment="Center">
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE897;" FontSize="18" HorizontalAlignment="Center"/>

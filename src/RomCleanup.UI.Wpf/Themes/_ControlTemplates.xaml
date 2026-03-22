@@ -724,7 +724,7 @@
     </Style>
 
     <!-- ═══ SIDEBAR NAV ITEM ══════════════════════════════════════════ -->
-    <Style x:Key="SidebarNavItem" TargetType="ListBoxItem">
+    <Style x:Key="SidebarNavItem" TargetType="RadioButton">
       <Setter Property="Padding" Value="12,8"/>
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="FontSize" Value="13"/>
@@ -734,7 +734,7 @@
       <Setter Property="BorderBrush" Value="Transparent"/>
       <Setter Property="Template">
         <Setter.Value>
-          <ControlTemplate TargetType="ListBoxItem">
+          <ControlTemplate TargetType="RadioButton">
             <Border Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}"
@@ -745,7 +745,7 @@
               <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{DynamicResource BrushSurfaceLight}"/>
               </Trigger>
-              <Trigger Property="IsSelected" Value="True">
+              <Trigger Property="IsChecked" Value="True">
                 <Setter Property="Foreground" Value="{DynamicResource BrushAccentCyan}"/>
                 <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentCyan}"/>
                 <Setter Property="Background" Value="{DynamicResource BrushSurfaceAlt}"/>

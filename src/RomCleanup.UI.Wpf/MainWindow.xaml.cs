@@ -50,6 +50,7 @@ public partial class MainWindow : Window, IWindowHost
 
         // React to ContextWing toggle from ViewModel
         _vm.PropertyChanged += OnVmPropertyChanged;
+        _vm.Shell.PropertyChanged += OnShellPropertyChanged;
 
         // Wire orchestration events
         _vm.RunRequested += OnRunRequested;
@@ -74,8 +75,8 @@ public partial class MainWindow : Window, IWindowHost
             if (_vm.Roots.Count == 0)
             {
                 _vm.ApplyLocaleRegionDefaults();
-                _vm.ShowFirstRunWizard = true;
-                _vm.WizardStep = 0;
+                _vm.Shell.ShowFirstRunWizard = true;
+                _vm.Shell.WizardStep = 0;
             }
         }
         catch (Exception ex)
@@ -97,7 +98,7 @@ public partial class MainWindow : Window, IWindowHost
     private void UpdateContextPanelWidth()
     {
         // Context Wing can be toggled off by the user (Ctrl+I)
-        var showWing = _vm.ShowContextWing && ActualWidth >= ContextPanelMinWindowWidth;
+        var showWing = _vm.Shell.ShowContextWing && ActualWidth >= ContextPanelMinWindowWidth;
         var targetWidth = showWing ? ContextPanelDefaultWidth : 0d;
 
         if (contextColumn.Width.GridUnitType != GridUnitType.Pixel ||
@@ -195,6 +196,7 @@ public partial class MainWindow : Window, IWindowHost
         // GUI-115: Unsubscribe all VM events to prevent leaks
         _vm.RunRequested -= OnRunRequested;
         _vm.PropertyChanged -= OnVmPropertyChanged;
+        _vm.Shell.PropertyChanged -= OnShellPropertyChanged;
         Loaded -= OnLoaded;
         SizeChanged -= OnWindowSizeChanged;
         Closing -= OnClosing;
@@ -216,12 +218,17 @@ public partial class MainWindow : Window, IWindowHost
     private void OnShortcutOverlayClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (e.OriginalSource == sender)
-            _vm.ShowShortcutSheet = false;
+            _vm.Shell.ShowShortcutSheet = false;
     }
 
     private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.ShowContextWing))
+        // ShowContextWing now lives on Shell — handled in OnShellPropertyChanged
+    }
+
+    private void OnShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ShellViewModel.ShowContextWing))
             UpdateContextPanelWidth();
     }
 
@@ -253,7 +260,7 @@ public partial class MainWindow : Window, IWindowHost
         // GUI-112: Tray balloon on run completion (when minimized/hidden)
         if (_trayService is not null && (WindowState == WindowState.Minimized || !IsVisible))
         {
-            var msg = string.Format(_vm.Loc["Tray.RunComplete"], _vm.DashGames, _vm.DashDupes, _vm.DashJunk);
+            var msg = string.Format(_vm.Loc["Tray.RunComplete"], _vm.Run.DashGames, _vm.Run.DashDupes, _vm.Run.DashJunk);
             _trayService.ShowBalloonTip(_vm.Loc["App.Title"], msg);
         }
         _trayService?.UpdateTooltip("RomCleanup");
@@ -274,7 +281,7 @@ public partial class MainWindow : Window, IWindowHost
         set => FontSize = value;
     }
 
-    void IWindowHost.SelectTab(int index) => _vm.SelectedNavIndex = index;
+    void IWindowHost.SelectTab(int index) => _vm.Shell.SelectedNavIndex = index;
 
     void IWindowHost.ShowTextDialog(string title, string content) =>
         ResultDialog.ShowText(title, content, this);

@@ -149,7 +149,7 @@
 
       <!-- Global empty state when no run data -->
       <Border Grid.Row="0" Grid.RowSpan="2"
-              Visibility="{Binding HasRunData, Converter={StaticResource InverseBoolToVis}}"
+              Visibility="{Binding Run.HasRunData, Converter={StaticResource InverseBoolToVis}}"
               x:Name="NoRunDataOverlay">
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
           <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="48"

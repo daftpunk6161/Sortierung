@@ -16,10 +16,14 @@ public partial class LibrarySafetyView : UserControl
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (e.OldValue is MainViewModel oldVm)
+        {
             oldVm.PropertyChanged -= OnMainVmPropertyChanged;
+            oldVm.Run.PropertyChanged -= OnRunVmPropertyChanged;
+        }
         if (e.NewValue is MainViewModel newVm)
         {
             newVm.PropertyChanged += OnMainVmPropertyChanged;
+            newVm.Run.PropertyChanged += OnRunVmPropertyChanged;
             RefreshLists(newVm);
         }
     }
@@ -33,9 +37,18 @@ public partial class LibrarySafetyView : UserControl
         }
     }
 
+    private void OnRunVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(RunViewModel.LastCandidates) or nameof(RunViewModel.HasRunData))
+        {
+            if (DataContext is MainViewModel vm)
+                Dispatcher.BeginInvoke(() => RefreshLists(vm));
+        }
+    }
+
     private void RefreshLists(MainViewModel vm)
     {
-        var candidates = vm.LastCandidates;
+        var candidates = vm.Run.LastCandidates;
         var blocked = new List<SafetyListItem>();
         var review = new List<SafetyListItem>();
         var unknown = new List<SafetyListItem>();

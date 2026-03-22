@@ -32,16 +32,16 @@
     <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveSettingsCommand}"/>
     <KeyBinding Key="W" Modifiers="Control" Command="{Binding WatchApplyCommand}"/>
     <!-- GUI-063: Navigation history -->
-    <KeyBinding Key="Left" Modifiers="Control" Command="{Binding NavBackCommand}"/>
-    <KeyBinding Key="Right" Modifiers="Control" Command="{Binding NavForwardCommand}"/>
+    <KeyBinding Key="Left" Modifiers="Control" Command="{Binding Shell.NavBackCommand}"/>
+    <KeyBinding Key="Right" Modifiers="Control" Command="{Binding Shell.NavForwardCommand}"/>
     <!-- GUI-101: Shortcut cheatsheet -->
-    <KeyBinding Key="F1" Command="{Binding ToggleShortcutSheetCommand}"/>
+    <KeyBinding Key="F1" Command="{Binding Shell.ToggleShortcutSheetCommand}"/>
     <!-- Context Wing toggle -->
-    <KeyBinding Key="I" Modifiers="Control" Command="{Binding ToggleContextWingCommand}"/>
+    <KeyBinding Key="I" Modifiers="Control" Command="{Binding Shell.ToggleContextWingCommand}"/>
     <!-- Command Palette (GUI-Phase4 4.1) -->
     <KeyBinding Key="K" Modifiers="Control" Command="{Binding ToggleCommandPaletteCommand}"/>
     <!-- Detail Drawer (GUI-Phase4 4.4) -->
-    <KeyBinding Key="J" Modifiers="Control" Command="{Binding ToggleDetailDrawerCommand}"/>
+    <KeyBinding Key="J" Modifiers="Control" Command="{Binding Shell.ToggleDetailDrawerCommand}"/>
   </Window.InputBindings>
 
   <Grid>
@@ -67,7 +67,7 @@
         <RowDefinition Height="48"/>   <!-- Row 0: CommandBar -->
         <RowDefinition Height="*"/>    <!-- Row 1: Main content -->
         <RowDefinition Height="Auto"/> <!-- Row 2: Detail Drawer (collapsible) -->
-        <RowDefinition Height="52"/>   <!-- Row 3: ActionRail -->
+        <RowDefinition Height="68"/>   <!-- Row 3: ActionRail -->
       </Grid.RowDefinitions>
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="72"/>  <!-- Col 0: NavigationRail -->
@@ -104,55 +104,57 @@
           <Grid Visibility="{Binding IsBusy, Converter={StaticResource InverseBoolToVis}}">
 
             <!-- ── MissionControl ──────────────────────────────── -->
-            <views:StartView Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=MissionControl}"
+            <views:StartView Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=MissionControl}"
                              TabIndex="51"/>
 
             <!-- ── Library (sub-tab-aware) ─────────────────────── -->
-            <Grid Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Library}"
+            <Grid Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Library}"
                   KeyboardNavigation.TabIndex="52">
               <views:ResultView x:Name="resultView"
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Results}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Results}"/>
               <views:LibrarySafetyView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Safety}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Safety}"/>
               <views:LibraryReportView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Report}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Report}"/>
             </Grid>
 
             <!-- ── Config (sub-tab-aware) ──────────────────────── -->
-            <Grid Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Config}"
+            <Grid Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Config}"
                   KeyboardNavigation.TabIndex="53">
               <views:SortView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Workflow}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Workflow}"/>
               <views:ConfigFiltersView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Filtering}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Filtering}"/>
               <views:ConfigProfilesView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Profiles}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Profiles}"/>
               <views:ConfigAdvancedView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Advanced}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Advanced}"/>
             </Grid>
 
             <!-- ── Tools (sub-tab-aware) ───────────────────────── -->
-            <Grid Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}"
+            <Grid Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}"
                   KeyboardNavigation.TabIndex="54">
+              <views:ExternalToolsView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=ExternalTools}"/>
               <views:ToolsView DataContext="{Binding Tools}"
-                  Visibility="{Binding DataContext.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=ExternalTools}"/>
+                  Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Features}"/>
               <views:ToolsDatView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=DatManagement}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=DatManagement}"/>
               <views:ToolsConversionView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Conversion}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Conversion}"/>
               <views:ToolsGameKeyLabView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=GameKeyLab}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=GameKeyLab}"/>
             </Grid>
 
             <!-- ── System (sub-tab-aware) ──────────────────────── -->
-            <Grid Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=System}"
+            <Grid Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=System}"
                   KeyboardNavigation.TabIndex="55">
               <views:SystemActivityView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=ActivityLog}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=ActivityLog}"/>
               <views:SystemAppearanceView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Appearance}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Appearance}"/>
               <views:SystemAboutView
-                  Visibility="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=About}"/>
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=About}"/>
             </Grid>
 
           </Grid>
@@ -166,7 +168,7 @@
 
       <!-- ═══ ROW 2: DETAIL DRAWER (collapsible log stream, Ctrl+J) ════════ -->
       <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
-              Visibility="{Binding ShowDetailDrawer, Converter={StaticResource BoolToVis}}"
+              Visibility="{Binding Shell.ShowDetailDrawer, Converter={StaticResource BoolToVis}}"
               Background="{DynamicResource BrushSurfaceAlt}"
               BorderBrush="{DynamicResource BrushBorder}"
               BorderThickness="0,1,0,0"
@@ -187,7 +189,7 @@
                       Foreground="{DynamicResource BrushTextMuted}"
                       AutomationProperties.Name="Log leeren"/>
               <Button Content="✕" Padding="6,2" FontSize="11"
-                      Command="{Binding ToggleDetailDrawerCommand}"
+                      Command="{Binding Shell.ToggleDetailDrawerCommand}"
                       Background="Transparent" BorderThickness="0"
                       Foreground="{DynamicResource BrushTextMuted}"
                       AutomationProperties.Name="Detail Drawer schließen"/>
@@ -216,7 +218,7 @@
                             TabIndex="56"/>
 
       <!-- ═══ TOAST / NOTIFICATION OVERLAY ════════════════════════════════ -->
-      <ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Notifications}"
+      <ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Shell.Notifications}"
                     VerticalAlignment="Bottom" HorizontalAlignment="Right"
                     Margin="0,0,16,16" IsHitTestVisible="True"
                     AutomationProperties.LiveSetting="Assertive">
@@ -251,13 +253,13 @@
 
       <!-- ═══ FIRST-RUN-WIZARD OVERLAY ════════════════════════════════════ -->
       <views:WizardView Grid.Row="0" Grid.RowSpan="4" Grid.Column="0" Grid.ColumnSpan="3"
-                        Visibility="{Binding ShowFirstRunWizard, Converter={StaticResource BoolToVis}}"
+                        Visibility="{Binding Shell.ShowFirstRunWizard, Converter={StaticResource BoolToVis}}"
                         AutomationProperties.Name="{Binding Loc[Wizard.Title]}"/>
 
       <!-- ═══ SHORTCUT CHEATSHEET OVERLAY ═════════════════════════════════ -->
       <Border Grid.Row="0" Grid.RowSpan="4" Grid.Column="0" Grid.ColumnSpan="3"
               Background="{DynamicResource BrushScrimOverlay}" IsHitTestVisible="True"
-              Visibility="{Binding ShowShortcutSheet, Converter={StaticResource BoolToVis}}"
+              Visibility="{Binding Shell.ShowShortcutSheet, Converter={StaticResource BoolToVis}}"
               MouseDown="OnShortcutOverlayClick"
               Style="{StaticResource OverlayFadeIn}">
         <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushAccentCyan}"
@@ -270,7 +272,7 @@
               <TextBlock Text="{Binding Loc[Shortcuts.Title]}" FontSize="20" FontWeight="Bold"
                          Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
               <Button DockPanel.Dock="Right" Content="✕" Padding="8,4"
-                      Command="{Binding ToggleShortcutSheetCommand}" HorizontalAlignment="Right"
+                      Command="{Binding Shell.ToggleShortcutSheetCommand}" HorizontalAlignment="Right"
                       Background="Transparent" BorderThickness="0"
                       Foreground="{DynamicResource BrushTextMuted}"
                       AutomationProperties.Name="{Binding Loc[Shortcuts.Close]}"/>

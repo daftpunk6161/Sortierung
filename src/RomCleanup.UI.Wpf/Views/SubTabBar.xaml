@@ -14,80 +14,83 @@
 
       <!-- ── MissionControl tabs ──────────────────────────────────── -->
       <StackPanel Orientation="Horizontal"
-                  Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=MissionControl}">
+                  Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=MissionControl}">
         <RadioButton GroupName="SubTab" Content="Dashboard" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Dashboard}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Dashboard}"
                      AutomationProperties.Name="Dashboard"/>
         <RadioButton GroupName="SubTab" Content="Quick Start" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=QuickStart}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=QuickStart}"
                      AutomationProperties.Name="Quick Start"/>
         <RadioButton GroupName="SubTab" Content="Recent Runs" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=RecentRuns}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=RecentRuns}"
                      AutomationProperties.Name="Recent Runs"/>
       </StackPanel>
 
       <!-- ── Library tabs ─────────────────────────────────────────── -->
       <StackPanel Orientation="Horizontal"
-                  Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Library}">
+                  Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Library}">
         <RadioButton GroupName="SubTab" Content="Results" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Results}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Results}"
                      AutomationProperties.Name="Results Dashboard"/>
         <RadioButton GroupName="SubTab" Content="Decisions" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Decisions}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Decisions}"
                      AutomationProperties.Name="Dedupe Decisions"/>
         <RadioButton GroupName="SubTab" Content="Safety" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Safety}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Safety}"
                      AutomationProperties.Name="Safety Review"/>
         <RadioButton GroupName="SubTab" Content="Report" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Report}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Report}"
                      AutomationProperties.Name="Report Viewer"/>
       </StackPanel>
 
       <!-- ── Config tabs ──────────────────────────────────────────── -->
       <StackPanel Orientation="Horizontal"
-                  Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Config}">
+                  Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Config}">
         <RadioButton GroupName="SubTab" Content="Workflow" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Workflow}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Workflow}"
                      AutomationProperties.Name="Workflow Configuration"/>
         <RadioButton GroupName="SubTab" Content="Filtering" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Filtering}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Filtering}"
                      AutomationProperties.Name="Filter Settings"/>
         <RadioButton GroupName="SubTab" Content="Profiles" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Profiles}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Profiles}"
                      AutomationProperties.Name="Profile Management"/>
         <RadioButton GroupName="SubTab" Content="Advanced" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Advanced}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Advanced}"
                      AutomationProperties.Name="Advanced Options"/>
       </StackPanel>
 
       <!-- ── Tools tabs ───────────────────────────────────────────── -->
       <StackPanel Orientation="Horizontal"
-                  Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}">
+                  Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}">
         <RadioButton GroupName="SubTab" Content="External Tools" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=ExternalTools}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=ExternalTools}"
                      AutomationProperties.Name="External Tools"/>
+        <RadioButton GroupName="SubTab" Content="Features" Style="{StaticResource SidebarNavItem}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Features}"
+                     AutomationProperties.Name="Features"/>
         <RadioButton GroupName="SubTab" Content="DAT Management" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=DatManagement}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=DatManagement}"
                      AutomationProperties.Name="DAT Management"/>
         <RadioButton GroupName="SubTab" Content="Conversion" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Conversion}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Conversion}"
                      AutomationProperties.Name="Conversion Registry"/>
         <RadioButton GroupName="SubTab" Content="GameKey Lab" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=GameKeyLab}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=GameKeyLab}"
                      AutomationProperties.Name="GameKey Lab"/>
       </StackPanel>
 
       <!-- ── System tabs ──────────────────────────────────────────── -->
       <StackPanel Orientation="Horizontal"
-                  Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=System}">
+                  Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=System}">
         <RadioButton GroupName="SubTab" Content="Activity Log" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=ActivityLog}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=ActivityLog}"
                      AutomationProperties.Name="Activity Log"/>
         <RadioButton GroupName="SubTab" Content="Appearance" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Appearance}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Appearance}"
                      AutomationProperties.Name="Appearance Settings"/>
         <RadioButton GroupName="SubTab" Content="About" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=About}"
+                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=About}"
                      AutomationProperties.Name="About and Health"/>
       </StackPanel>
 

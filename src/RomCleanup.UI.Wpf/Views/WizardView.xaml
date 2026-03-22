@@ -18,7 +18,7 @@
           </Setter>
           <!-- GUI-098: Suppress glow when ReduceMotion is active -->
           <Style.Triggers>
-            <DataTrigger Binding="{Binding ReduceMotion}" Value="True">
+            <DataTrigger Binding="{Binding Shell.ReduceMotion}" Value="True">
               <Setter Property="Effect" Value="{x:Null}"/>
             </DataTrigger>
           </Style.Triggers>
@@ -51,11 +51,11 @@
                 <Setter Property="Stroke" Value="{DynamicResource BrushBorder}"/>
                 <Setter Property="Fill" Value="Transparent"/>
                 <Style.Triggers>
-                  <DataTrigger Binding="{Binding WizardStep}" Value="1">
+                  <DataTrigger Binding="{Binding Shell.WizardStep}" Value="1">
                     <Setter Property="Stroke" Value="{DynamicResource BrushAccentCyan}"/>
                     <Setter Property="Fill" Value="{DynamicResource BrushAccentCyan}"/>
                   </DataTrigger>
-                  <DataTrigger Binding="{Binding WizardStep}" Value="2">
+                  <DataTrigger Binding="{Binding Shell.WizardStep}" Value="2">
                     <Setter Property="Stroke" Value="{DynamicResource BrushAccentCyan}"/>
                     <Setter Property="Fill" Value="{DynamicResource BrushAccentCyan}"/>
                   </DataTrigger>
@@ -75,7 +75,7 @@
                 <Setter Property="Stroke" Value="{DynamicResource BrushBorder}"/>
                 <Setter Property="Fill" Value="Transparent"/>
                 <Style.Triggers>
-                  <DataTrigger Binding="{Binding WizardStep}" Value="2">
+                  <DataTrigger Binding="{Binding Shell.WizardStep}" Value="2">
                     <Setter Property="Stroke" Value="{DynamicResource BrushAccentCyan}"/>
                     <Setter Property="Fill" Value="{DynamicResource BrushAccentCyan}"/>
                   </DataTrigger>
@@ -91,7 +91,7 @@
         <Grid Grid.Row="1">
 
           <!-- Step 0: Choose ROM directories -->
-          <StackPanel Visibility="{Binding WizardStepIs0, Converter={StaticResource BoolToVis}}">
+          <StackPanel Visibility="{Binding Shell.WizardStepIs0, Converter={StaticResource BoolToVis}}">
             <TextBlock Text="{Binding Loc[Wizard.Step1Title]}" FontSize="22" FontWeight="Bold"
                        Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center"
                        Margin="0,0,0,8"/>
@@ -111,7 +111,7 @@
           </StackPanel>
 
           <!-- Step 1: Choose Region -->
-          <StackPanel Visibility="{Binding WizardStepIs1, Converter={StaticResource BoolToVis}}">
+          <StackPanel Visibility="{Binding Shell.WizardStepIs1, Converter={StaticResource BoolToVis}}">
             <TextBlock Text="{Binding Loc[Wizard.Step2Title]}" FontSize="22" FontWeight="Bold"
                        Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center"
                        Margin="0,0,0,8"/>
@@ -135,7 +135,7 @@
           </StackPanel>
 
           <!-- Step 2: Ready (Preview) -->
-          <StackPanel Visibility="{Binding WizardStepIs2, Converter={StaticResource BoolToVis}}">
+          <StackPanel Visibility="{Binding Shell.WizardStepIs2, Converter={StaticResource BoolToVis}}">
             <TextBlock Text="{Binding Loc[Wizard.Step3Title]}" FontSize="22" FontWeight="Bold"
                        Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center"
                        Margin="0,0,0,8"/>
@@ -155,7 +155,7 @@
               <TextBlock.Text>
                 <MultiBinding StringFormat="{}{0} Ordner · Region: {1}">
                   <Binding Path="Roots.Count"/>
-                  <Binding Path="WizardRegionSummary"/>
+                  <Binding Path="Shell.WizardRegionSummary"/>
                 </MultiBinding>
               </TextBlock.Text>
             </TextBlock>
@@ -171,19 +171,19 @@
           </Grid.ColumnDefinitions>
 
           <Button Grid.Column="0" Content="{Binding Loc[Wizard.Skip]}" Padding="12,6" MinHeight="44" Cursor="Hand"
-                  Command="{Binding WizardSkipCommand}" Foreground="{DynamicResource BrushTextMuted}"
+                  Command="{Binding Shell.WizardSkipCommand}" Foreground="{DynamicResource BrushTextMuted}"
                   Background="Transparent" BorderThickness="0"
                   AutomationProperties.Name="{Binding Loc[Wizard.Skip]}"/>
 
           <StackPanel Grid.Column="2" Orientation="Horizontal">
             <Button Content="{Binding Loc[Wizard.Back]}" Padding="16,8" MinHeight="44" Margin="0,0,8,0" Cursor="Hand"
-                    Command="{Binding WizardBackCommand}"
+                    Command="{Binding Shell.WizardBackCommand}"
                     AutomationProperties.Name="{Binding Loc[Wizard.Back]}"/>
             <Button Padding="16,8" MinHeight="44" Cursor="Hand" FontWeight="Bold"
-                    Command="{Binding WizardNextCommand}"
+                    Command="{Binding Shell.WizardNextCommand}"
                     Background="{DynamicResource BrushAccentCyan}" Foreground="{DynamicResource BrushBackground}"
                     AutomationProperties.Name="{Binding Loc[Wizard.Next]}">
-              <TextBlock Text="{Binding WizardNextLabel}"/>
+              <TextBlock Text="{Binding Shell.WizardNextLabel}"/>
             </Button>
           </StackPanel>
         </Grid>

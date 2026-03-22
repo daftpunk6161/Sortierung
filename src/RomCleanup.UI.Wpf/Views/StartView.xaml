@@ -289,27 +289,27 @@
               <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                          Foreground="{DynamicResource BrushSuccess}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
               <TextBlock Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center">
-                <Run Text="{Binding DashWinners, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Loc[Start.Winners], Mode=OneWay}"/>
+                <Run Text="{Binding Run.DashWinners, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Loc[Start.Winners], Mode=OneWay}"/>
               </TextBlock>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="{DynamicResource SpaceRightMD}">
               <TextBlock Text="&#xE71A;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                          Foreground="{DynamicResource BrushWarning}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
               <TextBlock Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center">
-                <Run Text="{Binding DashDupes, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Loc[Start.Dupes], Mode=OneWay}"/>
+                <Run Text="{Binding Run.DashDupes, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Loc[Start.Dupes], Mode=OneWay}"/>
               </TextBlock>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="{DynamicResource SpaceRightMD}">
               <TextBlock Text="&#xE783;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                          Foreground="{DynamicResource BrushDanger}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
               <TextBlock Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center">
-                <Run Text="{Binding DashJunk, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Loc[Report.Junk], Mode=OneWay}"/>
+                <Run Text="{Binding Run.DashJunk, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Loc[Report.Junk], Mode=OneWay}"/>
               </TextBlock>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="&#xE916;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                          Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
-              <TextBlock Text="{Binding DashDuration}" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding Run.DashDuration}" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
             </StackPanel>
           </WrapPanel>
           <StackPanel Orientation="Horizontal" Margin="0,8,0,0">

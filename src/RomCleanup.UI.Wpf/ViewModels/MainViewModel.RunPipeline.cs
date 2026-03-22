@@ -59,10 +59,10 @@ public sealed partial class MainViewModel
     public ObservableCollection<RomCandidate> LastCandidates
     {
         get => _lastCandidates;
-        set { _lastCandidates = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasRunData)); }
+        set { _lastCandidates = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasRunData)); Run.LastCandidates = value; }
     }
 
-    public bool HasRunData => _lastCandidates.Count > 0;
+    public bool HasRunData => Run.HasRunData;
 
     private ObservableCollection<DedupeResult> _lastDedupeGroups = [];
     public ObservableCollection<DedupeResult> LastDedupeGroups
@@ -247,36 +247,28 @@ public sealed partial class MainViewModel
     private bool _showMoveCompleteBanner;
     public bool ShowMoveCompleteBanner { get => _showMoveCompleteBanner; set => SetProperty(ref _showMoveCompleteBanner, value); }
 
-    private bool _isResultPerfDetailsExpanded = true;
+    // ═══ RESULT DISPLAY (delegated to RunViewModel) ════════════════════
     public bool IsResultPerfDetailsExpanded
     {
-        get => _isResultPerfDetailsExpanded;
-        set => SetProperty(ref _isResultPerfDetailsExpanded, value);
+        get => Run.IsResultPerfDetailsExpanded;
+        set => Run.IsResultPerfDetailsExpanded = value;
     }
 
-    private string _runSummaryText = "";
     public string RunSummaryText
     {
-        get => _runSummaryText;
-        set
-        {
-            if (SetProperty(ref _runSummaryText, value))
-                OnPropertyChanged(nameof(HasRunSummary));
-        }
+        get => Run.RunSummaryText;
+        set => Run.RunSummaryText = value;
     }
 
-    private UiErrorSeverity _runSummarySeverity = UiErrorSeverity.Info;
     public UiErrorSeverity RunSummarySeverity
     {
-        get => _runSummarySeverity;
-        set => SetProperty(ref _runSummarySeverity, value);
+        get => Run.RunSummarySeverity;
+        set => Run.RunSummarySeverity = value;
     }
 
-    public bool HasRunSummary => !string.IsNullOrWhiteSpace(RunSummaryText);
+    public bool HasRunSummary => Run.HasRunSummary;
 
-    public string RollbackActionHint => CanRollback
-        ? "Letzten Move-Lauf rückgängig machen (Ctrl+Z)"
-        : "Kein Rollback möglich: Es wurde keine gültige Audit-Datei gefunden.";
+    public string RollbackActionHint => Run.RollbackActionHint;
 
     // ═══ STATUS INDICATORS ══════════════════════════════════════════════
     private string _statusRoots = "Roots: –";
@@ -322,41 +314,21 @@ public sealed partial class MainViewModel
     private string _cisoStatusText = "–";
     public string CisoStatusText { get => _cisoStatusText; set => SetProperty(ref _cisoStatusText, value); }
 
-    // ═══ DASHBOARD COUNTERS ═════════════════════════════════════════════
-    private string _dashMode = "–";
-    public string DashMode { get => _dashMode; set => SetProperty(ref _dashMode, value); }
+    // ═══ DASHBOARD COUNTERS (delegated to RunViewModel) ════════════════
+    public string DashMode { get => Run.DashMode; set => Run.DashMode = value; }
+    public string DashWinners { get => Run.DashWinners; set => Run.DashWinners = value; }
+    public string DashDupes { get => Run.DashDupes; set => Run.DashDupes = value; }
+    public string DashJunk { get => Run.DashJunk; set => Run.DashJunk = value; }
+    public string DashDuration { get => Run.DashDuration; set => Run.DashDuration = value; }
+    public string HealthScore { get => Run.HealthScore; set => Run.HealthScore = value; }
+    public string DashGames { get => Run.DashGames; set => Run.DashGames = value; }
+    public string DashDatHits { get => Run.DashDatHits; set => Run.DashDatHits = value; }
+    public string DedupeRate { get => Run.DedupeRate; set => Run.DedupeRate = value; }
 
-    private string _dashWinners = "0";
-    public string DashWinners { get => _dashWinners; set => SetProperty(ref _dashWinners, value); }
-
-    private string _dashDupes = "0";
-    public string DashDupes { get => _dashDupes; set => SetProperty(ref _dashDupes, value); }
-
-    private string _dashJunk = "0";
-    public string DashJunk { get => _dashJunk; set => SetProperty(ref _dashJunk, value); }
-
-    private string _dashDuration = "00:00";
-    public string DashDuration { get => _dashDuration; set => SetProperty(ref _dashDuration, value); }
-
-    private string _healthScore = "–";
-    public string HealthScore { get => _healthScore; set => SetProperty(ref _healthScore, value); }
-
-    private string _dashGames = "0";
-    public string DashGames { get => _dashGames; set => SetProperty(ref _dashGames, value); }
-
-    private string _dashDatHits = "0";
-    public string DashDatHits { get => _dashDatHits; set => SetProperty(ref _dashDatHits, value); }
-
-    private string _dedupeRate = "–";
-    public string DedupeRate { get => _dedupeRate; set => SetProperty(ref _dedupeRate, value); }
-
-    // ═══ GUI-070-073: ANALYSE SCREEN DATA ═══════════════════════════════
-    public ObservableCollection<Models.ConsoleDistributionItem> ConsoleDistribution { get; } = [];
-    public ObservableCollection<Models.DedupeGroupItem> DedupeGroupItems { get; } = [];
-
-    // GUI-074: Move consequence text
-    private string _moveConsequenceText = "";
-    public string MoveConsequenceText { get => _moveConsequenceText; set => SetProperty(ref _moveConsequenceText, value); }
+    // ═══ ANALYSE DATA (delegated to RunViewModel) ═══════════════════════
+    public ObservableCollection<Models.ConsoleDistributionItem> ConsoleDistribution => Run.ConsoleDistribution;
+    public ObservableCollection<Models.DedupeGroupItem> DedupeGroupItems => Run.DedupeGroupItems;
+    public string MoveConsequenceText { get => Run.MoveConsequenceText; set => Run.MoveConsequenceText = value; }
 
     // ═══ STEP INDICATOR ═════════════════════════════════════════════════
     private int _currentStep;
@@ -533,7 +505,7 @@ public sealed partial class MainViewModel
 
     private void OnCancel()
     {
-        ShowMoveInlineConfirm = false;
+        Shell.ShowMoveInlineConfirm = false;
         // F-02 FIX: Cancel under lock to prevent race with CreateRunCancellation/Dispose
         lock (_ctsLock)
         {
@@ -571,7 +543,7 @@ public sealed partial class MainViewModel
             ShowMoveCompleteBanner = false;
             ResetDashboardForNewRun();
             DashMode = "Rollback";
-            SelectedNavTag = "Analyse";
+            Shell.SelectedNavTag = "Analyse";
             SelectedResultSection = "Dashboard";
             SetRunSummary(
                 $"Rollback abgeschlossen: {restored.RolledBack} wiederhergestellt, {restored.SkippedMissingDest} fehlend, {restored.SkippedCollision} Kollisionen, {restored.Failed} Fehler.",
@@ -648,7 +620,7 @@ public sealed partial class MainViewModel
     /// <summary>Complete a run (call from UI thread when orchestration finishes).</summary>
     public void CompleteRun(bool success, string? reportPath = null, bool cancelled = false)
     {
-        ShowMoveInlineConfirm = false;
+        Shell.ShowMoveInlineConfirm = false;
         BusyHint = "";
         ConvertOnly = false; // Reset transient flag
         var resolvedReportPath = string.IsNullOrWhiteSpace(reportPath) ? null : reportPath;
@@ -658,7 +630,7 @@ public sealed partial class MainViewModel
         {
             _lastSuccessfulPreviewFingerprint = BuildPreviewConfigurationFingerprint();
             CurrentRunState = RunState.CompletedDryRun;
-            SelectedNavTag = "Analyse";
+            Shell.SelectedNavTag = "Analyse";
             SelectedResultSection = "Dashboard";
             IsResultPerfDetailsExpanded = true;
             SetRunSummary(
@@ -670,7 +642,7 @@ public sealed partial class MainViewModel
             CurrentRunState = RunState.Completed;
             CanRollback = true;
             ShowMoveCompleteBanner = true;
-            SelectedNavTag = "Analyse";
+            Shell.SelectedNavTag = "Analyse";
             SelectedResultSection = "Dashboard";
             IsResultPerfDetailsExpanded = true;
             SetRunSummary($"Änderungen angewendet: {MoveConsequenceText}", UiErrorSeverity.Info);
@@ -678,14 +650,14 @@ public sealed partial class MainViewModel
         else if (cancelled)
         {
             CurrentRunState = RunState.Cancelled;
-            SelectedNavTag = "Analyse";
+            Shell.SelectedNavTag = "Analyse";
             SelectedResultSection = "Dashboard";
             SetRunSummary("Lauf abgebrochen. Teilweise Ergebnisse können weiterhin sichtbar sein.", UiErrorSeverity.Warning);
         }
         else
         {
             CurrentRunState = RunState.Failed;
-            SelectedNavTag = "Analyse";
+            Shell.SelectedNavTag = "Analyse";
             SelectedResultSection = "Dashboard";
             SetRunSummary("Lauf fehlgeschlagen. Prüfe Protokoll und Fehler-Summary für Details.", UiErrorSeverity.Error);
         }

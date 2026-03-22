@@ -6,7 +6,7 @@
   <!-- Extracted from ResultView "Report-Vorschau" section -->
   <Grid>
     <DockPanel Background="{DynamicResource BrushBackground}"
-               Visibility="{Binding HasRunData, Converter={StaticResource BoolToVis}}">
+               Visibility="{Binding Run.HasRunData, Converter={StaticResource BoolToVis}}">
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,16,20,8">
         <TextBlock Text="{Binding Loc[Result.ReportPreviewHeader]}" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceRightSM}"/>
         <Button x:Name="btnRefreshReportPreview" Width="120" Height="28" Content="{Binding Loc[Result.Refresh]}"
@@ -46,7 +46,7 @@
     </DockPanel>
 
     <!-- Empty state: no report yet -->
-    <StackPanel Visibility="{Binding HasRunData, Converter={StaticResource InverseBoolToVis}}"
+    <StackPanel Visibility="{Binding Run.HasRunData, Converter={StaticResource InverseBoolToVis}}"
                 HorizontalAlignment="Center" VerticalAlignment="Center">
       <TextBlock Text="&#xE9F9;" FontFamily="Segoe MDL2 Assets" FontSize="48"
                  Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>

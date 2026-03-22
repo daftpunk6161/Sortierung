@@ -335,6 +335,9 @@
   "Tools.SectionQuickAccess": "QUICK ACCESS",
   "Tools.SectionRecent": "RECENTLY USED",
   "Tools.SectionAll": "ALL TOOLS",
+  "Tools.ExternalToolsHeader": "External Tools",
+  "Tools.ExternalToolsDesc": "Configure paths to external programs that Romulus needs for conversion and extraction.",
+  "Tools.ExternalToolsInfo": "These tools are required for format conversion (CHD, RVZ, CSO) and archive operations. Use 'Auto-detect' to find installed tools in PATH and common directories.",
 
   "Settings.NavSorting": "Sorting Options",
   "Settings.NavFilters": "Filters",

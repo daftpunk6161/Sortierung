@@ -12,20 +12,48 @@
 
     <!-- ═══ SIDEBAR NAVIGATION ═══════════════════════════════════════════ -->
     <Border Grid.Column="0" Background="{DynamicResource BrushSurface}" Padding="0,12">
-      <ListBox Background="Transparent" BorderThickness="0"
-               SelectedValue="{Binding SelectedSettingsSection, Mode=TwoWay}"
-               SelectedValuePath="Tag"
-               ItemContainerStyle="{DynamicResource SidebarNavItem}"
-               AutomationProperties.Name="{Binding Loc[Settings.NavCategoriesLabel]}">
-        <ListBoxItem Tag="Sortieroptionen" Content="{Binding Loc[Settings.NavSorting]}" AutomationProperties.Name="{Binding Loc[Settings.NavSorting]}"/>
-        <ListBoxItem Tag="Filter" Content="{Binding Loc[Settings.NavFilters]}" AutomationProperties.Name="{Binding Loc[Settings.NavFilters]}"/>
-        <ListBoxItem Tag="Sicherheit" Content="{Binding Loc[Settings.NavSecurity]}" AutomationProperties.Name="{Binding Loc[Settings.NavSecurity]}"/>
-        <ListBoxItem Tag="Externe Tools" Content="{Binding Loc[Settings.NavTools]}" AutomationProperties.Name="{Binding Loc[Settings.NavTools]}"/>
-        <ListBoxItem Tag="DAT &amp; Hashes" Content="{Binding Loc[Settings.NavDat]}" AutomationProperties.Name="{Binding Loc[Settings.NavDat]}"/>
-        <ListBoxItem Tag="Profile" Content="{Binding Loc[Settings.NavProfiles]}" AutomationProperties.Name="{Binding Loc[Settings.NavProfiles]}"/>
-        <ListBoxItem Tag="Allgemein" Content="{Binding Loc[Settings.NavGeneral]}" AutomationProperties.Name="{Binding Loc[Settings.NavGeneral]}"/>
-        <ListBoxItem Tag="System" Content="{Binding Loc[Settings.NavSystem]}" AutomationProperties.Name="{Binding Loc[Settings.NavSystem]}"/>
-      </ListBox>
+      <StackPanel>
+        <RadioButton GroupName="SettingsSection" Tag="Sortieroptionen"
+                     Content="{Binding Loc[Settings.NavSorting]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Sortieroptionen}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavSorting]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="Filter"
+                     Content="{Binding Loc[Settings.NavFilters]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Filter}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavFilters]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="Sicherheit"
+                     Content="{Binding Loc[Settings.NavSecurity]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Sicherheit}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavSecurity]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="Externe Tools"
+                     Content="{Binding Loc[Settings.NavTools]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Externe Tools}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavTools]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="DAT &amp; Hashes"
+                     Content="{Binding Loc[Settings.NavDat]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=DAT &amp; Hashes}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavDat]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="Profile"
+                     Content="{Binding Loc[Settings.NavProfiles]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Profile}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavProfiles]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="Allgemein"
+                     Content="{Binding Loc[Settings.NavGeneral]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Allgemein}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavGeneral]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="System"
+                     Content="{Binding Loc[Settings.NavSystem]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=System}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavSystem]}"/>
+      </StackPanel>
     </Border>
 
     <!-- Divider -->

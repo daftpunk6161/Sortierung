@@ -32,7 +32,7 @@ public sealed class RunViewModel : ObservableObject
     public ObservableCollection<RomCandidate> LastCandidates
     {
         get => _lastCandidates;
-        set { _lastCandidates = value; OnPropertyChanged(); }
+        set { _lastCandidates = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasRunData)); }
     }
 
     private ObservableCollection<DedupeResult> _lastDedupeGroups = [];
@@ -227,10 +227,75 @@ public sealed class RunViewModel : ObservableObject
     private string _cisoStatusText = "–";
     public string CisoStatusText { get => _cisoStatusText; set => SetProperty(ref _cisoStatusText, value); }
 
-    // Dashboard counters removed (R-03/R-04): XAML binds to MainViewModel properties directly.
-    // Keeping only DashDuration for GetPhaseDetail reference.
+    // ═══ DASHBOARD COUNTERS ═════════════════════════════════════════════
+    private string _dashMode = "–";
+    public string DashMode { get => _dashMode; set => SetProperty(ref _dashMode, value); }
+
+    private string _dashWinners = "0";
+    public string DashWinners { get => _dashWinners; set => SetProperty(ref _dashWinners, value); }
+
+    private string _dashDupes = "0";
+    public string DashDupes { get => _dashDupes; set => SetProperty(ref _dashDupes, value); }
+
+    private string _dashJunk = "0";
+    public string DashJunk { get => _dashJunk; set => SetProperty(ref _dashJunk, value); }
+
     private string _dashDuration = "00:00";
     public string DashDuration { get => _dashDuration; set => SetProperty(ref _dashDuration, value); }
+
+    private string _healthScore = "–";
+    public string HealthScore { get => _healthScore; set => SetProperty(ref _healthScore, value); }
+
+    private string _dashGames = "0";
+    public string DashGames { get => _dashGames; set => SetProperty(ref _dashGames, value); }
+
+    private string _dashDatHits = "0";
+    public string DashDatHits { get => _dashDatHits; set => SetProperty(ref _dashDatHits, value); }
+
+    private string _dedupeRate = "–";
+    public string DedupeRate { get => _dedupeRate; set => SetProperty(ref _dedupeRate, value); }
+
+    // ═══ RUN SUMMARY ════════════════════════════════════════════════════
+    private string _runSummaryText = "";
+    public string RunSummaryText
+    {
+        get => _runSummaryText;
+        set
+        {
+            if (SetProperty(ref _runSummaryText, value))
+                OnPropertyChanged(nameof(HasRunSummary));
+        }
+    }
+
+    private UiErrorSeverity _runSummarySeverity = UiErrorSeverity.Info;
+    public UiErrorSeverity RunSummarySeverity
+    {
+        get => _runSummarySeverity;
+        set => SetProperty(ref _runSummarySeverity, value);
+    }
+
+    public bool HasRunSummary => !string.IsNullOrWhiteSpace(RunSummaryText);
+
+    // ═══ DISPLAY STATE ══════════════════════════════════════════════════
+    private bool _isResultPerfDetailsExpanded = true;
+    public bool IsResultPerfDetailsExpanded
+    {
+        get => _isResultPerfDetailsExpanded;
+        set => SetProperty(ref _isResultPerfDetailsExpanded, value);
+    }
+
+    public string RollbackActionHint => CanRollback
+        ? "Letzten Move-Lauf rückgängig machen (Ctrl+Z)"
+        : "Kein Rollback möglich: Es wurde keine gültige Audit-Datei gefunden.";
+
+    public bool HasRunData => _lastCandidates.Count > 0;
+
+    // ═══ ANALYSE DATA ═══════════════════════════════════════════════════
+    public ObservableCollection<ConsoleDistributionItem> ConsoleDistribution { get; } = [];
+    public ObservableCollection<DedupeGroupItem> DedupeGroupItems { get; } = [];
+
+    private string _moveConsequenceText = "";
+    public string MoveConsequenceText { get => _moveConsequenceText; set => SetProperty(ref _moveConsequenceText, value); }
 
     // ═══ STEP INDICATOR ═════════════════════════════════════════════════
     private int _currentStep;

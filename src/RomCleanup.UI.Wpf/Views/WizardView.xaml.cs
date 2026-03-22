@@ -14,18 +14,18 @@ public partial class WizardView : UserControl
         DataContextChanged += OnDataContextChanged;
     }
 
-    // GUI-095: Focus management on wizard step change
+    // GUI-095: Focus management on wizard step change (now on Shell)
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (e.OldValue is INotifyPropertyChanged oldVm)
-            oldVm.PropertyChanged -= OnVmPropertyChanged;
-        if (e.NewValue is INotifyPropertyChanged newVm)
-            newVm.PropertyChanged += OnVmPropertyChanged;
+        if (e.OldValue is MainViewModel oldVm)
+            oldVm.Shell.PropertyChanged -= OnShellPropertyChanged;
+        if (e.NewValue is MainViewModel newVm)
+            newVm.Shell.PropertyChanged += OnShellPropertyChanged;
     }
 
-    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.WizardStep))
+        if (e.PropertyName == nameof(ShellViewModel.WizardStep))
             Dispatcher.BeginInvoke(() => MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)));
     }
 }

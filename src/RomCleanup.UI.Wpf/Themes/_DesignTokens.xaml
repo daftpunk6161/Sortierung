@@ -46,7 +46,7 @@
     <!-- ═══ SIZING ════════════════════════════════════════════════════ -->
     <sys:Double x:Key="NavRailWidth">72</sys:Double>
     <sys:Double x:Key="ContextWingWidth">280</sys:Double>
-    <sys:Double x:Key="ActionRailHeight">52</sys:Double>
+    <sys:Double x:Key="ActionRailHeight">68</sys:Double>
     <sys:Double x:Key="CommandBarHeight">48</sys:Double>
     <sys:Double x:Key="TabBarHeight">32</sys:Double>
     <sys:Double x:Key="MinTouchTarget">44</sys:Double>

@@ -15,7 +15,7 @@
         <!-- ── Header with collapse toggle ─────────────────────────── -->
         <DockPanel Margin="0,0,0,10">
           <Button DockPanel.Dock="Right" Content="✕" Padding="4,2"
-                  Command="{Binding ToggleContextWingCommand}"
+                  Command="{Binding Shell.ToggleContextWingCommand}"
                   Background="Transparent" BorderThickness="0"
                   Foreground="{DynamicResource BrushTextMuted}"
                   ToolTip="Inspector schließen (Ctrl+I)"
@@ -76,7 +76,7 @@
                   <TextBlock Text="&#xE8CB;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                              Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,0,2"/>
                   <TextBlock FontSize="10" Foreground="{DynamicResource BrushTextPrimary}">
-                    <Run Text="Health: "/><Run Text="{Binding HealthScore, Mode=OneWay}"/>
+                    <Run Text="Health: "/><Run Text="{Binding Run.HealthScore, Mode=OneWay}"/>
                   </TextBlock>
                 </StackPanel>
               </Border>
@@ -86,7 +86,7 @@
 
         <!-- ── MissionControl context ──────────────────────────────── -->
         <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8"
-                Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=MissionControl}">
+                Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=MissionControl}">
           <StackPanel>
             <TextBlock Text="{Binding Loc[Context.StartHintsTitle]}" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
@@ -98,7 +98,7 @@
 
         <!-- ── Config context ──────────────────────────────────────── -->
         <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8"
-                Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Config}">
+                Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Config}">
           <StackPanel>
             <TextBlock Text="{Binding Loc[Context.SetupQuickcheck]}" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
@@ -111,18 +111,18 @@
 
         <!-- ── Library context ─────────────────────────────────────── -->
         <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8"
-                Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Library}">
+                Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Library}">
           <StackPanel>
             <TextBlock Text="{Binding Loc[Context.AnalysisMetrics]}" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
             <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2">
-              <Run Text="{Binding Loc[Context.ModeLabel]}"/><Run Text="{Binding DashMode}"/>
+              <Run Text="{Binding Loc[Context.ModeLabel]}"/><Run Text="{Binding Run.DashMode}"/>
             </TextBlock>
             <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2">
-              <Run Text="{Binding Loc[Context.DupesLabel]}"/><Run Text="{Binding DashDupes}"/>
+              <Run Text="{Binding Loc[Context.DupesLabel]}"/><Run Text="{Binding Run.DashDupes}"/>
             </TextBlock>
             <TextBlock Foreground="{DynamicResource BrushTextPrimary}">
-              <Run Text="{Binding Loc[Context.JunkLabel]}"/><Run Text="{Binding DashJunk}"/>
+              <Run Text="{Binding Loc[Context.JunkLabel]}"/><Run Text="{Binding Run.DashJunk}"/>
             </TextBlock>
           </StackPanel>
         </Border>
@@ -133,10 +133,10 @@
             <Style TargetType="Border" BasedOn="{StaticResource SectionCard}">
               <Setter Property="Visibility" Value="Collapsed"/>
               <Style.Triggers>
-                <DataTrigger Binding="{Binding SelectedNavTag}" Value="Library">
+                <DataTrigger Binding="{Binding Shell.SelectedNavTag}" Value="Library">
                   <Setter Property="Visibility" Value="Visible"/>
                 </DataTrigger>
-                <DataTrigger Binding="{Binding SelectedNavTag}" Value="Config">
+                <DataTrigger Binding="{Binding Shell.SelectedNavTag}" Value="Config">
                   <Setter Property="Visibility" Value="Visible"/>
                 </DataTrigger>
               </Style.Triggers>
@@ -152,7 +152,7 @@
 
         <!-- ── Tools context ───────────────────────────────────────── -->
         <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8"
-                Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}">
+                Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}">
           <StackPanel>
             <TextBlock Text="Tool-Status" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
@@ -163,7 +163,7 @@
 
         <!-- ── System context ──────────────────────────────────────── -->
         <Border Style="{StaticResource SectionCard}"
-                Visibility="{Binding SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=System}">
+                Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=System}">
           <StackPanel>
             <TextBlock Text="{Binding Loc[Context.SystemActions]}" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>

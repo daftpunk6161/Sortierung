@@ -10,7 +10,7 @@
       <Style TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource BrushSurfaceAlt}"/>
         <Style.Triggers>
-          <DataTrigger Binding="{Binding ShowMoveInlineConfirm}" Value="True">
+          <DataTrigger Binding="{Binding Shell.ShowMoveInlineConfirm}" Value="True">
             <Setter Property="Background" Value="{DynamicResource BrushDangerBg}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BrushDanger}"/>
           </DataTrigger>
@@ -29,7 +29,7 @@
 
       <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
         <Button Command="{Binding RunCommand}" Style="{StaticResource PrimaryButton}"
-                Width="140" Height="52" Margin="{DynamicResource SpaceRightXS}"
+                Width="140" Height="44" Margin="{DynamicResource SpaceRightXS}"
                 ToolTip="{Binding Loc[Start.RunTip]}" AutomationProperties.Name="{Binding Loc[Start.RunButton]}"
                 AutomationProperties.AcceleratorKey="F5" TabIndex="1">
           <StackPanel HorizontalAlignment="Center">
@@ -39,7 +39,7 @@
         </Button>
 
         <Button Command="{Binding CancelCommand}" Style="{StaticResource DangerButton}"
-                Width="60" Height="52" Margin="{DynamicResource SpaceRightXS}"
+                Width="60" Height="44" Margin="{DynamicResource SpaceRightXS}"
                 AutomationProperties.AcceleratorKey="Esc"
                 ToolTip="{Binding Loc[Start.CancelTip]}" AutomationProperties.Name="{Binding Loc[Start.CancelButton]}" TabIndex="2">
           <StackPanel HorizontalAlignment="Center">
@@ -51,7 +51,7 @@
         <Rectangle Width="1" Height="40" Fill="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="{DynamicResource SpaceDivider}"/>
 
         <Button Command="{Binding ConvertOnlyCommand}"
-                Width="130" Height="52" Margin="{DynamicResource SpaceRightXS}"
+                Width="130" Height="44" Margin="{DynamicResource SpaceRightXS}"
                 BorderBrush="{DynamicResource BrushSuccess}" Foreground="{DynamicResource BrushSuccess}"
                 Background="{DynamicResource BrushSuccessBg}" BorderThickness="2"
                 ToolTip="{Binding Loc[Start.ConvertOnlyTip]}" AutomationProperties.Name="{Binding Loc[Start.ConvertOnlyButton]}" TabIndex="3"
@@ -64,20 +64,20 @@
 
         <StackPanel Orientation="Horizontal" Visibility="{Binding ShowStartMoveButton, Converter={StaticResource BoolToVis}}">
           <Button Command="{Binding RequestStartMoveCommand}"
-                  Width="120" Height="52" Margin="{DynamicResource SpaceRightXS}"
+                  Width="120" Height="44" Margin="{DynamicResource SpaceRightXS}"
                   BorderBrush="{DynamicResource BrushDanger}" Foreground="{DynamicResource BrushDanger}"
                   Background="{DynamicResource BrushDangerBg}" BorderThickness="2"
                   ToolTip="{Binding MoveApplyGateText}" AutomationProperties.Name="Move bestätigen anfordern" TabIndex="4"
-                  Visibility="{Binding ShowMoveInlineConfirm, Converter={StaticResource InverseBoolToVis}}">
+                  Visibility="{Binding Shell.ShowMoveInlineConfirm, Converter={StaticResource InverseBoolToVis}}">
             <StackPanel HorizontalAlignment="Center">
               <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="20" HorizontalAlignment="Center"/>
               <TextBlock Text="{Binding Loc[Result.BtnCleanup]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
             </StackPanel>
           </Button>
 
-          <StackPanel Orientation="Horizontal" Visibility="{Binding ShowMoveInlineConfirm, Converter={StaticResource BoolToVis}}">
+          <StackPanel Orientation="Horizontal" Visibility="{Binding Shell.ShowMoveInlineConfirm, Converter={StaticResource BoolToVis}}">
             <Button Command="{Binding StartMoveCommand}"
-                    Width="140" Height="52" Margin="{DynamicResource SpaceRightXS}"
+                    Width="140" Height="44" Margin="{DynamicResource SpaceRightXS}"
                     BorderBrush="{DynamicResource BrushDanger}" Foreground="{DynamicResource BrushDanger}"
                     Background="{DynamicResource BrushDangerBg}" BorderThickness="2"
                     ToolTip="{Binding MoveApplyGateText}" AutomationProperties.Name="Move jetzt ausführen" TabIndex="4">
@@ -87,7 +87,7 @@
               </StackPanel>
             </Button>
             <Button Command="{Binding CancelStartMoveCommand}"
-                    Width="80" Height="52" Margin="{DynamicResource SpaceRightXS}"
+                    Width="80" Height="44" Margin="{DynamicResource SpaceRightXS}"
                     ToolTip="Move abbrechen" AutomationProperties.Name="Move abbrechen" TabIndex="4">
               <StackPanel HorizontalAlignment="Center">
                 <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;" FontSize="18" HorizontalAlignment="Center"/>
@@ -98,7 +98,7 @@
         </StackPanel>
 
         <Button Command="{Binding RollbackCommand}"
-                Width="110" Height="52" Margin="{DynamicResource SpaceRightXS}"
+                Width="110" Height="44" Margin="{DynamicResource SpaceRightXS}"
                 BorderBrush="{DynamicResource BrushAccentPurple}" Foreground="{DynamicResource BrushAccentPurple}"
                 AutomationProperties.AcceleratorKey="Ctrl+Z"
                 Background="{DynamicResource BrushDangerBg}" BorderThickness="2"

@@ -40,7 +40,7 @@ public partial class ResultView : UserControl
     private void RefreshCharts(MainViewModel vm)
     {
         // ── Pie Chart: Console Distribution ──
-        var items = vm.ConsoleDistribution;
+        var items = vm.Run.ConsoleDistribution;
         chartConsolePie.Plot.Clear();
         if (items.Count > 0)
         {
@@ -79,10 +79,10 @@ public partial class ResultView : UserControl
 
         // ── Bar Chart: Before/After (Keep vs Move vs Junk) ──
         chartBeforeAfter.Plot.Clear();
-        if (int.TryParse(vm.DashGames, out var totalGames) && totalGames > 0)
+        if (int.TryParse(vm.Run.DashGames, out var totalGames) && totalGames > 0)
         {
-            int.TryParse(vm.DashDupes, out var dupes);
-            int.TryParse(vm.DashJunk, out var junk);
+            int.TryParse(vm.Run.DashDupes, out var dupes);
+            int.TryParse(vm.Run.DashJunk, out var junk);
             int kept = totalGames - dupes - junk;
 
             double[] values = [kept, dupes, junk];

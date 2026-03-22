@@ -12,15 +12,23 @@
 
     <!-- ═══ SIDEBAR NAVIGATION ═══════════════════════════════════════════ -->
     <Border Grid.Column="0" Background="{DynamicResource BrushSurface}" Padding="0,12">
-      <ListBox Background="Transparent" BorderThickness="0"
-               SelectedValue="{Binding SelectedToolsSection, Mode=TwoWay}"
-               SelectedValuePath="Tag"
-               ItemContainerStyle="{DynamicResource SidebarNavItem}"
-               AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavCategoriesLabel], RelativeSource={RelativeSource AncestorType=Window}}">
-        <ListBoxItem Tag="Schnellzugriff" Content="{Binding DataContext.Loc[Tools.NavQuickAccess], RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavQuickAccess], RelativeSource={RelativeSource AncestorType=Window}}"/>
-        <ListBoxItem Tag="Zuletzt verwendet" Content="{Binding DataContext.Loc[Tools.NavRecent], RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavRecent], RelativeSource={RelativeSource AncestorType=Window}}"/>
-        <ListBoxItem Tag="Alle Werkzeuge" Content="{Binding DataContext.Loc[Tools.NavAll], RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavAll], RelativeSource={RelativeSource AncestorType=Window}}"/>
-      </ListBox>
+      <StackPanel>
+        <RadioButton GroupName="ToolsSection" Tag="Schnellzugriff"
+                     Content="{Binding DataContext.Loc[Tools.NavQuickAccess], RelativeSource={RelativeSource AncestorType=Window}}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Schnellzugriff}"
+                     AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavQuickAccess], RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <RadioButton GroupName="ToolsSection" Tag="Zuletzt verwendet"
+                     Content="{Binding DataContext.Loc[Tools.NavRecent], RelativeSource={RelativeSource AncestorType=Window}}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Zuletzt verwendet}"
+                     AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavRecent], RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <RadioButton GroupName="ToolsSection" Tag="Alle Werkzeuge"
+                     Content="{Binding DataContext.Loc[Tools.NavAll], RelativeSource={RelativeSource AncestorType=Window}}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Alle Werkzeuge}"
+                     AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavAll], RelativeSource={RelativeSource AncestorType=Window}}"/>
+      </StackPanel>
     </Border>
 
     <!-- Divider -->
