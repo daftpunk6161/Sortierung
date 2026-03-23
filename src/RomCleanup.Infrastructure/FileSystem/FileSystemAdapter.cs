@@ -207,6 +207,53 @@ public sealed class FileSystemAdapter : IFileSystem
         }
     }
 
+    public string? RenameItemSafely(string sourcePath, string newFileName)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+            throw new ArgumentException("Source path must not be empty.", nameof(sourcePath));
+        if (string.IsNullOrWhiteSpace(newFileName))
+            throw new ArgumentException("New filename must not be empty.", nameof(newFileName));
+
+        // Rename must stay in the same directory; no subpaths are allowed.
+        if (!string.Equals(Path.GetFileName(newFileName), newFileName, StringComparison.Ordinal))
+            throw new InvalidOperationException("Blocked: Rename target must be a file name without path segments.");
+
+        if (newFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new InvalidOperationException("Blocked: Rename target contains invalid filename characters.");
+
+        if (IsWindowsReservedDeviceName(newFileName))
+            throw new InvalidOperationException("Blocked: Rename target uses a reserved Windows device name.");
+
+        var fullSource = NormalizePathNfc(sourcePath);
+        if (!File.Exists(fullSource))
+            throw new FileNotFoundException("Source file not found.", fullSource);
+
+        var sourceAttrs = File.GetAttributes(fullSource);
+        if ((sourceAttrs & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidOperationException("Blocked: Source is a reparse point.");
+
+        var sourceDir = Path.GetDirectoryName(fullSource)
+                        ?? throw new InvalidOperationException("Blocked: Source has no parent directory.");
+
+        var resolvedTarget = ResolveChildPathWithinRoot(sourceDir, newFileName);
+        if (resolvedTarget is null)
+            throw new InvalidOperationException("Blocked: Rename target failed root/path safety validation.");
+
+        var fullTarget = NormalizePathNfc(resolvedTarget);
+        if (string.Equals(fullSource, fullTarget, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Source and destination are the same path.");
+
+        try
+        {
+            return MoveItemSafelyCore(fullSource, fullTarget);
+        }
+        catch (IOException) when (File.Exists(fullSource))
+        {
+            // Locked/inaccessible source should behave like MoveItemSafely.
+            return null;
+        }
+    }
+
     /// <summary>
     /// Core move logic with collision handling. Separated for IOException catch scope.
     /// </summary>
