@@ -63,6 +63,33 @@ public sealed partial class RunOrchestrator
         return PhaseStepResult.Ok(moveResult.MoveCount, moveResult);
     }
 
+    private PhaseStepResult RunDatRenameStep(
+        PipelineState state,
+        RunOptions options,
+        RunResultBuilder result,
+        PhaseMetricsCollector metrics,
+        CancellationToken cancellationToken)
+    {
+        if (!options.EnableDatRename || options.Mode != "Move")
+            return PhaseStepResult.Skipped();
+
+        // DatAudit-to-Rename payload wiring lands in subsequent DAT integration steps.
+        var entries = Array.Empty<DatAuditEntry>();
+
+        var phase = new DatRenamePipelinePhase();
+        var context = new PipelineContext
+        {
+            Options = options,
+            FileSystem = _fs,
+            AuditStore = _audit,
+            Metrics = metrics,
+            OnProgress = _onProgress
+        };
+
+        var renameResult = phase.Execute(new DatRenameInput(entries, options), context, cancellationToken);
+        return PhaseStepResult.Ok(renameResult.ExecutedCount, renameResult);
+    }
+
     private PhaseStepResult RunConsoleSortStep(
         PipelineState state,
         RunOptions options,

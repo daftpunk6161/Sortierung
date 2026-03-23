@@ -85,6 +85,7 @@ public sealed class StandardPhaseStepActions
 {
     public required Func<PipelineState, CancellationToken, PhaseStepResult> Deduplicate { get; init; }
     public required Func<PipelineState, CancellationToken, PhaseStepResult> JunkRemoval { get; init; }
+    public Func<PipelineState, CancellationToken, PhaseStepResult>? DatRename { get; init; }
     public required Func<PipelineState, CancellationToken, PhaseStepResult> Move { get; init; }
     public required Func<PipelineState, CancellationToken, PhaseStepResult> ConsoleSort { get; init; }
     public required Func<PipelineState, CancellationToken, PhaseStepResult> WinnerConversion { get; init; }
@@ -135,6 +136,21 @@ public sealed class MovePhaseStep : IPhaseStep
         => _execute(state, cancellationToken);
 }
 
+public sealed class DatRenamePhaseStep : IPhaseStep
+{
+    private readonly Func<PipelineState, CancellationToken, PhaseStepResult> _execute;
+
+    public DatRenamePhaseStep(Func<PipelineState, CancellationToken, PhaseStepResult> execute)
+    {
+        _execute = execute;
+    }
+
+    public string Name => "DatRename";
+
+    public PhaseStepResult Execute(PipelineState state, CancellationToken cancellationToken)
+        => _execute(state, cancellationToken);
+}
+
 public sealed class ConsoleSortPhaseStep : IPhaseStep
 {
     private readonly Func<PipelineState, CancellationToken, PhaseStepResult> _execute;
@@ -174,6 +190,9 @@ public sealed class PhasePlanBuilder : IPhasePlanBuilder
             new DeduplicatePhaseStep(actions.Deduplicate),
             new JunkRemovalPhaseStep(actions.JunkRemoval)
         };
+
+        if (options.EnableDatRename && options.Mode == "Move" && actions.DatRename is not null)
+            phases.Add(new DatRenamePhaseStep(actions.DatRename));
 
         if (options.Mode == "Move")
             phases.Add(new MovePhaseStep(actions.Move));

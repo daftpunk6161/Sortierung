@@ -63,6 +63,7 @@ internal static class CliOptionsMapper
             aggressiveJunk: cli.AggressiveJunk,
             sortConsole: cli.SortConsole,
             enableDat: enableDat,
+            enableDatRename: cli.EnableDatRename,
             datRoot: datRoot,
             hashType: hashType,
             convertFormat: cli.ConvertFormat ? "auto" : null,
@@ -88,6 +89,7 @@ internal static class CliOptionsMapper
             bool aggressiveJunk,
             bool sortConsole,
             bool enableDat,
+            bool enableDatRename,
             string? datRoot,
             string hashType,
             string? convertFormat,
@@ -105,6 +107,7 @@ internal static class CliOptionsMapper
             AggressiveJunk = aggressiveJunk;
             SortConsole = sortConsole;
             EnableDat = enableDat;
+            EnableDatRename = enableDatRename;
             DatRoot = datRoot;
             HashType = hashType;
             ConvertFormat = convertFormat;
@@ -123,6 +126,7 @@ internal static class CliOptionsMapper
         public bool AggressiveJunk { get; }
         public bool SortConsole { get; }
         public bool EnableDat { get; }
+        public bool EnableDatRename { get; }
         public string? DatRoot { get; }
         public string HashType { get; }
         public string? ConvertFormat { get; }

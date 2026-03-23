@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Core.Classification;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Tools;
 using RomCleanup.Infrastructure.Reporting;
@@ -27,63 +28,10 @@ public static partial class FeatureService
             using var fs = File.OpenRead(filePath);
             var header = new byte[Math.Min(65536, fs.Length)];
             _ = fs.Read(header, 0, header.Length);
-
-            // NES (iNES): 4E 45 53 1A
-            if (header.Length >= 16 && header[0] == 0x4E && header[1] == 0x45 &&
-                header[2] == 0x53 && header[3] == 0x1A)
-            {
-                var isNes2 = (header[7] & 0x0C) == 0x08;
-                return new RomHeaderInfo("NES", isNes2 ? "NES 2.0" : "iNES",
-                    $"PRG={header[4] * 16}KB, CHR={header[5] * 8}KB, Mapper={(header[6] >> 4) | (header[7] & 0xF0)}");
-            }
-
-            // N64 Big-Endian: 80 37
-            if (header.Length >= 0x40 && header[0] == 0x80 && header[1] == 0x37)
-            {
-                var title = Encoding.ASCII.GetString(header, 0x20, 20).TrimEnd('\0', ' ');
-                return new RomHeaderInfo("N64", "Big-Endian (.z64)", $"Title={title}");
-            }
-
-            // N64 Byte-Swap: 37 80
-            if (header.Length >= 0x40 && header[0] == 0x37 && header[1] == 0x80)
-                return new RomHeaderInfo("N64", "Byte-Swapped (.v64)", "");
-
-            // N64 Little-Endian: 40 12
-            if (header.Length >= 0x40 && header[0] == 0x40 && header[1] == 0x12)
-                return new RomHeaderInfo("N64", "Little-Endian (.n64)", "");
-
-            // GBA: 0x96 at offset 0xB2
-            if (header.Length >= 0xBE && header[0xB2] == 0x96)
-            {
-                var title = Encoding.ASCII.GetString(header, 0xA0, 12).TrimEnd('\0', ' ');
-                var code = Encoding.ASCII.GetString(header, 0xAC, 4).TrimEnd('\0');
-                return new RomHeaderInfo("GBA", "GBA ROM", $"Title={title}, Code={code}");
-            }
-
-            // SNES LoROM (header at 0x7FC0)
-            if (header.Length >= 0x8000)
-            {
-                var snesTitle = Encoding.ASCII.GetString(header, 0x7FC0, 21).TrimEnd('\0', ' ');
-                // Validate SNES checksum complement: checksum + complement must equal 0xFFFF
-                int checksum = header[0x7FDE] | (header[0x7FDF] << 8);
-                int complement = header[0x7FDC] | (header[0x7FDD] << 8);
-                if (snesTitle.Length > 0 && snesTitle.All(c => c >= 0x20 && c <= 0x7E) &&
-                    (checksum + complement) == 0xFFFF)
-                    return new RomHeaderInfo("SNES", "LoROM", $"Title={snesTitle}");
-            }
-
-            // SNES HiROM (header at 0xFFC0)
-            if (header.Length >= 0x10000)
-            {
-                var snesTitle = Encoding.ASCII.GetString(header, 0xFFC0, 21).TrimEnd('\0', ' ');
-                int checksum = header[0xFFDE] | (header[0xFFDF] << 8);
-                int complement = header[0xFFDC] | (header[0xFFDD] << 8);
-                if (snesTitle.Length > 0 && snesTitle.All(c => c >= 0x20 && c <= 0x7E) &&
-                    (checksum + complement) == 0xFFFF)
-                    return new RomHeaderInfo("SNES", "HiROM", $"Title={snesTitle}");
-            }
-
-            return new RomHeaderInfo("Unbekannt", "Unbekanntes Format", $"Magic: {header[0]:X2} {header[1]:X2} {header[2]:X2} {header[3]:X2}");
+            var analyzed = HeaderAnalyzer.AnalyzeHeader(header, fs.Length);
+            return analyzed is null
+                ? null
+                : new RomHeaderInfo(analyzed.Platform, analyzed.Format, analyzed.Details);
         }
         catch
         {

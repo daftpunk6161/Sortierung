@@ -164,6 +164,10 @@ internal static class CliArgsParser
                     opts.EnableDat = true;
                     break;
 
+                case "-datrename" or "--datrename":
+                    opts.EnableDatRename = true;
+                    break;
+
                 case "-datroot" or "--datroot":
                     if (!TryConsumeValue(args, ref i, "--datroot", errors, out var datRootVal))
                         break;
@@ -395,6 +399,7 @@ internal sealed class CliRunOptions
     public bool AggressiveJunk { get; set; }
     public bool SortConsole { get; set; }
     public bool EnableDat { get; set; }
+    public bool EnableDatRename { get; set; }
     public string? DatRoot { get; set; }
     public string? HashType { get; set; }
     public bool ConvertFormat { get; set; }

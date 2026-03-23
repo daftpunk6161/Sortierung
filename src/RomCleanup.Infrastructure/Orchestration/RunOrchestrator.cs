@@ -180,6 +180,7 @@ public sealed partial class RunOrchestrator
         {
             Deduplicate = (state, ct) => RunDeduplicateStep(state, options, result, metrics, ct),
             JunkRemoval = (state, ct) => RunJunkRemovalStep(state, options, result, metrics, ct),
+            DatRename = (state, ct) => RunDatRenameStep(state, options, result, metrics, ct),
             Move = (state, ct) => RunMoveStep(state, options, result, metrics, ct),
             ConsoleSort = (state, ct) => RunConsoleSortStep(state, options, result, metrics, ct),
             WinnerConversion = (state, ct) => RunWinnerConversionStep(state, options, result, metrics, ct)

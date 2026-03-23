@@ -285,6 +285,14 @@ public sealed class CliProgramTests : IDisposable
     }
 
     [Fact]
+    public void ParseArgs_EnableDatRename_SetsFlag_Issue9()
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--datrename" });
+        Assert.NotNull(opts);
+        Assert.True(opts!.EnableDatRename);
+    }
+
+    [Fact]
     public void ParseArgs_ConvertFormat_SetsFlag()
     {
         var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--convertformat" });

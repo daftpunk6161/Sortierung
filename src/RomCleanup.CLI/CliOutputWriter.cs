@@ -115,6 +115,7 @@ Options:
   -AggressiveJunk    Also flag WIP/dev builds as junk
   -SortConsole       Sort winners into console-specific subfolders
   -EnableDat         Enable DAT verification (hash-match against No-Intro/Redump)
+    -DatRename         Rename DAT-verified mismatches before move (Move mode only)
   -DatRoot <path>    DAT file directory (overrides settings.json)
   -HashType <type>   Hash algorithm: SHA1|SHA256|MD5 (default: SHA1)
   -ConvertFormat     Convert winners to optimal format (CHD/RVZ/ZIP)
