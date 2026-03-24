@@ -181,7 +181,5 @@ public sealed record IntegrityBaseline(string Root, Dictionary<string, Integrity
 public sealed record IntegrityCheckResult(
     IReadOnlyList<string> Changed, IReadOnlyList<string> Missing,
     IReadOnlyList<string> Intact, bool BitRotRisk, string? Message = null);
-
-public sealed record RomHeaderInfo(string Platform, string Format, string Details);
 public sealed record ConfigDiffEntry(string Key, string SavedValue, string CurrentValue);
 public sealed record DatDiffResult(IReadOnlyList<string> Added, IReadOnlyList<string> Removed, int ModifiedCount, int UnchangedCount);

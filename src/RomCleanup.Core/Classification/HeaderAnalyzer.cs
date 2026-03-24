@@ -1,4 +1,5 @@
 using System.Text;
+using RomCleanup.Contracts.Models;
 
 namespace RomCleanup.Core.Classification;
 
@@ -83,5 +84,3 @@ public static class HeaderAnalyzer
         }
     }
 }
-
-public sealed record RomHeaderInfo(string Platform, string Format, string Details);

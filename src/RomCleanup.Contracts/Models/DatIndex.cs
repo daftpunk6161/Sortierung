@@ -10,8 +10,10 @@ namespace RomCleanup.Contracts.Models;
 /// </summary>
 public sealed class DatIndex
 {
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string>> _data = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, DatIndexEntry>> _data = new(StringComparer.OrdinalIgnoreCase);
     private int _totalEntries;
+
+    public readonly record struct DatIndexEntry(string GameName, string? RomFileName);
 
     /// <summary>Maximum entries per console to prevent OOM from malicious DATs. 0 = unlimited.</summary>
     public int MaxEntriesPerConsole { get; init; }
@@ -23,18 +25,20 @@ public sealed class DatIndex
     public int TotalEntries => Volatile.Read(ref _totalEntries);
 
     /// <summary>Add or update a hash→gameName mapping for a console.</summary>
-    public void Add(string consoleKey, string hash, string gameName)
+    public void Add(string consoleKey, string hash, string gameName, string? romFileName = null)
     {
-        var hashMap = _data.GetOrAdd(consoleKey, _ => new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+        var hashMap = _data.GetOrAdd(consoleKey, _ => new ConcurrentDictionary<string, DatIndexEntry>(StringComparer.OrdinalIgnoreCase));
+        var newEntry = new DatIndexEntry(gameName, romFileName);
+
         // Allow updates for existing keys even when at capacity
         if (hashMap.ContainsKey(hash))
         {
-            hashMap[hash] = gameName;
+            hashMap[hash] = newEntry;
             return;
         }
         if (MaxEntriesPerConsole > 0 && hashMap.Count >= MaxEntriesPerConsole)
             return;
-        if (hashMap.TryAdd(hash, gameName))
+        if (hashMap.TryAdd(hash, newEntry))
             Interlocked.Increment(ref _totalEntries);
     }
 
@@ -42,8 +46,17 @@ public sealed class DatIndex
     public string? Lookup(string consoleKey, string hash)
     {
         if (_data.TryGetValue(consoleKey, out var hashMap) &&
-            hashMap.TryGetValue(hash, out var name))
-            return name;
+            hashMap.TryGetValue(hash, out var entry))
+            return entry.GameName;
+        return null;
+    }
+
+    /// <summary>Look up game name plus optional DAT ROM filename by console key and hash.</summary>
+    public DatIndexEntry? LookupWithFilename(string consoleKey, string hash)
+    {
+        if (_data.TryGetValue(consoleKey, out var hashMap) &&
+            hashMap.TryGetValue(hash, out var entry))
+            return entry;
         return null;
     }
 
@@ -58,10 +71,28 @@ public sealed class DatIndex
         foreach (var key in _data.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
         {
             if (_data.TryGetValue(key, out var hashMap) &&
-                hashMap.TryGetValue(hash, out var name))
-                return (key, name);
+                hashMap.TryGetValue(hash, out var entry))
+                return (key, entry.GameName);
         }
         return null;
+    }
+
+    /// <summary>
+    /// Looks up all console matches for a hash in deterministic console-key order.
+    /// </summary>
+    public IReadOnlyList<(string ConsoleKey, DatIndexEntry Entry)> LookupAllByHash(string hash)
+    {
+        var results = new List<(string ConsoleKey, DatIndexEntry Entry)>();
+        foreach (var key in _data.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
+        {
+            if (_data.TryGetValue(key, out var hashMap) &&
+                hashMap.TryGetValue(hash, out var entry))
+            {
+                results.Add((key, entry));
+            }
+        }
+
+        return results;
     }
 
     /// <summary>Check if a console key exists in the index.</summary>
@@ -70,7 +101,10 @@ public sealed class DatIndex
     /// <summary>Get all hash→gameName pairs for a console.</summary>
     public IReadOnlyDictionary<string, string>? GetConsoleEntries(string consoleKey)
     {
-        return _data.TryGetValue(consoleKey, out var hashMap) ? hashMap : null;
+        if (!_data.TryGetValue(consoleKey, out var hashMap))
+            return null;
+
+        return hashMap.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.GameName, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>Get all indexed console keys (snapshot).</summary>

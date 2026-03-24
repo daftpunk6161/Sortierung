@@ -48,7 +48,8 @@ public sealed class DatRepositoryAdapter : IDatRepository
                 {
                     if (rom.TryGetValue("hash", out var hash) && !string.IsNullOrWhiteSpace(hash))
                     {
-                        index.Add(consoleKey, hash, game.Key);
+                        rom.TryGetValue("name", out var romFileName);
+                        index.Add(consoleKey, hash, game.Key, romFileName);
                     }
                 }
             }

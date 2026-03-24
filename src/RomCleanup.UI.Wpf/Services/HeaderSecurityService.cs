@@ -1,10 +1,18 @@
 using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
 
 namespace RomCleanup.UI.Wpf.Services;
 
 /// <summary>GUI-039: Delegates to static FeatureService.Security methods.</summary>
 public sealed class HeaderSecurityService : IHeaderService
 {
+    private readonly IHeaderRepairService _headerRepairService;
+
+    public HeaderSecurityService(IHeaderRepairService headerRepairService)
+    {
+        _headerRepairService = headerRepairService ?? throw new ArgumentNullException(nameof(headerRepairService));
+    }
+
     public RomHeaderInfo? AnalyzeHeader(string filePath)
         => FeatureService.AnalyzeHeader(filePath);
 
@@ -36,8 +44,8 @@ public sealed class HeaderSecurityService : IHeaderService
         => FeatureService.DetectPatchFormat(patchPath);
 
     public bool RepairNesHeader(string path)
-        => FeatureService.RepairNesHeader(path);
+        => _headerRepairService.RepairNesHeader(path);
 
     public bool RemoveCopierHeader(string path)
-        => FeatureService.RemoveCopierHeader(path);
+        => _headerRepairService.RemoveCopierHeader(path);
 }

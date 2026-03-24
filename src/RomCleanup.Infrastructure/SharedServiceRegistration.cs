@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.FileSystem;
+using RomCleanup.Infrastructure.Hashing;
 using RomCleanup.Infrastructure.Orchestration;
 
 namespace RomCleanup.Infrastructure;
@@ -18,6 +19,7 @@ public static class SharedServiceRegistration
                 sp.GetRequiredService<IFileSystem>(),
                 _ => { },
                 AuditSecurityPaths.GetDefaultSigningKeyPath()));
+        services.AddSingleton<IHeaderRepairService, HeaderRepairService>();
 
         services.AddSingleton<IRunOptionsFactory, RunOptionsFactory>();
         services.AddSingleton<IRunEnvironmentFactory, RunEnvironmentFactory>();
