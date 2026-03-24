@@ -63,6 +63,7 @@ internal static class CliOptionsMapper
             aggressiveJunk: cli.AggressiveJunk,
             sortConsole: cli.SortConsole,
             enableDat: enableDat,
+            enableDatAudit: cli.EnableDatAudit,
             enableDatRename: cli.EnableDatRename,
             datRoot: datRoot,
             hashType: hashType,
@@ -89,6 +90,7 @@ internal static class CliOptionsMapper
             bool aggressiveJunk,
             bool sortConsole,
             bool enableDat,
+            bool enableDatAudit,
             bool enableDatRename,
             string? datRoot,
             string hashType,
@@ -107,6 +109,7 @@ internal static class CliOptionsMapper
             AggressiveJunk = aggressiveJunk;
             SortConsole = sortConsole;
             EnableDat = enableDat;
+            EnableDatAudit = enableDatAudit;
             EnableDatRename = enableDatRename;
             DatRoot = datRoot;
             HashType = hashType;
@@ -126,6 +129,7 @@ internal static class CliOptionsMapper
         public bool AggressiveJunk { get; }
         public bool SortConsole { get; }
         public bool EnableDat { get; }
+        public bool EnableDatAudit { get; }
         public bool EnableDatRename { get; }
         public string? DatRoot { get; }
         public string HashType { get; }

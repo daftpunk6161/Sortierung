@@ -265,6 +265,7 @@ public static partial class FeatureService
     // ═══ NES HEADER REPAIR ═════════════════════════════════════════════
     // Check if NES ROM has dirty bytes at offset 12-15. If so, zero them.
 
+    [Obsolete("Use IHeaderRepairService.RepairNesHeader via DI instead.")]
     public static bool RepairNesHeader(string path)
     {
         if (string.IsNullOrEmpty(path) || !File.Exists(path))
@@ -313,6 +314,7 @@ public static partial class FeatureService
     // ═══ COPIER HEADER REMOVAL ═════════════════════════════════════════
     // Check if SNES ROM has a 512-byte copier header and remove it.
 
+    [Obsolete("Use IHeaderRepairService.RemoveCopierHeader via DI instead.")]
     public static bool RemoveCopierHeader(string path)
     {
         if (string.IsNullOrEmpty(path) || !File.Exists(path))

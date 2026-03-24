@@ -164,6 +164,10 @@ internal static class CliArgsParser
                     opts.EnableDat = true;
                     break;
 
+                case "-dat-audit" or "--dat-audit" or "-dataudit" or "--dataudit":
+                    opts.EnableDatAudit = true;
+                    break;
+
                 case "-datrename" or "--datrename":
                     opts.EnableDatRename = true;
                     break;
@@ -399,6 +403,7 @@ internal sealed class CliRunOptions
     public bool AggressiveJunk { get; set; }
     public bool SortConsole { get; set; }
     public bool EnableDat { get; set; }
+    public bool EnableDatAudit { get; set; }
     public bool EnableDatRename { get; set; }
     public string? DatRoot { get; set; }
     public string? HashType { get; set; }

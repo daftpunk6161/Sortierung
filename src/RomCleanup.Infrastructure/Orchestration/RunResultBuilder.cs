@@ -30,6 +30,16 @@ public sealed class RunResultBuilder
     public int ConvertReviewCount { get; set; }
     public long ConvertSavedBytes { get; set; }
     public ConversionReport? ConversionReport { get; set; }
+    public DatAuditResult? DatAuditResult { get; set; }
+    public int DatHaveCount { get; set; }
+    public int DatHaveWrongNameCount { get; set; }
+    public int DatMissCount { get; set; }
+    public int DatUnknownCount { get; set; }
+    public int DatAmbiguousCount { get; set; }
+    public int DatRenameProposedCount { get; set; }
+    public int DatRenameExecutedCount { get; set; }
+    public int DatRenameSkippedCount { get; set; }
+    public int DatRenameFailedCount { get; set; }
     public long DurationMs { get; set; }
     public string? ReportPath { get; set; }
     public IReadOnlyList<RomCandidate> AllCandidates { get; set; } = Array.Empty<RomCandidate>();
@@ -59,6 +69,16 @@ public sealed class RunResultBuilder
         ConvertReviewCount = ConvertReviewCount,
         ConvertSavedBytes = ConvertSavedBytes,
         ConversionReport = ConversionReport,
+        DatAuditResult = DatAuditResult,
+        DatHaveCount = DatHaveCount,
+        DatHaveWrongNameCount = DatHaveWrongNameCount,
+        DatMissCount = DatMissCount,
+        DatUnknownCount = DatUnknownCount,
+        DatAmbiguousCount = DatAmbiguousCount,
+        DatRenameProposedCount = DatRenameProposedCount,
+        DatRenameExecutedCount = DatRenameExecutedCount,
+        DatRenameSkippedCount = DatRenameSkippedCount,
+        DatRenameFailedCount = DatRenameFailedCount,
         DurationMs = DurationMs,
         ReportPath = ReportPath,
         AllCandidates = AllCandidates,

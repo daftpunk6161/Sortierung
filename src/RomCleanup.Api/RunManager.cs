@@ -119,6 +119,8 @@ internal sealed class RunRecordOptionsSource : IRunOptionsSource
         AggressiveJunk = run.AggressiveJunk;
         SortConsole = run.SortConsole;
         EnableDat = run.EnableDat;
+        EnableDatAudit = run.EnableDatAudit;
+        EnableDatRename = run.EnableDatRename;
         DatRoot = run.DatRoot;
         HashType = run.HashType;
         ConvertFormat = run.ConvertFormat;
@@ -137,7 +139,8 @@ internal sealed class RunRecordOptionsSource : IRunOptionsSource
     public bool AggressiveJunk { get; }
     public bool SortConsole { get; }
     public bool EnableDat { get; }
-    public bool EnableDatRename => false;
+    public bool EnableDatAudit { get; }
+    public bool EnableDatRename { get; }
     public string? DatRoot { get; }
     public string HashType { get; }
     public string? ConvertFormat { get; }
@@ -188,6 +191,8 @@ public sealed class RunRequest
     public bool AggressiveJunk { get; set; }
     public bool SortConsole { get; set; }
     public bool EnableDat { get; set; }
+    public bool EnableDatAudit { get; set; }
+    public bool EnableDatRename { get; set; }
     public string? DatRoot { get; set; }
     public bool OnlyGames { get; set; }
     public bool KeepUnknownWhenOnlyGames { get; set; } = true;
@@ -229,6 +234,8 @@ public sealed class RunRecord
     public bool AggressiveJunk { get; init; }
     public bool SortConsole { get; init; }
     public bool EnableDat { get; init; }
+    public bool EnableDatAudit { get; init; }
+    public bool EnableDatRename { get; init; }
     [JsonIgnore]
     public string? DatRoot { get; init; }
     public bool OnlyGames { get; init; }
@@ -318,6 +325,15 @@ public sealed class ApiRunResult
     public int ConvertBlockedCount { get; init; }
     public int ConvertReviewCount { get; init; }
     public long ConvertSavedBytes { get; init; }
+    public int DatHaveCount { get; init; }
+    public int DatHaveWrongNameCount { get; init; }
+    public int DatMissCount { get; init; }
+    public int DatUnknownCount { get; init; }
+    public int DatAmbiguousCount { get; init; }
+    public int DatRenameProposedCount { get; init; }
+    public int DatRenameExecutedCount { get; init; }
+    public int DatRenameSkippedCount { get; init; }
+    public int DatRenameFailedCount { get; init; }
     public int JunkRemovedCount { get; init; }
     public int FilteredNonGameCount { get; init; }
     public int JunkFailCount { get; init; }

@@ -7,8 +7,13 @@ namespace RomCleanup.Core.Audit;
 /// </summary>
 public static class DatAuditClassifier
 {
+    /// <summary>
+    /// Classifies a ROM against the DAT index.
+    /// Tries headerlessHash first (for NES/SNES/7800/Lynx), then falls back to regular hash.
+    /// </summary>
     public static DatAuditStatus Classify(
         string? hash,
+        string? headerlessHash,
         string actualFileName,
         string? consoleKey,
         DatIndex datIndex)
@@ -16,6 +21,36 @@ public static class DatAuditClassifier
         ArgumentNullException.ThrowIfNull(actualFileName);
         ArgumentNullException.ThrowIfNull(datIndex);
 
+        // Try headerless hash first (No-Intro DATs hash headered ROMs without header)
+        if (!string.IsNullOrWhiteSpace(headerlessHash))
+        {
+            var result = ClassifyWithHash(headerlessHash, actualFileName, consoleKey, datIndex);
+            if (result != DatAuditStatus.Unknown && result != DatAuditStatus.Miss)
+                return result;
+
+            // If headerless hash matched as Miss (known console, no match), it's a real Miss
+            if (result == DatAuditStatus.Miss && !string.IsNullOrWhiteSpace(consoleKey))
+                return DatAuditStatus.Miss;
+        }
+
+        // Fall back to regular hash
+        return ClassifyWithHash(hash, actualFileName, consoleKey, datIndex);
+    }
+
+    /// <summary>Backward-compatible overload without headerlessHash.</summary>
+    public static DatAuditStatus Classify(
+        string? hash,
+        string actualFileName,
+        string? consoleKey,
+        DatIndex datIndex)
+        => Classify(hash, headerlessHash: null, actualFileName, consoleKey, datIndex);
+
+    private static DatAuditStatus ClassifyWithHash(
+        string? hash,
+        string actualFileName,
+        string? consoleKey,
+        DatIndex datIndex)
+    {
         if (string.IsNullOrWhiteSpace(hash))
             return DatAuditStatus.Unknown;
 

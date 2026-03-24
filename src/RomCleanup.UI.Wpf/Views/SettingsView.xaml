@@ -246,6 +246,10 @@
           <CheckBox Content="{Binding Loc[Settings.UseDat]}" Margin="0,0,0,12"
                     IsChecked="{Binding UseDat}"
                     ToolTip="{Binding Loc[Settings.UseDatTip]}"/>
+          <CheckBox Content="DAT-Rename bei Move ausführen" Margin="0,0,0,12"
+                    IsChecked="{Binding EnableDatRename}"
+                    IsEnabled="{Binding UseDat}"
+                    ToolTip="Nur bei bestätigtem Move aktiv. Es werden ausschließlich HaveWrongName-Treffer umbenannt."/>
           <Grid>
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="120"/>

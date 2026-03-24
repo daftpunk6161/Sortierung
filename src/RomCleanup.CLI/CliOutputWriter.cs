@@ -51,6 +51,15 @@ internal static class CliOutputWriter
             ConvertBlockedCount = projection.ConvertBlockedCount,
             ConvertReviewCount = projection.ConvertReviewCount,
             ConvertSavedBytes = projection.ConvertSavedBytes,
+            DatHaveCount = projection.DatHaveCount,
+            DatHaveWrongNameCount = projection.DatHaveWrongNameCount,
+            DatMissCount = projection.DatMissCount,
+            DatUnknownCount = projection.DatUnknownCount,
+            DatAmbiguousCount = projection.DatAmbiguousCount,
+            DatRenameProposedCount = projection.DatRenameProposedCount,
+            DatRenameExecutedCount = projection.DatRenameExecutedCount,
+            DatRenameSkippedCount = projection.DatRenameSkippedCount,
+            DatRenameFailedCount = projection.DatRenameFailedCount,
             JunkRemovedCount = projection.JunkRemovedCount,
             FilteredNonGameCount = projection.FilteredNonGameCount,
             MoveCount = projection.MoveCount,
@@ -115,6 +124,7 @@ Options:
   -AggressiveJunk    Also flag WIP/dev builds as junk
   -SortConsole       Sort winners into console-specific subfolders
   -EnableDat         Enable DAT verification (hash-match against No-Intro/Redump)
+        -DatAudit          Emit DAT audit counters in DryRun output
     -DatRename         Rename DAT-verified mismatches before move (Move mode only)
   -DatRoot <path>    DAT file directory (overrides settings.json)
   -HashType <type>   Hash algorithm: SHA1|SHA256|MD5 (default: SHA1)
@@ -206,6 +216,15 @@ internal sealed class CliDryRunOutput
     public int ConvertBlockedCount { get; init; }
     public int ConvertReviewCount { get; init; }
     public long ConvertSavedBytes { get; init; }
+    public int DatHaveCount { get; init; }
+    public int DatHaveWrongNameCount { get; init; }
+    public int DatMissCount { get; init; }
+    public int DatUnknownCount { get; init; }
+    public int DatAmbiguousCount { get; init; }
+    public int DatRenameProposedCount { get; init; }
+    public int DatRenameExecutedCount { get; init; }
+    public int DatRenameSkippedCount { get; init; }
+    public int DatRenameFailedCount { get; init; }
     public int JunkRemovedCount { get; init; }
     public int FilteredNonGameCount { get; init; }
     public int MoveCount { get; init; }

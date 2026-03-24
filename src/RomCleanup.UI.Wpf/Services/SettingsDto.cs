@@ -20,6 +20,7 @@ public sealed record SettingsDto
 
     // DAT
     public bool UseDat { get; init; }
+    public bool EnableDatRename { get; init; }
     public string DatRoot { get; init; } = "";
     public string DatHashType { get; init; } = "SHA1";
     public bool DatFallback { get; init; } = true;

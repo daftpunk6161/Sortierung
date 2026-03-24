@@ -16,6 +16,11 @@ public sealed record DashboardProjection(
     string HealthScore,
     string Games,
     string DatHits,
+    string DatHaveDisplay,
+    string DatWrongNameDisplay,
+    string DatMissDisplay,
+    string DatUnknownDisplay,
+    string DatAmbiguousDisplay,
     string DedupeRate,
     string MoveConsequenceText,
     string ConvertedDisplay,
@@ -36,6 +41,16 @@ public sealed record DashboardProjection(
             : $"{projection.HealthScore}%";
         var games = isConvertOnlyRun ? "–" : projection.Games.ToString();
         var datHits = isConvertOnlyRun ? "–" : projection.DatMatches.ToString();
+        var hasDatAudit = projection.DatHaveCount > 0
+                          || projection.DatHaveWrongNameCount > 0
+                          || projection.DatMissCount > 0
+                          || projection.DatUnknownCount > 0
+                          || projection.DatAmbiguousCount > 0;
+        var datHaveDisplay = hasDatAudit ? projection.DatHaveCount.ToString() : "–";
+        var datWrongNameDisplay = hasDatAudit ? projection.DatHaveWrongNameCount.ToString() : "–";
+        var datMissDisplay = hasDatAudit ? projection.DatMissCount.ToString() : "–";
+        var datUnknownDisplay = hasDatAudit ? projection.DatUnknownCount.ToString() : "–";
+        var datAmbiguousDisplay = hasDatAudit ? projection.DatAmbiguousCount.ToString() : "–";
         var dedupeDenominator = projection.Keep + projection.Dupes;
         var dedupeRate = isConvertOnlyRun || dedupeDenominator <= 0
             ? "–"
@@ -68,6 +83,11 @@ public sealed record DashboardProjection(
             HealthScore: healthScore,
             Games: games,
             DatHits: datHits,
+            DatHaveDisplay: datHaveDisplay,
+            DatWrongNameDisplay: datWrongNameDisplay,
+            DatMissDisplay: datMissDisplay,
+            DatUnknownDisplay: datUnknownDisplay,
+            DatAmbiguousDisplay: datAmbiguousDisplay,
             DedupeRate: dedupeRate,
             MoveConsequenceText: moveConsequenceText,
             ConvertedDisplay: convertedDisplay,

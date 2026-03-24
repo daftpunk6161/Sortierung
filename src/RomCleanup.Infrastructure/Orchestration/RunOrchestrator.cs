@@ -30,6 +30,7 @@ public sealed partial class RunOrchestrator
     private readonly DatIndex? _datIndex;
     private readonly Action<string>? _onProgress;
     private readonly IPhasePlanBuilder _phasePlanBuilder;
+    private readonly Contracts.Ports.IHeaderlessHasher? _headerlessHasher;
 
     public RunOrchestrator(
         IFileSystem fs,
@@ -40,7 +41,8 @@ public sealed partial class RunOrchestrator
         DatIndex? datIndex = null,
         Action<string>? onProgress = null,
         IPhasePlanBuilder? phasePlanBuilder = null,
-        ArchiveHashService? archiveHashService = null)
+        ArchiveHashService? archiveHashService = null,
+        Contracts.Ports.IHeaderlessHasher? headerlessHasher = null)
     {
         _fs = fs;
         _audit = audit;
@@ -51,6 +53,7 @@ public sealed partial class RunOrchestrator
         _datIndex = datIndex;
         _onProgress = onProgress;
         _phasePlanBuilder = phasePlanBuilder ?? new PhasePlanBuilder();
+        _headerlessHasher = headerlessHasher;
     }
 
     /// <summary>
@@ -178,6 +181,7 @@ public sealed partial class RunOrchestrator
 
         var phasePlan = _phasePlanBuilder.Build(options, new StandardPhaseStepActions
         {
+            DatAudit = (state, ct) => RunDatAuditStep(state, options, result, metrics, ct),
             Deduplicate = (state, ct) => RunDeduplicateStep(state, options, result, metrics, ct),
             JunkRemoval = (state, ct) => RunJunkRemovalStep(state, options, result, metrics, ct),
             DatRename = (state, ct) => RunDatRenameStep(state, options, result, metrics, ct),
@@ -187,6 +191,25 @@ public sealed partial class RunOrchestrator
         });
 
         ExecutePhasePlan(phasePlan, pipelineState, cancellationToken);
+
+        // Propagate DatAudit / DatRename results from pipeline state to builder
+        if (pipelineState.DatAuditResult is { } datAudit)
+        {
+            result.DatAuditResult = datAudit;
+            result.DatHaveCount = datAudit.Entries.Count(e => e.Status == DatAuditStatus.Have);
+            result.DatHaveWrongNameCount = datAudit.Entries.Count(e => e.Status == DatAuditStatus.HaveWrongName);
+            result.DatMissCount = datAudit.Entries.Count(e => e.Status == DatAuditStatus.Miss);
+            result.DatUnknownCount = datAudit.Entries.Count(e => e.Status == DatAuditStatus.Unknown);
+            result.DatAmbiguousCount = datAudit.Entries.Count(e => e.Status == DatAuditStatus.Ambiguous);
+        }
+
+        if (pipelineState.DatRenameResult is { } datRename)
+        {
+            result.DatRenameProposedCount = datRename.ProposedCount;
+            result.DatRenameExecutedCount = datRename.ExecutedCount;
+            result.DatRenameSkippedCount = datRename.SkippedCount;
+            result.DatRenameFailedCount = datRename.FailedCount;
+        }
 
         sw.Stop();
         // Derive status based on actual errors

@@ -19,6 +19,10 @@ public sealed class RomCandidate
     public string Extension { get; init; } = "";
     public string ConsoleKey { get; init; } = "";
     public bool DatMatch { get; init; }
+    public string? Hash { get; init; }
+    public string? HeaderlessHash { get; init; }
+    public string? DatGameName { get; init; }
+    public DatAuditStatus DatAuditStatus { get; init; } = DatAuditStatus.Unknown;
     public FileCategory Category { get; init; } = FileCategory.Game;
     public string ClassificationReasonCode { get; init; } = "game-default";
     public int ClassificationConfidence { get; init; } = 100;

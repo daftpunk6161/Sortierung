@@ -20,6 +20,7 @@ public sealed partial class MainViewModel
         nameof(TrashRoot), nameof(DatRoot), nameof(AuditRoot), nameof(Ps3DupesRoot),
         nameof(ToolChdman), nameof(ToolDolphin), nameof(Tool7z), nameof(ToolPsxtract), nameof(ToolCiso),
         nameof(UseDat), nameof(DatHashType), nameof(DatFallback),
+        nameof(EnableDatRename),
         nameof(SortConsole), nameof(RemoveJunk), nameof(OnlyGames), nameof(KeepUnknownWhenOnlyGames), nameof(AliasKeying), nameof(AggressiveJunk),
         nameof(DryRun), nameof(ConvertEnabled), nameof(ConfirmMove), nameof(ConflictPolicy),
         nameof(PreferEU), nameof(PreferUS), nameof(PreferJP), nameof(PreferWORLD),
@@ -116,6 +117,9 @@ public sealed partial class MainViewModel
 
     private bool _useDat;
     public bool UseDat { get => _useDat; set { if (SetProperty(ref _useDat, value)) RefreshStatus(); } }
+
+    [ObservableProperty]
+    private bool _enableDatRename;
 
     [ObservableProperty]
     private bool _datFallback;

@@ -84,4 +84,51 @@ public sealed class UiProjectionTests
         Assert.Single(dashboard.ConsoleDistribution);
         Assert.Single(dashboard.DedupeGroups);
     }
+
+    [Fact]
+    public void DashboardProjection_ShouldExposeDatAuditDisplays_WhenDatAuditCountersPresent_Issue9()
+    {
+        var result = new RunResult
+        {
+            DatHaveCount = 4,
+            DatHaveWrongNameCount = 3,
+            DatMissCount = 2,
+            DatUnknownCount = 1,
+            DatAmbiguousCount = 5,
+            AllCandidates = new[]
+            {
+                new RomCandidate { MainPath = "a.zip", Category = FileCategory.Game, DatMatch = true }
+            }
+        };
+
+        var projection = RunProjectionFactory.Create(result);
+        var dashboard = DashboardProjection.From(projection, result, isConvertOnlyRun: false);
+
+        Assert.Equal("4", dashboard.DatHaveDisplay);
+        Assert.Equal("3", dashboard.DatWrongNameDisplay);
+        Assert.Equal("2", dashboard.DatMissDisplay);
+        Assert.Equal("1", dashboard.DatUnknownDisplay);
+        Assert.Equal("5", dashboard.DatAmbiguousDisplay);
+    }
+
+    [Fact]
+    public void DashboardProjection_ShouldShowDashForDatAuditDisplays_WhenAllCountersZero_Issue9()
+    {
+        var result = new RunResult
+        {
+            AllCandidates = new[]
+            {
+                new RomCandidate { MainPath = "a.zip", Category = FileCategory.Game, DatMatch = false }
+            }
+        };
+
+        var projection = RunProjectionFactory.Create(result);
+        var dashboard = DashboardProjection.From(projection, result, isConvertOnlyRun: false);
+
+        Assert.Equal("–", dashboard.DatHaveDisplay);
+        Assert.Equal("–", dashboard.DatWrongNameDisplay);
+        Assert.Equal("–", dashboard.DatMissDisplay);
+        Assert.Equal("–", dashboard.DatUnknownDisplay);
+        Assert.Equal("–", dashboard.DatAmbiguousDisplay);
+    }
 }

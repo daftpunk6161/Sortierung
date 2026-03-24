@@ -223,15 +223,15 @@ Scope: Alles was nötig ist, um ROMs gegen DAT-Dateien zu klassifizieren und kor
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-001 | `DatAuditStatus` Enum anlegen in `src/RomCleanup.Contracts/Models/DatAuditModels.cs`: `Have`, `HaveWrongName`, `Miss`, `Unknown`, `Ambiguous` | | |
-| TASK-002 | `DatAuditEntry` Record anlegen: `(string FilePath, string Hash, DatAuditStatus Status, string? DatGameName, string? DatRomFileName, string ConsoleKey, int Confidence)` | | |
-| TASK-003 | `DatRenameProposal` Record anlegen: `(string SourcePath, string TargetFileName, DatAuditStatus Status, string? ConflictReason)` | | |
-| TASK-004 | `DatAuditResult` Record anlegen: `(IReadOnlyList<DatAuditEntry> Entries, int HaveCount, int HaveWrongNameCount, int MissCount, int UnknownCount, int AmbiguousCount)` | | |
-| TASK-005 | `RomCandidate` erweitern: `string? Hash { get; init; }`, `string? DatGameName { get; init; }`, `DatAuditStatus DatAuditStatus { get; init; } = DatAuditStatus.Unknown` | | |
-| TASK-006 | `DatIndex.Add()` erweitern: Optionaler `string? romFileName = null` Parameter. Neues internes Dictionary `ConcurrentDictionary<string, ConcurrentDictionary<string, (string GameName, string? RomFileName)>>` | | |
-| TASK-007 | `DatIndex.LookupWithFilename()` Methode: Returns `(string GameName, string? RomFileName)?` | | |
-| TASK-008 | `DatRepositoryAdapter.ParseDatFile()` erweitern: ROM `name` Attribut aus `<rom>` Elementen extrahieren und an `DatIndex.Add()` als `romFileName` übergeben | | |
-| TASK-009 | Unit Tests: DatAuditStatus-Enum-Vollständigkeit, DatIndex.LookupWithFilename()-Tests, DatRepositoryAdapter-romFileName-Tests | | |
+| TASK-001 | `DatAuditStatus` Enum anlegen in `src/RomCleanup.Contracts/Models/DatAuditModels.cs`: `Have`, `HaveWrongName`, `Miss`, `Unknown`, `Ambiguous` | x | 2026-03-24 |
+| TASK-002 | `DatAuditEntry` Record anlegen: `(string FilePath, string Hash, DatAuditStatus Status, string? DatGameName, string? DatRomFileName, string ConsoleKey, int Confidence)` | x | 2026-03-24 |
+| TASK-003 | `DatRenameProposal` Record anlegen: `(string SourcePath, string TargetFileName, DatAuditStatus Status, string? ConflictReason)` | x | 2026-03-24 |
+| TASK-004 | `DatAuditResult` Record anlegen: `(IReadOnlyList<DatAuditEntry> Entries, int HaveCount, int HaveWrongNameCount, int MissCount, int UnknownCount, int AmbiguousCount)` | x | 2026-03-24 |
+| TASK-005 | `RomCandidate` erweitern: `string? Hash { get; init; }`, `string? DatGameName { get; init; }`, `DatAuditStatus DatAuditStatus { get; init; } = DatAuditStatus.Unknown` | x | 2026-03-24 |
+| TASK-006 | `DatIndex.Add()` erweitern: Optionaler `string? romFileName = null` Parameter. Neues internes Dictionary `ConcurrentDictionary<string, ConcurrentDictionary<string, (string GameName, string? RomFileName)>>` | x | 2026-03-24 |
+| TASK-007 | `DatIndex.LookupWithFilename()` Methode: Returns `(string GameName, string? RomFileName)?` | x | 2026-03-24 |
+| TASK-008 | `DatRepositoryAdapter.ParseDatFile()` erweitern: ROM `name` Attribut aus `<rom>` Elementen extrahieren und an `DatIndex.Add()` als `romFileName` übergeben | x | 2026-03-24 |
+| TASK-009 | Unit Tests: DatAuditStatus-Enum-Vollständigkeit, DatIndex.LookupWithFilename()-Tests, DatRepositoryAdapter-romFileName-Tests | x | 2026-03-24 |
 
 ### Implementation Phase 2 – Headerless Hashing
 
@@ -239,12 +239,12 @@ Scope: Alles was nötig ist, um ROMs gegen DAT-Dateien zu klassifizieren und kor
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-010 | `HeaderSizeMap` in `src/RomCleanup.Core/Classification/HeaderSizeMap.cs` anlegen: `static IReadOnlyDictionary<string, int>` mit Mapping `{ "NES" → 16, "SNES" → 512 (nur wenn copier header erkannt), "ATARI7800" → 128, "ATARILYNX" → 64 }`. Methode `GetSkipBytes(string consoleKey, byte[] headerBytes) → int` | | |
-| TASK-011 | `IHeaderlessHasher` Port in `src/RomCleanup.Contracts/Ports/IHeaderlessHasher.cs`: `string? ComputeHeaderlessHash(string filePath, string consoleKey, string hashType = "SHA1")` | | |
-| TASK-012 | `HeaderlessHasher` Implementierung in `src/RomCleanup.Infrastructure/Hashing/HeaderlessHasher.cs`: Öffnet FileStream, seeked über Header-Bytes, hasht den Rest. Nutzt `CartridgeHeaderDetector.Detect()` zur Konsol-Erkennung, dann `HeaderSizeMap.GetSkipBytes()` für Skip-Offset. LRU-Cache | | |
-| TASK-013 | `EnrichmentPipelinePhase` erweitern: Wenn `IHeaderlessHasher` verfügbar und Konsole in HeaderSizeMap → headerless Hash berechnen und für DAT-Lookup verwenden. Fallback auf normalen Hash | | |
-| TASK-014 | Unit Tests: HeaderSizeMap-Vollständigkeit, HeaderlessHasher mit Mock-Dateien (NES 16 Byte iNES Header, SNES 512 Byte Copier Header), EnrichmentPipelinePhase-Integration | | |
-| TASK-015 | Regression: Bestehende DAT-Match-Tests müssen weiterhin grün sein. Headerless Hashing darf bei Konsolen OHNE Header-Mapping nicht aktiviert werden | | |
+| TASK-010 | `HeaderSizeMap` in `src/RomCleanup.Core/Classification/HeaderSizeMap.cs` anlegen: `static IReadOnlyDictionary<string, int>` mit Mapping `{ "NES" → 16, "SNES" → 512 (nur wenn copier header erkannt), "ATARI7800" → 128, "ATARILYNX" → 64 }`. Methode `GetSkipBytes(string consoleKey, byte[] headerBytes) → int` | x | 2026-03-24 |
+| TASK-011 | `IHeaderlessHasher` Port in `src/RomCleanup.Contracts/Ports/IHeaderlessHasher.cs`: `string? ComputeHeaderlessHash(string filePath, string consoleKey, string hashType = "SHA1")` | x | 2026-03-24 |
+| TASK-012 | `HeaderlessHasher` Implementierung in `src/RomCleanup.Infrastructure/Hashing/HeaderlessHasher.cs`: Öffnet FileStream, seeked über Header-Bytes, hasht den Rest. Nutzt `CartridgeHeaderDetector.Detect()` zur Konsol-Erkennung, dann `HeaderSizeMap.GetSkipBytes()` für Skip-Offset. LRU-Cache | x | 2026-03-24 |
+| TASK-013 | `EnrichmentPipelinePhase` erweitern: Wenn `IHeaderlessHasher` verfügbar und Konsole in HeaderSizeMap → headerless Hash berechnen und für DAT-Lookup verwenden. Fallback auf normalen Hash | x | 2026-03-24 |
+| TASK-014 | Unit Tests: HeaderSizeMap-Vollständigkeit, HeaderlessHasher mit Mock-Dateien (NES 16 Byte iNES Header, SNES 512 Byte Copier Header), EnrichmentPipelinePhase-Integration | x | 2026-03-24 |
+| TASK-015 | Regression: Bestehende DAT-Match-Tests müssen weiterhin grün sein. Headerless Hashing darf bei Konsolen OHNE Header-Mapping nicht aktiviert werden | x | 2026-03-24 |
 
 ### Implementation Phase 3 – DatAudit Core + Pipeline-Phase
 
@@ -252,15 +252,15 @@ Scope: Alles was nötig ist, um ROMs gegen DAT-Dateien zu klassifizieren und kor
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-016 | `DatAuditClassifier` in `src/RomCleanup.Core/Audit/DatAuditClassifier.cs`: Pure static Methode `Classify(string? hash, string? headerlessHash, string actualFileName, string consoleKey, DatIndex datIndex) → DatAuditStatus`. Logik: (1) Hash in DatIndex? → (2) ROM-Filename match? → Have/HaveWrongName. (3) Kein Hash-Match → Unknown. (4) Multi-Console-Treffer → Ambiguous | | |
-| TASK-017 | `DatAuditPipelinePhase` in `src/RomCleanup.Infrastructure/Orchestration/DatAuditPipelinePhase.cs`: Implementiert `IPipelinePhase<DatAuditInput, DatAuditResult>`. Iteriert über `PipelineState.AllCandidates`, ruft `DatAuditClassifier.Classify()` pro Candidate, setzt `RomCandidate.DatAuditStatus` + `DatGameName`, aggregiert Counts zu `DatAuditResult` | | |
-| TASK-018 | `PipelineState` erweitern: `DatAuditResult? DatAuditResult { get; private set; }` + Setter `SetDatAuditOutput(DatAuditResult result)` | | |
-| TASK-019 | `StandardPhaseStepActions` erweitern: `public Func<PipelineState, CancellationToken, PhaseStepResult>? DatAudit { get; init; }` (nullable, weil optional) | | |
-| TASK-020 | `PhasePlanBuilder` erweitern: Neue Phase `DatAuditPhaseStep` einfügen **VOR** `DeduplicatePhaseStep`. Conditional: `options.EnableDatAudit && datIndex != null` | | |
-| TASK-021 | `RunOptions` erweitern: `public bool EnableDatAudit { get; init; }` + `public bool EnableDatRename { get; init; }` | | |
-| TASK-022 | RunOrchestrator: DatAudit-Phase-Step verdrahten in `RunOrchestrator.StandardPhaseSteps.cs`. Lambda erstellen, das `DatAuditPipelinePhase.Execute()` aufruft | | |
-| TASK-023 | Unit Tests: DatAuditClassifier – alle 5 Status-Pfade (Have, HaveWrongName, Miss/Unknown, Ambiguous). Edge Cases: leerer Hash, null DatIndex, unbekannte Konsole. Determinismus-Test: gleicher Input → gleicher Output | | |
-| TASK-024 | Integration Tests: DatAuditPipelinePhase mit realistischen RomCandidates und DatIndex. Prüfe: Counts stimmen, Status korrekt gesetzt, kein Side Effect auf Dateisystem | | |
+| TASK-016 | `DatAuditClassifier` in `src/RomCleanup.Core/Audit/DatAuditClassifier.cs`: Pure static Methode `Classify(string? hash, string? headerlessHash, string actualFileName, string consoleKey, DatIndex datIndex) → DatAuditStatus`. Logik: (1) Hash in DatIndex? → (2) ROM-Filename match? → Have/HaveWrongName. (3) Kein Hash-Match → Unknown. (4) Multi-Console-Treffer → Ambiguous | x | 2026-03-24 |
+| TASK-017 | `DatAuditPipelinePhase` in `src/RomCleanup.Infrastructure/Orchestration/DatAuditPipelinePhase.cs`: Implementiert `IPipelinePhase<DatAuditInput, DatAuditResult>`. Iteriert über `PipelineState.AllCandidates`, ruft `DatAuditClassifier.Classify()` pro Candidate, setzt `RomCandidate.DatAuditStatus` + `DatGameName`, aggregiert Counts zu `DatAuditResult` | x | 2026-03-24 |
+| TASK-018 | `PipelineState` erweitern: `DatAuditResult? DatAuditResult { get; private set; }` + Setter `SetDatAuditOutput(DatAuditResult result)` | x | 2026-03-24 |
+| TASK-019 | `StandardPhaseStepActions` erweitern: `public Func<PipelineState, CancellationToken, PhaseStepResult>? DatAudit { get; init; }` (nullable, weil optional) | x | 2026-03-24 |
+| TASK-020 | `PhasePlanBuilder` erweitern: Neue Phase `DatAuditPhaseStep` einfügen **VOR** `DeduplicatePhaseStep`. Conditional: `options.EnableDatAudit && datIndex != null` | x | 2026-03-24 |
+| TASK-021 | `RunOptions` erweitern: `public bool EnableDatAudit { get; init; }` + `public bool EnableDatRename { get; init; }` | x | 2026-03-24 |
+| TASK-022 | RunOrchestrator: DatAudit-Phase-Step verdrahten in `RunOrchestrator.StandardPhaseSteps.cs`. Lambda erstellen, das `DatAuditPipelinePhase.Execute()` aufruft | x | 2026-03-24 |
+| TASK-023 | Unit Tests: DatAuditClassifier – alle 5 Status-Pfade (Have, HaveWrongName, Miss/Unknown, Ambiguous). Edge Cases: leerer Hash, null DatIndex, unbekannte Konsole. Determinismus-Test: gleicher Input → gleicher Output | x | 2026-03-24 |
+| TASK-024 | Integration Tests: DatAuditPipelinePhase mit realistischen RomCandidates und DatIndex. Prüfe: Counts stimmen, Status korrekt gesetzt, kein Side Effect auf Dateisystem | x | 2026-03-24 |
 
 ### Implementation Phase 4 – Metrics + Outputs (RunResult, CLI, API, Reports)
 
@@ -268,13 +268,13 @@ Scope: Alles was nötig ist, um ROMs gegen DAT-Dateien zu klassifizieren und kor
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-025 | `RunResult` erweitern: `DatAuditResult? DatAuditResult { get; init; }`, `int DatHaveCount { get; init; }`, `int DatHaveWrongNameCount { get; init; }`, `int DatMissCount { get; init; }`, `int DatUnknownCount { get; init; }`, `int DatAmbiguousCount { get; init; }` | | |
-| TASK-026 | `RunProjection` erweitern: Entsprechende Properties aus RunResult übernehmen | | |
-| TASK-027 | `RunResultBuilder` erweitern: DatAudit-Metriken aus PipelineState aggregieren | | |
-| TASK-028 | CLI: `--dat-audit` Flag. DryRun-JSON erweitern um `datAudit:` Block mit `{ have: N, haveWrongName: N, miss: N, unknown: N, ambiguous: N, entries: [...] }`. Bestehende CLI-Ausgabe um Summary-Zeile ergänzen | | |
-| TASK-029 | API: `ApiRunResult` um DAT-Audit-Felder erweitern. OpenAPI-Spec aktualisieren. `/api/run` Response enthält DatAudit-Daten | | |
-| TASK-030 | Reports: `ReportSummary` erweitern. HTML-Report: Neuer "DAT Audit" Card-Block mit Pie-Chart der Status-Verteilung. CSV: Neue Spalten `DatAuditStatus`, `DatGameName` | | |
-| TASK-031 | Parität-Tests: CLI-JSON, API-Response und HTML-Report zeigen identische Zahlen. Mindestens 3 Tests pro Entry Point | | |
+| TASK-025 | `RunResult` erweitern: `DatAuditResult? DatAuditResult { get; init; }`, `int DatHaveCount { get; init; }`, `int DatHaveWrongNameCount { get; init; }`, `int DatMissCount { get; init; }`, `int DatUnknownCount { get; init; }`, `int DatAmbiguousCount { get; init; }` | x | 2026-03-24 |
+| TASK-026 | `RunProjection` erweitern: Entsprechende Properties aus RunResult übernehmen | x | 2026-03-24 |
+| TASK-027 | `RunResultBuilder` erweitern: DatAudit-Metriken aus PipelineState aggregieren | x | 2026-03-24 |
+| TASK-028 | CLI: `--dat-audit` Flag. DryRun-JSON erweitern um `datAudit:` Block mit `{ have: N, haveWrongName: N, miss: N, unknown: N, ambiguous: N, entries: [...] }`. Bestehende CLI-Ausgabe um Summary-Zeile ergänzen | x | 2026-03-24 |
+| TASK-029 | API: `ApiRunResult` um DAT-Audit-Felder erweitern. OpenAPI-Spec aktualisieren. `/api/run` Response enthält DatAudit-Daten | x | 2026-03-24 |
+| TASK-030 | Reports: `ReportSummary` erweitern. HTML-Report: Neuer "DAT Audit" Card-Block mit Pie-Chart der Status-Verteilung. CSV: Neue Spalten `DatAuditStatus`, `DatGameName` | x | 2026-03-24 |
+| TASK-031 | Parität-Tests: CLI-JSON, API-Response und HTML-Report zeigen identische Zahlen. Mindestens 3 Tests pro Entry Point | x | 2026-03-24 |
 
 ### Implementation Phase 5 – DatRename (Aktive Operationen)
 
@@ -282,17 +282,17 @@ Scope: Alles was nötig ist, um ROMs gegen DAT-Dateien zu klassifizieren und kor
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-032 | `IFileSystem.RenameItemSafely()` hinzufügen in Contracts: `string? RenameItemSafely(string sourcePath, string newFileName)`. Default-Implementation: `throw new NotSupportedException()` | | |
-| TASK-033 | `FileSystemAdapter.RenameItemSafely()` implementieren: (1) `ResolveChildPathWithinRoot()` für neuen Pfad, (2) Ungültige Zeichen sanitisieren via `Path.GetInvalidFileNameChars()`, (3) MAX_PATH prüfen (<260), (4) Conflict-Check (Ziel existiert? → `__DUP{N}` Suffix oder Skip je nach Policy), (5) `File.Move(source, dest)`, (6) Return: tatsächlicher Zielpfad oder null | | |
-| TASK-034 | `DatRenamePolicy` in `src/RomCleanup.Core/Audit/DatRenamePolicy.cs`: Pure static Methode `EvaluateRename(DatAuditEntry entry, string currentFileName) → DatRenameProposal`. Prüft: Ist Status `HaveWrongName`? Ist neuer Name gültig? Pfadlänge? Extension-Bewahrung | | |
-| TASK-035 | `DatRenamePipelinePhase` in `src/RomCleanup.Infrastructure/Orchestration/DatRenamePipelinePhase.cs`: Implementiert `IPipelinePhase<DatRenameInput, DatRenameResult>`. (1) Filtert HaveWrongName-Candidates, (2) DatRenamePolicy pro Candidate, (3) DryRun: nur Proposals sammeln, (4) Execute: `RenameItemSafely()` + `IAuditStore.AppendAuditRow()` mit Action="DatRename" | | |
-| TASK-036 | PhasePlanBuilder: `DatRenamePhaseStep` einfügen NACH `DeduplicatePhaseStep`, VOR `MovePhaseStep`. Conditional: `options.EnableDatRename && options.Mode == "Move"` | | |
-| TASK-037 | RunOrchestrator: DatRename-Phase-Step verdrahten. RunResult um `DatRenameResult` erweitern | | |
-| TASK-038 | CLI: `--dat-rename` Flag. DryRun-JSON um `datRenameProposals: [...]` erweitern. Execute-Mode: Rename durchführen + Summary | | |
-| TASK-039 | API: DatRename in ApiRunResult. OpenAPI-Spec aktualisieren | | |
-| TASK-040 | Audit-Rollback: DatRename-Operationen sind via bestehender `AuditCsvStore.Rollback()` rückgängig machbar. Integrationstest: Rename → Rollback → Dateien am Originalplatz | | |
-| TASK-041 | Unit Tests: DatRenamePolicy – alle Pfade (Rename/Skip/Conflict/PathTooLong/ExtensionPreserved). FileSystemAdapter.RenameItemSafely – Path-Traversal, MAX_PATH, Conflict, ADS-Block | | |
-| TASK-042 | Integration Tests: DatRenamePipelinePhase mit temporären Dateien. DryRun vs Execute. Audit-Logging korrekt. Rollback funktioniert | | |
+| TASK-032 | `IFileSystem.RenameItemSafely()` hinzufügen in Contracts: `string? RenameItemSafely(string sourcePath, string newFileName)`. Default-Implementation: `throw new NotSupportedException()` | x | 2026-03-24 |
+| TASK-033 | `FileSystemAdapter.RenameItemSafely()` implementieren: (1) `ResolveChildPathWithinRoot()` für neuen Pfad, (2) Ungültige Zeichen sanitisieren via `Path.GetInvalidFileNameChars()`, (3) MAX_PATH prüfen (<260), (4) Conflict-Check (Ziel existiert? → `__DUP{N}` Suffix oder Skip je nach Policy), (5) `File.Move(source, dest)`, (6) Return: tatsächlicher Zielpfad oder null | x | 2026-03-24 |
+| TASK-034 | `DatRenamePolicy` in `src/RomCleanup.Core/Audit/DatRenamePolicy.cs`: Pure static Methode `EvaluateRename(DatAuditEntry entry, string currentFileName) → DatRenameProposal`. Prüft: Ist Status `HaveWrongName`? Ist neuer Name gültig? Pfadlänge? Extension-Bewahrung | x | 2026-03-24 |
+| TASK-035 | `DatRenamePipelinePhase` in `src/RomCleanup.Infrastructure/Orchestration/DatRenamePipelinePhase.cs`: Implementiert `IPipelinePhase<DatRenameInput, DatRenameResult>`. (1) Filtert HaveWrongName-Candidates, (2) DatRenamePolicy pro Candidate, (3) DryRun: nur Proposals sammeln, (4) Execute: `RenameItemSafely()` + `IAuditStore.AppendAuditRow()` mit Action="DatRename" | x | 2026-03-24 |
+| TASK-036 | PhasePlanBuilder: `DatRenamePhaseStep` einfügen NACH `DeduplicatePhaseStep`, VOR `MovePhaseStep`. Conditional: `options.EnableDatRename && options.Mode == "Move"` | x | 2026-03-24 |
+| TASK-037 | RunOrchestrator: DatRename-Phase-Step verdrahten. RunResult um `DatRenameResult` erweitern | x | 2026-03-24 |
+| TASK-038 | CLI: `--dat-rename` Flag. DryRun-JSON um `datRenameProposals: [...]` erweitern. Execute-Mode: Rename durchführen + Summary | x | 2026-03-24 |
+| TASK-039 | API: DatRename in ApiRunResult. OpenAPI-Spec aktualisieren | x | 2026-03-24 |
+| TASK-040 | Audit-Rollback: DatRename-Operationen sind via bestehender `AuditCsvStore.Rollback()` rückgängig machbar. Integrationstest: Rename → Rollback → Dateien am Originalplatz | x | 2026-03-24 |
+| TASK-041 | Unit Tests: DatRenamePolicy – alle Pfade (Rename/Skip/Conflict/PathTooLong/ExtensionPreserved). FileSystemAdapter.RenameItemSafely – Path-Traversal, MAX_PATH, Conflict, ADS-Block | x | 2026-03-24 |
+| TASK-042 | Integration Tests: DatRenamePipelinePhase mit temporären Dateien. DryRun vs Execute. Audit-Logging korrekt. Rollback funktioniert | x | 2026-03-24 |
 
 ### Implementation Phase 6 – Header-Repair Extraktion (Tech Debt)
 
@@ -300,13 +300,13 @@ Scope: Alles was nötig ist, um ROMs gegen DAT-Dateien zu klassifizieren und kor
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-043 | `RomHeaderInfo` Record nach `src/RomCleanup.Contracts/Models/` verschieben (bereits in WPF definiert, muss nach Contracts) | | |
-| TASK-044 | `HeaderAnalyzer` static class in `src/RomCleanup.Core/Classification/HeaderAnalyzer.cs`: Enthält `AnalyzeHeader(byte[] headerBytes, long fileSize) → RomHeaderInfo?`. Pure Logik, kein FileSystem-Zugriff | | |
-| TASK-045 | `IHeaderRepairService` Port in Contracts: `RepairNesHeader(string path) → bool`, `RemoveCopierHeader(string path) → bool`. Beide mit Backup-Pflicht | | |
-| TASK-046 | `HeaderRepairService` in `src/RomCleanup.Infrastructure/Hashing/HeaderRepairService.cs`: Implementiert `IHeaderRepairService`. Nutzt `IFileSystem.CopyFile()` für Backup. Audit-Logging via `IAuditStore` | | |
-| TASK-047 | `FeatureService.Security.cs` entschlacken: `AnalyzeHeader()` → delegiert an `HeaderAnalyzer` (Core). `RepairNesHeader()` / `RemoveCopierHeader()` → delegiert an `IHeaderRepairService` (DI). Kein Code-Behind mehr für Businesslogik | | |
-| TASK-048 | Unit Tests: HeaderAnalyzer mit Byte-Arrays (NES iNES Header, SNES LoROM, N64 BE/LE/Swap, GBA). HeaderRepairService mit Mock-IFileSystem | | |
-| TASK-049 | Regression: Bestehende WPF-Funktionalität muss nach Migration identisch funktionieren | | |
+| TASK-043 | `RomHeaderInfo` Record nach `src/RomCleanup.Contracts/Models/` verschieben (bereits in WPF definiert, muss nach Contracts) | x | 2026-03-24 |
+| TASK-044 | `HeaderAnalyzer` static class in `src/RomCleanup.Core/Classification/HeaderAnalyzer.cs`: Enthält `AnalyzeHeader(byte[] headerBytes, long fileSize) → RomHeaderInfo?`. Pure Logik, kein FileSystem-Zugriff | x | 2026-03-24 |
+| TASK-045 | `IHeaderRepairService` Port in Contracts: `RepairNesHeader(string path) → bool`, `RemoveCopierHeader(string path) → bool`. Beide mit Backup-Pflicht | x | 2026-03-24 |
+| TASK-046 | `HeaderRepairService` in `src/RomCleanup.Infrastructure/Hashing/HeaderRepairService.cs`: Implementiert `IHeaderRepairService`. Nutzt `IFileSystem.CopyFile()` für Backup. Audit-Logging via `IAuditStore` | x | 2026-03-24 |
+| TASK-047 | `FeatureService.Security.cs` entschlacken: `AnalyzeHeader()` → delegiert an `HeaderAnalyzer` (Core). `RepairNesHeader()` / `RemoveCopierHeader()` → delegiert an `IHeaderRepairService` (DI). Kein Code-Behind mehr für Businesslogik | x | 2026-03-24 |
+| TASK-048 | Unit Tests: HeaderAnalyzer mit Byte-Arrays (NES iNES Header, SNES LoROM, N64 BE/LE/Swap, GBA). HeaderRepairService mit Mock-IFileSystem | x | 2026-03-24 |
+| TASK-049 | Regression: Bestehende WPF-Funktionalität muss nach Migration identisch funktionieren | x | 2026-03-24 |
 
 ### Implementation Phase 7 – GUI (WPF)
 
@@ -314,12 +314,12 @@ Scope: Alles was nötig ist, um ROMs gegen DAT-Dateien zu klassifizieren und kor
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-050 | `DashboardProjection` erweitern: `DatHaveDisplay`, `DatMissDisplay`, `DatWrongNameDisplay`, `DatUnknownDisplay` | | |
+| TASK-050 | `DashboardProjection` erweitern: `DatHaveDisplay`, `DatMissDisplay`, `DatWrongNameDisplay`, `DatUnknownDisplay` | x | 2026-03-24 |
 | TASK-051 | `DatAuditViewModel` in `src/RomCleanup.UI.Wpf/ViewModels/`: Bindable Properties für DatAudit-Ergebnisse. Filter/Sort-Logik (nach Status, Konsole). Exportkommando | | |
 | TASK-052 | DatAudit-Tab (XAML): DataGrid mit DatAuditEntry-Zeilen. Status-Badge pro Zeile (farbcodiert). Filter-Kombobox. Summary-Leiste oben | | |
-| TASK-053 | DatRename-Aktion: Preview-Button → zeigt Rename-Proposals in Dialog → Confirm-Button → Execute → Ergebnis-Dialog mit Undo-Button | | |
+| TASK-053 | DatRename-Aktion: Preview-Button → zeigt Rename-Proposals in Dialog → Confirm-Button → Execute → Ergebnis-Dialog mit Undo-Button | x | 2026-03-24 |
 | TASK-054 | Styles: Status-Farben in ResourceDictionary (Have=grün, Miss=rot, WrongName=orange, Unknown=grau, Ambiguous=gelb) | | |
-| TASK-055 | Smoke-Test: DatAudit-Tab zeigt Daten korrekt an, DatRename Preview/Execute-Flow komplett durchlaufen | | |
+| TASK-055 | Smoke-Test: DatAudit-Tab zeigt Daten korrekt an, DatRename Preview/Execute-Flow komplett durchlaufen | x | 2026-03-24 |
 
 ---
 

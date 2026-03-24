@@ -49,6 +49,15 @@ public sealed record ReportSummary
     public int ConvertBlockedCount { get; init; }
     public int ConvertReviewCount { get; init; }
     public long ConvertSavedBytes { get; init; }
+    public int DatHaveCount { get; init; }
+    public int DatHaveWrongNameCount { get; init; }
+    public int DatMissCount { get; init; }
+    public int DatUnknownCount { get; init; }
+    public int DatAmbiguousCount { get; init; }
+    public int DatRenameProposedCount { get; init; }
+    public int DatRenameExecutedCount { get; init; }
+    public int DatRenameSkippedCount { get; init; }
+    public int DatRenameFailedCount { get; init; }
     public int JunkRemovedCount { get; init; }
     public int JunkFailCount { get; init; }
     public int SkipCount { get; init; }
@@ -207,6 +216,22 @@ tr:hover { background: rgba(137,180,250,0.05); }
         AppendCard(sb, "bios", s.BiosCount.ToString(), "BIOS");
         AppendCard(sb, "", s.GamesCount.ToString(), "Games");
         AppendCard(sb, "dat", s.DatMatches.ToString(), "DAT Matches");
+        if (s.DatHaveCount > 0)
+            AppendCard(sb, "dat", s.DatHaveCount.ToString(), "DAT Have");
+        if (s.DatHaveWrongNameCount > 0)
+            AppendCard(sb, "dat", s.DatHaveWrongNameCount.ToString(), "DAT WrongName");
+        if (s.DatMissCount > 0)
+            AppendCard(sb, "dat", s.DatMissCount.ToString(), "DAT Miss");
+        if (s.DatUnknownCount > 0)
+            AppendCard(sb, "dat", s.DatUnknownCount.ToString(), "DAT Unknown");
+        if (s.DatAmbiguousCount > 0)
+            AppendCard(sb, "dat", s.DatAmbiguousCount.ToString(), "DAT Ambiguous");
+        if (s.DatRenameProposedCount > 0)
+            AppendCard(sb, "dat", s.DatRenameProposedCount.ToString(), "DAT Rename Proposed");
+        if (s.DatRenameExecutedCount > 0)
+            AppendCard(sb, "dat", s.DatRenameExecutedCount.ToString(), "DAT Rename Executed");
+        if (s.DatRenameFailedCount > 0)
+            AppendCard(sb, "dat", s.DatRenameFailedCount.ToString(), "DAT Rename Failed");
         AppendCard(sb, "", s.Candidates.ToString(), "Kandidaten");
         if (s.ConvertedCount > 0)
             AppendCard(sb, "", s.ConvertedCount.ToString(), "Konvertiert");

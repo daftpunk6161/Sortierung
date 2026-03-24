@@ -27,6 +27,7 @@ public sealed class RunOptions
     public bool AggressiveJunk { get; init; }
     public bool SortConsole { get; init; }
     public bool EnableDat { get; init; }
+    public bool EnableDatAudit { get; init; }
     public bool EnableDatRename { get; init; }
     public string? DatRoot { get; init; }
     public string HashType { get; init; } = "SHA1";
@@ -70,6 +71,16 @@ public sealed class RunResult
     public int ConvertReviewCount { get; init; }
     public long ConvertSavedBytes { get; init; }
     public ConversionReport? ConversionReport { get; init; }
+    public DatAuditResult? DatAuditResult { get; init; }
+    public int DatHaveCount { get; init; }
+    public int DatHaveWrongNameCount { get; init; }
+    public int DatMissCount { get; init; }
+    public int DatUnknownCount { get; init; }
+    public int DatAmbiguousCount { get; init; }
+    public int DatRenameProposedCount { get; init; }
+    public int DatRenameExecutedCount { get; init; }
+    public int DatRenameSkippedCount { get; init; }
+    public int DatRenameFailedCount { get; init; }
     public long DurationMs { get; init; }
     public string? ReportPath { get; init; }
 

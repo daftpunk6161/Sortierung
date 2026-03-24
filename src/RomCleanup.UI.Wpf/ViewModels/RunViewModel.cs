@@ -252,6 +252,21 @@ public sealed class RunViewModel : ObservableObject
     private string _dashDatHits = "0";
     public string DashDatHits { get => _dashDatHits; set => SetProperty(ref _dashDatHits, value); }
 
+    private string _dashDatHave = "–";
+    public string DashDatHave { get => _dashDatHave; set => SetProperty(ref _dashDatHave, value); }
+
+    private string _dashDatWrongName = "–";
+    public string DashDatWrongName { get => _dashDatWrongName; set => SetProperty(ref _dashDatWrongName, value); }
+
+    private string _dashDatMiss = "–";
+    public string DashDatMiss { get => _dashDatMiss; set => SetProperty(ref _dashDatMiss, value); }
+
+    private string _dashDatUnknown = "–";
+    public string DashDatUnknown { get => _dashDatUnknown; set => SetProperty(ref _dashDatUnknown, value); }
+
+    private string _dashDatAmbiguous = "–";
+    public string DashDatAmbiguous { get => _dashDatAmbiguous; set => SetProperty(ref _dashDatAmbiguous, value); }
+
     private string _dedupeRate = "–";
     public string DedupeRate { get => _dedupeRate; set => SetProperty(ref _dedupeRate, value); }
 

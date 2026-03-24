@@ -98,6 +98,7 @@ public sealed class SettingsService : ISettingsService
                 dto = dto with
                 {
                     UseDat = GetBool(dat, "useDat"),
+                    EnableDatRename = GetBool(dat, "enableDatRename"),
                     DatRoot = GetString(dat, "datRoot"),
                     DatHashType = GetString(dat, "hashType", "SHA1"),
                     DatFallback = GetBool(dat, "datFallback", true)
@@ -257,6 +258,7 @@ public sealed class SettingsService : ISettingsService
 
         // DAT
         vm.UseDat = dto.UseDat;
+        vm.EnableDatRename = dto.EnableDatRename;
         vm.DatRoot = dto.DatRoot;
         vm.DatHashType = dto.DatHashType;
         vm.DatFallback = dto.DatFallback;
@@ -317,6 +319,7 @@ public sealed class SettingsService : ISettingsService
                     dat = new
                     {
                         useDat = vm.UseDat,
+                        enableDatRename = vm.EnableDatRename,
                         datRoot = vm.DatRoot,
                         hashType = vm.DatHashType,
                         datFallback = vm.DatFallback

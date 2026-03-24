@@ -118,6 +118,36 @@
                   <TextBlock Text="{Binding Run.DedupeRate}" Foreground="{DynamicResource BrushWarning}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
                 </StackPanel>
               </Border>
+              <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                <StackPanel HorizontalAlignment="Center">
+                  <TextBlock Text="DAT Have" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding Run.DashDatHave}" Foreground="{DynamicResource BrushSuccess}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+                </StackPanel>
+              </Border>
+              <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                <StackPanel HorizontalAlignment="Center">
+                  <TextBlock Text="DAT WrongName" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding Run.DashDatWrongName}" Foreground="{DynamicResource BrushWarning}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+                </StackPanel>
+              </Border>
+              <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                <StackPanel HorizontalAlignment="Center">
+                  <TextBlock Text="DAT Miss" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding Run.DashDatMiss}" Foreground="{DynamicResource BrushDanger}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+                </StackPanel>
+              </Border>
+              <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                <StackPanel HorizontalAlignment="Center">
+                  <TextBlock Text="DAT Unknown" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding Run.DashDatUnknown}" Foreground="{DynamicResource BrushTextMuted}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+                </StackPanel>
+              </Border>
+              <Border Style="{StaticResource MetricCard}" MinWidth="90" Margin="0,0,8,8">
+                <StackPanel HorizontalAlignment="Center">
+                  <TextBlock Text="DAT Ambiguous" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding Run.DashDatAmbiguous}" Foreground="{DynamicResource BrushAccentCyan}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"/>
+                </StackPanel>
+              </Border>
             </WrapPanel>
           </Expander>
 

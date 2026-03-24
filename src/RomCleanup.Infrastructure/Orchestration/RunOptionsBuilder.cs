@@ -37,6 +37,8 @@ public static class RunOptionsBuilder
             ConvertOnly = options.ConvertOnly,
             ConvertFormat = options.ConvertFormat,
             EnableDat = options.EnableDat,
+            EnableDatAudit = options.EnableDatAudit,
+            EnableDatRename = options.EnableDatRename,
             DatRoot = options.DatRoot,
             TrashRoot = options.TrashRoot,
             ReportPath = options.ReportPath,

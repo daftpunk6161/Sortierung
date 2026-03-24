@@ -293,6 +293,14 @@ public sealed class CliProgramTests : IDisposable
     }
 
     [Fact]
+    public void ParseArgs_EnableDatAudit_SetsFlag_Issue9()
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--dat-audit" });
+        Assert.NotNull(opts);
+        Assert.True(opts!.EnableDatAudit);
+    }
+
+    [Fact]
     public void ParseArgs_ConvertFormat_SetsFlag()
     {
         var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--convertformat" });

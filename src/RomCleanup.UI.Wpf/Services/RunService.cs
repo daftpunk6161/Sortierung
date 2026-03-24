@@ -138,6 +138,7 @@ public sealed class RunService : IRunService
     {
         public ViewModelRunOptionsSource(MainViewModel vm, IReadOnlyList<string> selectedExtensions)
         {
+            _vm = vm;
             Roots = vm.Roots.ToList();
             Mode = vm.DryRun ? "DryRun" : "Move";
             PreferRegions = vm.GetPreferredRegions();
@@ -166,13 +167,16 @@ public sealed class RunService : IRunService
         public bool AggressiveJunk { get; }
         public bool SortConsole { get; }
         public bool EnableDat { get; }
-        public bool EnableDatRename => false;
+        public bool EnableDatAudit => EnableDat;
+        public bool EnableDatRename => EnableDat && _vm.EnableDatRename;
         public string? DatRoot { get; }
         public string HashType { get; }
         public string? ConvertFormat { get; }
         public bool ConvertOnly { get; }
         public string? TrashRoot { get; }
         public string ConflictPolicy { get; }
+
+        private readonly MainViewModel _vm;
     }
 
 }

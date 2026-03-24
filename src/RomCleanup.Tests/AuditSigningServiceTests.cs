@@ -341,6 +341,36 @@ public sealed class AuditSigningServiceTests : IDisposable
         Assert.False(File.Exists(sortedPath));
     }
 
+    [Fact]
+    public void Rollback_DatRenameAction_RestoresOriginalFileName()
+    {
+        var root = Path.Combine(_tempDir, "root");
+        Directory.CreateDirectory(root);
+
+        var originalPath = Path.Combine(root, "Contra (World).nes");
+        var renamedPath = Path.Combine(root, "contra-wrong.nes");
+        File.WriteAllText(renamedPath, "rom-data");
+
+        var csvPath = Path.Combine(_tempDir, "audit_datrename.csv");
+        File.WriteAllText(csvPath,
+            "RootPath,OldPath,NewPath,Action\n" +
+            $"{root},{originalPath},{renamedPath},DAT_RENAME\n",
+            Encoding.UTF8);
+
+        var service = new AuditSigningService(new MinimalFs());
+        service.WriteMetadataSidecar(csvPath, 1);
+
+        var result = service.Rollback(csvPath,
+            allowedRestoreRoots: [root],
+            allowedCurrentRoots: [root],
+            dryRun: false);
+
+        Assert.Equal(1, result.EligibleRows);
+        Assert.Equal(1, result.RolledBack);
+        Assert.True(File.Exists(originalPath));
+        Assert.False(File.Exists(renamedPath));
+    }
+
     // Minimal IFileSystem for audit tests
     private sealed class MinimalFs : IFileSystem
     {

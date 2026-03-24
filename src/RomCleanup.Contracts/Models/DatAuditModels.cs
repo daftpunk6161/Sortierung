@@ -32,6 +32,23 @@ public sealed record DatAuditEntry(
     int Confidence);
 
 /// <summary>
+/// Aggregated DAT audit result for a full candidate set.
+/// </summary>
+/// <param name="Entries">Per-file audit entries.</param>
+/// <param name="HaveCount">Count of Have entries.</param>
+/// <param name="HaveWrongNameCount">Count of HaveWrongName entries.</param>
+/// <param name="MissCount">Count of Miss entries.</param>
+/// <param name="UnknownCount">Count of Unknown entries.</param>
+/// <param name="AmbiguousCount">Count of Ambiguous entries.</param>
+public sealed record DatAuditResult(
+    IReadOnlyList<DatAuditEntry> Entries,
+    int HaveCount,
+    int HaveWrongNameCount,
+    int MissCount,
+    int UnknownCount,
+    int AmbiguousCount);
+
+/// <summary>
 /// DAT-driven rename proposal.
 /// </summary>
 /// <param name="SourcePath">Current absolute source file path.</param>

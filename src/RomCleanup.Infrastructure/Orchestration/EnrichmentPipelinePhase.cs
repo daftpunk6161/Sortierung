@@ -24,7 +24,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         foreach (var file in input.Files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            candidates.Add(MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex, context, folderConsoleCache, versionScorer));
+            candidates.Add(MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex, input.HeaderlessHasher, context, folderConsoleCache, versionScorer));
         }
 
         return candidates;
@@ -41,7 +41,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         await foreach (var file in input.Files.WithCancellation(cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            yield return MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex, context, folderConsoleCache, versionScorer);
+            yield return MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex, input.HeaderlessHasher, context, folderConsoleCache, versionScorer);
         }
     }
 
@@ -51,6 +51,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         FileHashService? hashService,
         ArchiveHashService? archiveHashService,
         DatIndex? datIndex,
+        Contracts.Ports.IHeaderlessHasher? headerlessHasher,
         PipelineContext context,
         Dictionary<string, string> folderConsoleCache,
         VersionScorer versionScorer)
@@ -100,6 +101,8 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         var verScore = versionScorer.GetVersionScore(fileName);
 
         bool datMatch = false;
+        string? computedHash = null;
+        string? computedHeaderlessHash = null;
         if (datIndex is not null && hashService is not null)
         {
             if (sizeBytes > 50_000_000)
@@ -117,12 +120,14 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                 var innerHashes = archiveHashService.GetArchiveHashes(filePath, context.Options.HashType);
                 foreach (var innerHash in innerHashes)
                 {
+                    computedHash ??= innerHash;
                     if (consoleKey is "UNKNOWN" or "")
                     {
                         var anyMatch = datIndex.LookupAny(innerHash);
                         if (anyMatch is not null)
                         {
                             datMatch = true;
+                            computedHash = innerHash;
                             var previousConsole = consoleKey;
                             consoleKey = anyMatch.Value.ConsoleKey;
                             if (!string.IsNullOrEmpty(previousConsole) &&
@@ -141,9 +146,20 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                         if (datIndex.Lookup(consoleKey, innerHash) is not null)
                         {
                             datMatch = true;
+                            computedHash = innerHash;
                             break;
                         }
                     }
+                }
+            }
+
+            // For non-archives: try headerless hash first (No-Intro DATs hash without headers for NES/SNES/7800/Lynx)
+            if (!datMatch && !isArchive && headerlessHasher is not null && consoleKey is not "UNKNOWN" and not "")
+            {
+                computedHeaderlessHash = headerlessHasher.ComputeHeaderlessHash(filePath, consoleKey, context.Options.HashType);
+                if (computedHeaderlessHash is not null)
+                {
+                    datMatch = datIndex.Lookup(consoleKey, computedHeaderlessHash) is not null;
                 }
             }
 
@@ -151,6 +167,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             if (!datMatch)
             {
                 var hash = hashService.GetHash(filePath, context.Options.HashType);
+                computedHash ??= hash;
                 if (hash is not null)
                 {
                     if (consoleKey is "UNKNOWN" or "")
@@ -159,6 +176,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                         if (anyMatch is not null)
                         {
                             datMatch = true;
+                            computedHash = hash;
                             var previousConsole = consoleKey;
                             consoleKey = anyMatch.Value.ConsoleKey;
                             if (!string.IsNullOrEmpty(previousConsole) &&
@@ -218,6 +236,8 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             sizeTieBreakScore: sizeTieBreak,
             datMatch: datMatch,
             consoleKey: consoleKey,
+            hash: computedHash,
+            headerlessHash: computedHeaderlessHash,
             classificationReasonCode: classification.ReasonCode,
             classificationConfidence: classification.Confidence,
             detectionConfidence: detectionConfidence,
@@ -246,11 +266,13 @@ public sealed record EnrichmentPhaseInput(
     ConsoleDetector? ConsoleDetector,
     FileHashService? HashService,
     ArchiveHashService? ArchiveHashService,
-    DatIndex? DatIndex);
+    DatIndex? DatIndex,
+    Contracts.Ports.IHeaderlessHasher? HeaderlessHasher = null);
 
 public sealed record EnrichmentPhaseStreamingInput(
     IAsyncEnumerable<ScannedFileEntry> Files,
     ConsoleDetector? ConsoleDetector,
     FileHashService? HashService,
     ArchiveHashService? ArchiveHashService,
-    DatIndex? DatIndex);
+    DatIndex? DatIndex,
+    Contracts.Ports.IHeaderlessHasher? HeaderlessHasher = null);

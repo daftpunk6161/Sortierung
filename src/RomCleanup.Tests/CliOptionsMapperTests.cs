@@ -7,6 +7,23 @@ namespace RomCleanup.Tests;
 public sealed class CliOptionsMapperTests
 {
     [Fact]
+    public void Map_EnableDatAudit_IsProjectedToRunOptions_Issue9()
+    {
+        var settings = new RomCleanupSettings();
+        var cli = new CliRunOptions
+        {
+            Roots = new[] { "C:\\temp" },
+            EnableDatAudit = true
+        };
+
+        var (runOptions, errors) = CliOptionsMapper.Map(cli, settings);
+
+        Assert.NotNull(runOptions);
+        Assert.Null(errors);
+        Assert.True(runOptions!.EnableDatAudit);
+    }
+
+    [Fact]
     public void Map_ConvertFlags_AreProjectedToRunOptions()
     {
         var settings = new RomCleanupSettings();

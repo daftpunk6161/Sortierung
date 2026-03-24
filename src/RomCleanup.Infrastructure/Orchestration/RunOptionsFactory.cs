@@ -14,6 +14,7 @@ public interface IRunOptionsSource
     bool AggressiveJunk { get; }
     bool SortConsole { get; }
     bool EnableDat { get; }
+    bool EnableDatAudit { get; }
     bool EnableDatRename { get; }
     string? DatRoot { get; }
     string HashType { get; }
@@ -46,6 +47,7 @@ public sealed class RunOptionsFactory : IRunOptionsFactory
             AggressiveJunk = source.AggressiveJunk,
             SortConsole = source.SortConsole,
             EnableDat = source.EnableDat,
+            EnableDatAudit = source.EnableDatAudit,
             EnableDatRename = source.EnableDatRename,
             DatRoot = source.DatRoot,
             HashType = source.HashType,

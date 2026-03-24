@@ -23,6 +23,7 @@ public sealed partial class MainViewModel
         nameof(AliasKeying),
         nameof(AggressiveJunk),
         nameof(UseDat),
+        nameof(EnableDatRename),
         nameof(DatRoot),
         nameof(DatHashType),
         nameof(ConvertEnabled),
@@ -323,6 +324,11 @@ public sealed partial class MainViewModel
     public string HealthScore { get => Run.HealthScore; set => Run.HealthScore = value; }
     public string DashGames { get => Run.DashGames; set => Run.DashGames = value; }
     public string DashDatHits { get => Run.DashDatHits; set => Run.DashDatHits = value; }
+    public string DashDatHave { get => Run.DashDatHave; set => Run.DashDatHave = value; }
+    public string DashDatWrongName { get => Run.DashDatWrongName; set => Run.DashDatWrongName = value; }
+    public string DashDatMiss { get => Run.DashDatMiss; set => Run.DashDatMiss = value; }
+    public string DashDatUnknown { get => Run.DashDatUnknown; set => Run.DashDatUnknown = value; }
+    public string DashDatAmbiguous { get => Run.DashDatAmbiguous; set => Run.DashDatAmbiguous = value; }
     public string DedupeRate { get => Run.DedupeRate; set => Run.DedupeRate = value; }
 
     // ═══ ANALYSE DATA (delegated to RunViewModel) ═══════════════════════
@@ -417,6 +423,50 @@ public sealed partial class MainViewModel
             AddLog("Konvertierung abgebrochen: ManualOnly/Risky-Review nicht bestätigt.", "WARN");
 
         return confirmed;
+    }
+
+    private Task<bool> ConfirmDatRenamePreviewDialogAsync(RunOptions runOptions, CancellationToken cancellationToken)
+    {
+        if (DryRun || runOptions.Mode != "Move" || !runOptions.EnableDatRename)
+            return Task.FromResult(true);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var auditEntries = LastRunResult?.DatAuditResult?.Entries;
+        if (auditEntries is null || auditEntries.Count == 0)
+            return Task.FromResult(true);
+
+        var proposals = auditEntries
+            .Where(static e => e.Status == DatAuditStatus.HaveWrongName && !string.IsNullOrWhiteSpace(e.DatRomFileName))
+            .Where(e => !string.Equals(Path.GetFileName(e.FilePath), e.DatRomFileName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (proposals.Count == 0)
+            return Task.FromResult(true);
+
+        const int maxPreviewLines = 12;
+        var lines = proposals
+            .Take(maxPreviewLines)
+            .Select(e => $"- {Path.GetFileName(e.FilePath)} -> {e.DatRomFileName}")
+            .ToArray();
+
+        var summary = new StringBuilder()
+            .AppendLine($"DAT-Rename Vorschau: {proposals.Count} Datei(en) werden auf DAT-Kanonnamen umbenannt.")
+            .AppendLine()
+            .AppendLine("Geplante Umbenennungen:")
+            .AppendLine(string.Join(Environment.NewLine, lines));
+
+        if (proposals.Count > maxPreviewLines)
+            summary.AppendLine().Append($"... und {proposals.Count - maxPreviewLines} weitere.");
+
+        summary.AppendLine().AppendLine()
+            .Append("Fortfahren und DatRename im Move-Lauf ausführen?");
+
+        var confirmed = _dialog.Confirm(summary.ToString(), "DAT-Rename bestätigen");
+        if (!confirmed)
+            AddLog("DAT-Rename abgebrochen: Vorschau wurde nicht bestätigt.", "WARN");
+
+        return Task.FromResult(confirmed);
     }
 
     private IReadOnlyList<ConversionReviewEntry> BuildConversionReviewEntries(RunOptions runOptions, CancellationToken cancellationToken)
@@ -852,6 +902,12 @@ public sealed partial class MainViewModel
                 return;
             }
 
+            if (!await ConfirmDatRenamePreviewDialogAsync(runOptions, ct))
+            {
+                CurrentRunState = RunState.Idle;
+                return;
+            }
+
             var svcResult = await Task.Run(
                 () => _runService.ExecuteRun(orchestrator, runOptions, auditPath, reportPath, ct), ct);
 
@@ -1024,6 +1080,11 @@ public sealed partial class MainViewModel
         HealthScore = dashboard.HealthScore;
         DashGames = dashboard.Games;
         DashDatHits = dashboard.DatHits;
+        DashDatHave = dashboard.DatHaveDisplay;
+        DashDatWrongName = dashboard.DatWrongNameDisplay;
+        DashDatMiss = dashboard.DatMissDisplay;
+        DashDatUnknown = dashboard.DatUnknownDisplay;
+        DashDatAmbiguous = dashboard.DatAmbiguousDisplay;
         DedupeRate = dashboard.DedupeRate;
 
         // GUI-021: Sync to MissionControl child VM
@@ -1128,6 +1189,7 @@ public sealed partial class MainViewModel
         builder.Append("aliasKeying=").Append(AliasKeying).Append('|');
         builder.Append("aggressiveJunk=").Append(AggressiveJunk).Append('|');
         builder.Append("useDat=").Append(UseDat).Append('|');
+        builder.Append("enableDatRename=").Append(EnableDatRename).Append('|');
         builder.Append("datRoot=").Append(DatRoot).Append('|');
         builder.Append("datHashType=").Append(DatHashType).Append('|');
         builder.Append("convertEnabled=").Append(ConvertEnabled).Append('|');
@@ -1158,6 +1220,11 @@ public sealed partial class MainViewModel
         HealthScore = "–";
         DashGames = "–";
         DashDatHits = "–";
+        DashDatHave = "–";
+        DashDatWrongName = "–";
+        DashDatMiss = "–";
+        DashDatUnknown = "–";
+        DashDatAmbiguous = "–";
         DedupeRate = "–";
         MoveConsequenceText = "";
         Progress = 0;

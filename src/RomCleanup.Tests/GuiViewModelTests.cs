@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 using System.Windows.Media;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Models;
@@ -1442,6 +1443,167 @@ public class GuiViewModelTests
         Assert.Equal(Path.Combine(@"C:\", "reports"), result);
     }
 
+    [Fact]
+    public void RunService_BuildOrchestrator_MapsDatRenameFlags_FromViewModel_Issue9()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"gui_datrename_root_{Guid.NewGuid():N}");
+        var datRoot = Path.Combine(Path.GetTempPath(), $"gui_datrename_dat_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(datRoot);
+
+        try
+        {
+            var vm = new MainViewModel(new ThemeService(), new StubDialogService());
+            vm.Roots.Add(root);
+            vm.UseDat = true;
+            vm.EnableDatRename = true;
+
+            var (_, options, _, _) = new RunService().BuildOrchestrator(vm);
+
+            Assert.True(options.EnableDat);
+            Assert.True(options.EnableDatAudit);
+            Assert.True(options.EnableDatRename);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+            Directory.Delete(datRoot, true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_ShouldAbort_WhenDatRenamePreviewNotConfirmed_Issue9()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"gui_datrename_abort_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            var dialog = new StubDialogService
+            {
+                DangerConfirmResult = true,
+                ConfirmReturnValue = false
+            };
+
+            var runService = new RecordingRunService(new RunResult
+            {
+                Status = "ok",
+                ExitCode = 0,
+                AllCandidates = Array.Empty<RomCandidate>(),
+                DedupeGroups = Array.Empty<DedupeResult>()
+            });
+
+            var vm = new MainViewModel(new ThemeService(), dialog, runService: runService);
+            vm.Roots.Add(root);
+            vm.UseDat = true;
+            vm.EnableDatRename = true;
+            vm.DryRun = false;
+
+            vm.LastRunResult = new RunResult
+            {
+                DatAuditResult = new DatAuditResult(
+                    Entries:
+                    [
+                        new DatAuditEntry(
+                            FilePath: Path.Combine(root, "old-name.nes"),
+                            Hash: "abc",
+                            Status: DatAuditStatus.HaveWrongName,
+                            DatGameName: "Super Mario Bros.",
+                            DatRomFileName: "Super Mario Bros. (USA).nes",
+                            ConsoleKey: "NES",
+                            Confidence: 100)
+                    ],
+                    HaveCount: 0,
+                    HaveWrongNameCount: 1,
+                    MissCount: 0,
+                    UnknownCount: 0,
+                    AmbiguousCount: 0)
+            };
+
+            await vm.ExecuteRunAsync();
+
+            Assert.Equal(1, dialog.ConfirmCallCount);
+            Assert.Equal(0, runService.ExecuteRunCallCount);
+            Assert.Equal(RunState.Idle, vm.CurrentRunState);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_ShouldExecuteAndEnableRollback_WhenDatRenamePreviewConfirmed_Issue9()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"gui_datrename_confirm_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        var auditPath = Path.Combine(root, "audit.csv");
+        File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action\n", Encoding.UTF8);
+
+        try
+        {
+            var dialog = new StubDialogService
+            {
+                DangerConfirmResult = true,
+                ConfirmReturnValue = true
+            };
+
+            var runService = new RecordingRunService(
+                new RunResult
+                {
+                    Status = "ok",
+                    ExitCode = 0,
+                    AllCandidates =
+                    [
+                        new RomCandidate { MainPath = Path.Combine(root, "game.nes"), Category = FileCategory.Game }
+                    ],
+                    DedupeGroups = Array.Empty<DedupeResult>()
+                },
+                auditPath: auditPath);
+
+            var vm = new MainViewModel(new ThemeService(), dialog, runService: runService);
+            vm.Roots.Add(root);
+            vm.UseDat = true;
+            vm.EnableDatRename = true;
+            vm.DryRun = false;
+
+            vm.LastRunResult = new RunResult
+            {
+                DatAuditResult = new DatAuditResult(
+                    Entries:
+                    [
+                        new DatAuditEntry(
+                            FilePath: Path.Combine(root, "old-name.nes"),
+                            Hash: "abc",
+                            Status: DatAuditStatus.HaveWrongName,
+                            DatGameName: "Super Mario Bros.",
+                            DatRomFileName: "Super Mario Bros. (USA).nes",
+                            ConsoleKey: "NES",
+                            Confidence: 100)
+                    ],
+                    HaveCount: 0,
+                    HaveWrongNameCount: 1,
+                    MissCount: 0,
+                    UnknownCount: 0,
+                    AmbiguousCount: 0)
+            };
+
+                    vm.TransitionTo(RunState.Preflight);
+
+            await vm.ExecuteRunAsync();
+
+            Assert.Equal(1, dialog.ConfirmCallCount);
+            Assert.Equal(1, runService.ExecuteRunCallCount);
+            Assert.Equal(RunState.Completed, vm.CurrentRunState);
+            Assert.True(vm.CanRollback);
+            Assert.True(vm.HasRollbackUndo);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
     // ═══ WatchService tests ═════════════════════════════════════════════
 
     [Fact]
@@ -2293,17 +2455,82 @@ public class GuiViewModelTests
     {
         public string? BrowseFileResult { get; set; }
         public string? BrowseFolderResult { get; set; }
+        public bool ConfirmReturnValue { get; set; } = true;
+        public bool DangerConfirmResult { get; set; } = true;
+        public int ConfirmCallCount { get; private set; }
+        public string? LastConfirmMessage { get; private set; }
+        public string? LastConfirmTitle { get; private set; }
 
         public string? BrowseFolder(string title = "Ordner auswählen") => BrowseFolderResult;
         public string? BrowseFile(string title = "Datei auswählen", string filter = "Alle Dateien|*.*") => BrowseFileResult;
         public string? SaveFile(string title = "Speichern unter", string filter = "Alle Dateien|*.*", string? defaultFileName = null) => null;
-        public bool Confirm(string message, string title = "Bestätigung") => true;
+        public bool Confirm(string message, string title = "Bestätigung")
+        {
+            ConfirmCallCount++;
+            LastConfirmMessage = message;
+            LastConfirmTitle = title;
+            return ConfirmReturnValue;
+        }
         public void Info(string message, string title = "Information") { }
         public void Error(string message, string title = "Fehler") { }
         public ConfirmResult YesNoCancel(string message, string title = "Frage") => ConfirmResult.Yes;
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => defaultValue;
         public void ShowText(string title, string content) { }
-        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => DangerConfirmResult;
+    }
+
+    private sealed class RecordingRunService : IRunService
+    {
+        private readonly RunResult _result;
+        private readonly string? _auditPath;
+        private readonly string? _reportPath;
+
+        public RecordingRunService(RunResult result, string? auditPath = null, string? reportPath = null)
+        {
+            _result = result;
+            _auditPath = auditPath;
+            _reportPath = reportPath;
+        }
+
+        public int ExecuteRunCallCount { get; private set; }
+
+        public (RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)
+            BuildOrchestrator(MainViewModel vm, Action<string>? onProgress = null)
+        {
+            onProgress?.Invoke("[Init] RecordingRunService bereit");
+            var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+            var audit = new RomCleanup.Infrastructure.Audit.AuditCsvStore();
+            var orchestrator = new RunOrchestrator(fs, audit, onProgress: onProgress);
+            var options = new RunOptions
+            {
+                Roots = vm.Roots.ToList(),
+                Mode = vm.DryRun ? "DryRun" : "Move",
+                Extensions = new[] { ".zip" },
+                EnableDat = vm.UseDat,
+                EnableDatAudit = vm.UseDat,
+                EnableDatRename = vm.UseDat && vm.EnableDatRename
+            };
+            return (orchestrator, options, _auditPath, _reportPath);
+        }
+
+        public RunService.RunServiceResult ExecuteRun(
+            RunOrchestrator orchestrator,
+            RunOptions options,
+            string? auditPath,
+            string? reportPath,
+            CancellationToken ct)
+        {
+            ExecuteRunCallCount++;
+            return new RunService.RunServiceResult
+            {
+                Result = _result,
+                AuditPath = auditPath,
+                ReportPath = reportPath
+            };
+        }
+
+        public string GetSiblingDirectory(string rootPath, string siblingName)
+            => Path.Combine(Path.GetDirectoryName(rootPath) ?? rootPath, siblingName);
     }
 
     private sealed class FakeRunService : IRunService
