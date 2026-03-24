@@ -1,3 +1,4 @@
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 
 namespace RomCleanup.Infrastructure.Orchestration;
@@ -26,7 +27,7 @@ public static class RunOptionsBuilder
         {
             Roots = normalizedRoots,
             Mode = string.IsNullOrWhiteSpace(options.Mode) ? "DryRun" : options.Mode,
-            ConflictPolicy = string.IsNullOrWhiteSpace(options.ConflictPolicy) ? "Rename" : options.ConflictPolicy,
+            ConflictPolicy = string.IsNullOrWhiteSpace(options.ConflictPolicy) ? RunConstants.DefaultConflictPolicy : options.ConflictPolicy,
             Extensions = normalizedExtensions,
             PreferRegions = options.PreferRegions,
             RemoveJunk = options.RemoveJunk,

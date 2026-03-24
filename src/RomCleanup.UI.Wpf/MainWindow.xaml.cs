@@ -207,9 +207,7 @@ public partial class MainWindow : Window, IWindowHost
         _trayService = null;
 
         // Kill detached API process if running
-        try { if (_apiProcess is { HasExited: false }) _apiProcess.Kill(entireProcessTree: true); } catch { }
-        try { _apiProcess?.Dispose(); } catch { }
-        _apiProcess = null;
+        SafeKillApiProcess();
 
         // GUI-115: Dispose file watchers (owned by VM) — includes WatchService event unsubscription
         _vm.CleanupWatchers();
@@ -302,8 +300,7 @@ public partial class MainWindow : Window, IWindowHost
             UseShellExecute = false,
             CreateNoWindow = false,
         };
-        try { if (_apiProcess is { HasExited: false }) _apiProcess.Kill(entireProcessTree: true); } catch { }
-        try { _apiProcess?.Dispose(); } catch { }
+        SafeKillApiProcess();
         _apiProcess = Process.Start(psi);
         _vm.AddLog("REST API gestartet: http://127.0.0.1:5000", "INFO");
         _ = Task.Delay(2000).ContinueWith(_ =>
@@ -320,10 +317,21 @@ public partial class MainWindow : Window, IWindowHost
 
     void IWindowHost.StopApiProcess()
     {
-        try { if (_apiProcess is { HasExited: false }) _apiProcess.Kill(entireProcessTree: true); } catch { }
-        try { _apiProcess?.Dispose(); } catch { }
-        _apiProcess = null;
+        SafeKillApiProcess();
     }
 
+    /// <summary>
+    /// Safely kill and dispose the detached API process.
+    /// Logs failures instead of swallowing them silently to prevent invisible zombie processes.
+    /// </summary>
+    private void SafeKillApiProcess()
+    {
+        try { if (_apiProcess is { HasExited: false }) _apiProcess.Kill(entireProcessTree: true); }
+        catch (InvalidOperationException) { /* process already exited between check and kill */ }
+        catch (System.ComponentModel.Win32Exception ex) { _vm.AddLog($"API process kill failed: {ex.Message}", "WARN"); }
+        try { _apiProcess?.Dispose(); }
+        catch (InvalidOperationException) { /* already disposed */ }
+        _apiProcess = null;
+    }
 
 }

@@ -77,7 +77,7 @@ public sealed class FileSystemAdapter : IFileSystem
                     if ((dirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
                         continue;
                 }
-                catch
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     continue; // inaccessible directory
                 }
@@ -106,7 +106,7 @@ public sealed class FileSystemAdapter : IFileSystem
                     if ((attrs & FileAttributes.ReparsePoint) != 0)
                         continue;
                 }
-                catch
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     continue; // inaccessible file
                 }
@@ -465,7 +465,7 @@ public sealed class FileSystemAdapter : IFileSystem
 
             return candidate;
         }
-        catch
+        catch (Exception ex) when (ex is ArgumentException or PathTooLongException or NotSupportedException or System.Security.SecurityException)
         {
             return null; // fail-safe
         }
@@ -521,7 +521,7 @@ public sealed class FileSystemAdapter : IFileSystem
 
                 current = Path.GetDirectoryName(current);
             }
-            catch
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 return true; // fail-safe: treat inaccessible as reparse
             }
@@ -537,7 +537,7 @@ public sealed class FileSystemAdapter : IFileSystem
             var attrs = File.GetAttributes(path);
             return (attrs & FileAttributes.ReparsePoint) != 0;
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return true; // fail-closed: treat inaccessible as reparse point
         }

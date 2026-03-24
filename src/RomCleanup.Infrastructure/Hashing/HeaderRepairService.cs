@@ -51,7 +51,7 @@ public sealed class HeaderRepairService : IHeaderRepairService
             fs.Flush();
             return true;
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return false;
         }
@@ -76,7 +76,7 @@ public sealed class HeaderRepairService : IHeaderRepairService
             File.WriteAllBytes(path, stripped);
             return true;
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return false;
         }

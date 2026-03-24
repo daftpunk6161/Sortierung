@@ -115,7 +115,7 @@ src/
 ├── RomCleanup.Contracts/        # Port-Interfaces, Models, Error-Contracts
 │   ├── Errors/                  #   OperationError, ErrorKind, ErrorClassifier
 │   ├── Models/                  #   RomCandidate, DatIndex, Settings, DTOs
-│   └── Ports/                   #   IFileSystem, IAuditStore, IDatRepository, ...
+│   └── Ports/                   #   IFileSystem, IAuditStore, IToolRunner, ...
 ├── RomCleanup.Core/             # Pure Domain Logic (keine I/O-Deps)
 │   ├── Caching/                 #   LruCache<TKey,TValue>
 │   ├── Classification/          #   ConsoleDetector, FileClassifier, ExtensionNormalizer

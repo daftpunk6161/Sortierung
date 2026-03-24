@@ -26,7 +26,7 @@ public static class RollbackService
             {
                 signingService.VerifyMetadataSidecar(auditPath);
             }
-            catch
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or InvalidDataException)
             {
                 return new AuditRollbackResult
                 {

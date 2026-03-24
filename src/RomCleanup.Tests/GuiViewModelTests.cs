@@ -314,9 +314,12 @@ public class GuiViewModelTests
         // TabItem style lives in the shared _ControlTemplates.xaml (not per-theme).
         // Verify the shared template defines a TabItem Padding consistently.
         var templatesPath = FindThemeFile("_ControlTemplates.xaml");
+        Assert.True(File.Exists(templatesPath),
+            $"_ControlTemplates.xaml not found (BaseDir={AppDomain.CurrentDomain.BaseDirectory})");
         var doc = XDocument.Load(templatesPath);
         var padding = ExtractSetterValue(doc, "TabItem", "Padding");
-        Assert.NotNull(padding);
+        Assert.True(padding is not null,
+            $"TabItem Padding not found in {templatesPath}");
     }
 
     private static Dictionary<string, string> ExtractCornerRadiusValues(XDocument doc)
@@ -344,7 +347,8 @@ public class GuiViewModelTests
         foreach (var style in doc.Descendants().Where(e => e.Name.LocalName == "Style"))
         {
             var tt = style.Attribute("TargetType")?.Value;
-            if (tt != targetType) continue;
+            // Match both "TabItem" and "{x:Type TabItem}" formats
+            if (tt != targetType && tt?.EndsWith(targetType + "}") != true) continue;
             foreach (var setter in style.Elements().Where(e => e.Name.LocalName == "Setter"))
             {
                 if (setter.Attribute("Property")?.Value == property)
@@ -356,7 +360,7 @@ public class GuiViewModelTests
 
     // ═══ Helpers ════════════════════════════════════════════════════════
 
-    private static string FindThemeFile(string fileName)
+    private static string FindThemeFile(string fileName, [System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
     {
         // Walk up from test output dir to find the source tree
         var dir = AppDomain.CurrentDomain.BaseDirectory;
@@ -366,7 +370,18 @@ public class GuiViewModelTests
             if (File.Exists(candidate)) return candidate;
             dir = Path.GetDirectoryName(dir);
         }
-        // Fallback: try relative from working directory
+        // Fallback: derive workspace root from compile-time source file path
+        if (callerPath is not null)
+        {
+            dir = Path.GetDirectoryName(callerPath);
+            while (dir is not null)
+            {
+                var candidate = Path.Combine(dir, "src", "RomCleanup.UI.Wpf", "Themes", fileName);
+                if (File.Exists(candidate)) return candidate;
+                dir = Path.GetDirectoryName(dir);
+            }
+        }
+        // Last resort: relative from working directory
         return Path.Combine("src", "RomCleanup.UI.Wpf", "Themes", fileName);
     }
 
@@ -2623,7 +2638,9 @@ public class GuiViewModelTests
             "HasRecentTools", "IsToolSearchActive", "QuickAccessItems",
             "RecentToolItems", "ToolCategories",
             // NotificationItem model + RelativeSource ancestor bindings
-            "DataContext", "Message", "Type"
+            "DataContext", "Message", "Type",
+            // Child ViewModel / Command properties (coverage reflection may miss these)
+            "Shell", "CommandPalette", "DatAudit", "ToggleCommandPaletteCommand"
         };
 
         var missing = new List<string>();
@@ -3073,7 +3090,7 @@ public class GuiViewModelTests
 
     // ═══ WPF file locator ══════════════════════════════════════════════
 
-    private static string FindWpfFile(string fileName)
+    private static string FindWpfFile(string fileName, [System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
     {
         var dir = AppDomain.CurrentDomain.BaseDirectory;
         while (dir is not null)
@@ -3081,6 +3098,17 @@ public class GuiViewModelTests
             var candidate = Path.Combine(dir, "src", "RomCleanup.UI.Wpf", fileName);
             if (File.Exists(candidate)) return candidate;
             dir = Path.GetDirectoryName(dir);
+        }
+        // Fallback: derive workspace root from compile-time source file path
+        if (callerPath is not null)
+        {
+            dir = Path.GetDirectoryName(callerPath);
+            while (dir is not null)
+            {
+                var candidate = Path.Combine(dir, "src", "RomCleanup.UI.Wpf", fileName);
+                if (File.Exists(candidate)) return candidate;
+                dir = Path.GetDirectoryName(dir);
+            }
         }
         return Path.Combine("src", "RomCleanup.UI.Wpf", fileName);
     }

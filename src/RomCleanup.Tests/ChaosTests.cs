@@ -68,9 +68,7 @@ public sealed class ChaosTests : IDisposable
     public void InvalidRegionTags_ReturnUnknown(string input)
     {
         var result = RegionDetector.GetRegionTag(input);
-        Assert.NotNull(result);
-        // Should return a valid string (likely "UNKNOWN")
-        Assert.False(string.IsNullOrWhiteSpace(result));
+        Assert.Equal("UNKNOWN", result);
     }
 
     // ── TEST-CHAOS-03: Corrupt DAT file handling ──
@@ -85,9 +83,9 @@ public sealed class ChaosTests : IDisposable
         File.WriteAllBytes(datPath, bytes);
 
         var dat = new DatRepositoryAdapter();
-        var ex = Record.Exception(() =>
-            dat.GetDatIndex(_tempDir, new Dictionary<string, string> { ["TEST"] = "corrupt.dat" }));
-        Assert.Null(ex);
+        var index = dat.GetDatIndex(_tempDir, new Dictionary<string, string> { ["TEST"] = "corrupt.dat" });
+        Assert.NotNull(index);
+        Assert.Equal(0, index.TotalEntries);
     }
 
     [Fact]
@@ -218,8 +216,10 @@ public sealed class ChaosTests : IDisposable
         };
         var summary = new ReportSummary { TotalFiles = 1, KeepCount = 1, SavedBytes = long.MaxValue };
 
-        var ex = Record.Exception(() => ReportGenerator.GenerateHtml(summary, entries));
-        Assert.Null(ex);
+        var html = ReportGenerator.GenerateHtml(summary, entries);
+        Assert.False(string.IsNullOrWhiteSpace(html));
+        Assert.Contains("<html", html);
+        Assert.Contains(new string('X', 100), html); // Extreme GameKey is HTML-present (may be encoded)
     }
 
     [Fact]

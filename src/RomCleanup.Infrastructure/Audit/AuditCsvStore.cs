@@ -42,7 +42,7 @@ public sealed class AuditCsvStore : IAuditStore
         {
             return _signingService.VerifyMetadataSidecar(auditCsvPath);
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             return false;
         }

@@ -52,10 +52,12 @@ public sealed class ArchiveHashService
                         continue;
                     Directory.Delete(dir, recursive: true);
                 }
-                catch { /* best effort */ }
+                catch (IOException) { /* best-effort cleanup of stale temp dir */ }
+                catch (UnauthorizedAccessException) { /* permission denied — skip stale temp dir */ }
             }
         }
-        catch { /* temp path inaccessible — ignore */ }
+        catch (IOException) { /* temp path inaccessible — ignore */ }
+        catch (UnauthorizedAccessException) { /* temp path access denied — ignore */ }
     }
 
     /// <summary>
@@ -84,7 +86,8 @@ public sealed class ArchiveHashService
                 return Array.Empty<string>();
             }
         }
-        catch { return Array.Empty<string>(); }
+        catch (IOException) { return Array.Empty<string>(); }
+        catch (UnauthorizedAccessException) { return Array.Empty<string>(); }
 
         var ext = Path.GetExtension(archivePath).ToLowerInvariant();
         string[] hashes;
@@ -133,7 +136,8 @@ public sealed class ArchiveHashService
                     .Select(e => e.FullName)
                     .ToList();
             }
-            catch { return Array.Empty<string>(); }
+            catch (InvalidDataException) { return Array.Empty<string>(); }
+            catch (IOException) { return Array.Empty<string>(); }
         }
 
         if (ext == ".7z" && _toolRunner is not null)
@@ -167,7 +171,8 @@ public sealed class ArchiveHashService
                 if (h is not null)
                     hashes.Add(h);
             }
-            catch { /* skip corrupt entries */ }
+            catch (InvalidDataException) { /* skip corrupt entries */ }
+            catch (IOException) { /* skip unreadable entries */ }
         }
 
         return hashes.ToArray();
@@ -241,7 +246,8 @@ public sealed class ArchiveHashService
                     if (h is not null)
                         hashes.Add(h);
                 }
-                catch { /* skip inaccessible */ }
+                catch (IOException) { /* skip inaccessible */ }
+                catch (UnauthorizedAccessException) { /* skip inaccessible */ }
             }
 
             return hashes.ToArray();
@@ -250,7 +256,8 @@ public sealed class ArchiveHashService
         {
             if (Directory.Exists(tempDir))
                 try { Directory.Delete(tempDir, true); }
-                catch (IOException) { /* Best-effort cleanup of temp extraction dir */ }
+                catch (IOException) { /* Best-effort cleanup — dir may be locked by AV or other process */ }
+                catch (UnauthorizedAccessException) { /* Permission denied on temp cleanup — non-fatal */ }
         }
     }
 

@@ -256,14 +256,16 @@ internal static class Program
         {
             if (!ReferenceEquals(writer, fallbackWriter))
             {
-                try { fallbackWriter.WriteLine(message); } catch { }
+                try { fallbackWriter.WriteLine(message); }
+                catch { System.Diagnostics.Debug.WriteLine($"CLI fallback write failed for: {message}"); }
             }
         }
         catch (IOException)
         {
             if (!ReferenceEquals(writer, fallbackWriter))
             {
-                try { fallbackWriter.WriteLine(message); } catch { }
+                try { fallbackWriter.WriteLine(message); }
+                catch { System.Diagnostics.Debug.WriteLine($"CLI fallback write failed for: {message}"); }
             }
         }
     }

@@ -371,9 +371,7 @@ public sealed class AuditComplianceTests : IDisposable
     public void Audit1_Test013_OnClosing_NoRecursion_HeadlessContract()
     {
         // Headless contract: OnClosing muss Re-Entry blocken und im Busy-Cancel-Pfad sauber re-closen.
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var codePath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..",
-            "RomCleanup.UI.Wpf", "MainWindow.xaml.cs"));
+        var codePath = Path.Combine(FindUiProjectDir(), "MainWindow.xaml.cs");
 
         Assert.True(File.Exists(codePath), "MainWindow.xaml.cs must exist");
         var code = File.ReadAllText(codePath);
@@ -544,8 +542,7 @@ public sealed class AuditComplianceTests : IDisposable
     public void Audit2_Test005_ShowTextDialog_LightTheme_HeadlessContract()
     {
         // Headless contract: Dialogpfad nutzt themed Dialog + Light Theme hat die erwarteten hellen Brushes.
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var uiDir = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "RomCleanup.UI.Wpf"));
+        var uiDir = FindUiProjectDir();
         var mainWindowCode = Path.Combine(uiDir, "MainWindow.xaml.cs");
         var resultDialogXaml = Path.Combine(uiDir, "ResultDialog.xaml");
         var lightThemeXaml = Path.Combine(uiDir, "Themes", "Light.xaml");
@@ -572,9 +569,7 @@ public sealed class AuditComplianceTests : IDisposable
     public void Audit2_Test006_Accessibility_AllControlsHaveNameAndRole_HeadlessContract()
     {
         // Headless contract: interaktive Controls in MainWindow tragen AutomationProperties.Name.
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var xamlPath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..",
-            "RomCleanup.UI.Wpf", "MainWindow.xaml"));
+        var xamlPath = Path.Combine(FindUiProjectDir(), "MainWindow.xaml");
 
         Assert.True(File.Exists(xamlPath), "MainWindow.xaml must exist");
         var xaml = File.ReadAllText(xamlPath);
@@ -600,9 +595,7 @@ public sealed class AuditComplianceTests : IDisposable
     public void Audit2_Test007_KeyboardNavigation_LogicalTabOrder_HeadlessContract()
     {
         // Headless contract: explizite TabIndex-Gruppen fuer Run-/Nav-Bereiche muessen vorhanden sein.
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var xamlPath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..",
-            "RomCleanup.UI.Wpf", "MainWindow.xaml"));
+        var xamlPath = Path.Combine(FindUiProjectDir(), "MainWindow.xaml");
 
         Assert.True(File.Exists(xamlPath), "MainWindow.xaml must exist");
         var xaml = File.ReadAllText(xamlPath);
@@ -686,9 +679,7 @@ public sealed class AuditComplianceTests : IDisposable
     public void Audit2_Test010_TrayToggle_NoGdiLeak_HeadlessContract()
     {
         // Headless contract: TrayService wird lazy erstellt und im Cleanup deterministisch disposed.
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var codePath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..",
-            "RomCleanup.UI.Wpf", "MainWindow.xaml.cs"));
+        var codePath = Path.Combine(FindUiProjectDir(), "MainWindow.xaml.cs");
 
         Assert.True(File.Exists(codePath), "MainWindow.xaml.cs must exist");
         var code = File.ReadAllText(codePath);
@@ -723,9 +714,7 @@ public sealed class AuditComplianceTests : IDisposable
     public void Audit2_Test012_UnhandledException_ShowsErrorDialog_HeadlessContract()
     {
         // Headless contract: Dispatcher-/Domain-Hooks sind registriert und der UI-Exception-Handler markiert handled.
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var appCodePath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..",
-            "RomCleanup.UI.Wpf", "App.xaml.cs"));
+        var appCodePath = Path.Combine(FindUiProjectDir(), "App.xaml.cs");
 
         Assert.True(File.Exists(appCodePath), "App.xaml.cs must exist");
         var appCode = File.ReadAllText(appCodePath);
@@ -1410,9 +1399,7 @@ public sealed class AuditComplianceTests : IDisposable
     public void Consolidated_Test007_Theme_BothThemes_LoadCorrectly()
     {
         // Stub: verify theme XAML files exist and are parseable XML
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var themeDir = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..",
-            "RomCleanup.UI.Wpf", "Themes"));
+        var themeDir = Path.Combine(FindUiProjectDir(), "Themes");
 
         if (Directory.Exists(themeDir))
         {
@@ -1438,9 +1425,7 @@ public sealed class AuditComplianceTests : IDisposable
     public void Consolidated_Test008_Accessibility_AllControlsHaveNameAndRole()
     {
         // Stub: verify MainWindow.xaml contains AutomationProperties annotations
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var xamlPath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..",
-            "RomCleanup.UI.Wpf", "MainWindow.xaml"));
+        var xamlPath = Path.Combine(FindUiProjectDir(), "MainWindow.xaml");
 
         if (File.Exists(xamlPath))
         {
@@ -1603,4 +1588,32 @@ public sealed class AuditComplianceTests : IDisposable
     }
 
     #endregion
+
+    /// <summary>
+    /// Walk up from test output directory to find the RomCleanup.UI.Wpf source project directory.
+    /// More robust than hard-coded relative paths that break under coverage instrumentation.
+    /// </summary>
+    private static string FindUiProjectDir([System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
+    {
+        // Try walking up from BaseDirectory (normal case: bin/Debug/net10.0-windows)
+        var dir = AppDomain.CurrentDomain.BaseDirectory;
+        while (dir is not null)
+        {
+            var candidate = Path.Combine(dir, "src", "RomCleanup.UI.Wpf");
+            if (Directory.Exists(candidate)) return candidate;
+            dir = Path.GetDirectoryName(dir);
+        }
+        // Fallback: derive workspace root from compile-time source file path
+        if (callerPath is not null)
+        {
+            dir = Path.GetDirectoryName(callerPath);
+            while (dir is not null)
+            {
+                var candidate = Path.Combine(dir, "src", "RomCleanup.UI.Wpf");
+                if (Directory.Exists(candidate)) return candidate;
+                dir = Path.GetDirectoryName(dir);
+            }
+        }
+        return Path.Combine("src", "RomCleanup.UI.Wpf");
+    }
 }

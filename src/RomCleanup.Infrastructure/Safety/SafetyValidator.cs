@@ -90,7 +90,10 @@ public sealed class SafetyValidator
             return null;
 
         try { return Path.GetFullPath(trimmed); }
-        catch { return null; }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or System.Security.SecurityException or PathTooLongException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -199,7 +202,7 @@ public sealed class SafetyValidator
                 {
                     _fs.EnsureDirectory(normalizedAudit);
                 }
-                catch
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     blockers.Add($"Cannot create audit directory: {auditRoot}");
                 }

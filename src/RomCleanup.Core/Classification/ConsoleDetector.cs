@@ -458,7 +458,7 @@ public sealed class ConsoleDetector
         {
             return Path.GetRelativePath(rootPath, fullPath);
         }
-        catch
+        catch (ArgumentException)
         {
             return Path.GetFileName(fullPath);
         }
@@ -490,7 +490,7 @@ public sealed class ConsoleDetector
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 .ToUpperInvariant();
         }
-        catch
+        catch (ArgumentException)
         {
             return path.Trim().ToUpperInvariant();
         }

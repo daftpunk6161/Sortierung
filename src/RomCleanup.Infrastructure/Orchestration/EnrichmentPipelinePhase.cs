@@ -2,7 +2,6 @@ using RomCleanup.Contracts.Models;
 using RomCleanup.Core.Classification;
 using RomCleanup.Core.GameKeys;
 using RomCleanup.Core.Scoring;
-using RomCleanup.Core.SetParsing;
 using RomCleanup.Infrastructure.Hashing;
 using System.Runtime.CompilerServices;
 
@@ -218,7 +217,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
 
         var headerScore = FormatScorer.GetHeaderVariantScore(root, filePath);
         var sizeTieBreak = FormatScorer.GetSizeTieBreakScore(null, ext, sizeBytes);
-        var setMembers = GetSetMembers(filePath, ext);
+        var setMembers = PipelinePhaseHelpers.GetSetMembers(filePath, ext, includeM3uMembers: true);
         var completeness = CompletenessScorer.Calculate(filePath, ext, setMembers, datMatch);
 
         return CandidateFactory.Create(
@@ -245,18 +244,6 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             hasHardEvidence: hasHardEvidence,
             isSoftOnly: isSoftOnly,
             sortDecision: sortDecision);
-    }
-
-    private static IReadOnlyList<string> GetSetMembers(string filePath, string ext)
-    {
-        return ext switch
-        {
-            ".cue" => CueSetParser.GetRelatedFiles(filePath),
-            ".gdi" => GdiSetParser.GetRelatedFiles(filePath),
-            ".ccd" => CcdSetParser.GetRelatedFiles(filePath),
-            ".m3u" => M3uPlaylistParser.GetRelatedFiles(filePath),
-            _ => Array.Empty<string>()
-        };
     }
 
 }

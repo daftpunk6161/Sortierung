@@ -21,7 +21,7 @@ public sealed class HardlinkService
             // Hardlinks require NTFS
             return string.Equals(driveInfo.DriveFormat, "NTFS", StringComparison.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return false;
         }

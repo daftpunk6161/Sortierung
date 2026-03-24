@@ -78,7 +78,7 @@ public static class HeaderAnalyzer
             return new RomHeaderInfo("Unbekannt", "Unbekanntes Format",
                 $"Magic: {headerBytes[0]:X2} {headerBytes[1]:X2} {headerBytes[2]:X2} {headerBytes[3]:X2}");
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return null;
         }

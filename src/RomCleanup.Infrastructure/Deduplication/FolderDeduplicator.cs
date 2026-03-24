@@ -445,7 +445,7 @@ public sealed class FolderDeduplicator
                 .Max();
             return newest;
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return dir.LastWriteTimeUtc;
         }
@@ -474,7 +474,7 @@ public sealed class FolderDeduplicator
             return Directory.EnumerateFiles(folderPath, fileName, SearchOption.AllDirectories)
                 .FirstOrDefault();
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return null;
         }

@@ -168,9 +168,13 @@ public sealed class DatSourceService : IDisposable
         catch (InvalidDataException) { return null; } // Corrupt ZIP
         finally
         {
-            // Cleanup temp files
-            try { if (File.Exists(tempZip)) File.Delete(tempZip); } catch { /* best-effort */ }
-            try { if (Directory.Exists(tempExtract)) Directory.Delete(tempExtract, true); } catch { /* best-effort */ }
+            // Cleanup temp files — specific exceptions to avoid hiding unexpected errors
+            try { if (File.Exists(tempZip)) File.Delete(tempZip); }
+            catch (IOException) { /* file locked — will be cleaned on next run or OS temp cleanup */ }
+            catch (UnauthorizedAccessException) { /* permission denied — non-fatal for temp files */ }
+            try { if (Directory.Exists(tempExtract)) Directory.Delete(tempExtract, true); }
+            catch (IOException) { /* dir locked — will be cleaned on next run or OS temp cleanup */ }
+            catch (UnauthorizedAccessException) { /* permission denied — non-fatal for temp dirs */ }
         }
     }
 
@@ -293,7 +297,7 @@ public sealed class DatSourceService : IDisposable
             var actual = ComputeFileSha256(localPath);
             return string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
         {
             return true; // Network error checking sidecar — allow (HTTPS integrity)
         }
@@ -412,13 +416,13 @@ public sealed class DatSourceService : IDisposable
         {
             File.Copy(sourcePath, destinationPath, overwrite: false);
         }
-        catch
+        catch (IOException)
         {
             // Restore previous file if replacement fails mid-flight.
             if (hadExistingTarget && File.Exists(backupPath) && !File.Exists(destinationPath))
             {
                 try { File.Move(backupPath, destinationPath, overwrite: true); }
-                catch { /* best-effort restore */ }
+                catch (IOException) { /* best-effort restore — file may be locked */ }
             }
 
             throw;

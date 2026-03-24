@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Conversion.ToolInvokers;
 
 namespace RomCleanup.Infrastructure.Tools;
 
@@ -217,7 +217,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
             && cached.LastWriteUtc == lastWrite
             && cached.Length == fileLength)
         {
-            return FixedTimeEqualsHash(cached.Hash, expectedHash);
+            return ToolInvokerSupport.FixedTimeHashEquals(cached.Hash, expectedHash);
         }
 
         using var sha256 = SHA256.Create();
@@ -227,14 +227,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
 
         _hashCache[fullPath] = (actualHash, lastWrite, fileLength);
 
-        return FixedTimeEqualsHash(actualHash, expectedHash);
-    }
-
-    private static bool FixedTimeEqualsHash(string actualHash, string expectedHash)
-    {
-        var actualBytes = Encoding.ASCII.GetBytes(actualHash.ToLowerInvariant());
-        var expectedBytes = Encoding.ASCII.GetBytes(expectedHash.ToLowerInvariant());
-        return CryptographicOperations.FixedTimeEquals(actualBytes, expectedBytes);
+        return ToolInvokerSupport.FixedTimeHashEquals(actualHash, expectedHash);
     }
 
     private void EnsureToolHashesLoaded()
@@ -266,7 +259,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
 
                 _toolHashes = hashes;
             }
-            catch
+            catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException)
             {
                 _toolHashes = new Dictionary<string, string>();
             }

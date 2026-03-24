@@ -407,7 +407,8 @@ public sealed class FormatConverterAdapter : IFormatConverter
                 // RVZ magic: "RVZ\x01"
                 return magic[0] == 'R' && magic[1] == 'V' && magic[2] == 'Z' && magic[3] == 0x01;
             }
-            catch { return false; }
+            catch (IOException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
         }
 
         if (ext == ".zip")
@@ -446,12 +447,11 @@ public sealed class FormatConverterAdapter : IFormatConverter
         {
             try
             {
-                const long ps2CdThreshold = 700L * 1024 * 1024;
                 var size = new FileInfo(sourcePath).Length;
-                if (size > 0 && size < ps2CdThreshold)
+                if (size > 0 && size < ToolInvokers.ToolInvokerSupport.CdImageThresholdBytes)
                     effectiveCommand = "createcd";
             }
-            catch
+            catch (IOException)
             {
                 // Best effort only; keep caller-selected command if size cannot be read.
             }
@@ -593,7 +593,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
                 if (Directory.Exists(extractDir))
                     Directory.Delete(extractDir, recursive: true);
             }
-            catch { /* best-effort cleanup */ }
+            catch (IOException) { /* best-effort cleanup — dir may be locked */ }
         }
     }
 
@@ -747,7 +747,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
             if (File.Exists(path))
                 File.Delete(path);
         }
-        catch
+        catch (IOException)
         {
             // Best effort cleanup
         }

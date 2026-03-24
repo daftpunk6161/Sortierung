@@ -92,7 +92,7 @@ internal static class ToolInvokerSupport
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
-    private static bool FixedTimeHashEquals(string actualHash, string expectedHash)
+    internal static bool FixedTimeHashEquals(string actualHash, string expectedHash)
     {
         var actual = Encoding.ASCII.GetBytes(actualHash.ToLowerInvariant());
         var expected = Encoding.ASCII.GetBytes(expectedHash.ToLowerInvariant());
@@ -110,5 +110,32 @@ internal static class ToolInvokerSupport
             return productVersion;
 
         return null;
+    }
+
+    /// <summary>
+    /// CD image threshold: files below 700 MB are treated as CD rather than DVD.
+    /// Delegates to the canonical Contracts constant.
+    /// </summary>
+    internal const long CdImageThresholdBytes = RomCleanup.Contracts.Models.ConversionThresholds.CdImageThresholdBytes;
+
+    /// <summary>
+    /// Heuristic: treat .iso/.bin/.img files below 700 MB as CD images rather than DVD.
+    /// Used by chdman (createcd vs createdvd) and general conversion decisions.
+    /// </summary>
+    internal static bool IsLikelyCdImage(string sourcePath)
+    {
+        try
+        {
+            var ext = Path.GetExtension(sourcePath).ToLowerInvariant();
+            if (ext is not (".iso" or ".bin" or ".img"))
+                return false;
+
+            var size = new FileInfo(sourcePath).Length;
+            return size > 0 && size < CdImageThresholdBytes;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
     }
 }

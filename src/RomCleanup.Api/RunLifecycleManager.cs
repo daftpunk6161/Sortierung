@@ -222,7 +222,7 @@ public sealed class RunLifecycleManager
             {
                 TryWriteEmergencyShutdownSidecar(activeId);
             }
-            catch
+            catch (Exception)
             {
                 TryWriteEmergencyShutdownSidecar(activeId);
             }
@@ -347,7 +347,7 @@ public sealed class RunLifecycleManager
                 ["ShutdownUtc"] = DateTime.UtcNow.ToString("o")
             });
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // best effort during host shutdown
         }

@@ -43,7 +43,7 @@ public sealed class ChdmanInvoker(IToolRunner tools) : IToolInvoker
             return ToolInvokerSupport.ConstraintFailure(constraintError);
 
         if (string.Equals(commandToken, "createdvd", StringComparison.OrdinalIgnoreCase)
-            && IsLikelyCdImage(sourcePath))
+            && ToolInvokerSupport.IsLikelyCdImage(sourcePath))
         {
             commandToken = "createcd";
         }
@@ -71,21 +71,4 @@ public sealed class ChdmanInvoker(IToolRunner tools) : IToolInvoker
         return result.Success ? VerificationStatus.Verified : VerificationStatus.VerifyFailed;
     }
 
-    private static bool IsLikelyCdImage(string sourcePath)
-    {
-        try
-        {
-            var ext = Path.GetExtension(sourcePath).ToLowerInvariant();
-            if (ext is not (".iso" or ".bin" or ".img"))
-                return false;
-
-            const long ps2CdThreshold = 700L * 1024 * 1024;
-            var size = new FileInfo(sourcePath).Length;
-            return size > 0 && size < ps2CdThreshold;
-        }
-        catch
-        {
-            return false;
-        }
-    }
 }

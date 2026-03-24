@@ -20,10 +20,7 @@ internal static class CliArgsParser
         "Debug", "Info", "Warning", "Error"
     };
 
-    private static readonly HashSet<string> AllowedConflictPolicies = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Rename", "Skip", "Overwrite"
-    };
+    private static readonly IReadOnlySet<string> AllowedConflictPolicies = RomCleanup.Contracts.RunConstants.ValidConflictPolicies;
 
     internal static CliParseResult Parse(string[] args)
     {
@@ -409,7 +406,7 @@ internal sealed class CliRunOptions
     public string? HashType { get; set; }
     public bool ConvertFormat { get; set; }
     public bool ConvertOnly { get; set; }
-    public string ConflictPolicy { get; set; } = "Rename";
+    public string ConflictPolicy { get; set; } = RomCleanup.Contracts.RunConstants.DefaultConflictPolicy;
     public bool Yes { get; set; }
     public string? ReportPath { get; set; }
     public string? AuditPath { get; set; }

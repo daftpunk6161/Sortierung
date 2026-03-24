@@ -47,7 +47,7 @@ public sealed class AuditSigningService
                     _persistedKey = Convert.FromHexString(hex);
                     return _persistedKey;
                 }
-                catch
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException)
                 {
                     _log?.Invoke("Failed to load HMAC key file, generating new key");
                 }
@@ -86,7 +86,7 @@ public sealed class AuditSigningService
                                 System.Security.AccessControl.AccessControlType.Allow));
                             fi.SetAccessControl(security);
                         }
-                        catch
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
                         {
                             _log?.Invoke("Could not restrict HMAC key file permissions — manual ACL recommended");
                         }
@@ -95,7 +95,7 @@ public sealed class AuditSigningService
                     else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
                     {
                         try { File.SetUnixFileMode(_keyFilePath, UnixFileMode.UserRead | UnixFileMode.UserWrite); }
-                        catch { _log?.Invoke("Could not set HMAC key file permissions to 0600"); }
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log?.Invoke("Could not set HMAC key file permissions to 0600"); }
                     }
                 }
                 catch (Exception ex)

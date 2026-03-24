@@ -1,5 +1,6 @@
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Core.SetParsing;
 
 namespace RomCleanup.Infrastructure.Orchestration;
 
@@ -82,5 +83,22 @@ internal static class PipelinePhaseHelpers
         {
             context.OnProgress?.Invoke($"WARNING: Could not move source after conversion: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Resolves set members (multi-file disc sets) for a given file extension.
+    /// <paramref name="includeM3uMembers"/>: when true, parses .m3u playlist members;
+    /// when false, treats .m3u targets as standalone scan candidates for DAT/hash matching.
+    /// </summary>
+    internal static IReadOnlyList<string> GetSetMembers(string filePath, string ext, bool includeM3uMembers = true)
+    {
+        return ext switch
+        {
+            ".cue" => CueSetParser.GetRelatedFiles(filePath),
+            ".gdi" => GdiSetParser.GetRelatedFiles(filePath),
+            ".ccd" => CcdSetParser.GetRelatedFiles(filePath),
+            ".m3u" => includeM3uMembers ? M3uPlaylistParser.GetRelatedFiles(filePath) : Array.Empty<string>(),
+            _ => Array.Empty<string>()
+        };
     }
 }

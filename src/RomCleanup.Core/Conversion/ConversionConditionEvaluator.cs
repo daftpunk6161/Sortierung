@@ -20,8 +20,8 @@ public sealed class ConversionConditionEvaluator(Func<string, long> fileSizeProv
         return condition switch
         {
             ConversionCondition.None => true,
-            ConversionCondition.FileSizeLessThan700MB => SafeSize(sourcePath) is > 0 and < 700L * 1024 * 1024,
-            ConversionCondition.FileSizeGreaterEqual700MB => SafeSize(sourcePath) >= 700L * 1024 * 1024,
+            ConversionCondition.FileSizeLessThan700MB => SafeSize(sourcePath) is > 0 and < ConversionThresholds.CdImageThresholdBytes,
+            ConversionCondition.FileSizeGreaterEqual700MB => SafeSize(sourcePath) >= ConversionThresholds.CdImageThresholdBytes,
             ConversionCondition.IsNKitSource => fileName.Contains(".nkit.", StringComparison.OrdinalIgnoreCase),
             ConversionCondition.IsWadFile => string.Equals(extension, ".wad", StringComparison.OrdinalIgnoreCase),
             ConversionCondition.IsCdiSource => string.Equals(extension, ".cdi", StringComparison.OrdinalIgnoreCase),
@@ -36,7 +36,7 @@ public sealed class ConversionConditionEvaluator(Func<string, long> fileSizeProv
         {
             return _fileSizeProvider(sourcePath);
         }
-        catch
+        catch (IOException)
         {
             return -1;
         }

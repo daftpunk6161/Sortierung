@@ -31,7 +31,7 @@ Produktivcode liegt in `src/` (7 Projekte). Die PowerShell-Version ist archivier
 
 | Projekt | Zweck |
 |---------|-------|
-| **RomCleanup.Contracts** | Port-Interfaces (`IFileSystem`, `IAuditStore`, `IDatRepository` …), Models/DTOs, Error-Contracts |
+| **RomCleanup.Contracts** | Port-Interfaces (`IFileSystem`, `IAuditStore`, `IToolRunner` …), Models/DTOs, Error-Contracts |
 | **RomCleanup.Core** | Pure Domain Logic: GameKeys, Regions, Scoring, Deduplication, Classification, SetParsing, Rules, Caching |
 | **RomCleanup.Infrastructure** | I/O-Adapter: FileSystem, Audit, Dat, Hashing, Tools, Conversion, Orchestration, Reporting, Logging, Configuration |
 | **RomCleanup.CLI** | Headless Entry Point |

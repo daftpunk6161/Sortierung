@@ -224,7 +224,7 @@ public sealed class QuarantineService
         {
             fullOriginal = Path.GetFullPath(originalPath);
         }
-        catch
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
             return new QuarantineRestoreResult { Status = "Error", Reason = "PathTraversalBlocked" };
         }
@@ -260,9 +260,15 @@ public sealed class QuarantineService
     {
         try
         {
+            // SEC-QUARANTINE-01: Block NTFS Alternate Data Streams
+            if (fullPath.IndexOf(':', 2) >= 0)
+                return false;
+
             var normalizedFull = Path.GetFullPath(fullPath)
+                .Normalize(System.Text.NormalizationForm.FormC)
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             var normalizedRoot = Path.GetFullPath(rootPath)
+                .Normalize(System.Text.NormalizationForm.FormC)
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
             if (normalizedFull.Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase))
@@ -272,7 +278,7 @@ public sealed class QuarantineService
                 normalizedRoot + Path.DirectorySeparatorChar,
                 StringComparison.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
             return false;
         }

@@ -1,8 +1,7 @@
 using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Text;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Conversion.ToolInvokers;
 
 namespace RomCleanup.Infrastructure.Conversion;
 
@@ -159,87 +158,13 @@ public sealed class ToolInvokerAdapter(IToolRunner tools) : IToolInvoker
     }
 
     private static string? ReadSafeCommandToken(string rawCommand)
-    {
-        var token = rawCommand.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
-        if (token.IndexOfAny(['/', '\\']) >= 0)
-            return null;
-
-        return token;
-    }
+        => ToolInvokerSupport.ReadSafeCommandToken(rawCommand);
 
     private static string? ValidateToolConstraints(string toolPath, ToolRequirement requirement)
-    {
-        if (!File.Exists(toolPath))
-            return "tool-not-found-on-disk";
-
-        if (!string.IsNullOrWhiteSpace(requirement.ExpectedHash))
-        {
-            var actualHash = ComputeSha256(toolPath);
-            if (!FixedTimeHashEquals(actualHash, requirement.ExpectedHash))
-                return "tool-hash-mismatch";
-        }
-
-        if (!string.IsNullOrWhiteSpace(requirement.MinVersion))
-        {
-            var actualVersion = TryReadFileVersion(toolPath);
-            if (actualVersion is null)
-                return "tool-version-unavailable";
-
-            if (!System.Version.TryParse(requirement.MinVersion, out var requiredVersion))
-                return "tool-minversion-invalid";
-
-            if (actualVersion < requiredVersion)
-                return "tool-version-too-old";
-        }
-
-        return null;
-    }
-
-    private static string ComputeSha256(string filePath)
-    {
-        using var sha256 = SHA256.Create();
-        using var stream = File.OpenRead(filePath);
-        var bytes = sha256.ComputeHash(stream);
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
-
-    private static bool FixedTimeHashEquals(string actualHash, string expectedHash)
-    {
-        var a = Encoding.ASCII.GetBytes(actualHash.ToLowerInvariant());
-        var e = Encoding.ASCII.GetBytes(expectedHash.ToLowerInvariant());
-        return CryptographicOperations.FixedTimeEquals(a, e);
-    }
-
-    private static System.Version? TryReadFileVersion(string toolPath)
-    {
-        var versionInfo = FileVersionInfo.GetVersionInfo(toolPath);
-
-        if (System.Version.TryParse(versionInfo.FileVersion, out var fileVersion))
-            return fileVersion;
-
-        if (System.Version.TryParse(versionInfo.ProductVersion, out var productVersion))
-            return productVersion;
-
-        return null;
-    }
+        => ToolInvokerSupport.ValidateToolConstraints(toolPath, requirement);
 
     private static bool IsLikelyCdImage(string sourcePath)
-    {
-        try
-        {
-            var ext = Path.GetExtension(sourcePath).ToLowerInvariant();
-            if (ext is not (".iso" or ".bin" or ".img"))
-                return false;
-
-            const long ps2CdThreshold = 700L * 1024 * 1024;
-            var size = new FileInfo(sourcePath).Length;
-            return size > 0 && size < ps2CdThreshold;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+        => ToolInvokerSupport.IsLikelyCdImage(sourcePath);
 
     private VerificationStatus VerifyChd(string targetPath)
     {
@@ -276,7 +201,7 @@ public sealed class ToolInvokerAdapter(IToolRunner tools) : IToolInvoker
 
             return magic[0] == 'R' && magic[1] == 'V' && magic[2] == 'Z' && magic[3] == 0x01;
         }
-        catch
+        catch (IOException)
         {
             return false;
         }

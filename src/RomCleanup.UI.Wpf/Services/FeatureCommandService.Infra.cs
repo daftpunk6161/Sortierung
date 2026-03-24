@@ -176,7 +176,8 @@ public sealed partial class FeatureCommandService
                 var driveRoot = Path.GetPathRoot(firstRoot);
                 if (driveRoot is not null) isNtfs = new DriveInfo(driveRoot).DriveFormat.Equals("NTFS", StringComparison.OrdinalIgnoreCase);
             }
-            catch { }
+            catch (IOException) { /* drive info unavailable — show as not available */ }
+            catch (UnauthorizedAccessException) { /* no access to drive info */ }
         }
         _dialog.ShowText("Hardlink-Modus", $"Hardlink-Modus\n\n{estimate}\n\nNTFS-Unterstützung: {(isNtfs ? "Verfügbar" : "Nicht verfügbar")}\n\nHardlinks teilen den Speicherplatz auf Dateisystemebene.\nBeide Pfade zeigen auf dieselben Daten – kein zusätzlicher Speicher.");
     }

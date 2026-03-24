@@ -80,7 +80,7 @@ public sealed class DolphinToolInvoker(IToolRunner tools) : IToolInvoker
                 ? VerificationStatus.Verified
                 : VerificationStatus.VerifyFailed;
         }
-        catch
+        catch (IOException)
         {
             return VerificationStatus.VerifyFailed;
         }

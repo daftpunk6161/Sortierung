@@ -168,7 +168,9 @@ app.MapGet("/health", (RunLifecycleManager mgr) =>
     });
 });
 
-app.MapGet("/openapi", () => Results.Content(OpenApiSpec.Json, "application/json"));
+app.MapGet("/openapi", () => Results.Content(
+    OpenApiSpec.Json.Replace("\"version\": \"1.0.0\"", $"\"version\": \"{Program.ApiVersion}\""),
+    "application/json"));
 
 app.MapPost("/runs", async (HttpContext ctx, RunLifecycleManager mgr) =>
 {
@@ -222,7 +224,12 @@ app.MapPost("/runs", async (HttpContext ctx, RunLifecycleManager mgr) =>
             if ((dirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
                 return ApiError(400, "SEC-ROOT-REPARSE-POINT", $"Symlink/junction not allowed as root: {root}", ErrorKind.Critical);
         }
-        catch { /* if we can't check attributes, let subsequent validation handle it */ }
+        catch (Exception ex)
+        {
+            // SEC: Fail closed — if we cannot verify attributes, reject the root
+            return ApiError(400, "SEC-ROOT-ATTRIBUTE-CHECK-FAILED",
+                $"Cannot verify attributes for root: {root} ({ex.GetType().Name})", ErrorKind.Critical);
+        }
 
         // Block system directories
         var full = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
@@ -267,8 +274,8 @@ app.MapPost("/runs", async (HttpContext ctx, RunLifecycleManager mgr) =>
     if (request.PreferRegions is { Length: > 0 })
     {
         // SEC-API-01: Limit array length to prevent abuse
-        if (request.PreferRegions.Length > 20)
-            return ApiError(400, "RUN-TOO-MANY-REGIONS", "PreferRegions must contain at most 20 entries.");
+        if (request.PreferRegions.Length > RomCleanup.Contracts.RunConstants.MaxPreferRegions)
+            return ApiError(400, "RUN-TOO-MANY-REGIONS", $"PreferRegions must contain at most {RomCleanup.Contracts.RunConstants.MaxPreferRegions} entries.");
 
         foreach (var region in request.PreferRegions)
         {
@@ -730,7 +737,7 @@ static IResult? ValidatePathSecurity(string path, string fieldName)
 
     string full;
     try { full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar); }
-    catch { return ApiError(400, "SEC-INVALID-PATH", $"Invalid path for {fieldName}.", ErrorKind.Critical); }
+    catch (Exception ex) when (ex is ArgumentException or NotSupportedException or System.Security.SecurityException) { return ApiError(400, "SEC-INVALID-PATH", $"Invalid path for {fieldName}.", ErrorKind.Critical); }
 
     // Block reparse points
     try
@@ -742,7 +749,10 @@ static IResult? ValidatePathSecurity(string path, string fieldName)
                 return ApiError(400, "SEC-REPARSE-POINT", $"Symlink/junction not allowed for {fieldName}.", ErrorKind.Critical);
         }
     }
-    catch { /* attribute check failure handled downstream */ }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+    {
+        return ApiError(400, "SEC-ATTRIBUTE-CHECK-FAILED", $"Cannot verify attributes for {fieldName}: {ex.GetType().Name}.", ErrorKind.Critical);
+    }
 
     // Block system directories
     var systemDirs = new[]

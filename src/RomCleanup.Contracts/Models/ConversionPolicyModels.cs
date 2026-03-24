@@ -63,3 +63,15 @@ public enum ConversionCondition
     /// <summary>Source is an encrypted PBP container.</summary>
     IsEncryptedPbp
 }
+
+/// <summary>
+/// Shared constants for conversion thresholds.
+/// </summary>
+public static class ConversionThresholds
+{
+    /// <summary>
+    /// CD image threshold: files below 700 MB are treated as CD rather than DVD.
+    /// Used by chdman (createcd vs createdvd), ConversionConditionEvaluator, and IsLikelyCdImage.
+    /// </summary>
+    public const long CdImageThresholdBytes = 700L * 1024 * 1024;
+}

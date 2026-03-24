@@ -95,4 +95,130 @@ public sealed class CliOptionsMapperTests
         Assert.Single(runOptions!.Extensions);
         Assert.Contains(".rvz", runOptions.Extensions);
     }
+
+    [Fact]
+    public void Map_DefaultMode_IsDryRun()
+    {
+        var settings = new RomCleanupSettings();
+        var cli = new CliRunOptions { Roots = new[] { "C:\\temp" } };
+
+        var (runOptions, _) = CliOptionsMapper.Map(cli, settings);
+
+        Assert.Equal("DryRun", runOptions!.Mode);
+    }
+
+    [Fact]
+    public void Map_ConvertFormatFalse_ProducesNullFormat()
+    {
+        var settings = new RomCleanupSettings();
+        var cli = new CliRunOptions
+        {
+            Roots = new[] { "C:\\temp" },
+            ConvertFormat = false
+        };
+
+        var (runOptions, _) = CliOptionsMapper.Map(cli, settings);
+
+        Assert.Null(runOptions!.ConvertFormat);
+    }
+
+    [Fact]
+    public void Map_HashType_IsNormalizedToUpperCase()
+    {
+        var settings = new RomCleanupSettings();
+        var cli = new CliRunOptions
+        {
+            Roots = new[] { "C:\\temp" },
+            HashType = "sha256"
+        };
+
+        var (runOptions, _) = CliOptionsMapper.Map(cli, settings);
+
+        Assert.Equal("SHA256", runOptions!.HashType);
+    }
+
+    [Fact]
+    public void Map_EmptyHashType_DefaultsToSHA1()
+    {
+        var settings = new RomCleanupSettings();
+        var cli = new CliRunOptions
+        {
+            Roots = new[] { "C:\\temp" },
+            HashType = null
+        };
+
+        var (runOptions, _) = CliOptionsMapper.Map(cli, settings);
+
+        Assert.Equal("SHA1", runOptions!.HashType);
+    }
+
+    [Fact]
+    public void Map_SettingsRegions_UsedWhenCliEmpty()
+    {
+        var settings = new RomCleanupSettings
+        {
+            General = { PreferredRegions = new List<string> { "JP", "WORLD" } }
+        };
+        var cli = new CliRunOptions
+        {
+            Roots = new[] { "C:\\temp" },
+            PreferRegions = Array.Empty<string>()
+        };
+
+        var (runOptions, _) = CliOptionsMapper.Map(cli, settings);
+
+        Assert.Equal(new[] { "JP", "WORLD" }, runOptions!.PreferRegions);
+    }
+
+    [Fact]
+    public void Map_CliRegions_OverrideSettings()
+    {
+        var settings = new RomCleanupSettings
+        {
+            General = { PreferredRegions = new List<string> { "EU", "US" } }
+        };
+        var cli = new CliRunOptions
+        {
+            Roots = new[] { "C:\\temp" },
+            PreferRegions = new[] { "JP" }
+        };
+
+        var (runOptions, _) = CliOptionsMapper.Map(cli, settings);
+
+        Assert.Equal(new[] { "JP" }, runOptions!.PreferRegions);
+    }
+
+    [Fact]
+    public void Map_SettingsDat_MergedWhenCliEmpty()
+    {
+        var settings = new RomCleanupSettings
+        {
+            Dat = { UseDat = true, HashType = "CRC32", DatRoot = "D:\\dats" }
+        };
+        var cli = new CliRunOptions
+        {
+            Roots = new[] { "C:\\temp" },
+            EnableDat = false,
+            HashType = null,
+            DatRoot = null
+        };
+
+        var (runOptions, _) = CliOptionsMapper.Map(cli, settings);
+
+        Assert.True(runOptions!.EnableDat);
+        Assert.Equal("CRC32", runOptions.HashType);
+        Assert.Equal("D:\\dats", runOptions.DatRoot);
+    }
+
+    [Fact]
+    public void Map_EmptyRoots_ProducesEmptyNormalizedRoots()
+    {
+        var settings = new RomCleanupSettings();
+        var cli = new CliRunOptions { Roots = Array.Empty<string>() };
+
+        var (runOptions, _) = CliOptionsMapper.Map(cli, settings);
+
+        Assert.NotNull(runOptions);
+        Assert.Empty(runOptions!.Roots);
+    }
 }

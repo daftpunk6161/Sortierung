@@ -50,7 +50,7 @@ public static class RuleEngine
             if (cond.Op == "regex")
             {
                 try { _ = new Regex(cond.Value); }
-                catch { errors.Add($"Invalid regex pattern: {cond.Value}"); }
+                catch (ArgumentException) { errors.Add($"Invalid regex pattern: {cond.Value}"); }
             }
         }
 
@@ -179,7 +179,7 @@ public static class RuleEngine
             var rx = _regexCache.GetOrAdd(pattern, p =>
             {
                 try { return new Regex(p, RegexOptions.IgnoreCase | RegexOptions.Compiled, RegexTimeout); }
-                catch { return null; }
+                catch (ArgumentException) { return null; }
             });
             return rx is not null && rx.IsMatch(input);
         }

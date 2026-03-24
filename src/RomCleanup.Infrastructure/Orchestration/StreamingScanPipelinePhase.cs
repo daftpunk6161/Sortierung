@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
-using RomCleanup.Core.SetParsing;
 
 namespace RomCleanup.Infrastructure.Orchestration;
 
@@ -54,7 +53,7 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
                     _context.OnProgress?.Invoke($"[Scan] {processed}/{fileCount} Dateien verarbeitet…");
 
                 var ext = Path.GetExtension(filePath).ToLowerInvariant();
-                var setMembers = GetSetMembers(filePath, ext);
+                var setMembers = PipelinePhaseHelpers.GetSetMembers(filePath, ext, includeM3uMembers: false);
                 foreach (var member in setMembers)
                     setMemberPaths.Add(Path.GetFullPath(member));
 
@@ -71,18 +70,5 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
             yield return candidate;
             await Task.Yield();
         }
-    }
-
-    private static IReadOnlyList<string> GetSetMembers(string filePath, string ext)
-    {
-        return ext switch
-        {
-            ".cue" => CueSetParser.GetRelatedFiles(filePath),
-            ".gdi" => GdiSetParser.GetRelatedFiles(filePath),
-            ".ccd" => CcdSetParser.GetRelatedFiles(filePath),
-            // Keep playlist targets as first-class scan candidates for DAT/hash matching.
-            ".m3u" => Array.Empty<string>(),
-            _ => Array.Empty<string>()
-        };
     }
 }

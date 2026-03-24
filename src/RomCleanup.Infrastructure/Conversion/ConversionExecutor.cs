@@ -266,7 +266,7 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers) : ICo
             if (File.Exists(path))
                 File.Delete(path);
         }
-        catch
+        catch (IOException)
         {
             // Best effort cleanup only.
         }

@@ -136,7 +136,7 @@ public sealed class AppStateStore : IAppState
         foreach (var handler in snapshot)
         {
             try { handler(state); }
-            catch { /* watchers must not crash the state store */ }
+            catch (Exception) { /* watchers must not crash the state store */ }
         }
     }
 

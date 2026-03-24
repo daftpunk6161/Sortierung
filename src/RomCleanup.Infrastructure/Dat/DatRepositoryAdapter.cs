@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
 using RomCleanup.Contracts.Models;
-using RomCleanup.Contracts.Ports;
 
 namespace RomCleanup.Infrastructure.Dat;
 
@@ -11,7 +10,7 @@ namespace RomCleanup.Infrastructure.Dat;
 /// Port of Dat.ps1 — XML-based DAT parsing with XXE protection,
 /// parent/clone mapping, game key resolution.
 /// </summary>
-public sealed class DatRepositoryAdapter : IDatRepository
+public sealed class DatRepositoryAdapter
 {
     /// <summary>Maximum DAT file size to parse (100 MB).</summary>
     private const long MaxDatFileSizeBytes = 100 * 1024 * 1024;
@@ -77,7 +76,7 @@ public sealed class DatRepositoryAdapter : IDatRepository
             if (fileSize > MaxDatFileSizeBytes)
                 return parentMap;
         }
-        catch { /* If we can't stat the file, let XmlReader handle it */ }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* If we can't stat the file, let XmlReader handle it */ }
 
         var settings = CreateSecureXmlSettings();
 
@@ -157,7 +156,7 @@ public sealed class DatRepositoryAdapter : IDatRepository
                 return games;
             }
         }
-        catch { /* If we can't stat the file, let XmlReader handle it */ }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* If we can't stat the file, let XmlReader handle it */ }
 
         // Pre-check: reject empty or obviously non-XML files before parsing
         try
@@ -176,7 +175,7 @@ public sealed class DatRepositoryAdapter : IDatRepository
                 return games;
             }
         }
-        catch { /* If we can't read, let XmlReader produce the proper error */ }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* If we can't read, let XmlReader produce the proper error */ }
 
         try
         {

@@ -96,7 +96,7 @@ public sealed class WinnerConversionPipelinePhase : IPipelinePhase<WinnerConvers
                             ConversionVerificationHelpers.ResolveToolName(convResult, target));
                         // SEC-CONV-04: Clean up failed output to prevent orphaned corrupt files
                         try { if (File.Exists(convResult.TargetPath)) File.Delete(convResult.TargetPath); }
-                        catch { /* best-effort cleanup */ }
+                        catch (IOException) { /* best-effort cleanup — file may be locked */ }
                     }
                 }
             }
@@ -117,7 +117,7 @@ public sealed class WinnerConversionPipelinePhase : IPipelinePhase<WinnerConvers
                 if (convResult.TargetPath is not null)
                 {
                     try { if (File.Exists(convResult.TargetPath)) File.Delete(convResult.TargetPath); }
-                    catch { /* best-effort cleanup */ }
+                    catch (IOException) { /* best-effort cleanup — file may be locked */ }
                 }
             }
 
