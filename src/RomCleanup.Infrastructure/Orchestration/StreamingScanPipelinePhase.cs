@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Core.Classification;
 
 namespace RomCleanup.Infrastructure.Orchestration;
 
@@ -48,11 +49,15 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
                 if (ExecutionHelpers.IsBlocklisted(filePath))
                     continue;
 
+                // TASK-020: Non-ROM extension pre-filter — skip known non-ROM file types early
+                var ext = Path.GetExtension(filePath).ToLowerInvariant();
+                if (FileClassifier.IsNonRomExtension(ext))
+                    continue;
+
                 processed++;
                 if (processed % 500 == 0)
                     _context.OnProgress?.Invoke($"[Scan] {processed}/{fileCount} Dateien verarbeitet…");
 
-                var ext = Path.GetExtension(filePath).ToLowerInvariant();
                 var setMembers = PipelinePhaseHelpers.GetSetMembers(filePath, ext, includeM3uMembers: false);
                 foreach (var member in setMembers)
                     setMemberPaths.Add(Path.GetFullPath(member));

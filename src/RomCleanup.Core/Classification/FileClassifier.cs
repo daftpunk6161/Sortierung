@@ -57,11 +57,25 @@ public static class FileClassifier
         ".txt", ".md", ".rtf", ".pdf", ".doc", ".docx",
         ".json", ".yaml", ".yml", ".xml", ".ini", ".cfg", ".conf", ".log",
         ".ps1", ".psm1", ".bat", ".cmd", ".sh", ".py", ".js", ".ts",
+        ".html", ".htm", ".exe", ".dll", ".msi",
         ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg",
         ".nfo", ".diz", ".url", ".lnk"
     ];
 
     public sealed record ClassificationDecision(FileCategory Category, int Confidence, string ReasonCode);
+
+    /// <summary>
+    /// Checks whether the given extension is a known non-ROM file type.
+    /// Used for scan-phase pre-filtering.
+    /// </summary>
+    public static bool IsNonRomExtension(string extension)
+    {
+        if (string.IsNullOrWhiteSpace(extension)) return false;
+        var normalized = extension.StartsWith(".", StringComparison.Ordinal)
+            ? extension.ToLowerInvariant()
+            : "." + extension.ToLowerInvariant();
+        return NonRomExtensions.Contains(normalized);
+    }
 
     /// <summary>
     /// Classifies a ROM filename (without extension) into GAME, BIOS or JUNK.

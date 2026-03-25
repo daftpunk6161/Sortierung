@@ -70,6 +70,22 @@ internal static class MetricsAggregator
             IsSortingDecision(r.ActualSortDecision) &&
             r.Verdict is BenchmarkVerdict.Correct or BenchmarkVerdict.Acceptable);
 
+        // TASK-022: categoryRecognitionRate — proportion of samples where expected and actual category match
+        int categoryMatches = results.Count(r =>
+            !string.IsNullOrWhiteSpace(r.ExpectedCategory) &&
+            !string.IsNullOrWhiteSpace(r.ActualCategory) &&
+            string.Equals(r.ExpectedCategory, r.ActualCategory, StringComparison.OrdinalIgnoreCase));
+
+        // TASK-022: junkClassifiedRate — proportion of junk-expected samples correctly identified as junk
+        int totalExpectedJunk = results.Count(r =>
+            string.Equals(r.ExpectedCategory, "Junk", StringComparison.OrdinalIgnoreCase));
+        int junkClassified = results.Count(r => r.Verdict == BenchmarkVerdict.JunkClassified);
+
+        // TASK-030: SortDecision breakdown counts
+        int sortCount = results.Count(r => r.ActualSortDecision == RomCleanup.Core.Classification.SortDecision.Sort);
+        int reviewCount = results.Count(r => r.ActualSortDecision == RomCleanup.Core.Classification.SortDecision.Review);
+        int blockedCount = results.Count(r => r.ActualSortDecision == RomCleanup.Core.Classification.SortDecision.Blocked);
+
         return new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
         {
             ["wrongMatchRate"] = total == 0 ? 0 : (double)wrong / total,
@@ -79,7 +95,12 @@ internal static class MetricsAggregator
             ["safeSortCoverage"] = total == 0 ? 0 : (double)correctSortDecisions / total,
             ["totalSortDecisions"] = totalSortDecisions,
             ["wrongSortDecisions"] = wrongSortDecisions,
-            ["gameAsJunkRate"] = CalculateGameAsJunkRate(results)
+            ["gameAsJunkRate"] = CalculateGameAsJunkRate(results),
+            ["categoryRecognitionRate"] = total == 0 ? 0 : (double)categoryMatches / total,
+            ["junkClassifiedRate"] = totalExpectedJunk == 0 ? 0 : (double)junkClassified / totalExpectedJunk,
+            ["sortCount"] = sortCount,
+            ["reviewCount"] = reviewCount,
+            ["blockedCount"] = blockedCount,
         };
     }
 

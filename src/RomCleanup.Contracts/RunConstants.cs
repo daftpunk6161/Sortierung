@@ -16,6 +16,13 @@ public static class RunConstants
     /// <summary>Maximum number of PreferRegions entries accepted by CLI and API.</summary>
     public const int MaxPreferRegions = 20;
 
+    /// <summary>
+    /// TASK-144: Central default for PreferRegions — single source of truth.
+    /// Order: EU, US, JP, WORLD (matches defaults.json).
+    /// Referenced by RunOptions, CLI, API, and GUI.
+    /// </summary>
+    public static readonly string[] DefaultPreferRegions = ["EU", "US", "JP", "WORLD"];
+
     /// <summary>Valid hash type names.</summary>
     public static readonly IReadOnlySet<string> ValidHashTypes =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SHA1", "SHA256", "MD5" };

@@ -207,6 +207,27 @@ public sealed class FileSystemAdapter : IFileSystem
         }
     }
 
+    /// <summary>
+    /// SEC-MOVE-04: Move with explicit root containment validation.
+    /// Verifies destination resolves within allowedRoot before proceeding.
+    /// </summary>
+    public string? MoveItemSafely(string sourcePath, string destinationPath, string allowedRoot)
+    {
+        if (string.IsNullOrWhiteSpace(allowedRoot))
+            throw new ArgumentException("Allowed root must not be empty.", nameof(allowedRoot));
+
+        var normalizedRoot = NormalizePathNfc(allowedRoot).TrimEnd(Path.DirectorySeparatorChar)
+                           + Path.DirectorySeparatorChar;
+        var normalizedDest = NormalizePathNfc(destinationPath).TrimEnd(Path.DirectorySeparatorChar)
+                           + Path.DirectorySeparatorChar;
+
+        if (!normalizedDest.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                $"Blocked: Destination '{destinationPath}' is outside allowed root '{allowedRoot}'.");
+
+        return MoveItemSafely(sourcePath, destinationPath);
+    }
+
     public string? RenameItemSafely(string sourcePath, string newFileName)
     {
         if (string.IsNullOrWhiteSpace(sourcePath))

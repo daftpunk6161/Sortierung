@@ -80,6 +80,17 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                     continue;
                 }
 
+                // TASK-147: Write-Ahead Audit Pattern — write planned audit row BEFORE move.
+                // If move fails, the row is already there with "PENDING" status.
+                // On success, we append the definitive row. On failure, the pending row
+                // ensures rollback discovery even if the process crashes mid-move.
+                if (hasAuditPath)
+                {
+                    context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, loser.MainPath, destPath,
+                        "MOVE_PENDING", loser.Category.ToString().ToUpperInvariant(), "", "region-dedupe:write-ahead");
+                    context.AuditStore.Flush(input.Options.AuditPath!);
+                }
+
                 var actualDest = context.FileSystem.MoveItemSafely(loser.MainPath, destPath);
                 if (actualDest is not null)
                 {
@@ -88,6 +99,7 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
 
                     if (hasAuditPath)
                     {
+                        // Write definitive audit row with actual destination (may differ due to DUP suffix)
                         context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, loser.MainPath, actualDest,
                             "Move", loser.Category.ToString().ToUpperInvariant(), "", "region-dedupe");
                     }
@@ -105,6 +117,12 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                 else
                 {
                     failCount++;
+                    // TASK-147: Record move failure so the PENDING row can be identified during rollback
+                    if (hasAuditPath)
+                    {
+                        context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, loser.MainPath, destPath,
+                            "MOVE_FAILED", loser.Category.ToString().ToUpperInvariant(), "", "region-dedupe:move-failed");
+                    }
                 }
 
                 if (processedLosers % 100 == 0 || processedLosers == totalLosers)

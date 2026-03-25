@@ -69,6 +69,14 @@ public sealed class ConsoleDetector
     }
 
     /// <summary>
+    /// Returns the CategoryOverride for a given console key, or null if none configured.
+    /// </summary>
+    public string? GetCategoryOverride(string consoleKey)
+    {
+        return _consoles.TryGetValue(consoleKey, out var info) ? info.CategoryOverride : null;
+    }
+
+    /// <summary>
     /// Loads console definitions from a consoles.json file.
     /// </summary>
     public static ConsoleDetector LoadFromJson(
@@ -94,8 +102,9 @@ public sealed class ConsoleDetector
                 var uniqueExts = ReadStringArray(item, "uniqueExts");
                 var ambigExts = ReadStringArray(item, "ambigExts");
                 var aliases = ReadStringArray(item, "folderAliases");
+                var categoryOverride = item.TryGetProperty("categoryOverride", out var co) ? co.GetString() : null;
 
-                consoles.Add(new ConsoleInfo(key, displayName, discBased, uniqueExts, ambigExts, aliases));
+                consoles.Add(new ConsoleInfo(key, displayName, discBased, uniqueExts, ambigExts, aliases, categoryOverride));
             }
         }
 
@@ -506,4 +515,5 @@ public sealed record ConsoleInfo(
     bool DiscBased,
     string[] UniqueExts,
     string[] AmbigExts,
-    string[] FolderAliases);
+    string[] FolderAliases,
+    string? CategoryOverride = null);

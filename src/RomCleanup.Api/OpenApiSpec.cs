@@ -164,6 +164,8 @@ public static class OpenApiSpec
           "skipCount": { "type": "integer" },
           "consoleSortMoved": { "type": "integer" },
           "consoleSortFailed": { "type": "integer" },
+          "consoleSortReviewed": { "type": "integer" },
+          "consoleSortBlocked": { "type": "integer" },
           "failCount": { "type": "integer" },
           "savedBytes": { "type": "integer", "format": "int64" },
           "durationMs": { "type": "integer", "format": "int64" },

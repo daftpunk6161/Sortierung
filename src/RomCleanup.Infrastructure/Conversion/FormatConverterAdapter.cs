@@ -540,6 +540,12 @@ public sealed class FormatConverterAdapter : IFormatConverter
             var gdiFiles = Directory.GetFiles(extractDir, "*.gdi", SearchOption.AllDirectories);
             var isoFiles = Directory.GetFiles(extractDir, "*.iso", SearchOption.AllDirectories);
 
+            // TASK-012/TASK-149: Deterministic CUE selection — sort alphabetically before selecting.
+            // This ensures identical results regardless of filesystem enumeration order.
+            Array.Sort(cueFiles, StringComparer.OrdinalIgnoreCase);
+            Array.Sort(gdiFiles, StringComparer.OrdinalIgnoreCase);
+            Array.Sort(isoFiles, StringComparer.OrdinalIgnoreCase);
+
             // Path traversal guard: Ensure selected files are within extractDir
             static bool IsWithinDir(string filePath, string baseDir)
             {
@@ -547,13 +553,25 @@ public sealed class FormatConverterAdapter : IFormatConverter
                 return Path.GetFullPath(filePath).StartsWith(fullBase, StringComparison.OrdinalIgnoreCase);
             }
 
+            // Filter to safe files within extractDir
+            var safeCueFiles = cueFiles.Where(f => IsWithinDir(f, extractDir)).ToArray();
+            var safeGdiFiles = gdiFiles.Where(f => IsWithinDir(f, extractDir)).ToArray();
+            var safeIsoFiles = isoFiles.Where(f => IsWithinDir(f, extractDir)).ToArray();
+
+            // TASK-012: Multi-CUE atomicity — if multiple .cue files exist, each needs conversion.
+            // For multi-disc archives, convert all CUE files as atomic set.
+            if (safeCueFiles.Length > 1)
+            {
+                return ConvertMultiCueArchive(sourcePath, safeCueFiles, dir, toolPath, command);
+            }
+
             string? inputFile = null;
-            if (cueFiles.Length > 0 && IsWithinDir(cueFiles[0], extractDir))
-                inputFile = cueFiles[0];
-            else if (gdiFiles.Length > 0 && IsWithinDir(gdiFiles[0], extractDir))
-                inputFile = gdiFiles[0];
-            else if (isoFiles.Length > 0 && IsWithinDir(isoFiles[0], extractDir))
-                inputFile = isoFiles[0];
+            if (safeCueFiles.Length == 1)
+                inputFile = safeCueFiles[0];
+            else if (safeGdiFiles.Length > 0)
+                inputFile = safeGdiFiles[0];
+            else if (safeIsoFiles.Length > 0)
+                inputFile = safeIsoFiles[0];
 
             if (inputFile is null)
                 return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped,
@@ -595,6 +613,43 @@ public sealed class FormatConverterAdapter : IFormatConverter
             }
             catch (IOException) { /* best-effort cleanup — dir may be locked */ }
         }
+    }
+
+    /// <summary>
+    /// TASK-012: Convert all CUE files from a multi-disc archive atomically.
+    /// All must succeed or the entire conversion is rolled back.
+    /// </summary>
+    private ConversionResult ConvertMultiCueArchive(
+        string sourcePath, string[] cueFiles, string outputDir, string toolPath, string command)
+    {
+        var baseName = Path.GetFileNameWithoutExtension(sourcePath);
+        var outputs = new List<string>();
+
+        for (int i = 0; i < cueFiles.Length; i++)
+        {
+            var cueBaseName = Path.GetFileNameWithoutExtension(cueFiles[i]);
+            var targetPath = Path.Combine(outputDir, cueBaseName + ".chd");
+
+            var args = new[] { command, "-i", cueFiles[i], "-o", targetPath };
+            var result = _tools.InvokeProcess(toolPath, args, "chdman");
+
+            if (!result.Success || !File.Exists(targetPath))
+            {
+                // Rollback: delete all already-created CHDs
+                foreach (var output in outputs)
+                    CleanupPartialOutput(output);
+                CleanupPartialOutput(targetPath);
+
+                return new ConversionResult(sourcePath, null, ConversionOutcome.Error,
+                    $"multi-cue-failed:disc{i + 1}of{cueFiles.Length}");
+            }
+
+            outputs.Add(targetPath);
+        }
+
+        // Return first output as primary, note multi-disc in detail
+        return new ConversionResult(sourcePath, outputs[0], ConversionOutcome.Success,
+            $"multi-disc:{cueFiles.Length}");
     }
 
     private ConversionResult ConvertWithDolphinTool(string sourcePath, string targetPath, string toolPath, string sourceExt)

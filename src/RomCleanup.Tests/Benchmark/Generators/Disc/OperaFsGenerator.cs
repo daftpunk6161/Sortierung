@@ -12,7 +12,7 @@ internal sealed class OperaFsGenerator : IStubGenerator
 
     public byte[] Generate(string? variant = null, IReadOnlyDictionary<string, string>? parameters = null)
     {
-        // Opera FS header: 0x01 + 5×0x5A at bytes 0-5
+        // Opera FS header: 0x01 + 5×0x5A at bytes 0-5, version byte at 6
         var data = new byte[2048];
         data[0] = 0x01;
         data[1] = 0x5A;
@@ -20,6 +20,7 @@ internal sealed class OperaFsGenerator : IStubGenerator
         data[3] = 0x5A;
         data[4] = 0x5A;
         data[5] = 0x5A;
+        data[6] = 0x01; // Record version — required by DiscHeaderDetector
         return data;
     }
 }

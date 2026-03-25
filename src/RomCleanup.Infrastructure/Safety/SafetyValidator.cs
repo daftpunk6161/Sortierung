@@ -89,6 +89,21 @@ public sealed class SafetyValidator
         if (trimmed.StartsWith(@"\\?\") || trimmed.StartsWith(@"\\.\"))
             return null;
 
+        // SEC-PATH-04: Reject NTFS Alternate Data Streams (colon after drive letter)
+        var adsCheckPortion = trimmed.Length >= 2 && trimmed[1] == ':'
+            ? trimmed[2..]
+            : trimmed;
+        if (adsCheckPortion.Contains(':'))
+            return null;
+
+        // SEC-PATH-05: Reject trailing dots/spaces in path segments (Windows silently strips them → path bypass)
+        var segments = trimmed.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        foreach (var seg in segments)
+        {
+            if (seg.Length > 0 && (seg[^1] == '.' || seg[^1] == ' '))
+                return null;
+        }
+
         try { return Path.GetFullPath(trimmed); }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or System.Security.SecurityException or PathTooLongException)
         {

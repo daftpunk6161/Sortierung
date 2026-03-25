@@ -41,6 +41,8 @@ public sealed record RunProjection(
     int JunkFailCount,
     int ConsoleSortMoved,
     int ConsoleSortFailed,
+    int ConsoleSortReviewed,
+    int ConsoleSortBlocked,
     int FailCount,
     long SavedBytes,
     long DurationMs,
@@ -75,6 +77,8 @@ public static class RunProjectionFactory
         var junkFailCount = result.JunkMoveResult?.FailCount ?? 0;
         var consoleSortMoved = result.ConsoleSortResult?.Moved ?? 0;
         var consoleSortFailed = result.ConsoleSortResult?.Failed ?? 0;
+        var consoleSortReviewed = result.ConsoleSortResult?.Reviewed ?? 0;
+        var consoleSortBlocked = result.ConsoleSortResult?.Blocked ?? 0;
 
         var health = HealthScorer.GetHealthScore(total, loserCount, junk, datMatches);
 
@@ -113,6 +117,8 @@ public static class RunProjectionFactory
             JunkFailCount: junkFailCount,
             ConsoleSortMoved: consoleSortMoved,
             ConsoleSortFailed: consoleSortFailed,
+            ConsoleSortReviewed: consoleSortReviewed,
+            ConsoleSortBlocked: consoleSortBlocked,
             FailCount: failCount,
             SavedBytes: savedBytes,
             DurationMs: result.DurationMs,

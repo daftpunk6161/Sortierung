@@ -139,19 +139,21 @@ public sealed partial class RunOrchestrator
         _onProgress?.Invoke("[Sort] Sortiere Dateien nach Konsole…");
 
         // Build sort-decision map from enrichment phase.
-        // We use the SortDecision computed by HypothesisResolver instead of raw confidence.
+        // We use the SortDecision computed by HypothesisResolver to route files.
         Dictionary<string, string>? enrichedConsoleKeys = null;
+        Dictionary<string, string>? enrichedSortDecisions = null;
+        Dictionary<string, string>? enrichedCategories = null;
         if (state.AllCandidates is not null)
         {
             enrichedConsoleKeys = new Dictionary<string, string>(
                 state.AllCandidates.Count, StringComparer.OrdinalIgnoreCase);
+            enrichedSortDecisions = new Dictionary<string, string>(
+                state.AllCandidates.Count, StringComparer.OrdinalIgnoreCase);
+            enrichedCategories = new Dictionary<string, string>(
+                state.AllCandidates.Count, StringComparer.OrdinalIgnoreCase);
             foreach (var c in state.AllCandidates)
             {
-                if (c.Category != FileCategory.Game)
-                {
-                    enrichedConsoleKeys[c.MainPath] = "UNKNOWN";
-                    continue;
-                }
+                enrichedCategories[c.MainPath] = c.Category.ToString();
 
                 if (string.IsNullOrEmpty(c.ConsoleKey) ||
                     c.ConsoleKey is "UNKNOWN" or "AMBIGUOUS")
@@ -160,14 +162,14 @@ public sealed partial class RunOrchestrator
                     continue;
                 }
 
-                // SortDecision-based gate: only Sort and DatVerified pass
-                if (c.SortDecision is "Sort" or "DatVerified")
+                // Pass through the actual console key for all decisions
+                enrichedConsoleKeys[c.MainPath] = c.ConsoleKey;
+                enrichedSortDecisions[c.MainPath] = c.SortDecision ?? "Blocked";
+
+                // Non-game categories are blocked
+                if (c.Category != FileCategory.Game)
                 {
-                    enrichedConsoleKeys[c.MainPath] = c.ConsoleKey;
-                }
-                else
-                {
-                    enrichedConsoleKeys[c.MainPath] = "UNKNOWN";
+                    enrichedSortDecisions[c.MainPath] = "Blocked";
                 }
             }
         }
@@ -175,7 +177,9 @@ public sealed partial class RunOrchestrator
         var sorter = new ConsoleSorter(_fs, _consoleDetector, _audit, options.AuditPath);
         result.ConsoleSortResult = sorter.Sort(
             options.Roots, options.Extensions, dryRun: false, cancellationToken,
-            enrichedConsoleKeys: enrichedConsoleKeys);
+            enrichedConsoleKeys: enrichedConsoleKeys,
+            enrichedSortDecisions: enrichedSortDecisions,
+            enrichedCategories: enrichedCategories);
 
         _onProgress?.Invoke("[Sort] Konsolen-Sortierung abgeschlossen");
         metrics.CompletePhase();

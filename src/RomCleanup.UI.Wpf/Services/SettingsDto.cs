@@ -1,3 +1,4 @@
+using RomCleanup.Contracts;
 using RomCleanup.UI.Wpf.Models;
 
 namespace RomCleanup.UI.Wpf.Services;
@@ -9,7 +10,7 @@ public sealed record SettingsDto
     public string LogLevel { get; init; } = "Info";
     public bool AggressiveJunk { get; init; }
     public bool AliasKeying { get; init; }
-    public string[] PreferredRegions { get; init; } = ["EU", "US", "JP", "WORLD"];
+    public string[] PreferredRegions { get; init; } = RunConstants.DefaultPreferRegions;
 
     // Tool paths
     public string ToolChdman { get; init; } = "";

@@ -151,6 +151,8 @@ public static class RunReportWriter
             SkipCount = projection.SkipCount,
             ConsoleSortMoved = projection.ConsoleSortMoved,
             ConsoleSortFailed = projection.ConsoleSortFailed,
+            ConsoleSortReviewed = projection.ConsoleSortReviewed,
+            ConsoleSortBlocked = projection.ConsoleSortBlocked,
             FailCount = projection.FailCount,
             ErrorCount = totalErrorCount,
             SkippedCount = projection.ConvertSkippedCount + projection.ConvertBlockedCount + projection.SkipCount,

@@ -23,13 +23,22 @@ public static class RunOptionsBuilder
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+        // TASK-144/F-08: Normalize PreferRegions — dedup, trim, uppercase, filter empty
+        var normalizedPreferRegions = options.PreferRegions
+            .Where(static r => !string.IsNullOrWhiteSpace(r))
+            .Select(static r => r.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (normalizedPreferRegions.Length == 0)
+            normalizedPreferRegions = RunConstants.DefaultPreferRegions;
+
         return new RunOptions
         {
             Roots = normalizedRoots,
             Mode = string.IsNullOrWhiteSpace(options.Mode) ? "DryRun" : options.Mode,
             ConflictPolicy = string.IsNullOrWhiteSpace(options.ConflictPolicy) ? RunConstants.DefaultConflictPolicy : options.ConflictPolicy,
             Extensions = normalizedExtensions,
-            PreferRegions = options.PreferRegions,
+            PreferRegions = normalizedPreferRegions,
             RemoveJunk = options.RemoveJunk,
             OnlyGames = options.OnlyGames,
             KeepUnknownWhenOnlyGames = options.KeepUnknownWhenOnlyGames,

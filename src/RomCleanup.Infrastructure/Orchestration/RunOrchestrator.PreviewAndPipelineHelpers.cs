@@ -58,7 +58,7 @@ public sealed partial class RunOrchestrator
         }
     }
 
-    private void WriteCompletedAuditSidecar(RunOptions options, RunResultBuilder result, long elapsedMs)
+    private void WriteCompletedAuditSidecar(RunOptions options, RunResultBuilder result, long elapsedMs, RunOutcome? outcome = null)
     {
         _onProgress?.Invoke("[Audit] Schreibe Audit-Sidecar…");
         if (string.IsNullOrEmpty(options.AuditPath) || !File.Exists(options.AuditPath))
@@ -70,7 +70,8 @@ public sealed partial class RunOrchestrator
         {
             ["RowCount"] = rowCount,
             ["Mode"] = options.Mode,
-            ["Status"] = "completed",
+            // TASK-145: Reflect actual RunOutcome instead of always "completed"
+            ["Status"] = outcome?.ToStatusString() ?? "completed",
             ["TotalFilesScanned"] = result.TotalFilesScanned,
             ["GroupCount"] = result.GroupCount,
             ["WinnerCount"] = result.WinnerCount,

@@ -35,6 +35,11 @@ public sealed class BenchmarkFixture : IAsyncLifetime
             SamplesRoot = Path.Combine(BenchmarkPaths.BenchmarkDir, "samples");
             AllEntries = GroundTruthLoader.LoadAll();
 
+            // Also include holdout entries for stub generation so they get their own files
+            var holdoutEntries = HoldoutEvaluator.LoadHoldoutEntries();
+            var allForGeneration = new List<GroundTruthEntry>(AllEntries);
+            allForGeneration.AddRange(holdoutEntries);
+
             // Generate stubs if not already present
             var markerFile = Path.Combine(SamplesRoot, ".generated");
             if (!File.Exists(markerFile))
@@ -44,10 +49,10 @@ public sealed class BenchmarkFixture : IAsyncLifetime
 
                 Directory.CreateDirectory(SamplesRoot);
                 var dispatch = new StubGeneratorDispatch();
-                dispatch.GenerateAll(AllEntries, SamplesRoot);
+                dispatch.GenerateAll(allForGeneration, SamplesRoot);
 
                 // Write marker with entry count for fingerprinting
-                File.WriteAllText(markerFile, $"{AllEntries.Count} entries generated");
+                File.WriteAllText(markerFile, $"{allForGeneration.Count} entries generated");
             }
 
             // Load production ConsoleDetector with header detectors

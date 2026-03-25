@@ -236,7 +236,8 @@ public sealed partial class RunOrchestrator
         }
 
         // FEAT-03: Write final audit sidecar with HMAC signature after all phases.
-        new AuditSealPhaseStep(() => WriteCompletedAuditSidecar(options, result, sw.ElapsedMilliseconds))
+        // TASK-145: Pass actual RunOutcome so sidecar status reflects errors.
+        new AuditSealPhaseStep(() => WriteCompletedAuditSidecar(options, result, sw.ElapsedMilliseconds, runOutcome))
             .Execute(pipelineState, cancellationToken);
 
         _onProgress?.Invoke($"[Fertig] Pipeline abgeschlossen in {sw.ElapsedMilliseconds}ms — {result.TotalFilesScanned} Dateien, {result.GroupCount} Gruppen");

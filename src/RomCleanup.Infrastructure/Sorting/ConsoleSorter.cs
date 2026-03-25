@@ -18,7 +18,7 @@ public sealed class ConsoleSorter
         TimeSpan.FromMilliseconds(100));
 
     private static readonly string[] ExcludedFolders =
-        { "_TRASH_REGION_DEDUPE", "_TRASH_JUNK", "_BIOS", "_JUNK" };
+        { "_TRASH_REGION_DEDUPE", "_TRASH_JUNK", "_BIOS", "_JUNK", "_REVIEW" };
 
     private readonly IFileSystem _fs;
     private readonly ConsoleDetector _consoleDetector;
@@ -46,15 +46,25 @@ public sealed class ConsoleSorter
     /// When provided, skips re-detection for files that already have a known ConsoleKey.
     /// This preserves DAT-rescued console identifications.
     /// </param>
+    /// <param name="enrichedSortDecisions">
+    /// Optional: pre-enriched SortDecision mappings (filePath → "Sort"/"Review"/"Blocked"/"DatVerified").
+    /// When provided, controls routing: Review → _REVIEW/{ConsoleKey}/, Blocked → no move.
+    /// </param>
+    /// <param name="enrichedCategories">
+    /// Optional: pre-enriched category mappings (filePath → "Game"/"Junk"/"NonGame"/"Bios"/"Unknown").
+    /// When provided, Junk files with a known console go to _TRASH_JUNK/{ConsoleKey}/.
+    /// </param>
     /// <returns>Sort result with counters.</returns>
     public ConsoleSortResult Sort(
         IReadOnlyList<string> roots,
         IEnumerable<string>? extensions = null,
         bool dryRun = true,
         CancellationToken cancellationToken = default,
-        IReadOnlyDictionary<string, string>? enrichedConsoleKeys = null)
+        IReadOnlyDictionary<string, string>? enrichedConsoleKeys = null,
+        IReadOnlyDictionary<string, string>? enrichedSortDecisions = null,
+        IReadOnlyDictionary<string, string>? enrichedCategories = null)
     {
-        int total = 0, moved = 0, skipped = 0, unknown = 0, setMembersMoved = 0, failed = 0;
+        int total = 0, moved = 0, skipped = 0, unknown = 0, setMembersMoved = 0, failed = 0, reviewed = 0, blocked = 0;
         var unknownReasons = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var root in roots)
@@ -112,6 +122,53 @@ public sealed class ConsoleSorter
                     continue;
                 }
 
+                // SortDecision routing: determine destination based on enriched decision
+                var sortDecision = enrichedSortDecisions is not null &&
+                    enrichedSortDecisions.TryGetValue(filePath, out var sd) ? sd : null;
+                var category = enrichedCategories is not null &&
+                    enrichedCategories.TryGetValue(filePath, out var cat) ? cat : null;
+
+                // Blocked files are not moved
+                if (string.Equals(sortDecision, "Blocked", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Junk with known console → _TRASH_JUNK/{ConsoleKey}/
+                    if (string.Equals(category, "Junk", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var junkDir = Path.Combine(root, "_TRASH_JUNK", consoleKey);
+                        var junkFileName = Path.GetFileName(filePath);
+                        if (MoveFile(root, filePath, junkDir, junkFileName, dryRun))
+                        {
+                            blocked++;
+                            WriteAuditRow(root, filePath, Path.Combine(junkDir, junkFileName), $"junk-sort:{consoleKey}");
+                        }
+                        else
+                        {
+                            failed++;
+                        }
+                        continue;
+                    }
+
+                    blocked++;
+                    continue;
+                }
+
+                // Review files → _REVIEW/{ConsoleKey}/
+                if (string.Equals(sortDecision, "Review", StringComparison.OrdinalIgnoreCase))
+                {
+                    var reviewDir = Path.Combine(root, "_REVIEW", consoleKey);
+                    var reviewFileName = Path.GetFileName(filePath);
+                    if (MoveFile(root, filePath, reviewDir, reviewFileName, dryRun))
+                    {
+                        reviewed++;
+                        WriteAuditRow(root, filePath, Path.Combine(reviewDir, reviewFileName), $"review-sort:{consoleKey}");
+                    }
+                    else
+                    {
+                        failed++;
+                    }
+                    continue;
+                }
+
                 // Check if already in correct subfolder
                 var fileName = Path.GetFileName(filePath);
                 var expectedDir = Path.Combine(root, consoleKey);
@@ -156,7 +213,7 @@ public sealed class ConsoleSorter
             }
         }
 
-        return new ConsoleSortResult(total, moved, setMembersMoved, skipped, unknown, unknownReasons, failed);
+        return new ConsoleSortResult(total, moved, setMembersMoved, skipped, unknown, unknownReasons, failed, reviewed, blocked);
     }
 
     /// <summary>
@@ -274,8 +331,12 @@ public sealed class ConsoleSorter
         if (dryRun) return true;
 
         _fs.EnsureDirectory(destDir);
-        var destPath = _fs.ResolveChildPathWithinRoot(root, Path.Combine(
-            Path.GetFileName(destDir), fileName));
+        var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normalizedDest = Path.GetFullPath(destDir);
+        var relativeDest = normalizedDest.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            ? normalizedDest[(normalizedRoot.Length + 1)..]
+            : Path.GetFileName(destDir);
+        var destPath = _fs.ResolveChildPathWithinRoot(root, Path.Combine(relativeDest, fileName));
 
         if (destPath is null) return false; // path traversal blocked
 

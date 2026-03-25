@@ -226,7 +226,9 @@ public sealed class Issue9InvariantRegressionRedPhaseTests : IDisposable
             CreateContext(options, fs, audit),
             CancellationToken.None);
 
-        Assert.Equal(result.MoveCount + result.SkipCount, audit.Rows.Count);
+        // TASK-147: Write-ahead pattern: each successful move writes 2 rows (MOVE_PENDING + Move),
+        // each Skip writes 1 row. So total = MoveCount * 2 + SkipCount.
+        Assert.Equal(result.MoveCount * 2 + result.SkipCount, audit.Rows.Count);
     }
 
     [Fact]

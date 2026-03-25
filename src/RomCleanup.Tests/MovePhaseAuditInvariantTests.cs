@@ -65,7 +65,9 @@ public sealed class MovePhaseAuditInvariantTests : IDisposable
         Assert.Equal(1, result.MoveCount);
         Assert.Equal(1, result.SkipCount);
         Assert.Equal(1, result.FailCount);
-        Assert.Equal(2, audit.Rows.Count);
+        // TASK-147: Write-ahead pattern: MOVE_PENDING + Move for successful move, SKIP for skip
+        // Loser a: MOVE_PENDING + Move = 2 rows; Loser b: SKIP = 1 row; Loser c: fail (no root) = 0 rows
+        Assert.Equal(3, audit.Rows.Count);
     }
 
     [Fact]
@@ -106,7 +108,10 @@ public sealed class MovePhaseAuditInvariantTests : IDisposable
             CancellationToken.None);
 
         Assert.Equal(10, result.MoveCount);
-        Assert.Equal(3, audit.FlushCalls);
+        // TASK-147: Write-ahead pattern adds Flush before each MOVE_PENDING.
+        // Flushes: 1 (initial) + 10 (before each PENDING) + 1 (at moveCount=10) + 1 (final) = 13
+        Assert.Equal(13, audit.FlushCalls);
+        // Sidecars: 1 (initial primed) + 1 (at moveCount=10) + 1 (final) = 3
         Assert.Equal(3, audit.SidecarCalls);
         Assert.Equal("Sidecar", audit.CallOrder[0]);
         Assert.Equal("Append", audit.CallOrder[1]);

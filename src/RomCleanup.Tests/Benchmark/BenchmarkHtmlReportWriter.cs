@@ -145,6 +145,7 @@ internal static class BenchmarkHtmlReportWriter
             ["datExactMatchRate"] =     (0.90,   ">=", "M11 DAT Exact Match Rate"),
             ["ambiguousMatchRate"] =    (0.08,   "<=", "M13 Ambiguous Match Rate"),
             ["repairSafeRate"] =        (0.70,   ">=", "M14 Repair-Safe Rate"),
+            ["categoryRecognitionRate"]=(0.85,   ">=", "M15 Category Recognition Rate"),
         };
 
         foreach (var (key, (target, op, label)) in thresholds)

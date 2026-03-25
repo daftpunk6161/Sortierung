@@ -86,7 +86,9 @@ internal sealed class StubGeneratorDispatch
     }
 
     /// <summary>
-    /// Gets the relative file path for a ground-truth entry (directory/fileName).
+    /// Gets the relative file path for a ground-truth entry.
+    /// Uses {directory}/{entryId}/{fileName} to ensure unique paths even when
+    /// multiple entries share the same directory and fileName (TASK-036).
     /// </summary>
     public static string BuildRelativePath(GroundTruthEntry entry)
     {
@@ -97,7 +99,10 @@ internal sealed class StubGeneratorDispatch
         directory = directory.Replace("..", "_").Replace('/', Path.DirectorySeparatorChar);
         fileName = Path.GetFileName(fileName); // Strip any directory components
 
-        return Path.Combine(directory, fileName);
+        // Entry ID as sub-directory ensures uniqueness across entries with same directory/fileName
+        var entryDir = entry.Id.Replace("..", "_").Replace('/', '_').Replace('\\', '_');
+
+        return Path.Combine(directory, entryDir, fileName);
     }
 
     /// <summary>

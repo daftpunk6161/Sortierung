@@ -63,6 +63,8 @@ public sealed record ReportSummary
     public int SkipCount { get; init; }
     public int ConsoleSortMoved { get; init; }
     public int ConsoleSortFailed { get; init; }
+    public int ConsoleSortReviewed { get; init; }
+    public int ConsoleSortBlocked { get; init; }
     public int FailCount { get; init; }
     public int ErrorCount { get; init; }
     public int SkippedCount { get; init; }
@@ -245,6 +247,10 @@ tr:hover { background: rgba(137,180,250,0.05); }
             AppendCard(sb, "", FormatSize(s.ConvertSavedBytes), "Convert-Gespart");
         if (s.ConvertErrorCount > 0)
             AppendCard(sb, "junk", s.ConvertErrorCount.ToString(), "Convert-Fehler");
+        if (s.ConsoleSortReviewed > 0)
+            AppendCard(sb, "", s.ConsoleSortReviewed.ToString(), "Sort-Review");
+        if (s.ConsoleSortBlocked > 0)
+            AppendCard(sb, "", s.ConsoleSortBlocked.ToString(), "Sort-Blocked");
         if (s.ErrorCount > 0)
             AppendCard(sb, "junk", s.ErrorCount.ToString(), "Fehler");
         AppendCard(sb, "", s.RunStatus, "Status");
