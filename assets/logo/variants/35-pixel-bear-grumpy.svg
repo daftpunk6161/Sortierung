@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#FFFBEB"/>
+  <!-- Pixel Bear - grumpy retro bear, Erdtöne -->
+  <g transform="translate(128,82)">
+    <!-- Ears -->
+    <rect x="-28" y="-24" width="12" height="12" fill="#78350F"/>
+    <rect x="16" y="-24" width="12" height="12" fill="#78350F"/>
+    <rect x="-24" y="-20" width="4" height="4" fill="#D97706"/>
+    <rect x="20" y="-20" width="4" height="4" fill="#D97706"/>
+    <!-- Head -->
+    <rect x="-24" y="-12" width="48" height="40" fill="#92400E"/>
+    <rect x="-28" y="-8" width="4" height="28" fill="#92400E"/>
+    <rect x="24" y="-8" width="4" height="28" fill="#92400E"/>
+    <!-- Face (lighter area) -->
+    <rect x="-16" y="4" width="32" height="20" fill="#B45309"/>
+    <!-- Eyes (grumpy, flat line) -->
+    <rect x="-16" y="-4" width="8" height="4" fill="#1C1917"/>
+    <rect x="8" y="-4" width="8" height="4" fill="#1C1917"/>
+    <!-- Eyebrows (angry angle) -->
+    <rect x="-20" y="-8" width="12" height="2" fill="#1C1917" transform="rotate(5,-14,-7)"/>
+    <rect x="8" y="-8" width="12" height="2" fill="#1C1917" transform="rotate(-5,14,-7)"/>
+    <!-- Nose -->
+    <rect x="-4" y="8" width="8" height="6" fill="#451A03"/>
+    <!-- Mouth -->
+    <rect x="-8" y="16" width="4" height="2" fill="#451A03"/>
+    <rect x="4" y="16" width="4" height="2" fill="#451A03"/>
+    <!-- Body -->
+    <rect x="-20" y="28" width="40" height="16" fill="#78350F"/>
+    <rect x="-12" y="32" width="24" height="8" fill="#92400E"/>
+    <!-- Arms -->
+    <rect x="-28" y="28" width="8" height="12" fill="#78350F"/>
+    <rect x="20" y="28" width="8" height="12" fill="#78350F"/>
+    <!-- Feet -->
+    <rect x="-16" y="44" width="8" height="4" fill="#451A03"/>
+    <rect x="8" y="44" width="8" height="4" fill="#451A03"/>
+  </g>
+  <text x="128" y="175" text-anchor="middle" font-family="'Press Start 2P','Courier New',monospace" font-size="16" font-weight="700" fill="#78350F" letter-spacing="2">ROMULUS</text>
+  <text x="128" y="198" text-anchor="middle" font-family="'Courier New',monospace" font-size="7" fill="#92400E" letter-spacing="2">DON'T POKE THE BEAR</text>
+  <text x="128" y="225" text-anchor="middle" font-family="'Courier New',monospace" font-size="7" fill="#B45309" letter-spacing="2">YOUR COLLECTION, PERFECTED.</text>
+</svg>

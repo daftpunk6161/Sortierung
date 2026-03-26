@@ -1,0 +1,5 @@
+[
+  { "Input": "Super Mario Bros (USA)", "Expected": "supermariobros" },
+  { "Input": "Game (Europe) [!]", "Expected": "game" },
+  { "Input": "Final Fantasy VII (Europe) (Disc 1)", "Expected": "finalfantasyvii(disc1)" }
+]

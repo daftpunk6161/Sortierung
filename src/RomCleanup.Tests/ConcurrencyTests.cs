@@ -1,5 +1,4 @@
 using RomCleanup.Core.Caching;
-using RomCleanup.Infrastructure.Events;
 using RomCleanup.Infrastructure.Hashing;
 using RomCleanup.Infrastructure.State;
 using Xunit;
@@ -8,7 +7,7 @@ namespace RomCleanup.Tests;
 
 /// <summary>
 /// TEST-CONC: Concurrency tests for thread-safe components.
-/// Covers LruCache, EventBus, AppStateStore, FileHashService.
+/// Covers LruCache, AppStateStore, FileHashService.
 /// </summary>
 public sealed class ConcurrencyTests : IDisposable
 {
@@ -59,55 +58,7 @@ public sealed class ConcurrencyTests : IDisposable
         Assert.Equal(10, snapshot.Count);
     }
 
-    // ── TEST-CONC-02: EventBus concurrent publish/subscribe ──
-
-    [Fact]
-    public void EventBus_ConcurrentPublishSubscribe_NoCrash()
-    {
-        var bus = new EventBus();
-        int totalDelivered = 0;
-
-        // Subscribe from multiple threads
-        Parallel.For(0, 50, i =>
-        {
-            bus.Subscribe($"topic-{i % 5}", _ => Interlocked.Increment(ref totalDelivered));
-        });
-
-        // Publish from multiple threads
-        Parallel.For(0, 100, i =>
-        {
-            bus.Publish($"topic-{i % 5}");
-        });
-
-        Assert.True(totalDelivered > 0);
-    }
-
-    [Fact]
-    public void EventBus_ConcurrentSubscribeUnsubscribe_NoDeadlock()
-    {
-        var bus = new EventBus();
-        var ids = new System.Collections.Concurrent.ConcurrentBag<string>();
-
-        // Subscribe
-        Parallel.For(0, 100, i =>
-        {
-            var id = bus.Subscribe("test", _ => { });
-            ids.Add(id);
-        });
-
-        // Unsubscribe half
-        int count = 0;
-        Parallel.ForEach(ids, id =>
-        {
-            if (Interlocked.Increment(ref count) % 2 == 0)
-                bus.Unsubscribe(id);
-        });
-
-        // Should still work
-        bus.Publish("test");
-    }
-
-    // ── TEST-CONC-03: AppStateStore concurrent SetValue/GetValue ──
+    // ── TEST-CONC-02: AppStateStore concurrent SetValue/GetValue ──
 
     [Fact]
     public void AppState_ConcurrentSetGet_NoCrash()
@@ -171,7 +122,7 @@ public sealed class ConcurrencyTests : IDisposable
         Assert.True(notifications >= 10, $"Expected at least 10 notifications, got {notifications}");
     }
 
-    // ── TEST-CONC-04: FileHashService concurrent hashing ──
+    // ── TEST-CONC-03: FileHashService concurrent hashing ──
 
     [Fact]
     public void FileHashService_ConcurrentHash_ConsistentResults()

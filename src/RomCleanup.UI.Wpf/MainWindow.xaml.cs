@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.UI.Wpf.Services;
@@ -11,6 +13,10 @@ namespace RomCleanup.UI.Wpf;
 
 public partial class MainWindow : Window, IWindowHost
 {
+    private const double ContextPanelMinWindowWidth = 1200;
+    private const double ContextPanelDefaultWidth = 280;
+    private const double NavCompactBreakpoint = 960;
+
     private readonly MainViewModel _vm;
     private readonly ISettingsService _settings;
     private readonly System.Threading.Timer _settingsTimer;
@@ -30,6 +36,7 @@ public partial class MainWindow : Window, IWindowHost
         DataContext = _vm;
 
         InitializeComponent();
+        ApplyRuntimeWindowIcon();
 
         // GUI-088: Periodic settings save every 5 minutes on background timer (not UI-thread)
         _settingsTimer = new System.Threading.Timer(
@@ -39,7 +46,12 @@ public partial class MainWindow : Window, IWindowHost
             TimeSpan.FromMinutes(5));
 
         Loaded += OnLoaded;
+        SizeChanged += OnWindowSizeChanged;
         Closing += OnClosing;
+
+        // React to ContextWing toggle from ViewModel
+        _vm.PropertyChanged += OnVmPropertyChanged;
+        _vm.Shell.PropertyChanged += OnShellPropertyChanged;
 
         // Wire orchestration events
         _vm.RunRequested += OnRunRequested;
@@ -48,13 +60,79 @@ public partial class MainWindow : Window, IWindowHost
         var featureCommands = new FeatureCommandService(_vm, _settings, dialog, this);
         featureCommands.RegisterCommands();
         _vm.WireToolItemCommands();
+        _vm.NotifyFeatureCommandsReady();
+
+        // Wire Command Palette execute callback to FeatureCommandService
+        _vm.CommandPalette.SetExecuteCallback(featureCommands.ExecuteCommand);
     }
 
     // ═══ LIFECYCLE ══════════════════════════════════════════════════════
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        _vm.LoadInitialSettings();
+        try
+        {
+            _vm.LoadInitialSettings();
+            UpdateContextPanelWidth();
+            if (_vm.Roots.Count == 0)
+            {
+                _vm.ApplyLocaleRegionDefaults();
+                _vm.Shell.ShowFirstRunWizard = true;
+                _vm.Shell.WizardStep = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            _vm.AddLog($"Startup-Fehler: {ex.Message}", "ERROR");
+            MessageBox.Show(
+                $"Ein Startfehler wurde abgefangen:\n\n{ex.Message}\n\nDie Anwendung bleibt geöffnet, aber einige Einstellungen wurden nicht geladen.",
+                "Romulus – Startwarnung",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
+    private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateContextPanelWidth();
+        _vm.Shell.IsCompactNav = ActualWidth < NavCompactBreakpoint;
+    }
+
+    private void UpdateContextPanelWidth()
+    {
+        // Context Wing can be toggled off by the user (Ctrl+I)
+        var showWing = _vm.Shell.ShowContextWing && ActualWidth >= ContextPanelMinWindowWidth;
+        var targetWidth = showWing ? ContextPanelDefaultWidth : 0d;
+
+        if (contextColumn.Width.GridUnitType != GridUnitType.Pixel ||
+            Math.Abs(contextColumn.Width.Value - targetWidth) > 0.1)
+        {
+            contextColumn.Width = new GridLength(targetWidth, GridUnitType.Pixel);
+        }
+    }
+
+    private void ApplyRuntimeWindowIcon()
+    {
+        try
+        {
+            var logo = new Views.RomulusLogoMark
+            {
+                Width = 64,
+                Height = 64
+            };
+
+            logo.Measure(new Size(64, 64));
+            logo.Arrange(new Rect(0, 0, 64, 64));
+            logo.UpdateLayout();
+
+            var rtb = new RenderTargetBitmap(64, 64, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(logo);
+            Icon = rtb;
+        }
+        catch
+        {
+            // Keep static app icon fallback if runtime icon rendering fails.
+        }
     }
 
     private async void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -112,12 +190,18 @@ public partial class MainWindow : Window, IWindowHost
     /// <summary>Release all resources — called from both OnClosing paths (normal + busy-cancel).</summary>
     private void CleanupResources()
     {
-        // Stop periodic save timer
+        // Stop periodic save timer first to prevent concurrent saves
         _settingsTimer.Dispose();
+
+        // F-04 FIX: Synchronous final save to ensure settings are persisted before exit
+        try { _vm.SaveSettings(); } catch { /* best effort */ }
 
         // GUI-115: Unsubscribe all VM events to prevent leaks
         _vm.RunRequested -= OnRunRequested;
+        _vm.PropertyChanged -= OnVmPropertyChanged;
+        _vm.Shell.PropertyChanged -= OnShellPropertyChanged;
         Loaded -= OnLoaded;
+        SizeChanged -= OnWindowSizeChanged;
         Closing -= OnClosing;
 
         // System tray
@@ -125,9 +209,7 @@ public partial class MainWindow : Window, IWindowHost
         _trayService = null;
 
         // Kill detached API process if running
-        try { if (_apiProcess is { HasExited: false }) _apiProcess.Kill(entireProcessTree: true); } catch { }
-        try { _apiProcess?.Dispose(); } catch { }
-        _apiProcess = null;
+        SafeKillApiProcess();
 
         // GUI-115: Dispose file watchers (owned by VM) — includes WatchService event unsubscription
         _vm.CleanupWatchers();
@@ -137,7 +219,18 @@ public partial class MainWindow : Window, IWindowHost
     private void OnShortcutOverlayClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (e.OriginalSource == sender)
-            _vm.ShowShortcutSheet = false;
+            _vm.Shell.ShowShortcutSheet = false;
+    }
+
+    private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        // ShowContextWing now lives on Shell — handled in OnShellPropertyChanged
+    }
+
+    private void OnShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ShellViewModel.ShowContextWing))
+            UpdateContextPanelWidth();
     }
 
     // ═══ DRAG & DROP ════════════════════════════════════════════════════
@@ -147,7 +240,8 @@ public partial class MainWindow : Window, IWindowHost
 
     private async void OnRunRequested(object? sender, EventArgs e)
     {
-        _activeRunTask = ExecuteAndRefreshAsync();
+        // Keep code-behind focused on view-only concerns (tray + preview refresh).
+        _activeRunTask = ExecuteRunFromViewModelAsync();
         try { await _activeRunTask; }
         catch (Exception ex)
         {
@@ -157,7 +251,7 @@ public partial class MainWindow : Window, IWindowHost
         finally { _activeRunTask = null; }
     }
 
-    private async Task ExecuteAndRefreshAsync()
+    private async Task ExecuteRunFromViewModelAsync()
     {
         // GUI-111: Update tray tooltip during run
         _trayService?.UpdateTooltip(string.Format(_vm.Loc["Tray.RunProgress"], _vm.DryRun ? "DryRun" : "Move"));
@@ -167,16 +261,14 @@ public partial class MainWindow : Window, IWindowHost
         // GUI-112: Tray balloon on run completion (when minimized/hidden)
         if (_trayService is not null && (WindowState == WindowState.Minimized || !IsVisible))
         {
-            var msg = string.Format(_vm.Loc["Tray.RunComplete"], _vm.DashGames, _vm.DashDupes, _vm.DashJunk);
+            var msg = string.Format(_vm.Loc["Tray.RunComplete"], _vm.Run.DashGames, _vm.Run.DashDupes, _vm.Run.DashJunk);
             _trayService.ShowBalloonTip(_vm.Loc["App.Title"], msg);
         }
         _trayService?.UpdateTooltip("RomCleanup");
 
         if (_vm.CurrentRunState is RunState.Completed or RunState.CompletedDryRun)
         {
-            // GUI-064: Auto-switch to Analyse screen after run completion
-            _vm.NavigateTo("Analyse");
-            resultView.RefreshReportPreview();
+            // Report preview auto-refreshes via LibraryReportView.OnLoaded
         }
     }
 
@@ -190,7 +282,7 @@ public partial class MainWindow : Window, IWindowHost
         set => FontSize = value;
     }
 
-    void IWindowHost.SelectTab(int index) => _vm.SelectedNavIndex = index;
+    void IWindowHost.SelectTab(int index) => _vm.Shell.SelectedNavIndex = index;
 
     void IWindowHost.ShowTextDialog(string title, string content) =>
         ResultDialog.ShowText(title, content, this);
@@ -210,8 +302,7 @@ public partial class MainWindow : Window, IWindowHost
             UseShellExecute = false,
             CreateNoWindow = false,
         };
-        try { if (_apiProcess is { HasExited: false }) _apiProcess.Kill(entireProcessTree: true); } catch { }
-        try { _apiProcess?.Dispose(); } catch { }
+        SafeKillApiProcess();
         _apiProcess = Process.Start(psi);
         _vm.AddLog("REST API gestartet: http://127.0.0.1:5000", "INFO");
         _ = Task.Delay(2000).ContinueWith(_ =>
@@ -228,10 +319,21 @@ public partial class MainWindow : Window, IWindowHost
 
     void IWindowHost.StopApiProcess()
     {
-        try { if (_apiProcess is { HasExited: false }) _apiProcess.Kill(entireProcessTree: true); } catch { }
-        try { _apiProcess?.Dispose(); } catch { }
-        _apiProcess = null;
+        SafeKillApiProcess();
     }
 
+    /// <summary>
+    /// Safely kill and dispose the detached API process.
+    /// Logs failures instead of swallowing them silently to prevent invisible zombie processes.
+    /// </summary>
+    private void SafeKillApiProcess()
+    {
+        try { if (_apiProcess is { HasExited: false }) _apiProcess.Kill(entireProcessTree: true); }
+        catch (InvalidOperationException) { /* process already exited between check and kill */ }
+        catch (System.ComponentModel.Win32Exception ex) { _vm.AddLog($"API process kill failed: {ex.Message}", "WARN"); }
+        try { _apiProcess?.Dispose(); }
+        catch (InvalidOperationException) { /* already disposed */ }
+        _apiProcess = null;
+    }
 
 }

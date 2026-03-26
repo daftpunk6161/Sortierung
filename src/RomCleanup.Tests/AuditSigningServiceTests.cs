@@ -273,6 +273,104 @@ public sealed class AuditSigningServiceTests : IDisposable
         Assert.Equal(0, result.DryRunPlanned);
     }
 
+    [Fact]
+    public void Rollback_NonDryRun_WritesForensicRollbackTrail()
+    {
+        var restoreDir = Path.Combine(_tempDir, "restore");
+        var currentDir = Path.Combine(_tempDir, "current");
+        Directory.CreateDirectory(restoreDir);
+        Directory.CreateDirectory(currentDir);
+
+        var oldPath = Path.Combine(restoreDir, "game.zip");
+        var newPath = Path.Combine(currentDir, "game.zip");
+        File.WriteAllText(newPath, "data");
+
+        var csvPath = Path.Combine(_tempDir, "audit_forensic.csv");
+        File.WriteAllText(csvPath,
+            "RootPath,OldPath,NewPath,Action\n" +
+            $"{_tempDir},{oldPath},{newPath},CONSOLE_SORT\n",
+            Encoding.UTF8);
+
+        var service = new AuditSigningService(new MinimalFs());
+        // SEC-ROLLBACK-03: Execute-mode rollback requires sidecar
+        service.WriteMetadataSidecar(csvPath, 1);
+        var result = service.Rollback(csvPath,
+            allowedRestoreRoots: [restoreDir],
+            allowedCurrentRoots: [currentDir],
+            dryRun: false);
+
+        Assert.Equal(1, result.RolledBack);
+        Assert.NotNull(result.RollbackTrailPath);
+        Assert.True(File.Exists(result.RollbackTrailPath!));
+
+        var trail = File.ReadAllText(result.RollbackTrailPath!, Encoding.UTF8);
+        Assert.Contains("RestoredPath,RestoredFrom,OriginalAction,Timestamp", trail);
+        Assert.Contains(oldPath, trail);
+        Assert.Contains(newPath, trail);
+        Assert.Contains("CONSOLE_SORT", trail);
+    }
+
+    [Fact]
+    public void Rollback_ConsoleSortAction_RestoresWinnerToOriginalLocation()
+    {
+        var root = Path.Combine(_tempDir, "root");
+        var sortedDir = Path.Combine(root, "SNES");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(sortedDir);
+
+        var originalPath = Path.Combine(root, "Winner (USA).sfc");
+        var sortedPath = Path.Combine(sortedDir, "Winner (USA).sfc");
+        File.WriteAllText(sortedPath, "winner-data");
+
+        var csvPath = Path.Combine(_tempDir, "audit_console_sort.csv");
+        File.WriteAllText(csvPath,
+            "RootPath,OldPath,NewPath,Action\n" +
+            $"{root},{originalPath},{sortedPath},CONSOLE_SORT\n",
+            Encoding.UTF8);
+
+        var service = new AuditSigningService(new MinimalFs());
+        // SEC-ROLLBACK-03: Execute-mode rollback requires sidecar
+        service.WriteMetadataSidecar(csvPath, 1);
+        var result = service.Rollback(csvPath,
+            allowedRestoreRoots: [root],
+            allowedCurrentRoots: [root],
+            dryRun: false);
+
+        Assert.Equal(1, result.RolledBack);
+        Assert.True(File.Exists(originalPath));
+        Assert.False(File.Exists(sortedPath));
+    }
+
+    [Fact]
+    public void Rollback_DatRenameAction_RestoresOriginalFileName()
+    {
+        var root = Path.Combine(_tempDir, "root");
+        Directory.CreateDirectory(root);
+
+        var originalPath = Path.Combine(root, "Contra (World).nes");
+        var renamedPath = Path.Combine(root, "contra-wrong.nes");
+        File.WriteAllText(renamedPath, "rom-data");
+
+        var csvPath = Path.Combine(_tempDir, "audit_datrename.csv");
+        File.WriteAllText(csvPath,
+            "RootPath,OldPath,NewPath,Action\n" +
+            $"{root},{originalPath},{renamedPath},DAT_RENAME\n",
+            Encoding.UTF8);
+
+        var service = new AuditSigningService(new MinimalFs());
+        service.WriteMetadataSidecar(csvPath, 1);
+
+        var result = service.Rollback(csvPath,
+            allowedRestoreRoots: [root],
+            allowedCurrentRoots: [root],
+            dryRun: false);
+
+        Assert.Equal(1, result.EligibleRows);
+        Assert.Equal(1, result.RolledBack);
+        Assert.True(File.Exists(originalPath));
+        Assert.False(File.Exists(renamedPath));
+    }
+
     // Minimal IFileSystem for audit tests
     private sealed class MinimalFs : IFileSystem
     {

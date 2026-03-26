@@ -28,4 +28,4 @@ public sealed record OperationError(
     string Message,
     ErrorKind Kind,
     string? Module = null,
-    Exception? InnerException = null);
+    [property: JsonIgnore] Exception? InnerException = null);

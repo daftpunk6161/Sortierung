@@ -194,7 +194,7 @@ public sealed class InsightsEngineTests
                     FormatScore = r.FormatScore,
                     VersionScore = r.VersionScore,
                     SizeTieBreakScore = 0,
-                    Category = "GAME"
+                    Category = FileCategory.Game
                 }).ToList();
 
                 var coreWinner = DeduplicationEngine.SelectWinner(candidates);

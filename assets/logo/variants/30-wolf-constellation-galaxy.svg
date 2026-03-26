@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="galaxyGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0C0A20"/>
+      <stop offset="50%" stop-color="#1A0533"/>
+      <stop offset="100%" stop-color="#0C0A20"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="url(#galaxyGrad)"/>
+  <!-- Stars -->
+  <circle cx="30" cy="30" r="1" fill="white" opacity="0.6"/>
+  <circle cx="80" cy="50" r="0.7" fill="white" opacity="0.4"/>
+  <circle cx="200" cy="35" r="1.2" fill="white" opacity="0.5"/>
+  <circle cx="180" cy="75" r="0.5" fill="white" opacity="0.3"/>
+  <circle cx="45" cy="200" r="0.8" fill="white" opacity="0.4"/>
+  <circle cx="220" cy="180" r="1" fill="white" opacity="0.5"/>
+  <circle cx="60" cy="130" r="0.6" fill="white" opacity="0.3"/>
+  <circle cx="210" cy="120" r="0.7" fill="white" opacity="0.4"/>
+  <circle cx="150" cy="220" r="0.5" fill="white" opacity="0.3"/>
+  <!-- Galaxy wolf constellation - dots connected by lines -->
+  <g transform="translate(128,90) scale(0.65)">
+    <!-- Star points (constellation nodes) -->
+    <circle cx="0" cy="-70" r="3" fill="#A78BFA"/>
+    <circle cx="-40" cy="-55" r="2.5" fill="#C4B5FD"/>
+    <circle cx="40" cy="-55" r="2.5" fill="#C4B5FD"/>
+    <circle cx="-55" cy="-20" r="2" fill="#818CF8"/>
+    <circle cx="55" cy="-20" r="2" fill="#818CF8"/>
+    <circle cx="-35" cy="5" r="2.5" fill="#A78BFA"/>
+    <circle cx="35" cy="5" r="2.5" fill="#A78BFA"/>
+    <circle cx="-20" cy="30" r="2" fill="#818CF8"/>
+    <circle cx="20" cy="30" r="2" fill="#818CF8"/>
+    <circle cx="0" cy="45" r="3" fill="#C4B5FD"/>
+    <circle cx="-65" cy="10" r="2" fill="#818CF8"/>
+    <circle cx="65" cy="10" r="2" fill="#818CF8"/>
+    <!-- Eyes - brighter stars -->
+    <circle cx="-20" cy="-15" r="3.5" fill="#FDE047"/>
+    <circle cx="20" cy="-15" r="3.5" fill="#FDE047"/>
+    <!-- Constellation lines -->
+    <line x1="0" y1="-70" x2="-40" y2="-55" stroke="#A78BFA" stroke-width="0.5" opacity="0.6"/>
+    <line x1="0" y1="-70" x2="40" y2="-55" stroke="#A78BFA" stroke-width="0.5" opacity="0.6"/>
+    <line x1="-40" y1="-55" x2="-55" y2="-20" stroke="#818CF8" stroke-width="0.5" opacity="0.5"/>
+    <line x1="40" y1="-55" x2="55" y2="-20" stroke="#818CF8" stroke-width="0.5" opacity="0.5"/>
+    <line x1="-55" y1="-20" x2="-35" y2="5" stroke="#818CF8" stroke-width="0.5" opacity="0.5"/>
+    <line x1="55" y1="-20" x2="35" y2="5" stroke="#818CF8" stroke-width="0.5" opacity="0.5"/>
+    <line x1="-35" y1="5" x2="-20" y2="30" stroke="#A78BFA" stroke-width="0.5" opacity="0.5"/>
+    <line x1="35" y1="5" x2="20" y2="30" stroke="#A78BFA" stroke-width="0.5" opacity="0.5"/>
+    <line x1="-20" y1="30" x2="0" y2="45" stroke="#C4B5FD" stroke-width="0.5" opacity="0.6"/>
+    <line x1="20" y1="30" x2="0" y2="45" stroke="#C4B5FD" stroke-width="0.5" opacity="0.6"/>
+    <line x1="-55" y1="-20" x2="-65" y2="10" stroke="#818CF8" stroke-width="0.3" opacity="0.3"/>
+    <line x1="55" y1="-20" x2="65" y2="10" stroke="#818CF8" stroke-width="0.3" opacity="0.3"/>
+    <line x1="-20" y1="-15" x2="-35" y2="5" stroke="#FDE047" stroke-width="0.3" opacity="0.3"/>
+    <line x1="20" y1="-15" x2="35" y2="5" stroke="#FDE047" stroke-width="0.3" opacity="0.3"/>
+  </g>
+  <text x="128" y="175" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="26" font-weight="200" fill="#C4B5FD" letter-spacing="8">ROMULUS</text>
+  <text x="128" y="198" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="7" fill="#6D28D9" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#1A0A2E"/>
+  <!-- Pixel-Drache (chinesischer Stil, ROM/Arcade-Vibe) -->
+  <g transform="translate(128,90)">
+    <!-- Body -->
+    <rect x="-32" y="-8" width="8" height="8" fill="#DC2626"/>
+    <rect x="-24" y="-8" width="8" height="8" fill="#DC2626"/>
+    <rect x="-16" y="-8" width="8" height="8" fill="#EF4444"/>
+    <rect x="-8" y="-8" width="8" height="8" fill="#EF4444"/>
+    <rect x="0" y="-8" width="8" height="8" fill="#DC2626"/>
+    <rect x="8" y="-8" width="8" height="8" fill="#DC2626"/>
+    <!-- Head -->
+    <rect x="-48" y="-24" width="8" height="8" fill="#DC2626"/>
+    <rect x="-40" y="-24" width="8" height="8" fill="#EF4444"/>
+    <rect x="-32" y="-24" width="8" height="8" fill="#EF4444"/>
+    <rect x="-48" y="-16" width="8" height="8" fill="#EF4444"/>
+    <rect x="-40" y="-16" width="8" height="8" fill="#FCA5A5"/>
+    <rect x="-32" y="-16" width="8" height="8" fill="#EF4444"/>
+    <!-- Eye -->
+    <rect x="-40" y="-24" width="4" height="4" fill="#FDE047"/>
+    <!-- Horns -->
+    <rect x="-44" y="-36" width="4" height="12" fill="#F59E0B"/>
+    <rect x="-32" y="-36" width="4" height="12" fill="#F59E0B"/>
+    <!-- Spine/back -->
+    <rect x="-24" y="-16" width="8" height="8" fill="#B91C1C"/>
+    <rect x="-16" y="-16" width="8" height="8" fill="#DC2626"/>
+    <rect x="-8" y="-16" width="8" height="8" fill="#B91C1C"/>
+    <rect x="0" y="-16" width="8" height="8" fill="#DC2626"/>
+    <rect x="8" y="-16" width="8" height="8" fill="#B91C1C"/>
+    <!-- Tail curling up -->
+    <rect x="16" y="-8" width="8" height="8" fill="#B91C1C"/>
+    <rect x="24" y="-16" width="8" height="8" fill="#991B1B"/>
+    <rect x="32" y="-24" width="8" height="8" fill="#7F1D1D"/>
+    <rect x="32" y="-32" width="8" height="8" fill="#7F1D1D"/>
+    <rect x="40" y="-32" width="4" height="4" fill="#F59E0B"/>
+    <rect x="40" y="-28" width="4" height="4" fill="#F59E0B"/>
+    <!-- Legs -->
+    <rect x="-24" y="0" width="8" height="12" fill="#DC2626"/>
+    <rect x="0" y="0" width="8" height="12" fill="#DC2626"/>
+    <!-- Flame pixels -->
+    <rect x="-56" y="-20" width="4" height="4" fill="#FDE047"/>
+    <rect x="-60" y="-16" width="4" height="4" fill="#F97316"/>
+    <rect x="-56" y="-12" width="4" height="4" fill="#EF4444"/>
+  </g>
+  <text x="128" y="180" text-anchor="middle" font-family="'Press Start 2P','Courier New',monospace" font-size="18" font-weight="700" fill="#EF4444" letter-spacing="3">ROMULUS</text>
+  <text x="128" y="200" text-anchor="middle" font-family="'Courier New',monospace" font-size="7" fill="#FCA5A5" letter-spacing="2">DRAGON EDITION</text>
+  <text x="128" y="225" text-anchor="middle" font-family="'Courier New',monospace" font-size="7" fill="#7F1D1D" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

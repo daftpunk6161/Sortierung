@@ -1,0 +1,45 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<!-- ═══ CLEAN DARK PRO ═══════════════════════════════════════════════════
+     Neutral dark palette with muted blue accents — professional, distraction-
+     free. No decorative shadows. Colours only — templates in _ControlTemplates.
+     ════════════════════════════════════════════════════════════════════════ -->
+
+    <!-- ── Core Surfaces ──────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushBackground"   Color="#16181D"/>
+    <SolidColorBrush x:Key="BrushSurface"      Color="#1E2028"/>
+    <SolidColorBrush x:Key="BrushSurfaceAlt"   Color="#1A1C23"/>
+    <SolidColorBrush x:Key="BrushSurfaceLight" Color="#282A34"/>
+
+    <!-- ── Accent ─────────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushAccentCyan"   Color="#6CA6E8"/>
+    <SolidColorBrush x:Key="BrushAccentPurple" Color="#9B7BDB"/>
+
+    <!-- ── Semantic ───────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushDanger"       Color="#E06060"/>
+    <SolidColorBrush x:Key="BrushSuccess"      Color="#5EC97C"/>
+    <SolidColorBrush x:Key="BrushWarning"      Color="#D9A646"/>
+
+    <!-- ── Text ───────────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushTextPrimary"  Color="#D4D6DE"/>
+    <SolidColorBrush x:Key="BrushTextMuted"    Color="#8A8EA0"/>
+    <SolidColorBrush x:Key="BrushBorder"       Color="#333648"/>
+
+    <!-- ── Semantic Backgrounds ──────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushDangerBg"  Color="#1E1214"/>
+    <SolidColorBrush x:Key="BrushSuccessBg" Color="#121E16"/>
+    <SolidColorBrush x:Key="BrushInfoBg"    Color="#121420"/>
+    <SolidColorBrush x:Key="BrushWarningBg" Color="#1E1A10"/>
+
+    <!-- ── Interaction ───────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushButtonPressed"   Color="#6CA6E822"/>
+    <SolidColorBrush x:Key="BrushInputSelection"  Color="#6CA6E844"/>
+    <SolidColorBrush x:Key="BrushBorderHover"     Color="#506090"/>
+    <SolidColorBrush x:Key="BrushPrimaryBg"       Color="#6CA6E833"/>
+    <SolidColorBrush x:Key="BrushTextOnAccent"    Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="BrushPrimaryHover"    Color="#6CA6E855"/>
+    <SolidColorBrush x:Key="BrushPrimaryActive"   Color="#6CA6E877"/>
+    <SolidColorBrush x:Key="BrushDangerHover"     Color="#E0606022"/>
+    <SolidColorBrush x:Key="BrushScrimOverlay"    Color="#CC1A1A2E"/>
+
+</ResourceDictionary>

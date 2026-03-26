@@ -1,0 +1,161 @@
+<UserControl x:Class="RomCleanup.UI.Wpf.Views.ConfigOptionsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+  <!-- E3/E4: Consolidated Options — migrated from SortView (Workflow tab) -->
+  <UserControl.Resources>
+    <DataTemplate x:Key="RootItemTemplate">
+      <StackPanel Orientation="Horizontal">
+        <TextBlock Text="&#xE8B7; " FontFamily="Segoe MDL2 Assets" FontSize="14"
+                   Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
+        <TextBlock Text="{Binding}" Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
+      </StackPanel>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" IsEnabled="{Binding IsIdle}">
+    <StackPanel Margin="20,16">
+
+      <!-- ── ROM-Verzeichnisse ── -->
+      <TextBlock Text="{Binding Loc[Sort.RomDirectories]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <Grid Margin="{DynamicResource SpaceBottomXS}">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <Grid Grid.Column="0">
+            <ListBox x:Name="listRoots" MinHeight="60" MaxHeight="280" Margin="{DynamicResource SpaceRightSM}"
+                     ItemsSource="{Binding Roots}"
+                     SelectedItem="{Binding SelectedRoot}"
+                     AllowDrop="True"
+                     ItemTemplate="{StaticResource RootItemTemplate}"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling"
+                     ScrollViewer.CanContentScroll="True"
+                     ToolTip="{Binding Loc[Sort.RootsDragTip]}"
+                     TabIndex="10"
+                     AutomationProperties.Name="{Binding Loc[Sort.RootsListName]}">
+              <ListBox.InputBindings>
+                <KeyBinding Key="Delete" Command="{Binding RemoveRootCommand}"/>
+              </ListBox.InputBindings>
+            </ListBox>
+            <!-- Empty-State Overlay -->
+            <Border IsHitTestVisible="False" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    Margin="{DynamicResource SpaceRightSM}">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Roots.Count}" Value="0">
+                      <Setter Property="Visibility" Value="Visible"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="28"
+                           Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center"
+                           Margin="{DynamicResource SpaceBottomSM}" Opacity="0.6"/>
+                <TextBlock Text="{Binding Loc[Sort.RootsEmptyDrag]}" FontSize="12"
+                           Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding Loc[Sort.RootsEmptyAdd]}" Style="{StaticResource CaptionText}"
+                           HorizontalAlignment="Center" Margin="0,2,0,0"/>
+              </StackPanel>
+            </Border>
+          </Grid>
+          <StackPanel Grid.Column="1" VerticalAlignment="Top" Width="118">
+            <Button Command="{Binding AddRootCommand}" Content="{Binding Loc[Sort.AddRoot]}" Margin="{DynamicResource SpaceBottomXS}" HorizontalAlignment="Stretch"
+                    ToolTip="{Binding Loc[Sort.AddRootTip]}" AutomationProperties.Name="{Binding Loc[Sort.AddRootTip]}"
+                    TabIndex="11"/>
+            <Button Command="{Binding RemoveRootCommand}" Content="{Binding Loc[Sort.RemoveRoot]}" Margin="{DynamicResource SpaceBottomXS}" HorizontalAlignment="Stretch"
+                    ToolTip="{Binding Loc[Sort.RemoveRootTip]}" AutomationProperties.Name="{Binding Loc[Sort.RemoveRootTip]}"
+                    TabIndex="12"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- ── Run-Optionen ── -->
+      <TextBlock Text="{Binding Loc[Sort.Options]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <StackPanel>
+          <WrapPanel>
+            <CheckBox Content="{Binding Loc[Sort.DryRunOption]}" Margin="0,4,24,4"
+                      IsChecked="{Binding DryRun}" Foreground="{DynamicResource BrushWarning}"
+                      ToolTip="{Binding Loc[Sort.DryRunOptionTip]}" TabIndex="40"/>
+            <CheckBox Content="{Binding Loc[Sort.ConvertOption]}" Margin="0,4,24,4"
+                      IsChecked="{Binding ConvertEnabled}"
+                      ToolTip="{Binding Loc[Sort.ConvertOptionTip]}" TabIndex="41"/>
+          </WrapPanel>
+          <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+            <TextBlock Text="{Binding Loc[Sort.LabelConflict]}" VerticalAlignment="Center" Margin="{DynamicResource SpaceRightSM}"/>
+            <ComboBox Width="160" SelectedIndex="{Binding ConflictPolicyIndex, Mode=TwoWay}"
+                      ToolTip="{Binding Loc[Sort.ConflictTip]}"
+                      AutomationProperties.Name="{Binding Loc[Sort.ConflictLabel]}">
+              <ComboBoxItem Content="{Binding Loc[Sort.ConflictRename]}"/>
+              <ComboBoxItem Content="{Binding Loc[Sort.ConflictSkip]}"/>
+              <ComboBoxItem Content="{Binding Loc[Sort.ConflictOverwrite]}"/>
+            </ComboBox>
+          </StackPanel>
+          <!-- DryRun Banner -->
+          <Border Margin="0,8,0,0" Padding="12,8"
+                  Background="{DynamicResource BrushInfoBg}" BorderBrush="{DynamicResource BrushAccentCyan}" BorderThickness="1"
+                  CornerRadius="6"
+                  Visibility="{Binding DryRun, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+              <TextBlock Text="{Binding Loc[Sort.DryRunBanner]}"
+                         Foreground="{DynamicResource BrushAccentCyan}" FontWeight="SemiBold" TextWrapping="Wrap"
+                         VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding MoveApplyGateText}" Margin="0,6,0,0" TextWrapping="Wrap"
+                         Foreground="{DynamicResource BrushTextPrimary}"/>
+            </StackPanel>
+          </Border>
+          <!-- Move Complete Banner -->
+          <Border Margin="0,8,0,0" Padding="12,8"
+              Background="{DynamicResource BrushWarningBg}" BorderBrush="{DynamicResource BrushWarning}" BorderThickness="1"
+                  CornerRadius="6"
+                  Visibility="{Binding ShowMoveCompleteBanner, Converter={StaticResource BoolToVis}}">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="{Binding Loc[Sort.MoveComplete]}"
+               Foreground="{DynamicResource BrushWarning}" FontWeight="SemiBold" TextWrapping="Wrap"
+                         VerticalAlignment="Center"/>
+              <Button Command="{Binding RollbackCommand}"
+                      Margin="16,0,0,0" Padding="12,4" FontWeight="SemiBold"
+                  Background="{DynamicResource BrushWarningBg}" Foreground="{DynamicResource BrushWarning}"
+                  BorderBrush="{DynamicResource BrushWarning}" BorderThickness="1" Cursor="Hand"
+                      ToolTip="{Binding Loc[Sort.RollbackTip]}"
+                      AutomationProperties.Name="{Binding Loc[Sort.RollbackTip]}">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="&#xE777;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                  <TextBlock Text="{Binding Loc[Sort.RollbackLabel]}" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </Border>
+          <TextBlock Text="{Binding Loc[Sort.OptionsTip]}"
+                     Style="{StaticResource CaptionText}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+
+      <!-- ── Sortier- und Bereinigungsoptionen ── -->
+      <TextBlock Text="Sortierung &amp; Bereinigung" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <StackPanel>
+          <CheckBox Content="Nach Konsole sortieren" Margin="0,4" IsChecked="{Binding SortConsole}"
+                    ToolTip="ROMs in Unterordner pro Konsole verschieben" TabIndex="50"/>
+          <CheckBox Content="Junk entfernen" Margin="0,4" IsChecked="{Binding RemoveJunk}"
+                    ToolTip="Demo, Beta, Homebrew, Hack etc. in Papierkorb" TabIndex="51"/>
+          <CheckBox Content="Aggressives Junk-Filtering" Margin="0,4" IsChecked="{Binding AggressiveJunk}"
+                    ToolTip="Erweiterte Junk-Erkennung mit mehr Regeln" TabIndex="52"/>
+          <CheckBox Content="Nur Spiele behalten" Margin="0,4" IsChecked="{Binding OnlyGames}"
+                    ToolTip="Nicht-Spiel-ROMs (BIOS, Apps etc.) entfernen" TabIndex="53"/>
+          <CheckBox Content="Unbekannte behalten (bei 'Nur Spiele')" Margin="0,4" IsChecked="{Binding KeepUnknownWhenOnlyGames}"
+                    ToolTip="ROMs ohne bekannte Klassifikation nicht entfernen" TabIndex="54"/>
+          <CheckBox Content="Alias-basierte GameKey-Bildung" Margin="0,4" IsChecked="{Binding AliasKeying}"
+                    ToolTip="Alternative Titel-Normalisierung verwenden" TabIndex="55"/>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

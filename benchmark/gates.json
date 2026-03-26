@@ -1,0 +1,74 @@
+{
+  "_meta": {
+    "description": "Machine-readable coverage gate thresholds. Used by CoverageValidator to enforce minimum coverage.",
+    "version": "1.1",
+    "updated": "2026-03-22",
+    "note": "Calibrated against 2073-entry ground-truth dataset. hardFail ≈ 80% of actual, target ≈ actual or slightly above."
+  },
+  "s1": {
+    "totalEntries": { "target": 2100, "hardFail": 1650 },
+    "systemsCovered": { "target": 65, "hardFail": 52 },
+    "fallklassenCovered": { "target": 20, "hardFail": 16 },
+
+    "platformFamily": {
+      "cartridge":  { "target": 920, "hardFail": 730 },
+      "disc":       { "target": 490, "hardFail": 385 },
+      "arcade":     { "target": 210, "hardFail": 160 },
+      "computer":   { "target": 225, "hardFail": 175 },
+      "hybrid":     { "target": 140, "hardFail": 108 }
+    },
+
+    "tierDepth": {
+      "tier1": { "minPerSystem": 50, "hardFail": 45, "systems": ["NES","SNES","N64","GBA","GB","GBC","MD","PS1","PS2"] },
+      "tier2": { "minPerSystem": 22, "hardFail": 18, "systems": ["32X","PSP","SAT","DC","GC","WII","SMS","GG","PCE","LYNX","A78","A26","NDS","3DS","SWITCH","AMIGA"] },
+      "tier3": { "minPerSystem": 6,  "hardFail": 4 },
+      "tier4": { "minPerSystem": 3,  "hardFail": 2 }
+    },
+
+    "caseClasses": {
+      "FC-01": { "name": "Saubere Referenz",          "target": 900, "hardFail": 710 },
+      "FC-02": { "name": "Falsch benannt",            "target": 100, "hardFail": 76 },
+      "FC-03": { "name": "Header-Konflikt",           "target": 35,  "hardFail": 24 },
+      "FC-04": { "name": "Extension-Konflikt",        "target": 65,  "hardFail": 48 },
+      "FC-05": { "name": "Folder-vs-Header",          "target": 60,  "hardFail": 46 },
+      "FC-06": { "name": "DAT exact",                 "target": 320, "hardFail": 250 },
+      "FC-07": { "name": "DAT weak/none",             "target": 70,  "hardFail": 52 },
+      "FC-08": { "name": "BIOS",                      "target": 55,  "hardFail": 40 },
+      "FC-09": { "name": "Parent/Clone",              "target": 135, "hardFail": 105 },
+      "FC-10": { "name": "Multi-Disc",                "target": 38,  "hardFail": 27 },
+      "FC-11": { "name": "Multi-File",                "target": 25,  "hardFail": 16 },
+      "FC-12": { "name": "Archive-Inner",             "target": 45,  "hardFail": 34 },
+      "FC-13": { "name": "Directory-based",           "target": 35,  "hardFail": 24 },
+      "FC-14": { "name": "UNKNOWN expected",           "target": 35,  "hardFail": 24 },
+      "FC-15": { "name": "Ambiguous",                 "target": 25,  "hardFail": 16 },
+      "FC-16": { "name": "Negative Control",          "target": 55,  "hardFail": 40 },
+      "FC-17": { "name": "Repair/Sort-blocked",       "target": 105, "hardFail": 80 },
+      "FC-18": { "name": "Cross-System",              "target": 100, "hardFail": 76 },
+      "FC-19": { "name": "Junk/NonGame",              "target": 170, "hardFail": 133 },
+      "FC-20": { "name": "Kaputte Sets",              "target": 85,  "hardFail": 64 }
+    },
+
+    "specialAreas": {
+      "biosTotal":                     { "target": 55, "hardFail": 40 },
+      "biosSystems":                   { "target": 25, "hardFail": 18 },
+      "arcadeParent":                  { "target": 100, "hardFail": 77 },
+      "arcadeClone":                   { "target": 38, "hardFail": 28 },
+      "arcadeSplitMergedNonMerged":    { "target": 48, "hardFail": 36 },
+      "arcadeBios":                    { "target": 10, "hardFail": 5 },
+      "arcadeChdSupplement":           { "target": 10, "hardFail": 6 },
+      "psDisambiguation":              { "target": 38, "hardFail": 28 },
+      "gbGbcCgb":                      { "target": 18, "hardFail": 12 },
+      "md32x":                         { "target": 14, "hardFail": 9 },
+      "multiFileSets":                 { "target": 25, "hardFail": 16 },
+      "multiDisc":                     { "target": 38, "hardFail": 27 },
+      "chdRawSha1":                    { "target": 12, "hardFail": 8 },
+      "datNoIntro":                    { "target": 420, "hardFail": 329 },
+      "datRedump":                     { "target": 260, "hardFail": 201 },
+      "datMame":                       { "target": 28, "hardFail": 20 },
+      "datTosec":                      { "target": 155, "hardFail": 120 },
+      "directoryBased":                { "target": 33, "hardFail": 24 },
+      "headerless":                    { "target": 55, "hardFail": 40 },
+      "holdout":                       { "target": 50, "hardFail": 20 }
+    }
+  }
+}

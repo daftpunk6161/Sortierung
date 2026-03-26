@@ -81,5 +81,17 @@
     "LaunchBox": "Games/{console}/{filename}",
     "Batocera": "share/roms/{console_lower}/{filename}",
     "Flat": "{filename}"
+  },
+  "extensionTargetFormats": {
+    "bin": "chd",
+    "cue": "chd",
+    "iso": "chd",
+    "cso": "chd",
+    "pbp": "chd",
+    "gcz": "rvz",
+    "wbfs": "rvz",
+    "nkit": "rvz",
+    "zip": "7z",
+    "rar": "7z"
   }
 }

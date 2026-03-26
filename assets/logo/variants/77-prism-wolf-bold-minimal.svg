@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="holo77" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="25%" stop-color="#8B5CF6"/>
+      <stop offset="50%" stop-color="#EC4899"/>
+      <stop offset="75%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <linearGradient id="bg77" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0C0C1A"/>
+      <stop offset="100%" stop-color="#1A0A30"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="url(#bg77)"/>
+  <!-- Large prism, minimalist — thick clean strokes -->
+  <polygon points="128,25 55,155 201,155" fill="none" stroke="url(#holo77)" stroke-width="3.5" stroke-linejoin="round"/>
+  <!-- No beam — clean & minimal -->
+  <!-- Thick rainbow spectrum band (wide lines, fewer of them) -->
+  <line x1="188" y1="85" x2="255" y2="55" stroke="#EF4444" stroke-width="3.5" opacity="0.55"/>
+  <line x1="190" y1="105" x2="255" y2="82" stroke="#FBBF24" stroke-width="3.5" opacity="0.55"/>
+  <line x1="192" y1="125" x2="255" y2="110" stroke="#22C55E" stroke-width="3.5" opacity="0.55"/>
+  <line x1="193" y1="145" x2="254" y2="140" stroke="#3B82F6" stroke-width="3.5" opacity="0.55"/>
+  <!-- Wolf — extra bold, simple, clean -->
+  <g transform="translate(128,92) scale(0.46)">
+    <polygon points="0,-68 -50,-12 -34,48 0,28 34,48 50,-12" fill="white" opacity="0.92"/>
+    <polygon points="-38,-8 -58,-50 -18,-28" fill="white" opacity="0.92"/>
+    <polygon points="38,-8 58,-50 18,-28" fill="white" opacity="0.92"/>
+  </g>
+  <!-- Bold text, extra spacing -->
+  <text x="128" y="192" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="32" font-weight="800" fill="url(#holo77)" letter-spacing="8">ROMULUS</text>
+  <text x="128" y="215" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="7.5" fill="#6B7280" letter-spacing="4">YOUR COLLECTION, PERFECTED.</text>
+</svg>

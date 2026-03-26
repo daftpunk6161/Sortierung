@@ -1,0 +1,1120 @@
+{
+  "Timestamp": "2026-03-21T03:57:39.1340879+00:00",
+  "GroundTruthVersion": "1.0.0",
+  "TotalSamples": 1152,
+  "Correct": 902,
+  "Acceptable": 0,
+  "Wrong": 0,
+  "Missed": 60,
+  "TrueNegative": 44,
+  "FalsePositive": 146,
+  "WrongMatchRate": 0.1267361111111111,
+  "PerSystem": {
+    "3DO": {
+      "Correct": 9,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "3DS": {
+      "Correct": 18,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "32X": {
+      "Correct": 18,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "A26": {
+      "Correct": 12,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "A52": {
+      "Correct": 10,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "A78": {
+      "Correct": 17,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "A800": {
+      "Correct": 13,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "AMIGA": {
+      "Correct": 15,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "ARCADE": {
+      "Correct": 122,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "ATARIST": {
+      "Correct": 13,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "C64": {
+      "Correct": 13,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "CD32": {
+      "Correct": 9,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "CDI": {
+      "Correct": 13,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "CHANNELF": {
+      "Correct": 4,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "COLECO": {
+      "Correct": 10,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "CPC": {
+      "Correct": 7,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "DC": {
+      "Correct": 16,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "DOS": {
+      "Correct": 10,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "FMTOWNS": {
+      "Correct": 9,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "GB": {
+      "Correct": 23,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 4
+    },
+    "GBA": {
+      "Correct": 23,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 4
+    },
+    "GBC": {
+      "Correct": 22,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 4
+    },
+    "GC": {
+      "Correct": 12,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "GG": {
+      "Correct": 13,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "INTV": {
+      "Correct": 10,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "JAG": {
+      "Correct": 10,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "JAGCD": {
+      "Correct": 8,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "LYNX": {
+      "Correct": 17,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "MD": {
+      "Correct": 22,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 4
+    },
+    "MSX": {
+      "Correct": 12,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "N64": {
+      "Correct": 20,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 4
+    },
+    "NDS": {
+      "Correct": 13,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "NEOCD": {
+      "Correct": 9,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 3,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "NEOGEO": {
+      "Correct": 34,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 3,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "NES": {
+      "Correct": 19,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 4
+    },
+    "NGP": {
+      "Correct": 8,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "NGPC": {
+      "Correct": 4,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "ODYSSEY2": {
+      "Correct": 7,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "PC98": {
+      "Correct": 7,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "PCE": {
+      "Correct": 10,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "PCECD": {
+      "Correct": 9,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 3,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "PCFX": {
+      "Correct": 12,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "POKEMINI": {
+      "Correct": 7,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "PS1": {
+      "Correct": 25,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 4
+    },
+    "PS2": {
+      "Correct": 26,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 4
+    },
+    "PS3": {
+      "Correct": 7,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 13,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "PSP": {
+      "Correct": 8,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "SAT": {
+      "Correct": 10,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "SCD": {
+      "Correct": 8,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "SG1000": {
+      "Correct": 8,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "SMS": {
+      "Correct": 11,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "SNES": {
+      "Correct": 18,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 4
+    },
+    "SUPERVISION": {
+      "Correct": 4,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "SWITCH": {
+      "Correct": 12,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "VB": {
+      "Correct": 7,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "VECTREX": {
+      "Correct": 7,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "VITA": {
+      "Correct": 10,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "WII": {
+      "Correct": 15,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 2
+    },
+    "WIIU": {
+      "Correct": 14,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "WS": {
+      "Correct": 7,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "WSC": {
+      "Correct": 7,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "X360": {
+      "Correct": 6,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "X68K": {
+      "Correct": 7,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 1,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "XBOX": {
+      "Correct": 6,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 2,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "ZX": {
+      "Correct": 10,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 0,
+      "FalsePositive": 1
+    },
+    "UNKNOWN": {
+      "Correct": 0,
+      "Acceptable": 0,
+      "Wrong": 0,
+      "Missed": 0,
+      "TrueNegative": 44,
+      "FalsePositive": 38
+    }
+  },
+  "AggregateMetrics": {
+    "wrongMatchRate": 0.1267361111111111,
+    "unknownRate": 0.09027777777777778,
+    "unsafeSortRate": 0.1267361111111111,
+    "safeSortCoverage": 0.8732638888888888
+  },
+  "ConfusionMatrix": [
+    {
+      "ExpectedSystem": "PS3",
+      "ActualSystem": "UNKNOWN",
+      "Count": 13
+    },
+    {
+      "ExpectedSystem": "GB",
+      "ActualSystem": "GB",
+      "Count": 4
+    },
+    {
+      "ExpectedSystem": "GBA",
+      "ActualSystem": "GBA",
+      "Count": 4
+    },
+    {
+      "ExpectedSystem": "GBC",
+      "ActualSystem": "GBC",
+      "Count": 4
+    },
+    {
+      "ExpectedSystem": "MD",
+      "ActualSystem": "MD",
+      "Count": 4
+    },
+    {
+      "ExpectedSystem": "N64",
+      "ActualSystem": "N64",
+      "Count": 4
+    },
+    {
+      "ExpectedSystem": "NES",
+      "ActualSystem": "NES",
+      "Count": 4
+    },
+    {
+      "ExpectedSystem": "PS1",
+      "ActualSystem": "PS1",
+      "Count": 4
+    },
+    {
+      "ExpectedSystem": "PS2",
+      "ActualSystem": "PS2",
+      "Count": 4
+    },
+    {
+      "ExpectedSystem": "SNES",
+      "ActualSystem": "SNES",
+      "Count": 4
+    },
+    {
+      "ExpectedSystem": "NEOCD",
+      "ActualSystem": "UNKNOWN",
+      "Count": 3
+    },
+    {
+      "ExpectedSystem": "PCECD",
+      "ActualSystem": "UNKNOWN",
+      "Count": 3
+    },
+    {
+      "ExpectedSystem": "NEOGEO",
+      "ActualSystem": "UNKNOWN",
+      "Count": 3
+    },
+    {
+      "ExpectedSystem": "3DO",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "CD32",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "FMTOWNS",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "GC",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "JAGCD",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "PS1",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "PS2",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "PSP",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "SAT",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "SCD",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "X360",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "XBOX",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "ARCADE",
+      "ActualSystem": "UNKNOWN",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "3DS",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "32X",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "A26",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "A52",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "A78",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "A800",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "AMIGA",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "ATARIST",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "C64",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "CDI",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "COLECO",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "DC",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "GB",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "GBA",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "GBC",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "GG",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "INTV",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "JAG",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "3DS",
+      "ActualSystem": "3DS",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "32X",
+      "ActualSystem": "32X",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "A26",
+      "ActualSystem": "A26",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "A78",
+      "ActualSystem": "A78",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "AMIGA",
+      "ActualSystem": "AMIGA",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "DC",
+      "ActualSystem": "DC",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "GC",
+      "ActualSystem": "GC",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "GG",
+      "ActualSystem": "GG",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "LYNX",
+      "ActualSystem": "LYNX",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "NDS",
+      "ActualSystem": "NDS",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "PCE",
+      "ActualSystem": "PCE",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "PSP",
+      "ActualSystem": "PSP",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "SAT",
+      "ActualSystem": "SAT",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "SMS",
+      "ActualSystem": "SMS",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "SWITCH",
+      "ActualSystem": "SWITCH",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "WII",
+      "ActualSystem": "WII",
+      "Count": 2
+    },
+    {
+      "ExpectedSystem": "CDI",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "DC",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "PCFX",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "WII",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "WIIU",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "3DO",
+      "ActualSystem": "3DO",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "A52",
+      "ActualSystem": "A52",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "A800",
+      "ActualSystem": "A800",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "ARCADE",
+      "ActualSystem": "ARCADE",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "ATARIST",
+      "ActualSystem": "ATARIST",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "C64",
+      "ActualSystem": "C64",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "CD32",
+      "ActualSystem": "CD32",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "CDI",
+      "ActualSystem": "CDI",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "CHANNELF",
+      "ActualSystem": "CHANNELF",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "COLECO",
+      "ActualSystem": "COLECO",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "CPC",
+      "ActualSystem": "CPC",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "DOS",
+      "ActualSystem": "DOS",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "FMTOWNS",
+      "ActualSystem": "FMTOWNS",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "INTV",
+      "ActualSystem": "INTV",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "JAG",
+      "ActualSystem": "JAG",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "JAGCD",
+      "ActualSystem": "JAGCD",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "MSX",
+      "ActualSystem": "MSX",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "NEOCD",
+      "ActualSystem": "NEOCD",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "NEOGEO",
+      "ActualSystem": "NEOGEO",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "NGP",
+      "ActualSystem": "NGP",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "NGPC",
+      "ActualSystem": "NGPC",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "ODYSSEY2",
+      "ActualSystem": "ODYSSEY2",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "PC98",
+      "ActualSystem": "PC98",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "PCECD",
+      "ActualSystem": "PCECD",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "PCFX",
+      "ActualSystem": "PCFX",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "POKEMINI",
+      "ActualSystem": "POKEMINI",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "PS3",
+      "ActualSystem": "PS3",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "SCD",
+      "ActualSystem": "SCD",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "SG1000",
+      "ActualSystem": "SG1000",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "SUPERVISION",
+      "ActualSystem": "SUPERVISION",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "VB",
+      "ActualSystem": "VB",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "VECTREX",
+      "ActualSystem": "VECTREX",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "VITA",
+      "ActualSystem": "VITA",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "WIIU",
+      "ActualSystem": "WIIU",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "WS",
+      "ActualSystem": "WS",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "WSC",
+      "ActualSystem": "WSC",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "X360",
+      "ActualSystem": "X360",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "X68K",
+      "ActualSystem": "X68K",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "XBOX",
+      "ActualSystem": "XBOX",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "ZX",
+      "ActualSystem": "ZX",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "LYNX",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "UNKNOWN",
+      "ActualSystem": "MD",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "CHANNELF",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "CPC",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "DOS",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "NGPC",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "PC98",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "SUPERVISION",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    },
+    {
+      "ExpectedSystem": "X68K",
+      "ActualSystem": "UNKNOWN",
+      "Count": 1
+    }
+  ]
+}

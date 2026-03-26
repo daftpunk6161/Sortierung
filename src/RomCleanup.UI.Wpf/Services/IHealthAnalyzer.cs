@@ -6,13 +6,13 @@ namespace RomCleanup.UI.Wpf.Services;
 public interface IHealthAnalyzer
 {
     int CalculateHealthScore(int totalFiles, int dupes, int junk, int verified);
-    List<HeatmapEntry> GetDuplicateHeatmap(IReadOnlyList<DedupeResult> groups);
+    List<HeatmapEntry> GetDuplicateHeatmap(IReadOnlyList<DedupeGroup> groups);
     List<DuplicateSourceEntry> GetDuplicateInspector(string? auditPath);
     List<RomCandidate> SearchRomCollection(IReadOnlyList<RomCandidate> candidates, string searchText);
     string AnalyzeStorageTiers(IReadOnlyList<RomCandidate> candidates, int hotThresholdDays = 30);
-    string GetHardlinkEstimate(IReadOnlyList<DedupeResult> groups);
+    string GetHardlinkEstimate(IReadOnlyList<DedupeGroup> groups);
     string GetNasInfo(IReadOnlyList<string> roots);
-    string BuildCloneTree(IReadOnlyList<DedupeResult> groups);
+    string BuildCloneTree(IReadOnlyList<DedupeGroup> groups);
     string BuildVirtualFolderPreview(IReadOnlyList<RomCandidate> candidates);
     List<(string key, string name, string shortcut, int score)> SearchCommands(string query);
     string ExportRetroArchPlaylist(IReadOnlyList<RomCandidate> winners, string playlistName);

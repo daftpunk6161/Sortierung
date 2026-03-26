@@ -77,7 +77,7 @@ public sealed class FileSystemAdapter : IFileSystem
                     if ((dirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
                         continue;
                 }
-                catch
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     continue; // inaccessible directory
                 }
@@ -106,7 +106,7 @@ public sealed class FileSystemAdapter : IFileSystem
                     if ((attrs & FileAttributes.ReparsePoint) != 0)
                         continue;
                 }
-                catch
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     continue; // inaccessible file
                 }
@@ -139,6 +139,9 @@ public sealed class FileSystemAdapter : IFileSystem
         }
 
         // TASK-169: Deterministic ordering for reproducible results
+        // F-06 FIX: NFC-normalize before sort for consistent ordering on HFS+/NFD volumes
+        for (int i = 0; i < results.Count; i++)
+            results[i] = results[i].Normalize(System.Text.NormalizationForm.FormC);
         results.Sort(StringComparer.OrdinalIgnoreCase);
         return results;
     }
@@ -149,6 +152,18 @@ public sealed class FileSystemAdapter : IFileSystem
             throw new ArgumentException("Source path must not be empty.", nameof(sourcePath));
         if (string.IsNullOrWhiteSpace(destinationPath))
             throw new ArgumentException("Destination path must not be empty.", nameof(destinationPath));
+
+        // SEC-MOVE-01: Block directory traversal in destination path
+        var destSegments = destinationPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (destSegments.Any(s => s == ".."))
+            throw new InvalidOperationException("Blocked: Destination path contains directory traversal.");
+
+        // SEC-MOVE-03: Block NTFS Alternate Data Streams (parity with ResolveChildPathWithinRoot)
+        if (sourcePath.Contains(':') && !Path.IsPathRooted(sourcePath))
+            throw new InvalidOperationException("Blocked: Source path contains NTFS ADS reference.");
+        var destFileName = Path.GetFileName(destinationPath);
+        if (destFileName.Contains(':'))
+            throw new InvalidOperationException("Blocked: Destination filename contains NTFS ADS reference.");
 
         var fullSource = NormalizePathNfc(sourcePath);
         var fullDest = NormalizePathNfc(destinationPath);
@@ -180,6 +195,91 @@ public sealed class FileSystemAdapter : IFileSystem
             Directory.CreateDirectory(destDir);
         }
 
+        // SEC-IO-01: Catch locked-file/IO errors gracefully → return null
+        try
+        {
+            return MoveItemSafelyCore(fullSource, fullDest);
+        }
+        catch (IOException) when (File.Exists(fullSource))
+        {
+            // Source still in place (locked/inaccessible) — graceful null return
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// SEC-MOVE-04: Move with explicit root containment validation.
+    /// Verifies destination resolves within allowedRoot before proceeding.
+    /// </summary>
+    public string? MoveItemSafely(string sourcePath, string destinationPath, string allowedRoot)
+    {
+        if (string.IsNullOrWhiteSpace(allowedRoot))
+            throw new ArgumentException("Allowed root must not be empty.", nameof(allowedRoot));
+
+        var normalizedRoot = NormalizePathNfc(allowedRoot).TrimEnd(Path.DirectorySeparatorChar)
+                           + Path.DirectorySeparatorChar;
+        var normalizedDest = NormalizePathNfc(destinationPath).TrimEnd(Path.DirectorySeparatorChar)
+                           + Path.DirectorySeparatorChar;
+
+        if (!normalizedDest.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                $"Blocked: Destination '{destinationPath}' is outside allowed root '{allowedRoot}'.");
+
+        return MoveItemSafely(sourcePath, destinationPath);
+    }
+
+    public string? RenameItemSafely(string sourcePath, string newFileName)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+            throw new ArgumentException("Source path must not be empty.", nameof(sourcePath));
+        if (string.IsNullOrWhiteSpace(newFileName))
+            throw new ArgumentException("New filename must not be empty.", nameof(newFileName));
+
+        // Rename must stay in the same directory; no subpaths are allowed.
+        if (!string.Equals(Path.GetFileName(newFileName), newFileName, StringComparison.Ordinal))
+            throw new InvalidOperationException("Blocked: Rename target must be a file name without path segments.");
+
+        if (newFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new InvalidOperationException("Blocked: Rename target contains invalid filename characters.");
+
+        if (IsWindowsReservedDeviceName(newFileName))
+            throw new InvalidOperationException("Blocked: Rename target uses a reserved Windows device name.");
+
+        var fullSource = NormalizePathNfc(sourcePath);
+        if (!File.Exists(fullSource))
+            throw new FileNotFoundException("Source file not found.", fullSource);
+
+        var sourceAttrs = File.GetAttributes(fullSource);
+        if ((sourceAttrs & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidOperationException("Blocked: Source is a reparse point.");
+
+        var sourceDir = Path.GetDirectoryName(fullSource)
+                        ?? throw new InvalidOperationException("Blocked: Source has no parent directory.");
+
+        var resolvedTarget = ResolveChildPathWithinRoot(sourceDir, newFileName);
+        if (resolvedTarget is null)
+            throw new InvalidOperationException("Blocked: Rename target failed root/path safety validation.");
+
+        var fullTarget = NormalizePathNfc(resolvedTarget);
+        if (string.Equals(fullSource, fullTarget, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Source and destination are the same path.");
+
+        try
+        {
+            return MoveItemSafelyCore(fullSource, fullTarget);
+        }
+        catch (IOException) when (File.Exists(fullSource))
+        {
+            // Locked/inaccessible source should behave like MoveItemSafely.
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Core move logic with collision handling. Separated for IOException catch scope.
+    /// </summary>
+    private static string MoveItemSafelyCore(string fullSource, string fullDest)
+    {
         // Collision handling with __DUP suffix (V2-H07: try/catch eliminates TOCTOU)
         var finalDest = fullDest;
         if (File.Exists(finalDest))
@@ -252,14 +352,34 @@ public sealed class FileSystemAdapter : IFileSystem
         if (string.IsNullOrWhiteSpace(destinationPath))
             throw new ArgumentException("Destination path must not be empty.", nameof(destinationPath));
 
-        var fullSource = Path.GetFullPath(sourcePath);
-        var fullDest = Path.GetFullPath(destinationPath);
+        // SEC-MOVE-01: Block directory traversal in destination path (parity with MoveItemSafely)
+        var destSegments = destinationPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (destSegments.Any(s => s == ".."))
+            throw new InvalidOperationException("Blocked: Destination path contains directory traversal.");
+
+        // SEC-MOVE-02: Use NFC normalization consistent with MoveItemSafely
+        var fullSource = NormalizePathNfc(sourcePath);
+        var fullDest = NormalizePathNfc(destinationPath);
 
         if (string.Equals(fullSource, fullDest, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Source and destination are the same path.");
 
         if (!Directory.Exists(fullSource))
             throw new DirectoryNotFoundException($"Source directory not found: {fullSource}");
+
+        // SEC-MOVE-02: Block reparse points on source directory
+        var sourceInfo = new DirectoryInfo(fullSource);
+        if ((sourceInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidOperationException("Blocked: Source directory is a reparse point.");
+
+        // SEC-MOVE-02: Block reparse points on destination parent
+        var destParent = Path.GetDirectoryName(fullDest);
+        if (!string.IsNullOrEmpty(destParent) && Directory.Exists(destParent))
+        {
+            var destParentInfo = new DirectoryInfo(destParent);
+            if ((destParentInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidOperationException("Blocked: Destination parent is a reparse point.");
+        }
 
         var finalDest = fullDest;
         if (Directory.Exists(finalDest))
@@ -271,11 +391,15 @@ public sealed class FileSystemAdapter : IFileSystem
             for (int i = 1; i <= MaxDuplicateAttempts; i++)
             {
                 finalDest = Path.Combine(parentDir, $"{dirName}__DUP{i}");
-                if (!Directory.Exists(finalDest))
+                try
                 {
                     Directory.Move(fullSource, finalDest);
                     moved = true;
                     break;
+                }
+                catch (IOException)
+                {
+                    // Slot already taken — try next index (eliminates TOCTOU with Directory.Exists)
                 }
             }
 
@@ -284,7 +408,35 @@ public sealed class FileSystemAdapter : IFileSystem
         }
         else
         {
-            Directory.Move(fullSource, finalDest);
+            try
+            {
+                Directory.Move(fullSource, finalDest);
+            }
+            catch (IOException) when (Directory.Exists(finalDest))
+            {
+                // Race: directory appeared between our check and move — use DUP suffix logic
+                var dirName = Path.GetFileName(fullDest);
+                var parentDir = Path.GetDirectoryName(fullDest) ?? "";
+
+                bool moved = false;
+                for (int i = 1; i <= MaxDuplicateAttempts; i++)
+                {
+                    finalDest = Path.Combine(parentDir, $"{dirName}__DUP{i}");
+                    try
+                    {
+                        Directory.Move(fullSource, finalDest);
+                        moved = true;
+                        break;
+                    }
+                    catch (IOException)
+                    {
+                        // Slot already taken — try next index
+                    }
+                }
+
+                if (!moved)
+                    throw new IOException($"Could not find free DUP slot after {MaxDuplicateAttempts} attempts.");
+            }
         }
 
         return true;
@@ -297,6 +449,22 @@ public sealed class FileSystemAdapter : IFileSystem
 
         if (string.IsNullOrWhiteSpace(rootPath))
             return null;
+
+        // SEC-PATH-01: Block NTFS Alternate Data Streams (colon in filename portion)
+        if (relativePath.Contains(':'))
+            return null;
+
+        // SEC-PATH-02: Block segments with trailing dots/spaces (Windows silently strips them → path bypass)
+        var segments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        foreach (var seg in segments)
+        {
+            if (seg.Length > 0 && (seg[^1] == '.' || seg[^1] == ' '))
+                return null;
+
+            // SEC-PATH-03: Block Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+            if (IsWindowsReservedDeviceName(seg))
+                return null;
+        }
 
         try
         {
@@ -318,10 +486,37 @@ public sealed class FileSystemAdapter : IFileSystem
 
             return candidate;
         }
-        catch
+        catch (Exception ex) when (ex is ArgumentException or PathTooLongException or NotSupportedException or System.Security.SecurityException)
         {
             return null; // fail-safe
         }
+    }
+
+    /// <summary>
+    /// SEC-PATH-03: Check if a filename (without extension) matches a Windows reserved device name.
+    /// Reserved names: CON, PRN, AUX, NUL, COM0-COM9, LPT0-LPT9.
+    /// These are reserved regardless of extension (e.g., "NUL.txt" is still reserved).
+    /// </summary>
+    internal static bool IsWindowsReservedDeviceName(string segment)
+    {
+        if (string.IsNullOrEmpty(segment))
+            return false;
+
+        // Strip extension if present (e.g., "NUL.txt" → "NUL")
+        var dotIndex = segment.IndexOf('.');
+        var nameOnly = dotIndex >= 0 ? segment[..dotIndex] : segment;
+
+        return nameOnly.Length switch
+        {
+            3 => nameOnly.Equals("CON", StringComparison.OrdinalIgnoreCase)
+              || nameOnly.Equals("PRN", StringComparison.OrdinalIgnoreCase)
+              || nameOnly.Equals("AUX", StringComparison.OrdinalIgnoreCase)
+              || nameOnly.Equals("NUL", StringComparison.OrdinalIgnoreCase),
+            4 => (nameOnly.StartsWith("COM", StringComparison.OrdinalIgnoreCase)
+                  || nameOnly.StartsWith("LPT", StringComparison.OrdinalIgnoreCase))
+                 && char.IsAsciiDigit(nameOnly[3]),
+            _ => false
+        };
     }
 
     private static bool HasReparsePointInAncestry(string path, string stopAtRoot)
@@ -347,7 +542,7 @@ public sealed class FileSystemAdapter : IFileSystem
 
                 current = Path.GetDirectoryName(current);
             }
-            catch
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 return true; // fail-safe: treat inaccessible as reparse
             }
@@ -363,7 +558,7 @@ public sealed class FileSystemAdapter : IFileSystem
             var attrs = File.GetAttributes(path);
             return (attrs & FileAttributes.ReparsePoint) != 0;
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return true; // fail-closed: treat inaccessible as reparse point
         }
@@ -382,6 +577,10 @@ public sealed class FileSystemAdapter : IFileSystem
         var attrs = File.GetAttributes(fullPath);
         if ((attrs & FileAttributes.ReparsePoint) != 0)
             throw new InvalidOperationException("Blocked: Target is a reparse point.");
+
+        // SEC-IO-02: Clear ReadOnly attribute before delete to handle protected files robustly
+        if ((attrs & FileAttributes.ReadOnly) != 0)
+            File.SetAttributes(fullPath, attrs & ~FileAttributes.ReadOnly);
 
         File.Delete(fullPath);
     }

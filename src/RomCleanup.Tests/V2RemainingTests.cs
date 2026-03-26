@@ -1,3 +1,8 @@
+// ══════════════════════════════════════════════════════════════════════════════
+// LEGACY: V2 remaining gap-fill tests. Still active — do not delete.
+// These tests cover CancellationToken, CJK/Unicode, InsightsEngine, concurrency.
+// Migrate to domain-specific test classes when revisiting test organization.
+// ══════════════════════════════════════════════════════════════════════════════
 using System.IO.Compression;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;

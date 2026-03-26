@@ -1,4 +1,5 @@
 using RomCleanup.Api;
+using RomCleanup.Contracts.Errors;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.FileSystem;
 using Xunit;
@@ -150,7 +151,7 @@ public class RunManagerTests
             var completed = mgr.Get(run.RunId);
             Assert.Equal("completed", completed!.Status);
             Assert.NotNull(completed.Result);
-            Assert.Equal("ok", completed.Result!.Status);
+            Assert.Equal("ok", completed.Result!.OrchestratorStatus);
             Assert.Equal(0, completed.Result.ExitCode);
             Assert.True(completed.Result.TotalFiles >= 3);
         }
@@ -236,7 +237,7 @@ public class RunManagerTests
         var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (_, _, _, ct) =>
         {
             Task.Delay(150, ct).GetAwaiter().GetResult();
-            return new RunExecutionOutcome("completed", new ApiRunResult { Status = "ok", ExitCode = 0 });
+            return new RunExecutionOutcome("completed", new ApiRunResult { OrchestratorStatus = "ok", ExitCode = 0 });
         });
 
         var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "DryRun", "idem-003").Run!;
@@ -260,13 +261,15 @@ public class RunManagerTests
 
         try
         {
-            var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (_, _, _, _) =>
-                new RunExecutionOutcome("cancelled", new ApiRunResult
+            var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (run, _, _, _) =>
+            {
+                run.AuditPath = auditPath;
+                return new RunExecutionOutcome("cancelled", new ApiRunResult
                 {
-                    Status = "cancelled",
-                    ExitCode = 2,
-                    AuditPath = auditPath
-                }));
+                    OrchestratorStatus = "cancelled",
+                    ExitCode = 2
+                });
+            });
 
             var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "Move", "idem-004").Run!;
             await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(1));
@@ -291,13 +294,15 @@ public class RunManagerTests
 
         try
         {
-            var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (_, _, _, _) =>
-                new RunExecutionOutcome("failed", new ApiRunResult
+            var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (run, _, _, _) =>
+            {
+                run.AuditPath = auditPath;
+                return new RunExecutionOutcome("failed", new ApiRunResult
                 {
-                    Status = "failed",
-                    ExitCode = 1,
-                    AuditPath = auditPath
-                }));
+                    OrchestratorStatus = "failed",
+                    ExitCode = 1
+                });
+            });
 
             var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "Move", "idem-005").Run!;
             await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(1));
@@ -322,9 +327,9 @@ public class RunManagerTests
         var firstManager = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (_, _, _, _) =>
             new RunExecutionOutcome("failed", new ApiRunResult
             {
-                Status = "failed",
+                OrchestratorStatus = "failed",
                 ExitCode = 1,
-                Error = "Simulated crash"
+                Error = new OperationError("RUN-SIMULATED-CRASH", "Simulated crash", ErrorKind.Critical, "TEST")
             }));
 
         var firstRun = firstManager.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "Move", "idem-006").Run!;
@@ -335,6 +340,75 @@ public class RunManagerTests
         Assert.NotNull(firstManager.Get(firstRun.RunId));
         Assert.Null(restartedManager.Get(firstRun.RunId));
         Assert.Null(restartedManager.GetActive());
+    }
+
+    [Fact]
+    public async Task TryCreateOrReuse_MapsExtendedRequestOptions_IntoRunRecord()
+    {
+        var mgr = CreateManager();
+        var request = new RunRequest
+        {
+            Roots = new[] { GetTestRoot() },
+            Mode = "Move",
+            PreferRegions = new[] { "US", "EU" },
+            RemoveJunk = false,
+            AggressiveJunk = true,
+            SortConsole = true,
+            EnableDat = true,
+            HashType = "sha256",
+            ConvertFormat = "auto",
+            TrashRoot = GetTestRoot(),
+            OnlyGames = true,
+            KeepUnknownWhenOnlyGames = false,
+            Extensions = new[] { "chd", ".rvz" }
+        };
+
+        var create = mgr.TryCreateOrReuse(request, "Move", "idem-options-map");
+        Assert.Equal(RunCreateDisposition.Created, create.Disposition);
+
+        var run = create.Run!;
+        Assert.False(run.RemoveJunk);
+        Assert.True(run.AggressiveJunk);
+        Assert.True(run.SortConsole);
+        Assert.True(run.EnableDat);
+        Assert.Equal("SHA256", run.HashType);
+        Assert.Equal("auto", run.ConvertFormat);
+        Assert.Equal(GetTestRoot(), run.TrashRoot);
+        Assert.True(run.OnlyGames);
+        Assert.False(run.KeepUnknownWhenOnlyGames);
+        Assert.Contains(".chd", run.Extensions);
+        Assert.Contains(".rvz", run.Extensions);
+
+        await mgr.WaitForCompletion(run.RunId, 50);
+    }
+
+    [Fact]
+    public void TryCreateOrReuse_SameIdempotencyKey_DifferentExtendedOptions_ReturnsConflict()
+    {
+        var mgr = CreateManager();
+        var key = "idem-extended-conflict";
+
+        var first = mgr.TryCreateOrReuse(new RunRequest
+        {
+            Roots = new[] { GetTestRoot() },
+            EnableDat = false,
+            HashType = "SHA1",
+            RemoveJunk = true
+        }, "DryRun", key);
+
+        var second = mgr.TryCreateOrReuse(new RunRequest
+        {
+            Roots = new[] { GetTestRoot() },
+            EnableDat = true,
+            HashType = "SHA256",
+            RemoveJunk = false,
+            OnlyGames = true,
+            KeepUnknownWhenOnlyGames = false
+        }, "DryRun", key);
+
+        Assert.Equal(RunCreateDisposition.Created, first.Disposition);
+        Assert.Equal(RunCreateDisposition.IdempotencyConflict, second.Disposition);
+        Assert.Equal(first.Run!.RunId, second.Run!.RunId);
     }
 
     private static string GetTestRoot()

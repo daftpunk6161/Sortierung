@@ -1,0 +1,179 @@
+<UserControl x:Class="RomCleanup.UI.Wpf.Views.ConfigFiltersView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+  <!-- E1: Smart-Picker — search, chips, accordion, presets, counter -->
+  <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
+    <StackPanel>
+
+      <!-- ═══ CONSOLE FILTER (Smart-Picker) ═══════════════════════════ -->
+      <DockPanel Margin="0,0,0,8">
+        <TextBlock Text="{Binding Loc[Settings.LabelConsoles]}" Style="{StaticResource SectionHeader}" VerticalAlignment="Center"/>
+        <Border DockPanel.Dock="Right" HorizontalAlignment="Right" CornerRadius="10"
+                Background="{DynamicResource BrushAccentCyan}" Padding="10,3" VerticalAlignment="Center">
+          <TextBlock Text="{Binding ConsoleCountDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+        </Border>
+      </DockPanel>
+
+      <TextBlock Text="Keine Auswahl = alle Konsolen werden gescannt"
+                 Style="{StaticResource CaptionText}" Margin="0,0,0,8" TextWrapping="Wrap"
+                 Foreground="{DynamicResource BrushTextMuted}"/>
+
+      <!-- Search Field (prominent) -->
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomSM}">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                     Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="8,0"/>
+          <TextBox Grid.Column="1" Text="{Binding ConsoleFilterText, UpdateSourceTrigger=PropertyChanged}"
+                   Padding="6,8" BorderThickness="0" Background="Transparent" FontSize="13"
+                   AutomationProperties.Name="{Binding Loc[Settings.ConsoleSearchLabel]}"
+                   ToolTip="{Binding Loc[Settings.ConsoleSearchTip]}"/>
+        </Grid>
+      </Border>
+
+      <!-- Selected Chips (removable tags) -->
+      <ItemsControl ItemsSource="{Binding ConsoleFilters}" Margin="0,0,0,8">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Margin="0,0,4,4" Padding="8,4" CornerRadius="12"
+                    Background="{DynamicResource BrushAccentCyan}" Cursor="Hand">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsChecked}" Value="True">
+                      <Setter Property="Visibility" Value="Visible"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding DisplayName}" FontSize="11" Foreground="White" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <Button Content="✕" Padding="2,0" FontSize="9" Cursor="Hand"
+                        Background="Transparent" BorderThickness="0" Foreground="White"
+                        Command="{Binding DataContext.RemoveConsoleSelectionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding DisplayName, StringFormat='{}{0} entfernen'}"/>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- Quick Presets -->
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomSM}">
+        <StackPanel>
+          <TextBlock Text="Schnellauswahl" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" Margin="{DynamicResource SpaceBottomXS}"/>
+          <WrapPanel>
+            <Button Content="🏆 Top 10" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                    Command="{Binding ConsolePresetTop10Command}"
+                    ToolTip="PS1, PS2, SNES, NES, N64, GC, Wii, GBA, MD, DC"
+                    AutomationProperties.Name="Preset Top 10 Konsolen"/>
+            <Button Content="💿 Disc-basiert" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                    Command="{Binding ConsolePresetDiscBasedCommand}"
+                    ToolTip="PS1–PS3, PSP, GC, Wii, Wii U, Sega CD, Saturn, DC, 3DO, PCECD, Neo Geo CD"
+                    AutomationProperties.Name="Preset Disc-basierte Konsolen"/>
+            <Button Content="🎮 Handhelds" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                    Command="{Binding ConsolePresetHandheldsCommand}"
+                    ToolTip="GB, GBC, GBA, NDS, 3DS, PSP, GG, Switch"
+                    AutomationProperties.Name="Preset Handheld Konsolen"/>
+            <Button Content="👾 Retro" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                    Command="{Binding ConsolePresetRetroCommand}"
+                    ToolTip="NES, SNES, N64, GB, GBC, GBA, MD, SMS, GG, Saturn, PCE, Neo Geo"
+                    AutomationProperties.Name="Preset Retro Konsolen"/>
+            <Button Content="Alle" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                    Command="{Binding SelectAllConsolesCommand}"
+                    AutomationProperties.Name="Alle Konsolen auswählen"/>
+            <Button Content="Keine" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                    Command="{Binding ClearAllConsolesCommand}"
+                    AutomationProperties.Name="Keine Konsolen auswählen"/>
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Console List with Accordion Groups -->
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <ListBox ItemsSource="{Binding ConsoleFiltersView}"
+                 MaxHeight="400"
+                 VirtualizingPanel.IsVirtualizing="True"
+                 VirtualizingPanel.VirtualizationMode="Recycling"
+                 ScrollViewer.CanContentScroll="True"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 BorderThickness="0" Background="Transparent"
+                 AutomationProperties.Name="{Binding Loc[Settings.LabelConsoles]}">
+          <ListBox.GroupStyle>
+            <GroupStyle>
+              <GroupStyle.HeaderTemplate>
+                <DataTemplate>
+                  <DockPanel Margin="0,8,0,4">
+                    <TextBlock Text="{Binding Name}" Style="{StaticResource CategoryHeader}" VerticalAlignment="Center"/>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" Margin="8,0,0,0">
+                      <Button Content="Alle" Padding="6,2" FontSize="10" Margin="0,0,4,0"
+                              Background="Transparent" BorderThickness="0"
+                              Foreground="{DynamicResource BrushAccentCyan}" Cursor="Hand"
+                              Command="{Binding DataContext.SelectConsoleGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding Name}"
+                              AutomationProperties.Name="{Binding Name, StringFormat='Alle {0} auswählen'}"/>
+                      <Button Content="Keine" Padding="6,2" FontSize="10"
+                              Background="Transparent" BorderThickness="0"
+                              Foreground="{DynamicResource BrushTextMuted}" Cursor="Hand"
+                              Command="{Binding DataContext.DeselectConsoleGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding Name}"
+                              AutomationProperties.Name="{Binding Name, StringFormat='Keine {0} auswählen'}"/>
+                    </StackPanel>
+                  </DockPanel>
+                </DataTemplate>
+              </GroupStyle.HeaderTemplate>
+              <GroupStyle.Panel>
+                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+              </GroupStyle.Panel>
+            </GroupStyle>
+          </ListBox.GroupStyle>
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <CheckBox Content="{Binding DisplayName}"
+                        IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                        Margin="0,0,12,4"
+                        AutomationProperties.Name="{Binding DisplayName, StringFormat='Konsole {0} filtern'}"/>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Border>
+
+      <!-- ═══ EXTENSION FILTER ════════════════════════════════════════ -->
+      <TextBlock Text="{Binding Loc[Settings.SectionFilters]}" Style="{StaticResource SectionHeader}" Margin="0,16,0,12"/>
+      <TextBlock Text="{Binding Loc[Settings.LabelFileTypes]}" Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="0,4,0,4"/>
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <ItemsControl ItemsSource="{Binding ExtensionFiltersView}">
+          <ItemsControl.GroupStyle>
+            <GroupStyle>
+              <GroupStyle.HeaderTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding Name}" Style="{StaticResource CategoryHeader}"/>
+                </DataTemplate>
+              </GroupStyle.HeaderTemplate>
+              <GroupStyle.Panel>
+                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+              </GroupStyle.Panel>
+            </GroupStyle>
+          </ItemsControl.GroupStyle>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <CheckBox Content="{Binding Extension}" IsChecked="{Binding IsChecked}"
+                        ToolTip="{Binding ToolTip}" Margin="0,0,12,4"
+                        AutomationProperties.Name="{Binding Extension, StringFormat='Dateityp {0} filtern'}"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

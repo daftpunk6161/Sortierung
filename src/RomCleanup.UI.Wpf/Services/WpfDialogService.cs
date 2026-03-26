@@ -1,4 +1,5 @@
 using System.Windows;
+using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 
 namespace RomCleanup.UI.Wpf.Services;
@@ -45,4 +46,7 @@ public sealed class WpfDialogService : IDialogService
 
     public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen")
         => DialogService.DangerConfirm(title, message, confirmText, buttonLabel);
+
+    public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals)
+        => DialogService.ConfirmDatRenamePreview(renameProposals);
 }

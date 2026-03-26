@@ -357,6 +357,38 @@ public class RunOrchestratorTests : IDisposable
         Assert.Equal("ok", result.Status);
     }
 
+    [Fact]
+    public void Execute_WithUnwritableReportPath_UsesAppDataFallback()
+    {
+        CreateFile("Game (USA).zip", 100);
+
+        var blocker = Path.Combine(_tempDir, "reports-blocker");
+        File.WriteAllText(blocker, "not a directory");
+        var primaryReportPath = Path.Combine(blocker, "result.html");
+
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var audit = new FakeAuditStore();
+        var orch = new RunOrchestrator(fs, audit);
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = "DryRun",
+            ReportPath = primaryReportPath
+        };
+
+        var result = orch.Execute(options);
+
+        Assert.False(string.IsNullOrWhiteSpace(result.ReportPath));
+        var appDataReports = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "RomCleanupRegionDedupe",
+            "reports");
+        Assert.StartsWith(Path.GetFullPath(appDataReports), Path.GetFullPath(result.ReportPath!), StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(result.ReportPath!));
+    }
+
     // ── Move Phase Tests ──────────────────────────────────────────
 
     [Fact]
@@ -420,11 +452,69 @@ public class RunOrchestratorTests : IDisposable
         // The Beta file should be classified as JUNK
         var betaCandidate = result.AllCandidates.FirstOrDefault(c => c.MainPath.Contains("Beta"));
         Assert.NotNull(betaCandidate);
-        Assert.Equal("JUNK", betaCandidate!.Category);
+        Assert.Equal(FileCategory.Junk, betaCandidate!.Category);
         // The non-Beta file should be classified as GAME
         var normalCandidate = result.AllCandidates.FirstOrDefault(c => !c.MainPath.Contains("Beta"));
         Assert.NotNull(normalCandidate);
-        Assert.Equal("GAME", normalCandidate!.Category);
+        Assert.Equal(FileCategory.Game, normalCandidate!.Category);
+    }
+
+    [Fact]
+    public void Execute_OnlyGames_FiltersNonGameCandidates()
+    {
+        CreateFile("Super Mario (USA).zip", 80);
+        CreateFile("Workbench (System Disk).zip", 40);
+
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var audit = new FakeAuditStore();
+        var orch = new RunOrchestrator(fs, audit);
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = "DryRun",
+            OnlyGames = true,
+            KeepUnknownWhenOnlyGames = true
+        };
+
+        var result = orch.Execute(options);
+
+        Assert.Equal("ok", result.Status);
+        Assert.Equal(2, result.TotalFilesScanned);
+        Assert.Equal(1, result.FilteredNonGameCount);
+        Assert.Single(result.DedupeGroups);
+        Assert.Equal("supermario", result.DedupeGroups[0].GameKey);
+    }
+
+    [Fact]
+    public void Execute_OnlyGames_DropUnknown_RemovesUnknownFromProcessing()
+    {
+        CreateFile(".zip", 10);
+        CreateFile("Valid Game (USA).zip", 50);
+
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var audit = new FakeAuditStore();
+        var orch = new RunOrchestrator(fs, audit);
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = "DryRun",
+            OnlyGames = true,
+            KeepUnknownWhenOnlyGames = false
+        };
+
+        var result = orch.Execute(options);
+
+        Assert.Equal("ok", result.Status);
+        Assert.Equal(2, result.TotalFilesScanned);
+        Assert.Equal(1, result.UnknownCount);
+        Assert.Equal(1, result.FilteredNonGameCount);
+        Assert.True(result.UnknownReasonCounts.ContainsKey("empty-basename"));
+        Assert.Single(result.DedupeGroups);
+        Assert.Equal("validgame", result.DedupeGroups[0].GameKey);
     }
 
     // ── Helpers ───────────────────────────────────────────────────

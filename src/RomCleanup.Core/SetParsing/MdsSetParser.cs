@@ -8,14 +8,14 @@ public static class MdsSetParser
 {
     public static IReadOnlyList<string> GetRelatedFiles(string mdsPath)
     {
-        if (string.IsNullOrWhiteSpace(mdsPath) || !File.Exists(mdsPath))
+        if (string.IsNullOrWhiteSpace(mdsPath) || !SetParserIo.Exists(mdsPath))
             return Array.Empty<string>();
 
         var dir = Path.GetDirectoryName(mdsPath) ?? "";
         var baseName = Path.GetFileNameWithoutExtension(mdsPath);
         var mdfPath = Path.GetFullPath(Path.Combine(dir, baseName + ".mdf"));
 
-        return File.Exists(mdfPath) ? new[] { mdfPath } : Array.Empty<string>();
+        return SetParserIo.Exists(mdfPath) ? new[] { mdfPath } : Array.Empty<string>();
     }
 
     public static IReadOnlyList<string> GetMissingFiles(string mdsPath)
@@ -27,6 +27,6 @@ public static class MdsSetParser
         var baseName = Path.GetFileNameWithoutExtension(mdsPath);
         var mdfPath = Path.Combine(dir, baseName + ".mdf");
 
-        return !File.Exists(mdfPath) ? new[] { mdfPath } : Array.Empty<string>();
+        return !SetParserIo.Exists(mdfPath) ? new[] { mdfPath } : Array.Empty<string>();
     }
 }

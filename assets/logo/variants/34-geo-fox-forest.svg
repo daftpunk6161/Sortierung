@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="forestGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1A2E1A"/>
+      <stop offset="100%" stop-color="#0D1A0D"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="url(#forestGrad)"/>
+  <!-- Geo Fox (Fuchs) - Angular, Wald-Thema -->
+  <g transform="translate(128,92) scale(0.6)">
+    <!-- Face - angular/diamond shape -->
+    <polygon points="0,-75 -65,-15 -40,55 0,70 40,55 65,-15" fill="#C2410C" stroke="#EA580C" stroke-width="1"/>
+    <!-- White face markings -->
+    <polygon points="0,-30 -25,25 0,65 25,25" fill="#FED7AA"/>
+    <!-- Ears -->
+    <polygon points="-50,-10 -75,-75 -25,-45" fill="#9A3412"/>
+    <polygon points="50,-10 75,-75 25,-45" fill="#9A3412"/>
+    <polygon points="-50,-15 -65,-60 -32,-38" fill="#FDBA74" opacity="0.5"/>
+    <polygon points="50,-15 65,-60 32,-38" fill="#FDBA74" opacity="0.5"/>
+    <!-- Eyes -->
+    <polygon points="-22,-15 -15,-8 -22,-1 -29,-8" fill="#0D1A0D"/>
+    <polygon points="22,-15 29,-8 22,-1 15,-8" fill="#0D1A0D"/>
+    <circle cx="-22" cy="-8" r="2" fill="#FDE047"/>
+    <circle cx="22" cy="-8" r="2" fill="#FDE047"/>
+    <!-- Nose -->
+    <polygon points="0,15 -6,25 6,25" fill="#0D1A0D"/>
+    <!-- Mouth -->
+    <line x1="0" y1="25" x2="0" y2="35" stroke="#0D1A0D" stroke-width="1"/>
+    <line x1="0" y1="35" x2="-8" y2="40" stroke="#0D1A0D" stroke-width="1"/>
+    <line x1="0" y1="35" x2="8" y2="40" stroke="#0D1A0D" stroke-width="1"/>
+  </g>
+  <!-- Pine tree silhouettes -->
+  <polygon points="35,195 42,170 49,195" fill="#14532D" opacity="0.3"/>
+  <polygon points="207,195 215,165 223,195" fill="#14532D" opacity="0.3"/>
+  <polygon points="22,195 30,178 38,195" fill="#14532D" opacity="0.2"/>
+  <polygon points="218,195 225,180 232,195" fill="#14532D" opacity="0.2"/>
+  <text x="128" y="190" text-anchor="middle" font-family="'Trebuchet MS','Segoe UI',sans-serif" font-size="28" font-weight="700" fill="#EA580C" letter-spacing="4">ROMULUS</text>
+  <text x="128" y="215" text-anchor="middle" font-family="'Trebuchet MS',sans-serif" font-size="8" fill="#365314" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

@@ -1,4 +1,4 @@
-# Contributing
+# Romulus — Contributing
 
 ## Voraussetzungen
 
@@ -12,7 +12,7 @@
    ```bash
    dotnet build src/RomCleanup.sln
    ```
-3. Tests ausführen (3090+ xUnit-Tests):
+3. Tests ausführen (5200+ xUnit-Tests):
    ```bash
    dotnet test src/RomCleanup.sln
    ```
@@ -31,13 +31,13 @@ Produktivcode liegt in `src/` (7 Projekte). Die PowerShell-Version ist archivier
 
 | Projekt | Zweck |
 |---------|-------|
-| **RomCleanup.Contracts** | Port-Interfaces (`IFileSystem`, `IAuditStore`, `IDatRepository` …), Models/DTOs, Error-Contracts |
+| **RomCleanup.Contracts** | Port-Interfaces (`IFileSystem`, `IAuditStore`, `IToolRunner` …), Models/DTOs, Error-Contracts |
 | **RomCleanup.Core** | Pure Domain Logic: GameKeys, Regions, Scoring, Deduplication, Classification, SetParsing, Rules, Caching |
 | **RomCleanup.Infrastructure** | I/O-Adapter: FileSystem, Audit, Dat, Hashing, Tools, Conversion, Orchestration, Reporting, Logging, Configuration |
 | **RomCleanup.CLI** | Headless Entry Point |
 | **RomCleanup.Api** | ASP.NET Core Minimal API (REST + SSE, API-Key-Auth, Rate-Limiting) |
 | **RomCleanup.UI.Wpf** | WPF GUI (MVVM, Dark-Theme, net10.0-windows) |
-| **RomCleanup.Tests** | xUnit Tests (3090+ Tests, 72 Testdateien) |
+| **RomCleanup.Tests** | xUnit Tests (5200+ Tests) |
 
 ## Coding Standards
 
@@ -68,7 +68,7 @@ Produktivcode liegt in `src/` (7 Projekte). Die PowerShell-Version ist archivier
 - Danach alle Tests: `dotnet test src/RomCleanup.sln`
 - Mit Filter: `dotnet test src/RomCleanup.sln --filter "FullyQualifiedName~GameKey"`
 - Coverage-Minimum: 50%
-- Details: `docs/TEST_STRATEGY.md`
+- Details: `docs/architecture/TEST_STRATEGY.md`
 
 ## Pull Request Checkliste
 
@@ -79,5 +79,5 @@ Produktivcode liegt in `src/` (7 Projekte). Die PowerShell-Version ist archivier
 - [ ] Dependency-Richtung eingehalten (Entry Points → Infrastructure → Core → Contracts)
 - [ ] Neue Klassen mit Tests in `RomCleanup.Tests/`
 - [ ] Sicherheitsregeln beachtet (Path-Traversal, CSV-Injection, Tool-Hash)
-- [ ] `docs/ARCHITECTURE_MAP.md` aktualisiert bei neuen Modulen
+- [ ] `docs/architecture/ARCHITECTURE_MAP.md` aktualisiert bei neuen Modulen
 - [ ] Breaking Changes dokumentiert

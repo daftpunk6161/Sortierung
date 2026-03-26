@@ -1,0 +1,182 @@
+<UserControl x:Class="RomCleanup.UI.Wpf.Views.ContextPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+  <!-- ═══ CONTEXT WING (Inspector Panel, 240-320px, right, collapsible) ══
+       Kontextabhängig: zeigt Details zum selektierten Bereich.
+       Toggle via Ctrl+I  (ToggleContextWingCommand). ═══════════════════ -->
+  <Border Background="{DynamicResource BrushSurfaceAlt}"
+          BorderBrush="{DynamicResource BrushBorder}"
+          BorderThickness="1,0,0,0"
+          Padding="12,12,12,10">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel>
+
+        <!-- ── Header with collapse toggle ─────────────────────────── -->
+        <DockPanel Margin="0,0,0,10">
+          <Button DockPanel.Dock="Right" Content="✕" Padding="4,2"
+                  Command="{Binding Shell.ToggleContextWingCommand}"
+                  Background="Transparent" BorderThickness="0"
+                  Foreground="{DynamicResource BrushTextMuted}"
+                  ToolTip="Inspector schließen (Ctrl+I)"
+                  AutomationProperties.Name="Inspector schließen" VerticalAlignment="Top"/>
+          <TextBlock Text="{Binding Loc[Context.Title]}" Style="{StaticResource SectionHeader}"/>
+        </DockPanel>
+
+        <!-- ── Always-visible: Run status + Health ─────────────────── -->
+        <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8">
+          <StackPanel>
+            <TextBlock Text="{Binding Loc[Context.RunStatus]}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
+            <TextBlock Text="{Binding StatusReady}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
+            <TextBlock Text="{Binding StatusRuntime}" Foreground="{DynamicResource BrushTextMuted}" FontSize="11"/>
+          </StackPanel>
+        </Border>
+
+        <!-- ── System Health Widget (always visible, 4 mini-cards) ─── -->
+        <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8">
+          <StackPanel>
+            <TextBlock Text="System Health" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
+            <UniformGrid Columns="2" Margin="0,0,0,0">
+              <!-- Sources -->
+              <Border CornerRadius="6" Padding="8,6" Margin="0,0,4,4"
+                      Background="{DynamicResource BrushBackground}">
+                <StackPanel>
+                  <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                             Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,0,2"/>
+                  <TextBlock Text="{Binding StatusRoots}" FontSize="10" TextTrimming="CharacterEllipsis"
+                             Foreground="{DynamicResource BrushTextPrimary}"/>
+                </StackPanel>
+              </Border>
+              <!-- Tools -->
+              <Border CornerRadius="6" Padding="8,6" Margin="4,0,0,4"
+                      Background="{DynamicResource BrushBackground}">
+                <StackPanel>
+                  <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                             Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,0,2"/>
+                  <TextBlock Text="{Binding StatusTools}" FontSize="10" TextTrimming="CharacterEllipsis"
+                             Foreground="{DynamicResource BrushTextPrimary}"/>
+                </StackPanel>
+              </Border>
+              <!-- DAT -->
+              <Border CornerRadius="6" Padding="8,6" Margin="0,0,4,0"
+                      Background="{DynamicResource BrushBackground}">
+                <StackPanel>
+                  <TextBlock Text="&#xE82D;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                             Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,0,2"/>
+                  <TextBlock Text="{Binding StatusDat}" FontSize="10" TextTrimming="CharacterEllipsis"
+                             Foreground="{DynamicResource BrushTextPrimary}"/>
+                </StackPanel>
+              </Border>
+              <!-- Health Score -->
+              <Border CornerRadius="6" Padding="8,6" Margin="4,0,0,0"
+                      Background="{DynamicResource BrushBackground}">
+                <StackPanel>
+                  <TextBlock Text="&#xE8CB;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                             Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,0,2"/>
+                  <TextBlock FontSize="10" Foreground="{DynamicResource BrushTextPrimary}">
+                    <Run Text="Health: "/><Run Text="{Binding Run.HealthScore, Mode=OneWay}"/>
+                  </TextBlock>
+                </StackPanel>
+              </Border>
+            </UniformGrid>
+          </StackPanel>
+        </Border>
+
+        <!-- ── MissionControl context ──────────────────────────────── -->
+        <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8"
+                Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=MissionControl}">
+          <StackPanel>
+            <TextBlock Text="{Binding Loc[Context.StartHintsTitle]}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
+            <TextBlock Text="{Binding Loc[Context.StartHint1]}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
+            <TextBlock Text="{Binding Loc[Context.StartHint2]}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
+            <TextBlock Text="{Binding Loc[Context.StartHint3]}" Foreground="{DynamicResource BrushTextPrimary}"/>
+          </StackPanel>
+        </Border>
+
+        <!-- ── Config context ──────────────────────────────────────── -->
+        <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8"
+                Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Config}">
+          <StackPanel>
+            <TextBlock Text="{Binding Loc[Context.SetupQuickcheck]}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
+            <TextBlock Text="{Binding MoveApplyGateText}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource BrushTextPrimary}" FontSize="11" Margin="0,0,0,6"/>
+            <Button Content="{Binding Loc[Context.RunPreview]}" Command="{Binding QuickPreviewCommand}"
+                   AutomationProperties.Name="{Binding Loc[Context.RunPreview]}"/>
+          </StackPanel>
+        </Border>
+
+        <!-- ── Library context ─────────────────────────────────────── -->
+        <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8"
+                Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Library}">
+          <StackPanel>
+            <TextBlock Text="{Binding Loc[Context.AnalysisMetrics]}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
+            <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2">
+              <Run Text="{Binding Loc[Context.ModeLabel]}"/><Run Text="{Binding Run.DashMode}"/>
+            </TextBlock>
+            <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2">
+              <Run Text="{Binding Loc[Context.DupesLabel]}"/><Run Text="{Binding Run.DashDupes}"/>
+            </TextBlock>
+            <TextBlock Foreground="{DynamicResource BrushTextPrimary}">
+              <Run Text="{Binding Loc[Context.JunkLabel]}"/><Run Text="{Binding Run.DashJunk}"/>
+            </TextBlock>
+          </StackPanel>
+        </Border>
+
+        <!-- ── Safety Gate (Library + Config) ──────────────────────── -->
+        <Border Margin="0,0,0,8">
+          <Border.Style>
+            <Style TargetType="Border" BasedOn="{StaticResource SectionCard}">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Shell.SelectedNavTag}" Value="Library">
+                  <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Shell.SelectedNavTag}" Value="Config">
+                  <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+          <StackPanel>
+            <TextBlock Text="{Binding Loc[Context.SafetyGate]}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
+            <TextBlock Text="{Binding MoveApplyGateText}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource BrushTextPrimary}" FontSize="11"/>
+          </StackPanel>
+        </Border>
+
+        <!-- ── Tools context ───────────────────────────────────────── -->
+        <Border Style="{StaticResource SectionCard}" Margin="0,0,0,8"
+                Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}">
+          <StackPanel>
+            <TextBlock Text="Tool-Status" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
+            <TextBlock Text="{Binding StatusTools}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
+            <TextBlock Text="{Binding StatusDat}" Foreground="{DynamicResource BrushTextPrimary}"/>
+          </StackPanel>
+        </Border>
+
+        <!-- ── System context ──────────────────────────────────────── -->
+        <Border Style="{StaticResource SectionCard}"
+                Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=System}">
+          <StackPanel>
+            <TextBlock Text="{Binding Loc[Context.SystemActions]}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
+            <Button Content="{Binding Loc[Start.FlowOpenSetup]}" Command="{Binding GoToConfigCommand}" Margin="0,0,0,6"
+                   AutomationProperties.Name="{Binding Loc[Start.FlowOpenSetup]}"/>
+            <Button Content="{Binding Loc[Start.FlowOpenAnalyse]}" Command="{Binding GoToLibraryCommand}" Margin="0,0,0,6"
+                   AutomationProperties.Name="{Binding Loc[Start.FlowOpenAnalyse]}"/>
+            <Button Content="{Binding Loc[Report.OpenReportLog]}" Command="{Binding OpenReportCommand}"
+                   AutomationProperties.Name="{Binding Loc[Report.OpenReportLog]}"/>
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+</UserControl>

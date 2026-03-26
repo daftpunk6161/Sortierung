@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs><linearGradient id="g5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF0080"/><stop offset="100%" stop-color="#7928CA"/></linearGradient></defs>
+  <rect width="256" height="256" rx="32" fill="#0A0A0A"/>
+  <g transform="translate(128,110) scale(0.55)">
+    <polygon points="-120,-180 -80,-60 -40,-120" fill="url(#g5)"/>
+    <polygon points="120,-180 80,-60 40,-120" fill="url(#g5)"/>
+    <polygon points="-80,-60 -110,30 -60,80 0,120 60,80 110,30 80,-60 40,-120 0,-80 -40,-120" fill="url(#g5)"/>
+    <ellipse cx="-35" cy="-10" rx="7" ry="7" fill="#FF0080"/><ellipse cx="35" cy="-10" rx="7" ry="7" fill="#FF0080"/>
+  </g>
+  <text x="128" y="210" text-anchor="middle" font-family="'Impact',sans-serif" font-size="34" fill="#FF0080" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="232" text-anchor="middle" font-family="'Arial',sans-serif" font-size="9" fill="#7928CA" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Conversion.ToolInvokers;
 
 namespace RomCleanup.Infrastructure.Tools;
 
@@ -158,7 +159,8 @@ public sealed class ToolRunnerAdapter : IToolRunner
             if (!completed)
             {
                 if (!process.HasExited)
-                    try { process.Kill(entireProcessTree: true); } catch { }
+                    try { process.Kill(entireProcessTree: true); }
+                    catch (Exception ex) { _log?.Invoke($"{label}: failed to kill timed-out process: {ex.Message}"); }
                 return new ToolResult(-1, $"{label}: process timed out after {_timeoutMinutes} minutes", false);
             }
 
@@ -215,7 +217,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
             && cached.LastWriteUtc == lastWrite
             && cached.Length == fileLength)
         {
-            return string.Equals(cached.Hash, expectedHash, StringComparison.OrdinalIgnoreCase);
+            return ToolInvokerSupport.FixedTimeHashEquals(cached.Hash, expectedHash);
         }
 
         using var sha256 = SHA256.Create();
@@ -225,7 +227,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
 
         _hashCache[fullPath] = (actualHash, lastWrite, fileLength);
 
-        return string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase);
+        return ToolInvokerSupport.FixedTimeHashEquals(actualHash, expectedHash);
     }
 
     private void EnsureToolHashesLoaded()
@@ -257,7 +259,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
 
                 _toolHashes = hashes;
             }
-            catch
+            catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException)
             {
                 _toolHashes = new Dictionary<string, string>();
             }

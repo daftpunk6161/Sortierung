@@ -4,8 +4,8 @@ using RomCleanup.Contracts.Models;
 namespace RomCleanup.Infrastructure.History;
 
 /// <summary>
-/// Scan index tracker — persists file fingerprints for change detection.
-/// Mirrors RunIndex.ps1.
+/// [v2.1 deferred] Scan index tracker — persists file fingerprints for change detection.
+/// Mirrors RunIndex.ps1. Not wired into RunOrchestrator pipeline yet.
 /// </summary>
 public sealed class ScanIndexService
 {

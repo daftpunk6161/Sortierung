@@ -1,0 +1,55 @@
+<UserControl x:Class="RomCleanup.UI.Wpf.Views.ConfigAdvancedView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+  <!-- Extracted from SettingsView "Sortieroptionen" + "Sicherheit" sections -->
+  <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
+    <StackPanel>
+
+      <!-- ── Sortieroptionen ── -->
+      <TextBlock Text="{Binding Loc[Settings.SectionSorting]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <WrapPanel>
+        <CheckBox Content="{Binding Loc[Settings.SortConsole]}" Margin="0,4,24,4"
+                  IsChecked="{Binding SortConsole}" ToolTip="{Binding Loc[Settings.SortConsoleTip]}"/>
+        <CheckBox Content="{Binding Loc[Settings.AggressiveJunk]}" Margin="0,4,24,4"
+                  IsChecked="{Binding AggressiveJunk}" ToolTip="{Binding Loc[Settings.AggressiveJunkTip]}"/>
+        <CheckBox Content="{Binding Loc[Settings.AliasKeying]}" Margin="0,4,24,4"
+                  IsChecked="{Binding AliasKeying}" ToolTip="{Binding Loc[Settings.AliasKeyingTip]}"/>
+        <CheckBox Content="{Binding Loc[Settings.OnlyGames]}" Margin="0,4,24,4"
+                  IsChecked="{Binding OnlyGames}" ToolTip="{Binding Loc[Settings.OnlyGamesTip]}"/>
+        <CheckBox Content="{Binding Loc[Settings.KeepUnknownWhenOnlyGames]}" Margin="0,4,24,4"
+                  IsChecked="{Binding KeepUnknownWhenOnlyGames}" ToolTip="{Binding Loc[Settings.KeepUnknownWhenOnlyGamesTip]}"/>
+      </WrapPanel>
+
+      <!-- ── Sicherheit ── -->
+      <TextBlock Text="{Binding Loc[Settings.SectionSecurity]}" Style="{StaticResource SectionHeader}" Margin="0,24,0,12"/>
+      <CheckBox Content="{Binding Loc[Settings.SafetyStrict]}" Margin="0,0,0,12"
+                IsChecked="{Binding SafetyStrict}"
+                ToolTip="{Binding Loc[Settings.SafetyStrictTip]}"/>
+      <Grid Margin="0,2,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="140"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Label Grid.Column="0" Content="{Binding Loc[Settings.LabelProtectedPaths]}" VerticalAlignment="Center"/>
+        <TextBox Grid.Column="1" Text="{Binding ProtectedPaths, UpdateSourceTrigger=PropertyChanged}"
+                 ToolTip="{Binding Loc[Settings.ProtectedPathsTip]}"
+                 AutomationProperties.Name="{Binding Loc[Settings.ProtectedPathsName]}"/>
+      </Grid>
+      <CheckBox Content="{Binding Loc[Settings.JpKeepSelected]}" Margin="0,4,0,0"
+                IsChecked="{Binding JpOnlySelected}"
+                ToolTip="{Binding Loc[Settings.JpKeepSelectedTip]}"/>
+      <Grid Margin="0,8,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="140"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Label Grid.Column="0" Content="{Binding Loc[Settings.JpKeepConsolesLabel]}" VerticalAlignment="Center"/>
+        <TextBox Grid.Column="1" Text="{Binding JpKeepConsoles, UpdateSourceTrigger=PropertyChanged}"
+                 ToolTip="{Binding Loc[Settings.JpKeepConsolesTip]}"
+                 AutomationProperties.Name="{Binding Loc[Settings.JpKeepConsolesLabel]}"/>
+      </Grid>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

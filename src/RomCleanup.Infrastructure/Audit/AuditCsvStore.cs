@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Collections.Concurrent;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.FileSystem;
 
@@ -12,6 +13,7 @@ namespace RomCleanup.Infrastructure.Audit;
 public sealed class AuditCsvStore : IAuditStore
 {
     private readonly AuditSigningService _signingService;
+    private static readonly ConcurrentDictionary<string, object> FileLocks = new(StringComparer.OrdinalIgnoreCase);
 
     public AuditCsvStore(IFileSystem? fs = null, Action<string>? log = null, string? keyFilePath = null)
     {
@@ -40,7 +42,7 @@ public sealed class AuditCsvStore : IAuditStore
         {
             return _signingService.VerifyMetadataSidecar(auditCsvPath);
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             return false;
         }
@@ -66,165 +68,38 @@ public sealed class AuditCsvStore : IAuditStore
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
-        bool writeHeader = !File.Exists(auditCsvPath);
+        var lockObj = FileLocks.GetOrAdd(auditCsvPath, static _ => new object());
+        lock (lockObj)
+        {
+            bool writeHeader = !File.Exists(auditCsvPath);
 
-        using var sw = new StreamWriter(auditCsvPath, append: true, Encoding.UTF8);
-        if (writeHeader)
-            sw.WriteLine("RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp");
+            // REC-03: Use explicit file stream + Flush(true) for crash-safe durability.
+            using var fs = new FileStream(auditCsvPath, FileMode.Append, FileAccess.Write, FileShare.Read);
+            using var sw = new StreamWriter(fs, Encoding.UTF8);
+            if (writeHeader)
+                sw.WriteLine("RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp");
 
-        // V2-L07: Consistent UTC timestamps across CLI and API
-        var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
-        sw.WriteLine(string.Join(",",
-            SanitizeCsvField(rootPath),
-            SanitizeCsvField(oldPath),
-            SanitizeCsvField(newPath),
-            SanitizeCsvField(action),
-            SanitizeCsvField(category),
-            SanitizeCsvField(hash),
-            SanitizeCsvField(reason),
-            SanitizeCsvField(timestamp)));
+            // V2-L07: Consistent UTC timestamps across CLI and API
+            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+            sw.WriteLine(string.Join(",",
+                SanitizeCsvField(rootPath),
+                SanitizeCsvField(oldPath),
+                SanitizeCsvField(newPath),
+                SanitizeCsvField(action),
+                SanitizeCsvField(category),
+                SanitizeCsvField(hash),
+                SanitizeCsvField(reason),
+                SanitizeCsvField(timestamp)));
+            sw.Flush();
+            fs.Flush(flushToDisk: true);
+        }
     }
 
     public IReadOnlyList<string> Rollback(string auditCsvPath, string[] allowedRestoreRoots,
                                            string[] allowedCurrentRoots, bool dryRun = false)
     {
-        if (!File.Exists(auditCsvPath))
-            return Array.Empty<string>();
-
-        var metaPath = auditCsvPath + ".meta.json";
-        if (File.Exists(metaPath) && !TestMetadataSidecar(auditCsvPath))
-            return Array.Empty<string>();
-
-        var restoredPaths = new List<string>();
-        var lines = File.ReadAllLines(auditCsvPath, Encoding.UTF8);
-
-        // Skip header line
-        foreach (var line in lines.Skip(1))
-        {
-            if (string.IsNullOrWhiteSpace(line))
-                continue;
-
-            var parts = AuditCsvParser.ParseCsvLine(line);
-            if (parts.Length < 4)
-                continue;
-
-            // CSV format: RootPath, OldPath, NewPath, Action, ...
-            var oldPath = parts[1];
-            var newPath = parts[2];
-            var action = parts[3];
-
-            // Rollback MOVE and JUNK_REMOVE actions (Issue #22)
-            if (!string.Equals(action, "Move", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(action, "MOVED", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(action, "JUNK_REMOVE", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            // Validate paths within allowed roots
-            if (!IsWithinAnyRoot(oldPath, allowedRestoreRoots))
-                continue;
-            if (!IsWithinAnyRoot(newPath, allowedCurrentRoots))
-                continue;
-
-            if (!dryRun && File.Exists(newPath))
-            {
-                // BUG-FIX: Block reparse points on source/destination to prevent symlink attacks
-                // from crafted audit CSV entries.
-                try
-                {
-                    var newAttrs = File.GetAttributes(newPath);
-                    if ((newAttrs & FileAttributes.ReparsePoint) != 0)
-                        continue; // Skip: source is a symlink/junction
-                }
-                catch { continue; } // Skip inaccessible files
-
-                var fullOldPath = Path.GetFullPath(oldPath);
-                var destDir = Path.GetDirectoryName(fullOldPath);
-                if (!string.IsNullOrEmpty(destDir))
-                {
-                    // Block reparse point on destination parent
-                    if (Directory.Exists(destDir))
-                    {
-                        try
-                        {
-                            var destDirInfo = new DirectoryInfo(destDir);
-                            if ((destDirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
-                                continue;
-                        }
-                        catch { continue; }
-                    }
-                    Directory.CreateDirectory(destDir);
-                }
-
-                // Use overwrite:false to prevent clobbering existing files
-                if (File.Exists(fullOldPath))
-                    continue; // Skip: destination already exists
-
-                // Issue #22: TOCTOU-Schutz — try/catch with single retry
-                try
-                {
-                    File.Move(newPath, fullOldPath);
-                }
-                catch (IOException) when (RetryFileMove(newPath, fullOldPath))
-                {
-                    // Retry succeeded
-                }
-                catch (IOException)
-                {
-                    continue; // Both attempts failed — skip this entry
-                }
-            }
-
-            restoredPaths.Add(oldPath);
-        }
-
-        // Issue #22: Write rollback trail
-        WriteRollbackTrail(auditCsvPath, restoredPaths);
-
-        return restoredPaths;
-    }
-
-    private static bool RetryFileMove(string source, string dest)
-    {
-        Thread.Sleep(50);
-        try
-        {
-            if (!File.Exists(source) || File.Exists(dest))
-                return false;
-            File.Move(source, dest);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static void WriteRollbackTrail(string auditCsvPath, IReadOnlyList<string> restoredPaths)
-    {
-        if (restoredPaths.Count == 0)
-            return;
-
-        var trailPath = Path.ChangeExtension(auditCsvPath, ".rollback-trail.csv");
-        var sb = new StringBuilder();
-        sb.AppendLine("RestoredPath,Timestamp");
-        var timestamp = DateTime.UtcNow.ToString("o");
-        foreach (var p in restoredPaths)
-            sb.AppendLine($"{SanitizeCsvField(p)},{timestamp}");
-        File.WriteAllText(trailPath, sb.ToString(), Encoding.UTF8);
-    }
-
-    private static bool IsWithinAnyRoot(string path, string[] roots)
-    {
-        // Issue #21: NFC normalization for macOS HFS+ paths
-        var fullPath = Path.GetFullPath(path).Normalize(System.Text.NormalizationForm.FormC);
-        foreach (var root in roots)
-        {
-            var normalizedRoot = Path.GetFullPath(root).Normalize(System.Text.NormalizationForm.FormC)
-                .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            if (fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
+        var detailed = _signingService.Rollback(auditCsvPath, allowedRestoreRoots, allowedCurrentRoots, dryRun);
+        return dryRun ? detailed.PlannedPaths : detailed.RestoredPaths;
     }
 
     private static int CountAuditRows(string auditCsvPath)

@@ -14,6 +14,7 @@ public sealed class UiLookupData
     public List<GenreKeywordEntry> GenreKeywords { get; init; } = [];
     public Dictionary<string, string> CoreMapping { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, string> SortTemplates { get; init; } = [];
+    public Dictionary<string, string> ExtensionTargetFormats { get; init; } = new(StringComparer.OrdinalIgnoreCase);
 
     public static UiLookupData Load()
     {

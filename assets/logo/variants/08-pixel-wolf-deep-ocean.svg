@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs><linearGradient id="g8" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#1a1a2e"/><stop offset="100%" stop-color="#16213e"/></linearGradient></defs>
+  <rect width="256" height="256" rx="32" fill="url(#g8)"/>
+  <!-- Pixel wolf ocean blue -->
+  <g transform="translate(40,20)">
+    <rect x="12" y="0" width="12" height="12" fill="#0077B6" opacity="0.7"/>
+    <rect x="144" y="0" width="12" height="12" fill="#0077B6" opacity="0.7"/>
+    <rect x="12" y="12" width="24" height="12" fill="#0096C7"/>
+    <rect x="132" y="12" width="24" height="12" fill="#0096C7"/>
+    <rect x="24" y="24" width="24" height="12" fill="#00B4D8"/>
+    <rect x="120" y="24" width="24" height="12" fill="#00B4D8"/>
+    <rect x="24" y="36" width="36" height="12" fill="#0096C7"/>
+    <rect x="108" y="36" width="36" height="12" fill="#0096C7"/>
+    <rect x="36" y="48" width="96" height="12" fill="#0077B6"/>
+    <rect x="36" y="60" width="96" height="12" fill="#023E8A"/>
+    <rect x="48" y="60" width="24" height="12" fill="#90E0EF"/>
+    <rect x="96" y="60" width="24" height="12" fill="#90E0EF"/>
+    <rect x="36" y="72" width="96" height="12" fill="#023E8A"/>
+    <rect x="48" y="84" width="72" height="12" fill="#0077B6"/>
+    <rect x="72" y="84" width="24" height="12" fill="#03045E"/>
+    <rect x="60" y="96" width="48" height="12" fill="#0077B6"/>
+    <rect x="60" y="108" width="48" height="12" fill="#0096C7"/>
+    <rect x="72" y="108" width="12" height="12" fill="#CAF0F8" opacity="0.4"/>
+    <rect x="84" y="108" width="12" height="12" fill="#CAF0F8" opacity="0.4"/>
+  </g>
+  <text x="128" y="178" text-anchor="middle" font-family="'Trebuchet MS',sans-serif" font-size="28" font-weight="700" fill="#00B4D8" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="200" text-anchor="middle" font-family="'Trebuchet MS',sans-serif" font-size="9" fill="#90E0EF" letter-spacing="2" opacity="0.6">YOUR COLLECTION, PERFECTED.</text>
+</svg>

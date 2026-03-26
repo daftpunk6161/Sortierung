@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#111827"/>
+  <!-- Brutalistisch / Industrial: harte Kanten, raw, kein Schnörkel -->
+  <!-- Scan lines -->
+  <g opacity="0.05">
+    <rect x="0" y="0" width="256" height="2" fill="white"/>
+    <rect x="0" y="4" width="256" height="2" fill="white"/>
+    <rect x="0" y="8" width="256" height="2" fill="white"/>
+    <rect x="0" y="12" width="256" height="2" fill="white"/>
+    <rect x="0" y="16" width="256" height="2" fill="white"/>
+    <rect x="0" y="20" width="256" height="2" fill="white"/>
+    <rect x="0" y="24" width="256" height="2" fill="white"/>
+    <rect x="0" y="28" width="256" height="2" fill="white"/>
+  </g>
+  <!-- Giant R monogram - brutalist -->
+  <text x="128" y="140" text-anchor="middle" font-family="'Impact','Arial Black',sans-serif" font-size="160" font-weight="900" fill="none" stroke="#E5E7EB" stroke-width="1.5" opacity="0.15">R</text>
+  <!-- Wolf eye stripe -->
+  <rect x="40" y="85" width="176" height="24" fill="#DC2626"/>
+  <!-- Two wolf eyes in stripe -->
+  <g>
+    <polygon points="90,93 96,97 90,101" fill="#111827"/>
+    <polygon points="166,93 160,97 166,101" fill="#111827"/>
+    <circle cx="93" cy="97" r="2" fill="#FDE047"/>
+    <circle cx="163" cy="97" r="2" fill="#FDE047"/>
+  </g>
+  <!-- Heavy text block -->
+  <text x="128" y="160" text-anchor="middle" font-family="'Impact','Arial Black',sans-serif" font-size="40" font-weight="900" fill="#E5E7EB" letter-spacing="6">ROMULUS</text>
+  <!-- Thin underline -->
+  <rect x="40" y="168" width="176" height="1" fill="#DC2626"/>
+  <text x="128" y="190" text-anchor="middle" font-family="'Courier New',monospace" font-size="8" fill="#6B7280" letter-spacing="4">YOUR COLLECTION, PERFECTED.</text>
+  <!-- Version tag brutalist -->
+  <text x="220" y="240" text-anchor="end" font-family="'Courier New',monospace" font-size="7" fill="#374151">v2.0</text>
+</svg>

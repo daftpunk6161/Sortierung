@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#0F0A1A"/>
+  <!-- Pixel Roman Helmet -->
+  <g transform="translate(40,12)">
+    <!-- Crest/Plume -->
+    <rect x="72" y="0" width="12" height="12" fill="#DC143C"/>
+    <rect x="72" y="12" width="12" height="12" fill="#B22222"/>
+    <rect x="72" y="24" width="12" height="12" fill="#8B0000"/>
+    <rect x="84" y="0" width="12" height="12" fill="#FF4500"/>
+    <rect x="84" y="12" width="12" height="12" fill="#DC143C"/>
+    <rect x="84" y="24" width="12" height="12" fill="#B22222"/>
+    <!-- Helmet dome -->
+    <rect x="36" y="36" width="96" height="12" fill="#C9A227"/>
+    <rect x="24" y="48" width="120" height="12" fill="#DAA520"/>
+    <rect x="24" y="60" width="120" height="12" fill="#B8860B"/>
+    <!-- Eye slit -->
+    <rect x="24" y="72" width="120" height="12" fill="#2C1810"/>
+    <rect x="36" y="72" width="24" height="12" fill="#0F0A1A"/>
+    <rect x="108" y="72" width="24" height="12" fill="#0F0A1A"/>
+    <!-- Cyan eye glow -->
+    <rect x="42" y="72" width="12" height="12" fill="#06B6D4"/>
+    <rect x="114" y="72" width="12" height="12" fill="#06B6D4"/>
+    <!-- Cheek guards -->
+    <rect x="12" y="84" width="24" height="12" fill="#DAA520"/>
+    <rect x="132" y="84" width="24" height="12" fill="#DAA520"/>
+    <rect x="12" y="96" width="24" height="12" fill="#B8860B"/>
+    <rect x="132" y="96" width="24" height="12" fill="#B8860B"/>
+    <!-- Chin -->
+    <rect x="48" y="84" width="72" height="12" fill="#8B6914"/>
+    <rect x="60" y="96" width="48" height="12" fill="#6B4226"/>
+  </g>
+  <text x="128" y="172" text-anchor="middle" font-family="'Times New Roman',serif" font-size="28" font-weight="700" fill="#DAA520" letter-spacing="5">ROMVLVS</text>
+  <text x="128" y="194" text-anchor="middle" font-family="'Times New Roman',serif" font-size="9" fill="#DC143C" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

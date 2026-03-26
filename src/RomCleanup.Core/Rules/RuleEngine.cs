@@ -23,6 +23,7 @@ public static class RuleEngine
     /// <summary>Cache for compiled regex patterns from user rules. Bounded to 1024 entries to prevent memory exhaustion.</summary>
     private static readonly ConcurrentDictionary<string, Regex?> _regexCache = new(StringComparer.Ordinal);
     private static readonly int MaxRegexCacheSize = 1024;
+    private static readonly object _evictionLock = new();
 
     /// <summary>
     /// Validate rule syntax. Returns errors if the rule is misconfigured.
@@ -49,7 +50,7 @@ public static class RuleEngine
             if (cond.Op == "regex")
             {
                 try { _ = new Regex(cond.Value); }
-                catch { errors.Add($"Invalid regex pattern: {cond.Value}"); }
+                catch (ArgumentException) { errors.Add($"Invalid regex pattern: {cond.Value}"); }
             }
         }
 
@@ -160,14 +161,25 @@ public static class RuleEngine
     {
         try
         {
-            // V2-BUG-H02: Trim cache when it exceeds max size to prevent unbounded growth
+            // Evict ~25% of cache entries when capacity exceeded.
+            // Lock prevents stampede where multiple threads evict concurrently.
             if (_regexCache.Count >= MaxRegexCacheSize)
-                _regexCache.Clear();
+            {
+                lock (_evictionLock)
+                {
+                    if (_regexCache.Count >= MaxRegexCacheSize)
+                    {
+                        var keysToRemove = _regexCache.Keys.Take(MaxRegexCacheSize / 4).ToList();
+                        foreach (var key in keysToRemove)
+                            _regexCache.TryRemove(key, out _);
+                    }
+                }
+            }
 
             var rx = _regexCache.GetOrAdd(pattern, p =>
             {
                 try { return new Regex(p, RegexOptions.IgnoreCase | RegexOptions.Compiled, RegexTimeout); }
-                catch { return null; }
+                catch (ArgumentException) { return null; }
             });
             return rx is not null && rx.IsMatch(input);
         }

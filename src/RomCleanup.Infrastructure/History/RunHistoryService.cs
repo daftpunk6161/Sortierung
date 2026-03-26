@@ -4,8 +4,8 @@ using RomCleanup.Contracts.Models;
 namespace RomCleanup.Infrastructure.History;
 
 /// <summary>
-/// Run history browser — reads move-plan JSON files.
-/// Mirrors RunHistory.ps1.
+/// [v2.1 deferred] Run history browser — reads move-plan JSON files.
+/// Mirrors RunHistory.ps1. Not wired into RunOrchestrator pipeline yet.
 /// </summary>
 public sealed class RunHistoryService
 {

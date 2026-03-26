@@ -2,21 +2,36 @@ using System.Windows;
 
 namespace RomCleanup.UI.Wpf.Services;
 
-public enum AppTheme { Dark, Light, HighContrast }
+public enum AppTheme { Dark, Light, HighContrast, CleanDarkPro, RetroCRT, ArcadeNeon }
 
 /// <summary>
-/// Theme switching service. Swaps MergedDictionaries between Dark/Light/HighContrast themes.
-/// Port of WpfHost.ps1 Set-WpfThemeResourceDictionary + Initialize-DesignSystem.
+/// Theme switching service. Swaps MergedDictionaries between theme palettes.
+/// Templates live in _ControlTemplates.xaml (always loaded); only the colour
+/// palette dictionary is swapped on theme change.
 /// </summary>
 public sealed class ThemeService : IThemeService
 {
-    private const string DarkThemeUri = "pack://application:,,,/Themes/SynthwaveDark.xaml";
-    private const string LightThemeUri = "pack://application:,,,/Themes/Light.xaml";
-    private const string HighContrastThemeUri = "pack://application:,,,/Themes/HighContrast.xaml";
+    private const string DarkThemeUri         = "pack://application:,,,/Themes/SynthwaveDark.xaml";
+    private const string LightThemeUri        = "pack://application:,,,/Themes/Light.xaml";
+    private const string HighContrastThemeUri  = "pack://application:,,,/Themes/HighContrast.xaml";
+    private const string CleanDarkProThemeUri  = "pack://application:,,,/Themes/CleanDarkPro.xaml";
+    private const string RetroCrtThemeUri      = "pack://application:,,,/Themes/RetroCRT.xaml";
+    private const string ArcadeNeonThemeUri    = "pack://application:,,,/Themes/ArcadeNeon.xaml";
+
+    internal static readonly List<AppTheme> AllThemes =
+    [
+        AppTheme.Dark,
+        AppTheme.CleanDarkPro,
+        AppTheme.RetroCRT,
+        AppTheme.ArcadeNeon,
+        AppTheme.Light,
+        AppTheme.HighContrast,
+    ];
 
     private AppTheme _current = AppTheme.Dark;
     public AppTheme Current => _current;
-    public bool IsDark => _current == AppTheme.Dark;
+    public bool IsDark => _current != AppTheme.Light && _current != AppTheme.HighContrast;
+    public IReadOnlyList<AppTheme> AvailableThemes => AllThemes;
 
     /// <summary>Apply the specified theme to the application.</summary>
     public void ApplyTheme(AppTheme theme)
@@ -25,9 +40,12 @@ public sealed class ThemeService : IThemeService
 
         var uri = theme switch
         {
-            AppTheme.Light => LightThemeUri,
-            AppTheme.HighContrast => HighContrastThemeUri,
-            _ => DarkThemeUri,
+            AppTheme.Light         => LightThemeUri,
+            AppTheme.HighContrast  => HighContrastThemeUri,
+            AppTheme.CleanDarkPro  => CleanDarkProThemeUri,
+            AppTheme.RetroCRT      => RetroCrtThemeUri,
+            AppTheme.ArcadeNeon    => ArcadeNeonThemeUri,
+            _                      => DarkThemeUri,
         };
         var dict = new ResourceDictionary { Source = new Uri(uri, UriKind.Absolute) };
 
@@ -45,25 +63,23 @@ public sealed class ThemeService : IThemeService
     /// <summary>Apply dark or light theme (legacy overload).</summary>
     public void ApplyTheme(bool dark) => ApplyTheme(dark ? AppTheme.Dark : AppTheme.Light);
 
-    /// <summary>Cycle through Dark → Light → HighContrast → Dark.</summary>
+    /// <summary>Cycle through all themes in display order.</summary>
     public void Toggle()
     {
-        var next = _current switch
-        {
-            AppTheme.Dark => AppTheme.Light,
-            AppTheme.Light => AppTheme.HighContrast,
-            AppTheme.HighContrast => AppTheme.Dark,
-            _ => AppTheme.Dark,
-        };
+        var idx = AllThemes.IndexOf(_current);
+        var next = AllThemes[(idx + 1) % AllThemes.Count];
         ApplyTheme(next);
     }
 
-    // GUI-114: Robust theme detection via known URI set instead of fragile substring matching
+    // GUI-114: Robust theme detection via known URI set
     private static readonly HashSet<string> ThemeUris = new(StringComparer.OrdinalIgnoreCase)
     {
         DarkThemeUri,
         LightThemeUri,
         HighContrastThemeUri,
+        CleanDarkProThemeUri,
+        RetroCrtThemeUri,
+        ArcadeNeonThemeUri,
     };
 
     private static bool IsThemeDictionary(ResourceDictionary rd)

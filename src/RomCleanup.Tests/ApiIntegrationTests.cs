@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -45,6 +46,20 @@ public sealed class ApiIntegrationTests
     }
 
     [Fact]
+    public async Task Health_WithWrongApiKey_ReturnsUnauthorized()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Key", "wrong-key");
+
+        var response = await client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        AssertError(doc.RootElement, "AUTH-UNAUTHORIZED", ErrorKind.Critical, "Unauthorized");
+    }
+
+    [Fact]
     public async Task Cors_Preflight_Options_Returns204_WithExpectedHeaders()
     {
         using var factory = CreateFactory(new Dictionary<string, string?>
@@ -84,6 +99,80 @@ public sealed class ApiIntegrationTests
         Assert.Equal((HttpStatusCode)429, third.StatusCode);
         using var doc = JsonDocument.Parse(await third.Content.ReadAsStringAsync());
         AssertError(doc.RootElement, "RUN-RATE-LIMIT", ErrorKind.Transient, "Too many requests");
+    }
+
+    [Fact]
+    public async Task RateLimit_TrustForwardedForFalse_IgnoresHeaderValue()
+    {
+        using var factory = CreateFactory(new Dictionary<string, string?>
+        {
+            ["RateLimitRequests"] = "1",
+            ["RateLimitWindowSeconds"] = "60",
+            ["TrustForwardedFor"] = "false"
+        });
+        using var client = CreateClientWithApiKey(factory);
+
+        using var req1 = new HttpRequestMessage(HttpMethod.Get, "/health");
+        req1.Headers.Add("X-Forwarded-For", "203.0.113.10");
+        using var req2 = new HttpRequestMessage(HttpMethod.Get, "/health");
+        req2.Headers.Add("X-Forwarded-For", "203.0.113.11");
+
+        var first = await client.SendAsync(req1);
+        var second = await client.SendAsync(req2);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal((HttpStatusCode)429, second.StatusCode);
+    }
+
+    [Fact]
+    public async Task RateLimit_TrustForwardedForTrue_UntrustedProxySource_FallsBackToRemoteIp()
+    {
+        using var factory = CreateFactory(new Dictionary<string, string?>
+        {
+            ["RateLimitRequests"] = "1",
+            ["RateLimitWindowSeconds"] = "60",
+            ["TrustForwardedFor"] = "true"
+        });
+        using var client = CreateClientWithApiKey(factory);
+
+        using var req1 = new HttpRequestMessage(HttpMethod.Get, "/health");
+        req1.Headers.Add("X-Forwarded-For", "198.51.100.20");
+        using var req2 = new HttpRequestMessage(HttpMethod.Get, "/health");
+        req2.Headers.Add("X-Forwarded-For", "198.51.100.21");
+        using var req3 = new HttpRequestMessage(HttpMethod.Get, "/health");
+        req3.Headers.Add("X-Forwarded-For", "198.51.100.20");
+
+        var first = await client.SendAsync(req1);
+        var second = await client.SendAsync(req2);
+        var third = await client.SendAsync(req3);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal((HttpStatusCode)429, second.StatusCode);
+        Assert.Equal((HttpStatusCode)429, third.StatusCode);
+    }
+
+    [Fact]
+    public void ResolveRateLimitClientId_TrustEnabled_LoopbackProxy_UsesForwardedHeader()
+    {
+        var context = new DefaultHttpContext();
+        context.Connection.RemoteIpAddress = IPAddress.Loopback;
+        context.Request.Headers["X-Forwarded-For"] = "198.51.100.20, 10.0.0.1";
+
+        var clientId = ApiClientIdentity.ResolveRateLimitClientId(context, trustForwardedFor: true);
+
+        Assert.Equal("198.51.100.20", clientId);
+    }
+
+    [Fact]
+    public void ResolveRateLimitClientId_TrustDisabled_IgnoresForwardedHeader()
+    {
+        var context = new DefaultHttpContext();
+        context.Connection.RemoteIpAddress = IPAddress.Parse("127.0.0.1");
+        context.Request.Headers["X-Forwarded-For"] = "198.51.100.20";
+
+        var clientId = ApiClientIdentity.ResolveRateLimitClientId(context, trustForwardedFor: false);
+
+        Assert.Equal("127.0.0.1", clientId);
     }
 
     [Fact]
@@ -286,12 +375,12 @@ public sealed class ApiIntegrationTests
             Task.Delay(1_500, ct).GetAwaiter().GetResult();
             return new RunExecutionOutcome("completed", new ApiRunResult
             {
-                Status = "ok",
+                OrchestratorStatus = "ok",
                 ExitCode = 0,
                 TotalFiles = 1,
                 Groups = 1,
-                Keep = 1,
-                Move = 0,
+                Winners = 1,
+                Losers = 0,
                 DurationMs = 1_500
             });
         });
@@ -313,6 +402,41 @@ public sealed class ApiIntegrationTests
             await Task.Delay(1_700);
             var resultResponse = await client.GetAsync($"/runs/{runId}/result");
             Assert.Equal(HttpStatusCode.OK, resultResponse.StatusCode);
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Runs_WaitTrue_ResultContainsProjectionFields()
+    {
+        using var factory = CreateFactory();
+        using var client = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        try
+        {
+            var payload = JsonSerializer.Serialize(new { roots = new[] { root }, mode = "DryRun" });
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+            var response = await client.PostAsync("/runs?wait=true", content);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var result = doc.RootElement.GetProperty("result");
+
+            Assert.True(result.TryGetProperty("candidates", out _));
+            Assert.True(result.TryGetProperty("games", out _));
+            Assert.True(result.TryGetProperty("winners", out _));
+            Assert.True(result.TryGetProperty("losers", out _));
+            Assert.True(result.TryGetProperty("junk", out _));
+            Assert.True(result.TryGetProperty("bios", out _));
+            Assert.True(result.TryGetProperty("datMatches", out _));
+            Assert.True(result.TryGetProperty("healthScore", out _));
+            Assert.True(result.TryGetProperty("convertSkippedCount", out _));
+            Assert.True(result.TryGetProperty("convertBlockedCount", out _));
         }
         finally
         {
@@ -418,6 +542,20 @@ public sealed class ApiIntegrationTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("Invalid JSON", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Runs_InvalidContentType_ReturnsBadRequest()
+    {
+        using var factory = CreateFactory();
+        using var client = CreateClientWithApiKey(factory);
+
+        using var content = new StringContent("{}", Encoding.UTF8, "text/plain");
+        var response = await client.PostAsync("/runs", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("RUN-INVALID-CONTENT-TYPE", body, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -544,6 +682,281 @@ public sealed class ApiIntegrationTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("not found", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Runs_InvalidExtensions_ReturnsBadRequest()
+    {
+        using var factory = CreateFactory();
+        using var client = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        try
+        {
+            var payload = JsonSerializer.Serialize(new
+            {
+                roots = new[] { root },
+                mode = "DryRun",
+                extensions = new[] { ".zip", ".bad-ext", "..\\evil" }
+            });
+
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var response = await client.PostAsync("/runs", content);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.Contains("RUN-INVALID-EXTENSION", body, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Runs_Rollback_WithoutAuditArtifact_ReturnsConflict()
+    {
+        using var factory = CreateFactory();
+        using var client = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        try
+        {
+            var payload = JsonSerializer.Serialize(new
+            {
+                roots = new[] { root },
+                mode = "DryRun",
+                removeJunk = false
+            });
+
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var createResponse = await client.PostAsync("/runs?wait=true", content);
+            Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+
+            using var createDoc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
+            var runId = createDoc.RootElement.GetProperty("run").GetProperty("runId").GetString();
+            Assert.False(string.IsNullOrWhiteSpace(runId));
+
+            var rollbackResponse = await client.PostAsync($"/runs/{runId}/rollback", new StringContent("", Encoding.UTF8, "application/json"));
+            Assert.Equal(HttpStatusCode.Conflict, rollbackResponse.StatusCode);
+            var rollbackBody = await rollbackResponse.Content.ReadAsStringAsync();
+            Assert.Contains("RUN-ROLLBACK-NOT-AVAILABLE", rollbackBody, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Runs_Rollback_AfterMoveRun_ReturnsRollbackSummary()
+    {
+        using var factory = CreateFactory();
+        using var client = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "MegaGame (Europe).zip"), "eu");
+            File.WriteAllText(Path.Combine(root, "MegaGame (USA).zip"), "us");
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                roots = new[] { root },
+                mode = "Move",
+                removeJunk = false,
+                trashRoot = root,
+                preferRegions = new[] { "US", "EU" }
+            });
+
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var createResponse = await client.PostAsync("/runs?wait=true", content);
+            Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+
+            using var createDoc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
+            var runId = createDoc.RootElement.GetProperty("run").GetProperty("runId").GetString();
+            Assert.False(string.IsNullOrWhiteSpace(runId));
+
+            var rollbackResponse = await client.PostAsync($"/runs/{runId}/rollback", new StringContent("", Encoding.UTF8, "application/json"));
+            Assert.Equal(HttpStatusCode.OK, rollbackResponse.StatusCode);
+
+            using var rollbackDoc = JsonDocument.Parse(await rollbackResponse.Content.ReadAsStringAsync());
+            var rollback = rollbackDoc.RootElement.GetProperty("rollback");
+            Assert.True(rollback.GetProperty("rolledBack").GetInt32() >= 1);
+            Assert.Equal(0, rollback.GetProperty("failed").GetInt32());
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Runs_MoveMode_MovesLosersToTrash()
+    {
+        using var factory = CreateFactory();
+        using var client = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "MegaGame (Europe).zip"), "eu");
+            File.WriteAllText(Path.Combine(root, "MegaGame (USA).zip"), "us");
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                roots = new[] { root },
+                mode = "Move",
+                removeJunk = false,
+                trashRoot = root,
+                preferRegions = new[] { "US", "EU" }
+            });
+
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var response = await client.PostAsync("/runs?wait=true", content);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var trashDir = Path.Combine(root, "_TRASH_REGION_DEDUPE");
+            Assert.True(Directory.Exists(trashDir));
+            var moved = Directory.GetFiles(trashDir);
+            Assert.NotEmpty(moved);
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Runs_ConcurrentPostRequests_OneAccepted_AndConflicts()
+    {
+        using var gate = new ManualResetEventSlim(false);
+        using var factory = CreateFactory(executor: (_, _, _, ct) =>
+        {
+            gate.Wait(TimeSpan.FromMilliseconds(700), ct);
+            return new RunExecutionOutcome("completed", new ApiRunResult
+            {
+                OrchestratorStatus = "ok",
+                ExitCode = 0
+            });
+        });
+        using var client = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        try
+        {
+            var payload = JsonSerializer.Serialize(new { roots = new[] { root }, mode = "DryRun" });
+
+            var calls = Enumerable.Range(0, 8)
+                .Select(async _ =>
+                {
+                    using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                    return await client.PostAsync("/runs", content);
+                })
+                .ToArray();
+
+            var responses = await Task.WhenAll(calls);
+            var codes = responses.Select(r => r.StatusCode).ToArray();
+
+            Assert.Contains(HttpStatusCode.Accepted, codes);
+            Assert.Contains(HttpStatusCode.Conflict, codes);
+            Assert.DoesNotContain(codes, code => code is not HttpStatusCode.Accepted and not HttpStatusCode.Conflict);
+        }
+        finally
+        {
+            gate.Set();
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Runs_Sse_Stream_Contains_Ready_Status_And_TerminalEvents()
+    {
+        using var factory = CreateFactory(executor: (run, _, _, _) =>
+        {
+            run.ProgressMessage = "[Scan] phase";
+            run.ProgressPercent = 20;
+            Thread.Sleep(200);
+            run.ProgressMessage = "[Move] phase";
+            run.ProgressPercent = 75;
+            Thread.Sleep(200);
+            return new RunExecutionOutcome("completed", new ApiRunResult
+            {
+                OrchestratorStatus = "ok",
+                ExitCode = 0
+            });
+        });
+        using var client = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        try
+        {
+            var payload = JsonSerializer.Serialize(new { roots = new[] { root }, mode = "DryRun" });
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var createResponse = await client.PostAsync("/runs", content);
+            Assert.Equal(HttpStatusCode.Accepted, createResponse.StatusCode);
+
+            using var createDoc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
+            var runId = createDoc.RootElement.GetProperty("run").GetProperty("runId").GetString();
+            Assert.False(string.IsNullOrWhiteSpace(runId));
+
+            using var streamRequest = new HttpRequestMessage(HttpMethod.Get, $"/runs/{runId}/stream");
+            using var streamResponse = await client.SendAsync(streamRequest, HttpCompletionOption.ResponseHeadersRead);
+            Assert.Equal(HttpStatusCode.OK, streamResponse.StatusCode);
+
+            var body = await streamResponse.Content.ReadAsStringAsync();
+            Assert.Contains("event: ready", body, StringComparison.Ordinal);
+            Assert.Contains("event: status", body, StringComparison.Ordinal);
+            Assert.Contains("event: completed", body, StringComparison.Ordinal);
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Runs_Sse_Heartbeat_IsEmitted_ForLongRunningRun()
+    {
+        using var factory = CreateFactory(
+            new Dictionary<string, string?>
+            {
+                ["SseHeartbeatSeconds"] = "5",
+                ["SseTimeoutSeconds"] = "30"
+            },
+            executor: (_, _, _, ct) =>
+            {
+                Task.Delay(6_200, ct).GetAwaiter().GetResult();
+                return new RunExecutionOutcome("completed", new ApiRunResult
+                {
+                    OrchestratorStatus = "ok",
+                    ExitCode = 0
+                });
+            });
+
+        using var client = CreateClientWithApiKey(factory);
+        var root = CreateTempRoot();
+        try
+        {
+            var payload = JsonSerializer.Serialize(new { roots = new[] { root }, mode = "DryRun" });
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var createResponse = await client.PostAsync("/runs", content);
+            Assert.Equal(HttpStatusCode.Accepted, createResponse.StatusCode);
+
+            using var createDoc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
+            var runId = createDoc.RootElement.GetProperty("run").GetProperty("runId").GetString();
+
+            using var streamRequest = new HttpRequestMessage(HttpMethod.Get, $"/runs/{runId}/stream");
+            using var streamResponse = await client.SendAsync(streamRequest, HttpCompletionOption.ResponseHeadersRead);
+            Assert.Equal(HttpStatusCode.OK, streamResponse.StatusCode);
+
+            var body = await streamResponse.Content.ReadAsStringAsync();
+            Assert.Contains(":\n\n", body, StringComparison.Ordinal);
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
     }
 
     [Fact]

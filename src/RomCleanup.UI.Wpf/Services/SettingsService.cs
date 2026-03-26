@@ -18,9 +18,10 @@ public sealed class SettingsService : ISettingsService
 
     private static readonly string SettingsDir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "RomCleanupRegionDedupe");
+            RomCleanup.Contracts.AppIdentity.AppFolderName);
 
     private static readonly string SettingsPath = Path.Combine(SettingsDir, "settings.json");
+    private static readonly object SettingsWriteLock = new();
 
     /// <summary>Last audit path loaded from settings (for rollback after restart).</summary>
     public string? LastAuditPath { get; private set; }
@@ -97,6 +98,8 @@ public sealed class SettingsService : ISettingsService
                 dto = dto with
                 {
                     UseDat = GetBool(dat, "useDat"),
+                    EnableDatAudit = GetBool(dat, "enableDatAudit", true),
+                    EnableDatRename = GetBool(dat, "enableDatRename"),
                     DatRoot = GetString(dat, "datRoot"),
                     DatHashType = GetString(dat, "hashType", "SHA1"),
                     DatFallback = GetBool(dat, "datFallback", true)
@@ -126,6 +129,9 @@ public sealed class SettingsService : ISettingsService
                 dto = dto with
                 {
                     SortConsole = GetBool(ui, "sortConsole"),
+                    RemoveJunk = GetBool(ui, "removeJunk", true),
+                    OnlyGames = GetBool(ui, "onlyGames"),
+                    KeepUnknownWhenOnlyGames = GetBool(ui, "keepUnknownWhenOnlyGames", true),
                     DryRun = GetBool(ui, "dryRun", true),
                     ConvertEnabled = GetBool(ui, "convertEnabled"),
                     ConfirmMove = GetBool(ui, "confirmMove", true),
@@ -145,6 +151,20 @@ public sealed class SettingsService : ISettingsService
                         rootList.Add(path);
                 }
                 dto = dto with { Roots = [.. rootList] };
+            }
+
+            if (root.TryGetProperty("datMappings", out var mappings) &&
+                mappings.ValueKind == JsonValueKind.Array)
+            {
+                var mapList = new List<DatMappingEntry>();
+                foreach (var m in mappings.EnumerateArray())
+                {
+                    var console = GetString(m, "console");
+                    var datFile = GetString(m, "datFile");
+                    if (!string.IsNullOrWhiteSpace(console) && !string.IsNullOrWhiteSpace(datFile))
+                        mapList.Add(new DatMappingEntry(console, datFile));
+                }
+                dto = dto with { DatMappings = [.. mapList] };
             }
 
             // Update service-level state
@@ -239,6 +259,8 @@ public sealed class SettingsService : ISettingsService
 
         // DAT
         vm.UseDat = dto.UseDat;
+        vm.EnableDatAudit = dto.EnableDatAudit;
+        vm.EnableDatRename = dto.EnableDatRename;
         vm.DatRoot = dto.DatRoot;
         vm.DatHashType = dto.DatHashType;
         vm.DatFallback = dto.DatFallback;
@@ -250,6 +272,9 @@ public sealed class SettingsService : ISettingsService
 
         // UI
         vm.SortConsole = dto.SortConsole;
+        vm.RemoveJunk = dto.RemoveJunk;
+        vm.OnlyGames = dto.OnlyGames;
+        vm.KeepUnknownWhenOnlyGames = dto.KeepUnknownWhenOnlyGames;
         vm.DryRun = dto.DryRun;
         vm.ConvertEnabled = dto.ConvertEnabled;
         vm.ConfirmMove = dto.ConfirmMove;
@@ -259,6 +284,11 @@ public sealed class SettingsService : ISettingsService
         vm.Roots.Clear();
         foreach (var r in dto.Roots)
             vm.Roots.Add(r);
+
+        // DAT Mappings
+        vm.DatMappings.Clear();
+        foreach (var m in dto.DatMappings)
+            vm.DatMappings.Add(new Models.DatMapRow { Console = m.Console, DatFile = m.DatFile });
     }
 
     /// <summary>Save current ViewModel state to disk.</summary>
@@ -266,56 +296,68 @@ public sealed class SettingsService : ISettingsService
     {
         try
         {
-            Directory.CreateDirectory(SettingsDir);
-
-            var settings = new
+            lock (SettingsWriteLock)
             {
-                version = CurrentVersion,
-                general = new
-                {
-                    logLevel = vm.LogLevel,
-                    preferredRegions = vm.GetPreferredRegions(),
-                    aggressiveJunk = vm.AggressiveJunk,
-                    aliasEditionKeying = vm.AliasKeying
-                },
-                toolPaths = new Dictionary<string, string>
-                {
-                    ["chdman"] = vm.ToolChdman,
-                    ["dolphintool"] = vm.ToolDolphin,
-                    ["7z"] = vm.Tool7z,
-                    ["psxtract"] = vm.ToolPsxtract,
-                    ["ciso"] = vm.ToolCiso
-                },
-                dat = new
-                {
-                    useDat = vm.UseDat,
-                    datRoot = vm.DatRoot,
-                    hashType = vm.DatHashType,
-                    datFallback = vm.DatFallback
-                },
-                paths = new
-                {
-                    trashRoot = vm.TrashRoot,
-                    auditRoot = vm.AuditRoot,
-                    ps3DupesRoot = vm.Ps3DupesRoot,
-                    lastAuditPath = lastAuditPath ?? ""
-                },
-                roots = vm.Roots.ToArray(),
-                ui = new
-                {
-                    sortConsole = vm.SortConsole,
-                    dryRun = vm.DryRun,
-                    convertEnabled = vm.ConvertEnabled,
-                    confirmMove = vm.ConfirmMove,
-                    conflictPolicy = vm.ConflictPolicy.ToString(),
-                    theme = vm.CurrentThemeName
-                }
-            };
+                Directory.CreateDirectory(SettingsDir);
 
-            var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-            var tmpPath = SettingsPath + ".tmp";
-            File.WriteAllText(tmpPath, json);
-            File.Move(tmpPath, SettingsPath, overwrite: true);
+                var settings = new
+                {
+                    version = CurrentVersion,
+                    general = new
+                    {
+                        logLevel = vm.LogLevel,
+                        preferredRegions = vm.GetPreferredRegions(),
+                        aggressiveJunk = vm.AggressiveJunk,
+                        aliasEditionKeying = vm.AliasKeying
+                    },
+                    toolPaths = new Dictionary<string, string>
+                    {
+                        ["chdman"] = vm.ToolChdman,
+                        ["dolphintool"] = vm.ToolDolphin,
+                        ["7z"] = vm.Tool7z,
+                        ["psxtract"] = vm.ToolPsxtract,
+                        ["ciso"] = vm.ToolCiso
+                    },
+                    dat = new
+                    {
+                        useDat = vm.UseDat,
+                        enableDatAudit = vm.EnableDatAudit,
+                        enableDatRename = vm.EnableDatRename,
+                        datRoot = vm.DatRoot,
+                        hashType = vm.DatHashType,
+                        datFallback = vm.DatFallback
+                    },
+                    datMappings = vm.DatMappings
+                        .Where(m => !string.IsNullOrWhiteSpace(m.Console) && !string.IsNullOrWhiteSpace(m.DatFile))
+                        .Select(m => new { console = m.Console, datFile = m.DatFile })
+                        .ToArray(),
+                    paths = new
+                    {
+                        trashRoot = vm.TrashRoot,
+                        auditRoot = vm.AuditRoot,
+                        ps3DupesRoot = vm.Ps3DupesRoot,
+                        lastAuditPath = lastAuditPath ?? ""
+                    },
+                    roots = vm.Roots.ToArray(),
+                    ui = new
+                    {
+                        sortConsole = vm.SortConsole,
+                        removeJunk = vm.RemoveJunk,
+                        onlyGames = vm.OnlyGames,
+                        keepUnknownWhenOnlyGames = vm.KeepUnknownWhenOnlyGames,
+                        dryRun = vm.DryRun,
+                        convertEnabled = vm.ConvertEnabled,
+                        confirmMove = vm.ConfirmMove,
+                        conflictPolicy = vm.ConflictPolicy.ToString(),
+                        theme = vm.CurrentThemeName
+                    }
+                };
+
+                var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+                var tmpPath = SettingsPath + ".tmp";
+                File.WriteAllText(tmpPath, json);
+                File.Move(tmpPath, SettingsPath, overwrite: true);
+            }
             return true;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)

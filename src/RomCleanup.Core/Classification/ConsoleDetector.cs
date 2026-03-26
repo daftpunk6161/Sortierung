@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text.Json;
 using RomCleanup.Core.Caching;
 
@@ -16,14 +17,22 @@ public sealed class ConsoleDetector
     private readonly Dictionary<string, List<string>> _ambigExtMap; // .ext → [keys]
     private readonly Dictionary<string, ConsoleInfo> _consoles; // key → info
     private readonly DiscHeaderDetector? _discHeaderDetector;
+    private readonly CartridgeHeaderDetector? _cartridgeHeaderDetector;
+    private readonly Func<string, IReadOnlyList<string>>? _archiveEntryProvider;
 
     // V2-H11: Folder-level detection cache — avoids re-scanning path segments per file
     // V2-BUG-H01: Bounded LruCache instead of unbounded Dictionary to prevent OOM at scale
     private readonly LruCache<string, string> _folderDetectCache = new(65536);
 
-    public ConsoleDetector(IReadOnlyList<ConsoleInfo> consoles, DiscHeaderDetector? discHeaderDetector = null)
+    public ConsoleDetector(
+        IReadOnlyList<ConsoleInfo> consoles,
+        DiscHeaderDetector? discHeaderDetector = null,
+        Func<string, IReadOnlyList<string>>? archiveEntryProvider = null,
+        CartridgeHeaderDetector? cartridgeHeaderDetector = null)
     {
         _discHeaderDetector = discHeaderDetector;
+        _archiveEntryProvider = archiveEntryProvider;
+        _cartridgeHeaderDetector = cartridgeHeaderDetector;
         _folderMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         _uniqueExtMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         _ambigExtMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
@@ -60,9 +69,21 @@ public sealed class ConsoleDetector
     }
 
     /// <summary>
+    /// Returns the CategoryOverride for a given console key, or null if none configured.
+    /// </summary>
+    public string? GetCategoryOverride(string consoleKey)
+    {
+        return _consoles.TryGetValue(consoleKey, out var info) ? info.CategoryOverride : null;
+    }
+
+    /// <summary>
     /// Loads console definitions from a consoles.json file.
     /// </summary>
-    public static ConsoleDetector LoadFromJson(string jsonContent, DiscHeaderDetector? discHeaderDetector = null)
+    public static ConsoleDetector LoadFromJson(
+        string jsonContent,
+        DiscHeaderDetector? discHeaderDetector = null,
+        Func<string, IReadOnlyList<string>>? archiveEntryProvider = null,
+        CartridgeHeaderDetector? cartridgeHeaderDetector = null)
     {
         using var doc = JsonDocument.Parse(jsonContent);
         var consoles = new List<ConsoleInfo>();
@@ -81,12 +102,13 @@ public sealed class ConsoleDetector
                 var uniqueExts = ReadStringArray(item, "uniqueExts");
                 var ambigExts = ReadStringArray(item, "ambigExts");
                 var aliases = ReadStringArray(item, "folderAliases");
+                var categoryOverride = item.TryGetProperty("categoryOverride", out var co) ? co.GetString() : null;
 
-                consoles.Add(new ConsoleInfo(key, displayName, discBased, uniqueExts, ambigExts, aliases));
+                consoles.Add(new ConsoleInfo(key, displayName, discBased, uniqueExts, ambigExts, aliases, categoryOverride));
             }
         }
 
-        return new ConsoleDetector(consoles, discHeaderDetector);
+        return new ConsoleDetector(consoles, discHeaderDetector, archiveEntryProvider, cartridgeHeaderDetector);
     }
 
     /// <summary>
@@ -96,9 +118,11 @@ public sealed class ConsoleDetector
     /// </summary>
     public string? DetectByFolder(string filePath, string rootPath)
     {
-        // Cache key: directory of the file relative to root
+        // Cache key: directory of the file relative to root (normalized for case-insensitive match)
         var dir = Path.GetDirectoryName(filePath) ?? "";
-        var cacheKey = $"{rootPath}|{dir}";
+        var normalizedRoot = NormalizePathForCache(rootPath);
+        var normalizedDir = NormalizePathForCache(dir);
+        var cacheKey = $"{normalizedRoot}|{normalizedDir}";
         if (_folderDetectCache.TryGet(cacheKey, out var cached))
             return cached.Length > 0 ? cached : null;
 
@@ -158,6 +182,10 @@ public sealed class ConsoleDetector
     /// </summary>
     public string Detect(string filePath, string rootPath)
     {
+        var fileName = Path.GetFileNameWithoutExtension(filePath);
+        if (IsClearlyInvalidFile(filePath))
+            return "UNKNOWN";
+
         // Method 1: Folder name
         var byFolder = DetectByFolder(filePath, rootPath);
         if (byFolder is not null)
@@ -174,7 +202,7 @@ public sealed class ConsoleDetector
         if (ambig.Count == 1)
             return ambig[0];
 
-        // Method 4: Disc header binary detection (ISO/BIN/GCM/CHD)
+        // Method 3b: Disc header binary detection (ISO/BIN/GCM/CHD) — higher confidence than archive interior
         if (_discHeaderDetector is not null)
         {
             var discExt = ext.ToLowerInvariant();
@@ -187,7 +215,234 @@ public sealed class ConsoleDetector
                 return byHeader;
         }
 
+        // Method 4: Archive interior extension (ZIP/7z contain ROM files whose extension reveals the console)
+        var byArchive = DetectByArchiveContent(filePath, ext);
+        if (byArchive is not null)
+            return byArchive;
+
+        // Method 5: Cartridge header binary detection (NES/SNES/MD/N64/GBA/GB)
+        if (_cartridgeHeaderDetector is not null)
+        {
+            var byCartridge = _cartridgeHeaderDetector.Detect(filePath);
+            if (byCartridge is not null)
+                return byCartridge;
+        }
+
+        // Method 6: Filename serial numbers and system keywords (e.g. SLUS-00123 → PS1, [GBA] tag)
+        var byFilename = FilenameConsoleAnalyzer.Detect(fileName);
+        if (byFilename is not null)
+            return byFilename.Value.ConsoleKey;
+
         return "UNKNOWN";
+    }
+
+    /// <summary>
+    /// Multi-method detection with confidence scoring.
+    /// Collects hypotheses from ALL available detection methods and resolves via HypothesisResolver.
+    /// Unlike Detect(), this runs ALL methods (not short-circuit) to gather maximum evidence.
+    /// </summary>
+    public ConsoleDetectionResult DetectWithConfidence(string filePath, string rootPath)
+    {
+        var hypotheses = new List<DetectionHypothesis>();
+        var ext = Path.GetExtension(filePath);
+        var fileName = Path.GetFileNameWithoutExtension(filePath);
+
+        if (IsClearlyInvalidFile(filePath))
+            return ConsoleDetectionResult.Unknown;
+
+
+        // Method 1: Folder name
+        var byFolder = DetectByFolder(filePath, rootPath);
+        if (byFolder is not null)
+            hypotheses.Add(new DetectionHypothesis(byFolder, (int)DetectionSource.FolderName,
+                DetectionSource.FolderName, $"folder={byFolder}"));
+
+        // Method 2: Unique extension
+        var byExt = DetectByExtension(ext);
+        if (byExt is not null)
+            hypotheses.Add(new DetectionHypothesis(byExt, (int)DetectionSource.UniqueExtension,
+                DetectionSource.UniqueExtension, $"ext={ext}"));
+
+        // Method 3: Ambiguous extension
+        var ambig = GetAmbiguousMatches(ext);
+        if (ambig.Count == 1)
+            hypotheses.Add(new DetectionHypothesis(ambig[0], (int)DetectionSource.AmbiguousExtension,
+                DetectionSource.AmbiguousExtension, $"ambig-ext={ext}"));
+
+        // Method 4: Disc header
+        if (_discHeaderDetector is not null)
+        {
+            var discExt = ext.ToLowerInvariant();
+            string? byHeader = discExt == ".chd"
+                ? _discHeaderDetector.DetectFromChd(filePath)
+                : discExt is ".iso" or ".gcm" or ".img" or ".bin"
+                    ? _discHeaderDetector.DetectFromDiscImage(filePath)
+                    : null;
+            if (byHeader is not null)
+                hypotheses.Add(new DetectionHypothesis(byHeader, (int)DetectionSource.DiscHeader,
+                    DetectionSource.DiscHeader, $"disc-header={byHeader}"));
+        }
+
+        // Method 5: Archive interior
+        var byArchive = DetectByArchiveContent(filePath, ext);
+        if (byArchive is not null)
+            hypotheses.Add(new DetectionHypothesis(byArchive, (int)DetectionSource.ArchiveContent,
+                DetectionSource.ArchiveContent, $"archive-inner={byArchive}"));
+
+        // Method 6: Cartridge header
+        if (_cartridgeHeaderDetector is not null)
+        {
+            var byCartridge = _cartridgeHeaderDetector.Detect(filePath);
+            if (byCartridge is not null)
+                hypotheses.Add(new DetectionHypothesis(byCartridge, (int)DetectionSource.CartridgeHeader,
+                    DetectionSource.CartridgeHeader, $"cartridge-header={byCartridge}"));
+        }
+
+        // Method 7: Filename serial numbers
+        var bySerial = FilenameConsoleAnalyzer.DetectBySerial(fileName);
+        if (bySerial is not null)
+            hypotheses.Add(new DetectionHypothesis(bySerial.Value.ConsoleKey, bySerial.Value.Confidence,
+                DetectionSource.SerialNumber, $"serial={fileName}"));
+
+        // Method 8: Filename keywords
+        var byKeyword = FilenameConsoleAnalyzer.DetectByKeyword(fileName);
+        if (byKeyword is not null)
+            hypotheses.Add(new DetectionHypothesis(byKeyword.Value.ConsoleKey, byKeyword.Value.Confidence,
+                DetectionSource.FilenameKeyword, $"keyword={fileName}"));
+
+        return HypothesisResolver.Resolve(hypotheses);
+    }
+
+    private static bool IsClearlyInvalidFile(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            return false;
+
+        try
+        {
+            return new FileInfo(filePath).Length == 0;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+
+    /// <summary>
+    /// Detect console by inspecting the file extensions of entries inside a ZIP or 7z archive.
+    /// For .zip files: opens the archive, finds the largest non-directory entry,
+    /// and runs unique/ambiguous extension detection on its extension.
+    /// For .7z files: uses the injected archive entry provider to list entry names.
+    /// Returns null if not a supported archive or no match found.
+    /// </summary>
+    public string? DetectByArchiveContent(string filePath, string outerExt)
+    {
+        var lowerExt = string.IsNullOrWhiteSpace(outerExt)
+            ? string.Empty
+            : outerExt.ToLowerInvariant();
+
+        // Be robust against incorrect caller-provided outerExt and prefer the real file extension.
+        if (lowerExt is not ".zip" and not ".7z")
+            lowerExt = Path.GetExtension(filePath).ToLowerInvariant();
+
+        if (lowerExt == ".zip")
+            return DetectByZipContent(filePath);
+
+        if (lowerExt == ".7z" && _archiveEntryProvider is not null)
+            return DetectByArchiveEntryNames(_archiveEntryProvider(filePath));
+
+        return null;
+    }
+
+    private string? DetectByZipContent(string filePath)
+    {
+        try
+        {
+            using var archive = ZipFile.OpenRead(filePath);
+            // Find the largest entry (most likely the actual ROM, not readme/nfo)
+            ZipArchiveEntry? bestEntry = null;
+            foreach (var entry in archive.Entries)
+            {
+                if (string.IsNullOrEmpty(entry.Name)) continue; // skip directories
+                if (bestEntry is null || entry.Length > bestEntry.Length)
+                    bestEntry = entry;
+            }
+
+            if (bestEntry is null)
+                return null;
+
+            var innerExt = Path.GetExtension(bestEntry.Name);
+            if (string.IsNullOrEmpty(innerExt))
+                return null;
+
+            // Try unique extension first
+            var byExt = DetectByExtension(innerExt);
+            if (byExt is not null)
+                return byExt;
+
+            // Try ambiguous extension
+            var ambig = GetAmbiguousMatches(innerExt);
+            if (ambig.Count == 1)
+                return ambig[0];
+
+            // For disc-type inner files, try disc header detection
+            if (_discHeaderDetector is not null)
+            {
+                var discExt = innerExt.ToLowerInvariant();
+                if (discExt is ".iso" or ".bin" or ".img" or ".cue" or ".gcm")
+                {
+                    // Extract inner extension info only — actual disc header reading
+                    // on compressed entries is not feasible without full extraction.
+                    // The inner extension combined with ambiguous matching is sufficient.
+                }
+            }
+        }
+        catch (InvalidDataException) { /* corrupt/not-a-zip */ }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Detect console from a list of archive entry names (e.g. from 7z listing).
+    /// Finds the entry with the longest name (heuristic: largest ROM path) and runs extension detection.
+    /// </summary>
+    private string? DetectByArchiveEntryNames(IReadOnlyList<string> entryNames)
+    {
+        if (entryNames.Count == 0)
+            return null;
+
+        // Pick the entry with the longest filename (heuristic for the main ROM vs readme/nfo)
+        string? bestEntry = null;
+        foreach (var name in entryNames)
+        {
+            if (string.IsNullOrWhiteSpace(name)) continue;
+            if (bestEntry is null || name.Length > bestEntry.Length)
+                bestEntry = name;
+        }
+
+        if (bestEntry is null)
+            return null;
+
+        var innerExt = Path.GetExtension(bestEntry);
+        if (string.IsNullOrEmpty(innerExt))
+            return null;
+
+        var byExt = DetectByExtension(innerExt);
+        if (byExt is not null)
+            return byExt;
+
+        var ambig = GetAmbiguousMatches(innerExt);
+        if (ambig.Count == 1)
+            return ambig[0];
+
+        return null;
     }
 
     /// <summary>
@@ -212,7 +467,7 @@ public sealed class ConsoleDetector
         {
             return Path.GetRelativePath(rootPath, fullPath);
         }
-        catch
+        catch (ArgumentException)
         {
             return Path.GetFileName(fullPath);
         }
@@ -232,6 +487,23 @@ public sealed class ConsoleDetector
         }
         return result.ToArray();
     }
+
+    private static string NormalizePathForCache(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return string.Empty;
+
+        try
+        {
+            return Path.GetFullPath(path)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .ToUpperInvariant();
+        }
+        catch (ArgumentException)
+        {
+            return path.Trim().ToUpperInvariant();
+        }
+    }
 }
 
 /// <summary>
@@ -243,4 +515,5 @@ public sealed record ConsoleInfo(
     bool DiscBased,
     string[] UniqueExts,
     string[] AmbigExts,
-    string[] FolderAliases);
+    string[] FolderAliases,
+    string? CategoryOverride = null);

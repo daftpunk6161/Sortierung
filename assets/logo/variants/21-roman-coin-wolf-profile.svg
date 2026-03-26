@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#1C1917"/>
+  <!-- Römische Münze / Coin / Medaillon -->
+  <!-- Outer ring -->
+  <circle cx="128" cy="105" r="70" fill="none" stroke="#B8860B" stroke-width="3"/>
+  <circle cx="128" cy="105" r="65" fill="none" stroke="#B8860B" stroke-width="1" opacity="0.5"/>
+  <circle cx="128" cy="105" r="60" fill="#292524" stroke="#DAA520" stroke-width="0.5"/>
+  <!-- Wolf profile (left-facing, like a Roman coin) -->
+  <g transform="translate(128,100) scale(0.5)">
+    <!-- Head outline -->
+    <path d="M-20,-80 L-40,-40 L-50,-10 L-55,20 L-40,50 L-10,60 L20,50 L35,30 L40,0 L35,-30 L20,-60 L0,-75 Z" fill="none" stroke="#DAA520" stroke-width="2.5"/>
+    <!-- Ear -->
+    <polygon points="-10,-70 -25,-95 -30,-65" fill="none" stroke="#DAA520" stroke-width="2"/>
+    <!-- Eye -->
+    <circle cx="-10" cy="-25" r="4" fill="#DAA520"/>
+    <!-- Snout detail -->
+    <path d="M-40,-10 L-55,5 L-50,15" fill="none" stroke="#DAA520" stroke-width="2"/>
+    <!-- Mouth line -->
+    <path d="M-50,10 L-35,20 L-15,25" fill="none" stroke="#DAA520" stroke-width="1.5"/>
+    <!-- Neck lines -->
+    <line x1="10" y1="40" x2="30" y2="55" stroke="#DAA520" stroke-width="1" opacity="0.5"/>
+    <line x1="0" y1="45" x2="15" y2="60" stroke="#DAA520" stroke-width="1" opacity="0.5"/>
+  </g>
+  <!-- Coin text around edge -->
+  <text x="128" y="52" text-anchor="middle" font-family="'Times New Roman',serif" font-size="9" fill="#DAA520" letter-spacing="6" opacity="0.6">• ROMVLVS •</text>
+  <!-- Stars / decorative dots on coin -->
+  <circle cx="75" cy="105" r="1.5" fill="#DAA520" opacity="0.4"/>
+  <circle cx="181" cy="105" r="1.5" fill="#DAA520" opacity="0.4"/>
+  <text x="128" y="195" text-anchor="middle" font-family="'Times New Roman',serif" font-size="28" font-weight="700" fill="#DAA520" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="218" text-anchor="middle" font-family="'Times New Roman',serif" font-size="8" fill="#92702A" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

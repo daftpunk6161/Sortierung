@@ -43,6 +43,40 @@ public static class FileClassifier
         @"\b(work\s*in\s*progress|wip|playtest|test\s*build|dev\s*build|qa\s*build|review\s*build|internal\s*build|preview\s*build|not\s*for\s*distribution)\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
 
+    private static readonly Regex RxNonGameTags = new(
+        @"\((driver|tool|tools|utility|utilities|editor|assembler|compiler|monitor|debugger|devkit|sdk|workbench|workbench\s*disk|system\s*disk|operating\s*system|os|desktop|database|encyclopedia|reference|manual|documentation|docs|guide|tutorial|music\s*disk|sound\s*tool|tracker|composer|paint|drawing|office|word\s*processor|spreadsheet|terminal|shell|diagnostic)\)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
+
+    private static readonly Regex RxNonGameWords = new(
+        @"\b(driver|utility|utilities|tool|editor|workbench|operating\s*system|encyclopedia|reference|manual|documentation|tutorial|music\s*disk|tracker|composer|word\s*processor|spreadsheet|database|desktop\s*publishing|paint\s*program)\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
+
+    // Conservative allow-deny prefilter: extensions that are clearly non-ROM/user-content.
+    private static readonly HashSet<string> NonRomExtensions =
+    [
+        ".txt", ".md", ".rtf", ".pdf", ".doc", ".docx",
+        ".json", ".yaml", ".yml", ".xml", ".ini", ".cfg", ".conf", ".log",
+        ".ps1", ".psm1", ".bat", ".cmd", ".sh", ".py", ".js", ".ts",
+        ".html", ".htm", ".exe", ".dll", ".msi",
+        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg",
+        ".nfo", ".diz", ".url", ".lnk"
+    ];
+
+    public sealed record ClassificationDecision(FileCategory Category, int Confidence, string ReasonCode);
+
+    /// <summary>
+    /// Checks whether the given extension is a known non-ROM file type.
+    /// Used for scan-phase pre-filtering.
+    /// </summary>
+    public static bool IsNonRomExtension(string extension)
+    {
+        if (string.IsNullOrWhiteSpace(extension)) return false;
+        var normalized = extension.StartsWith(".", StringComparison.Ordinal)
+            ? extension.ToLowerInvariant()
+            : "." + extension.ToLowerInvariant();
+        return NonRomExtensions.Contains(normalized);
+    }
+
     /// <summary>
     /// Classifies a ROM filename (without extension) into GAME, BIOS or JUNK.
     /// </summary>
@@ -50,33 +84,68 @@ public static class FileClassifier
     /// <param name="aggressiveJunk">When true, additional patterns flag WIP/dev builds as JUNK.</param>
     /// <returns>The file category.</returns>
     public static FileCategory Classify(string baseName, bool aggressiveJunk = false)
+        => Analyze(baseName, aggressiveJunk).Category;
+
+    /// <summary>
+    /// Returns classification category plus confidence and a machine-readable reason code.
+    /// </summary>
+    public static ClassificationDecision Analyze(string baseName, bool aggressiveJunk = false)
+        => Analyze(baseName, extension: null, sizeBytes: null, aggressiveJunk: aggressiveJunk);
+
+    /// <summary>
+    /// Returns classification category plus confidence and a machine-readable reason code.
+    /// Optional extension and size allow scan-level prefilter hardening.
+    /// </summary>
+    public static ClassificationDecision Analyze(string baseName, string? extension, long? sizeBytes, bool aggressiveJunk = false)
     {
+        // Scan-level hard gate: known non-ROM file types should not pass as GAME.
+        if (!string.IsNullOrWhiteSpace(extension))
+        {
+            var normalizedExt = extension.StartsWith(".", StringComparison.Ordinal)
+                ? extension.ToLowerInvariant()
+                : "." + extension.ToLowerInvariant();
+
+            if (NonRomExtensions.Contains(normalizedExt))
+                return new ClassificationDecision(FileCategory.NonGame, 98, "non-rom-extension");
+        }
+
+        // Empty files are never valid game candidates.
+        if (sizeBytes.HasValue && sizeBytes.Value == 0)
+            return new ClassificationDecision(FileCategory.NonGame, 99, "empty-file");
+
         // V2-BUG-M05: Return Unknown for empty inputs instead of misclassifying as Game
         if (string.IsNullOrWhiteSpace(baseName))
-            return FileCategory.Unknown;
+            return new ClassificationDecision(FileCategory.Unknown, 5, "empty-basename");
 
         // 1. BIOS — highest priority
-        if (RxBios.IsMatch(baseName))
-            return FileCategory.Bios;
+        if (SafeRegex.IsMatch(RxBios, baseName))
+            return new ClassificationDecision(FileCategory.Bios, 98, "bios-tag");
 
         // 2. Standard junk tags (parenthesized/bracketed)
-        if (RxJunkTags.IsMatch(baseName))
-            return FileCategory.Junk;
+        if (SafeRegex.IsMatch(RxJunkTags, baseName))
+            return new ClassificationDecision(FileCategory.Junk, 95, "junk-tag");
 
         // 3. Standard junk words (unparenthesized keywords)
-        if (RxJunkWords.IsMatch(baseName))
-            return FileCategory.Junk;
+        if (SafeRegex.IsMatch(RxJunkWords, baseName))
+            return new ClassificationDecision(FileCategory.Junk, 90, "junk-word");
+
+        // 3b. Explicit non-game software/content
+        if (SafeRegex.IsMatch(RxNonGameTags, baseName))
+            return new ClassificationDecision(FileCategory.NonGame, 85, "non-game-tag");
+
+        if (SafeRegex.IsMatch(RxNonGameWords, baseName))
+            return new ClassificationDecision(FileCategory.NonGame, 75, "non-game-word");
 
         // 4. Aggressive junk (only when enabled)
         if (aggressiveJunk)
         {
-            if (RxJunkTagsAggressive.IsMatch(baseName))
-                return FileCategory.Junk;
+            if (SafeRegex.IsMatch(RxJunkTagsAggressive, baseName))
+                return new ClassificationDecision(FileCategory.Junk, 88, "junk-aggressive-tag");
 
-            if (RxJunkWordsAggressive.IsMatch(baseName))
-                return FileCategory.Junk;
+            if (SafeRegex.IsMatch(RxJunkWordsAggressive, baseName))
+                return new ClassificationDecision(FileCategory.Junk, 82, "junk-aggressive-word");
         }
 
-        return FileCategory.Game;
+        return new ClassificationDecision(FileCategory.Game, 75, "game-default");
     }
 }

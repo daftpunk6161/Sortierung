@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="spqrGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7F1D1D"/>
+      <stop offset="100%" stop-color="#450A0A"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="url(#spqrGrad)"/>
+  <!-- Roman Banner / SPQR Vexillum Stil -->
+  <!-- Banner pole -->
+  <rect x="126" y="25" width="4" height="140" fill="#D4AF37"/>
+  <circle cx="128" cy="22" r="6" fill="#D4AF37"/>
+  <!-- Crossbar -->
+  <rect x="80" y="42" width="96" height="4" fill="#D4AF37"/>
+  <!-- Banner fabric -->
+  <rect x="82" y="46" width="92" height="100" fill="#991B1B" stroke="#D4AF37" stroke-width="1"/>
+  <!-- Banner fringe decoration -->
+  <rect x="82" y="146" width="12" height="8" fill="#D4AF37" opacity="0.6"/>
+  <rect x="102" y="146" width="12" height="8" fill="#D4AF37" opacity="0.6"/>
+  <rect x="122" y="146" width="12" height="8" fill="#D4AF37" opacity="0.6"/>
+  <rect x="142" y="146" width="12" height="8" fill="#D4AF37" opacity="0.6"/>
+  <rect x="162" y="146" width="12" height="8" fill="#D4AF37" opacity="0.6"/>
+  <!-- SPQR text on banner -->
+  <text x="128" y="68" text-anchor="middle" font-family="'Times New Roman',serif" font-size="10" fill="#D4AF37" letter-spacing="4">S·P·Q·R</text>
+  <!-- Wolf emblem on banner -->
+  <g transform="translate(128,100) scale(0.3)">
+    <polygon points="0,-60 -45,-5 -30,40 0,20 30,40 45,-5" fill="#D4AF37" opacity="0.8"/>
+    <polygon points="-35,-5 -55,-45 -15,-25" fill="#D4AF37" opacity="0.7"/>
+    <polygon points="35,-5 55,-45 15,-25" fill="#D4AF37" opacity="0.7"/>
+    <circle cx="-12" cy="-8" r="3" fill="#991B1B"/>
+    <circle cx="12" cy="-8" r="3" fill="#991B1B"/>
+  </g>
+  <!-- Laurel wreath around wolf -->
+  <path d="M105,80 Q98,95 105,110" fill="none" stroke="#D4AF37" stroke-width="1" opacity="0.4"/>
+  <path d="M151,80 Q158,95 151,110" fill="none" stroke="#D4AF37" stroke-width="1" opacity="0.4"/>
+  <!-- Bottom text on banner -->
+  <text x="128" y="138" text-anchor="middle" font-family="'Times New Roman',serif" font-size="8" fill="#D4AF37" opacity="0.7" letter-spacing="2">ROMVLVS</text>
+  <text x="128" y="190" text-anchor="middle" font-family="'Times New Roman',serif" font-size="28" font-weight="700" fill="#D4AF37" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="215" text-anchor="middle" font-family="'Times New Roman',serif" font-size="8" fill="#92400E" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

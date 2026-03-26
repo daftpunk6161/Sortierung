@@ -148,6 +148,52 @@ public class FileClassifierTests
         Assert.Equal(FileCategory.Game, FileClassifier.Classify(name));
     }
 
+    [Theory]
+    [InlineData("Workbench (System Disk)")]
+    [InlineData("Workbench (Operating System)")]
+    public void NonGameTags_AreDetected(string name)
+    {
+        var decision = FileClassifier.Analyze(name);
+
+        Assert.Equal(FileCategory.NonGame, decision.Category);
+        Assert.Equal("non-game-tag", decision.ReasonCode);
+        Assert.True(decision.Confidence >= 80);
+    }
+
+    [Fact]
+    public void NonGameWords_AreDetected()
+    {
+        var decision = FileClassifier.Analyze("Amiga workbench utility pack");
+
+        Assert.Equal(FileCategory.NonGame, decision.Category);
+        Assert.Equal("non-game-word", decision.ReasonCode);
+        Assert.True(decision.Confidence >= 70);
+    }
+
+    [Theory]
+    [InlineData("Readme", ".txt")]
+    [InlineData("Config", ".json")]
+    [InlineData("Screenshot", ".png")]
+    [InlineData("Script", ".ps1")]
+    public void NonRomExtensions_AreDetectedAsNonGame(string baseName, string extension)
+    {
+        var decision = FileClassifier.Analyze(baseName, extension, sizeBytes: 1024, aggressiveJunk: false);
+
+        Assert.Equal(FileCategory.NonGame, decision.Category);
+        Assert.Equal("non-rom-extension", decision.ReasonCode);
+        Assert.True(decision.Confidence >= 95);
+    }
+
+    [Fact]
+    public void ZeroByteFile_IsDetectedAsNonGame()
+    {
+        var decision = FileClassifier.Analyze("Some Game", ".bin", sizeBytes: 0, aggressiveJunk: false);
+
+        Assert.Equal(FileCategory.NonGame, decision.Category);
+        Assert.Equal("empty-file", decision.ReasonCode);
+        Assert.True(decision.Confidence >= 95);
+    }
+
     // ── Edge cases ──────────────────────────────────────────────────────
 
     [Fact]

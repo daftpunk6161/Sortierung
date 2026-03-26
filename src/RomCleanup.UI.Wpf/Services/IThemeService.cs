@@ -5,6 +5,7 @@ public interface IThemeService
 {
     AppTheme Current { get; }
     bool IsDark { get; }
+    IReadOnlyList<AppTheme> AvailableThemes { get; }
     void ApplyTheme(AppTheme theme);
     void ApplyTheme(bool dark);
     void Toggle();

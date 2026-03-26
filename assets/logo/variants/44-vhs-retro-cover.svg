@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#FAFAF9"/>
+  <!-- VHS / Kassetten-Cover Retro Stil -->
+  <!-- VHS tape border -->
+  <rect x="30" y="30" width="196" height="130" rx="4" fill="#1C1917" stroke="#44403C" stroke-width="1"/>
+  <!-- Label area -->
+  <rect x="38" y="38" width="180" height="100" rx="2" fill="#292524"/>
+  <!-- Color stripe decoration (typical VHS label) -->
+  <rect x="38" y="38" width="180" height="8" fill="#DC2626"/>
+  <rect x="38" y="46" width="180" height="4" fill="#F59E0B"/>
+  <rect x="38" y="50" width="180" height="3" fill="#2563EB"/>
+  <!-- Wolf icon on VHS label -->
+  <g transform="translate(128,88) scale(0.25)">
+    <polygon points="0,-65 -50,-10 -35,45 0,25 35,45 50,-10" fill="#E5E7EB"/>
+    <polygon points="-38,-5 -58,-48 -18,-28" fill="#E5E7EB"/>
+    <polygon points="38,-5 58,-48 18,-28" fill="#E5E7EB"/>
+    <circle cx="-15" cy="-8" r="4" fill="#DC2626"/>
+    <circle cx="15" cy="-8" r="4" fill="#DC2626"/>
+  </g>
+  <!-- VHS text -->
+  <text x="128" y="75" text-anchor="middle" font-family="'Impact',sans-serif" font-size="14" fill="#E5E7EB" letter-spacing="4">ROMULUS</text>
+  <text x="128" y="128" text-anchor="middle" font-family="'Courier New',monospace" font-size="7" fill="#78716C">RUNTIME: ∞  •  QUALITY: PERFECT</text>
+  <!-- VHS reels -->
+  <circle cx="85" cy="148" r="6" fill="#44403C" stroke="#57534E" stroke-width="1"/>
+  <circle cx="171" cy="148" r="6" fill="#44403C" stroke="#57534E" stroke-width="1"/>
+  <circle cx="85" cy="148" r="2" fill="#292524"/>
+  <circle cx="171" cy="148" r="2" fill="#292524"/>
+  <!-- Tape window -->
+  <rect x="85" y="142" width="86" height="12" rx="2" fill="#1C1917"/>
+  <rect x="90" y="144" width="76" height="8" rx="1" fill="#292524"/>
+  <text x="128" y="195" text-anchor="middle" font-family="'Impact','Arial Black',sans-serif" font-size="30" font-weight="900" fill="#1C1917" letter-spacing="3">ROMULUS</text>
+  <text x="128" y="218" text-anchor="middle" font-family="'Courier New',monospace" font-size="8" fill="#78716C" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+  <!-- VHS rating badge -->
+  <rect x="190" y="195" width="28" height="16" rx="2" fill="#1C1917"/>
+  <text x="204" y="207" text-anchor="middle" font-family="'Impact',sans-serif" font-size="9" fill="#E5E7EB">ROM</text>
+</svg>

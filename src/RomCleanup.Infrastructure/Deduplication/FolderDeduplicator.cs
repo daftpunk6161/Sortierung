@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Core.GameKeys;
 
 namespace RomCleanup.Infrastructure.Deduplication;
 
@@ -21,26 +22,9 @@ public sealed class FolderDeduplicator
 
     private static readonly string[] Ps3KeyFiles = ["PS3_DISC.SFB", "PARAM.SFO", "EBOOT.BIN"];
 
-    private static readonly TimeSpan RxTimeout = TimeSpan.FromMilliseconds(200);
-
-    private static readonly Regex PreservePattern = new(
-        @"(?:Disk|Disc|CD|Side)\s*[\dA-Z]|AGA|ECS|OCS|NTSC|PAL|WHDLoad|ADF",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
-
-    private static readonly Regex ParenthesisPattern = new(
-        @"\([^)]*\)", RegexOptions.Compiled, RxTimeout);
-
-    private static readonly Regex TrailingBracketPattern = new(
-        @"\s*\[[^\]]*\]\s*$", RegexOptions.Compiled, RxTimeout);
-
-    private static readonly Regex VersionSuffixPattern = new(
-        @"\s+v?\d+(\.\d+)+\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
-
-    private static readonly Regex MultiSpacePattern = new(
-        @"\s{2,}", RegexOptions.Compiled, RxTimeout);
-
     private static readonly Regex MultidiscPattern = new(
-        @"(?:Disc|Disk|CD|Side)\s*\d", RegexOptions.IgnoreCase | RegexOptions.Compiled, RxTimeout);
+        @"(?:Disc|Disk|CD|Side)\s*\d", RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        TimeSpan.FromMilliseconds(200));
 
     private readonly IFileSystem _fs;
     private readonly Action<string>? _log;
@@ -98,42 +82,10 @@ public sealed class FolderDeduplicator
     /// <summary>
     /// Normalize a folder name into a grouping key for deduplication.
     /// Preserves disc/side markers and platform-variant tags (AGA/ECS/OCS/NTSC/PAL).
+    /// Delegates to <see cref="FolderKeyNormalizer"/> in Core (ADR-0007 §3.4).
     /// </summary>
     public static string GetFolderBaseKey(string folderName)
-    {
-        if (string.IsNullOrWhiteSpace(folderName))
-            return "";
-
-        var result = folderName;
-
-        // Unicode normalization (FormC for basic folding)
-        result = result.Normalize(System.Text.NormalizationForm.FormC);
-
-        // Collect preserved parenthetical tags, strip all parens, re-append preserved
-        var preserved = new List<string>();
-        foreach (Match m in ParenthesisPattern.Matches(result))
-        {
-            if (PreservePattern.IsMatch(m.Value))
-                preserved.Add(m.Value);
-        }
-        result = ParenthesisPattern.Replace(result, "");
-        if (preserved.Count > 0)
-            result = result.TrimEnd() + " " + string.Join(" ", preserved);
-
-        // Strip all trailing bracket groups
-        while (TrailingBracketPattern.IsMatch(result))
-            result = TrailingBracketPattern.Replace(result, "");
-
-        // Strip version-like suffixes
-        result = VersionSuffixPattern.Replace(result, "");
-
-        // Collapse multiple spaces
-        result = MultiSpacePattern.Replace(result, " ").Trim();
-
-        return string.IsNullOrWhiteSpace(result)
-            ? folderName.Trim().ToLowerInvariant()
-            : result.ToLowerInvariant();
-    }
+        => FolderKeyNormalizer.GetFolderBaseKey(folderName);
 
     /// <summary>
     /// PS3 folder deduplication: hash key files and move duplicates.
@@ -205,11 +157,19 @@ public sealed class FolderDeduplicator
                     var loserName = Path.GetFileName(loserPath);
                     var dest = Path.Combine(dupeBase, loserName!);
 
-                    // Path traversal check
+                    // Path traversal check — source AND destination
                     var resolvedSrc = _fs.ResolveChildPathWithinRoot(root, Path.GetRelativePath(root, loserPath));
                     if (resolvedSrc is null)
                     {
                         _log?.Invoke($"    BLOCKED: {loserName} - außerhalb Root");
+                        continue;
+                    }
+
+                    // SEC-DEDUP-01: Validate destination path within dupeBase
+                    var resolvedDest = _fs.ResolveChildPathWithinRoot(dupeBase, loserName!);
+                    if (resolvedDest is null)
+                    {
+                        _log?.Invoke($"    BLOCKED: {loserName} - Ziel außerhalb Dupe-Root");
                         continue;
                     }
 
@@ -485,7 +445,7 @@ public sealed class FolderDeduplicator
                 .Max();
             return newest;
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return dir.LastWriteTimeUtc;
         }
@@ -514,7 +474,7 @@ public sealed class FolderDeduplicator
             return Directory.EnumerateFiles(folderPath, fileName, SearchOption.AllDirectories)
                 .FirstOrDefault();
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return null;
         }

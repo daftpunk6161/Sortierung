@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="emeraldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#064E3B"/>
+      <stop offset="100%" stop-color="#022C22"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="url(#emeraldGrad)"/>
+  <!-- Heraldik / Wappen Stil — wie ein Familienwappen -->
+  <!-- Shield shape -->
+  <path d="M128,18 L188,45 L188,110 Q188,155 128,175 Q68,155 68,110 L68,45 Z" fill="#0D3B24" stroke="#D4AF37" stroke-width="2"/>
+  <!-- Inner shield border -->
+  <path d="M128,28 L180,50 L180,108 Q180,148 128,165 Q76,148 76,108 L76,50 Z" fill="none" stroke="#D4AF37" stroke-width="0.5" opacity="0.5"/>
+  <!-- Diagonal division (heraldry "per bend") -->
+  <clipPath id="shieldClip">
+    <path d="M128,28 L180,50 L180,108 Q180,148 128,165 Q76,148 76,108 L76,50 Z"/>
+  </clipPath>
+  <!-- Wolf rampant (standing, heraldic pose) -->
+  <g transform="translate(128,95) scale(0.35)" clip-path="url(#shieldClip)">
+    <!-- Body standing -->
+    <ellipse cx="0" cy="20" rx="20" ry="30" fill="#D4AF37" opacity="0.8"/>
+    <!-- Head -->
+    <circle cx="0" cy="-25" r="18" fill="#D4AF37"/>
+    <!-- Ears -->
+    <polygon points="-12,-38 -8,-55 -2,-40" fill="#D4AF37"/>
+    <polygon points="12,-38 8,-55 2,-40" fill="#D4AF37"/>
+    <!-- Snout -->
+    <ellipse cx="12" cy="-20" rx="10" ry="6" fill="#B8860B"/>
+    <!-- Eye -->
+    <circle cx="2" cy="-28" r="3" fill="#0D3B24"/>
+    <!-- Front paws (raised - rampant) -->
+    <path d="M-12,-5 L-25,-25 L-30,-20" stroke="#D4AF37" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M12,-5 L25,-15 L30,-10" stroke="#D4AF37" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <!-- Hind legs -->
+    <rect x="-10" y="45" width="6" height="15" fill="#D4AF37"/>
+    <rect x="4" y="45" width="6" height="15" fill="#D4AF37"/>
+    <!-- Tail -->
+    <path d="M-5,40 C-20,35 -25,20 -18,10" fill="none" stroke="#D4AF37" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <!-- Crown on top of shield -->
+  <g transform="translate(128,16)">
+    <rect x="-12" y="-8" width="24" height="6" fill="#D4AF37"/>
+    <rect x="-10" y="-14" width="4" height="6" fill="#D4AF37"/>
+    <rect x="-2" y="-16" width="4" height="8" fill="#D4AF37"/>
+    <rect x="6" y="-14" width="4" height="6" fill="#D4AF37"/>
+    <circle cx="-8" cy="-16" r="2" fill="#DC2626"/>
+    <circle cx="0" cy="-18" r="2" fill="#DC2626"/>
+    <circle cx="8" cy="-16" r="2" fill="#DC2626"/>
+  </g>
+  <text x="128" y="208" text-anchor="middle" font-family="'Palatino Linotype','Times New Roman',serif" font-size="26" font-weight="700" fill="#D4AF37" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="232" text-anchor="middle" font-family="'Palatino Linotype',serif" font-size="8" fill="#4ADE80" opacity="0.5" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

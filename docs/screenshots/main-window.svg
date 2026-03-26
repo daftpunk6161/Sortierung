@@ -2,6 +2,6 @@
   <rect width="1280" height="720" fill="#0d0d1f"/>
   <rect x="40" y="40" width="1200" height="80" fill="#13133a" stroke="#2d2d5a"/>
   <rect x="40" y="140" width="1200" height="500" fill="#111122" stroke="#2d2d5a"/>
-  <text x="70" y="90" fill="#00f5ff" font-family="Segoe UI" font-size="28">ROM Cleanup – Hauptfenster (Referenz)</text>
+  <text x="70" y="90" fill="#00f5ff" font-family="Segoe UI" font-size="28">Romulus – Hauptfenster (Referenz)</text>
   <text x="70" y="190" fill="#e8e8f8" font-family="Segoe UI" font-size="20">Sortieren | Konfiguration | Log</text>
 </svg>

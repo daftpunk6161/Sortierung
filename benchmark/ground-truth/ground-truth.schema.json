@@ -1,0 +1,316 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://romcleanup.local/ground-truth.schema.json",
+  "title": "RomCleanup Ground Truth Entry",
+  "description": "Schema for a single JSONL ground-truth entry. Each line in a .jsonl file must validate against this schema.",
+  "type": "object",
+  "required": ["id", "source", "tags", "difficulty", "expected"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "SemVer of the ground-truth schema this entry conforms to. Optional — defaults to 1.0.0."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z]{2,3}-[A-Z0-9]{1,10}-[a-z0-9-]+-\\d{3,4}$",
+      "description": "Unique entry ID. Format: {set-prefix}-{SYSTEM}-{subclass}-{number}. Example: gc-NES-ref-001"
+    },
+    "source": {
+      "type": "object",
+      "required": ["fileName", "extension", "sizeBytes"],
+      "additionalProperties": false,
+      "properties": {
+        "fileName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Original filename as it would appear in a ROM collection"
+        },
+        "extension": {
+          "type": "string",
+          "pattern": "^\\.[a-z0-9]+$",
+          "description": "Lowercase file extension including dot"
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "File size in bytes. 0 is valid for empty-file negatives."
+        },
+        "directory": {
+          "type": ["string", "null"],
+          "description": "Relative folder path if directory context matters for detection"
+        },
+        "stub": {
+          "type": "object",
+          "required": ["generator"],
+          "additionalProperties": false,
+          "properties": {
+            "generator": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the stub generator to produce this sample file"
+            },
+            "variant": {
+              "type": "string",
+              "description": "Generator variant (e.g. 'standard', 'headerless', 'corrupted')"
+            },
+            "params": {
+              "type": "object",
+              "description": "Generator-specific parameters (header bytes, CRC, etc.)",
+              "additionalProperties": true
+            }
+          }
+        },
+        "innerFiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "sizeBytes": { "type": "integer", "minimum": 0 },
+              "crc32": { "type": "string", "pattern": "^[0-9a-fA-F]{8}$" }
+            }
+          },
+          "description": "For archive/multi-file entries: inner file listing"
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "clean-reference",
+          "region-variant",
+          "revision-variant",
+          "bios",
+          "bios-edge",
+          "bios-negative",
+          "arcade-parent",
+          "arcade-clone",
+          "arcade-bios",
+          "arcade-device",
+          "arcade-split",
+          "arcade-merged",
+          "arcade-nonmerged",
+          "arcade-chd",
+          "arcade-junk",
+          "multi-file",
+          "multi-disc",
+          "cue-bin",
+          "gdi-tracks",
+          "m3u-playlist",
+          "ccd-img",
+          "mds-mdf",
+          "chd-single",
+          "chd-raw-sha1",
+          "container-cso",
+          "container-wia",
+          "container-rvz",
+          "container-wbfs",
+          "directory-based",
+          "folder-only-detection",
+          "keyword-detection",
+          "cartridge-header",
+          "disc-header",
+          "unique-extension",
+          "ambiguous-extension",
+          "serial-number",
+          "headerless",
+          "wrong-name",
+          "wrong-extension",
+          "extension-conflict",
+          "folder-vs-header-conflict",
+          "cross-system-ambiguity",
+          "ps-disambiguation",
+          "gb-gbc-ambiguity",
+          "md-32x-ambiguity",
+          "dat-exact",
+          "dat-weak",
+          "dat-none",
+          "dat-nointro",
+          "dat-redump",
+          "dat-mame",
+          "dat-tosec",
+          "negative-control",
+          "unknown-expected",
+          "sort-blocked",
+          "confidence-low",
+          "confidence-borderline",
+          "junk",
+          "non-game",
+          "demo",
+          "homebrew",
+          "hack",
+          "corrupt-archive",
+          "truncated-rom",
+          "empty-file",
+          "repair-unsafe"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Classification tags for Fallklasse and coverage analysis"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["easy", "medium", "hard", "adversarial"],
+      "description": "Expected difficulty for the detection pipeline"
+    },
+    "expected": {
+      "type": "object",
+      "required": ["consoleKey", "category"],
+      "additionalProperties": false,
+      "properties": {
+        "consoleKey": {
+          "type": ["string", "null"],
+          "description": "Expected console key from consoles.json. null = UNKNOWN expected."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Game", "Bios", "NonGame", "Junk", "Unknown"],
+          "description": "Expected file category classification"
+        },
+        "confidence": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Expected confidence score. null if not deterministic."
+        },
+        "hasConflict": {
+          "type": "boolean",
+          "description": "Whether the detection result should have a conflict flag"
+        },
+        "datMatchLevel": {
+          "type": ["string", "null"],
+          "enum": ["exact", "weak", "none", null],
+          "description": "Expected DAT match strength"
+        },
+        "datEcosystem": {
+          "type": ["string", "null"],
+          "enum": ["no-intro", "redump", "mame", "tosec", null],
+          "description": "Expected DAT ecosystem for matched entries"
+        },
+        "sortDecision": {
+          "type": ["string", "null"],
+          "enum": ["sort", "block", "skip", "review", null],
+          "description": "Expected sorting decision based on confidence gating"
+        },
+        "gameIdentity": {
+          "type": ["string", "null"],
+          "description": "Canonical game title for deduplication grouping. null if unknown."
+        },
+        "discNumber": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Disc number in a multi-disc set. null for single-disc or non-disc entries."
+        },
+        "repairSafe": {
+          "type": ["boolean", "null"],
+          "description": "Whether this entry is safe for automatic repair/sort (confidence gating result). null if not evaluated."
+        }
+      }
+    },
+    "detectionExpectations": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primaryMethod": {
+          "type": "string",
+          "enum": [
+            "FolderName",
+            "UniqueExtension",
+            "AmbiguousExtension",
+            "DiscHeader",
+            "ArchiveContent",
+            "CartridgeHeader",
+            "SerialNumber",
+            "Keyword",
+            "DatLookup"
+          ],
+          "description": "Expected primary detection method"
+        },
+        "acceptableAlternatives": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "FolderName",
+              "UniqueExtension",
+              "AmbiguousExtension",
+              "DiscHeader",
+              "ArchiveContent",
+              "CartridgeHeader",
+              "SerialNumber",
+              "Keyword",
+              "DatLookup"
+            ]
+          },
+          "description": "Alternative detection methods that are also acceptable"
+        },
+        "acceptableConsoleKeys": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Alternative consoleKey values that count as correct (e.g. NEOGEO for ARCADE)"
+        }
+      }
+    },
+    "fileModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["single-file", "archive", "multi-file-set", "directory", "playlist"],
+          "description": "File model type for this entry"
+        },
+        "setFiles": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of files in a multi-file set (CUE+BIN, GDI+tracks, etc.)"
+        },
+        "discCount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of discs in a multi-disc set"
+        }
+      }
+    },
+    "relationships": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cloneOf": {
+          "type": ["string", "null"],
+          "description": "Parent ROM/set name for Arcade clone-sets"
+        },
+        "biosSystemKeys": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Console keys this BIOS serves (for shared BIOS like neogeo.zip)"
+        },
+        "parentSet": {
+          "type": ["string", "null"],
+          "description": "Parent set for split/merged ROM sets"
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional human-readable notes about this test case"
+    },
+    "addedInVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Ground-truth dataset version when this entry was first added."
+    },
+    "lastVerified": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "ISO date when this entry was last verified against the detection pipeline."
+    }
+  }
+}

@@ -19,17 +19,8 @@ public partial class StartView : UserControl
         if (e.Data.GetDataPresent(DataFormats.FileDrop) &&
             e.Data.GetData(DataFormats.FileDrop) is string[] paths)
         {
-            var vm = DataContext as ViewModels.MainViewModel;
-            if (vm is null) return;
-            int added = 0;
-            foreach (var path in paths)
-            {
-                if (System.IO.Directory.Exists(path) && !vm.Roots.Contains(path))
-                {
-                    vm.Roots.Add(path);
-                    added++;
-                }
-            }
+            if (DataContext is not ViewModels.MainViewModel vm) return;
+            int added = vm.AddDroppedFolders(paths);
             // GUI-093: Screen-reader announcement
             if (added > 0)
             {

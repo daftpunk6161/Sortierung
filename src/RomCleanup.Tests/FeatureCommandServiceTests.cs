@@ -423,7 +423,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
         _vm.LastCandidates = new System.Collections.ObjectModel.ObservableCollection<RomCleanup.Contracts.Models.RomCandidate>
         {
             new RomCandidate { MainPath = "test.sfc", GameKey = "TestGame", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME" }
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game }
         };
         _vm.FeatureCommands["HealthScore"].Execute(null);
         Assert.True(HasOutput());
@@ -436,9 +436,9 @@ public sealed class FeatureCommandServiceTests : IDisposable
         _vm.LastCandidates = new System.Collections.ObjectModel.ObservableCollection<RomCleanup.Contracts.Models.RomCandidate>
         {
             new RomCandidate { MainPath = "game.sfc", GameKey = "Game", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME" },
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game },
             new RomCandidate { MainPath = "demo.sfc", GameKey = "Demo", Region = "US",
-                Extension = ".sfc", SizeBytes = 512, Category = "JUNK" }
+                Extension = ".sfc", SizeBytes = 512, Category = FileCategory.Junk }
         };
         _vm.FeatureCommands["JunkReport"].Execute(null);
         Assert.True(HasOutput());
@@ -451,9 +451,9 @@ public sealed class FeatureCommandServiceTests : IDisposable
         _vm.LastCandidates = new System.Collections.ObjectModel.ObservableCollection<RomCleanup.Contracts.Models.RomCandidate>
         {
             new RomCandidate { MainPath = "a.sfc", GameKey = "Game", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME" },
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game },
             new RomCandidate { MainPath = "b.sfc", GameKey = "Game", Region = "US",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME" }
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game }
         };
         _vm.FeatureCommands["DuplicateAnalysis"].Execute(null);
         Assert.True(HasOutput());
@@ -471,7 +471,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
         _vm.LastCandidates = new System.Collections.ObjectModel.ObservableCollection<RomCleanup.Contracts.Models.RomCandidate>
         {
             new RomCandidate { MainPath = "game.sfc", GameKey = "Game", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME", ConsoleKey = "SNES" }
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game, ConsoleKey = "SNES" }
         };
         _vm.FeatureCommands["ExportCollection"].Execute(null);
         Assert.True(File.Exists(csvPath));
@@ -487,7 +487,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
         _vm.LastCandidates = new System.Collections.ObjectModel.ObservableCollection<RomCleanup.Contracts.Models.RomCandidate>
         {
             new RomCandidate { MainPath = "game.sfc", GameKey = "Game", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME", ConsoleKey = "SNES" }
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game, ConsoleKey = "SNES" }
         };
         _vm.FeatureCommands["ExportCollection"].Execute(null);
         Assert.True(File.Exists(xmlPath));
@@ -570,7 +570,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
 
         Assert.False(_vm.HasRollbackUndo);
         Assert.True(_vm.HasRollbackRedo);
-        Assert.Contains(_vm.LogEntries, entry => entry.Level == "INFO" && entry.Text.Contains("RollbackUndone", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(_vm.LogEntries, entry => entry.Level == "INFO" && entry.Text.Contains("Rollback-Verlauf", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -584,7 +584,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
 
         Assert.True(_vm.HasRollbackUndo);
         Assert.False(_vm.HasRollbackRedo);
-        Assert.Contains(_vm.LogEntries, entry => entry.Level == "INFO" && entry.Text.Contains("RollbackRedone", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(_vm.LogEntries, entry => entry.Level == "INFO" && entry.Text.Contains("Rollback-Verlauf", StringComparison.OrdinalIgnoreCase));
     }
 
     // ═══ IDEMPOTENCY ════════════════════════════════════════════════════
@@ -617,7 +617,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
     public void DuplicateAnalysis_WithDedupeGroups_ShowsHeatmapData()
     {
         _sut.RegisterCommands();
-        _vm.LastDedupeGroups.Add(new DedupeResult
+        _vm.LastDedupeGroups.Add(new DedupeGroup
         {
             GameKey = "TestGame",
             Winner = new RomCandidate { MainPath = "SNES/a.sfc", GameKey = "TestGame", Region = "EU", Extension = ".sfc", SizeBytes = 1024, ConsoleKey = "SNES" },
@@ -650,11 +650,11 @@ public sealed class FeatureCommandServiceTests : IDisposable
         var csvPath = Path.Combine(_tempDir, "dupes.csv");
         _dialog.ShowInputBoxResult = "3";
         _dialog.SaveFileResult = csvPath;
-        _vm.LastDedupeGroups.Add(new DedupeResult
+        _vm.LastDedupeGroups.Add(new DedupeGroup
         {
             GameKey = "DupeGame",
-            Winner = new RomCandidate { MainPath = "w.sfc", GameKey = "DupeGame", Region = "EU", Extension = ".sfc", SizeBytes = 1024, Category = "GAME", ConsoleKey = "SNES" },
-            Losers = [new RomCandidate { MainPath = "l.sfc", GameKey = "DupeGame", Region = "US", Extension = ".sfc", SizeBytes = 1024, Category = "GAME", ConsoleKey = "SNES" }]
+            Winner = new RomCandidate { MainPath = "w.sfc", GameKey = "DupeGame", Region = "EU", Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game, ConsoleKey = "SNES" },
+            Losers = [new RomCandidate { MainPath = "l.sfc", GameKey = "DupeGame", Region = "US", Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game, ConsoleKey = "SNES" }]
         });
         _vm.FeatureCommands["ExportCollection"].Execute(null);
         Assert.True(File.Exists(csvPath));
@@ -865,8 +865,8 @@ public sealed class FeatureCommandServiceTests : IDisposable
         var enJson = Path.Combine(dataDir, "i18n", "en.json");
         if (!File.Exists(deJson) || !File.Exists(enJson)) return;
 
-        var de = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(deJson))!;
-        var en = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(enJson))!;
+        var de = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(File.ReadAllText(deJson))!;
+        var en = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(File.ReadAllText(enJson))!;
 
         var deToolKeys = de.Keys.Where(k => k.StartsWith("Tool.")).OrderBy(k => k).ToList();
         var enToolKeys = en.Keys.Where(k => k.StartsWith("Tool.")).OrderBy(k => k).ToList();
@@ -899,7 +899,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
         {
             var path = Path.Combine(dataDir, "i18n", locale);
             if (!File.Exists(path)) continue;
-            var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path))!;
+            var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(File.ReadAllText(path))!;
             foreach (var removed in removedKeys)
             {
                 Assert.False(dict.ContainsKey(removed), $"Removed i18n key '{removed}' found in {locale}");
@@ -1007,6 +1007,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => ShowInputBoxResult;
         public void ShowText(string title, string content) => ShowTextCalls.Add((title, content));
         public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
+        public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => true;
     }
 
     private sealed class StubSettingsService : ISettingsService
@@ -1022,6 +1023,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
     {
         public AppTheme Current => AppTheme.Dark;
         public bool IsDark => true;
+        public IReadOnlyList<AppTheme> AvailableThemes => [AppTheme.Dark];
         public void ApplyTheme(AppTheme theme) { }
         public void ApplyTheme(bool dark) { }
         public void Toggle() { }

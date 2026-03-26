@@ -32,11 +32,11 @@ public sealed class RunViewModel : ObservableObject
     public ObservableCollection<RomCandidate> LastCandidates
     {
         get => _lastCandidates;
-        set { _lastCandidates = value; OnPropertyChanged(); }
+        set { _lastCandidates = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasRunData)); }
     }
 
-    private ObservableCollection<DedupeResult> _lastDedupeGroups = [];
-    public ObservableCollection<DedupeResult> LastDedupeGroups
+    private ObservableCollection<DedupeGroup> _lastDedupeGroups = [];
+    public ObservableCollection<DedupeGroup> LastDedupeGroups
     {
         get => _lastDedupeGroups;
         set { _lastDedupeGroups = value; OnPropertyChanged(); }
@@ -79,27 +79,7 @@ public sealed class RunViewModel : ObservableObject
     }
 
     internal static bool IsValidTransition(RunState from, RunState to)
-    {
-        if (from == to) return true;
-        return (from, to) switch
-        {
-            (RunState.Idle, RunState.Preflight) => true,
-            (RunState.Preflight, RunState.Scanning) => true,
-            (RunState.Scanning, RunState.Deduplicating) => true,
-            (RunState.Deduplicating, RunState.Sorting) => true,
-            (RunState.Sorting, RunState.Moving) => true,
-            (RunState.Moving, RunState.Converting) => true,
-            (RunState.Preflight or RunState.Scanning or RunState.Deduplicating or
-             RunState.Sorting or RunState.Moving or RunState.Converting,
-             RunState.Completed or RunState.CompletedDryRun or RunState.Failed or RunState.Cancelled) => true,
-            (RunState.Scanning, RunState.Sorting or RunState.Moving or RunState.Converting) => true,
-            (RunState.Deduplicating, RunState.Moving or RunState.Converting) => true,
-            (RunState.Sorting, RunState.Converting) => true,
-            (RunState.Completed or RunState.CompletedDryRun or RunState.Failed or RunState.Cancelled,
-             RunState.Idle or RunState.Preflight) => true,
-            _ => false,
-        };
-    }
+        => RunStateMachine.IsValidTransition(from, to);
 
     public bool IsBusy => _runState is RunState.Preflight or RunState.Scanning
         or RunState.Deduplicating or RunState.Sorting or RunState.Moving or RunState.Converting;
@@ -153,7 +133,15 @@ public sealed class RunViewModel : ObservableObject
 
     // ═══ PROGRESS & PERFORMANCE ═════════════════════════════════════════
     private double _progress;
-    public double Progress { get => _progress; set => SetProperty(ref _progress, value); }
+    public double Progress
+    {
+        get => _progress;
+        set
+        {
+            var clamped = Math.Clamp(value, 0d, 100d);
+            SetProperty(ref _progress, clamped);
+        }
+    }
 
     private string _progressText = "";
     public string ProgressText { get => _progressText; set => SetProperty(ref _progressText, value); }
@@ -264,8 +252,65 @@ public sealed class RunViewModel : ObservableObject
     private string _dashDatHits = "0";
     public string DashDatHits { get => _dashDatHits; set => SetProperty(ref _dashDatHits, value); }
 
+    private string _dashDatHave = "–";
+    public string DashDatHave { get => _dashDatHave; set => SetProperty(ref _dashDatHave, value); }
+
+    private string _dashDatWrongName = "–";
+    public string DashDatWrongName { get => _dashDatWrongName; set => SetProperty(ref _dashDatWrongName, value); }
+
+    private string _dashDatMiss = "–";
+    public string DashDatMiss { get => _dashDatMiss; set => SetProperty(ref _dashDatMiss, value); }
+
+    private string _dashDatUnknown = "–";
+    public string DashDatUnknown { get => _dashDatUnknown; set => SetProperty(ref _dashDatUnknown, value); }
+
+    private string _dashDatAmbiguous = "–";
+    public string DashDatAmbiguous { get => _dashDatAmbiguous; set => SetProperty(ref _dashDatAmbiguous, value); }
+
     private string _dedupeRate = "–";
     public string DedupeRate { get => _dedupeRate; set => SetProperty(ref _dedupeRate, value); }
+
+    // ═══ RUN SUMMARY ════════════════════════════════════════════════════
+    private string _runSummaryText = "";
+    public string RunSummaryText
+    {
+        get => _runSummaryText;
+        set
+        {
+            if (SetProperty(ref _runSummaryText, value))
+                OnPropertyChanged(nameof(HasRunSummary));
+        }
+    }
+
+    private UiErrorSeverity _runSummarySeverity = UiErrorSeverity.Info;
+    public UiErrorSeverity RunSummarySeverity
+    {
+        get => _runSummarySeverity;
+        set => SetProperty(ref _runSummarySeverity, value);
+    }
+
+    public bool HasRunSummary => !string.IsNullOrWhiteSpace(RunSummaryText);
+
+    // ═══ DISPLAY STATE ══════════════════════════════════════════════════
+    private bool _isResultPerfDetailsExpanded = true;
+    public bool IsResultPerfDetailsExpanded
+    {
+        get => _isResultPerfDetailsExpanded;
+        set => SetProperty(ref _isResultPerfDetailsExpanded, value);
+    }
+
+    public string RollbackActionHint => CanRollback
+        ? "Letzten Move-Lauf rückgängig machen (Ctrl+Z)"
+        : "Kein Rollback möglich: Es wurde keine gültige Audit-Datei gefunden.";
+
+    public bool HasRunData => _lastCandidates.Count > 0;
+
+    // ═══ ANALYSE DATA ═══════════════════════════════════════════════════
+    public ObservableCollection<ConsoleDistributionItem> ConsoleDistribution { get; } = [];
+    public ObservableCollection<DedupeGroupItem> DedupeGroupItems { get; } = [];
+
+    private string _moveConsequenceText = "";
+    public string MoveConsequenceText { get => _moveConsequenceText; set => SetProperty(ref _moveConsequenceText, value); }
 
     // ═══ STEP INDICATOR ═════════════════════════════════════════════════
     private int _currentStep;
@@ -334,43 +379,9 @@ public sealed class RunViewModel : ObservableObject
     public void TransitionTo(RunState newState) => CurrentRunState = newState;
 
     // ═══ RESULT METHODS ═════════════════════════════════════════════════
-
-    /// <summary>Apply run results from orchestrator to all dashboard/state properties.</summary>
-    public void ApplyRunResult(RunResult result, Action<string, string>? addLog = null)
-    {
-        LastRunResult = result;
-        LastCandidates = new ObservableCollection<RomCandidate>(result.AllCandidates);
-        LastDedupeGroups = new ObservableCollection<DedupeResult>(result.DedupeGroups);
-
-        Progress = 100;
-        DashWinners = result.WinnerCount.ToString();
-        DashDupes = result.LoserCount.ToString();
-        var junkCount = result.AllCandidates.Count(c => c.Category == "JUNK");
-        DashJunk = junkCount.ToString();
-        DashDuration = $"{result.DurationMs / 1000.0:F1}s";
-        var total = result.AllCandidates.Count;
-        HealthScore = total > 0 ? $"{100.0 * result.WinnerCount / total:F0}%" : "–";
-
-        var gameCount = result.DedupeGroups.Count;
-        DashGames = gameCount.ToString();
-        var datHits = result.AllCandidates.Count(c => c.DatMatch);
-        DashDatHits = datHits.ToString();
-        DedupeRate = gameCount > 0 ? $"{100.0 * result.LoserCount / (result.WinnerCount + result.LoserCount):F0}%" : "–";
-
-        if (result.Status == "blocked")
-        {
-            addLog?.Invoke(_loc.Format("Run.LogPreflight", result.Preflight?.Reason ?? ""), "ERROR");
-        }
-        else
-        {
-            addLog?.Invoke(_loc.Format("Run.LogScan", result.TotalFilesScanned), "INFO");
-            addLog?.Invoke(_loc.Format("Run.LogDedupe", result.WinnerCount, result.LoserCount, junkCount), "INFO");
-            if (result.MoveResult is { } mv)
-                addLog?.Invoke(_loc.Format("Run.LogMoved", mv.MoveCount, mv.FailCount), mv.FailCount > 0 ? "WARN" : "INFO");
-            if (result.ConvertedCount > 0)
-                addLog?.Invoke(_loc.Format("Run.LogConverted", result.ConvertedCount), "INFO");
-        }
-    }
+    // R-03/R-04: ApplyRunResult removed — it contained a divergent HealthScore formula
+    // (WinnerCount/Total vs FeatureService.CalculateHealthScore). XAML binds to
+    // MainViewModel.ApplyRunResult which uses the correct FeatureService formula.
 
     /// <summary>Complete a run.</summary>
     public void CompleteRun(bool success, bool dryRun, string? reportPath = null)
@@ -378,6 +389,10 @@ public sealed class RunViewModel : ObservableObject
         BusyHint = "";
         if (reportPath is not null)
             LastReportPath = reportPath;
+
+        if (CurrentRunState == RunState.Cancelled)
+            return;
+
         if (success && dryRun)
         {
             CurrentRunState = RunState.CompletedDryRun;
@@ -474,44 +489,13 @@ public sealed class RunViewModel : ObservableObject
         errorSummaryItems.Clear();
         _runLogStartIndex = Math.Min(_runLogStartIndex, logEntries.Count);
 
-        var issues = new List<UiError>();
-        foreach (var e in logEntries.Skip(_runLogStartIndex))
-        {
-            if (e.Level is "WARN")
-                issues.Add(new UiError("RUN-WARN", e.Text, UiErrorSeverity.Warning));
-            else if (e.Level is "ERROR")
-                issues.Add(new UiError("RUN-ERR", e.Text, UiErrorSeverity.Error));
-        }
+        var projected = ErrorSummaryProjection.Build(
+            LastRunResult,
+            LastCandidates,
+            logEntries.Skip(_runLogStartIndex));
 
-        if (LastRunResult is not null)
-        {
-            if (LastRunResult.Status == "blocked")
-                issues.Insert(0, new UiError("RUN-BLOCKED", $"Preflight: {LastRunResult.Preflight?.Reason}", UiErrorSeverity.Blocked));
-
-            if (LastRunResult.MoveResult is { FailCount: > 0 } mv)
-                issues.Insert(0, new UiError("IO-MOVE", $"{mv.FailCount} Dateien konnten nicht verschoben werden", UiErrorSeverity.Error));
-
-            var junk = LastCandidates.Count(c => c.Category == "JUNK");
-            if (junk > 0)
-                issues.Insert(0, new UiError("RUN-JUNK", $"{junk} Junk-Dateien erkannt", UiErrorSeverity.Warning));
-
-            var unverified = LastCandidates.Count(c => !c.DatMatch);
-            if (unverified > 0 && LastCandidates.Count > 0)
-                issues.Insert(0, new UiError("DAT-UNVERIFIED", $"{unverified}/{LastCandidates.Count} Dateien ohne DAT-Verifizierung", UiErrorSeverity.Info));
-        }
-
-        if (issues.Count == 0)
-        {
-            errorSummaryItems.Add(new UiError("RUN-OK", "Keine Fehler oder Warnungen.", UiErrorSeverity.Info));
-            if (LastRunResult is not null)
-                errorSummaryItems.Add(new UiError("RUN-STATS", $"Report geladen: {LastRunResult.WinnerCount} Winner, {LastRunResult.LoserCount} Dupes", UiErrorSeverity.Info));
-            return;
-        }
-
-        foreach (var issue in issues.Take(50))
+        foreach (var issue in projected)
             errorSummaryItems.Add(issue);
-        if (issues.Count > 50)
-            errorSummaryItems.Add(new UiError("RUN-TRUNC", $"… und {issues.Count - 50} weitere", UiErrorSeverity.Warning));
     }
 
     /// <summary>Set the log start index for the current run (used by PopulateErrorSummary).</summary>

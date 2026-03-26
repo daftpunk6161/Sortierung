@@ -117,9 +117,9 @@ public sealed class WpfCoverageBoostTests : IDisposable
     {
         var winners = new[] {
             new RomCandidate { MainPath = @"D:\Roms\SNES\game.sfc", GameKey = "Game", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME" },
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game },
             new RomCandidate { MainPath = @"D:\Roms\NES\mario.nes", GameKey = "Mario", Region = "US",
-                Extension = ".nes", SizeBytes = 512, Category = "GAME" }
+                Extension = ".nes", SizeBytes = 512, Category = FileCategory.Game }
         };
 
         var json = FeatureService.ExportRetroArchPlaylist(winners, "MyROMs");
@@ -146,7 +146,7 @@ public sealed class WpfCoverageBoostTests : IDisposable
     {
         var groups = new[]
         {
-            new DedupeResult
+            new DedupeGroup
             {
                 GameKey = "Game A",
                 Winner = new RomCandidate { MainPath = "a1.sfc", GameKey = "Game A", Region = "EU", Extension = ".sfc" },
@@ -161,7 +161,8 @@ public sealed class WpfCoverageBoostTests : IDisposable
     public void BuildCloneTree_EmptyGroups_ReturnsEmptyMessage()
     {
         var result = FeatureService.BuildCloneTree([]);
-        Assert.NotNull(result);
+        Assert.Contains("Parent/Clone-Baum", result);
+        Assert.DoesNotContain("►", result);
     }
 
     // ═══ ANALYSIS: BuildVirtualFolderPreview ════════════════════════════
@@ -172,9 +173,9 @@ public sealed class WpfCoverageBoostTests : IDisposable
         var candidates = new[]
         {
             new RomCandidate { MainPath = @"D:\Roms\SNES\game.sfc", GameKey = "Game", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME", ConsoleKey = "SNES" },
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game, ConsoleKey = "SNES" },
             new RomCandidate { MainPath = @"D:\Roms\NES\mario.nes", GameKey = "Mario", Region = "US",
-                Extension = ".nes", SizeBytes = 512, Category = "GAME", ConsoleKey = "NES" }
+                Extension = ".nes", SizeBytes = 512, Category = FileCategory.Game, ConsoleKey = "NES" }
         };
         var result = FeatureService.BuildVirtualFolderPreview(candidates);
         Assert.NotEmpty(result);
@@ -184,7 +185,8 @@ public sealed class WpfCoverageBoostTests : IDisposable
     public void BuildVirtualFolderPreview_Empty_ReturnsMessage()
     {
         var result = FeatureService.BuildVirtualFolderPreview([]);
-        Assert.NotNull(result);
+        Assert.Contains("Virtuelle Ordner-Vorschau", result);
+        Assert.DoesNotContain("📁", result);
     }
 
     // ═══ ANALYSIS: GetHardlinkEstimate ══════════════════════════════════
@@ -194,7 +196,7 @@ public sealed class WpfCoverageBoostTests : IDisposable
     {
         var groups = new[]
         {
-            new DedupeResult
+            new DedupeGroup
             {
                 GameKey = "Game",
                 Winner = new RomCandidate { MainPath = "a.sfc", GameKey = "Game", Region = "EU", Extension = ".sfc", SizeBytes = 1_000_000 },
@@ -209,7 +211,8 @@ public sealed class WpfCoverageBoostTests : IDisposable
     public void GetHardlinkEstimate_EmptyGroups_ReturnsMessage()
     {
         var result = FeatureService.GetHardlinkEstimate([]);
-        Assert.NotNull(result);
+        Assert.Contains("0 Links möglich", result);
+        Assert.Contains("0 B", result);
     }
 
     // ═══ ANALYSIS: GetDuplicateHeatmap ══════════════════════════════════
@@ -219,12 +222,12 @@ public sealed class WpfCoverageBoostTests : IDisposable
     {
         var groups = new[]
         {
-            new DedupeResult
+            new DedupeGroup
             {
                 GameKey = "A", Winner = new RomCandidate { MainPath = @"root\SNES\a.sfc", Region = "EU" },
                 Losers = [new RomCandidate { MainPath = @"root\SNES\b.sfc", Region = "US" }]
             },
-            new DedupeResult
+            new DedupeGroup
             {
                 GameKey = "B", Winner = new RomCandidate { MainPath = @"root\NES\c.nes", Region = "JP" },
                 Losers = []
@@ -413,9 +416,7 @@ public sealed class WpfCoverageBoostTests : IDisposable
 
     [Theory]
     [InlineData("Game (Beta)", true)]
-    [InlineData("Game (Beta)", false)]
     [InlineData("Game (Demo)", true)]
-    [InlineData("Game (Demo)", false)]
     [InlineData("Game (Sample)", true)]
     [InlineData("Game (Unl)", true)]
     [InlineData("Regular Game Name", false)]
@@ -424,8 +425,8 @@ public sealed class WpfCoverageBoostTests : IDisposable
         var result = FeatureService.GetJunkReason(name, aggressive: true);
         if (expectJunk)
             Assert.NotNull(result);
-        else if (result != null)
-            Assert.NotNull(result); // May or may not be junk depending on exact rules
+        else
+            Assert.Null(result);
     }
 
     [Fact]
@@ -442,8 +443,8 @@ public sealed class WpfCoverageBoostTests : IDisposable
     {
         var candidates = new[]
         {
-            new RomCandidate { MainPath = "game.sfc", GameKey = "Game", Category = "GAME", Region = "EU" },
-            new RomCandidate { MainPath = "demo.sfc", GameKey = "Demo (Beta)", Category = "JUNK", Region = "US" }
+            new RomCandidate { MainPath = "game.sfc", GameKey = "Game", Category = FileCategory.Game, Region = "EU" },
+            new RomCandidate { MainPath = "demo.sfc", GameKey = "Demo (Beta)", Category = FileCategory.Junk, Region = "US" }
         };
         var report = FeatureService.BuildJunkReport(candidates, aggressive: true);
         Assert.NotEmpty(report);
@@ -453,7 +454,8 @@ public sealed class WpfCoverageBoostTests : IDisposable
     public void BuildJunkReport_NoCandidates_ReturnsMessage()
     {
         var report = FeatureService.BuildJunkReport([], aggressive: false);
-        Assert.NotNull(report);
+        Assert.Contains("Junk-Klassifizierungsbericht", report);
+        Assert.Contains("Gesamt: 0 Junk-Dateien", report);
     }
 
     // ═══ EXPORT: ExportCollectionCsv ════════════════════════════════════
@@ -464,7 +466,7 @@ public sealed class WpfCoverageBoostTests : IDisposable
         var candidates = new[]
         {
             new RomCandidate { MainPath = "game.sfc", GameKey = "Game", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME", ConsoleKey = "SNES" }
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game, ConsoleKey = "SNES" }
         };
         var csv = FeatureService.ExportCollectionCsv(candidates);
         Assert.Contains("Dateiname", csv);
@@ -479,7 +481,7 @@ public sealed class WpfCoverageBoostTests : IDisposable
         var candidates = new[]
         {
             new RomCandidate { MainPath = "game.sfc", GameKey = "Game", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME", ConsoleKey = "SNES" }
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game, ConsoleKey = "SNES" }
         };
         var csv = FeatureService.ExportCollectionCsv(candidates, ',');
         Assert.Contains(",", csv);
@@ -493,7 +495,7 @@ public sealed class WpfCoverageBoostTests : IDisposable
         var candidates = new[]
         {
             new RomCandidate { MainPath = "game.sfc", GameKey = "Game", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME", ConsoleKey = "SNES" }
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game, ConsoleKey = "SNES" }
         };
         var xml = FeatureService.ExportExcelXml(candidates);
         Assert.Contains("Workbook", xml);
@@ -558,8 +560,13 @@ public sealed class WpfCoverageBoostTests : IDisposable
     public void LoadLocale_UnknownLocale_ReturnsEmptyOrDefault()
     {
         var result = FeatureService.LoadLocale("xx-XX");
-        // May return empty dict or default
+        var fallback = FeatureService.LoadLocale("de");
+
         Assert.NotNull(result);
+        if (fallback.Count > 0)
+            Assert.Equal(fallback.Count, result.Count);
+        else
+            Assert.Empty(result);
     }
 
     // ═══ FeatureService: FormatSize ═════════════════════════════════════
@@ -715,9 +722,9 @@ public sealed class WpfCoverageBoostTests : IDisposable
         var candidates = new[]
         {
             new RomCandidate { MainPath = "game.iso", GameKey = "Game", Region = "EU",
-                Extension = ".iso", SizeBytes = 700_000_000, Category = "GAME" },
+                Extension = ".iso", SizeBytes = 700_000_000, Category = FileCategory.Game },
             new RomCandidate { MainPath = "other.sfc", GameKey = "Other", Region = "US",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME" }
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game }
         };
         var result = FeatureService.GetConversionEstimate(candidates);
         Assert.NotNull(result);
@@ -859,8 +866,8 @@ public sealed class WpfCoverageBoostTests : IDisposable
     {
         var candidates = new[]
         {
-            new RomCandidate { MainPath = "a.sfc", GameKey = "A", Region = "EU", Extension = ".sfc", SizeBytes = 1024, Category = "GAME" },
-            new RomCandidate { MainPath = "b.sfc", GameKey = "B", Region = "US", Extension = ".sfc", SizeBytes = 2048, Category = "GAME" }
+            new RomCandidate { MainPath = "a.sfc", GameKey = "A", Region = "EU", Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game },
+            new RomCandidate { MainPath = "b.sfc", GameKey = "B", Region = "US", Extension = ".sfc", SizeBytes = 2048, Category = FileCategory.Game }
         };
         var result = FeatureService.ApplyFilter(candidates, "region", "eq", "EU");
         Assert.Single(result);
@@ -965,6 +972,7 @@ public sealed class WpfCoverageBoostTests : IDisposable
     {
         public AppTheme Current => AppTheme.Dark;
         public bool IsDark => true;
+        public IReadOnlyList<AppTheme> AvailableThemes => [AppTheme.Dark];
         public void ApplyTheme(AppTheme theme) { }
         public void ApplyTheme(bool dark) { }
         public void Toggle() { }
@@ -982,5 +990,6 @@ public sealed class WpfCoverageBoostTests : IDisposable
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => defaultValue;
         public void ShowText(string title, string content) { }
         public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
+        public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => true;
     }
 }

@@ -1,0 +1,6 @@
+[
+  { "Input": "Game (USA)", "Expected": "US" },
+  { "Input": "Game (Europe)", "Expected": "EU" },
+  { "Input": "Game (Japan)", "Expected": "JP" },
+  { "Input": "Game (World)", "Expected": "WORLD" }
+]

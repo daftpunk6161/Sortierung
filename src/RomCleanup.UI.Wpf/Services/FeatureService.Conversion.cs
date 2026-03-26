@@ -54,14 +54,21 @@ public static partial class FeatureService
     }
 
 
-    internal static string? GetTargetFormat(string ext) => ext switch
+    internal static string? GetTargetFormat(string ext)
     {
-        "bin" or "cue" or "iso" or "cso" or "pbp" => "chd",
-        "gcz" or "wbfs" or "nkit" => "rvz",
-        "zip" => "7z",
-        "rar" => "7z",
-        _ => null
-    };
+        // TASK-054: Read from externalized ui-lookups.json; fall back to hardcoded map.
+        if (UiLookupData.Instance.ExtensionTargetFormats.TryGetValue(ext, out var target))
+            return target;
+
+        return ext switch
+        {
+            "bin" or "cue" or "iso" or "cso" or "pbp" => "chd",
+            "gcz" or "wbfs" or "nkit" => "rvz",
+            "zip" => "7z",
+            "rar" => "7z",
+            _ => null
+        };
+    }
 
 
     // ═══ CONVERSION VERIFY ══════════════════════════════════════════════

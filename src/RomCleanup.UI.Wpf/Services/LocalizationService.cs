@@ -21,8 +21,13 @@ public sealed class LocalizationService : ILocalizationService
         LoadStrings("de");
     }
 
-    public string this[string key] =>
-        _strings.TryGetValue(key, out var value) ? value : $"[{key}]";
+    // Some WPF dependency properties default to TwoWay binding.
+    // A no-op setter keeps accidental TwoWay bindings from crashing at startup.
+    public string this[string key]
+    {
+        get => _strings.TryGetValue(key, out var value) ? value : $"[{key}]";
+        set { /* intentionally ignored */ }
+    }
 
     public string CurrentLocale => _currentLocale;
 

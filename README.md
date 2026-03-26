@@ -1,6 +1,17 @@
-# RomCleanup
+# Romulus
 
-> C# .NET 10 Tool zur ROM-Sammlungsverwaltung: regionsbasierte Deduplizierung, Entrümpelung, Formatkonvertierung, DAT-basierte Verifizierung und Konsolen-Sortierung. Drei unabhängige Entry Points: **GUI** (WPF/XAML), **CLI** (headless/CI), **REST API** (ASP.NET Core Minimal API).
+<p align="center">
+  <img src="assets/logo/romulus-banner.svg" alt="Romulus Banner" width="100%"/>
+</p>
+
+<p align="center">
+  <strong>Your Collection, Perfected.</strong><br/>
+  C# .NET 10 Tool zur ROM-Sammlungsverwaltung: regionsbasierte Deduplizierung, Entrümpelung, Formatkonvertierung, DAT-basierte Verifizierung und Konsolen-Sortierung.
+</p>
+
+<p align="center">
+  <strong>GUI</strong> (WPF/XAML) · <strong>CLI</strong> (headless/CI) · <strong>REST API</strong> (ASP.NET Core Minimal API)
+</p>
 
 ---
 
@@ -104,7 +115,7 @@ src/
 ├── RomCleanup.Contracts/        # Port-Interfaces, Models, Error-Contracts
 │   ├── Errors/                  #   OperationError, ErrorKind, ErrorClassifier
 │   ├── Models/                  #   RomCandidate, DatIndex, Settings, DTOs
-│   └── Ports/                   #   IFileSystem, IAuditStore, IDatRepository, ...
+│   └── Ports/                   #   IFileSystem, IAuditStore, IToolRunner, ...
 ├── RomCleanup.Core/             # Pure Domain Logic (keine I/O-Deps)
 │   ├── Caching/                 #   LruCache<TKey,TValue>
 │   ├── Classification/          #   ConsoleDetector, FileClassifier, ExtensionNormalizer
@@ -135,7 +146,25 @@ src/
 │   ├── Services/                #   ThemeService, DialogService, SettingsService
 │   ├── Converters/              #   WPF Value Converters
 │   └── Themes/                  #   ResourceDictionary (Dark + Neon Accent)
-└── RomCleanup.Tests/            # xUnit Tests (3090+ Tests, 72 Testdateien)
+└── RomCleanup.Tests/            # xUnit Tests (5200+ Tests)
+
+docs/                            # Permanente Referenzdokumentation
+├── architecture/                #   Technische Specs, Architektur, API, OpenAPI, Strategien
+├── adrs/                        #   Architecture Decision Records (0001–0017)
+├── guides/                      #   User Handbook, FAQ, Naming Guide, Review Checklist
+├── product/                     #   Produkt-Analyse & Entscheidungen
+├── ux/                          #   UX/GUI-Design & A11y-Testpläne
+└── screenshots/                 #   UI-Screenshots
+
+plan/                            #   Aktive Implementierungspläne
+├── feature-conversion-*.md      #   Conversion Engine Plan (In Progress)
+└── feature-benchmark-*.md       #   Benchmark Expansion Plans
+
+archive/                         #   Historische/abgeschlossene Dokumente
+├── audits/                      #   Fertige Code-/Security-/Bug-Audits
+├── completed/                   #   Erledigte Tracker & Checklisten
+├── legacy/                      #   PowerShell-Ära Dokumente
+└── powershell/                  #   Archivierter PS-Quellcode
 ```
 
 ---
@@ -172,7 +201,7 @@ Clean Architecture (Ports & Adapters). Abhängigkeiten nur abwärts:
 # Build
 dotnet build src/RomCleanup.sln
 
-# Alle Tests (3090+)
+# Alle Tests (5200+)
 dotnet test src/RomCleanup.sln
 
 # Einzelnes Testprojekt

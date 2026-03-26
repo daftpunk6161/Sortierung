@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Romulus Logo-Galerie — 80 Varianten</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0A0118; color: #E5E7EB; font-family: 'Segoe UI', sans-serif; padding: 2rem; }
+  h1 { text-align: center; font-size: 2.5rem; font-weight: 200; letter-spacing: 0.5rem; color: #A78BFA; margin-bottom: 0.5rem; }
+  .subtitle { text-align: center; font-size: 0.9rem; color: #6B7280; margin-bottom: 2rem; letter-spacing: 0.2rem; }
+  .filters { text-align: center; margin-bottom: 2rem; display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+  .filters button { background: #1E1B4B; color: #A78BFA; border: 1px solid #312E81; padding: 0.4rem 1rem; border-radius: 999px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+  .filters button:hover, .filters button.active { background: #6B21A8; color: white; border-color: #6B21A8; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; max-width: 1600px; margin: 0 auto; }
+  .card { background: #1C1917; border-radius: 16px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; border: 1px solid transparent; }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(139, 92, 246, 0.2); border-color: #6B21A8; }
+  .card.selected { border: 2px solid #06B6D4; box-shadow: 0 0 20px rgba(6, 182, 212, 0.3); }
+  .card img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #111; display: block; }
+  .card-info { padding: 0.75rem 1rem; }
+  .card-info .num { color: #6B7280; font-size: 0.75rem; font-family: 'Courier New', monospace; }
+  .card-info .name { color: #E5E7EB; font-size: 0.9rem; font-weight: 600; margin-top: 0.2rem; }
+  .card-info .tags { margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .card-info .tag { background: #27272A; color: #9CA3AF; font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 999px; }
+  .selection-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1E1B4B; padding: 1rem 2rem; display: none; align-items: center; justify-content: space-between; border-top: 1px solid #312E81; z-index: 100; }
+  .selection-bar.visible { display: flex; }
+  .selection-bar .count { color: #06B6D4; font-weight: 700; }
+  .selection-bar .selected-list { color: #A78BFA; font-size: 0.85rem; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .selection-bar button { background: #06B6D4; color: #0A0118; border: none; padding: 0.5rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 700; }
+  footer { text-align: center; margin-top: 3rem; padding-bottom: 4rem; color: #4B5563; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<h1>ROMULUS</h1>
+<p class="subtitle">Logo-Varianten Galerie — Klicke zum Auswählen, dann vergleichen</p>
+
+<div class="filters">
+  <button class="active" onclick="filterAll()">Alle (80)</button>
+  <button onclick="filterTag('wolf')">Wolf</button>
+  <button onclick="filterTag('prism')">Prism</button>
+  <button onclick="filterTag('pixel')">Pixel Art</button>
+  <button onclick="filterTag('tier')">Andere Tiere</button>
+  <button onclick="filterTag('retro')">Retro</button>
+  <button onclick="filterTag('modern')">Modern</button>
+  <button onclick="filterTag('roman')">Römisch</button>
+  <button onclick="filterTag('luxury')">Luxury</button>
+  <button onclick="filterTag('neon')">Neon/Cyber</button>
+  <button onclick="filterTag('objekt')">Objekte</button>
+</div>
+
+<div class="grid" id="gallery"></div>
+
+<div class="selection-bar" id="selectionBar">
+  <div>
+    <span class="count" id="selCount">0</span> ausgewählt:
+    <span class="selected-list" id="selList"></span>
+  </div>
+  <button onclick="clearSelection()">Auswahl leeren</button>
+</div>
+
+<footer>Romulus Rebranding — 80 Logo-Varianten zum Vergleichen und Auswählen</footer>
+
+<script>
+const variants = [
+  { num: "01", name: "Wolf Synthwave", file: "01-wolf-synthwave.svg", tags: ["wolf", "neon", "retro"] },
+  { num: "02", name: "Wolf Amber Fire", file: "02-wolf-amber-fire.svg", tags: ["wolf", "luxury"] },
+  { num: "03", name: "Wolf Vintage Cream", file: "03-wolf-vintage-cream.svg", tags: ["wolf", "retro"] },
+  { num: "04", name: "Wolf Matrix Green", file: "04-wolf-matrix-green.svg", tags: ["wolf", "neon", "retro"] },
+  { num: "05", name: "Wolf Neon Pink", file: "05-wolf-neon-pink.svg", tags: ["wolf", "neon"] },
+  { num: "06", name: "Pixel Wolf Crimson-Gold", file: "06-pixel-wolf-crimson-gold.svg", tags: ["wolf", "pixel"] },
+  { num: "07", name: "Pixel Wolf Sepia", file: "07-pixel-wolf-sepia-parchment.svg", tags: ["wolf", "pixel", "retro"] },
+  { num: "08", name: "Pixel Wolf Deep Ocean", file: "08-pixel-wolf-deep-ocean.svg", tags: ["wolf", "pixel"] },
+  { num: "09", name: "Pixel Wolf Monochrome", file: "09-pixel-wolf-monochrome.svg", tags: ["wolf", "pixel", "modern"] },
+  { num: "10", name: "Pixel Wolf Sunset", file: "10-pixel-wolf-sunset.svg", tags: ["wolf", "pixel", "retro"] },
+  { num: "11", name: "Pixel Eagle Gold", file: "11-pixel-eagle-gold.svg", tags: ["pixel", "tier"] },
+  { num: "12", name: "Pixel Roman Helmet", file: "12-pixel-roman-helmet.svg", tags: ["pixel", "roman", "objekt"] },
+  { num: "13", name: "Pixel Cartridge Chip", file: "13-pixel-cartridge-chip.svg", tags: ["pixel", "objekt", "retro"] },
+  { num: "14", name: "Geo Lion Purple-Pink", file: "14-geo-lion-purple-pink.svg", tags: ["tier", "modern", "neon"] },
+  { num: "15", name: "Lupa She-Wolf Myth", file: "15-lupa-she-wolf-myth.svg", tags: ["wolf", "roman"] },
+  { num: "16", name: "Pixel Dragon Fire", file: "16-pixel-dragon-fire.svg", tags: ["pixel", "tier", "retro"] },
+  { num: "17", name: "Wolf Vaporwave", file: "17-wolf-vaporwave.svg", tags: ["wolf", "neon", "retro"] },
+  { num: "18", name: "Wolf Art Deco Gold", file: "18-wolf-art-deco-gold.svg", tags: ["wolf", "luxury"] },
+  { num: "19", name: "Wolf Brutalist Red", file: "19-wolf-brutalist-red.svg", tags: ["wolf", "modern"] },
+  { num: "20", name: "Wolf Frost Ice Blue", file: "20-wolf-frost-ice-blue.svg", tags: ["wolf", "modern"] },
+  { num: "21", name: "Roman Coin Wolf Profile", file: "21-roman-coin-wolf-profile.svg", tags: ["wolf", "roman", "luxury"] },
+  { num: "22", name: "Wolf Kawaii Pastel", file: "22-wolf-kawaii-pastel.svg", tags: ["wolf", "modern"] },
+  { num: "23", name: "Wolf CRT Terminal", file: "23-wolf-crt-terminal.svg", tags: ["wolf", "retro", "objekt"] },
+  { num: "24", name: "Wolf Cyberpunk Neon", file: "24-wolf-cyberpunk-neon.svg", tags: ["wolf", "neon"] },
+  { num: "25", name: "Pixel Phoenix Fire", file: "25-pixel-phoenix-fire.svg", tags: ["pixel", "tier"] },
+  { num: "26", name: "Wolf Luxury Black-Gold", file: "26-wolf-luxury-black-gold.svg", tags: ["wolf", "luxury", "modern"] },
+  { num: "27", name: "Arcade Cabinet Purple", file: "27-arcade-cabinet-purple.svg", tags: ["objekt", "retro", "neon"] },
+  { num: "28", name: "Wolf Retro 70s Sunset", file: "28-wolf-retro-70s-sunset.svg", tags: ["wolf", "retro"] },
+  { num: "29", name: "Gamepad Controller Retro", file: "29-gamepad-controller-retro.svg", tags: ["objekt", "retro"] },
+  { num: "30", name: "Wolf Constellation Galaxy", file: "30-wolf-constellation-galaxy.svg", tags: ["wolf", "neon"] },
+  { num: "31", name: "Pixel Owl Wisdom", file: "31-pixel-owl-wisdom.svg", tags: ["pixel", "tier"] },
+  { num: "32", name: "Wolf Japanese Enso", file: "32-wolf-japanese-enso.svg", tags: ["wolf", "modern"] },
+  { num: "33", name: "ROM Chip Circuit", file: "33-rom-chip-circuit.svg", tags: ["objekt", "modern", "neon"] },
+  { num: "34", name: "Geo Fox Forest", file: "34-geo-fox-forest.svg", tags: ["tier", "modern"] },
+  { num: "35", name: "Pixel Bear Grumpy", file: "35-pixel-bear-grumpy.svg", tags: ["pixel", "tier"] },
+  { num: "36", name: "Wolf RGB Glitch", file: "36-wolf-rgb-glitch.svg", tags: ["wolf", "neon"] },
+  { num: "37", name: "Roman Banner SPQR", file: "37-roman-banner-spqr.svg", tags: ["roman", "wolf", "luxury"] },
+  { num: "38", name: "Wolf Rubber Stamp", file: "38-wolf-rubber-stamp.svg", tags: ["wolf", "retro", "objekt"] },
+  { num: "39", name: "Wolf Holographic Prism", file: "39-wolf-holographic-prism.svg", tags: ["wolf", "neon", "modern"] },
+  { num: "40", name: "Wolf Blueprint Technical", file: "40-wolf-blueprint-technical.svg", tags: ["wolf", "modern", "objekt"] },
+  { num: "41", name: "Wolf App Icon Indigo", file: "41-wolf-app-icon-indigo.svg", tags: ["wolf", "modern"] },
+  { num: "42", name: "Pixel Sword+Shield RPG", file: "42-pixel-sword-shield-rpg.svg", tags: ["pixel", "objekt"] },
+  { num: "43", name: "Wolf Neon Outline Minimal", file: "43-wolf-neon-outline-minimal.svg", tags: ["wolf", "neon", "modern"] },
+  { num: "44", name: "VHS Retro Cover", file: "44-vhs-retro-cover.svg", tags: ["wolf", "retro", "objekt"] },
+  { num: "45", name: "Wolf Modern Flat Coral", file: "45-wolf-modern-flat-coral.svg", tags: ["wolf", "modern"] },
+  { num: "46", name: "Pixel Spaceship Fleet", file: "46-pixel-spaceship-fleet.svg", tags: ["pixel", "objekt"] },
+  { num: "47", name: "Heraldic Crest Wolf", file: "47-heraldic-crest-wolf.svg", tags: ["wolf", "roman", "luxury"] },
+  { num: "48", name: "Sci-Fi Helmet HUD", file: "48-scifi-helmet-hud.svg", tags: ["wolf", "neon", "objekt"] },
+  { num: "49", name: "Gameboy DMG Wolf", file: "49-gameboy-dmg-wolf.svg", tags: ["pixel", "retro", "objekt"] },
+  { num: "50", name: "Synthwave Wolf Ultimate", file: "50-synthwave-wolf-ultimate.svg", tags: ["wolf", "neon", "retro"] },
+  { num: "51", name: "Prism Wolf Big", file: "51-prism-wolf-big.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "52", name: "Prism Wolf Gradient Fill", file: "52-prism-wolf-gradient-fill.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "53", name: "Prism Wolf Double Glow Eyes", file: "53-prism-wolf-double-glow-eyes.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "54", name: "Prism Wolf Warm Spectrum", file: "54-prism-wolf-warm-spectrum.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "55", name: "Prism Wolf Dual Rays", file: "55-prism-wolf-dual-rays.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "56", name: "Prism Wolf Outline Only", file: "56-prism-wolf-outline-only.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "57", name: "Prism Wolf Diamond", file: "57-prism-wolf-diamond.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "58", name: "Prism Wolf Shattered", file: "58-prism-wolf-shattered.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "59", name: "Prism Wolf Inverted", file: "59-prism-wolf-inverted.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "60", name: "Prism Wolf Hexagon", file: "60-prism-wolf-hexagon.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "61", name: "Prism Wolf Howling", file: "61-prism-wolf-howling.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "62", name: "Prism Wolf Light Theme", file: "62-prism-wolf-light-theme.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "63", name: "Prism Wolf Triple Nested", file: "63-prism-wolf-triple-nested.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "64", name: "Prism Wolf Half-Fill", file: "64-prism-wolf-half-fill.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "65", name: "Prism Wolf Cascade Dual", file: "65-prism-wolf-cascade-dual.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "66", name: "Prism Wolf IS Prism", file: "66-prism-wolf-IS-prism.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "67", name: "Prism Wolf Dark Side", file: "67-prism-wolf-dark-side.svg", tags: ["wolf", "prism"] },
+  { num: "68", name: "Prism Wolf Violet Dream", file: "68-prism-wolf-violet-dream.svg", tags: ["wolf", "prism", "luxury"] },
+  { num: "69", name: "Prism Wolf Pentagon", file: "69-prism-wolf-pentagon.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "70", name: "Prism Wolf Dashed", file: "70-prism-wolf-dashed.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "71", name: "Prism Wolf Curved Rays", file: "71-prism-wolf-curved-rays.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "72", name: "Prism Wolf Ocean Teal", file: "72-prism-wolf-ocean-teal.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "73", name: "Prism Wolf Fade Stars", file: "73-prism-wolf-fade-stars.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "74", name: "Prism Wolf Rotation Echo", file: "74-prism-wolf-rotation-echo.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "75", name: "Prism Wolf Fire Ember", file: "75-prism-wolf-fire-ember.svg", tags: ["wolf", "prism", "luxury"] },
+  { num: "76", name: "Prism Wolf Side Profile", file: "76-prism-wolf-side-profile.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "77", name: "Prism Wolf Bold Minimal", file: "77-prism-wolf-bold-minimal.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "78", name: "Prism Wolf Circle Frame", file: "78-prism-wolf-circle-frame.svg", tags: ["wolf", "prism", "modern"] },
+  { num: "79", name: "Prism Wolf Ultra Dark", file: "79-prism-wolf-ultra-dark.svg", tags: ["wolf", "prism", "neon"] },
+  { num: "80", name: "Prism Wolf Perfect Balance", file: "80-prism-wolf-perfect-balance.svg", tags: ["wolf", "prism", "neon"] }
+];
+
+const selected = new Set();
+let activeFilter = null;
+
+function render() {
+  const gallery = document.getElementById("gallery");
+  gallery.innerHTML = "";
+  const filtered = activeFilter ? variants.filter(v => v.tags.includes(activeFilter)) : variants;
+  filtered.forEach(v => {
+    const card = document.createElement("div");
+    card.className = "card" + (selected.has(v.num) ? " selected" : "");
+    card.dataset.num = v.num;
+    card.onclick = () => toggleSelect(v.num);
+    card.innerHTML = `
+      <img src="variants/${v.file}" alt="${v.name}" loading="lazy">
+      <div class="card-info">
+        <div class="num">#${v.num}</div>
+        <div class="name">${v.name}</div>
+        <div class="tags">${v.tags.map(t => `<span class="tag">${t}</span>`).join("")}</div>
+      </div>
+    `;
+    gallery.appendChild(card);
+  });
+  updateSelectionBar();
+}
+
+function toggleSelect(num) {
+  if (selected.has(num)) selected.delete(num); else selected.add(num);
+  render();
+}
+
+function clearSelection() {
+  selected.clear();
+  render();
+}
+
+function updateSelectionBar() {
+  const bar = document.getElementById("selectionBar");
+  const count = document.getElementById("selCount");
+  const list = document.getElementById("selList");
+  if (selected.size > 0) {
+    bar.classList.add("visible");
+    count.textContent = selected.size;
+    const names = [...selected].sort().map(n => {
+      const v = variants.find(x => x.num === n);
+      return `#${n} ${v ? v.name : ""}`;
+    });
+    list.textContent = names.join(" · ");
+  } else {
+    bar.classList.remove("visible");
+  }
+}
+
+function filterAll() {
+  activeFilter = null;
+  document.querySelectorAll(".filters button").forEach(b => b.classList.remove("active"));
+  document.querySelector(".filters button").classList.add("active");
+  render();
+}
+
+function filterTag(tag) {
+  activeFilter = tag;
+  document.querySelectorAll(".filters button").forEach(b => b.classList.remove("active"));
+  event.target.classList.add("active");
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

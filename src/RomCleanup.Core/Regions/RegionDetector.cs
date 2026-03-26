@@ -190,7 +190,7 @@ public static class RegionDetector
         if (foundRegions.Count == 0) return null;
         if (foundRegions.Count > 1) return Regions.World;
 
-        return foundRegions.First();
+        return foundRegions.Single();
     }
 
     private static readonly Dictionary<string, string> RegionTokenMap = new(StringComparer.OrdinalIgnoreCase)

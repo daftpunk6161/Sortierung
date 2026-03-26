@@ -18,10 +18,15 @@ public partial class DangerConfirmDialog : Window
     /// </summary>
     public static bool Show(string title, string message, string confirmText, string buttonLabel = "Bestätigen", Window? owner = null)
     {
-        var dlg = new DangerConfirmDialog
-        {
-            Owner = owner
-        };
+        // Guard: don't set Owner if the window is closing or not visible
+        if (owner is not null && (!owner.IsLoaded || !owner.IsVisible))
+            owner = null;
+
+        var dlg = new DangerConfirmDialog();
+        if (owner is not null)
+            dlg.Owner = owner;
+        else
+            dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         dlg._confirmText = confirmText;
         dlg.txtTitle.Text = title;
         dlg.txtMessage.Text = message;

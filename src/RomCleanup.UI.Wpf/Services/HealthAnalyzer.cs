@@ -8,7 +8,7 @@ public sealed class HealthAnalyzer : IHealthAnalyzer
     public int CalculateHealthScore(int totalFiles, int dupes, int junk, int verified)
         => FeatureService.CalculateHealthScore(totalFiles, dupes, junk, verified);
 
-    public List<HeatmapEntry> GetDuplicateHeatmap(IReadOnlyList<DedupeResult> groups)
+    public List<HeatmapEntry> GetDuplicateHeatmap(IReadOnlyList<DedupeGroup> groups)
         => FeatureService.GetDuplicateHeatmap(groups);
 
     public List<DuplicateSourceEntry> GetDuplicateInspector(string? auditPath)
@@ -20,13 +20,13 @@ public sealed class HealthAnalyzer : IHealthAnalyzer
     public string AnalyzeStorageTiers(IReadOnlyList<RomCandidate> candidates, int hotThresholdDays = 30)
         => FeatureService.AnalyzeStorageTiers(candidates, hotThresholdDays);
 
-    public string GetHardlinkEstimate(IReadOnlyList<DedupeResult> groups)
+    public string GetHardlinkEstimate(IReadOnlyList<DedupeGroup> groups)
         => FeatureService.GetHardlinkEstimate(groups);
 
     public string GetNasInfo(IReadOnlyList<string> roots)
         => FeatureService.GetNasInfo(roots);
 
-    public string BuildCloneTree(IReadOnlyList<DedupeResult> groups)
+    public string BuildCloneTree(IReadOnlyList<DedupeGroup> groups)
         => FeatureService.BuildCloneTree(groups);
 
     public string BuildVirtualFolderPreview(IReadOnlyList<RomCandidate> candidates)

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="vaporGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF6AD5"/>
+      <stop offset="50%" stop-color="#C774E8"/>
+      <stop offset="100%" stop-color="#94D0FF"/>
+    </linearGradient>
+    <linearGradient id="sunsetGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#0D0221"/>
+      <stop offset="40%" stop-color="#261447"/>
+      <stop offset="100%" stop-color="#AD1457"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="url(#sunsetGrad)"/>
+  <!-- Vaporwave grid floor -->
+  <g opacity="0.3" stroke="#FF6AD5" stroke-width="0.5">
+    <line x1="0" y1="180" x2="256" y2="180"/>
+    <line x1="0" y1="200" x2="256" y2="200"/>
+    <line x1="0" y1="224" x2="256" y2="224"/>
+    <line x1="0" y1="180" x2="40" y2="256"/>
+    <line x1="64" y1="180" x2="80" y2="256"/>
+    <line x1="128" y1="180" x2="128" y2="256"/>
+    <line x1="192" y1="180" x2="176" y2="256"/>
+    <line x1="256" y1="180" x2="216" y2="256"/>
+  </g>
+  <!-- Vaporwave sun -->
+  <circle cx="128" cy="110" r="50" fill="#FF6AD5" opacity="0.5"/>
+  <circle cx="128" cy="110" r="40" fill="#C774E8" opacity="0.6"/>
+  <circle cx="128" cy="110" r="30" fill="#FF6AD5" opacity="0.7"/>
+  <!-- Horizontal stripes through sun -->
+  <rect x="78" y="100" width="100" height="3" fill="#261447" opacity="0.5"/>
+  <rect x="78" y="108" width="100" height="4" fill="#261447" opacity="0.5"/>
+  <rect x="78" y="118" width="100" height="5" fill="#261447" opacity="0.5"/>
+  <rect x="78" y="130" width="100" height="7" fill="#261447" opacity="0.5"/>
+  <!-- Wolf silhouette over sun -->
+  <g transform="translate(128,100) scale(0.35)">
+    <!-- Ears -->
+    <polygon points="-70,-110 -45,-60 -20,-110" fill="#0D0221"/>
+    <polygon points="20,-110 45,-60 70,-110" fill="#0D0221"/>
+    <!-- Head -->
+    <circle cx="0" cy="-40" r="55" fill="#0D0221"/>
+    <!-- Snout -->
+    <ellipse cx="0" cy="-10" rx="25" ry="20" fill="#0D0221"/>
+    <!-- Eyes - glowing -->
+    <ellipse cx="-18" cy="-45" rx="7" ry="4" fill="#FF6AD5"/>
+    <ellipse cx="18" cy="-45" rx="7" ry="4" fill="#94D0FF"/>
+  </g>
+  <text x="128" y="165" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="28" font-weight="100" fill="url(#vaporGrad)" letter-spacing="12">ROMULUS</text>
+  <text x="128" y="183" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="8" fill="#94D0FF" opacity="0.7" letter-spacing="4">YOUR COLLECTION, PERFECTED.</text>
+</svg>

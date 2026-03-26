@@ -14,4 +14,8 @@
     <ProjectReference Include="..\RomCleanup.Infrastructure\RomCleanup.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="RomCleanup.Tests" />
+  </ItemGroup>
+
 </Project>

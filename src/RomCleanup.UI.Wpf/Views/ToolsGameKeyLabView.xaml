@@ -1,0 +1,32 @@
+<UserControl x:Class="RomCleanup.UI.Wpf.Views.ToolsGameKeyLabView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+  <!-- Extracted from SettingsView "System > GameKey-Vorschau" section -->
+  <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
+    <StackPanel>
+      <TextBlock Text="{Binding Loc[Settings.SectionGameKey]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="130"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="120"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="6"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Label Grid.Row="0" Grid.Column="0" Content="{Binding Loc[Settings.GameKeyTitleLabel]}" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding GameKeyPreviewInput, UpdateSourceTrigger=PropertyChanged}"
+                 Margin="{DynamicResource SpaceRightSM}" ToolTip="{Binding Loc[Settings.GameKeyTitleTip]}"
+                 AutomationProperties.Name="{Binding Loc[Settings.GameKeyTitleName]}"/>
+        <Button Grid.Row="0" Grid.Column="2" Command="{Binding GameKeyPreviewCommand}" Content="{Binding Loc[Settings.GameKeyPreview]}" Width="110"
+                AutomationProperties.Name="{Binding Loc[Settings.GameKeyPreviewName]}"/>
+        <Label Grid.Row="2" Grid.Column="0" Content="{Binding Loc[Settings.GameKeyLabel]}" VerticalAlignment="Center"/>
+        <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                   Text="{Binding GameKeyPreviewOutput}" Foreground="{DynamicResource BrushAccentCyan}" TextTrimming="CharacterEllipsis"/>
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

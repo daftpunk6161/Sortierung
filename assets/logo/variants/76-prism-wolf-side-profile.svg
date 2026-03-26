@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="holo76" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="25%" stop-color="#8B5CF6"/>
+      <stop offset="50%" stop-color="#EC4899"/>
+      <stop offset="75%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <filter id="glow76">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#0D0D16"/>
+  <!-- Wolf profile (side view) inside prism -->
+  <!-- Prism larger -->
+  <polygon points="128,22 52,155 204,155" fill="none" stroke="url(#holo76)" stroke-width="2.5"/>
+  <!-- Beam -->
+  <line x1="0" y1="98" x2="68" y2="98" stroke="white" stroke-width="2.5" opacity="0.3"/>
+  <!-- Rays -->
+  <line x1="190" y1="78" x2="255" y2="40" stroke="#EF4444" stroke-width="2.2" opacity="0.65"/>
+  <line x1="192" y1="90" x2="255" y2="58" stroke="#F97316" stroke-width="2.2" opacity="0.65"/>
+  <line x1="194" y1="102" x2="255" y2="78" stroke="#FBBF24" stroke-width="2.2" opacity="0.65"/>
+  <line x1="195" y1="114" x2="255" y2="100" stroke="#22C55E" stroke-width="2.2" opacity="0.65"/>
+  <line x1="196" y1="126" x2="255" y2="122" stroke="#3B82F6" stroke-width="2.2" opacity="0.65"/>
+  <line x1="197" y1="138" x2="254" y2="144" stroke="#8B5CF6" stroke-width="2.2" opacity="0.65"/>
+  <!-- Wolf profile facing right — side view silhouette -->
+  <g transform="translate(120,92) scale(0.45)" filter="url(#glow76)">
+    <!-- Head shape from side -->
+    <path d="M-30,-55 L-18,-68 L-8,-55 L5,-62 L15,-48 L32,-30 L40,-10 L35,5 L20,15 L0,20 L-20,15 L-35,28 L-30,48 L-10,50 L10,45 L15,50 L-15,58 L-40,45 L-45,25 L-30,10 L-40,-5 L-42,-25 L-35,-42 Z" fill="white" opacity="0.88"/>
+    <!-- Eye -->
+    <circle cx="8" cy="-28" r="4" fill="#0D0D16"/>
+  </g>
+  <text x="128" y="192" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="26" font-weight="600" fill="url(#holo76)" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="212" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="8" fill="#6B7280" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

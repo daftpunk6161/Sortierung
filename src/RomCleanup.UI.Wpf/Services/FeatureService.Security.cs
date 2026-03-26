@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Core.Classification;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Tools;
 using RomCleanup.Infrastructure.Reporting;
@@ -27,63 +28,10 @@ public static partial class FeatureService
             using var fs = File.OpenRead(filePath);
             var header = new byte[Math.Min(65536, fs.Length)];
             _ = fs.Read(header, 0, header.Length);
-
-            // NES (iNES): 4E 45 53 1A
-            if (header.Length >= 16 && header[0] == 0x4E && header[1] == 0x45 &&
-                header[2] == 0x53 && header[3] == 0x1A)
-            {
-                var isNes2 = (header[7] & 0x0C) == 0x08;
-                return new RomHeaderInfo("NES", isNes2 ? "NES 2.0" : "iNES",
-                    $"PRG={header[4] * 16}KB, CHR={header[5] * 8}KB, Mapper={(header[6] >> 4) | (header[7] & 0xF0)}");
-            }
-
-            // N64 Big-Endian: 80 37
-            if (header.Length >= 0x40 && header[0] == 0x80 && header[1] == 0x37)
-            {
-                var title = Encoding.ASCII.GetString(header, 0x20, 20).TrimEnd('\0', ' ');
-                return new RomHeaderInfo("N64", "Big-Endian (.z64)", $"Title={title}");
-            }
-
-            // N64 Byte-Swap: 37 80
-            if (header.Length >= 0x40 && header[0] == 0x37 && header[1] == 0x80)
-                return new RomHeaderInfo("N64", "Byte-Swapped (.v64)", "");
-
-            // N64 Little-Endian: 40 12
-            if (header.Length >= 0x40 && header[0] == 0x40 && header[1] == 0x12)
-                return new RomHeaderInfo("N64", "Little-Endian (.n64)", "");
-
-            // GBA: 0x96 at offset 0xB2
-            if (header.Length >= 0xBE && header[0xB2] == 0x96)
-            {
-                var title = Encoding.ASCII.GetString(header, 0xA0, 12).TrimEnd('\0', ' ');
-                var code = Encoding.ASCII.GetString(header, 0xAC, 4).TrimEnd('\0');
-                return new RomHeaderInfo("GBA", "GBA ROM", $"Title={title}, Code={code}");
-            }
-
-            // SNES LoROM (header at 0x7FC0)
-            if (header.Length >= 0x8000)
-            {
-                var snesTitle = Encoding.ASCII.GetString(header, 0x7FC0, 21).TrimEnd('\0', ' ');
-                // Validate SNES checksum complement: checksum + complement must equal 0xFFFF
-                int checksum = header[0x7FDE] | (header[0x7FDF] << 8);
-                int complement = header[0x7FDC] | (header[0x7FDD] << 8);
-                if (snesTitle.Length > 0 && snesTitle.All(c => c >= 0x20 && c <= 0x7E) &&
-                    (checksum + complement) == 0xFFFF)
-                    return new RomHeaderInfo("SNES", "LoROM", $"Title={snesTitle}");
-            }
-
-            // SNES HiROM (header at 0xFFC0)
-            if (header.Length >= 0x10000)
-            {
-                var snesTitle = Encoding.ASCII.GetString(header, 0xFFC0, 21).TrimEnd('\0', ' ');
-                int checksum = header[0xFFDE] | (header[0xFFDF] << 8);
-                int complement = header[0xFFDC] | (header[0xFFDD] << 8);
-                if (snesTitle.Length > 0 && snesTitle.All(c => c >= 0x20 && c <= 0x7E) &&
-                    (checksum + complement) == 0xFFFF)
-                    return new RomHeaderInfo("SNES", "HiROM", $"Title={snesTitle}");
-            }
-
-            return new RomHeaderInfo("Unbekannt", "Unbekanntes Format", $"Magic: {header[0]:X2} {header[1]:X2} {header[2]:X2} {header[3]:X2}");
+            var analyzed = HeaderAnalyzer.AnalyzeHeader(header, fs.Length);
+            return analyzed is null
+                ? null
+                : new RomHeaderInfo(analyzed.Platform, analyzed.Format, analyzed.Details);
         }
         catch
         {
@@ -97,7 +45,7 @@ public static partial class FeatureService
 
     private static readonly string TrendFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "RomCleanupRegionDedupe", "trend-history.json");
+        RomCleanup.Contracts.AppIdentity.AppFolderName, "trend-history.json");
 
 
     public static void SaveTrendSnapshot(int totalFiles, long sizeBytes, int verified, int dupes, int junk)
@@ -150,7 +98,7 @@ public static partial class FeatureService
 
     private static readonly string BaselinePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "RomCleanupRegionDedupe", "integrity-baseline.json");
+        RomCleanup.Contracts.AppIdentity.AppFolderName, "integrity-baseline.json");
 
 
     public static async Task<Dictionary<string, IntegrityEntry>> CreateBaseline(
@@ -311,82 +259,6 @@ public static partial class FeatureService
         if (magic[0] == 'B' && magic[1] == 'P' && magic[2] == 'S' && magic[3] == '1') return "BPS";
         if (magic[0] == 'U' && magic[1] == 'P' && magic[2] == 'S' && magic[3] == '1') return "UPS";
         return null;
-    }
-
-
-    // ═══ NES HEADER REPAIR ═════════════════════════════════════════════
-    // Check if NES ROM has dirty bytes at offset 12-15. If so, zero them.
-
-    public static bool RepairNesHeader(string path)
-    {
-        if (string.IsNullOrEmpty(path) || !File.Exists(path))
-            return false;
-
-        try
-        {
-            using var fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
-
-            if (fs.Length < 16)
-                return false;
-
-            var header = new byte[16];
-            var read = fs.Read(header, 0, header.Length);
-            if (read < 16)
-                return false;
-
-            // Verify iNES magic: 4E 45 53 1A
-            if (header[0] != 0x4E || header[1] != 0x45 || header[2] != 0x53 || header[3] != 0x1A)
-                return false;
-
-            // Check if bytes 12-15 are dirty (non-zero)
-            bool dirty = false;
-            for (int i = 12; i <= 15; i++)
-            {
-                if (header[i] != 0x00)
-                { dirty = true; break; }
-            }
-
-            if (!dirty) return false;
-
-            // Create backup
-            File.Copy(path, path + ".bak", overwrite: true);
-
-            // Zero bytes 12-15 in place (streaming-safe for large files).
-            fs.Seek(12, SeekOrigin.Begin);
-            var zeroBytes = new byte[] { 0x00, 0x00, 0x00, 0x00 };
-            fs.Write(zeroBytes, 0, zeroBytes.Length);
-            fs.Flush();
-            return true;
-        }
-        catch { return false; }
-    }
-
-
-    // ═══ COPIER HEADER REMOVAL ═════════════════════════════════════════
-    // Check if SNES ROM has a 512-byte copier header and remove it.
-
-    public static bool RemoveCopierHeader(string path)
-    {
-        if (string.IsNullOrEmpty(path) || !File.Exists(path))
-            return false;
-
-        try
-        {
-            var fi = new FileInfo(path);
-            if (fi.Length < 512 || fi.Length % 1024 != 512)
-                return false;
-
-            // Create backup
-            File.Copy(path, path + ".bak", overwrite: true);
-
-            // Read file, skip first 512 bytes, write back
-            byte[] data = File.ReadAllBytes(path);
-            byte[] stripped = new byte[data.Length - 512];
-            Array.Copy(data, 512, stripped, 0, stripped.Length);
-            File.WriteAllBytes(path, stripped);
-            return true;
-        }
-        catch { return false; }
     }
 
 }

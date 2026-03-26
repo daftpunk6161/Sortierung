@@ -173,16 +173,17 @@ public class FileSystemAdapterTests : IDisposable
     }
 
     [Fact]
-    public void MoveItemSafely_LockedFile_ThrowsIOException()
+    public void MoveItemSafely_LockedFile_ReturnsNull()
     {
-        // Issue #23: Verify locked files produce a meaningful IOException, not silent failure
+        // SEC-IO-01: Locked files should return null gracefully instead of throwing
         var src = Path.Combine(_tempDir, "locked.rom");
         var dst = Path.Combine(_tempDir, "dest.rom");
         File.WriteAllText(src, "data");
 
         // Lock the source file by holding it open with FileShare.None
         using var lockHandle = new FileStream(src, FileMode.Open, FileAccess.Read, FileShare.None);
-        Assert.Throws<IOException>(() => _fs.MoveItemSafely(src, dst));
+        var result = _fs.MoveItemSafely(src, dst);
+        Assert.Null(result);
     }
 
     // --- ResolveChildPathWithinRoot ---
@@ -223,5 +224,37 @@ public class FileSystemAdapterTests : IDisposable
     public void ResolveChildPath_NullRoot_ReturnsNull()
     {
         Assert.Null(_fs.ResolveChildPathWithinRoot(null!, "file.rom"));
+    }
+
+    [Fact]
+    public void GetFilesSafe_JunctionSubdirectory_IsBlockedAsReparsePoint_Issue9()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var root = Path.Combine(_tempDir, "root");
+        var target = Path.Combine(_tempDir, "target");
+        var junction = Path.Combine(root, "junction");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(target);
+
+        var regularFile = Path.Combine(root, "regular.rom");
+        var linkedFile = Path.Combine(target, "linked.rom");
+        File.WriteAllText(regularFile, "regular");
+        File.WriteAllText(linkedFile, "linked");
+
+        try
+        {
+            Directory.CreateSymbolicLink(junction, target);
+        }
+        catch
+        {
+            return;
+        }
+
+        var files = _fs.GetFilesSafe(root);
+
+        Assert.Contains(regularFile, files, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain(files, f => f.Contains("linked.rom", StringComparison.OrdinalIgnoreCase));
     }
 }

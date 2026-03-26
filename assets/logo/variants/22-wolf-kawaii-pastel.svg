@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="pastelGrad22" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FDF2F8"/>
+      <stop offset="50%" stop-color="#FAE8FF"/>
+      <stop offset="100%" stop-color="#EDE9FE"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="url(#pastelGrad22)"/>
+  <!-- Kawaii/Cute Pastel Wolf - sanfte Farben, freundlich -->
+  <g transform="translate(128,95) scale(0.6)">
+    <!-- Head -->
+    <circle cx="0" cy="0" r="65" fill="#E9D5FF"/>
+    <!-- Ears -->
+    <ellipse cx="-42" cy="-55" rx="22" ry="35" fill="#D8B4FE" transform="rotate(-15,-42,-55)"/>
+    <ellipse cx="42" cy="-55" rx="22" ry="35" fill="#D8B4FE" transform="rotate(15,42,-55)"/>
+    <ellipse cx="-42" cy="-55" rx="14" ry="22" fill="#F9A8D4" transform="rotate(-15,-42,-55)"/>
+    <ellipse cx="42" cy="-55" rx="14" ry="22" fill="#F9A8D4" transform="rotate(15,42,-55)"/>
+    <!-- Eyes - big kawaii -->
+    <ellipse cx="-22" cy="-5" rx="14" ry="16" fill="white"/>
+    <ellipse cx="22" cy="-5" rx="14" ry="16" fill="white"/>
+    <circle cx="-22" cy="-2" r="10" fill="#7C3AED"/>
+    <circle cx="22" cy="-2" r="10" fill="#7C3AED"/>
+    <circle cx="-19" cy="-6" r="4" fill="white"/>
+    <circle cx="25" cy="-6" r="4" fill="white"/>
+    <circle cx="-24" cy="1" r="2" fill="white"/>
+    <circle cx="20" cy="1" r="2" fill="white"/>
+    <!-- Blush -->
+    <ellipse cx="-38" cy="15" rx="10" ry="6" fill="#F9A8D4" opacity="0.5"/>
+    <ellipse cx="38" cy="15" rx="10" ry="6" fill="#F9A8D4" opacity="0.5"/>
+    <!-- Nose -->
+    <ellipse cx="0" cy="15" rx="6" ry="4" fill="#C084FC"/>
+    <!-- Mouth -->
+    <path d="M-8,22 Q0,30 8,22" fill="none" stroke="#C084FC" stroke-width="1.5"/>
+  </g>
+  <text x="128" y="180" text-anchor="middle" font-family="'Comic Sans MS','Segoe UI',sans-serif" font-size="24" font-weight="700" fill="#7C3AED" letter-spacing="3">Romulus</text>
+  <text x="128" y="202" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="8" fill="#A78BFA" letter-spacing="2">YOUR COLLECTION, PERFECTED.</text>
+  <!-- Tiny hearts -->
+  <text x="70" y="180" font-size="10" fill="#F9A8D4" opacity="0.6">♥</text>
+  <text x="195" y="175" font-size="8" fill="#F9A8D4" opacity="0.4">♥</text>
+</svg>

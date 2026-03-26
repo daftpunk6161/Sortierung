@@ -1,0 +1,69 @@
+<UserControl x:Class="RomCleanup.UI.Wpf.Views.ToolsConversionView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+  <!-- ═══ CONVERSION REGISTRY VIEWER (Tools → Conversion sub-tab) ════════
+       Shows available format conversion capabilities loaded from
+       conversion-registry.json. Read-only reference view. ═══════════════ -->
+  <Border Background="{DynamicResource BrushBackground}" Padding="20,16">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+
+      <!-- Header -->
+      <StackPanel Grid.Row="0" Margin="0,0,0,12">
+        <TextBlock Text="Konvertierungs-Registry" Style="{StaticResource SectionHeader}" Margin="0,0,0,4"/>
+        <TextBlock Foreground="{DynamicResource BrushTextMuted}" FontSize="12"
+                   Text="Verfügbare Formatkonvertierungen aus der Konfiguration."/>
+      </StackPanel>
+
+      <!-- Capabilities DataGrid -->
+      <Border Grid.Row="1" Style="{StaticResource SectionCard}" Padding="0">
+        <DataGrid ItemsSource="{Binding Tools.ConversionCapabilities}" AutoGenerateColumns="False" IsReadOnly="True"
+                  GridLinesVisibility="Horizontal" CanUserSortColumns="True"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  RowBackground="{DynamicResource BrushBackground}"
+                  AlternatingRowBackground="{DynamicResource BrushSurfaceAlt}"
+                  Foreground="{DynamicResource BrushTextPrimary}"
+                  HeadersVisibility="Column"
+                  AutomationProperties.Name="Konvertierungs-Tabelle">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Quelle" Binding="{Binding Source}" Width="90"/>
+            <DataGridTextColumn Header="→" Width="30"/>
+            <DataGridTextColumn Header="Ziel" Binding="{Binding Target}" Width="90"/>
+            <DataGridTextColumn Header="Tool" Binding="{Binding Tool}" Width="120"/>
+            <DataGridTextColumn Header="Befehl" Binding="{Binding Command}" Width="100"/>
+            <DataGridTextColumn Header="Verlustfrei" Binding="{Binding LosslessDisplay}" Width="80"/>
+            <DataGridTextColumn Header="Kosten" Binding="{Binding Cost}" Width="60"/>
+            <DataGridTextColumn Header="Konsolen" Binding="{Binding Consoles}" Width="*"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </Border>
+
+      <!-- Empty state -->
+      <Border Grid.Row="0" Grid.RowSpan="2">
+        <Border.Style>
+          <Style TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding Tools.HasConversionCapabilities}" Value="False">
+                <Setter Property="Visibility" Value="Visible"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Border.Style>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+          <TextBlock Text="&#xE8AB;" FontFamily="Segoe MDL2 Assets" FontSize="48"
+                     Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+          <TextBlock Text="Keine Konvertierungs-Regeln geladen" FontSize="16" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+          <TextBlock Text="conversion-registry.json konnte nicht gefunden oder geladen werden."
+                     Foreground="{DynamicResource BrushTextMuted}" FontSize="12" HorizontalAlignment="Center"/>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

@@ -1,0 +1,4 @@
+[
+  { "Input": ".chd", "ExpectedFormatScore": 1000 },
+  { "Input": ".zip", "ExpectedFormatScore": 700 }
+]

@@ -1,0 +1,1 @@
+Phase 6A: groundTruthVersion 2.0.0 + ExtendedMetrics record + hard-fail gates + TrendAnalyzer integration

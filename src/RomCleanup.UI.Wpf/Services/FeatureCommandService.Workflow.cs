@@ -36,7 +36,7 @@ public sealed partial class FeatureCommandService
         {
             string fieldValue = field switch
             {
-                "region" => c.Region, "category" => c.Category, "extension" or "ext" => c.Extension,
+                "region" => c.Region, "category" => FeatureService.ToCategoryLabel(c.Category), "extension" or "ext" => c.Extension,
                 "gamekey" or "game" => c.GameKey, "type" or "consolekey" or "console" => c.ConsoleKey,
                 "datmatch" or "dat" => c.DatMatch.ToString(),
                 "sizemb" => (c.SizeBytes / 1048576.0).ToString("F1"),
@@ -86,7 +86,7 @@ public sealed partial class FeatureCommandService
             sb.AppendLine($"  {new string('-', 20)} {new string('-', 15)} {new string('-', 30)}");
             sb.AppendLine($"  {"Scan",-20} {"OK",-15} {_vm.LastRunResult.TotalFilesScanned} Dateien");
             sb.AppendLine($"  {"Dedupe",-20} {"OK",-15} {_vm.LastRunResult.GroupCount} Gruppen, {_vm.LastRunResult.WinnerCount} Winner");
-            var junkCount = _vm.LastCandidates.Count(c => c.Category == "JUNK");
+            var junkCount = _vm.LastCandidates.Count(c => c.Category == FileCategory.Junk);
             sb.AppendLine($"  {"Junk-Erkennung",-20} {"OK",-15} {junkCount} Junk-Dateien");
             if (_vm.LastRunResult.ConsoleSortResult is { }) sb.AppendLine($"  {"Konsolen-Sort",-20} {"OK",-15} sortiert");
             else sb.AppendLine($"  {"Konsolen-Sort",-20} {"Übersprungen",-15}");

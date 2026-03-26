@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Text;
 using RomCleanup.Core.Classification;
 using Xunit;
@@ -253,6 +254,23 @@ public class DiscHeaderDetectorTests : IDisposable
         Encoding.ASCII.GetBytes("SEGA SATURN").CopyTo(data, 200);
         var path = CreateImage("game.chd", data);
         Assert.Equal("SAT", _detector.DetectFromChd(path));
+    }
+
+    [Fact]
+    public void DetectFromChd_V5MetaOffset_PS2()
+    {
+        var data = MakeBuffer(220_000);
+        Encoding.ASCII.GetBytes("MComprHD").CopyTo(data, 0);
+        BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(12, 4), 5);
+
+        const ulong metaOffset = 180_000;
+        BinaryPrimitives.WriteUInt64BigEndian(data.AsSpan(0x30, 8), metaOffset);
+
+        // Marker only in metadata region; this verifies offset-based parsing.
+        Encoding.ASCII.GetBytes("Sony Computer Entertainment BOOT2 = cdrom0:").CopyTo(data, (int)metaOffset + 64);
+
+        var path = CreateImage("game-v5.chd", data);
+        Assert.Equal("PS2", _detector.DetectFromChd(path));
     }
 
     [Fact]

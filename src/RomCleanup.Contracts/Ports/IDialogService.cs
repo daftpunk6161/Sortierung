@@ -20,6 +20,8 @@ public interface IDialogService
     void ShowText(string title, string content);
     /// <summary>GUI-054: Danger-Confirm dialog requiring typed confirmation. Returns true only if confirmed.</summary>
     bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen");
+    /// <summary>A-22: DatRename preview/confirm dialog. Returns true only when user confirms the rename proposals.</summary>
+    bool ConfirmDatRenamePreview(IReadOnlyList<Models.DatAuditEntry> renameProposals);
 }
 
 /// <summary>Platform-neutral replacement for <c>System.Windows.MessageBoxResult</c>.</summary>

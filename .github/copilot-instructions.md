@@ -1,300 +1,325 @@
-# RomCleanup – Copilot Instructions
+# Romulus – Copilot Instructions
 
-## Projektübersicht
+## Zweck
 
-C# .NET 10 Tool zur ROM-Sammlungsverwaltung: regionsbasierte Deduplizierung, Entrümpelung (Demos/Betas/Hacks), Formatkonvertierung (CUE/BIN→CHD, ISO→RVZ etc.), DAT-basierte Verifizierung und Konsolen-Sortierung. Drei unabhängige Entry Points: **GUI** (WPF/XAML), **CLI** (headless/CI), **REST API** (ASP.NET Core Minimal API).
+Romulus (intern: RomCleanup) ist ein produktionsnahes C# .NET 10 Tool zur Verwaltung und Bereinigung von ROM-Sammlungen mit drei Entry Points:
 
-**Plattform:** Windows 10/11, .NET 10 (net10.0 / net10.0-windows für WPF), LangVersion 14.
+- **GUI**: WPF/XAML
+- **CLI**: headless / automation / CI
+- **REST API**: ASP.NET Core Minimal API
 
-> **Migration abgeschlossen:** Die ursprüngliche PowerShell-Version liegt archiviert in `archive/powershell/` als Referenz. Aktive Entwicklung ausschließlich in `src/`.
+Kernfunktionen:
+- regionsbasierte Deduplizierung
+- Junk-Erkennung (Demo/Beta/Homebrew/Hack etc.)
+- Formatkonvertierung
+- DAT-basierte Verifizierung
+- konsolenbezogene Klassifikation und Sortierung
 
----
-
-## Befehle
-
-### Build
-```bash
-dotnet build src/RomCleanup.sln
-```
-
-### Tests (xUnit, 3090+ Tests)
-```bash
-# Alle Tests
-dotnet test src/RomCleanup.sln
-
-# Einzelnes Testprojekt
-dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj
-
-# Mit Filter
-dotnet test src/RomCleanup.sln --filter "FullyQualifiedName~GameKey"
-```
-
-### Entry Points starten
-```bash
-# CLI – DryRun
-dotnet run --project src/RomCleanup.CLI -- --roots "D:\Roms" --mode DryRun
-
-# CLI – Move-Modus
-dotnet run --project src/RomCleanup.CLI -- --roots "D:\Roms" --mode Move --regions EU,US
-
-# REST API (127.0.0.1 only)
-dotnet run --project src/RomCleanup.Api
-
-# GUI (WPF)
-dotnet run --project src/RomCleanup.UI.Wpf
-```
+Aktive Entwicklung erfolgt ausschließlich in `src/`.  
+`archive/powershell/` ist nur Legacy-Referenz und darf nicht als aktive Implementierungsbasis behandelt werden.
 
 ---
 
-## Architektur
+## Nicht verhandelbare Regeln
 
-Clean Architecture (Ports & Adapters) als .NET Solution mit 7 Projekten:
+### 1) Release-Fähigkeit geht vor
+Bevorzuge immer:
+- Korrektheit
+- Determinismus
+- Sicherheit
+- Testbarkeit
+- Wartbarkeit
 
-```
-src/
-├── RomCleanup.Contracts/      ← Port-Interfaces, Models, Error-Contracts
-├── RomCleanup.Core/           ← Pure Domain Logic (keine I/O-Deps)
-│   ├── Caching/               LruCache<TKey,TValue>
-│   ├── Classification/        ConsoleDetector, FileClassifier, ExtensionNormalizer
-│   ├── Deduplication/         DeduplicationEngine (Winner-Selection)
-│   ├── GameKeys/              GameKeyNormalizer (Tag-Parsing, Region-Scoring)
-│   ├── Regions/               RegionDetector
-│   ├── Rules/                 RuleEngine
-│   ├── Scoring/               FormatScorer, VersionScorer
-│   └── SetParsing/            CueSetParser, GdiSetParser, CcdSetParser, M3uPlaylistParser
-├── RomCleanup.Infrastructure/ ← I/O-Adapter & Services
-│   ├── Audit/                 AuditCsvStore, AuditSigningService
-│   ├── Configuration/         SettingsLoader
-│   ├── Conversion/            FormatConverterAdapter
-│   ├── Dat/                   DatRepositoryAdapter, DatSourceService
-│   ├── Deduplication/         CrossRootDeduplicator, FolderDeduplicator
-│   ├── FileSystem/            FileSystemAdapter (Path-Traversal-Schutz, Reparse-Blocking)
-│   ├── Hashing/               FileHashService, Crc32, ArchiveHashService, ParallelHasher
-│   ├── Logging/               JsonlLogWriter (strukturiertes JSONL)
-│   ├── Orchestration/         RunOrchestrator (Full Pipeline)
-│   ├── Reporting/             ReportGenerator (HTML, CSV)
-│   ├── Safety/                SafetyValidator
-│   ├── Tools/                 ToolRunnerAdapter (Hash-Verifizierung, Process-Execution)
-│   └── ...                    (Analytics, Events, History, Metrics, Pipeline, Quarantine, Sorting, State, Version)
-├── RomCleanup.CLI/            ← Headless Entry Point (Program.cs)
-├── RomCleanup.Api/            ← ASP.NET Core Minimal API (REST + SSE)
-├── RomCleanup.UI.Wpf/         ← WPF GUI (MVVM, net10.0-windows)
-│   ├── ViewModels/            MainViewModel (INotifyPropertyChanged, Commands)
-│   ├── Services/              ThemeService, DialogService, SettingsService
-│   ├── Converters/            WPF Value Converters
-│   ├── Themes/                ResourceDictionary (Dark + Neon Accent)
-│   └── MainWindow.xaml(.cs)   RunOrchestrator-Wiring, Rollback
-└── RomCleanup.Tests/          ← xUnit Tests (3090+ Tests, 72 Testdateien)
-```
+gegenüber:
+- Feature-Hype
+- unnötiger Abstraktion
+- kosmetischem Refactoring
+- UI-Spielerei
 
-Dependency-Richtung: Entry Points → Infrastructure → Core → Contracts (nie umgekehrt).
+### 2) Kein Datenverlust
+- Standardverhalten ist **Move to Trash / Audit / Undo-fähiges Verhalten**
+- Kein direktes Löschen ohne explizite, klar abgesicherte Benutzerentscheidung
+- Riskante Operationen brauchen Summary, Schutzmechanismus und Audit
 
-### Zentrale Datendateien (`data/`)
+### 3) Determinismus ist Pflicht
+Gleiche Inputs müssen gleiche Outputs erzeugen.  
+Das gilt insbesondere für:
+- GameKey-Bildung
+- Region-Erkennung
+- Score-Berechnung
+- Winner-Selection
+- Preview vs Execute
+- GUI / CLI / API / Report-Parität
 
-| Datei | Rolle |
-|-------|-------|
-| `consoles.json` | Single Source of Truth für 100+ Konsolen: Key, DisplayName, `discBased`, `uniqueExts`, `folderAliases` |
-| `rules.json` | Regions-Patterns, Junk-Tags, Version/Revision-Erkennung |
-| `dat-catalog.json` | DAT-Quellen (Redump, No-Intro, FBNEO) mit URLs |
-| `defaults.json` | Standard-Einstellungen: Mode=DryRun, Extensions, Theme, Locale |
-| `tool-hashes.json` | SHA256-Allowlist für externe Tools (chdman, 7z, dolphintool) |
-| `schemas/*.json` | JSON-Schema v7 für Plugin-Manifests, Settings, Rules |
+### 4) Keine doppelte Logik
+- Geschäftslogik darf nicht in mehreren Entry Points separat nachgebaut werden
+- Gemeinsame Regeln gehören in Core oder klar definierte Services
+- Duplikate aktiv vermeiden und bei Gelegenheit abbauen
 
-User-Settings: `%APPDATA%\RomCleanupRegionDedupe\settings.json`
+### 5) Keine halben Lösungen
+Erzeuge keinen:
+- Pseudocode
+- Platzhaltercode
+- TODO-only-Code
+- Scheincode ohne echte Integration
+- erfundene APIs oder Klassen ohne klare Projektpassung
 
-```jsonc
-{
-  "general": {
-    "logLevel": "Info",            // Debug|Info|Warning|Error
-    "preferredRegions": ["EU","US","JP"],
-    "aggressiveJunk": false,
-    "aliasEditionKeying": false
-  },
-  "toolPaths": { "chdman": "", "7z": "", "dolphintool": "" },
-  "dat": {
-    "useDat": true,
-    "datRoot": "",
-    "hashType": "SHA1",            // SHA1|SHA256|MD5
-    "datFallback": true
-  }
-}
-```
-
-Validierung via JSON Schema. Settings werden über `SettingsLoader` in Infrastructure geladen.
+Wenn Code erwartet ist, liefere **kompilierbaren, konsistenten und integrierbaren Code**.
 
 ---
 
-## Schlüssel-Konventionen
+## Architekturregeln
 
-### Code-Struktur
+Dependency-Richtung:
 
-- **C# Naming:** PascalCase für Methoden/Properties, camelCase für lokale Variablen/Parameter
-- **Core-Logik muss pure sein:** Keine I/O-Abhängigkeiten in `RomCleanup.Core` — Grundvoraussetzung für Unit-Tests
-- **Dependency Injection:** Alle Services über Konstruktor-Injection, Interfaces aus `Contracts/Ports/`
-- **Records/DTOs:** Alle Datenstrukturen als C# records oder Modelle in `Contracts/Models/`
+**Entry Points → Infrastructure → Core → Contracts**
 
-### Fehlerbehandlung
+Nie umgekehrt.
 
-- **Drei Fehlerklassen** (`Contracts/Errors/`):
-  - `Transient` → automatischer Retry
-  - `Recoverable` → loggen und fortfahren
-  - `Critical` → sofort abbrechen, Benutzer informieren
-- Strukturierte Fehlerobjekte via `OperationError` — niemals rohe Strings werfen
-- **Fehler-Code-Namespaces:** `GUI-*`, `DAT-*`, `IO-*`, `SEC-*`, `RUN-*`
+### Schichten
+- **Contracts**: Interfaces, Models, Fehlerverträge
+- **Core**: pure Domänenlogik, keine I/O-Abhängigkeiten
+- **Infrastructure**: Datei-, Tool-, Report-, Hash-, DAT-, Logging- und Orchestrierungsadapter
+- **CLI / API / GUI**: Entry Points, Komposition, Benutzerinteraktion
 
-### Sicherheitsregeln (nicht verhandelbar)
+### Pflichtregeln
+- Keine I/O-Logik in `RomCleanup.Core`
+- Keine Businesslogik in WPF Code-Behind
+- MVVM in der GUI einhalten
+- Services per Constructor Injection
+- Harte Umgebungsabhängigkeiten kapseln
+- Zeit, Prozesse, Dateisystem, externe Tools und Umgebungswerte hinter testbaren Abstraktionen halten
 
-- **Kein direktes Löschen** — Standard ist Move in Trash + Audit-Log. Echtes Delete braucht explizite Bestätigung + Danger-Zone-UI
-- **Path-Traversal-Schutz** — `FileSystemAdapter.ResolveChildPathWithinRoot` vor jedem Move/Copy/Delete aufrufen; schlägt fehl wenn außerhalb der Root
-- **Zip-Slip** — Archiv-Entry-Pfade vor Extraktion gegen Root validieren
-- **Reparse Points** (Symlinks/Junctions) — explizit blockieren oder definiert behandeln, niemals transparent folgen
-- **CSV-Injection** verhindern: keine führenden `=`, `+`, `-`, `@` in Felder
-- **HTML-Encoding** in allen Report-Outputs konsequent
-- **Tool-Hash-Verifizierung:** SHA256-Checksums aus `data/tool-hashes.json` vor jedem externen Tool-Aufruf prüfen; Bypass nur via `AllowInsecureToolHashBypass`
+---
 
-### GameKey & Scoring-System
+## GUI / WPF Regeln
 
-**GameKeyNormalizer** (LRU-Cache: 50k Einträge):
-1. ASCII-Fold (Diakritika: ß→ss, é→e etc.)
-2. 25 Regions-Tag-Patterns anwenden (aus `rules.json`)
-3. Version/Revision-Tags entfernen
-4. Junk-Tags entfernen (Alpha, Beta, Demo, Homebrew, Aftermarket …)
-5. Whitespace normalisieren
-6. ALWAYS-Alias-Map anwenden (immer)
-7. Optional: Edition-Keying-Alias-Map (`aliasEditionKeying`)
-8. Ergebnis in LRU-Cache schreiben
+Die GUI muss:
+- verständlich
+- luftig
+- robust
+- nicht überladen
+- fehlbedienungssicher
 
-**`Get-FormatScore`-Werte** (höher = besser):
-| Format | Score |
-|--------|-------|
-| CHD | 850 |
-| ISO | 700 |
-| ZIP | 500 |
-| 7Z | 480 |
-| RAR | 400 |
+sein.
 
-**Winner-Selection** (`DeduplicationEngine.SelectWinner`) – deterministisch, gleiche Inputs = gleicher Output:
-1. Kategorie filtern (GAME vs. JUNK vs. BIOS)
-2. Regions-Score: bevorzugte Region aus `preferredRegions` = 1000−N
-3. Format-Score
-4. Versions-Score: Verified `[!]` = +500; Revision a-z = 10×Ordinalwert; Version v1.0 = numerisch
-5. Größen-Tiebreak: Disc-Spiele → größer bevorzugt; Cartridge → kleiner bevorzugt
+### Pflicht
+- Standardablauf ist:
+  **DryRun / Preview → Summary → Bestätigung → Apply / Move → Report / Undo**
+- Lange Operationen nicht auf dem UI-Thread ausführen
+- UI-Updates sauber über Dispatcher / async Patterns
+- Kein `DoEvents`-ähnliches Muster
+- Styles, Farben und Spacing zentral in `ResourceDictionary`
+- Zwei Bedienmodi unterstützen:
+  - einfach
+  - experte
 
-### DAT-Verifizierung
+### Verboten
+- Businesslogik im Code-Behind
+- unklare Danger Actions
+- überladene Screens ohne klare Priorisierung
+- unkontrollierte Converter-Logik für fachliche Regeln
 
-- LRU-Cache für Datei-Hashes (20k Einträge), Archiv-Hash-Extraktion via 7z (Skip bei >500 MB)
-- Parent/Clone-Mapping-Auflösung
-- DAT-Index-Fingerprinting per `consoleKey + hashType + datRoot`
-- XXE-Schutz beim XML-Parsing aktiv
-- DAT-Download mit SHA256-Sidecar-Verifizierung (`*.sha256`-Datei von Download-URL)
-- Quellen: No-Intro, Redump, FBNEO
+---
 
-### Konvertierungs-Pipeline
+## Sicherheitsregeln
 
-| Konsole | Zielformat | Tool |
-|---------|-----------|------|
-| PS1, Saturn, Dreamcast | CHD | `chdman createcd` |
-| PS2 | CHD | `chdman createdvd` |
-| GameCube, Wii | RVZ | `dolphintool` |
-| PSP (PBP) | CHD | `psxtract` |
-| NES, SNES etc. | ZIP | `7z` |
+Diese Regeln sind zwingend:
 
-**`Invoke-ExternalToolProcess`:** Process-Start, Exit-Code-Prüfung, automatisches Cleanup. Timeout und Retry konfigurierbar. Alle Tool-Pfade aus `toolPaths` in Settings, niemals hardcoded.
+- **Path Traversal blockieren**
+  - vor Move/Copy/Delete immer Root-validierte Pfadauflösung verwenden
 
-### REST API
+- **Zip-Slip blockieren**
+  - Archivpfade vor Extraktion validieren
 
-**Authentifizierung:** HTTP-Header `ROM_CLEANUP_API_KEY` — Wert aus Env-Variable.
+- **Reparse Points nicht transparent folgen**
+  - explizit blockieren oder sicher definieren
 
-**Endpunkte:**
-| Methode | Pfad | Zweck |
-|---------|------|-------|
-| `GET` | `/health` | Health-Check |
-| `GET` | `/openapi` | OpenAPI-Spec |
-| `POST` | `/runs` | Run erstellen (`{roots:[], mode:"DryRun"\|"Move"}`) |
-| `GET` | `/runs/{id}` | Run-Status abfragen |
-| `GET` | `/runs/{id}/result` | Vollständiges Ergebnis |
-| `POST` | `/runs/{id}/cancel` | Run abbrechen |
-| `GET` | `/runs/{id}/stream` | SSE-Fortschrittsstream |
+- **CSV-Injection verhindern**
+  - keine ungesicherten Formel-Präfixe in Exportfeldern
 
-**CORS-Modi:** `custom` / `local-dev` / `strict-local` via `-CorsAllowOrigin` (Default `*`).
-**Rate Limiting:** 120 Requests/Minute.
-**HTTPS/TLS:** Konfigurierbar; API ist ausschließlich auf 127.0.0.1 gebunden.
+- **HTML-Encoding konsequent anwenden**
+  - alle HTML-Reports müssen sauber escapen
 
-**Response-Shape (Run-Status):**
-```json
-{ "Status": "ok|blocked|skipped|failed", "ExitCode": 0, "Preflight": {"valid": true, "warnings": []}, "ReportPath": "…", "AuditPath": "…" }
-```
+- **Externe Tools absichern**
+  - Tool-Hash-Verifizierung
+  - korrektes Argument-Quoting
+  - Exit-Code-Prüfung
+  - Timeout / Retry / Cleanup
 
-**CLI Exit Codes:** `0` = Erfolg, `1` = Fehler, `2` = Abgebrochen, `3` = Preflight fehlgeschlagen.
+---
 
-### Logging
+## Kernlogik-Regeln
 
-- Format: strukturiertes **JSONL** (eine JSON-Zeile pro Eintrag)
-- Felder: `module`, `level`, `correlationId` (128-bit GUID), `phase`, `metrics`
-- Log-Levels (numerisch): `Debug=10`, `Info=20`, `Warning=30`, `Error=40`
+### GameKey / Region / Winner Selection
+Diese Bereiche sind besonders kritisch und dürfen nicht still verändert werden:
 
-### Plugins (`archive/powershell/plugins/`)
+- `GameKeyNormalizer`
+- Region-Erkennung
+- `FormatScore`
+- `VersionScore`
+- `DeduplicationEngine.SelectWinner`
 
-> Plugins sind ein PS-Legacy-Feature. Beispiele liegen im Archiv als Referenz für eine mögliche C#-Neuimplementierung.
+Änderungen in diesen Bereichen müssen:
+- deterministisch bleiben
+- bestehende Invarianten respektieren
+- durch gezielte Tests abgesichert werden
 
-### Output-Formate
+### Preview / Run / Report Parität
+Bei jeder Änderung, die Runs oder Ergebnisse beeinflusst, muss sichergestellt werden:
 
-- **Audit-CSV** — SHA256-signiert; Spalten: `RootPath, OldPath, NewPath, Action, Category, Hash, Reason, Timestamp`
-- **HTML-Report** — mit Meta-Tags, CSP-Header, Diagrammen (Keep/Move/Junk nach Konsole)
-- **JSON-Summary** — `{ Status, ExitCode, Preflight: {valid, warnings}, ReportPath, AuditPath }`
-- **JSONL-Logs** — strukturiert mit Correlation-ID und Phase-Metriken
-
-### GUI (WPF/XAML)
-
-WPF GUI in `src/RomCleanup.UI.Wpf/` (MVVM-Pattern):
-- `MainWindow.xaml` — Full Layout mit TabControl, Dashboard, Progress, Timeline
-- `ViewModels/MainViewModel.cs` — ~530 Zeilen, 12 Commands, INotifyPropertyChanged
-- `Services/` — ThemeService, DialogService, SettingsService, StatusBarService
-- `Converters/` — WPF Value Converters
-- `Themes/` — ResourceDictionary (Dark + Neon Accent)
-
-**GUI-Pflichten:**
-- Standard-Flow: **DryRun/Preview → explizite Summary-Anzeige → Bestätigung → Move/Apply**
-- Lange Tasks **off-UI-thread**; UI-Updates ausschließlich via `Dispatcher.Invoke`
-- Kein `DoEvents`-Pattern
-- Farben/Styles zentral im `ResourceDictionary` (retro-modern Dark + Neon Accent)
-- Zwei Modi: Einfach (4 Entscheidungen) und Experte (volle Kontrolle)
+- Preview zeigt dieselben fachlichen Entscheidungen wie Execute
+- Reports zählen dieselben Entscheidungen korrekt
+- GUI, CLI und API widersprechen sich nicht
 
 ---
 
 ## Tests
 
-3090+ xUnit-Tests in `src/RomCleanup.Tests/` (72 Testdateien).
+Jede relevante Änderung an Core, Safety, Run-Verhalten, Reports, DAT oder Toolintegration braucht passende Tests.
 
-**Benennung:** `<Klasse>Tests.cs` (z.B. `GameKeyNormalizerTests.cs`, `DeduplicationEngineTests.cs`)
+### Pflicht-Testarten
+- Unit
+- Integration
+- Regression
+- Negative / Edge
 
-**Pflicht-Testarten:**
-- **Unit:** Region-Parsing, GameKey-Konstruktion, FormatScore/VersionScore, Winner-Selection, Sanitizer
-- **Integration:** echte TempDirs, Move→Trash, Report-Output, Archiv-Handling (ZIP/7Z), DAT-Index/Hits
-- **Regression:** reale Problemfälle als Fixtures (beschädigte Archive, fehlende CUE-Tracks, Sonderzeichen)
-- **Negativ/Edge:** Path-Traversal-Versuche, Reparse-Points, leere Archive, >500 MB Dateien
+### Kritische Invarianten
+Tests müssen prüfen, dass:
+- kein Move außerhalb erlaubter Roots möglich ist
+- keine leeren oder inkonsistenten Keys entstehen
+- Winner-Selection deterministisch bleibt
+- Preview / Execute / Report konsistent sind
+- fehlerhafte Archive und Sonderfälle sauber behandelt werden
 
-**Keine Alibi-Tests:** Jeder Test muss einen echten Fehler finden können. Invarianten prüfen:
-- Winner-Selection ist deterministisch (gleiche Inputs = gleicher Winner)
-- Kein Move außerhalb der Root
-- Keine leeren Keys für Gruppierung
+### Keine Alibi-Tests
+Ein Test ist nur wertvoll, wenn er einen realen Fehler finden kann.
 
 ---
 
-## CI/CD (`.github/workflows/`)
+## Arbeitsweise bei Änderungen
 
-### test-pipeline.yml
-Trigger: Push/PR auf `dev/**`, `.github/**`
+Wenn du Änderungen vorschlägst oder erzeugst:
 
-| Job | Gate | Bei Fehler |
-|-----|------|-----------|
-| Unit-Tests + Coverage | 50% Minimum | Fail |
-| Governance | Modul-Grenzen, Komplexität | Warn only |
-| Mutation-Testing | Reporting only | continue-on-error |
-| Benchmark-Gate | Regression-Erkennung | continue-on-error |
+1. ändere nur die wirklich betroffenen Teile
+2. halte Architekturgrenzen ein
+3. benenne betroffene Dateien klar
+4. erkläre funktionale Auswirkungen
+5. ergänze oder aktualisiere passende Tests
+6. vermeide unnötige Stil- oder Strukturänderungen
 
-Artifacts: `test-pipeline-*.json`, `mutation-reports-*.json`
+Wenn eine Änderung mehrere Schichten betrifft, liefere die Änderung konsistent über alle nötigen Dateien hinweg statt nur Teilfragmente.
 
-### release.yml
-Trigger: `workflow_dispatch` oder Tag `v*`
-Artifact: `rom-cleanup-v*.zip`
+---
+
+## Arbeitsweise bei Reviews / Analysen
+
+Wenn du Code analysierst oder reviewst, priorisiere in dieser Reihenfolge:
+
+### Priorität 1 – Release-Blocker
+- Datenverlust
+- Security-Probleme
+- falsche Winner-Selection
+- falsches Grouping / Scoring
+- Preview / Execute / Report Divergenz
+- GUI-Fehlverhalten mit Fehlbedienungsrisiko
+- Deadlocks, Hänger, nicht abbrechbare Prozesse
+
+### Priorität 2 – Hohe Risiken
+- doppelte Logik
+- fragile Tool-Integration
+- schlechte Testbarkeit
+- versteckte Seiteneffekte
+- inkonsistente Fehlerbehandlung
+
+### Priorität 3 – Wartbarkeit
+- unnötige Komplexität
+- Naming- oder Strukturprobleme
+- Erweiterbarkeitsprobleme
+- UI-Unklarheiten ohne unmittelbares Fehlverhalten
+
+### Review-Format
+Wenn du Findings lieferst, verwende wenn möglich dieses Format:
+
+- **Titel**
+- **Schweregrad**
+- **Impact**
+- **Betroffene Datei(en)**
+- **Beispiel / Reproduktion**
+- **Ursache**
+- **Fix**
+- **Testabsicherung**
+
+---
+
+## Antwortverhalten
+
+Wenn du nicht-triviale Hilfe gibst, strukturiere die Antwort bevorzugt so:
+
+1. Kurzfazit
+2. Risiken / Blocker
+3. konkrete Änderungen
+4. betroffene Dateien
+5. Testbedarf
+6. offene Annahmen
+
+Wenn Code erzeugt wird, liefere vollständige, zusammenhängende Änderungen statt lose Fragmente.
+
+---
+
+## Wichtige Projektfakten
+
+### Plattform
+- Windows 10/11
+- .NET 10
+- `net10.0`
+- `net10.0-windows` für WPF
+- C# LangVersion 14
+
+### Wichtige Datenquellen
+- `data/consoles.json`
+- `data/console-maps.json`
+- `data/rules.json`
+- `data/dat-catalog.json`
+- `data/defaults.json`
+- `data/tool-hashes.json`
+- `data/conversion-registry.json`
+- `data/ui-lookups.json`
+
+### User Settings
+- `%APPDATA%\RomCleanupRegionDedupe\settings.json`
+
+### Wichtige Entry Points
+- `src/RomCleanup.CLI`
+- `src/RomCleanup.Api`
+- `src/RomCleanup.UI.Wpf`
+
+### Wichtige Kernbereiche
+- `RomCleanup.Contracts` (Interfaces, Models, Fehlerverträge)
+- `RomCleanup.Core/GameKeys`
+- `RomCleanup.Core/Regions`
+- `RomCleanup.Core/Scoring`
+- `RomCleanup.Core/Deduplication`
+- `RomCleanup.Core/Classification`
+- `RomCleanup.Core/Conversion`
+- `RomCleanup.Infrastructure/Orchestration`
+- `RomCleanup.Infrastructure/FileSystem`
+- `RomCleanup.Infrastructure/Tools`
+- `RomCleanup.Infrastructure/Reporting`
+- `RomCleanup.Infrastructure/Dat`
+- `RomCleanup.Infrastructure/Conversion`
+- `RomCleanup.Infrastructure/Hashing`
+- `RomCleanup.Infrastructure/Safety`
+- `RomCleanup.Infrastructure/Sorting`
+
+---
+
+## Was du vermeiden musst
+
+- keine stillen Verhaltensänderungen
+- keine Logikduplikation zwischen GUI, CLI und API
+- keine Businesslogik im WPF Code-Behind
+- keine Umgehung von Safety-Checks
+- keine Refactors ohne Verifikation
+- keine kosmetischen Änderungen, wenn funktionale Risiken offen sind
+- keine Annahmen, die Projektstruktur oder bestehende Verträge verletzen

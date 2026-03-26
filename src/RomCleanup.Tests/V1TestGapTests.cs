@@ -1,3 +1,8 @@
+// ══════════════════════════════════════════════════════════════════════════════
+// LEGACY: Phase-3/4 gap-fill tests. Still active — do not delete.
+// These tests cover real scenarios but may overlap with Phase5D determinism suite.
+// Migrate to domain-specific test classes when revisiting test organization.
+// ══════════════════════════════════════════════════════════════════════════════
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.GameKeys;

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="neonGrad43" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#0A0A0A"/>
+  <!-- Minimalist: nur der Wolf-Umriss, keine Füllung, Neon-Glow -->
+  <!-- Glow halo -->
+  <circle cx="128" cy="90" r="72" fill="none" stroke="#8B5CF6" stroke-width="0.5" opacity="0.15"/>
+  <circle cx="128" cy="90" r="65" fill="none" stroke="#06B6D4" stroke-width="0.3" opacity="0.1"/>
+  <!-- Wolf - single continuous path feel -->
+  <g transform="translate(128,88) scale(0.6)">
+    <!-- Left ear -->
+    <path d="M-55,-20 L-70,-72 L-30,-42" fill="none" stroke="url(#neonGrad43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Left head -->
+    <path d="M-55,-20 L-60,5 L-42,42" fill="none" stroke="url(#neonGrad43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Chin left -->
+    <path d="M-42,42 L0,25" fill="none" stroke="url(#neonGrad43)" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Right ear -->
+    <path d="M55,-20 L70,-72 L30,-42" fill="none" stroke="url(#neonGrad43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Right head -->
+    <path d="M55,-20 L60,5 L42,42" fill="none" stroke="url(#neonGrad43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Chin right -->
+    <path d="M42,42 L0,25" fill="none" stroke="url(#neonGrad43)" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Crown / top connection -->
+    <path d="M-30,-42 L0,-60 L30,-42" fill="none" stroke="url(#neonGrad43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Eyes -->
+    <circle cx="-22" cy="-10" r="3" fill="#06B6D4"/>
+    <circle cx="22" cy="-10" r="3" fill="#8B5CF6"/>
+    <!-- Nose -->
+    <circle cx="0" cy="10" r="2" fill="white" opacity="0.6"/>
+  </g>
+  <text x="128" y="175" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="28" font-weight="200" fill="url(#neonGrad43)" letter-spacing="8">ROMULUS</text>
+  <text x="128" y="200" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="7" fill="#4B5563" letter-spacing="4">YOUR COLLECTION, PERFECTED.</text>
+</svg>

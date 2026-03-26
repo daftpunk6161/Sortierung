@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<datafile>
+  <header><name>RomCleanup Test DAT - No-Intro GBA</name></header>
+  <game name="Pokemon FireRed (USA)"><rom name="Pokemon FireRed (USA).gba" size="16777216" crc="20000001" sha1="0123456789012345678901234567890123456789" /></game>
+  <game name="Metroid Fusion (USA)"><rom name="Metroid Fusion (USA).gba" size="8388608" crc="20000002" sha1="1123456789012345678901234567890123456789" /></game>
+  <game name="Minish Cap (USA)"><rom name="Minish Cap (USA).gba" size="16777216" crc="20000003" sha1="2123456789012345678901234567890123456789" /></game>
+  <game name="Mario Kart Super Circuit (USA)"><rom name="Mario Kart Super Circuit (USA).gba" size="8388608" crc="20000004" sha1="3123456789012345678901234567890123456789" /></game>
+  <game name="Golden Sun (USA)"><rom name="Golden Sun (USA).gba" size="8388608" crc="20000005" sha1="4123456789012345678901234567890123456789" /></game>
+</datafile>

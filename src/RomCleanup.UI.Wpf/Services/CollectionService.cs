@@ -11,7 +11,7 @@ public sealed class CollectionService : ICollectionService
     public string? BuildMissingRomReport(IReadOnlyList<RomCandidate> candidates, IReadOnlyList<string> roots)
         => FeatureService.BuildMissingRomReport(candidates, roots);
 
-    public string BuildCrossRootReport(IReadOnlyList<DedupeResult> dedupeGroups, IReadOnlyList<string> roots)
+    public string BuildCrossRootReport(IReadOnlyList<DedupeGroup> dedupeGroups, IReadOnlyList<string> roots)
         => FeatureService.BuildCrossRootReport(dedupeGroups, roots);
 
     public (string Report, int Matched, int Unmatched) BuildCoverReport(string coverDir, IReadOnlyList<RomCandidate> candidates)

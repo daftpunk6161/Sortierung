@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<datafile>
+  <header><name>RomCleanup Test DAT - Redump PS1</name></header>
+  <game name="Final Fantasy VII (USA)"><rom name="ff7.bin" size="734003200" crc="30000001" sha1="5223456789012345678901234567890123456789" /></game>
+  <game name="Metal Gear Solid (USA)"><rom name="mgs.bin" size="734003200" crc="30000002" sha1="6223456789012345678901234567890123456789" /></game>
+  <game name="Gran Turismo 2 (USA)"><rom name="gt2.bin" size="734003200" crc="30000003" sha1="7223456789012345678901234567890123456789" /></game>
+  <game name="Tekken 3 (USA)"><rom name="tekken3.bin" size="734003200" crc="30000004" sha1="8223456789012345678901234567890123456789" /></game>
+  <game name="Crash Bandicoot 2 (USA)"><rom name="cb2.bin" size="734003200" crc="30000005" sha1="9223456789012345678901234567890123456789" /></game>
+</datafile>

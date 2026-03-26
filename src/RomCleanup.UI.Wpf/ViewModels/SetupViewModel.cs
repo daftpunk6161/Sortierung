@@ -61,10 +61,10 @@ public sealed partial class SetupViewModel : ObservableObject, INotifyDataErrorI
     public string Tool7z { get => _tool7z; set { if (SetProperty(ref _tool7z, value)) { ValidateToolPath(value, nameof(Tool7z)); StatusRefreshRequested?.Invoke(); } } }
 
     private string _toolPsxtract = "";
-    public string ToolPsxtract { get => _toolPsxtract; set { if (SetProperty(ref _toolPsxtract, value)) ValidateToolPath(value, nameof(ToolPsxtract)); } }
+    public string ToolPsxtract { get => _toolPsxtract; set { if (SetProperty(ref _toolPsxtract, value)) { ValidateToolPath(value, nameof(ToolPsxtract)); StatusRefreshRequested?.Invoke(); } } }
 
     private string _toolCiso = "";
-    public string ToolCiso { get => _toolCiso; set { if (SetProperty(ref _toolCiso, value)) ValidateToolPath(value, nameof(ToolCiso)); } }
+    public string ToolCiso { get => _toolCiso; set { if (SetProperty(ref _toolCiso, value)) { ValidateToolPath(value, nameof(ToolCiso)); StatusRefreshRequested?.Invoke(); } } }
 
     // ═══ BOOLEAN FLAGS (persisted) ══════════════════════════════════════
     [ObservableProperty]
@@ -230,10 +230,13 @@ public sealed partial class SetupViewModel : ObservableObject, INotifyDataErrorI
     public string CurrentThemeName => _theme.Current.ToString();
     public string ThemeToggleText => _theme.Current switch
     {
-        AppTheme.Dark => "☀ Hell",
-        AppTheme.Light => "◐ Kontrast",
-        AppTheme.HighContrast => "☾ Dunkel",
-        _ => "☾ Dunkel",
+        AppTheme.Dark         => "⮞ Clean Dark",
+        AppTheme.CleanDarkPro => "⮞ Retro CRT",
+        AppTheme.RetroCRT     => "⮞ Arcade Neon",
+        AppTheme.ArcadeNeon   => "⮞ Hell",
+        AppTheme.Light        => "⮞ Kontrast",
+        AppTheme.HighContrast => "⮞ Synthwave",
+        _                     => "⮞ Synthwave",
     };
 
     // ═══ EXTENSION FILTERS ═══════════════════════════════════════════════

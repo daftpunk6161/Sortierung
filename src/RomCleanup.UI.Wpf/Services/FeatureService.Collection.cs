@@ -4,6 +4,7 @@ using System.Security;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using RomCleanup.Core;
 using System.Xml;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Models;
@@ -34,7 +35,7 @@ public static partial class FeatureService
         "console" => DetectConsoleFromPath(c.MainPath),
         "region" => c.Region,
         "format" => c.Extension,
-        "category" => c.Category,
+        "category" => ToCategoryLabel(c.Category),
         "sizemb" => (c.SizeBytes / 1048576.0).ToString("F2", CultureInfo.InvariantCulture),
         "datstatus" => c.DatMatch ? "Verified" : "Unverified",
         "filename" => Path.GetFileName(c.MainPath),
@@ -63,8 +64,12 @@ public static partial class FeatureService
 
     internal static bool TryRegexMatch(string input, string pattern)
     {
-        try { return Regex.IsMatch(input, pattern, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(200)); }
-        catch { return false; }
+        try
+        {
+            var rx = new Regex(pattern, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(200));
+            return SafeRegex.IsMatch(rx, input);
+        }
+        catch (ArgumentException) { return false; } // invalid regex pattern
     }
 
 
@@ -119,7 +124,7 @@ public static partial class FeatureService
     /// <summary>
     /// Build a cross-root duplicate report showing groups spanning multiple roots.
     /// </summary>
-    public static string BuildCrossRootReport(IReadOnlyList<DedupeResult> dedupeGroups, IReadOnlyList<string> roots)
+    public static string BuildCrossRootReport(IReadOnlyList<DedupeGroup> dedupeGroups, IReadOnlyList<string> roots)
     {
         var normalizedRoots = roots
             .Select(r => Path.GetFullPath(r).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
@@ -131,7 +136,7 @@ public static partial class FeatureService
             return normalizedRoots.FirstOrDefault(r => full.Length > r.Length && full.StartsWith(r, StringComparison.OrdinalIgnoreCase) && full[r.Length] is '\\' or '/');
         }
 
-        var crossRootGroups = new List<DedupeResult>();
+        var crossRootGroups = new List<DedupeGroup>();
         foreach (var g in dedupeGroups)
         {
             var allPaths = new[] { g.Winner }.Concat(g.Losers);
@@ -246,7 +251,7 @@ public static partial class FeatureService
             string fieldValue = field switch
             {
                 "region" => c.Region,
-                "category" => c.Category,
+                "category" => ToCategoryLabel(c.Category),
                 "extension" or "ext" => c.Extension,
                 "gamekey" or "game" => c.GameKey,
                 "type" or "consolekey" or "console" => c.ConsoleKey,

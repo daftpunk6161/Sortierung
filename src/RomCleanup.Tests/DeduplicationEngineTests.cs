@@ -203,4 +203,182 @@ public class DeduplicationEngineTests
         Assert.Single(results);
         Assert.Equal("b.zip", results[0].Winner.MainPath);
     }
+
+    [Fact]
+    public void Deduplicate_SameMainPathDifferentCandidates_RetainsLoser()
+    {
+        var stronger = MakeCandidate(
+            mainPath: "same_path.zip",
+            gameKey: "game",
+            regionScore: 1000,
+            versionScore: 100,
+            formatScore: 850);
+        var weaker = MakeCandidate(
+            mainPath: "same_path.zip",
+            gameKey: "game",
+            regionScore: 200,
+            versionScore: 0,
+            formatScore: 300);
+
+        var results = DeduplicationEngine.Deduplicate(new[] { stronger, weaker });
+
+        Assert.Single(results);
+        Assert.Equal("same_path.zip", results[0].Winner.MainPath);
+        Assert.Single(results[0].Losers);
+    }
+
+    [Fact]
+    public void SelectWinner_GameCategory_BeatsUnknownDespiteHigherScores()
+    {
+        var unknown = new RomCandidate
+        {
+            MainPath = "u.zip",
+            GameKey = "game",
+            Category = FileCategory.Unknown,
+            RegionScore = 1000,
+            VersionScore = 1000,
+            FormatScore = 1000
+        };
+        var game = new RomCandidate
+        {
+            MainPath = "g.zip",
+            GameKey = "game",
+            Category = FileCategory.Game,
+            RegionScore = 1,
+            VersionScore = 1,
+            FormatScore = 1
+        };
+
+        var winner = DeduplicationEngine.SelectWinner(new[] { unknown, game });
+
+        Assert.NotNull(winner);
+        Assert.Equal(FileCategory.Game, winner!.Category);
+    }
+
+    // --- Whitespace-only GameKey excluded ---
+
+    [Fact]
+    public void Deduplicate_WhitespaceOnlyGameKey_ExcludedFromGroups()
+    {
+        var candidates = new[]
+        {
+            MakeCandidate(mainPath: "space_key.zip", gameKey: "   ", regionScore: 1000),
+            MakeCandidate(mainPath: "mario.zip", gameKey: "mario", regionScore: 500),
+        };
+
+        var results = DeduplicationEngine.Deduplicate(candidates);
+        Assert.Single(results);
+        Assert.Equal("mario", results[0].GameKey);
+    }
+
+    // --- Deduplicate determinism (full pipeline) ---
+
+    [Fact]
+    public void Deduplicate_IsDeterministic()
+    {
+        var candidates = Enumerable.Range(0, 20)
+            .Select(i => MakeCandidate(
+                mainPath: $"game_{i:D2}.zip",
+                gameKey: $"group_{i % 4}",
+                regionScore: 500 + (i % 5),
+                versionScore: i * 10,
+                formatScore: 300 + (i % 3) * 100))
+            .ToArray();
+
+        var first = DeduplicationEngine.Deduplicate(candidates);
+        for (var run = 0; run < 20; run++)
+        {
+            var result = DeduplicationEngine.Deduplicate(candidates);
+            Assert.Equal(first.Count, result.Count);
+            for (var g = 0; g < first.Count; g++)
+            {
+                Assert.Equal(first[g].GameKey, result[g].GameKey);
+                Assert.Equal(first[g].Winner.MainPath, result[g].Winner.MainPath);
+                Assert.Equal(first[g].Losers.Count, result[g].Losers.Count);
+            }
+        }
+    }
+
+    // --- Full Category Ranking: Bios > Game > NonGame > Junk > Unknown ---
+
+    [Fact]
+    public void SelectWinner_BiosCategory_BeatsGameDespiteHigherScores()
+    {
+        var game = new RomCandidate
+        {
+            MainPath = "g.zip", GameKey = "key",
+            Category = FileCategory.Game,
+            RegionScore = 1000, VersionScore = 1000, FormatScore = 1000
+        };
+        var bios = new RomCandidate
+        {
+            MainPath = "b.zip", GameKey = "key",
+            Category = FileCategory.Bios,
+            RegionScore = 1, VersionScore = 1, FormatScore = 1
+        };
+
+        var winner = DeduplicationEngine.SelectWinner(new[] { game, bios });
+        Assert.Equal(FileCategory.Game, winner!.Category);
+        // Game rank (5) > Bios rank (4), so Game wins
+    }
+
+    [Fact]
+    public void SelectWinner_GameCategory_BeatsNonGame()
+    {
+        var nonGame = new RomCandidate
+        {
+            MainPath = "n.zip", GameKey = "key",
+            Category = FileCategory.NonGame,
+            RegionScore = 1000, VersionScore = 1000, FormatScore = 1000
+        };
+        var game = new RomCandidate
+        {
+            MainPath = "g.zip", GameKey = "key",
+            Category = FileCategory.Game,
+            RegionScore = 1, VersionScore = 1, FormatScore = 1
+        };
+
+        var winner = DeduplicationEngine.SelectWinner(new[] { nonGame, game });
+        Assert.Equal(FileCategory.Game, winner!.Category);
+    }
+
+    [Fact]
+    public void SelectWinner_NonGameCategory_BeatsJunk()
+    {
+        var junk = new RomCandidate
+        {
+            MainPath = "j.zip", GameKey = "key",
+            Category = FileCategory.Junk,
+            RegionScore = 1000, VersionScore = 1000
+        };
+        var nonGame = new RomCandidate
+        {
+            MainPath = "n.zip", GameKey = "key",
+            Category = FileCategory.NonGame,
+            RegionScore = 1, VersionScore = 1
+        };
+
+        var winner = DeduplicationEngine.SelectWinner(new[] { junk, nonGame });
+        Assert.Equal(FileCategory.NonGame, winner!.Category);
+    }
+
+    [Fact]
+    public void SelectWinner_JunkCategory_BeatsUnknown()
+    {
+        var unknown = new RomCandidate
+        {
+            MainPath = "u.zip", GameKey = "key",
+            Category = FileCategory.Unknown,
+            RegionScore = 1000
+        };
+        var junk = new RomCandidate
+        {
+            MainPath = "j.zip", GameKey = "key",
+            Category = FileCategory.Junk,
+            RegionScore = 1
+        };
+
+        var winner = DeduplicationEngine.SelectWinner(new[] { unknown, junk });
+        Assert.Equal(FileCategory.Junk, winner!.Category);
+    }
 }

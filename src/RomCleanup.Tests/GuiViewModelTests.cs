@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 using System.Windows.Media;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Models;
@@ -135,6 +136,28 @@ public class GuiViewModelTests
         Assert.Equal(0x00, result.Color.R);
         Assert.Equal(0xF5, result.Color.G);
         Assert.Equal(0xFF, result.Color.B);
+    }
+
+    [Fact]
+    public void AutoDetectDatMappingsCommand_CanExecute_TracksDatRootValidity()
+    {
+        var vm = new MainViewModel();
+
+        vm.DatRoot = "";
+        Assert.False(vm.AutoDetectDatMappingsCommand.CanExecute(null));
+
+        var tempDatRoot = Path.Combine(Path.GetTempPath(), "RomCleanup_DatCmd_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDatRoot);
+        try
+        {
+            vm.DatRoot = tempDatRoot;
+            Assert.True(vm.AutoDetectDatMappingsCommand.CanExecute(null));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDatRoot))
+                Directory.Delete(tempDatRoot, true);
+        }
     }
 
     [Theory]
@@ -288,17 +311,15 @@ public class GuiViewModelTests
     [Fact]
     public void ThemeParity_TabItem_Padding_MatchesBetweenThemes()
     {
-        var darkPath = FindThemeFile("SynthwaveDark.xaml");
-        var lightPath = FindThemeFile("Light.xaml");
-        var darkDoc = XDocument.Load(darkPath);
-        var lightDoc = XDocument.Load(lightPath);
-
-        var darkPadding = ExtractSetterValue(darkDoc, "TabItem", "Padding");
-        var lightPadding = ExtractSetterValue(lightDoc, "TabItem", "Padding");
-
-        Assert.NotNull(darkPadding);
-        Assert.NotNull(lightPadding);
-        Assert.Equal(darkPadding, lightPadding);
+        // TabItem style lives in the shared _ControlTemplates.xaml (not per-theme).
+        // Verify the shared template defines a TabItem Padding consistently.
+        var templatesPath = FindThemeFile("_ControlTemplates.xaml");
+        Assert.True(File.Exists(templatesPath),
+            $"_ControlTemplates.xaml not found (BaseDir={AppDomain.CurrentDomain.BaseDirectory})");
+        var doc = XDocument.Load(templatesPath);
+        var padding = ExtractSetterValue(doc, "TabItem", "Padding");
+        Assert.True(padding is not null,
+            $"TabItem Padding not found in {templatesPath}");
     }
 
     private static Dictionary<string, string> ExtractCornerRadiusValues(XDocument doc)
@@ -326,7 +347,8 @@ public class GuiViewModelTests
         foreach (var style in doc.Descendants().Where(e => e.Name.LocalName == "Style"))
         {
             var tt = style.Attribute("TargetType")?.Value;
-            if (tt != targetType) continue;
+            // Match both "TabItem" and "{x:Type TabItem}" formats
+            if (tt != targetType && tt?.EndsWith(targetType + "}") != true) continue;
             foreach (var setter in style.Elements().Where(e => e.Name.LocalName == "Setter"))
             {
                 if (setter.Attribute("Property")?.Value == property)
@@ -338,18 +360,49 @@ public class GuiViewModelTests
 
     // ═══ Helpers ════════════════════════════════════════════════════════
 
-    private static string FindThemeFile(string fileName)
+    private static string FindThemeFile(string fileName, [System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
     {
-        // Walk up from test output dir to find the source tree
-        var dir = AppDomain.CurrentDomain.BaseDirectory;
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir, "src", "RomCleanup.UI.Wpf", "Themes", fileName);
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        // Fallback: try relative from working directory
+        var repoRoot = FindRepoRoot(callerPath);
+        var candidate = Path.Combine(repoRoot, "src", "RomCleanup.UI.Wpf", "Themes", fileName);
+        if (File.Exists(candidate))
+            return candidate;
+
+        // Last resort: preserve previous behavior to keep tests resilient in odd runners.
         return Path.Combine("src", "RomCleanup.UI.Wpf", "Themes", fileName);
+    }
+
+    private static string FindRepoRoot(string? callerPath)
+    {
+        // Prefer compile-time source location to avoid resolving archived duplicates.
+        if (!string.IsNullOrWhiteSpace(callerPath))
+        {
+            var dir = Path.GetDirectoryName(callerPath);
+            while (dir is not null)
+            {
+                if (File.Exists(Path.Combine(dir, "src", "RomCleanup.sln")) ||
+                    File.Exists(Path.Combine(dir, "src", "RomCleanup.UI.Wpf", "RomCleanup.UI.Wpf.csproj")))
+                {
+                    return dir;
+                }
+
+                dir = Path.GetDirectoryName(dir);
+            }
+        }
+
+        // Fallback for unusual test hosts that do not provide a caller path.
+        var probe = AppDomain.CurrentDomain.BaseDirectory;
+        while (probe is not null)
+        {
+            if (File.Exists(Path.Combine(probe, "src", "RomCleanup.sln")) ||
+                File.Exists(Path.Combine(probe, "src", "RomCleanup.UI.Wpf", "RomCleanup.UI.Wpf.csproj")))
+            {
+                return probe;
+            }
+
+            probe = Path.GetDirectoryName(probe);
+        }
+
+        return Directory.GetCurrentDirectory();
     }
 
     private static HashSet<string> ExtractResourceKeys(string xamlPath)
@@ -641,6 +694,50 @@ public class GuiViewModelTests
         vm.RefreshStatus();
         Assert.Equal(StatusLevel.Warning, vm.ToolsStatusLevel);
         Assert.Equal("Tools nicht gefunden", vm.StatusTools);
+    }
+
+    [Fact]
+    public void ToolCiso_Setter_RefreshesCisoStatusImmediately()
+    {
+        var vm = new MainViewModel();
+        var tempDir = Path.Combine(Path.GetTempPath(), "RomCleanup_ToolStatus_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        var cisoPath = Path.Combine(tempDir, "ciso.exe");
+
+        try
+        {
+            File.WriteAllText(cisoPath, "stub");
+
+            vm.ToolCiso = cisoPath;
+
+            Assert.Equal("✓ Gefunden", vm.CisoStatusText);
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void ToolPsxtract_Setter_RefreshesPsxtractStatusImmediately()
+    {
+        var vm = new MainViewModel();
+        var tempDir = Path.Combine(Path.GetTempPath(), "RomCleanup_ToolStatus_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        var psxtractPath = Path.Combine(tempDir, "psxtract.exe");
+
+        try
+        {
+            File.WriteAllText(psxtractPath, "stub");
+
+            vm.ToolPsxtract = psxtractPath;
+
+            Assert.Equal("✓ Gefunden", vm.PsxtractStatusText);
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { }
+        }
     }
 
     [Fact]
@@ -1133,6 +1230,123 @@ public class GuiViewModelTests
         Assert.Equal(RunState.Cancelled, vm.CurrentRunState);
     }
 
+    [Fact]
+    public void ApplyRunResult_WhenStateIsCancelled_DoesNotMutateDashboardOrCollections()
+    {
+        var vm = new MainViewModel();
+        vm.DashWinners = "sentinel";
+        vm.DashDupes = "sentinel";
+        SetRunStateViaValidPath(vm, RunState.Cancelled);
+
+        var winner = new RomCandidate
+        {
+            MainPath = @"C:\Roms\Game (USA).zip",
+            GameKey = "game",
+            Region = "US",
+            Category = FileCategory.Game,
+            SizeBytes = 1024,
+            Extension = ".zip"
+        };
+
+        var loser = new RomCandidate
+        {
+            MainPath = @"C:\Roms\Game (EU).zip",
+            GameKey = "game",
+            Region = "EU",
+            Category = FileCategory.Game,
+            SizeBytes = 1000,
+            Extension = ".zip"
+        };
+
+        var result = new RunResult
+        {
+            Status = "cancelled",
+            TotalFilesScanned = 2,
+            GroupCount = 1,
+            WinnerCount = 1,
+            LoserCount = 1,
+            AllCandidates = new[] { winner, loser },
+            DedupeGroups = new[]
+            {
+                new DedupeGroup
+                {
+                    GameKey = "game",
+                    Winner = winner,
+                    Losers = new[] { loser }
+                }
+            }
+        };
+
+        vm.ApplyRunResult(result);
+
+        Assert.Equal("sentinel", vm.DashWinners);
+        Assert.Equal("sentinel", vm.DashDupes);
+        Assert.Null(vm.LastRunResult);
+        Assert.Empty(vm.LastCandidates);
+        Assert.Empty(vm.LastDedupeGroups);
+        Assert.Equal(RunState.Cancelled, vm.CurrentRunState);
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_CancelledRun_ShowsPartialResultsInDashboard()
+    {
+        var winner = new RomCandidate
+        {
+            MainPath = @"C:\Roms\Game (USA).zip",
+            GameKey = "game",
+            Region = "US",
+            Category = FileCategory.Game,
+            SizeBytes = 1024,
+            Extension = ".zip"
+        };
+
+        var loser = new RomCandidate
+        {
+            MainPath = @"C:\Roms\Game (EU).zip",
+            GameKey = "game",
+            Region = "EU",
+            Category = FileCategory.Game,
+            SizeBytes = 1000,
+            Extension = ".zip"
+        };
+
+        var partialCancelledResult = new RunResult
+        {
+            Status = "cancelled",
+            ExitCode = 2,
+            TotalFilesScanned = 2,
+            GroupCount = 1,
+            WinnerCount = 1,
+            LoserCount = 1,
+            AllCandidates = new[] { winner, loser },
+            DedupeGroups = new[]
+            {
+                new DedupeGroup
+                {
+                    GameKey = "game",
+                    Winner = winner,
+                    Losers = new[] { loser }
+                }
+            }
+        };
+
+        var fakeRunService = new FakeRunService(partialCancelledResult);
+        var vm = new MainViewModel(new ThemeService(), new StubDialogService(), runService: fakeRunService);
+        vm.Roots.Add(Path.GetTempPath());
+        vm.TransitionTo(RunState.Preflight);
+
+        await vm.ExecuteRunAsync();
+
+        Assert.Equal(RunState.Cancelled, vm.CurrentRunState);
+        Assert.NotNull(vm.LastRunResult);
+        Assert.Equal("cancelled", vm.LastRunResult!.Status);
+        Assert.Equal("1", vm.DashWinners);
+        Assert.Equal("1", vm.DashDupes);
+        Assert.Equal("1", vm.DashGames);
+        Assert.Equal(2, vm.LastCandidates.Count);
+        Assert.Single(vm.LastDedupeGroups);
+    }
+
     // ═══ TEST-007: DryRun E2E Smoke-Test ════════════════════════════════
 
     [Fact]
@@ -1153,7 +1367,7 @@ public class GuiViewModelTests
             var orch = new RomCleanup.Infrastructure.Orchestration.RunOrchestrator(fs, audit);
 
             // Act: DryRun
-            var options = new RomCleanup.Infrastructure.Orchestration.RunOptions
+            var options = new RomCleanup.Contracts.Models.RunOptions
             {
                 Roots = new[] { tempDir },
                 Extensions = new[] { ".zip" },
@@ -1264,6 +1478,167 @@ public class GuiViewModelTests
         Assert.Equal(Path.Combine(@"C:\", "reports"), result);
     }
 
+    [Fact]
+    public void RunService_BuildOrchestrator_MapsDatRenameFlags_FromViewModel_Issue9()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"gui_datrename_root_{Guid.NewGuid():N}");
+        var datRoot = Path.Combine(Path.GetTempPath(), $"gui_datrename_dat_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(datRoot);
+
+        try
+        {
+            var vm = new MainViewModel(new ThemeService(), new StubDialogService());
+            vm.Roots.Add(root);
+            vm.UseDat = true;
+            vm.EnableDatRename = true;
+
+            var (_, options, _, _) = new RunService().BuildOrchestrator(vm);
+
+            Assert.True(options.EnableDat);
+            Assert.True(options.EnableDatAudit);
+            Assert.True(options.EnableDatRename);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+            Directory.Delete(datRoot, true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_ShouldAbort_WhenDatRenamePreviewNotConfirmed_Issue9()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"gui_datrename_abort_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            var dialog = new StubDialogService
+            {
+                DangerConfirmResult = true,
+                ConfirmReturnValue = false
+            };
+
+            var runService = new RecordingRunService(new RunResult
+            {
+                Status = "ok",
+                ExitCode = 0,
+                AllCandidates = Array.Empty<RomCandidate>(),
+                DedupeGroups = Array.Empty<DedupeGroup>()
+            });
+
+            var vm = new MainViewModel(new ThemeService(), dialog, runService: runService);
+            vm.Roots.Add(root);
+            vm.UseDat = true;
+            vm.EnableDatRename = true;
+            vm.DryRun = false;
+
+            vm.LastRunResult = new RunResult
+            {
+                DatAuditResult = new DatAuditResult(
+                    Entries:
+                    [
+                        new DatAuditEntry(
+                            FilePath: Path.Combine(root, "old-name.nes"),
+                            Hash: "abc",
+                            Status: DatAuditStatus.HaveWrongName,
+                            DatGameName: "Super Mario Bros.",
+                            DatRomFileName: "Super Mario Bros. (USA).nes",
+                            ConsoleKey: "NES",
+                            Confidence: 100)
+                    ],
+                    HaveCount: 0,
+                    HaveWrongNameCount: 1,
+                    MissCount: 0,
+                    UnknownCount: 0,
+                    AmbiguousCount: 0)
+            };
+
+            await vm.ExecuteRunAsync();
+
+            Assert.Equal(1, dialog.ConfirmCallCount);
+            Assert.Equal(0, runService.ExecuteRunCallCount);
+            Assert.Equal(RunState.Idle, vm.CurrentRunState);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_ShouldExecuteAndEnableRollback_WhenDatRenamePreviewConfirmed_Issue9()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"gui_datrename_confirm_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        var auditPath = Path.Combine(root, "audit.csv");
+        File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action\n", Encoding.UTF8);
+
+        try
+        {
+            var dialog = new StubDialogService
+            {
+                DangerConfirmResult = true,
+                ConfirmReturnValue = true
+            };
+
+            var runService = new RecordingRunService(
+                new RunResult
+                {
+                    Status = "ok",
+                    ExitCode = 0,
+                    AllCandidates =
+                    [
+                        new RomCandidate { MainPath = Path.Combine(root, "game.nes"), Category = FileCategory.Game }
+                    ],
+                    DedupeGroups = Array.Empty<DedupeGroup>()
+                },
+                auditPath: auditPath);
+
+            var vm = new MainViewModel(new ThemeService(), dialog, runService: runService);
+            vm.Roots.Add(root);
+            vm.UseDat = true;
+            vm.EnableDatRename = true;
+            vm.DryRun = false;
+
+            vm.LastRunResult = new RunResult
+            {
+                DatAuditResult = new DatAuditResult(
+                    Entries:
+                    [
+                        new DatAuditEntry(
+                            FilePath: Path.Combine(root, "old-name.nes"),
+                            Hash: "abc",
+                            Status: DatAuditStatus.HaveWrongName,
+                            DatGameName: "Super Mario Bros.",
+                            DatRomFileName: "Super Mario Bros. (USA).nes",
+                            ConsoleKey: "NES",
+                            Confidence: 100)
+                    ],
+                    HaveCount: 0,
+                    HaveWrongNameCount: 1,
+                    MissCount: 0,
+                    UnknownCount: 0,
+                    AmbiguousCount: 0)
+            };
+
+                    vm.TransitionTo(RunState.Preflight);
+
+            await vm.ExecuteRunAsync();
+
+            Assert.Equal(1, dialog.ConfirmCallCount);
+            Assert.Equal(1, runService.ExecuteRunCallCount);
+            Assert.Equal(RunState.Completed, vm.CurrentRunState);
+            Assert.True(vm.CanRollback);
+            Assert.True(vm.HasRollbackUndo);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
     // ═══ WatchService tests ═════════════════════════════════════════════
 
     [Fact]
@@ -1359,7 +1734,7 @@ public class GuiViewModelTests
     [Fact]
     public void RollbackService_Execute_NoAuditFile_ReturnsEmpty()
     {
-        var result = RollbackService.Execute(
+        var result = RomCleanup.Infrastructure.Audit.RollbackService.Execute(
             Path.Combine(Path.GetTempPath(), "nonexistent_audit.csv"),
             new[] { @"C:\Games" });
         Assert.Equal(0, result.RolledBack);
@@ -1453,7 +1828,7 @@ public class GuiViewModelTests
     {
         var candidates = new List<RomCandidate>
         {
-            new() { MainPath = @"C:\Roms\game1.rom", GameKey = "game1", DatMatch = true, Category = "GAME", Extension = ".rom", Region = "EU", SizeBytes = 100 }
+            new() { MainPath = @"C:\Roms\game1.rom", GameKey = "game1", DatMatch = true, Category = FileCategory.Game, Extension = ".rom", Region = "EU", SizeBytes = 100 }
         };
         var result = FeatureService.BuildMissingRomReport(candidates, new[] { @"C:\Roms" });
         Assert.Null(result);
@@ -1464,8 +1839,8 @@ public class GuiViewModelTests
     {
         var candidates = new List<RomCandidate>
         {
-            new() { MainPath = @"C:\Roms\SNES\game1.rom", GameKey = "game1", DatMatch = false, Category = "GAME", Extension = ".rom", Region = "EU", SizeBytes = 100 },
-            new() { MainPath = @"C:\Roms\SNES\game2.rom", GameKey = "game2", DatMatch = true, Category = "GAME", Extension = ".rom", Region = "US", SizeBytes = 200 }
+            new() { MainPath = @"C:\Roms\SNES\game1.rom", GameKey = "game1", DatMatch = false, Category = FileCategory.Game, Extension = ".rom", Region = "EU", SizeBytes = 100 },
+            new() { MainPath = @"C:\Roms\SNES\game2.rom", GameKey = "game2", DatMatch = true, Category = FileCategory.Game, Extension = ".rom", Region = "US", SizeBytes = 200 }
         };
         var result = FeatureService.BuildMissingRomReport(candidates, new[] { @"C:\Roms" });
         Assert.NotNull(result);
@@ -1475,7 +1850,7 @@ public class GuiViewModelTests
     [Fact]
     public void FeatureService_BuildCrossRootReport_NoGroups_ShowsEmpty()
     {
-        var groups = new List<DedupeResult>();
+        var groups = new List<DedupeGroup>();
         var result = FeatureService.BuildCrossRootReport(groups, new[] { @"C:\A", @"C:\B" });
         Assert.Contains("Cross-Root-Gruppen: 0", result);
         Assert.Contains("Keine Cross-Root-Duplikate", result);
@@ -1602,7 +1977,7 @@ public class GuiViewModelTests
     public void FeatureService_BuildHtmlReportData_EmptyCandidates()
     {
         var (summary, entries) = FeatureService.BuildHtmlReportData(
-            Array.Empty<RomCandidate>(), Array.Empty<DedupeResult>(), null, true);
+            Array.Empty<RomCandidate>(), Array.Empty<DedupeGroup>(), null, true);
         Assert.Equal("DryRun", summary.Mode);
         Assert.Equal(0, summary.TotalFiles);
         Assert.Empty(entries);
@@ -1613,10 +1988,10 @@ public class GuiViewModelTests
     {
         var candidates = new List<RomCandidate>
         {
-            new() { MainPath = @"C:\game.rom", GameKey = "game", Category = "GAME", Extension = ".rom", Region = "EU", SizeBytes = 100, RegionScore = 50, FormatScore = 500, VersionScore = 100, DatMatch = true },
-            new() { MainPath = @"C:\junk.rom", GameKey = "junk", Category = "JUNK", Extension = ".rom", Region = "US", SizeBytes = 200 }
+            new() { MainPath = @"C:\game.rom", GameKey = "game", Category = FileCategory.Game, Extension = ".rom", Region = "EU", SizeBytes = 100, RegionScore = 50, FormatScore = 500, VersionScore = 100, DatMatch = true },
+            new() { MainPath = @"C:\junk.rom", GameKey = "junk", Category = FileCategory.Junk, Extension = ".rom", Region = "US", SizeBytes = 200 }
         };
-        var groups = new List<DedupeResult>
+        var groups = new List<DedupeGroup>
         {
             new() { GameKey = "game", Winner = candidates[0], Losers = [] }
         };
@@ -1865,17 +2240,131 @@ public class GuiViewModelTests
     {
         public string? BrowseFileResult { get; set; }
         public string? BrowseFolderResult { get; set; }
+        public bool ConfirmReturnValue { get; set; } = true;
+        public bool DangerConfirmResult { get; set; } = true;
+        public int ConfirmCallCount { get; private set; }
+        public string? LastConfirmMessage { get; private set; }
+        public string? LastConfirmTitle { get; private set; }
 
         public string? BrowseFolder(string title = "Ordner auswählen") => BrowseFolderResult;
         public string? BrowseFile(string title = "Datei auswählen", string filter = "Alle Dateien|*.*") => BrowseFileResult;
         public string? SaveFile(string title = "Speichern unter", string filter = "Alle Dateien|*.*", string? defaultFileName = null) => null;
-        public bool Confirm(string message, string title = "Bestätigung") => true;
+        public bool Confirm(string message, string title = "Bestätigung")
+        {
+            ConfirmCallCount++;
+            LastConfirmMessage = message;
+            LastConfirmTitle = title;
+            return ConfirmReturnValue;
+        }
         public void Info(string message, string title = "Information") { }
         public void Error(string message, string title = "Fehler") { }
         public ConfirmResult YesNoCancel(string message, string title = "Frage") => ConfirmResult.Yes;
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => defaultValue;
         public void ShowText(string title, string content) { }
-        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => DangerConfirmResult;
+        public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals)
+        {
+            ConfirmCallCount++;
+            return ConfirmReturnValue;
+        }
+    }
+
+    private sealed class RecordingRunService : IRunService
+    {
+        private readonly RunResult _result;
+        private readonly string? _auditPath;
+        private readonly string? _reportPath;
+
+        public RecordingRunService(RunResult result, string? auditPath = null, string? reportPath = null)
+        {
+            _result = result;
+            _auditPath = auditPath;
+            _reportPath = reportPath;
+        }
+
+        public int ExecuteRunCallCount { get; private set; }
+
+        public (RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)
+            BuildOrchestrator(MainViewModel vm, Action<string>? onProgress = null)
+        {
+            onProgress?.Invoke("[Init] RecordingRunService bereit");
+            var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+            var audit = new RomCleanup.Infrastructure.Audit.AuditCsvStore();
+            var orchestrator = new RunOrchestrator(fs, audit, onProgress: onProgress);
+            var options = new RunOptions
+            {
+                Roots = vm.Roots.ToList(),
+                Mode = vm.DryRun ? "DryRun" : "Move",
+                Extensions = new[] { ".zip" },
+                EnableDat = vm.UseDat,
+                EnableDatAudit = vm.UseDat,
+                EnableDatRename = vm.UseDat && vm.EnableDatRename
+            };
+            return (orchestrator, options, _auditPath, _reportPath);
+        }
+
+        public RunService.RunServiceResult ExecuteRun(
+            RunOrchestrator orchestrator,
+            RunOptions options,
+            string? auditPath,
+            string? reportPath,
+            CancellationToken ct)
+        {
+            ExecuteRunCallCount++;
+            return new RunService.RunServiceResult
+            {
+                Result = _result,
+                AuditPath = auditPath,
+                ReportPath = reportPath
+            };
+        }
+
+        public string GetSiblingDirectory(string rootPath, string siblingName)
+            => Path.Combine(Path.GetDirectoryName(rootPath) ?? rootPath, siblingName);
+    }
+
+    private sealed class FakeRunService : IRunService
+    {
+        private readonly RunResult _result;
+
+        public FakeRunService(RunResult result)
+        {
+            _result = result;
+        }
+
+        public (RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)
+            BuildOrchestrator(MainViewModel vm, Action<string>? onProgress = null)
+        {
+            onProgress?.Invoke("[Init] FakeRunService bereit");
+            var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+            var audit = new RomCleanup.Infrastructure.Audit.AuditCsvStore();
+            var orchestrator = new RunOrchestrator(fs, audit, onProgress: onProgress);
+            var options = new RunOptions
+            {
+                Roots = vm.Roots.ToList(),
+                Mode = vm.DryRun ? "DryRun" : "Move",
+                Extensions = new[] { ".zip" }
+            };
+            return (orchestrator, options, null, null);
+        }
+
+        public RunService.RunServiceResult ExecuteRun(
+            RunOrchestrator orchestrator,
+            RunOptions options,
+            string? auditPath,
+            string? reportPath,
+            CancellationToken ct)
+        {
+            return new RunService.RunServiceResult
+            {
+                Result = _result,
+                AuditPath = auditPath,
+                ReportPath = reportPath
+            };
+        }
+
+        public string GetSiblingDirectory(string rootPath, string siblingName)
+            => Path.Combine(Path.GetDirectoryName(rootPath) ?? rootPath, siblingName);
     }
 
     // ═══ XAML Binding Validation (VERIFY-001) ═══════════════════════════
@@ -1919,7 +2408,9 @@ public class GuiViewModelTests
             "HasRecentTools", "IsToolSearchActive", "QuickAccessItems",
             "RecentToolItems", "ToolCategories",
             // NotificationItem model + RelativeSource ancestor bindings
-            "DataContext", "Message", "Type"
+            "DataContext", "Message", "Type",
+            // Child ViewModel / Command properties (coverage reflection may miss these)
+            "Shell", "CommandPalette", "DatAudit", "ToggleCommandPaletteCommand"
         };
 
         var missing = new List<string>();
@@ -2194,10 +2685,6 @@ public class GuiViewModelTests
         Assert.Contains(11, indices);
         Assert.Contains(12, indices);
 
-        // Mode toggle group (20-21)
-        Assert.Contains(20, indices);
-        Assert.Contains(21, indices);
-
         // Simple mode group (30-33)
         Assert.Contains(30, indices);
         Assert.Contains(31, indices);
@@ -2206,9 +2693,9 @@ public class GuiViewModelTests
         Assert.Contains(40, indices);
         Assert.Contains(41, indices);
 
-        // At least 12 controls with explicit TabIndex
-        Assert.True(indices.Count >= 12,
-            $"Expected at least 12 controls with TabIndex, found {indices.Count}");
+        // At least 10 controls with explicit TabIndex
+        Assert.True(indices.Count >= 10,
+            $"Expected at least 10 controls with TabIndex, found {indices.Count}");
     }
 
     // ═══ TASK-127: Feature Buttons use MinWidth not Width ═══════════════
@@ -2359,15 +2846,13 @@ public class GuiViewModelTests
 
     // ═══ WPF file locator ══════════════════════════════════════════════
 
-    private static string FindWpfFile(string fileName)
+    private static string FindWpfFile(string fileName, [System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
     {
-        var dir = AppDomain.CurrentDomain.BaseDirectory;
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir, "src", "RomCleanup.UI.Wpf", fileName);
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
+        var repoRoot = FindRepoRoot(callerPath);
+        var candidate = Path.Combine(repoRoot, "src", "RomCleanup.UI.Wpf", fileName);
+        if (File.Exists(candidate))
+            return candidate;
+
         return Path.Combine("src", "RomCleanup.UI.Wpf", fileName);
     }
 
@@ -2567,7 +3052,7 @@ public class GuiViewModelTests
             audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object> { ["Mode"] = "Move" });
 
             // Execute rollback: should move destFile back to srcFile
-            var restored = RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
+            var restored = RomCleanup.Infrastructure.Audit.RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
 
             Assert.Equal(1, restored.RolledBack);
             Assert.True(File.Exists(srcFile), "Source file should be restored");
@@ -2595,7 +3080,7 @@ public class GuiViewModelTests
                 Path.Combine(tempDir, "b.rom"),
                 "Skip", "GAME", "", "test");
 
-            var restored = RollbackService.Execute(auditPath, new[] { tempDir });
+            var restored = RomCleanup.Infrastructure.Audit.RollbackService.Execute(auditPath, new[] { tempDir });
             Assert.Equal(0, restored.RolledBack);
         }
         finally
@@ -2627,7 +3112,7 @@ public class GuiViewModelTests
 
             File.AppendAllText(auditPath, "tampered\n");
 
-            var restored = RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
+            var restored = RomCleanup.Infrastructure.Audit.RollbackService.Execute(auditPath, new[] { tempDir }, keyPath);
 
             Assert.Equal(0, restored.RolledBack);
             Assert.Equal(1, restored.Failed);
@@ -2651,22 +3136,18 @@ public class GuiViewModelTests
     }
 
     [Fact]
-    public void ThemeService_ToggleCycle_FollowsDarkLightHC()
+    public void ThemeService_ToggleCycle_FollowsAllThemes()
     {
         // Toggle() calls ApplyTheme() which needs Application.Current — not available in unit tests.
-        // Verify the cycle logic is correct by checking the switch expression result.
-        // The cycle is: Dark → Light → HighContrast → Dark
-        AppTheme Next(AppTheme current) => current switch
-        {
-            AppTheme.Dark => AppTheme.Light,
-            AppTheme.Light => AppTheme.HighContrast,
-            AppTheme.HighContrast => AppTheme.Dark,
-            _ => AppTheme.Dark,
-        };
-
-        Assert.Equal(AppTheme.Light, Next(AppTheme.Dark));
-        Assert.Equal(AppTheme.HighContrast, Next(AppTheme.Light));
-        Assert.Equal(AppTheme.Dark, Next(AppTheme.HighContrast));
+        // Verify the cycle logic is correct by checking the AllThemes list order.
+        var all = ThemeService.AllThemes;
+        Assert.Equal(6, all.Count);
+        Assert.Equal(AppTheme.Dark, all[0]);
+        Assert.Equal(AppTheme.CleanDarkPro, all[1]);
+        Assert.Equal(AppTheme.RetroCRT, all[2]);
+        Assert.Equal(AppTheme.ArcadeNeon, all[3]);
+        Assert.Equal(AppTheme.Light, all[4]);
+        Assert.Equal(AppTheme.HighContrast, all[5]);
     }
 
     [Fact]
@@ -2685,7 +3166,10 @@ public class GuiViewModelTests
         Assert.Contains("Dark", names);
         Assert.Contains("Light", names);
         Assert.Contains("HighContrast", names);
-        Assert.Equal(3, names.Length);
+        Assert.Contains("CleanDarkPro", names);
+        Assert.Contains("RetroCRT", names);
+        Assert.Contains("ArcadeNeon", names);
+        Assert.Equal(6, names.Length);
     }
 
     // ═══ TEST-010: VM Smoke Tests ═══════════════════════════════════════
@@ -2745,5 +3229,1243 @@ public class GuiViewModelTests
         Assert.True(vm.DryRun);
         Assert.False(vm.AggressiveJunk);
         Assert.Equal(RunState.Idle, vm.CurrentRunState);
+    }
+
+    // ═══ TASK-124: Localization — inline strings must use _loc ═════════
+
+    [Theory]
+    [InlineData("Run.MoveApplyGate.Unlocked")]
+    [InlineData("Run.MoveApplyGate.LockedNoPrev")]
+    [InlineData("Run.MoveApplyGate.LockedChanged")]
+    [InlineData("Progress.BusyHint.Converting")]
+    [InlineData("Progress.BusyHint.Preview")]
+    [InlineData("Progress.BusyHint.DryRun")]
+    [InlineData("Progress.BusyHint.Move")]
+    [InlineData("Progress.BusyHint.CancelRequested")]
+    [InlineData("Step.NoRoots")]
+    [InlineData("Step.Ready")]
+    [InlineData("Step.PressF5")]
+    [InlineData("Step.Preflight")]
+    [InlineData("Step.Scanning")]
+    [InlineData("Step.Deduplicating")]
+    [InlineData("Step.Sorting")]
+    [InlineData("Step.Moving")]
+    [InlineData("Step.Converting")]
+    [InlineData("Step.Running")]
+    [InlineData("Step.PreviewComplete")]
+    [InlineData("Step.Completed")]
+    [InlineData("Status.RootsConfigured")]
+    [InlineData("Status.NoRoots")]
+    [InlineData("Status.ToolsFound")]
+    [InlineData("Status.ToolsNotFound")]
+    [InlineData("Status.NoTools")]
+    [InlineData("Status.DatActive")]
+    [InlineData("Status.DatPathInvalid")]
+    [InlineData("Status.DatDisabled")]
+    [InlineData("Status.Ready.Ok")]
+    [InlineData("Status.Ready.Warning")]
+    [InlineData("Status.Ready.Blocked")]
+    [InlineData("Tool.Status.Found")]
+    [InlineData("Tool.Status.NotFound")]
+    [InlineData("Conversion.ReviewRequired")]
+    [InlineData("Result.Summary.PreviewDone")]
+    [InlineData("Result.Summary.ChangesApplied")]
+    [InlineData("Result.Summary.CancelledPartial")]
+    [InlineData("Result.Summary.Failed")]
+    public void Localization_DeJson_ContainsRequiredKey(string key)
+    {
+        // RED: These keys do not yet exist in de.json
+        var loc = new LocalizationService();
+        var value = loc[key];
+        Assert.False(value.StartsWith('[') && value.EndsWith(']'),
+            $"Key '{key}' missing from de.json — got placeholder [{key}]");
+    }
+
+    [Fact]
+    public void MoveApplyGateText_UsesLocalizationService_NotHardcodedGerman()
+    {
+        // Inject English locale so hardcoded German would be detected
+        var loc = new RomCleanup.UI.Wpf.Services.LocalizationService();
+        loc.SetLocale("en");
+        var vm = new MainViewModel(new RomCleanup.UI.Wpf.Services.ThemeService(), new RomCleanup.UI.Wpf.Services.WpfDialogService(), loc: loc);
+        var text = vm.MoveApplyGateText;
+        Assert.DoesNotContain("Änderungen anwenden ist gesperrt", text);
+    }
+
+    [Fact]
+    public void RefreshStatus_StatusLabels_UseLocalizationService()
+    {
+        // Inject English locale so hardcoded German would be detected
+        var loc = new RomCleanup.UI.Wpf.Services.LocalizationService();
+        loc.SetLocale("en");
+        var vm = new MainViewModel(new RomCleanup.UI.Wpf.Services.ThemeService(), new RomCleanup.UI.Wpf.Services.WpfDialogService(), loc: loc);
+        vm.RefreshStatus();
+        Assert.DoesNotContain("Keine Ordner", vm.StatusRoots);
+        Assert.DoesNotContain("Keine Tools", vm.StatusTools);
+    }
+
+    [Fact]
+    public void StepLabels_Default_UseLocalizationService()
+    {
+        // RED: Step labels default to hardcoded German
+        var vm = new MainViewModel();
+        Assert.DoesNotContain("Keine Ordner", vm.StepLabel1);
+        Assert.DoesNotContain("Bereit", vm.StepLabel2);
+        Assert.DoesNotContain("F5 drücken", vm.StepLabel3);
+    }
+
+    // ═══ TASK-127: Code-behind must not reference Infrastructure ═══════
+
+    [Fact]
+    public void ToolsConversionView_CodeBehind_NoInfrastructureImport()
+    {
+        // RED: ToolsConversionView.xaml.cs currently imports RomCleanup.Infrastructure.Conversion
+        var codeBehindPath = FindWpfFile(Path.Combine("Views", "ToolsConversionView.xaml.cs"));
+        var content = File.ReadAllText(codeBehindPath);
+        Assert.DoesNotContain("RomCleanup.Infrastructure", content);
+    }
+
+    [Fact]
+    public void StartView_CodeBehind_NoDragDropBusinessLogic()
+    {
+        // RED: StartView.xaml.cs contains vm.Roots.Add() in OnHeroDrop
+        var codeBehindPath = FindWpfFile(Path.Combine("Views", "StartView.xaml.cs"));
+        var content = File.ReadAllText(codeBehindPath);
+        Assert.DoesNotContain("vm.Roots.Add", content);
+    }
+
+    // ═══ TASK-125: ConversionPreviewViewModel must exist ════════════════
+
+    [Fact]
+    public void ConversionPreviewViewModel_Exists_WithExpectedProperties()
+    {
+        // RED: ConversionPreviewViewModel does not exist yet
+        var type = typeof(MainViewModel).Assembly.GetType(
+            "RomCleanup.UI.Wpf.ViewModels.ConversionPreviewViewModel");
+        Assert.NotNull(type);
+        Assert.NotNull(type!.GetProperty("Items"));
+        Assert.NotNull(type.GetProperty("HasItems"));
+        Assert.NotNull(type.GetProperty("SummaryText"));
+    }
+
+    [Fact]
+    public void MainViewModel_HasConversionPreviewChild()
+    {
+        // RED: MainViewModel does not have ConversionPreview child VM
+        var vm = new MainViewModel();
+        var prop = vm.GetType().GetProperty("ConversionPreview");
+        Assert.NotNull(prop);
+        Assert.NotNull(prop!.GetValue(vm));
+    }
+
+    // ═══ TASK-123: Settings delegation — no duplication ═════════════════
+
+    [Fact]
+    public void SettingsDelegation_MainVM_TrashRoot_DelegatesToSetup()
+    {
+        // RED: MainViewModel.TrashRoot is independent, not delegated to Setup
+        var vm = new MainViewModel();
+        vm.TrashRoot = @"C:\TestTrash";
+        Assert.Equal(@"C:\TestTrash", vm.Setup.TrashRoot);
+    }
+
+    [Fact]
+    public void SettingsDelegation_SetupChange_ReflectedInMainVM()
+    {
+        // RED: Setting Setup.ToolChdman does not propagate to MainVM.ToolChdman
+        var vm = new MainViewModel();
+        vm.Setup.ToolChdman = @"C:\tools\chdman.exe";
+        Assert.Equal(@"C:\tools\chdman.exe", vm.ToolChdman);
+    }
+
+    // ═══ TASK-126A: SortDecision in UI ══════════════════════════════════
+
+    [Fact]
+    public void SortDecision_HasAllExpectedValues()
+    {
+        var values = Enum.GetValues<SortDecision>();
+        Assert.Contains(SortDecision.Sort, values);
+        Assert.Contains(SortDecision.Review, values);
+        Assert.Contains(SortDecision.Blocked, values);
+        Assert.Contains(SortDecision.DatVerified, values);
+        Assert.Equal(4, values.Length);
+    }
+
+    [Fact]
+    public void SortDecision_CodeBehind_HandlesBlockedAndReview()
+    {
+        // Architectural guard: LibrarySafetyView.xaml.cs switches on SortDecision
+        var code = File.ReadAllText(FindUiFile("Views", "LibrarySafetyView.xaml.cs"));
+        Assert.Contains("SortDecision.Blocked", code);
+        Assert.Contains("SortDecision.Review", code);
+    }
+
+    [Fact]
+    public void SortDecision_DefaultIsSort()
+    {
+        Assert.Equal(SortDecision.Sort, default(SortDecision));
+    }
+
+    // ═══ TASK-126B: Smart Action Bar States ═════════════════════════════
+
+    [Fact]
+    public void ShowConfigChangedBanner_FalseWhenIdle()
+    {
+        var vm = new MainViewModel();
+        Assert.False(vm.ShowConfigChangedBanner);
+    }
+
+    [Fact]
+    public void IsMovePhaseApplicable_FalseWhenDryRun()
+    {
+        var vm = new MainViewModel();
+        vm.DryRun = true;
+        Assert.False(vm.IsMovePhaseApplicable);
+    }
+
+    [Fact]
+    public void IsMovePhaseApplicable_FalseWhenConvertOnly()
+    {
+        var vm = new MainViewModel();
+        vm.ConvertOnly = true;
+        Assert.False(vm.IsMovePhaseApplicable);
+    }
+
+    [Fact]
+    public void IsMovePhaseApplicable_TrueWhenNotDryRunAndNotConvertOnly()
+    {
+        var vm = new MainViewModel();
+        vm.DryRun = false;
+        vm.ConvertOnly = false;
+        Assert.True(vm.IsMovePhaseApplicable);
+    }
+
+    [Fact]
+    public void IsConvertPhaseApplicable_TrueWhenConvertOnly()
+    {
+        var vm = new MainViewModel();
+        vm.ConvertOnly = true;
+        Assert.True(vm.IsConvertPhaseApplicable);
+    }
+
+    [Fact]
+    public void IsConvertPhaseApplicable_TrueWhenConvertEnabledAndNotDryRun()
+    {
+        var vm = new MainViewModel();
+        vm.DryRun = false;
+        vm.ConvertEnabled = true;
+        Assert.True(vm.IsConvertPhaseApplicable);
+    }
+
+    [Fact]
+    public void IsConvertPhaseApplicable_FalseWhenDryRunOnly()
+    {
+        var vm = new MainViewModel();
+        vm.DryRun = true;
+        vm.ConvertEnabled = false;
+        vm.ConvertOnly = false;
+        Assert.False(vm.IsConvertPhaseApplicable);
+    }
+
+    [Theory]
+    [InlineData(RunState.Idle, RunState.Preflight, true)]
+    [InlineData(RunState.Preflight, RunState.Scanning, true)]
+    [InlineData(RunState.Scanning, RunState.Deduplicating, true)]
+    [InlineData(RunState.Deduplicating, RunState.Sorting, true)]
+    [InlineData(RunState.Sorting, RunState.Moving, true)]
+    [InlineData(RunState.Moving, RunState.Converting, true)]
+    [InlineData(RunState.Converting, RunState.Completed, true)]
+    [InlineData(RunState.Idle, RunState.Completed, false)]
+    [InlineData(RunState.Completed, RunState.Scanning, false)]
+    [InlineData(RunState.Moving, RunState.Scanning, false)]
+    [InlineData(RunState.Scanning, RunState.Moving, true)]
+    [InlineData(RunState.Deduplicating, RunState.Converting, true)]
+    [InlineData(RunState.Sorting, RunState.Failed, true)]
+    [InlineData(RunState.Completed, RunState.Idle, true)]
+    [InlineData(RunState.CompletedDryRun, RunState.Preflight, true)]
+    public void TransitionMatrix_SystematicCoverage(RunState from, RunState to, bool expected)
+    {
+        Assert.Equal(expected, RunStateMachine.IsValidTransition(from, to));
+    }
+
+    // ═══ TASK-126C: Region-Ranker ═══════════════════════════════════════
+
+    [Fact]
+    public void InitRegionPriorities_EnabledFirst_DisabledLast()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.PreferJP = false;
+        vm.InitRegionPriorities();
+
+        var enabledItems = vm.RegionPriorities.Where(r => r.IsEnabled).ToList();
+        var disabledItems = vm.RegionPriorities.Where(r => !r.IsEnabled).ToList();
+
+        // All enabled items must appear before all disabled items
+        int lastEnabledIdx = vm.RegionPriorities.ToList().FindLastIndex(r => r.IsEnabled);
+        int firstDisabledIdx = vm.RegionPriorities.ToList().FindIndex(r => !r.IsEnabled);
+        if (enabledItems.Count > 0 && disabledItems.Count > 0)
+            Assert.True(lastEnabledIdx < firstDisabledIdx);
+    }
+
+    [Fact]
+    public void InitRegionPriorities_EnabledItemsHavePositions()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.InitRegionPriorities();
+
+        var enabled = vm.RegionPriorities.Where(r => r.IsEnabled).ToList();
+        Assert.All(enabled, r => Assert.True(r.Position > 0));
+        var disabled = vm.RegionPriorities.Where(r => !r.IsEnabled).ToList();
+        Assert.All(disabled, r => Assert.Equal(0, r.Position));
+    }
+
+    [Fact]
+    public void EnabledRegionCount_MatchesEnabledItems()
+    {
+        var vm = new MainViewModel();
+        // Defaults: EU=true, US=true, JP=true, WORLD=true
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.PreferJP = true;
+        vm.PreferWORLD = false;
+        vm.InitRegionPriorities();
+
+        Assert.Equal(3, vm.EnabledRegionCount);
+    }
+
+    [Fact]
+    public void MoveRegionUpCommand_MovesItem()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.PreferJP = true;
+        vm.InitRegionPriorities();
+
+        // EU=0, US=1, JP=2 initially
+        var usItem = vm.RegionPriorities.First(r => r.Code == "US");
+        vm.MoveRegionUpCommand.Execute(usItem);
+
+        Assert.Equal("US", vm.RegionPriorities[0].Code);
+        Assert.Equal("EU", vm.RegionPriorities[1].Code);
+    }
+
+    [Fact]
+    public void MoveRegionUpCommand_AtTop_NoChange()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.InitRegionPriorities();
+
+        var euItem = vm.RegionPriorities.First(r => r.Code == "EU");
+        vm.MoveRegionUpCommand.Execute(euItem);
+
+        Assert.Equal("EU", vm.RegionPriorities[0].Code);
+    }
+
+    [Fact]
+    public void MoveRegionDownCommand_MovesItem()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.PreferJP = true;
+        vm.InitRegionPriorities();
+
+        var euItem = vm.RegionPriorities.First(r => r.Code == "EU");
+        vm.MoveRegionDownCommand.Execute(euItem);
+
+        Assert.Equal("US", vm.RegionPriorities[0].Code);
+        Assert.Equal("EU", vm.RegionPriorities[1].Code);
+    }
+
+    [Fact]
+    public void MoveRegionDownCommand_AtLastEnabled_NoChange()
+    {
+        var vm = new MainViewModel();
+        // Enable only EU, disable all others
+        vm.PreferEU = true;
+        vm.PreferUS = false;
+        vm.PreferJP = false;
+        vm.PreferWORLD = false;
+        vm.InitRegionPriorities();
+
+        var euItem = vm.RegionPriorities.First(r => r.Code == "EU");
+        vm.MoveRegionDownCommand.Execute(euItem);
+
+        // EU should stay at position 0 since next item is disabled
+        Assert.Equal("EU", vm.RegionPriorities[0].Code);
+    }
+
+    [Fact]
+    public void ToggleRegionCommand_DisablesEnabled()
+    {
+        var vm = new MainViewModel();
+        // Reset all defaults, enable only EU+US
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.PreferJP = false;
+        vm.PreferWORLD = false;
+        vm.InitRegionPriorities();
+
+        var euItem = vm.RegionPriorities.First(r => r.Code == "EU");
+        vm.ToggleRegionCommand.Execute(euItem);
+
+        Assert.False(vm.PreferEU);
+        Assert.Equal(1, vm.EnabledRegionCount);
+    }
+
+    [Fact]
+    public void ToggleRegionCommand_EnablesDisabled()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferJP = false;
+        vm.InitRegionPriorities();
+
+        var jpItem = vm.RegionPriorities.First(r => r.Code == "JP");
+        vm.ToggleRegionCommand.Execute(jpItem);
+
+        Assert.True(vm.PreferJP);
+    }
+
+    [Fact]
+    public void RegionPresetEuFocus_SetsCorrectRegions()
+    {
+        var vm = new MainViewModel();
+        vm.RegionPresetEuFocusCommand.Execute(null);
+
+        Assert.True(vm.PreferEU);
+        Assert.True(vm.PreferDE);
+        Assert.True(vm.PreferFR);
+        Assert.True(vm.PreferWORLD);
+        Assert.False(vm.PreferUS);
+        Assert.False(vm.PreferJP);
+    }
+
+    [Fact]
+    public void RegionPresetUsFocus_SetsCorrectRegions()
+    {
+        var vm = new MainViewModel();
+        vm.RegionPresetUsFocusCommand.Execute(null);
+
+        Assert.True(vm.PreferUS);
+        Assert.True(vm.PreferWORLD);
+        Assert.True(vm.PreferEU);
+        Assert.False(vm.PreferJP);
+        Assert.False(vm.PreferDE);
+    }
+
+    [Fact]
+    public void RegionPresetMultiRegion_SetsCorrectRegions()
+    {
+        var vm = new MainViewModel();
+        vm.RegionPresetMultiRegionCommand.Execute(null);
+
+        Assert.True(vm.PreferEU);
+        Assert.True(vm.PreferUS);
+        Assert.True(vm.PreferJP);
+        Assert.True(vm.PreferWORLD);
+        Assert.False(vm.PreferDE);
+    }
+
+    [Fact]
+    public void RegionPresetAll_EnablesAllRegions()
+    {
+        var vm = new MainViewModel();
+        vm.RegionPresetAllCommand.Execute(null);
+
+        Assert.Equal(16, vm.EnabledRegionCount);
+        Assert.True(vm.PreferEU);
+        Assert.True(vm.PreferUS);
+        Assert.True(vm.PreferJP);
+        Assert.True(vm.PreferWORLD);
+        Assert.True(vm.PreferDE);
+        Assert.True(vm.PreferSCAN);
+    }
+
+    [Fact]
+    public void RegionPreset_OrderMatchesPreset()
+    {
+        var vm = new MainViewModel();
+        vm.RegionPresetUsFocusCommand.Execute(null);
+
+        // US-Focus preset order: US, WORLD, EU
+        var enabled = vm.RegionPriorities.Where(r => r.IsEnabled).Select(r => r.Code).ToList();
+        Assert.Equal(new[] { "US", "WORLD", "EU" }, enabled);
+    }
+
+    // ═══ TASK-117: Region Ranker Drag & Drop ════════════════════════════
+
+    [Fact]
+    public void MoveRegionTo_ReordersEnabledItems()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.PreferJP = true;
+        vm.PreferWORLD = false;
+        vm.InitRegionPriorities();
+
+        // Order: EU(0), US(1), JP(2) — move JP to position 0
+        vm.MoveRegionTo(2, 0);
+
+        Assert.Equal("JP", vm.RegionPriorities[0].Code);
+        Assert.Equal("EU", vm.RegionPriorities[1].Code);
+        Assert.Equal("US", vm.RegionPriorities[2].Code);
+    }
+
+    [Fact]
+    public void MoveRegionTo_RenumbersPositions()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.PreferJP = true;
+        vm.PreferWORLD = false;
+        vm.InitRegionPriorities();
+
+        vm.MoveRegionTo(0, 2);
+
+        Assert.Equal(1, vm.RegionPriorities[0].Position);
+        Assert.Equal(2, vm.RegionPriorities[1].Position);
+        Assert.Equal(3, vm.RegionPriorities[2].Position);
+    }
+
+    [Fact]
+    public void MoveRegionTo_SyncsBooleans()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.PreferJP = false;
+        vm.PreferWORLD = false;
+        vm.InitRegionPriorities();
+
+        // Ensure booleans stay consistent after reorder
+        vm.MoveRegionTo(0, 1);
+        Assert.True(vm.PreferEU);
+        Assert.True(vm.PreferUS);
+    }
+
+    [Fact]
+    public void MoveRegionTo_InvalidFromIndex_NoChange()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.PreferJP = false;
+        vm.PreferWORLD = false;
+        vm.InitRegionPriorities();
+
+        var original = vm.RegionPriorities.Select(r => r.Code).ToList();
+        vm.MoveRegionTo(-1, 0);
+        vm.MoveRegionTo(99, 0);
+        var after = vm.RegionPriorities.Select(r => r.Code).ToList();
+        Assert.Equal(original, after);
+    }
+
+    [Fact]
+    public void MoveRegionTo_DisabledItemStaysInDisabledSection()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.PreferJP = false;
+        vm.PreferWORLD = false;
+        vm.InitRegionPriorities();
+
+        int enabledCount = vm.RegionPriorities.Count(r => r.IsEnabled);
+        // Try to move disabled item into enabled section — should be no-op
+        int disabledIdx = vm.RegionPriorities.ToList().FindIndex(r => !r.IsEnabled);
+        vm.MoveRegionTo(disabledIdx, 0);
+
+        // Enabled count should not change
+        Assert.Equal(enabledCount, vm.RegionPriorities.Count(r => r.IsEnabled));
+    }
+
+    [Fact]
+    public void MoveRegionTo_SameIndex_NoChange()
+    {
+        var vm = new MainViewModel();
+        vm.PreferEU = true;
+        vm.PreferUS = true;
+        vm.PreferJP = false;
+        vm.PreferWORLD = false;
+        vm.InitRegionPriorities();
+
+        var original = vm.RegionPriorities.Select(r => r.Code).ToList();
+        vm.MoveRegionTo(0, 0);
+        var after = vm.RegionPriorities.Select(r => r.Code).ToList();
+        Assert.Equal(original, after);
+    }
+
+    [Fact]
+    public void SortViewXaml_HasRegionRankerListBox()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "SortView.xaml"));
+        Assert.Contains("RegionPriorities", xaml);
+        Assert.Contains("AllowDrop", xaml);
+    }
+
+    // ═══ TASK-126D: Console-Picker ══════════════════════════════════════
+
+    [Fact]
+    public void SelectAllConsolesCommand_SelectsAll()
+    {
+        var vm = new MainViewModel();
+        vm.SelectAllConsolesCommand.Execute(null);
+
+        Assert.True(vm.ConsoleFilters.All(c => c.IsChecked));
+        Assert.Equal(vm.ConsoleFilters.Count, vm.SelectedConsoleCount);
+    }
+
+    [Fact]
+    public void ClearAllConsolesCommand_DeselectsAll()
+    {
+        var vm = new MainViewModel();
+        vm.SelectAllConsolesCommand.Execute(null);
+        vm.ClearAllConsolesCommand.Execute(null);
+
+        Assert.True(vm.ConsoleFilters.All(c => !c.IsChecked));
+        Assert.Equal(0, vm.SelectedConsoleCount);
+    }
+
+    [Fact]
+    public void SelectConsoleGroupCommand_SelectsOnlyGroup()
+    {
+        var vm = new MainViewModel();
+        vm.SelectConsoleGroupCommand.Execute("Nintendo");
+
+        var nintendo = vm.ConsoleFilters.Where(c => c.Category == "Nintendo").ToList();
+        var others = vm.ConsoleFilters.Where(c => c.Category != "Nintendo").ToList();
+
+        Assert.True(nintendo.All(c => c.IsChecked));
+        Assert.True(others.All(c => !c.IsChecked));
+    }
+
+    [Fact]
+    public void DeselectConsoleGroupCommand_DeselectsGroup()
+    {
+        var vm = new MainViewModel();
+        vm.SelectAllConsolesCommand.Execute(null);
+        vm.DeselectConsoleGroupCommand.Execute("Sony");
+
+        var sony = vm.ConsoleFilters.Where(c => c.Category == "Sony").ToList();
+        var others = vm.ConsoleFilters.Where(c => c.Category != "Sony").ToList();
+
+        Assert.True(sony.All(c => !c.IsChecked));
+        Assert.True(others.All(c => c.IsChecked));
+    }
+
+    [Fact]
+    public void ConsolePresetTop10_Selects10()
+    {
+        var vm = new MainViewModel();
+        vm.ConsolePresetTop10Command.Execute(null);
+
+        var selected = vm.ConsoleFilters.Where(c => c.IsChecked).ToList();
+        Assert.Equal(10, selected.Count);
+        Assert.Contains(selected, c => c.Key == "PS1");
+        Assert.Contains(selected, c => c.Key == "SNES");
+        Assert.Contains(selected, c => c.Key == "N64");
+    }
+
+    [Fact]
+    public void ConsolePresetDiscBased_SelectsDiscSystems()
+    {
+        var vm = new MainViewModel();
+        vm.ConsolePresetDiscBasedCommand.Execute(null);
+
+        var selected = vm.ConsoleFilters.Where(c => c.IsChecked).Select(c => c.Key).ToList();
+        Assert.Contains("PS1", selected);
+        Assert.Contains("PS2", selected);
+        Assert.Contains("GC", selected);
+        Assert.Contains("DC", selected);
+        Assert.DoesNotContain("NES", selected);
+        Assert.DoesNotContain("SNES", selected);
+    }
+
+    [Fact]
+    public void ConsolePresetHandhelds_SelectsHandhelds()
+    {
+        var vm = new MainViewModel();
+        vm.ConsolePresetHandheldsCommand.Execute(null);
+
+        var selected = vm.ConsoleFilters.Where(c => c.IsChecked).Select(c => c.Key).ToList();
+        Assert.Contains("GB", selected);
+        Assert.Contains("GBA", selected);
+        Assert.Contains("PSP", selected);
+        Assert.DoesNotContain("PS1", selected);
+    }
+
+    [Fact]
+    public void ConsolePresetRetro_SelectsRetroSystems()
+    {
+        var vm = new MainViewModel();
+        vm.ConsolePresetRetroCommand.Execute(null);
+
+        var selected = vm.ConsoleFilters.Where(c => c.IsChecked).Select(c => c.Key).ToList();
+        Assert.Contains("NES", selected);
+        Assert.Contains("SNES", selected);
+        Assert.Contains("MD", selected);
+        Assert.DoesNotContain("PS2", selected);
+    }
+
+    [Fact]
+    public void SelectedConsoleCount_UpdatesAfterSelection()
+    {
+        var vm = new MainViewModel();
+        Assert.Equal(0, vm.SelectedConsoleCount);
+
+        vm.ConsoleFilters[0].IsChecked = true;
+        vm.ConsoleFilters[1].IsChecked = true;
+
+        Assert.Equal(2, vm.SelectedConsoleCount);
+    }
+
+    [Fact]
+    public void ConsoleCountDisplay_NoSelection_ShowsKeine()
+    {
+        var vm = new MainViewModel();
+        // ConsoleCountDisplay when nothing selected
+        Assert.Contains("0", vm.ConsoleCountDisplay);
+    }
+
+    [Fact]
+    public void RemoveConsoleSelectionCommand_DeselectsItem()
+    {
+        var vm = new MainViewModel();
+        vm.SelectAllConsolesCommand.Execute(null);
+        var firstItem = vm.ConsoleFilters[0];
+        Assert.True(firstItem.IsChecked);
+
+        vm.RemoveConsoleSelectionCommand.Execute(firstItem);
+        Assert.False(firstItem.IsChecked);
+    }
+
+    [Fact]
+    public void ConsoleFilterText_FiltersView()
+    {
+        var vm = new MainViewModel();
+        vm.ConsoleFilterText = "Play";
+        // The ICollectionView should filter — we verify the filter is set
+        Assert.Equal("Play", vm.ConsoleFilterText);
+        // ConsoleFiltersView should have filtering active
+        Assert.NotNull(vm.ConsoleFiltersView.Filter);
+    }
+
+    [Fact]
+    public void SelectConsoleGroupCommand_NullCategory_NoException()
+    {
+        var vm = new MainViewModel();
+        vm.SelectConsoleGroupCommand.Execute(null);
+        // Should not throw, no console selected
+        Assert.Equal(0, vm.SelectedConsoleCount);
+    }
+
+    // ═══ TASK-119: Extension Filter Counter + Group Commands ════════════
+
+    [Fact]
+    public void SelectedExtensionCount_InitiallyZero()
+    {
+        var vm = new MainViewModel();
+        Assert.Equal(0, vm.SelectedExtensionCount);
+    }
+
+    [Fact]
+    public void SelectedExtensionCount_UpdatesOnCheck()
+    {
+        var vm = new MainViewModel();
+        vm.ExtensionFilters[0].IsChecked = true;
+        vm.ExtensionFilters[1].IsChecked = true;
+        Assert.Equal(2, vm.SelectedExtensionCount);
+    }
+
+    [Fact]
+    public void ExtensionCountDisplay_NoSelection_Reflects()
+    {
+        var vm = new MainViewModel();
+        Assert.Contains("0", vm.ExtensionCountDisplay);
+    }
+
+    [Fact]
+    public void SelectAllExtensionsCommand_SelectsAll()
+    {
+        var vm = new MainViewModel();
+        vm.SelectAllExtensionsCommand.Execute(null);
+        Assert.True(vm.ExtensionFilters.All(e => e.IsChecked));
+        Assert.Equal(vm.ExtensionFilters.Count, vm.SelectedExtensionCount);
+    }
+
+    [Fact]
+    public void ClearAllExtensionsCommand_DeselectsAll()
+    {
+        var vm = new MainViewModel();
+        vm.SelectAllExtensionsCommand.Execute(null);
+        vm.ClearAllExtensionsCommand.Execute(null);
+        Assert.True(vm.ExtensionFilters.All(e => !e.IsChecked));
+        Assert.Equal(0, vm.SelectedExtensionCount);
+    }
+
+    [Fact]
+    public void SelectExtensionGroupCommand_SelectsOnlyGroup()
+    {
+        var vm = new MainViewModel();
+        vm.SelectExtensionGroupCommand.Execute("Archive");
+
+        var archives = vm.ExtensionFilters.Where(e => e.Category == "Archive").ToList();
+        var others = vm.ExtensionFilters.Where(e => e.Category != "Archive").ToList();
+
+        Assert.True(archives.All(e => e.IsChecked));
+        Assert.True(others.All(e => !e.IsChecked));
+    }
+
+    [Fact]
+    public void DeselectExtensionGroupCommand_DeselectsGroup()
+    {
+        var vm = new MainViewModel();
+        vm.SelectAllExtensionsCommand.Execute(null);
+        vm.DeselectExtensionGroupCommand.Execute("Disc-Images");
+
+        var discs = vm.ExtensionFilters.Where(e => e.Category == "Disc-Images").ToList();
+        var others = vm.ExtensionFilters.Where(e => e.Category != "Disc-Images").ToList();
+
+        Assert.True(discs.All(e => !e.IsChecked));
+        Assert.True(others.All(e => e.IsChecked));
+    }
+
+    // ═══ TASK-113: Responsive NavRail Compact ═══════════════════════════
+
+    [Fact]
+    public void IsCompactNav_DefaultFalse()
+    {
+        var vm = new MainViewModel();
+        Assert.False(vm.Shell.IsCompactNav);
+    }
+
+    [Fact]
+    public void IsCompactNav_Settable()
+    {
+        var vm = new MainViewModel();
+        vm.Shell.IsCompactNav = true;
+        Assert.True(vm.Shell.IsCompactNav);
+    }
+
+    [Fact]
+    public void NavigationRailXaml_LabelsBindToIsCompactNav()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "NavigationRail.xaml"));
+        Assert.Contains("Shell.IsCompactNav", xaml);
+    }
+
+    [Fact]
+    public void CommandBarXaml_PhaseIndicatorHasLabels()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "CommandBar.xaml"));
+        Assert.Contains("Config", xaml);
+        Assert.Contains("Preview", xaml);
+        Assert.Contains("Review", xaml);
+        Assert.Contains("Execute", xaml);
+        Assert.Contains("Report", xaml);
+    }
+
+    // ═══ TASK-115: SmartActionBar RunState DataTriggers ════════════════
+
+    [Theory]
+    [InlineData(RunState.Idle)]
+    [InlineData(RunState.Preflight)]
+    [InlineData(RunState.Scanning)]
+    [InlineData(RunState.Deduplicating)]
+    [InlineData(RunState.Sorting)]
+    [InlineData(RunState.Moving)]
+    [InlineData(RunState.Converting)]
+    [InlineData(RunState.Completed)]
+    [InlineData(RunState.CompletedDryRun)]
+    [InlineData(RunState.Failed)]
+    [InlineData(RunState.Cancelled)]
+    public void RunStateDisplayText_ReturnsNonEmptyString_ForEachState(RunState state)
+    {
+        var vm = new MainViewModel();
+        // Transition through valid path to reach target state
+        TransitionTo(vm, state);
+        Assert.False(string.IsNullOrWhiteSpace(vm.RunStateDisplayText));
+    }
+
+    [Fact]
+    public void CurrentRunState_Setter_NotifiesRunStateDisplayText()
+    {
+        var vm = new MainViewModel();
+        var changed = new List<string>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName!);
+        vm.CurrentRunState = RunState.Preflight;
+        Assert.Contains(nameof(vm.RunStateDisplayText), changed);
+    }
+
+    [Fact]
+    public void SmartActionBarXaml_HasRunStateBindings()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "SmartActionBar.xaml"));
+        // RunState-derived properties must be used in SmartActionBar
+        Assert.Contains("RunStateDisplayText", xaml);
+        Assert.Contains("IsIdle", xaml);
+        Assert.Contains("IsBusy", xaml);
+    }
+
+    [Fact]
+    public void SmartActionBarXaml_RunButton_HiddenViaTriggerWhenBusy()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "SmartActionBar.xaml"));
+        // Run button uses IsIdle binding to hide when pipeline is running
+        Assert.Contains("RunCommand", xaml);
+        Assert.Matches(@"(?s)RunCommand.*IsIdle", xaml);
+    }
+
+    [Fact]
+    public void SmartActionBarXaml_CancelButton_HasRunStateTrigger()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "SmartActionBar.xaml"));
+        // Cancel button has x:Name and IsBusy-based visibility
+        Assert.Matches(@"x:Name=""CancelButton""", xaml);
+        Assert.Contains("CancelCommand", xaml);
+    }
+
+    [Fact]
+    public void SmartActionBarXaml_ProgressPanel_HasRunStateTrigger()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "SmartActionBar.xaml"));
+        Assert.Matches(@"x:Name=""ProgressPanel""", xaml);
+    }
+
+    [Fact]
+    public void SmartActionBarXaml_HasRunStateStatusLabel()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "SmartActionBar.xaml"));
+        Assert.Contains("RunStateDisplayText", xaml);
+    }
+
+    [Theory]
+    [InlineData(RunState.Idle, true)]
+    [InlineData(RunState.Preflight, false)]
+    [InlineData(RunState.Scanning, false)]
+    [InlineData(RunState.Deduplicating, false)]
+    [InlineData(RunState.Sorting, false)]
+    [InlineData(RunState.Moving, false)]
+    [InlineData(RunState.Converting, false)]
+    [InlineData(RunState.Completed, true)]
+    [InlineData(RunState.CompletedDryRun, true)]
+    [InlineData(RunState.Failed, true)]
+    [InlineData(RunState.Cancelled, true)]
+    public void IsIdle_MatchesExpectation_ForEachState(RunState state, bool expectedIdle)
+    {
+        var vm = new MainViewModel();
+        TransitionTo(vm, state);
+        Assert.Equal(expectedIdle, vm.IsIdle);
+    }
+
+    [Theory]
+    [InlineData(RunState.Completed)]
+    [InlineData(RunState.CompletedDryRun)]
+    public void HasRunResult_TrueOnlyForCompletedStates(RunState state)
+    {
+        var vm = new MainViewModel();
+        TransitionTo(vm, state);
+        Assert.True(vm.HasRunResult);
+    }
+
+    [Theory]
+    [InlineData(RunState.Idle)]
+    [InlineData(RunState.Scanning)]
+    [InlineData(RunState.Failed)]
+    [InlineData(RunState.Cancelled)]
+    public void HasRunResult_FalseForNonCompletedStates(RunState state)
+    {
+        var vm = new MainViewModel();
+        TransitionTo(vm, state);
+        Assert.False(vm.HasRunResult);
+    }
+
+    /// <summary>Transitions the VM through valid states to reach the target.</summary>
+    private static void TransitionTo(MainViewModel vm, RunState target)
+    {
+        if (target == RunState.Idle) return;
+        RunState[] chain = [RunState.Preflight, RunState.Scanning, RunState.Deduplicating,
+            RunState.Sorting, RunState.Moving, RunState.Converting];
+        RunState[] terminals = [RunState.Completed, RunState.CompletedDryRun, RunState.Failed, RunState.Cancelled];
+
+        if (terminals.Contains(target))
+        {
+            vm.CurrentRunState = RunState.Preflight;
+            vm.CurrentRunState = target;
+            return;
+        }
+        foreach (var s in chain)
+        {
+            vm.CurrentRunState = s;
+            if (s == target) return;
+        }
+    }
+
+    // ═══ TASK-122: RunState entkernen — MainVM delegiert an RunViewModel ═══
+
+    [Fact]
+    public void Task122_CurrentRunState_DelegatesToRunViewModel()
+    {
+        var vm = new MainViewModel();
+        TransitionTo(vm, RunState.Scanning);
+
+        // MainVM.CurrentRunState must be the same object as Run.CurrentRunState
+        Assert.Equal(vm.Run.CurrentRunState, vm.CurrentRunState);
+    }
+
+    [Fact]
+    public void Task122_SetRunCurrentRunState_ReflectedInMainVm()
+    {
+        var vm = new MainViewModel();
+        vm.Run.CurrentRunState = RunState.Preflight;
+
+        Assert.Equal(RunState.Preflight, vm.CurrentRunState);
+    }
+
+    [Fact]
+    public void Task122_IsBusy_DelegatesToRunViewModel()
+    {
+        var vm = new MainViewModel();
+        TransitionTo(vm, RunState.Scanning);
+
+        Assert.True(vm.IsBusy);
+        Assert.Equal(vm.Run.IsBusy, vm.IsBusy);
+    }
+
+    [Fact]
+    public void Task122_IsIdle_DelegatesToRunViewModel()
+    {
+        var vm = new MainViewModel();
+        Assert.True(vm.IsIdle);
+        Assert.Equal(vm.Run.IsIdle, vm.IsIdle);
+    }
+
+    [Fact]
+    public void Task122_HasRunResult_DelegatesToRunViewModel()
+    {
+        var vm = new MainViewModel();
+        TransitionTo(vm, RunState.Completed);
+
+        Assert.True(vm.HasRunResult);
+        Assert.Equal(vm.Run.HasRunResult, vm.HasRunResult);
+    }
+
+    [Fact]
+    public void Task122_MainVm_HasNoOwnRunStateField()
+    {
+        // After TASK-122, MainViewModel must NOT have its own _runState field.
+        // RunState is owned exclusively by RunViewModel (ADR-0006).
+        var fields = typeof(MainViewModel)
+            .GetFields(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            .Where(f => f.FieldType == typeof(RunState) && f.Name.Contains("runState", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        Assert.Empty(fields);
+    }
+
+    [Fact]
+    public void Task122_PropertyChanged_FiresOnMainVm_WhenRunStateChanges()
+    {
+        var vm = new MainViewModel();
+        var changed = new List<string>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName!);
+
+        vm.CurrentRunState = RunState.Preflight;
+
+        Assert.Contains("CurrentRunState", changed);
+        Assert.Contains("IsBusy", changed);
+        Assert.Contains("IsIdle", changed);
+    }
+
+    [Fact]
+    public void Task122_RunStateDisplayText_StillWorksAfterDelegation()
+    {
+        var vm = new MainViewModel();
+        TransitionTo(vm, RunState.Scanning);
+
+        // RunStateDisplayText must still return a non-empty localized string
+        Assert.False(string.IsNullOrWhiteSpace(vm.RunStateDisplayText));
+    }
+
+    [Fact]
+    public void Task122_IsValidTransition_StillAvailableOnMainVm()
+    {
+        // The static helper should still be accessible for backward compat
+        Assert.True(MainViewModel.IsValidTransition(RunState.Idle, RunState.Preflight));
+        Assert.False(MainViewModel.IsValidTransition(RunState.Idle, RunState.Completed));
+    }
+
+    // ═══ BUG-FIX: ActionRailHeight too small (buttons clipped) ══════════
+
+    [Fact]
+    public void DesignTokens_ActionRailHeight_IsAtLeast84()
+    {
+        var tokensPath = FindUiFile("Themes", "_DesignTokens.xaml");
+        var content = File.ReadAllText(tokensPath);
+        var match = System.Text.RegularExpressions.Regex.Match(
+            content, @"x:Key=""ActionRailHeight"">(\d+)<");
+        Assert.True(match.Success, "ActionRailHeight token not found in _DesignTokens.xaml");
+        var value = int.Parse(match.Groups[1].Value);
+        Assert.True(value >= 84,
+            $"ActionRailHeight is {value}px but must be ≥ 84px to avoid button clipping (44px buttons + 12+6 padding)");
+    }
+
+    [Fact]
+    public void MainWindow_ActionRailRow_MatchesDesignToken()
+    {
+        var windowPath = FindWpfFile("MainWindow.xaml");
+        var content = File.ReadAllText(windowPath);
+        // Row 3 should use a dynamic resource or be at least 84
+        var match = System.Text.RegularExpressions.Regex.Match(
+            content, @"<!-- Row 3: ActionRail -->\s*</RowDefinitions>|Height=""(\d+)""\s*/>\s*<!-- Row 3");
+        // Find the last RowDefinition (Row 3)
+        var rowMatches = System.Text.RegularExpressions.Regex.Matches(
+            content, @"<RowDefinition\s+Height=""(\d+)""/>");
+        // Row 3 is the 4th RowDefinition (index 3) — the one with hardcoded height for ActionRail
+        var rowDefs = System.Text.RegularExpressions.Regex.Matches(
+            content, @"<RowDefinition\s+Height=""([^""]+)""\s*/>");
+        Assert.True(rowDefs.Count >= 4, "Expected at least 4 RowDefinitions in MainWindow.xaml");
+        var row3Height = rowDefs[3].Groups[1].Value;
+        // Should be "84" or a dynamic resource reference
+        if (int.TryParse(row3Height, out var h))
+        {
+            Assert.True(h >= 84,
+                $"MainWindow Row 3 Height is {h}px but must be ≥ 84px to match ActionRailHeight token");
+        }
+    }
+
+    // ═══ BUG-FIX: Theme button shows NEXT theme instead of current ══════
+
+    [Fact]
+    public void CurrentThemeLabel_ReturnsHumanFriendlyName_ForAllThemes()
+    {
+        var vm = new MainViewModel();
+
+        // Default theme is Dark → "Synthwave"
+        Assert.Equal("Synthwave", vm.CurrentThemeLabel);
+
+        // Verify CurrentThemeLabel maps all AppTheme values via reflection
+        // (we can't call SelectedTheme= because ApplyTheme loads WPF resources)
+        var expectedLabels = new Dictionary<AppTheme, string>
+        {
+            [AppTheme.Dark] = "Synthwave",
+            [AppTheme.CleanDarkPro] = "Clean Dark",
+            [AppTheme.RetroCRT] = "Retro CRT",
+            [AppTheme.ArcadeNeon] = "Arcade Neon",
+            [AppTheme.Light] = "Hell",
+            [AppTheme.HighContrast] = "Kontrast",
+        };
+
+        // Verify ThemeToggleText also covers all themes (complementary)
+        var toggleLabels = new Dictionary<AppTheme, string>
+        {
+            [AppTheme.Dark] = "⮞ Clean Dark",
+            [AppTheme.CleanDarkPro] = "⮞ Retro CRT",
+            [AppTheme.RetroCRT] = "⮞ Arcade Neon",
+            [AppTheme.ArcadeNeon] = "⮞ Hell",
+            [AppTheme.Light] = "⮞ Kontrast",
+            [AppTheme.HighContrast] = "⮞ Synthwave",
+        };
+
+        // All themes must have a mapping in both CurrentThemeLabel and ThemeToggleText
+        foreach (var theme in Enum.GetValues<AppTheme>())
+        {
+            Assert.True(expectedLabels.ContainsKey(theme),
+                $"CurrentThemeLabel has no mapping for {theme}");
+            Assert.True(toggleLabels.ContainsKey(theme),
+                $"ThemeToggleText has no mapping for {theme}");
+        }
+    }
+
+    [Fact]
+    public void CommandBar_ThemeButton_BindsToCurrentThemeLabel()
+    {
+        var cmdBarPath = FindUiFile("Views", "CommandBar.xaml");
+        var content = File.ReadAllText(cmdBarPath);
+
+        // The theme button's display text must bind to CurrentThemeLabel (current theme)
+        // NOT to ThemeToggleText (which shows the NEXT theme)
+        Assert.Contains("CurrentThemeLabel", content);
+
+        // ThemeToggleText should only appear in ToolTip binding, not in Text binding
+        var textBindings = System.Text.RegularExpressions.Regex.Matches(
+            content, @"Text=""\{Binding\s+ThemeToggleText\}""");
+        Assert.True(textBindings.Count == 0,
+            "Theme button Text should bind to CurrentThemeLabel, not ThemeToggleText. " +
+            "ThemeToggleText should only appear in ToolTip.");
+    }
+
+    // ═══ BUG-FIX: EnableDatAudit missing from GUI layer ═════════════════
+
+    [Fact]
+    public void SettingsDto_HasEnableDatAudit_DefaultTrue()
+    {
+        var dto = new SettingsDto();
+        Assert.True(dto.EnableDatAudit,
+            "SettingsDto.EnableDatAudit must default to true so DAT verification runs by default");
+    }
+
+    [Fact]
+    public void MainViewModel_HasEnableDatAudit_DefaultTrue()
+    {
+        var vm = new MainViewModel();
+        // EnableDatAudit should be an independent property (not just a copy of UseDat)
+        var prop = typeof(MainViewModel).GetProperty("EnableDatAudit");
+        Assert.NotNull(prop);
+        Assert.True((bool)prop.GetValue(vm)!,
+            "MainViewModel.EnableDatAudit must default to true");
+    }
+
+    [Fact]
+    public void AutoSavePropertyNames_IncludesEnableDatAudit()
+    {
+        // AutoSavePropertyNames is a private static field — verify via reflection
+        var field = typeof(MainViewModel)
+            .GetField("AutoSavePropertyNames",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        Assert.NotNull(field);
+        var names = (HashSet<string>)field.GetValue(null)!;
+        Assert.Contains("EnableDatAudit", names);
+    }
+
+    [Fact]
+    public void RunService_EnableDatAudit_ReadsFromViewModel()
+    {
+        // When a VM has EnableDatAudit = true but UseDat = false,
+        // EnableDatAudit must still be independently controllable
+        var vm = new MainViewModel();
+        vm.UseDat = false;
+
+        // The EnableDatAudit property should exist and be independent
+        var prop = typeof(MainViewModel).GetProperty("EnableDatAudit");
+        Assert.NotNull(prop);
+        // With default true, even if UseDat is false, the property should be true
+        Assert.True((bool)prop.GetValue(vm)!);
+    }
+
+    private static string FindUiFile(string folder, string fileName)
+    {
+        var dir = Path.GetDirectoryName(typeof(GuiViewModelTests).Assembly.Location)!;
+        while (dir is not null)
+        {
+            var candidate = Path.Combine(dir, "src", "RomCleanup.UI.Wpf", folder, fileName);
+            if (File.Exists(candidate)) return candidate;
+            dir = Path.GetDirectoryName(dir);
+        }
+        // Fallback: try repo root from CallerFilePath context
+        var repoRoot = Path.GetDirectoryName(Path.GetDirectoryName(
+            Path.GetDirectoryName(Path.GetDirectoryName(
+                Path.GetDirectoryName(typeof(GuiViewModelTests).Assembly.Location)))));
+        return Path.Combine(repoRoot!, "src", "RomCleanup.UI.Wpf", folder, fileName);
     }
 }

@@ -1,6 +1,7 @@
 using RomCleanup.CLI;
 using Xunit;
 using CliProgram = RomCleanup.CLI.Program;
+using System.Reflection;
 
 namespace RomCleanup.Tests;
 
@@ -73,6 +74,17 @@ public sealed class CliProgramTests : IDisposable
         var (opts, exitCode) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--mode", "Delete" });
         Assert.Null(opts);
         Assert.Equal(3, exitCode);
+    }
+
+    [Fact]
+    public void ParseArgs_MissingModeValue_ReturnsExitCode3_AndWriteOnlyStderr()
+    {
+        var (opts, exitCode, stdout, stderr) = ParseArgsWithCapturedConsole(new[] { "--roots", _tempDir, "--mode" });
+
+        Assert.Null(opts);
+        Assert.Equal(3, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("Missing value for --mode", stderr, StringComparison.OrdinalIgnoreCase);
     }
 
     // ═══ ParseArgs: Default mode ═══════════════════════════════════════
@@ -237,6 +249,16 @@ public sealed class CliProgramTests : IDisposable
     }
 
     [Theory]
+    [InlineData("--no-removejunk")]
+    [InlineData("-no-removejunk")]
+    public void ParseArgs_NoRemoveJunk_ClearsFlag(string flag)
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, flag });
+        Assert.NotNull(opts);
+        Assert.False(opts!.RemoveJunk);
+    }
+
+    [Theory]
     [InlineData("--aggressivejunk")]
     [InlineData("-aggressivejunk")]
     public void ParseArgs_AggressiveJunk_SetsFlag(string flag)
@@ -263,11 +285,84 @@ public sealed class CliProgramTests : IDisposable
     }
 
     [Fact]
+    public void ParseArgs_EnableDatRename_SetsFlag_Issue9()
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--datrename" });
+        Assert.NotNull(opts);
+        Assert.True(opts!.EnableDatRename);
+    }
+
+    [Fact]
+    public void ParseArgs_EnableDatAudit_SetsFlag_Issue9()
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--dat-audit" });
+        Assert.NotNull(opts);
+        Assert.True(opts!.EnableDatAudit);
+    }
+
+    [Fact]
     public void ParseArgs_ConvertFormat_SetsFlag()
     {
         var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--convertformat" });
         Assert.NotNull(opts);
         Assert.True(opts!.ConvertFormat);
+    }
+
+    [Fact]
+    public void ParseArgs_ConvertOnly_SetsFlags()
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--convertonly" });
+        Assert.NotNull(opts);
+        Assert.True(opts!.ConvertOnly);
+        Assert.True(opts.ConvertFormat);
+    }
+
+    [Fact]
+    public void ParseArgs_Yes_SetsFlag()
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--yes" });
+        Assert.NotNull(opts);
+        Assert.True(opts!.Yes);
+    }
+
+    [Fact]
+    public void ParseArgs_GamesOnly_SetsFlag()
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--gamesonly" });
+        Assert.NotNull(opts);
+        Assert.True(opts!.OnlyGames);
+    }
+
+    [Fact]
+    public void ParseArgs_DropUnknown_DisablesUnknownKeepPolicy()
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--gamesonly", "--dropunknown" });
+        Assert.NotNull(opts);
+        Assert.True(opts!.OnlyGames);
+        Assert.False(opts.KeepUnknownWhenOnlyGames);
+    }
+
+    [Theory]
+    [InlineData("Rename")]
+    [InlineData("Skip")]
+    [InlineData("Overwrite")]
+    public void ParseArgs_ConflictPolicy_SetsValue(string policy)
+    {
+        var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--conflictpolicy", policy });
+        Assert.NotNull(opts);
+        Assert.Equal(policy, opts!.ConflictPolicy);
+    }
+
+    [Fact]
+    public void ParseArgs_InvalidConflictPolicy_ReturnsExitCode3()
+    {
+        var (opts, exitCode, stdout, stderr) = ParseArgsWithCapturedConsole(
+            new[] { "--roots", _tempDir, "--conflictpolicy", "Delete" });
+
+        Assert.Null(opts);
+        Assert.Equal(3, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("Invalid conflict policy", stderr, StringComparison.OrdinalIgnoreCase);
     }
 
     // ═══ ParseArgs: Path options ═══════════════════════════════════════
@@ -316,6 +411,35 @@ public sealed class CliProgramTests : IDisposable
         Assert.Equal(log, opts!.LogPath);
     }
 
+    [Fact]
+    public void ParseArgs_UncRootPath_ReturnsExitCode3()
+    {
+        var (opts, exitCode, stdout, stderr) = ParseArgsWithCapturedConsole(
+            new[] { "--roots", "\\\\server\\share\\roms" });
+
+        Assert.Null(opts);
+        Assert.Equal(3, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("UNC", stderr, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ParseArgs_LogPath_InProtectedSystemPath_ReturnsExitCode3()
+    {
+        var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (string.IsNullOrWhiteSpace(winDir) || !Directory.Exists(winDir))
+            return;
+
+        var protectedLog = Path.Combine(winDir, "Temp", "romcleanup-test.jsonl");
+        var (opts, exitCode, stdout, stderr) = ParseArgsWithCapturedConsole(
+            new[] { "--roots", _tempDir, "--log", protectedLog });
+
+        Assert.Null(opts);
+        Assert.Equal(3, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("protected system path", stderr, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ═══ ParseArgs: LogLevel ═══════════════════════════════════════════
 
     [Theory]
@@ -338,6 +462,18 @@ public sealed class CliProgramTests : IDisposable
         Assert.Equal("Info", opts!.LogLevel);
     }
 
+    [Fact]
+    public void ParseArgs_InvalidLogLevel_ReturnsExitCode3()
+    {
+        var (opts, exitCode, stdout, stderr) = ParseArgsWithCapturedConsole(
+            new[] { "--roots", _tempDir, "--loglevel", "Verbose" });
+
+        Assert.Null(opts);
+        Assert.Equal(3, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("Invalid log level", stderr, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ═══ ParseArgs: HashType ═══════════════════════════════════════════
 
     [Theory]
@@ -349,6 +485,18 @@ public sealed class CliProgramTests : IDisposable
         var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--hashtype", hashType });
         Assert.NotNull(opts);
         Assert.Equal(hashType, opts!.HashType);
+    }
+
+    [Fact]
+    public void ParseArgs_InvalidHashType_ReturnsExitCode3()
+    {
+        var (opts, exitCode, stdout, stderr) = ParseArgsWithCapturedConsole(
+            new[] { "--roots", _tempDir, "--hashtype", "SHA2" });
+
+        Assert.Null(opts);
+        Assert.Equal(3, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("Invalid hash type", stderr, StringComparison.OrdinalIgnoreCase);
     }
 
     // ═══ ParseArgs: Unknown flag ═══════════════════════════════════════
@@ -430,6 +578,7 @@ public sealed class CliProgramTests : IDisposable
         Assert.False(opts.SortConsole);
         Assert.False(opts.EnableDat);
         Assert.False(opts.ConvertFormat);
+        Assert.False(opts.Yes);
         Assert.Null(opts.TrashRoot);
         Assert.Null(opts.DatRoot);
         Assert.Null(opts.HashType);
@@ -439,24 +588,94 @@ public sealed class CliProgramTests : IDisposable
         Assert.Equal("Info", opts.LogLevel);
     }
 
-    private static (CliProgram.CliOptions? Options, int ExitCode, string Stdout, string Stderr) ParseArgsWithCapturedConsole(string[] args)
+    [Fact]
+    public void RunForTests_MoveNonInteractive_WithoutYes_ReturnsExitCode3()
     {
-        var originalOut = Console.Out;
-        var originalError = Console.Error;
         using var stdout = new StringWriter();
         using var stderr = new StringWriter();
+        var originalOut = Console.Out;
+        var originalErr = Console.Error;
 
         try
         {
             Console.SetOut(stdout);
             Console.SetError(stderr);
+            CliProgram.SetNonInteractiveOverride(true);
+
+            var exitCode = CliProgram.RunForTests(new CliRunOptions
+            {
+                Roots = new[] { _tempDir },
+                Mode = "Move"
+            });
+
+            Assert.Equal(3, exitCode);
+            Assert.Contains("requires --yes", stderr.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            CliProgram.SetNonInteractiveOverride(null);
+            Console.SetOut(originalOut);
+            Console.SetError(originalErr);
+        }
+    }
+
+    [Fact]
+    public void RunForTests_WithLogPath_CreatesJsonlLog()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "Game (USA).zip"), "data");
+        var logPath = Path.Combine(_tempDir, "run.jsonl");
+
+        var exitCode = CliProgram.RunForTests(new CliRunOptions
+        {
+            Roots = new[] { _tempDir },
+            Mode = "DryRun",
+            LogPath = logPath,
+            LogLevel = "Info"
+        });
+
+        Assert.Equal(0, exitCode);
+        Assert.True(File.Exists(logPath));
+        Assert.False(string.IsNullOrWhiteSpace(File.ReadAllText(logPath)));
+    }
+
+    [Fact]
+    public void Main_Version_WritesAssemblyVersion()
+    {
+        using var stdout = new StringWriter();
+
+        try
+        {
+            CliProgram.SetConsoleOverrides(stdout, null);
+            var main = typeof(CliProgram).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(main);
+
+            var exitCode = (int)(main!.Invoke(null, new object[] { new[] { "--version" } }) ?? -1);
+            var output = stdout.ToString().Trim();
+
+            Assert.Equal(0, exitCode);
+            Assert.False(string.IsNullOrWhiteSpace(output));
+            Assert.Matches("^[0-9]+\\.[0-9]+\\.[0-9]+", output);
+        }
+        finally
+        {
+            CliProgram.SetConsoleOverrides(null, null);
+        }
+    }
+
+    private static (CliRunOptions? Options, int ExitCode, string Stdout, string Stderr) ParseArgsWithCapturedConsole(string[] args)
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+
+        try
+        {
+            CliProgram.SetConsoleOverrides(stdout, stderr);
             var (options, exitCode) = CliProgram.ParseArgs(args);
             return (options, exitCode, stdout.ToString(), stderr.ToString());
         }
         finally
         {
-            Console.SetOut(originalOut);
-            Console.SetError(originalError);
+            CliProgram.SetConsoleOverrides(null, null);
         }
     }
 }

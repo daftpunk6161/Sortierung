@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using RomCleanup.Infrastructure.Hashing;
 using Xunit;
 
@@ -49,6 +50,38 @@ public class FileHashServiceTests : IDisposable
         // CRC32 of "Hello" = f7d18982
         var file = CreateTestFile("crc.bin", new byte[] { 0x48, 0x65, 0x6c, 0x6c, 0x6f });
         Assert.Equal("f7d18982", _svc.GetHash(file, "CRC32"));
+    }
+
+    [Fact]
+    public void GetHash_ChdV5Sha1_UsesEmbeddedRawSha1()
+    {
+        var chd = new byte[512];
+        "MComprHD"u8.CopyTo(chd);
+        BinaryPrimitives.WriteUInt32BigEndian(chd.AsSpan(12, 4), 5);
+
+        var expectedBytes = Enumerable.Range(1, 20).Select(i => (byte)i).ToArray();
+        expectedBytes.CopyTo(chd, 0x40);
+
+        var file = CreateTestFile("game.chd", chd);
+        var hash = _svc.GetHash(file, "SHA1");
+
+        Assert.Equal(Convert.ToHexString(expectedBytes).ToLowerInvariant(), hash);
+    }
+
+    [Fact]
+    public void GetHash_ChdV4Sha1_UsesLegacyEmbeddedSha1()
+    {
+        var chd = new byte[512];
+        "MComprHD"u8.CopyTo(chd);
+        BinaryPrimitives.WriteUInt32BigEndian(chd.AsSpan(12, 4), 4);
+
+        var expectedBytes = Enumerable.Range(20, 20).Select(i => (byte)i).ToArray();
+        expectedBytes.CopyTo(chd, 0x50);
+
+        var file = CreateTestFile("game-v4.chd", chd);
+        var hash = _svc.GetHash(file, "SHA1");
+
+        Assert.Equal(Convert.ToHexString(expectedBytes).ToLowerInvariant(), hash);
     }
 
     [Fact]

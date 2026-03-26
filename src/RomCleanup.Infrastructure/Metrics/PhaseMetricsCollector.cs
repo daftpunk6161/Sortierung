@@ -66,6 +66,17 @@ public sealed class PhaseMetricsCollector
         }
     }
 
+    /// <summary>
+    /// Gets the name of the currently active phase, or null if no phase is active.
+    /// </summary>
+    public string? GetCurrentPhaseName()
+    {
+        lock (_lock)
+        {
+            return _activePhase?.Phase;
+        }
+    }
+
     private void CompletePhaseInternal(int itemCount = 0)
     {
         if (_activePhase == null || _activeStopwatch == null)
@@ -98,13 +109,17 @@ public sealed class PhaseMetricsCollector
             // Include the currently active (non-stopped) phase
             if (_activePhase != null && _activeStopwatch != null)
             {
+                var activeDuration = _activeStopwatch.Elapsed;
+                var activeItemsPerSec = activeDuration.TotalSeconds > 0
+                    ? Math.Round(_activePhase.ItemCount / activeDuration.TotalSeconds, 1)
+                    : 0;
                 snapshot.Add(new PhaseMetricEntry
                 {
                     Phase = _activePhase.Phase,
                     StartedAt = _activePhase.StartedAt,
-                    Duration = _activeStopwatch.Elapsed,
+                    Duration = activeDuration,
                     ItemCount = _activePhase.ItemCount,
-                    ItemsPerSec = 0,
+                    ItemsPerSec = activeItemsPerSec,
                     Status = "Running",
                     Meta = _activePhase.Meta
                 });

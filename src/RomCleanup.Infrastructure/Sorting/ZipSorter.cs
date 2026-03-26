@@ -10,12 +10,12 @@ namespace RomCleanup.Infrastructure.Sorting;
 /// </summary>
 public static class ZipSorter
 {
-    // PS1-specific extensions inside ZIPs
-    private static readonly HashSet<string> Ps1Extensions = new(StringComparer.OrdinalIgnoreCase)
+    /// <summary>Default PS1-specific extensions inside ZIPs. Overridable via <see cref="SortPS1PS2"/>.</summary>
+    public static readonly HashSet<string> DefaultPs1Extensions = new(StringComparer.OrdinalIgnoreCase)
         { ".ccd", ".sub", ".pbp" };
 
-    // PS2-specific extensions inside ZIPs
-    private static readonly HashSet<string> Ps2Extensions = new(StringComparer.OrdinalIgnoreCase)
+    /// <summary>Default PS2-specific extensions inside ZIPs. Overridable via <see cref="SortPS1PS2"/>.</summary>
+    public static readonly HashSet<string> DefaultPs2Extensions = new(StringComparer.OrdinalIgnoreCase)
         { ".nrg", ".mdf", ".mds" };
 
     /// <summary>
@@ -48,12 +48,18 @@ public static class ZipSorter
     /// based on their internal file extensions.
     /// Port of Invoke-ZipSortPS1PS2.
     /// </summary>
+    /// <param name="ps1Extensions">Override PS1 extensions; defaults to <see cref="DefaultPs1Extensions"/>.</param>
+    /// <param name="ps2Extensions">Override PS2 extensions; defaults to <see cref="DefaultPs2Extensions"/>.</param>
     public static ZipSortResult SortPS1PS2(
         IReadOnlyList<string> roots,
         IFileSystem fs,
         bool dryRun = true,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<string>? ps1Extensions = null,
+        IReadOnlySet<string>? ps2Extensions = null)
     {
+        var ps1Exts = ps1Extensions ?? DefaultPs1Extensions;
+        var ps2Exts = ps2Extensions ?? DefaultPs2Extensions;
         int total = 0, moved = 0, skipped = 0, errors = 0;
 
         foreach (var root in roots)
@@ -75,8 +81,8 @@ public static class ZipSorter
                     continue;
                 }
 
-                bool hasPs1 = extensions.Any(e => Ps1Extensions.Contains(e));
-                bool hasPs2 = extensions.Any(e => Ps2Extensions.Contains(e));
+                bool hasPs1 = extensions.Any(e => ps1Exts.Contains(e));
+                bool hasPs2 = extensions.Any(e => ps2Exts.Contains(e));
 
                 // Ambiguous: contains both PS1 and PS2 extensions — skip
                 if (hasPs1 && hasPs2)

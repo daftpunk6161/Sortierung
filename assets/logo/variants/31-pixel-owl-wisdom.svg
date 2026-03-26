@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#1A1A2E"/>
+  <!-- Pixel Owl - Weisheit, Ordnung, Nacht-Vibes -->
+  <g transform="translate(128,85)">
+    <!-- Body -->
+    <rect x="-24" y="0" width="48" height="24" fill="#6D4C41"/>
+    <rect x="-20" y="24" width="40" height="8" fill="#5D4037"/>
+    <!-- Belly pattern -->
+    <rect x="-12" y="4" width="24" height="16" fill="#8D6E63"/>
+    <rect x="-8" y="8" width="4" height="4" fill="#A1887F"/>
+    <rect x="4" y="8" width="4" height="4" fill="#A1887F"/>
+    <rect x="-4" y="16" width="4" height="4" fill="#A1887F"/>
+    <!-- Head (round, wide) -->
+    <rect x="-28" y="-24" width="56" height="24" fill="#795548"/>
+    <rect x="-32" y="-20" width="8" height="16" fill="#795548"/>
+    <rect x="24" y="-20" width="8" height="16" fill="#795548"/>
+    <!-- Ear tufts -->
+    <rect x="-32" y="-32" width="8" height="12" fill="#6D4C41"/>
+    <rect x="24" y="-32" width="8" height="12" fill="#6D4C41"/>
+    <rect x="-28" y="-36" width="4" height="8" fill="#5D4037"/>
+    <rect x="24" y="-36" width="4" height="8" fill="#5D4037"/>
+    <!-- Eyes (large, round) -->
+    <rect x="-20" y="-16" width="12" height="12" fill="#FDE047"/>
+    <rect x="8" y="-16" width="12" height="12" fill="#FDE047"/>
+    <rect x="-16" y="-12" width="4" height="4" fill="#1A1A2E"/>
+    <rect x="12" y="-12" width="4" height="4" fill="#1A1A2E"/>
+    <!-- Beak -->
+    <rect x="-4" y="-8" width="8" height="6" fill="#F59E0B"/>
+    <rect x="-2" y="-4" width="4" height="4" fill="#D97706"/>
+    <!-- Wings -->
+    <rect x="-36" y="0" width="12" height="16" fill="#5D4037"/>
+    <rect x="24" y="0" width="12" height="16" fill="#5D4037"/>
+    <!-- Feet -->
+    <rect x="-16" y="32" width="8" height="4" fill="#F59E0B"/>
+    <rect x="8" y="32" width="8" height="4" fill="#F59E0B"/>
+  </g>
+  <!-- Branch beneath owl -->
+  <rect x="70" y="125" width="116" height="4" fill="#3E2723" rx="2"/>
+  <text x="128" y="168" text-anchor="middle" font-family="'Press Start 2P','Courier New',monospace" font-size="16" font-weight="700" fill="#FDE047" letter-spacing="2">ROMULUS</text>
+  <text x="128" y="188" text-anchor="middle" font-family="'Courier New',monospace" font-size="7" fill="#795548" letter-spacing="2">KEEPER OF COLLECTIONS</text>
+  <text x="128" y="215" text-anchor="middle" font-family="'Courier New',monospace" font-size="7" fill="#3E2723" letter-spacing="2">YOUR COLLECTION, PERFECTED.</text>
+</svg>

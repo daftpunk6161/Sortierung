@@ -1,7 +1,6 @@
 <UserControl x:Class="RomCleanup.UI.Wpf.Views.SettingsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
 >
 
   <Grid IsEnabled="{Binding IsIdle}">
@@ -13,20 +12,48 @@
 
     <!-- ═══ SIDEBAR NAVIGATION ═══════════════════════════════════════════ -->
     <Border Grid.Column="0" Background="{DynamicResource BrushSurface}" Padding="0,12">
-      <ListBox Background="Transparent" BorderThickness="0"
-               SelectedValue="{Binding SelectedSettingsSection, Mode=TwoWay}"
-               SelectedValuePath="Tag"
-               ItemContainerStyle="{DynamicResource SidebarNavItem}"
-               AutomationProperties.Name="{Binding Loc[Settings.NavCategoriesLabel]}">
-        <ListBoxItem Tag="Sortieroptionen" Content="{Binding Loc[Settings.NavSorting]}" AutomationProperties.Name="{Binding Loc[Settings.NavSorting]}"/>
-        <ListBoxItem Tag="Filter" Content="{Binding Loc[Settings.NavFilters]}" AutomationProperties.Name="{Binding Loc[Settings.NavFilters]}"/>
-        <ListBoxItem Tag="Sicherheit" Content="{Binding Loc[Settings.NavSecurity]}" AutomationProperties.Name="{Binding Loc[Settings.NavSecurity]}"/>
-        <ListBoxItem Tag="Externe Tools" Content="{Binding Loc[Settings.NavTools]}" AutomationProperties.Name="{Binding Loc[Settings.NavTools]}"/>
-        <ListBoxItem Tag="DAT &amp; Hashes" Content="{Binding Loc[Settings.NavDat]}" AutomationProperties.Name="{Binding Loc[Settings.NavDat]}"/>
-        <ListBoxItem Tag="Profile" Content="{Binding Loc[Settings.NavProfiles]}" AutomationProperties.Name="{Binding Loc[Settings.NavProfiles]}"/>
-        <ListBoxItem Tag="Allgemein" Content="{Binding Loc[Settings.NavGeneral]}" AutomationProperties.Name="{Binding Loc[Settings.NavGeneral]}"/>
-        <ListBoxItem Tag="System" Content="{Binding Loc[Settings.NavSystem]}" AutomationProperties.Name="{Binding Loc[Settings.NavSystem]}"/>
-      </ListBox>
+      <StackPanel>
+        <RadioButton GroupName="SettingsSection" Tag="Sortieroptionen"
+                     Content="{Binding Loc[Settings.NavSorting]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Sortieroptionen}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavSorting]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="Filter"
+                     Content="{Binding Loc[Settings.NavFilters]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Filter}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavFilters]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="Sicherheit"
+                     Content="{Binding Loc[Settings.NavSecurity]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Sicherheit}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavSecurity]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="Externe Tools"
+                     Content="{Binding Loc[Settings.NavTools]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Externe Tools}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavTools]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="DAT &amp; Hashes"
+                     Content="{Binding Loc[Settings.NavDat]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=DAT &amp; Hashes}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavDat]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="Profile"
+                     Content="{Binding Loc[Settings.NavProfiles]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Profile}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavProfiles]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="Allgemein"
+                     Content="{Binding Loc[Settings.NavGeneral]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Allgemein}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavGeneral]}"/>
+        <RadioButton GroupName="SettingsSection" Tag="System"
+                     Content="{Binding Loc[Settings.NavSystem]}"
+                     Style="{DynamicResource SidebarNavItem}"
+                     IsChecked="{Binding SelectedSettingsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=System}"
+                     AutomationProperties.Name="{Binding Loc[Settings.NavSystem]}"/>
+      </StackPanel>
     </Border>
 
     <!-- Divider -->
@@ -46,6 +73,10 @@
                       IsChecked="{Binding AggressiveJunk}" ToolTip="{Binding Loc[Settings.AggressiveJunkTip]}"/>
             <CheckBox Content="{Binding Loc[Settings.AliasKeying]}" Margin="0,4,24,4"
                       IsChecked="{Binding AliasKeying}" ToolTip="{Binding Loc[Settings.AliasKeyingTip]}"/>
+            <CheckBox Content="{Binding Loc[Settings.OnlyGames]}" Margin="0,4,24,4"
+                      IsChecked="{Binding OnlyGames}" ToolTip="{Binding Loc[Settings.OnlyGamesTip]}"/>
+            <CheckBox Content="{Binding Loc[Settings.KeepUnknownWhenOnlyGames]}" Margin="0,4,24,4"
+                      IsChecked="{Binding KeepUnknownWhenOnlyGames}" ToolTip="{Binding Loc[Settings.KeepUnknownWhenOnlyGamesTip]}"/>
           </WrapPanel>
         </StackPanel>
 
@@ -215,6 +246,10 @@
           <CheckBox Content="{Binding Loc[Settings.UseDat]}" Margin="0,0,0,12"
                     IsChecked="{Binding UseDat}"
                     ToolTip="{Binding Loc[Settings.UseDatTip]}"/>
+          <CheckBox Content="DAT-Rename bei Move ausführen" Margin="0,0,0,12"
+                    IsChecked="{Binding EnableDatRename}"
+                    IsEnabled="{Binding UseDat}"
+                    ToolTip="Nur bei bestätigtem Move aktiv. Es werden ausschließlich HaveWrongName-Treffer umbenannt."/>
           <Grid>
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="120"/>
@@ -266,25 +301,54 @@
                     VirtualizingPanel.VirtualizationMode="Recycling"
                     ScrollViewer.CanContentScroll="True"
                     AutomationProperties.Name="{Binding Loc[Settings.DatMappingName]}">
-            <DataGrid.Resources>
-              <x:Array x:Key="DatConsoleItems" Type="{x:Type sys:String}">
-                <sys:String>PS1</sys:String>
-                <sys:String>PS2</sys:String>
-                <sys:String>PSP</sys:String>
-                <sys:String>DC</sys:String>
-                <sys:String>SAT</sys:String>
-                <sys:String>GC</sys:String>
-                <sys:String>WII</sys:String>
-              </x:Array>
-            </DataGrid.Resources>
             <DataGrid.Columns>
-              <DataGridComboBoxColumn Header="Console"
-                                      SelectedItemBinding="{Binding Console}"
-                                      ItemsSource="{StaticResource DatConsoleItems}"
-                                      Width="130"/>
-              <DataGridTextColumn Header="DAT File" Binding="{Binding DatFile}" Width="*"/>
+              <DataGridTemplateColumn Header="Console" Width="130">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Console}" VerticalAlignment="Center" Margin="4,0"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+                <DataGridTemplateColumn.CellEditingTemplate>
+                  <DataTemplate>
+                    <ComboBox SelectedItem="{Binding Console, UpdateSourceTrigger=PropertyChanged}"
+                              ItemsSource="{Binding DataContext.AllConsoleKeys, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              IsDropDownOpen="True" MaxDropDownHeight="300"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellEditingTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="DAT File" Width="*">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <DockPanel>
+                      <Button DockPanel.Dock="Right" Content="&#xE838;" FontFamily="Segoe MDL2 Assets" Width="30" Padding="2"
+                              Click="OnBrowseDatFile_Click" AutomationProperties.Name="DAT-Datei durchsuchen"/>
+                      <TextBlock Text="{Binding DatFile}" VerticalAlignment="Center" Margin="4,0"
+                                 TextTrimming="CharacterEllipsis" ToolTip="{Binding DatFile}"/>
+                    </DockPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+                <DataGridTemplateColumn.CellEditingTemplate>
+                  <DataTemplate>
+                    <DockPanel>
+                      <Button DockPanel.Dock="Right" Content="&#xE838;" FontFamily="Segoe MDL2 Assets" Width="30" Padding="2"
+                              Click="OnBrowseDatFile_Click" AutomationProperties.Name="DAT-Datei durchsuchen"/>
+                      <TextBox Text="{Binding DatFile, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellEditingTemplate>
+              </DataGridTemplateColumn>
             </DataGrid.Columns>
           </DataGrid>
+          <Button Margin="0,8,0,0" Padding="12,6"
+                  HorizontalAlignment="Left"
+                  Command="{Binding AutoDetectDatMappingsCommand}"
+                  ToolTip="Scannt den DAT-Ordner und ordnet gefundene DAT-Dateien automatisch Konsolen zu."
+                  AutomationProperties.Name="DAT-Mapping automatisch erkennen">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="&#xE773;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,6,0"/>
+              <TextBlock Text="DATs auto-erkennen" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
         </StackPanel>
 
         <!-- ── Profile ── -->

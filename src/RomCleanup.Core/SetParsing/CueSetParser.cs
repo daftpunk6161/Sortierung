@@ -6,7 +6,7 @@ namespace RomCleanup.Core.SetParsing;
 /// </summary>
 public static class CueSetParser
 {
-    private static readonly System.Text.RegularExpressions.Regex RxFile =
+    private static readonly System.Text.RegularExpressions.Regex RxCueEntry =
         new(@"^\s*FILE\s+(?:""(.+?)""|(\S+))\s+",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase |
             System.Text.RegularExpressions.RegexOptions.Compiled);
@@ -26,12 +26,12 @@ public static class CueSetParser
     public static IReadOnlyList<string> GetMissingFiles(string cuePath)
     {
         return ParseReferencedPaths(cuePath, existingOnly: false)
-            .Where(f => !File.Exists(f)).ToList();
+            .Where(f => !SetParserIo.Exists(f)).ToList();
     }
 
     private static IReadOnlyList<string> ParseReferencedPaths(string cuePath, bool existingOnly)
     {
-        if (string.IsNullOrWhiteSpace(cuePath) || !File.Exists(cuePath))
+        if (string.IsNullOrWhiteSpace(cuePath) || !SetParserIo.Exists(cuePath))
             return Array.Empty<string>();
 
         var dir = Path.GetDirectoryName(Path.GetFullPath(cuePath)) ?? "";
@@ -43,9 +43,9 @@ public static class CueSetParser
         var normalizedDir = dir.TrimEnd(Path.DirectorySeparatorChar)
                             + Path.DirectorySeparatorChar;
 
-        foreach (var line in File.ReadLines(cuePath))
+        foreach (var line in SetParserIo.ReadLines(cuePath))
         {
-            var match = RxFile.Match(line);
+            var match = RxCueEntry.Match(line);
             if (!match.Success) continue;
 
             var refPath = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
@@ -57,7 +57,7 @@ public static class CueSetParser
             if (!fullPath.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            if (seen.Add(fullPath) && (!existingOnly || File.Exists(fullPath)))
+            if (seen.Add(fullPath) && (!existingOnly || SetParserIo.Exists(fullPath)))
                 result.Add(fullPath);
         }
 

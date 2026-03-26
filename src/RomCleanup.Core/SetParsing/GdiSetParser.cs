@@ -18,19 +18,19 @@ public static class GdiSetParser
     public static IReadOnlyList<string> GetMissingFiles(string gdiPath)
     {
         return ParseReferencedPaths(gdiPath, existingOnly: false)
-            .Where(f => !File.Exists(f)).ToList();
+            .Where(f => !SetParserIo.Exists(f)).ToList();
     }
 
     private static IReadOnlyList<string> ParseReferencedPaths(string gdiPath, bool existingOnly)
     {
-        if (string.IsNullOrWhiteSpace(gdiPath) || !File.Exists(gdiPath))
+        if (string.IsNullOrWhiteSpace(gdiPath) || !SetParserIo.Exists(gdiPath))
             return Array.Empty<string>();
 
         var dir = Path.GetDirectoryName(Path.GetFullPath(gdiPath)) ?? "";
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var line in File.ReadLines(gdiPath))
+        foreach (var line in SetParserIo.ReadLines(gdiPath))
         {
             var trimmed = line.Trim();
             if (string.IsNullOrEmpty(trimmed)) continue;
@@ -74,7 +74,7 @@ public static class GdiSetParser
             if (!fullPath.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            if (seen.Add(fullPath) && (!existingOnly || File.Exists(fullPath)))
+            if (seen.Add(fullPath) && (!existingOnly || SetParserIo.Exists(fullPath)))
                 result.Add(fullPath);
         }
 

@@ -21,7 +21,10 @@ public static class DeduplicationEngine
         if (items is null || items.Count == 0) return null;
         if (items.Count == 1) return items[0];
 
-        return items
+        var highestCategoryRank = items.Max(GetCategoryRank);
+        var prioritized = items.Where(x => GetCategoryRank(x) == highestCategoryRank);
+
+        return prioritized
             .OrderByDescending(x => x.CompletenessScore)
             .ThenByDescending(x => x.DatMatch ? 1 : 0)
             .ThenByDescending(x => x.RegionScore)
@@ -30,7 +33,21 @@ public static class DeduplicationEngine
             .ThenByDescending(x => x.FormatScore)
             .ThenByDescending(x => x.SizeTieBreakScore)
             .ThenBy(x => x.MainPath, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.MainPath, StringComparer.Ordinal)
             .First();
+    }
+
+    private static int GetCategoryRank(RomCandidate candidate)
+    {
+        return candidate.Category switch
+        {
+            FileCategory.Game => 5,
+            FileCategory.Bios => 4,
+            FileCategory.NonGame => 3,
+            FileCategory.Junk => 2,
+            FileCategory.Unknown => 1,
+            _ => 0
+        };
     }
 
     /// <summary>
@@ -39,7 +56,7 @@ public static class DeduplicationEngine
     /// V2-H12: Uses dictionary-based grouping instead of LINQ GroupBy+OrderBy+ToList
     /// to reduce intermediate allocations for large candidate sets.
     /// </summary>
-    public static IReadOnlyList<DedupeResult> Deduplicate(
+    public static IReadOnlyList<DedupeGroup> Deduplicate(
         IReadOnlyList<RomCandidate> candidates)
     {
         // Build groups with a single pass over candidates
@@ -58,13 +75,33 @@ public static class DeduplicationEngine
         // Sort keys for deterministic output order
         var sortedKeys = groupDict.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToList();
 
-        var results = new List<DedupeResult>(sortedKeys.Count);
+        var results = new List<DedupeGroup>(sortedKeys.Count);
         foreach (var key in sortedKeys)
         {
             var items = groupDict[key];
             var winner = SelectWinner(items)!;
-            var losers = items.Where(x => !string.Equals(x.MainPath, winner.MainPath, StringComparison.OrdinalIgnoreCase)).ToList();
-            results.Add(new DedupeResult
+            var losers = new List<RomCandidate>(Math.Max(0, items.Count - 1));
+            var winnerSkipped = false;
+            foreach (var item in items)
+            {
+                if (!winnerSkipped && ReferenceEquals(item, winner))
+                {
+                    winnerSkipped = true;
+                    continue;
+                }
+
+                losers.Add(item);
+            }
+
+            if (!winnerSkipped)
+            {
+                // Defensive fallback for non-reference-equivalent winner instances.
+                losers = items
+                    .Where(x => !string.Equals(x.MainPath, winner.MainPath, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            results.Add(new DedupeGroup
             {
                 Winner = winner,
                 Losers = losers,
@@ -72,6 +109,27 @@ public static class DeduplicationEngine
             });
         }
 
-        return results;
+        var winnerPaths = new HashSet<string>(
+            results.Select(r => r.Winner.MainPath),
+            StringComparer.OrdinalIgnoreCase);
+
+        var sanitized = new List<DedupeGroup>(results.Count);
+        foreach (var result in results)
+        {
+            var filteredLosers = result.Losers
+                .Where(l =>
+                    !winnerPaths.Contains(l.MainPath)
+                    || string.Equals(l.MainPath, result.Winner.MainPath, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            sanitized.Add(new DedupeGroup
+            {
+                Winner = result.Winner,
+                Losers = filteredLosers,
+                GameKey = result.GameKey
+            });
+        }
+
+        return sanitized;
     }
 }

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="coral45" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FB923C"/>
+      <stop offset="100%" stop-color="#F43F5E"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="white"/>
+  <!-- Flat / Modern App Style — wie Figma, Notion, Linear branding -->
+  <!-- Rounded square icon -->
+  <rect x="78" y="35" width="100" height="100" rx="22" fill="url(#coral45)"/>
+  <!-- White wolf icon inside -->
+  <g transform="translate(128,82) scale(0.33)">
+    <polygon points="0,-70 -52,-14 -36,48 0,26 36,48 52,-14" fill="white"/>
+    <polygon points="-40,-10 -56,-50 -18,-30" fill="white"/>
+    <polygon points="40,-10 56,-50 18,-30" fill="white"/>
+    <!-- Eyes as negative space -->
+    <circle cx="-15" cy="-6" r="5" fill="url(#coral45)"/>
+    <circle cx="15" cy="-6" r="5" fill="url(#coral45)"/>
+    <!-- Nose -->
+    <polygon points="0,8 -4,16 4,16" fill="url(#coral45)"/>
+  </g>
+  <text x="128" y="168" text-anchor="middle" font-family="'Inter','Segoe UI',sans-serif" font-size="30" font-weight="700" fill="#1E293B" letter-spacing="1">Romulus</text>
+  <text x="128" y="192" text-anchor="middle" font-family="'Inter','Segoe UI',sans-serif" font-size="9" fill="#94A3B8" letter-spacing="2">Your Collection, Perfected.</text>
+</svg>

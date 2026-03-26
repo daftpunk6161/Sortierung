@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#1A0536"/>
+  <!-- Pixel Cartridge / ROM chip with wolf eyes -->
+  <g transform="translate(48,12)">
+    <!-- Cartridge body -->
+    <rect x="12" y="12" width="132" height="96" fill="#2D2B55" rx="4"/>
+    <rect x="18" y="18" width="120" height="48" fill="#1A0536" rx="2"/>
+    <!-- Label area -->
+    <rect x="24" y="24" width="108" height="36" fill="#3D3B75" rx="2"/>
+    <!-- Wolf eyes in label -->
+    <rect x="48" y="36" width="12" height="8" fill="#06B6D4"/>
+    <rect x="96" y="36" width="12" height="8" fill="#06B6D4"/>
+    <!-- Cartridge pins -->
+    <rect x="24" y="108" width="12" height="12" fill="#C9A227"/>
+    <rect x="42" y="108" width="12" height="12" fill="#C9A227"/>
+    <rect x="60" y="108" width="12" height="12" fill="#C9A227"/>
+    <rect x="78" y="108" width="12" height="12" fill="#C9A227"/>
+    <rect x="96" y="108" width="12" height="12" fill="#C9A227"/>
+    <rect x="114" y="108" width="12" height="12" fill="#C9A227"/>
+    <!-- Grip notch -->
+    <rect x="54" y="72" width="48" height="6" fill="#1A0536"/>
+  </g>
+  <text x="128" y="180" text-anchor="middle" font-family="'Consolas',monospace" font-size="24" font-weight="700" fill="#06B6D4" letter-spacing="3">ROMULUS</text>
+  <text x="128" y="200" text-anchor="middle" font-family="'Consolas',monospace" font-size="8" fill="#9333EA" letter-spacing="2" opacity="0.6">YOUR COLLECTION, PERFECTED.</text>
+</svg>

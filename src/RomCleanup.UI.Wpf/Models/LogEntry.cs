@@ -84,3 +84,20 @@ public sealed partial class ToolCategory : ObservableObject
     [ObservableProperty]
     private bool _isExpanded;
 }
+
+/// <summary>
+/// Bindable region priority item for the Region Priority Ranker (E2).
+/// Position in the collection determines priority order.
+/// </summary>
+public sealed partial class RegionPriorityItem : ObservableObject
+{
+    public required string Code { get; init; }
+    public required string DisplayName { get; init; }
+    public required string Group { get; init; }
+
+    [ObservableProperty]
+    private bool _isEnabled;
+
+    [ObservableProperty]
+    private int _position;
+}

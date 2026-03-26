@@ -76,6 +76,14 @@ public class FormatScorerTests
     }
 
     [Fact]
+    public void SizeTieBreak_M3uPlaylist_LargerBetter()
+    {
+        var large = FormatScorer.GetSizeTieBreakScore(null, ".m3u", 500_000);
+        var small = FormatScorer.GetSizeTieBreakScore(null, ".m3u", 100_000);
+        Assert.True(large > small);
+    }
+
+    [Fact]
     public void SizeTieBreak_CartridgeFormat_SmallerBetter()
     {
         var large = FormatScorer.GetSizeTieBreakScore(null, ".nes", 500_000);

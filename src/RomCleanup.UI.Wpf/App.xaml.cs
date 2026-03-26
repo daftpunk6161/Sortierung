@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure;
+using RomCleanup.Infrastructure.State;
 using RomCleanup.UI.Wpf.Services;
 using RomCleanup.UI.Wpf.ViewModels;
 using Application = System.Windows.Application;
@@ -17,23 +19,40 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        var services = new ServiceCollection();
-        ConfigureServices(services);
-        Services = services.BuildServiceProvider();
-
-        var mainWindow = Services.GetRequiredService<MainWindow>();
-        mainWindow.Show();
-
+        // Register global handlers before resolving UI to catch startup exceptions.
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
+
+        try
+        {
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+            Services = services.BuildServiceProvider();
+
+            var mainWindow = Services.GetRequiredService<MainWindow>();
+            mainWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            LogFatalException(ex);
+            MessageBox.Show(
+                $"Der Start von Romulus ist fehlgeschlagen:\n\n{ex.Message}\n\nDetails wurden in crash.log gespeichert.",
+                "Romulus – Startfehler",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown(-1);
+        }
     }
 
     private static void ConfigureServices(IServiceCollection services)
     {
+        services.AddRomCleanupCore();
+
         // Services
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<IAppState, AppStateStore>();
         services.AddTransient<IDialogService, WpfDialogService>();
 
         // Feature domain services (GUI-034 to GUI-040)
@@ -76,7 +95,7 @@ public partial class App : Application
         {
             var logDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "RomCleanupRegionDedupe");
+                RomCleanup.Contracts.AppIdentity.AppFolderName);
             Directory.CreateDirectory(logDir);
             var logPath = Path.Combine(logDir, "crash.log");
             File.AppendAllText(logPath, $"[{DateTime.UtcNow:O}] {ex}\n\n");

@@ -39,7 +39,7 @@ public sealed partial class FeatureCommandService
         if (isPortable) sb.AppendLine($"  Settings-Ordner: {Path.Combine(AppContext.BaseDirectory, ".romcleanup")}");
         else
         {
-            sb.AppendLine($"  Settings-Ordner: {Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RomCleanupRegionDedupe")}");
+            sb.AppendLine($"  Settings-Ordner: {Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), RomCleanup.Contracts.AppIdentity.AppFolderName)}");
             sb.AppendLine("\n  Tipp: Erstelle '.portable' im Programmverzeichnis für Portable-Modus.");
         }
         _dialog.ShowText("Portable-Modus", sb.ToString());
@@ -59,7 +59,8 @@ public sealed partial class FeatureCommandService
                 var driveRoot = Path.GetPathRoot(firstRoot);
                 if (driveRoot is not null) isNtfs = new DriveInfo(driveRoot).DriveFormat.Equals("NTFS", StringComparison.OrdinalIgnoreCase);
             }
-            catch { }
+            catch (IOException) { /* drive info unavailable — show as not available */ }
+            catch (UnauthorizedAccessException) { /* no access to drive info */ }
         }
         _dialog.ShowText("Hardlink-Modus", $"Hardlink-Modus\n\n{estimate}\n\nNTFS-Unterstützung: {(isNtfs ? "Verfügbar" : "Nicht verfügbar")}\n\nHardlinks teilen den Speicherplatz auf Dateisystemebene.\nBeide Pfade zeigen auf dieselben Daten – kein zusätzlicher Speicher.");
     }
@@ -92,11 +93,13 @@ public sealed partial class FeatureCommandService
         if (locks.Count > 0 && _dialog.Confirm($"{locks.Count} Lock-Datei(en) gefunden.\n\nAbgelaufene Locks entfernen?", "Multi-Instanz"))
         {
             var removed = 0;
+            var failed = 0;
             foreach (var (path, _) in locks)
             {
-                try { File.Delete(path); removed++; } catch { }
+                try { File.Delete(path); removed++; }
+                catch (Exception ex) { failed++; _vm.AddLog($"Lock-Datei konnte nicht entfernt werden: {path} ({ex.Message})", "WARN"); }
             }
-            _vm.AddLog($"Multi-Instanz: {removed} Lock(s) entfernt", "INFO");
+            _vm.AddLog($"Multi-Instanz: {removed} Lock(s) entfernt{(failed > 0 ? $", {failed} fehlgeschlagen" : "")}", "INFO");
         }
     }
 
@@ -114,7 +117,7 @@ public sealed partial class FeatureCommandService
         if (results[0].score == 0) ExecuteCommand(results[0].key);
     }
 
-    private void ExecuteCommand(string key)
+    internal void ExecuteCommand(string key)
     {
         // 1. Try FeatureCommands dictionary (all registered tool commands)
         if (_vm.FeatureCommands.TryGetValue(key, out var featureCmd))

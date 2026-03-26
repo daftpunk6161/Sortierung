@@ -1,16 +1,10 @@
 using System.IO;
-using System.Text.Json;
+using System.Linq;
 using RomCleanup.Contracts.Models;
-using RomCleanup.Core.Classification;
-using RomCleanup.Infrastructure.Audit;
-using RomCleanup.Infrastructure.Conversion;
-using RomCleanup.Infrastructure.Dat;
-using RomCleanup.Infrastructure.FileSystem;
-using RomCleanup.Infrastructure.Hashing;
+using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Paths;
-using RomCleanup.Infrastructure.Reporting;
-using RomCleanup.Infrastructure.Tools;
+using RomCleanup.Infrastructure.State;
 using RomCleanup.UI.Wpf.ViewModels;
 
 namespace RomCleanup.UI.Wpf.Services;
@@ -23,6 +17,20 @@ namespace RomCleanup.UI.Wpf.Services;
 /// </summary>
 public sealed class RunService : IRunService
 {
+    private readonly IAppState _appState;
+    private readonly IRunOptionsFactory _runOptionsFactory;
+    private readonly IRunEnvironmentFactory _runEnvironmentFactory;
+
+    public RunService(
+        IAppState? appState = null,
+        IRunOptionsFactory? runOptionsFactory = null,
+        IRunEnvironmentFactory? runEnvironmentFactory = null)
+    {
+        _appState = appState ?? new AppStateStore();
+        _runOptionsFactory = runOptionsFactory ?? new RunOptionsFactory();
+        _runEnvironmentFactory = runEnvironmentFactory ?? new RunEnvironmentFactory();
+    }
+
     /// <summary>Result of a single pipeline run.</summary>
     public sealed class RunServiceResult
     {
@@ -38,56 +46,10 @@ public sealed class RunService : IRunService
     public (RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)
         BuildOrchestrator(MainViewModel vm, Action<string>? onProgress = null)
     {
+        _appState.SetValue("run.build.startedUtc", DateTime.UtcNow);
+        _appState.SetValue("run.mode", vm.DryRun ? "DryRun" : "Move");
+
         onProgress?.Invoke("[Init] Initialisiere Infrastruktur…");
-        var fs = new FileSystemAdapter();
-        var audit = new AuditCsvStore(fs, onProgress, AuditSecurityPaths.GetDefaultSigningKeyPath());
-
-        var dataDir = FeatureService.ResolveDataDirectory()
-                      ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
-        onProgress?.Invoke($"[Init] Datenverzeichnis: {dataDir}");
-
-        var toolHashesPath = Path.Combine(dataDir, "tool-hashes.json");
-        var toolRunner = new ToolRunnerAdapter(File.Exists(toolHashesPath) ? toolHashesPath : null);
-
-        ConsoleDetector? consoleDetector = null;
-        var discHeaderDetector = new DiscHeaderDetector();
-        var consolesJsonPath = Path.Combine(dataDir, "consoles.json");
-        if (File.Exists(consolesJsonPath))
-        {
-            var consolesJson = File.ReadAllText(consolesJsonPath);
-            consoleDetector = ConsoleDetector.LoadFromJson(consolesJson, discHeaderDetector);
-            onProgress?.Invoke($"[Init] Konsolen-Datenbank geladen: {consoleDetector.AllConsoleKeys.Count} Konsolen");
-        }
-        else
-        {
-            onProgress?.Invoke("[Init] Warnung: consoles.json nicht gefunden — Konsolen-Erkennung deaktiviert");
-        }
-
-        DatIndex? datIndex = null;
-        FileHashService? hashService = null;
-        if (vm.UseDat && !string.IsNullOrWhiteSpace(vm.DatRoot) && Directory.Exists(vm.DatRoot))
-        {
-            var datRepo = new DatRepositoryAdapter();
-            hashService = new FileHashService();
-            var consoleMap = BuildConsoleMap(dataDir, vm.DatRoot);
-            onProgress?.Invoke($"DAT: {consoleMap.Count} Konsolen-Zuordnungen in {vm.DatRoot}");
-            if (consoleMap.Count > 0)
-            {
-                datIndex = datRepo.GetDatIndex(vm.DatRoot, consoleMap, vm.DatHashType);
-                onProgress?.Invoke($"DAT: {datIndex.TotalEntries} Hashes für {datIndex.ConsoleCount} Konsolen geladen");
-            }
-            else
-            {
-                onProgress?.Invoke("DAT: Keine DAT-Dateien gefunden – DAT-Verifizierung übersprungen");
-            }
-        }
-
-        FormatConverterAdapter? converter = null;
-        if (vm.ConvertEnabled || vm.ConvertOnly)
-        {
-            converter = new FormatConverterAdapter(toolRunner);
-            onProgress?.Invoke("[Init] Formatkonvertierung aktiviert");
-        }
 
         string? auditPath = null;
         if ((!vm.DryRun || vm.ConvertOnly) && vm.Roots.Count > 0)
@@ -109,29 +71,24 @@ public sealed class RunService : IRunService
         }
 
         var selectedExts = vm.GetSelectedExtensions();
-        var runOptions = new RunOptions
-        {
-            Roots = vm.Roots.ToList(),
-            Mode = vm.DryRun ? "DryRun" : "Move",
-            PreferRegions = vm.GetPreferredRegions(),
-            Extensions = selectedExts.Length > 0 ? selectedExts : RunOptions.DefaultExtensions,
-            RemoveJunk = true,
-            AggressiveJunk = vm.AggressiveJunk,
-            SortConsole = vm.SortConsole,
-            EnableDat = vm.UseDat,
-            HashType = vm.DatHashType,
-            ConvertFormat = (vm.ConvertEnabled || vm.ConvertOnly) ? "auto" : null,
-            ConvertOnly = vm.ConvertOnly,
-            TrashRoot = string.IsNullOrWhiteSpace(vm.TrashRoot) ? null : vm.TrashRoot,
-            AuditPath = auditPath,
-            ReportPath = reportPath,
-            ConflictPolicy = vm.ConflictPolicy.ToString()
-        };
+        var source = new ViewModelRunOptionsSource(vm, selectedExts);
+        var runOptions = _runOptionsFactory.Create(source, auditPath, reportPath);
 
         onProgress?.Invoke($"[Init] Konfiguration: Modus={runOptions.Mode}, {runOptions.Extensions.Count} Extension(s), {runOptions.Roots.Count} Root(s)");
 
+        var dataDir = FeatureService.ResolveDataDirectory()
+                      ?? RunEnvironmentBuilder.ResolveDataDir();
+        onProgress?.Invoke($"[Init] Datenverzeichnis: {dataDir}");
+
+        var env = _runEnvironmentFactory.Create(runOptions, onProgress);
+
         var orchestrator = new RunOrchestrator(
-            fs, audit, consoleDetector, hashService, converter, datIndex, onProgress);
+            env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex, onProgress,
+            archiveHashService: env.ArchiveHashService);
+
+        _appState.SetValue("run.build.completedUtc", DateTime.UtcNow);
+        _appState.SetValue("run.auditPath", auditPath);
+        _appState.SetValue("run.reportPath", reportPath);
 
         return (orchestrator, runOptions, auditPath, reportPath);
     }
@@ -147,13 +104,23 @@ public sealed class RunService : IRunService
         string? reportPath,
         CancellationToken ct)
     {
+        _appState.SetValue("run.execute.startedUtc", DateTime.UtcNow);
+        _appState.SetValue("run.execute.cancelRequested", ct.IsCancellationRequested);
+
         var result = orchestrator.Execute(options, ct);
+        var effectiveReportPath = ReportPathResolver.Resolve(result.ReportPath, reportPath);
+
+        _appState.SetValue("run.execute.completedUtc", DateTime.UtcNow);
+        _appState.SetValue("run.execute.status", result.Status);
+        _appState.SetValue("run.execute.exitCode", result.ExitCode);
+        _appState.SetValue("run.execute.durationMs", result.DurationMs);
+        _appState.SetValue("run.execute.reportPath", effectiveReportPath);
 
         return new RunServiceResult
         {
             Result = result,
             AuditPath = auditPath,
-            ReportPath = result.ReportPath
+            ReportPath = effectiveReportPath
         };
     }
 
@@ -167,77 +134,49 @@ public sealed class RunService : IRunService
         return ArtifactPathResolver.GetSiblingDirectory(fullRoot, siblingName);
     }
 
-    /// <summary>
-    /// Build console-key → DAT-file mapping using dat-catalog.json and filesystem scan.
-    /// Matches CLI BuildConsoleMap logic: catalog-based mapping first, then fallback scan.
-    /// </summary>
-    private Dictionary<string, string> BuildConsoleMap(string dataDir, string datRoot)
+    private sealed class ViewModelRunOptionsSource : IRunOptionsSource
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        var catalogPath = Path.Combine(dataDir, "dat-catalog.json");
-        if (File.Exists(catalogPath))
+        public ViewModelRunOptionsSource(MainViewModel vm, IReadOnlyList<string> selectedExtensions)
         {
-            try
-            {
-                var json = File.ReadAllText(catalogPath);
-                var entries = JsonSerializer.Deserialize<List<DatCatalogEntry>>(json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                if (entries != null)
-                {
-                    foreach (var entry in entries)
-                    {
-                        if (string.IsNullOrWhiteSpace(entry.ConsoleKey))
-                            continue;
-
-                        var candidates = new[]
-                        {
-                            Path.Combine(datRoot, entry.Id + ".dat"),
-                            Path.Combine(datRoot, entry.Id + ".xml"),
-                            Path.Combine(datRoot, entry.System + ".dat"),
-                            Path.Combine(datRoot, entry.System + ".xml"),
-                            Path.Combine(datRoot, entry.ConsoleKey + ".dat"),
-                            Path.Combine(datRoot, entry.ConsoleKey + ".xml")
-                        };
-
-                        foreach (var candidate in candidates)
-                        {
-                            if (File.Exists(candidate))
-                            {
-                                map[entry.ConsoleKey] = candidate;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            catch (JsonException)
-            {
-                // Malformed catalog — fall through to directory scan
-            }
+            _vm = vm;
+            Roots = vm.Roots.ToList();
+            Mode = vm.DryRun ? "DryRun" : "Move";
+            PreferRegions = vm.GetPreferredRegions();
+            Extensions = selectedExtensions.Count > 0 ? selectedExtensions : RunOptions.DefaultExtensions;
+            RemoveJunk = vm.RemoveJunk;
+            OnlyGames = vm.OnlyGames;
+            KeepUnknownWhenOnlyGames = vm.KeepUnknownWhenOnlyGames;
+            AggressiveJunk = vm.AggressiveJunk;
+            SortConsole = vm.SortConsole;
+            EnableDat = vm.UseDat;
+            DatRoot = string.IsNullOrWhiteSpace(vm.DatRoot) ? null : vm.DatRoot;
+            HashType = string.IsNullOrWhiteSpace(vm.DatHashType) ? "SHA1" : vm.DatHashType;
+            ConvertFormat = (vm.ConvertEnabled || vm.ConvertOnly) ? "auto" : null;
+            ConvertOnly = vm.ConvertOnly;
+            TrashRoot = string.IsNullOrWhiteSpace(vm.TrashRoot) ? null : vm.TrashRoot;
+            ConflictPolicy = vm.ConflictPolicy.ToString();
         }
 
-        // Fallback: scan datRoot for any .dat/.xml files not yet mapped
-        if (Directory.Exists(datRoot))
-        {
-            foreach (var datFile in Directory.GetFiles(datRoot, "*.dat", SearchOption.AllDirectories)
-                         .Concat(Directory.GetFiles(datRoot, "*.xml", SearchOption.AllDirectories)))
-            {
-                var stem = Path.GetFileNameWithoutExtension(datFile).ToUpperInvariant();
-                if (!map.ContainsKey(stem))
-                    map[stem] = datFile;
-            }
-        }
+        public IReadOnlyList<string> Roots { get; }
+        public string Mode { get; }
+        public string[] PreferRegions { get; }
+        public IReadOnlyList<string> Extensions { get; }
+        public bool RemoveJunk { get; }
+        public bool OnlyGames { get; }
+        public bool KeepUnknownWhenOnlyGames { get; }
+        public bool AggressiveJunk { get; }
+        public bool SortConsole { get; }
+        public bool EnableDat { get; }
+        public bool EnableDatAudit => EnableDat && _vm.EnableDatAudit;
+        public bool EnableDatRename => EnableDat && _vm.EnableDatRename;
+        public string? DatRoot { get; }
+        public string HashType { get; }
+        public string? ConvertFormat { get; }
+        public bool ConvertOnly { get; }
+        public string? TrashRoot { get; }
+        public string ConflictPolicy { get; }
 
-        return map;
+        private readonly MainViewModel _vm;
     }
 
-    private sealed class DatCatalogEntry
-    {
-        public string Group { get; set; } = "";
-        public string System { get; set; } = "";
-        public string Id { get; set; } = "";
-        public string ConsoleKey { get; set; } = "";
-    }
 }

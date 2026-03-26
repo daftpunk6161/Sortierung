@@ -79,7 +79,8 @@ public sealed class InsightsEngine
                 var verScore = (int)versionScorer.GetVersionScore(item.FileName);
                 long sizeBytes = 0;
                 if (File.Exists(item.Path))
-                    try { sizeBytes = new FileInfo(item.Path).Length; } catch { }
+                    try { sizeBytes = new FileInfo(item.Path).Length; }
+                    catch (Exception ex) { _log?.Invoke($"Cannot read file size: {item.Path}: {ex.Message}"); }
 
                 return new
                 {
@@ -111,7 +112,7 @@ public sealed class InsightsEngine
                     SizeBytes = c.SizeBytes,
                     SizeTieBreakScore = c.SizeBytes,
                     Extension = c.Extension,
-                    Category = "GAME"
+                    Category = FileCategory.Game
                 })
                 .ToList();
 
@@ -277,7 +278,7 @@ public sealed class InsightsEngine
                     GameKey = g.Key,
                     RootCount = distinctRoots.Count,
                     CandidateCount = g.Count(),
-                    WinnerPath = g.First().Path,
+                    WinnerPath = g.OrderBy(x => x.Path, StringComparer.Ordinal).First().Path,
                     Roots = distinctRoots,
                     RootsSummary = string.Join(", ", distinctRoots.Select(r => Path.GetFileName(r)))
                 };

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<datafile>
+  <header><name>RomCleanup Test DAT - Redump PS2</name></header>
+  <game name="Shadow of the Colossus (USA)"><rom name="sotc.iso" size="4697620480" crc="40000001" sha1="a223456789012345678901234567890123456789" /></game>
+  <game name="God of War (USA)"><rom name="gow.iso" size="4697620480" crc="40000002" sha1="b223456789012345678901234567890123456789" /></game>
+  <game name="MGS3 (USA)"><rom name="mgs3.iso" size="4697620480" crc="40000003" sha1="c223456789012345678901234567890123456789" /></game>
+  <game name="Okami (USA)"><rom name="okami.iso" size="4697620480" crc="40000004" sha1="d223456789012345678901234567890123456789" /></game>
+  <game name="FFX (USA)"><rom name="ffx.iso" size="4697620480" crc="40000005" sha1="e223456789012345678901234567890123456789" /></game>
+</datafile>

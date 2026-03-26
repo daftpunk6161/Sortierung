@@ -8,5 +8,6 @@ public sealed record OperationErrorResponse(
     string? RunId = null,
     IDictionary<string, object>? Meta = null)
 {
+    public string Utc { get; init; } = DateTime.UtcNow.ToString("o");
     public bool Retryable => Error.Kind == ErrorKind.Transient;
 }

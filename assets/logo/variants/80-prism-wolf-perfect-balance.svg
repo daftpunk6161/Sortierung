@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="holo80" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="20%" stop-color="#8B5CF6"/>
+      <stop offset="40%" stop-color="#EC4899"/>
+      <stop offset="60%" stop-color="#F59E0B"/>
+      <stop offset="80%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <filter id="glow80">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#0C0C18"/>
+  <!-- The "perfect" version — balanced, clean, premium -->
+  <!-- Prism with subtle inner glow -->
+  <polygon points="128,28 60,150 196,150" fill="none" stroke="url(#holo80)" stroke-width="2" opacity="0.35" filter="url(#glow80)"/>
+  <polygon points="128,28 60,150 196,150" fill="none" stroke="url(#holo80)" stroke-width="2.5"/>
+  <!-- Clean beam -->
+  <line x1="0" y1="98" x2="74" y2="98" stroke="white" stroke-width="2.5" opacity="0.3"/>
+  <!-- Perfect rainbow — 7 evenly spaced rays -->
+  <line x1="184" y1="82" x2="255" y2="45" stroke="#EF4444" stroke-width="2" opacity="0.7"/>
+  <line x1="186" y1="92" x2="255" y2="62" stroke="#F97316" stroke-width="2" opacity="0.7"/>
+  <line x1="187" y1="102" x2="255" y2="80" stroke="#FBBF24" stroke-width="2" opacity="0.7"/>
+  <line x1="188" y1="112" x2="255" y2="98" stroke="#22C55E" stroke-width="2" opacity="0.7"/>
+  <line x1="189" y1="122" x2="255" y2="116" stroke="#06B6D4" stroke-width="2" opacity="0.7"/>
+  <line x1="190" y1="132" x2="255" y2="134" stroke="#3B82F6" stroke-width="2" opacity="0.7"/>
+  <line x1="191" y1="142" x2="254" y2="152" stroke="#8B5CF6" stroke-width="2" opacity="0.7"/>
+  <!-- Wolf — ideal size, perfectly centered, clean white -->
+  <g transform="translate(128,92) scale(0.42)">
+    <polygon points="0,-68 -50,-12 -34,48 0,28 34,48 50,-12" fill="white" opacity="0.92"/>
+    <polygon points="-38,-8 -58,-50 -18,-28" fill="white" opacity="0.92"/>
+    <polygon points="38,-8 58,-50 18,-28" fill="white" opacity="0.92"/>
+  </g>
+  <text x="128" y="188" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="28" font-weight="600" fill="url(#holo80)" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="210" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="8" fill="#6B7280" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

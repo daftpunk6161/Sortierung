@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
+using RomCleanup.Contracts.Models;
 using RomCleanup.UI.Wpf.Models;
 using Color = System.Windows.Media.Color;
 
@@ -240,5 +241,59 @@ public sealed class FractionToWidthConverter : IMultiValueConverter
     }
 
     public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>Converts DatAuditStatus to a SolidColorBrush for status badges.
+/// Have=green, HaveWrongName=orange, Miss=red, Unknown=grey, Ambiguous=yellow.</summary>
+public sealed class DatAuditStatusToBrushConverter : IValueConverter
+{
+    private static readonly SolidColorBrush Have = Freeze(Color.FromRgb(0x00, 0xFF, 0x88));
+    private static readonly SolidColorBrush WrongName = Freeze(Color.FromRgb(0xFF, 0xB7, 0x00));
+    private static readonly SolidColorBrush Miss = Freeze(Color.FromRgb(0xFF, 0x00, 0x44));
+    private static readonly SolidColorBrush Unknown = Freeze(Color.FromRgb(0x99, 0x99, 0xCC));
+    private static readonly SolidColorBrush Ambiguous = Freeze(Color.FromRgb(0xFF, 0xD5, 0x00));
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is DatAuditStatus status ? status switch
+        {
+            DatAuditStatus.Have => Have,
+            DatAuditStatus.HaveWrongName => WrongName,
+            DatAuditStatus.Miss => Miss,
+            DatAuditStatus.Unknown => Unknown,
+            DatAuditStatus.Ambiguous => Ambiguous,
+            _ => Unknown
+        } : Unknown;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+
+    private static SolidColorBrush Freeze(Color c)
+    {
+        var b = new SolidColorBrush(c);
+        b.Freeze();
+        return b;
+    }
+}
+
+/// <summary>Converts DatAuditStatus to a user-friendly label string.</summary>
+public sealed class DatAuditStatusToLabelConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is DatAuditStatus status ? status switch
+        {
+            DatAuditStatus.Have => "Have",
+            DatAuditStatus.HaveWrongName => "Wrong Name",
+            DatAuditStatus.Miss => "Miss",
+            DatAuditStatus.Unknown => "Unknown",
+            DatAuditStatus.Ambiguous => "Ambiguous",
+            _ => "–"
+        } : "–";
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }

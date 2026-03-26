@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs><linearGradient id="g14" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#A855F7"/><stop offset="100%" stop-color="#EC4899"/></linearGradient></defs>
+  <rect width="256" height="256" rx="32" fill="#0F0A1A"/>
+  <!-- Geometric lion head (Romulus = Rome = power) -->
+  <g transform="translate(128,100) scale(0.5)">
+    <!-- Mane -->
+    <circle cx="0" cy="0" r="120" fill="none" stroke="url(#g14)" stroke-width="8" stroke-dasharray="15,10"/>
+    <!-- Head -->
+    <polygon points="-60,-70 -80,0 -50,60 0,80 50,60 80,0 60,-70 30,-90 0,-75 -30,-90" fill="url(#g14)"/>
+    <!-- Mane tufts -->
+    <polygon points="-80,-40 -110,-20 -80,0" fill="#A855F7" opacity="0.5"/>
+    <polygon points="80,-40 110,-20 80,0" fill="#EC4899" opacity="0.5"/>
+    <polygon points="-60,-70 -90,-80 -80,-40" fill="#A855F7" opacity="0.4"/>
+    <polygon points="60,-70 90,-80 80,-40" fill="#EC4899" opacity="0.4"/>
+    <!-- Eyes -->
+    <circle cx="-25" cy="-15" r="10" fill="#0F0A1A"/><circle cx="-22" cy="-15" r="5" fill="#FBBF24"/>
+    <circle cx="25" cy="-15" r="10" fill="#0F0A1A"/><circle cx="22" cy="-15" r="5" fill="#FBBF24"/>
+    <!-- Nose -->
+    <polygon points="-8,20 0,30 8,20" fill="#0F0A1A" opacity="0.5"/>
+  </g>
+  <text x="128" y="210" text-anchor="middle" font-family="'Georgia',serif" font-size="30" font-weight="700" fill="url(#g14)" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="232" text-anchor="middle" font-family="'Georgia',serif" font-size="9" fill="#FBBF24" letter-spacing="3" opacity="0.6">YOUR COLLECTION, PERFECTED.</text>
+</svg>

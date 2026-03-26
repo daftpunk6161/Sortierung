@@ -83,8 +83,32 @@ public sealed class SafetyValidator
     public static string? NormalizePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
-        try { return Path.GetFullPath(path.Trim()); }
-        catch { return null; }
+
+        // SEC-PATH-03: Reject extended-length/device path prefixes (bypass for path normalization)
+        var trimmed = path.Trim();
+        if (trimmed.StartsWith(@"\\?\") || trimmed.StartsWith(@"\\.\"))
+            return null;
+
+        // SEC-PATH-04: Reject NTFS Alternate Data Streams (colon after drive letter)
+        var adsCheckPortion = trimmed.Length >= 2 && trimmed[1] == ':'
+            ? trimmed[2..]
+            : trimmed;
+        if (adsCheckPortion.Contains(':'))
+            return null;
+
+        // SEC-PATH-05: Reject trailing dots/spaces in path segments (Windows silently strips them → path bypass)
+        var segments = trimmed.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        foreach (var seg in segments)
+        {
+            if (seg.Length > 0 && (seg[^1] == '.' || seg[^1] == ' '))
+                return null;
+        }
+
+        try { return Path.GetFullPath(trimmed); }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or System.Security.SecurityException or PathTooLongException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -193,7 +217,7 @@ public sealed class SafetyValidator
                 {
                     _fs.EnsureDirectory(normalizedAudit);
                 }
-                catch
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     blockers.Add($"Cannot create audit directory: {auditRoot}");
                 }

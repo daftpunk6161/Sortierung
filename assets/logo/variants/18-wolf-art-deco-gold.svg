@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#FEFCE8"/>
+  <!-- Art-Deco-Stil: Goldrahmen, geometrisch -->
+  <!-- Outer deco frame -->
+  <rect x="16" y="16" width="224" height="224" rx="4" fill="none" stroke="#B8860B" stroke-width="2"/>
+  <rect x="22" y="22" width="212" height="212" rx="2" fill="none" stroke="#B8860B" stroke-width="0.5"/>
+  <!-- Top deco fan -->
+  <g transform="translate(128,55)">
+    <path d="M0,-30 L-40,0 L-30,0 Z" fill="#DAA520" opacity="0.3"/>
+    <path d="M0,-30 L-30,0 L-15,0 Z" fill="#DAA520" opacity="0.4"/>
+    <path d="M0,-30 L-15,0 L0,0 Z" fill="#DAA520" opacity="0.5"/>
+    <path d="M0,-30 L0,0 L15,0 Z" fill="#DAA520" opacity="0.5"/>
+    <path d="M0,-30 L15,0 L30,0 Z" fill="#DAA520" opacity="0.4"/>
+    <path d="M0,-30 L30,0 L40,0 Z" fill="#DAA520" opacity="0.3"/>
+  </g>
+  <!-- Stylized Wolf head - Art Deco geometric -->
+  <g transform="translate(128,105) scale(0.6)">
+    <!-- Face triangle -->
+    <polygon points="0,-80 -60,40 60,40" fill="none" stroke="#B8860B" stroke-width="2.5"/>
+    <!-- Inner face lines -->
+    <line x1="0" y1="-80" x2="0" y2="40" stroke="#B8860B" stroke-width="1" opacity="0.5"/>
+    <line x1="-30" y1="-20" x2="30" y2="-20" stroke="#B8860B" stroke-width="1" opacity="0.3"/>
+    <!-- Ears -->
+    <polygon points="-45,-20 -65,-70 -25,-50" fill="none" stroke="#B8860B" stroke-width="2"/>
+    <polygon points="45,-20 65,-70 25,-50" fill="none" stroke="#B8860B" stroke-width="2"/>
+    <!-- Eyes - diamond shaped -->
+    <polygon points="-20,-25 -15,-20 -20,-15 -25,-20" fill="#B8860B"/>
+    <polygon points="20,-25 25,-20 20,-15 15,-20" fill="#B8860B"/>
+    <!-- Nose -->
+    <polygon points="0,0 -6,8 6,8" fill="#B8860B"/>
+  </g>
+  <!-- Deco divider line -->
+  <line x1="60" y1="158" x2="196" y2="158" stroke="#B8860B" stroke-width="1"/>
+  <circle cx="128" cy="158" r="3" fill="#B8860B"/>
+  <circle cx="60" cy="158" r="2" fill="#B8860B"/>
+  <circle cx="196" cy="158" r="2" fill="#B8860B"/>
+  <text x="128" y="185" text-anchor="middle" font-family="'Palatino Linotype','Times New Roman',serif" font-size="26" font-weight="700" fill="#B8860B" letter-spacing="8">ROMULUS</text>
+  <text x="128" y="208" text-anchor="middle" font-family="'Palatino Linotype',serif" font-size="8" fill="#8B6914" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+  <!-- Bottom deco element -->
+  <polygon points="118,218 128,228 138,218" fill="none" stroke="#B8860B" stroke-width="1"/>
+</svg>

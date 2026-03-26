@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Text;
 using System.Text.RegularExpressions;
 using RomCleanup.Core.Caching;
@@ -30,7 +31,9 @@ public sealed class DiscHeaderDetector
     private static readonly Regex RxPsp = new(@"PSP\s*GAME", RxOpts, RxTimeout);
     private static readonly Regex RxPs2Boot = new(@"BOOT2\s*=|cdrom0:", RxOpts, RxTimeout);
     private static readonly Regex RxPs2Name = new(@"playstation\s*2", RxOpts, RxTimeout);
+    private static readonly Regex RxPs3Marker = new(@"PS3_DISC\.SFB|PS3_GAME|PLAYSTATION\s*3|PS3VOLUME", RxOpts, RxTimeout);
     private static readonly Regex RxXbox = new(@"MICROSOFT\*XBOX\*MEDIA", RxOpts, RxTimeout);
+    private static readonly Regex RxXbox360Marker = new(@"XBOX\s*360|XEX2|XGD2|XGD3", RxOpts, RxTimeout);
 
     // ScanDiscImage patterns
     private static readonly Regex RxIpDreamcast = new(@"SEGA.SEGAKATANA|SEGA.DREAMCAST", RxOpts, RxTimeout);
@@ -177,6 +180,7 @@ public sealed class DiscHeaderDetector
                 if (RxPsp.IsMatch(text)) return "PSP";
                 if (RxPs2Boot.IsMatch(text)) return "PS2";
                 if (RxPs2Name.IsMatch(text)) return "PS2";
+                if (RxPs3Marker.IsMatch(text)) return "PS3";
                 return "PS1";
             }
             // Microsoft Xbox
@@ -239,7 +243,12 @@ public sealed class DiscHeaderDetector
         {
             var xboxSig = Encoding.ASCII.GetString(buffer, 0x10000, 20);
             if (xboxSig == "MICROSOFT*XBOX*MEDIA")
+            {
+                var probeText = ExtractPrintableAscii(buffer, 0, Math.Min(scanSize, 131072));
+                if (RxXbox360Marker.IsMatch(probeText))
+                    return "X360";
                 return "XBOX";
+            }
         }
 
         // Sega IP.BIN detection (DC / SAT / SCD)
@@ -291,13 +300,15 @@ public sealed class DiscHeaderDetector
 
                     if (RxPvdPlayStation.IsMatch(sysId))
                     {
-                        // Scan remaining buffer for PS2/PSP distinguishing markers
+                        // Scan remaining buffer for PS2/PSP/PS3 distinguishing markers
                         int markerScanLen = Math.Min(scanSize - pvdOff, 65536);
                         var pvdText = Encoding.ASCII.GetString(buffer, pvdOff, markerScanLen);
                         if (RxPsp.IsMatch(pvdText))
                             return "PSP";
                         if (RxPs2Boot.IsMatch(pvdText))
                             return "PS2";
+                        if (RxPs3Marker.IsMatch(pvdText))
+                            return "PS3";
                         return "PS1";
                     }
 
@@ -314,16 +325,52 @@ public sealed class DiscHeaderDetector
     private static string? ScanChdMetadata(string path)
     {
         using var fs = File.OpenRead(path);
+        if (fs.Length < 8)
+            return null;
+
+        var headerSize = (int)Math.Min(0x54, fs.Length);
+        var header = new byte[headerSize];
+        var headerRead = fs.ReadAtLeast(header, headerSize, throwOnEndOfStream: false);
+
+        // Verify CHD magic "MComprHD"
+        if (headerRead < 8)
+            return null;
+        var magic = Encoding.ASCII.GetString(header, 0, 8);
+        if (magic != "MComprHD")
+            return null;
+
+        // CHD v5: read metadata at declared meta offset (first metadata block).
+        if (headerRead >= 0x38)
+        {
+            var version = BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(12, 4));
+            if (version == 5)
+            {
+                var metaOffset = BinaryPrimitives.ReadUInt64BigEndian(header.AsSpan(0x30, 8));
+                if (metaOffset > 0 && metaOffset < (ulong)fs.Length)
+                {
+                    fs.Position = (long)metaOffset;
+                    var metaScanSize = (int)Math.Min(131072, fs.Length - fs.Position);
+                    if (metaScanSize > 0)
+                    {
+                        var metaBuffer = new byte[metaScanSize];
+                        var metaRead = fs.ReadAtLeast(metaBuffer, metaScanSize, throwOnEndOfStream: false);
+                        if (metaRead > 0)
+                        {
+                            var metaText = ExtractPrintableAscii(metaBuffer, 0, metaRead);
+                            var fromMeta = ResolveConsoleFromText(metaText);
+                            if (fromMeta is not null)
+                                return fromMeta;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback for older/atypical files: scan first chunk for printable metadata.
+        fs.Position = 0;
         int scanSize = (int)Math.Min(65536, fs.Length);
         var raw = new byte[scanSize];
         scanSize = fs.ReadAtLeast(raw, scanSize, throwOnEndOfStream: false);
-
-        // Verify CHD magic "MComprHD"
-        if (scanSize < 8)
-            return null;
-        var magic = Encoding.ASCII.GetString(raw, 0, 8);
-        if (magic != "MComprHD")
-            return null;
 
         // Convert printable ASCII bytes to searchable string
         var meta = ExtractPrintableAscii(raw, 0, scanSize);

@@ -144,4 +144,33 @@ public class DatRepositoryAdapterTests : IDisposable
         // Should return empty or partial, not throw
         Assert.NotNull(index);
     }
+
+        [Fact]
+        public void GetDatIndex_BillionLaughsPayload_DoesNotExpandEntities_AndReturnsNoEntries_Issue9()
+        {
+                // Arrange: classic XXE entity expansion payload (billion laughs family)
+                var datContent = """
+                        <?xml version="1.0"?>
+                        <!DOCTYPE datafile [
+                            <!ENTITY lol "lol">
+                            <!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+                            <!ENTITY lol2 "&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;">
+                        ]>
+                        <datafile>
+                            <game name="&lol2;">
+                                <rom name="attack.bin" size="1" sha1="deadbeef" />
+                            </game>
+                        </datafile>
+                        """;
+                File.WriteAllText(Path.Combine(_tempDir, "xxe.dat"), datContent);
+
+                // Act
+                var index = _dat.GetDatIndex(
+                        _tempDir,
+                        new Dictionary<string, string> { ["TEST"] = "xxe.dat" });
+
+                // Assert
+                Assert.NotNull(index);
+                Assert.Equal(0, index.TotalEntries);
+        }
 }

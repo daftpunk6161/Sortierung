@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<datafile>
+  <header><name>RomCleanup Test DAT - No-Intro NES</name></header>
+  <game name="Super Mario Bros (USA)"><rom name="Super Mario Bros (USA).nes" size="40976" crc="00000001" sha1="1111111111111111111111111111111111111111" /></game>
+  <game name="Legend of Zelda (USA)"><rom name="Legend of Zelda (USA).nes" size="131088" crc="00000002" sha1="2222222222222222222222222222222222222222" /></game>
+  <game name="Metroid (USA)"><rom name="Metroid (USA).nes" size="262160" crc="00000003" sha1="3333333333333333333333333333333333333333" /></game>
+  <game name="Mega Man 2 (USA)"><rom name="Mega Man 2 (USA).nes" size="262160" crc="00000004" sha1="4444444444444444444444444444444444444444" /></game>
+  <game name="Castlevania III (USA)"><rom name="Castlevania III (USA).nes" size="524304" crc="00000005" sha1="5555555555555555555555555555555555555555" /></game>
+  <game name="Contra (USA)"><rom name="Contra (USA).nes" size="131088" crc="00000006" sha1="6666666666666666666666666666666666666666" /></game>
+  <game name="Final Fantasy (USA)"><rom name="Final Fantasy (USA).nes" size="262160" crc="00000007" sha1="7777777777777777777777777777777777777777" /></game>
+  <game name="Double Dragon II (USA)"><rom name="Double Dragon II (USA).nes" size="262160" crc="00000008" sha1="8888888888888888888888888888888888888888" /></game>
+  <game name="Kirbys Adventure (USA)"><rom name="Kirbys Adventure (USA).nes" size="393232" crc="00000009" sha1="9999999999999999999999999999999999999999" /></game>
+  <game name="Punch Out (USA)"><rom name="Punch Out (USA).nes" size="262160" crc="00000010" sha1="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" /></game>
+</datafile>

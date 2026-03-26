@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="japanGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF5F5"/>
+      <stop offset="100%" stop-color="#FEE2E2"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="url(#japanGrad)"/>
+  <!-- Japanischer / Minimalistischer Stil - Kreis (Enso) + Wolf -->
+  <!-- Enso circle (imperfect brush stroke feel) -->
+  <circle cx="128" cy="95" r="55" fill="none" stroke="#1C1917" stroke-width="4" stroke-dasharray="300 50" stroke-linecap="round"/>
+  <!-- Red circle (Hinomaru accent) -->
+  <circle cx="128" cy="95" r="8" fill="#DC2626" opacity="0.15"/>
+  <!-- Minimalist wolf in ink-brush style -->
+  <g transform="translate(128,90) scale(0.45)">
+    <!-- Head - simple strokes -->
+    <path d="M-50,-40 L-30,-80 L-10,-45" fill="none" stroke="#1C1917" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M50,-40 L30,-80 L10,-45" fill="none" stroke="#1C1917" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Face outline -->
+    <path d="M-45,-35 Q-35,10 0,30 Q35,10 45,-35" fill="none" stroke="#1C1917" stroke-width="3" stroke-linecap="round"/>
+    <!-- Eyes - simple dots -->
+    <circle cx="-15" cy="-15" r="4" fill="#1C1917"/>
+    <circle cx="15" cy="-15" r="4" fill="#1C1917"/>
+    <!-- Nose -->
+    <circle cx="0" cy="5" r="3" fill="#1C1917"/>
+  </g>
+  <!-- Japanese-style divider -->
+  <line x1="90" y1="155" x2="166" y2="155" stroke="#1C1917" stroke-width="0.5" opacity="0.3"/>
+  <!-- Kanji-inspired mark (decorative, not real kanji) -->
+  <text x="195" y="105" font-family="serif" font-size="14" fill="#DC2626" opacity="0.2">狼</text>
+  <text x="128" y="180" text-anchor="middle" font-family="'Yu Mincho','MS Mincho','Times New Roman',serif" font-size="26" font-weight="400" fill="#1C1917" letter-spacing="8">ROMULUS</text>
+  <text x="128" y="202" text-anchor="middle" font-family="'Yu Mincho','MS Mincho',serif" font-size="8" fill="#78716C" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

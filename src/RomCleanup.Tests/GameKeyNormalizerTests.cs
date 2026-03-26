@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using RomCleanup.Core.GameKeys;
 using Xunit;
 
@@ -117,6 +118,19 @@ public class GameKeyNormalizerTests
         // Second normalization should also produce a non-empty result if first was non-empty
         if (!string.IsNullOrEmpty(first))
             Assert.False(string.IsNullOrEmpty(second));
+    }
+
+    [Fact]
+    public void Normalize_WhenTagPatternTimesOut_DoesNotThrow()
+    {
+        var timeoutPattern = new Regex("(a+)+$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(1));
+        var tagPatterns = new[] { timeoutPattern };
+        var aliases = new Dictionary<string, string>();
+        var input = new string('a', 8000) + "!";
+
+        var ex = Record.Exception(() => GameKeyNormalizer.Normalize(input, tagPatterns, aliases));
+
+        Assert.Null(ex);
     }
 
     // --- ASCII Folding ---

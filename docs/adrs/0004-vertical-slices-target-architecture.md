@@ -61,7 +61,7 @@ Clean Architecture (Ports & Adapters) als .NET Solution mit 7 Projekten:
    - `RomCleanup.UI.Wpf` — WPF GUI (MVVM, Dark-Theme, net10.0-windows)
 
 5. **Tests** (`RomCleanup.Tests`)
-   - 3090+ xUnit-Tests in 72 Testdateien
+   - 5200+ xUnit-Tests in 136 Testdateien
 
 ## Dependency-Richtung
 
@@ -85,14 +85,14 @@ Entry Points (CLI, Api, UI.Wpf) → Infrastructure → Core → Contracts
 | PowerShell → C# CLI | ✅ Done | Vollständiger CLI Entry Point |
 | PowerShell → C# API | ✅ Done | REST-API mit Auth, Rate-Limiting, SSE |
 | PowerShell → C# GUI | ✅ Done | WPF-GUI (MVVM, Dark-Theme) |
-| PowerShell → C# Tests | ✅ Done | 3090+ xUnit-Tests |
+| PowerShell → C# Tests | ✅ Done | 5200+ xUnit-Tests |
 | Plugin-System (C#) | ⏳ Backlog | Neuimplementierung ausstehend |
 
 ## Konsequenzen
 
 ### Positiv
 - Klar getrennte Projekte mit expliziten Abhängigkeiten
-- 3090+ Tests sichern Regressionssicherheit
+- 5200+ Tests sichern Regressionssicherheit
 - Drei unabhängige Entry Points (CLI, API, GUI) teilen einen Kern
 - .NET 10 bietet native Async, starke Typisierung, Cross-Platform-Readiness
 

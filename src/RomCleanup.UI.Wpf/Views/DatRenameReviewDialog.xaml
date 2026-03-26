@@ -1,0 +1,117 @@
+<Window x:Class="RomCleanup.UI.Wpf.Views.DatRenameReviewDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="DAT-Rename Vorschau"
+        Width="960"
+        Height="560"
+        MinWidth="760"
+        MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
+        Background="{DynamicResource BrushBackground}"
+        Foreground="{DynamicResource BrushTextPrimary}">
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Title -->
+            <RowDefinition Height="Auto"/>  <!-- Summary -->
+            <RowDefinition Height="*"/>     <!-- DataGrid -->
+            <RowDefinition Height="Auto"/>  <!-- Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="&#xE8AC;" FontFamily="Segoe MDL2 Assets" FontSize="20"
+                       Foreground="{DynamicResource BrushWarning}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Summary -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,12">
+            <TextBlock Text="{Binding Summary}" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding CountLabel}" Margin="0,6,0,0"
+                       Foreground="{DynamicResource BrushWarning}" FontWeight="SemiBold"/>
+        </StackPanel>
+
+        <!-- Proposals DataGrid -->
+        <DataGrid Grid.Row="2"
+                  ItemsSource="{Binding Proposals}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  SelectionMode="Single"
+                  AlternatingRowBackground="{DynamicResource BrushSurfaceAlt}"
+                  HeadersVisibility="Column"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling"
+                  AutomationProperties.Name="DatRename Vorschau">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Aktueller Name" Width="*" MinWidth="200"
+                                    Binding="{Binding CurrentFileName}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="ToolTip" Value="{Binding CurrentFileName}"/>
+                            <Setter Property="FontFamily" Value="{DynamicResource FontMono}"/>
+                            <Setter Property="FontSize" Value="12"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridTemplateColumn Header="" Width="30">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="→" FontSize="14" FontWeight="Bold"
+                                       Foreground="{DynamicResource BrushAccentCyan}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTextColumn Header="Neuer Name (DAT)" Width="*" MinWidth="200"
+                                    Binding="{Binding ProposedFileName}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="ToolTip" Value="{Binding ProposedFileName}"/>
+                            <Setter Property="FontFamily" Value="{DynamicResource FontMono}"/>
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="Foreground" Value="{DynamicResource BrushSuccess}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Konsole" Width="100"
+                                    Binding="{Binding ConsoleKey}"/>
+
+                <DataGridTextColumn Header="DAT-Spiel" Width="200"
+                                    Binding="{Binding DatGameName}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="ToolTip" Value="{Binding DatGameName}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Conf." Width="55"
+                                    Binding="{Binding Confidence, StringFormat={}{0}%}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Abbrechen" Width="120" Margin="0,0,8,0"
+                    Command="{Binding CancelCommand}"
+                    AutomationProperties.Name="DatRename abbrechen"/>
+            <Button Content="Umbenennung bestätigen" Width="220"
+                    Background="{DynamicResource BrushWarning}"
+                    Foreground="{DynamicResource BrushTextOnAccent}"
+                    FontWeight="SemiBold"
+                    Command="{Binding ConfirmCommand}"
+                    AutomationProperties.Name="DatRename bestätigen"/>
+        </StackPanel>
+    </Grid>
+</Window>

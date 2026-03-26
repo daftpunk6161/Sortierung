@@ -56,15 +56,15 @@ public sealed class VersionScorer
         long score = 0;
 
         // Verified dump [!] = +500
-        if (_rxVerified.IsMatch(baseName)) score += 500;
+        if (SafeRegex.IsMatch(_rxVerified, baseName)) score += 500;
 
         // Revision scoring
-        var revMatch = _rxRevision.Match(baseName);
+        var revMatch = SafeRegex.Match(_rxRevision, baseName);
         if (revMatch.Success)
         {
             var rev = revMatch.Groups[1].Value.ToLowerInvariant();
 
-            if (RxPureLetters.IsMatch(rev))
+            if (SafeRegex.IsMatch(RxPureLetters, rev))
             {
                 // Pure letter revision: a=1, b=2, ..., z=26, aa=27 etc.
                 long letterScore = 0;
@@ -74,9 +74,12 @@ public sealed class VersionScorer
                 }
                 score += letterScore * 10;
             }
-            else if (RxNumericSuffix.IsMatch(rev))
+            else if (SafeRegex.IsMatch(RxNumericSuffix, rev))
             {
-                var numericMatch = RxNumericSuffix.Match(rev);
+                var numericMatch = SafeRegex.Match(RxNumericSuffix, rev);
+                if (!numericMatch.Success)
+                    return score;
+
                 var numeric = int.Parse(numericMatch.Groups[1].Value);
                 var suffix = numericMatch.Groups[2].Value;
                 long suffixScore = 0;
@@ -91,31 +94,44 @@ public sealed class VersionScorer
                 // so numericMatch.Length == rev.Length, meaning remainder was always empty.
                 score += (numeric * 10L) + suffixScore;
             }
-            else if (RxLeadingDigits.IsMatch(rev))
+            else if (SafeRegex.IsMatch(RxLeadingDigits, rev))
             {
-                var digitMatch = RxLeadingDigits.Match(rev);
+                var digitMatch = SafeRegex.Match(RxLeadingDigits, rev);
+                if (!digitMatch.Success)
+                    return score;
+
                 score += int.Parse(digitMatch.Value) * 10L;
             }
         }
 
         // Version scoring (e.g. "(v1.2)")
-        var verMatch = _rxVersion.Match(baseName);
+        var verMatch = SafeRegex.Match(_rxVersion, baseName);
         if (verMatch.Success)
         {
             var segments = new List<int>();
-            foreach (Match seg in RxDigits.Matches(verMatch.Value))
+            try
             {
-                segments.Add(int.Parse(seg.Value));
+                foreach (Match seg in RxDigits.Matches(verMatch.Value))
+                {
+                    segments.Add(int.Parse(seg.Value));
+                }
             }
+            catch (RegexMatchTimeoutException) { }
 
             if (segments.Count > 0)
             {
+                // Clamp to max 6 segments to prevent long overflow (1000^5 ≈ 10^15 fits in long)
+                const int maxSegments = 6;
+                var effectiveSegments = segments.Count > maxSegments
+                    ? segments.GetRange(0, maxSegments)
+                    : segments;
+
                 long weight = 1;
-                for (var i = 1; i < segments.Count; i++)
+                for (var i = 1; i < effectiveSegments.Count; i++)
                     weight *= 1000;
 
                 long versionScore = 0;
-                foreach (var seg in segments)
+                foreach (var seg in effectiveSegments)
                 {
                     versionScore += seg * weight;
                     if (weight > 1) weight /= 1000;
@@ -125,7 +141,7 @@ public sealed class VersionScorer
         }
 
         // Language bonus: en = +50 + multi-lang bonus, de = +25
-        var langMatch = _rxLang.Match(baseName);
+        var langMatch = SafeRegex.Match(_rxLang, baseName);
         if (langMatch.Success)
         {
             var langs = langMatch.Value.ToLowerInvariant();

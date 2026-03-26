@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#F5F0E6"/>
+  <!-- Vintage Gamepad / SNES-Controller mit Wolf-Detail -->
+  <!-- Controller body -->
+  <rect x="48" y="65" width="160" height="75" rx="35" fill="#D4D0C8" stroke="#A09888" stroke-width="1.5"/>
+  <!-- Inner detail line -->
+  <rect x="55" y="72" width="146" height="61" rx="30" fill="none" stroke="#B8B0A0" stroke-width="0.5"/>
+  <!-- D-Pad -->
+  <rect x="72" y="90" width="8" height="25" rx="1" fill="#4A4A4A"/>
+  <rect x="65" y="97" width="22" height="8" rx="1" fill="#4A4A4A"/>
+  <!-- Buttons (SNES-style colored) -->
+  <circle cx="172" cy="92" r="7" fill="#DC2626"/>
+  <circle cx="186" cy="100" r="7" fill="#FDE047"/>
+  <circle cx="158" cy="100" r="7" fill="#2563EB"/>
+  <circle cx="172" cy="108" r="7" fill="#16A34A"/>
+  <!-- Button labels -->
+  <text x="172" y="95" text-anchor="middle" font-family="Arial" font-size="6" fill="white" font-weight="700">R</text>
+  <!-- Center buttons (select/start) -->
+  <rect x="112" y="98" width="14" height="5" rx="2" fill="#4A4A4A"/>
+  <rect x="130" y="98" width="14" height="5" rx="2" fill="#4A4A4A"/>
+  <!-- Shoulder buttons (L/R) -->
+  <rect x="55" y="62" width="35" height="6" rx="3" fill="#B8B0A0"/>
+  <rect x="166" y="62" width="35" height="6" rx="3" fill="#B8B0A0"/>
+  <!-- Cable -->
+  <path d="M128,140 C128,155 130,165 128,170" fill="none" stroke="#4A4A4A" stroke-width="3" stroke-linecap="round"/>
+  <!-- Wolf icon on controller center -->
+  <g transform="translate(128,88) scale(0.12)">
+    <polygon points="0,-60 -40,10 -15,30 0,15 15,30 40,10" fill="#4A4A4A"/>
+  </g>
+  <text x="128" y="200" text-anchor="middle" font-family="'Trebuchet MS',sans-serif" font-size="28" font-weight="700" fill="#4A4A4A" letter-spacing="4">ROMULUS</text>
+  <text x="128" y="222" text-anchor="middle" font-family="'Trebuchet MS',sans-serif" font-size="8" fill="#8B8070" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

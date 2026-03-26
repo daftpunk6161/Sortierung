@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="gC" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6B21A8"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="gC2" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#9333EA"/>
+      <stop offset="100%" stop-color="#4C1D95"/>
+    </linearGradient>
+    <linearGradient id="gCshield" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#6B21A8" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="glowC">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="64" fill="#0F0A1A"/>
+  <!-- Shield shape - outer glow -->
+  <path d="M256,52 L428,128 L428,290 C428,392 344,452 256,484 C168,452 84,392 84,290 L84,128 Z"
+        fill="none" stroke="url(#gC)" stroke-width="3" opacity="0.35" filter="url(#glowC)"/>
+  <!-- Shield fill -->
+  <path d="M256,68 L415,140 L415,285 C415,380 338,438 256,468 C174,438 97,380 97,285 L97,140 Z"
+        fill="url(#gCshield)" stroke="url(#gC)" stroke-width="1.5" opacity="0.6"/>
+  <!-- Shield inner border -->
+  <path d="M256,85 L400,152 L400,278 C400,368 328,422 256,450 C184,422 112,368 112,278 L112,152 Z"
+        fill="none" stroke="url(#gC)" stroke-width="0.8" opacity="0.2"/>
+  <!-- Wolf face inside shield -->
+  <g transform="translate(256,252) scale(0.88)">
+    <!-- Left ear -->
+    <polygon points="-100,-170 -70,-55 -35,-105" fill="url(#gC)" opacity="0.85"/>
+    <!-- Right ear -->
+    <polygon points="100,-170 70,-55 35,-105" fill="url(#gC)" opacity="0.85"/>
+    <!-- Head -->
+    <polygon points="-70,-55 -92,28 -50,70 0,100 50,70 92,28 70,-55 35,-105 0,-70 -35,-105"
+             fill="url(#gC2)" opacity="0.95"/>
+    <!-- Forehead mark -->
+    <polygon points="-20,-85 0,-65 20,-85 0,-45" fill="#9333EA" opacity="0.2"/>
+    <!-- Eyes - glowing cyan -->
+    <ellipse cx="-32" cy="-8" rx="14" ry="10" fill="#0F0A1A" opacity="0.65"/>
+    <circle cx="-30" cy="-8" r="7" fill="#06B6D4"/>
+    <circle cx="-28" cy="-10" r="3" fill="white" opacity="0.75"/>
+    <ellipse cx="32" cy="-8" rx="14" ry="10" fill="#0F0A1A" opacity="0.65"/>
+    <circle cx="30" cy="-8" r="7" fill="#06B6D4"/>
+    <circle cx="28" cy="-10" r="3" fill="white" opacity="0.75"/>
+    <!-- Snout -->
+    <polygon points="-30,42 0,100 30,42 0,68" fill="#0F0A1A" opacity="0.3"/>
+    <!-- Nose -->
+    <ellipse cx="0" cy="52" rx="8" ry="6" fill="#0F0A1A" opacity="0.5"/>
+    <!-- Whisker accents -->
+    <line x1="-58" y1="12" x2="-82" y2="22" stroke="#06B6D4" stroke-width="1.2" opacity="0.2"/>
+    <line x1="-55" y1="22" x2="-78" y2="32" stroke="#06B6D4" stroke-width="1.2" opacity="0.15"/>
+    <line x1="58" y1="12" x2="82" y2="22" stroke="#06B6D4" stroke-width="1.2" opacity="0.2"/>
+    <line x1="55" y1="22" x2="78" y2="32" stroke="#06B6D4" stroke-width="1.2" opacity="0.15"/>
+  </g>
+  <!-- Brand text -->
+  <text x="256" y="472" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="40" font-weight="600" fill="white" letter-spacing="7" opacity="0.9">ROMULUS</text>
+  <!-- Tagline -->
+  <text x="256" y="498" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="300" fill="#06B6D4" letter-spacing="3.5" opacity="0.6">YOUR COLLECTION, PERFECTED.</text>
+</svg>

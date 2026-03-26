@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using RomCleanup.Infrastructure.Audit;
 
 namespace RomCleanup.Infrastructure.Reporting;
 
@@ -30,14 +31,41 @@ public sealed record ReportEntry
 public sealed record ReportSummary
 {
     public string Mode { get; init; } = "DryRun";
+    public string RunStatus { get; init; } = "ok";
     public DateTime Timestamp { get; init; } = DateTime.UtcNow;
     public int TotalFiles { get; init; }
+    public int Candidates { get; init; }
     public int KeepCount { get; init; }
+    public int DupesCount { get; init; }
+    public int GamesCount { get; init; }
     public int MoveCount { get; init; }
     public int JunkCount { get; init; }
     public int BiosCount { get; init; }
     public int DatMatches { get; init; }
+    public int HealthScore { get; init; }
     public int ConvertedCount { get; init; }
+    public int ConvertErrorCount { get; init; }
+    public int ConvertSkippedCount { get; init; }
+    public int ConvertBlockedCount { get; init; }
+    public int ConvertReviewCount { get; init; }
+    public long ConvertSavedBytes { get; init; }
+    public int DatHaveCount { get; init; }
+    public int DatHaveWrongNameCount { get; init; }
+    public int DatMissCount { get; init; }
+    public int DatUnknownCount { get; init; }
+    public int DatAmbiguousCount { get; init; }
+    public int DatRenameProposedCount { get; init; }
+    public int DatRenameExecutedCount { get; init; }
+    public int DatRenameSkippedCount { get; init; }
+    public int DatRenameFailedCount { get; init; }
+    public int JunkRemovedCount { get; init; }
+    public int JunkFailCount { get; init; }
+    public int SkipCount { get; init; }
+    public int ConsoleSortMoved { get; init; }
+    public int ConsoleSortFailed { get; init; }
+    public int ConsoleSortReviewed { get; init; }
+    public int ConsoleSortBlocked { get; init; }
+    public int FailCount { get; init; }
     public int ErrorCount { get; init; }
     public int SkippedCount { get; init; }
     public long SavedBytes { get; init; }
@@ -67,7 +95,7 @@ public static class ReportGenerator
         sb.AppendLine("<meta charset=\"utf-8\">");
         sb.AppendLine($"<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'nonce-{Enc(nonce)}'; script-src 'nonce-{Enc(nonce)}'; img-src data:;\">");
         sb.AppendLine("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
-        sb.AppendLine($"<title>ROM Cleanup Report \u2014 {Enc(summary.Mode)} \u2014 {summary.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")}</title>");
+        sb.AppendLine($"<title>Romulus Report \u2014 {Enc(summary.Mode)} \u2014 {summary.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")}</title>");
         sb.AppendLine($"<style nonce=\"{Enc(nonce)}\">");
         AppendCss(sb);
         sb.AppendLine("</style>");
@@ -76,7 +104,7 @@ public static class ReportGenerator
 
         // Header
         sb.AppendLine("<header>");
-        sb.AppendLine("<h1>🗂 ROM Cleanup Report</h1>");
+        sb.AppendLine("<h1>� Romulus Report</h1>");
         sb.AppendLine($"<p>Modus: <strong>{Enc(summary.Mode)}</strong> \u2022 {summary.Timestamp.ToString("dd.MM.yyyy HH:mm:ss")}</p>");
         sb.AppendLine("</header>");
 
@@ -183,15 +211,49 @@ tr:hover { background: rgba(137,180,250,0.05); }
     private static void AppendSummaryCards(StringBuilder sb, ReportSummary s)
     {
         sb.AppendLine("<div class=\"cards\">");
+        AppendCard(sb, "", $"{s.HealthScore}%", "Health");
         AppendCard(sb, "keep", s.KeepCount.ToString(), "Spiele (KEEP)");
         AppendCard(sb, "move", s.MoveCount.ToString(), "Duplikate");
         AppendCard(sb, "junk", s.JunkCount.ToString(), "Junk");
         AppendCard(sb, "bios", s.BiosCount.ToString(), "BIOS");
+        AppendCard(sb, "", s.GamesCount.ToString(), "Games");
         AppendCard(sb, "dat", s.DatMatches.ToString(), "DAT Matches");
+        if (s.DatHaveCount > 0)
+            AppendCard(sb, "dat", s.DatHaveCount.ToString(), "DAT Have");
+        if (s.DatHaveWrongNameCount > 0)
+            AppendCard(sb, "dat", s.DatHaveWrongNameCount.ToString(), "DAT WrongName");
+        if (s.DatMissCount > 0)
+            AppendCard(sb, "dat", s.DatMissCount.ToString(), "DAT Miss");
+        if (s.DatUnknownCount > 0)
+            AppendCard(sb, "dat", s.DatUnknownCount.ToString(), "DAT Unknown");
+        if (s.DatAmbiguousCount > 0)
+            AppendCard(sb, "dat", s.DatAmbiguousCount.ToString(), "DAT Ambiguous");
+        if (s.DatRenameProposedCount > 0)
+            AppendCard(sb, "dat", s.DatRenameProposedCount.ToString(), "DAT Rename Proposed");
+        if (s.DatRenameExecutedCount > 0)
+            AppendCard(sb, "dat", s.DatRenameExecutedCount.ToString(), "DAT Rename Executed");
+        if (s.DatRenameFailedCount > 0)
+            AppendCard(sb, "dat", s.DatRenameFailedCount.ToString(), "DAT Rename Failed");
+        AppendCard(sb, "", s.Candidates.ToString(), "Kandidaten");
         if (s.ConvertedCount > 0)
             AppendCard(sb, "", s.ConvertedCount.ToString(), "Konvertiert");
+        if (s.ConvertSkippedCount > 0)
+            AppendCard(sb, "", s.ConvertSkippedCount.ToString(), "Convert-Skip");
+        if (s.ConvertBlockedCount > 0)
+            AppendCard(sb, "", s.ConvertBlockedCount.ToString(), "Convert-Blocked");
+        if (s.ConvertReviewCount > 0)
+            AppendCard(sb, "", s.ConvertReviewCount.ToString(), "Convert-Review");
+        if (s.ConvertSavedBytes != 0)
+            AppendCard(sb, "", FormatSize(s.ConvertSavedBytes), "Convert-Gespart");
+        if (s.ConvertErrorCount > 0)
+            AppendCard(sb, "junk", s.ConvertErrorCount.ToString(), "Convert-Fehler");
+        if (s.ConsoleSortReviewed > 0)
+            AppendCard(sb, "", s.ConsoleSortReviewed.ToString(), "Sort-Review");
+        if (s.ConsoleSortBlocked > 0)
+            AppendCard(sb, "", s.ConsoleSortBlocked.ToString(), "Sort-Blocked");
         if (s.ErrorCount > 0)
             AppendCard(sb, "junk", s.ErrorCount.ToString(), "Fehler");
+        AppendCard(sb, "", s.RunStatus, "Status");
         AppendCard(sb, "", FormatSize(s.SavedBytes), "Gespart");
         AppendCard(sb, "", s.TotalFiles.ToString(), "Gescannt");
         AppendCard(sb, "", s.Duration.ToString(@"mm\:ss"), "Laufzeit");
@@ -225,6 +287,18 @@ tr:hover { background: rgba(137,180,250,0.05); }
 
     private static void AppendTable(StringBuilder sb, IReadOnlyList<ReportEntry> entries, string nonce)
     {
+        // TASK-174: Info banner for UNKNOWN files
+        var unknownCount = entries.Count(e => string.Equals(e.Category, "UNKNOWN", StringComparison.OrdinalIgnoreCase));
+        if (unknownCount > 0)
+        {
+            sb.AppendLine($"<div class=\"unknown-info\" style=\"background:var(--surface-1);border-left:4px solid var(--yellow);padding:12px 16px;margin:0 0 16px 0;border-radius:6px\">");
+            sb.AppendLine($"<strong>&#9432; {unknownCount} Datei(en) mit Klassifizierung UNKNOWN</strong><br>");
+            sb.AppendLine("UNKNOWN bedeutet, dass die Datei keiner bekannten Konsole oder Kategorie zugeordnet werden konnte. ");
+            sb.AppendLine("M\u00f6gliche Ursachen: nicht standardkonformer Dateiname, unbekanntes Format oder fehlende DAT-Abdeckung. ");
+            sb.AppendLine("Empfehlung: Dateiname pr\u00fcfen, DAT-Verzeichnis aktualisieren oder Datei manuell zuordnen.");
+            sb.AppendLine("</div>");
+        }
+
         sb.AppendLine("<h2>Details</h2>");
         sb.AppendLine("<table id=\"reportTable\">");
         sb.AppendLine("<thead><tr>");
@@ -246,7 +320,11 @@ tr:hover { background: rgba(137,180,250,0.05); }
             sb.Append("<tr>");
             sb.Append($"<td>{Enc(e.GameKey)}</td>");
             sb.Append($"<td class=\"{actionClass}\">{Enc(e.Action)}</td>");
-            sb.Append($"<td>{Enc(e.Category)}</td>");
+            // TASK-174: Tooltip on UNKNOWN category cells
+            if (string.Equals(e.Category, "UNKNOWN", StringComparison.OrdinalIgnoreCase))
+                sb.Append($"<td title=\"Keine Konsole/Kategorie erkannt. Dateiname pr\u00fcfen, DAT aktualisieren oder manuell zuordnen.\">{Enc(e.Category)}</td>");
+            else
+                sb.Append($"<td>{Enc(e.Category)}</td>");
             sb.Append($"<td>{Enc(e.Region)}</td>");
             sb.Append($"<td title=\"{Enc(e.FilePath)}\">{Enc(e.FileName)}</td>");
             sb.Append($"<td>{Enc(e.Extension)}</td>");
@@ -277,16 +355,15 @@ tr:hover { background: rgba(137,180,250,0.05); }
     private static string Enc(string value) =>
         WebUtility.HtmlEncode(value ?? "");
 
-    /// <summary>CSV-safe value: quote if needed, prevent CSV injection.</summary>
+    /// <summary>CSV-safe value: delegates to central AuditCsvParser for consistent CSV injection prevention.</summary>
     private static string CsvSafe(string value)
     {
         if (string.IsNullOrEmpty(value)) return "\"\"";
-        // CSV injection prevention: strip leading =, +, -, @
-        var safe = value;
-        if (safe.Length > 0 && "=+-@".Contains(safe[0]))
-            safe = "'" + safe;
-        // Quote and escape internal quotes
-        return "\"" + safe.Replace("\"", "\"\"") + "\"";
+        var sanitized = AuditCsvParser.SanitizeCsvField(value);
+        // Ensure quoted for CSV consistency
+        if (!sanitized.StartsWith('"'))
+            return "\"" + sanitized.Replace("\"", "\"\"") + "\"";
+        return sanitized;
     }
 
     private static string FormatSize(long bytes)

@@ -1,57 +1,82 @@
-using System.Text.Json;
 using RomCleanup.Contracts.Errors;
-using RomCleanup.Contracts.Models;
-using RomCleanup.Core.Classification;
 using RomCleanup.Infrastructure.Audit;
-using RomCleanup.Infrastructure.Configuration;
-using RomCleanup.Infrastructure.Conversion;
-using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.FileSystem;
-using RomCleanup.Infrastructure.Hashing;
 using RomCleanup.Infrastructure.Logging;
 using RomCleanup.Infrastructure.Orchestration;
-using RomCleanup.Infrastructure.Paths;
-using RomCleanup.Infrastructure.Reporting;
-using RomCleanup.Infrastructure.Tools;
 
 namespace RomCleanup.CLI;
 
 /// <summary>
 /// Headless CLI entry point for ROM Cleanup.
-/// Mirrors Invoke-RomCleanup.ps1 interface.
+/// Thin adapter wiring CliArgsParser → CliOptionsMapper → RunEnvironmentBuilder → RunOrchestrator → CliOutputWriter.
+/// ADR-008.
 /// Exit codes: 0=Success, 1=Error, 2=Cancelled, 3=Preflight failed.
 /// </summary>
 internal static class Program
 {
+    private static readonly AsyncLocal<TextWriter?> StdoutOverride = new();
+    private static readonly AsyncLocal<TextWriter?> StderrOverride = new();
+    private static readonly AsyncLocal<bool> ConsoleOverrideEnabled = new();
+    private static readonly AsyncLocal<bool?> NonInteractiveOverride = new();
+
     private static int Main(string[] args)
     {
         try
         {
-            var (options, exitCode) = ParseArgs(args);
-            if (options is null)
-            {
-                if (exitCode == 0)
-                    PrintUsage();
-                return exitCode;
-            }
+            var result = CliArgsParser.Parse(args);
 
-            return Run(options);
+            switch (result.Command)
+            {
+                case CliCommand.Help:
+                    if (result.Errors.Count > 0)
+                    {
+                        CliOutputWriter.WriteErrors(GetStderr(), result.Errors);
+                        return result.ExitCode;
+                    }
+                    CliOutputWriter.WriteUsage(GetStdout());
+                    return 0;
+
+                case CliCommand.Version:
+                    SafeStandardWriteLine(typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0");
+                    return 0;
+
+                case CliCommand.Run when result.ExitCode != 0:
+                    CliOutputWriter.WriteErrors(GetStderr(), result.Errors);
+                    return result.ExitCode;
+
+                case CliCommand.Run:
+                    return Run(result.Options!);
+
+                case CliCommand.Rollback:
+                    return Rollback(result.Options!);
+
+                default:
+                    return result.ExitCode;
+            }
         }
         catch (OperationCanceledException)
         {
-            Console.Error.WriteLine("[Cancelled]");
+            SafeErrorWriteLine("[Cancelled]");
             return 2;
         }
         catch (Exception ex)
         {
             var error = ErrorClassifier.FromException(ex, "CLI");
-            Console.Error.WriteLine($"[{error.Kind}] {error.Code}: {error.Message}");
+            SafeErrorWriteLine($"[{error.Kind}] {error.Code}: {error.Message}");
             return 1;
         }
     }
 
-    private static int Run(CliOptions opts)
+    private static int Run(CliRunOptions cliOpts)
     {
+        if (string.Equals(cliOpts.Mode, "Move", StringComparison.OrdinalIgnoreCase)
+            && IsNonInteractiveExecution()
+            && !cliOpts.Yes)
+        {
+            SafeErrorWriteLine("[Error] Non-interactive Move requires --yes confirmation.");
+            return 3;
+        }
+
         using var cts = new CancellationTokenSource();
         int cancelCount = 0;
         Console.CancelKeyPress += (_, e) =>
@@ -59,594 +84,315 @@ internal static class Program
             cancelCount++;
             if (cancelCount >= 2)
             {
-                // V2-M05: Second Ctrl+C force-kills the process
-                Console.Error.WriteLine("Force exit.");
-                Environment.Exit(2);
+                e.Cancel = true;
+                cts.Cancel();
+                SafeErrorWriteLine("Force-cancel requested.");
                 return;
             }
-            e.Cancel = true; // Prevent immediate process kill
+            e.Cancel = true;
             cts.Cancel();
-            Console.Error.WriteLine("Cancelling… press Ctrl+C again to force exit.");
+            SafeErrorWriteLine("Cancelling… press Ctrl+C again to force exit.");
         };
-
-        var fs = new FileSystemAdapter();
-        var audit = new AuditCsvStore(fs, Console.Error.WriteLine, AuditSecurityPaths.GetDefaultSigningKeyPath());
 
         // JSONL logging
         JsonlLogWriter? log = null;
-        if (!string.IsNullOrEmpty(opts.LogPath))
+        if (!string.IsNullOrEmpty(cliOpts.LogPath))
         {
-            var logLevel = Enum.TryParse<LogLevel>(opts.LogLevel, true, out var lvl) ? lvl : LogLevel.Info;
-            log = new JsonlLogWriter(opts.LogPath, logLevel);
+            var logLevel = Enum.Parse<LogLevel>(cliOpts.LogLevel, ignoreCase: true);
+            log = new JsonlLogWriter(cliOpts.LogPath, logLevel);
         }
 
-        // Load settings (defaults.json → user settings → CLI overrides)
-           var dataDir = ResolveDataDir();
-        var defaultsPath = Path.Combine(dataDir, "defaults.json");
-        var settings = SettingsLoader.Load(File.Exists(defaultsPath) ? defaultsPath : null);
+        // Load settings + map to RunOptions
+        var dataDir = RunEnvironmentBuilder.ResolveDataDir();
+        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+        var (runOptions, mapErrors) = CliOptionsMapper.Map(cliOpts, settings);
 
-        if (opts.PreferRegions.Length > 0)
-            settings.General.PreferredRegions = new List<string>(opts.PreferRegions);
-        settings.General.AggressiveJunk = opts.AggressiveJunk;
-
-        // Merge extensions from settings if not explicitly set via CLI
-        if (!opts.ExtensionsExplicit && !string.IsNullOrWhiteSpace(settings.General.Extensions))
+        if (runOptions is null)
         {
-            var settingsExts = settings.General.Extensions.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(e => e.Trim())
-                .Where(e => e.Length > 0)
-                .Select(e => e.StartsWith('.') ? e : "." + e);
-            foreach (var ext in settingsExts)
-                opts.Extensions.Add(ext);
+            CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
+            return 3;
         }
 
-        // ToolRunner
-        var toolHashesPath = Path.Combine(dataDir, "tool-hashes.json");
-        var toolRunner = new ToolRunnerAdapter(File.Exists(toolHashesPath) ? toolHashesPath : null);
-
-        // DAT setup
-        DatIndex? datIndex = null;
-        FileHashService? hashService = null;
-        var enableDat = opts.EnableDat || settings.Dat.UseDat;
-        var hashType = !string.IsNullOrWhiteSpace(opts.HashType) ? opts.HashType : settings.Dat.HashType;
-        var datRoot = !string.IsNullOrWhiteSpace(opts.DatRoot) ? opts.DatRoot : settings.Dat.DatRoot;
-
-        // FormatConverter
-        FormatConverterAdapter? converter = null;
-        if (opts.ConvertFormat)
-        {
-            converter = new FormatConverterAdapter(toolRunner);
+        if (cliOpts.ConvertFormat)
             log?.Info("CLI", "convert-init", "Format conversion enabled", "init");
-        }
 
-        // ConsoleDetector
-        ConsoleDetector? consoleDetector = null;
-        var discHeaderDetector = new DiscHeaderDetector();
-        {
-            var consolesJsonPath = Path.Combine(dataDir, "consoles.json");
-            if (File.Exists(consolesJsonPath))
-            {
-                var consolesJson = File.ReadAllText(consolesJsonPath);
-                consoleDetector = ConsoleDetector.LoadFromJson(consolesJson, discHeaderDetector);
-            }
-            else if (opts.SortConsole || enableDat)
-            {
-                Console.Error.WriteLine("[Warning] consoles.json not found, --SortConsole/--EnableDat require it");
-            }
-        }
+        // Build environment (DAT, ConsoleDetector, Converter, etc.)
+        var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
 
-        // Build DatIndex
-        if (enableDat && !string.IsNullOrWhiteSpace(datRoot) && Directory.Exists(datRoot))
-        {
-            var datRepo = new DatRepositoryAdapter();
-            hashService = new FileHashService();
-            var consoleMap = BuildConsoleMap(dataDir, datRoot);
-            if (consoleMap.Count > 0)
-            {
-                datIndex = datRepo.GetDatIndex(datRoot, consoleMap, hashType);
-                Console.Error.WriteLine($"[DAT] Loaded {datIndex.TotalEntries} hashes for {datIndex.ConsoleCount} consoles");
-                log?.Info("CLI", "dat-loaded",
-                    $"{datIndex.TotalEntries} hashes for {datIndex.ConsoleCount} consoles (hashType={hashType})", "init");
-            }
-            else
-            {
-                Console.Error.WriteLine("[Warning] No DAT files mapped — check dat-catalog.json and DatRoot");
-            }
-        }
-        else if (enableDat)
-        {
-            Console.Error.WriteLine("[Warning] DAT enabled but DatRoot not set or not found");
-        }
+        log?.Info("CLI", "start", $"Run started: Mode={cliOpts.Mode}, Roots={string.Join(";", cliOpts.Roots)}", "scan");
 
-        // Audit path
-        var auditPath = opts.AuditPath;
-        if (string.IsNullOrEmpty(auditPath) && opts.Mode == "Move")
-        {
-            var auditDir = ArtifactPathResolver.GetArtifactDirectory(opts.Roots, "audit-logs");
-            auditPath = Path.Combine(Path.GetFullPath(auditDir),
-                $"audit-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv");
-        }
-
-        // Build RunOptions and execute via RunOrchestrator
-        var runOptions = new RunOptions
-        {
-            Roots = opts.Roots,
-            Mode = opts.Mode,
-            PreferRegions = opts.PreferRegions,
-            Extensions = opts.Extensions.ToArray(),
-            RemoveJunk = opts.RemoveJunk,
-            AggressiveJunk = opts.AggressiveJunk,
-            SortConsole = opts.SortConsole,
-            EnableDat = enableDat,
-            HashType = hashType,
-            ConvertFormat = opts.ConvertFormat ? "auto" : null,
-            TrashRoot = opts.TrashRoot,
-            AuditPath = auditPath,
-            ReportPath = opts.ReportPath
-        };
-
-        log?.Info("CLI", "start", $"Run started: Mode={opts.Mode}, Roots={string.Join(";", opts.Roots)}", "scan");
-
-        var orchestrator = new RunOrchestrator(fs, audit, consoleDetector, hashService,
-            converter, datIndex, onProgress: msg => Console.Error.WriteLine(msg));
+        var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
+            env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService);
 
         var result = orchestrator.Execute(runOptions, cts.Token);
+        var projection = RunProjectionFactory.Create(result);
 
-        // Output results
         log?.Info("CLI", "scan-complete", $"{result.TotalFilesScanned} files scanned", "scan");
         log?.Info("CLI", "dedupe-complete",
             $"{result.GroupCount} groups: Keep={result.WinnerCount}, Move={result.LoserCount}", "dedupe");
 
-        // DryRun: JSON summary to stdout
-        if (opts.Mode == "DryRun")
+        // Output
+        if (cliOpts.Mode == "DryRun")
         {
-            var junkCount = result.AllCandidates.Count(c => c.Category == "JUNK");
-            var biosCount = result.AllCandidates.Count(c => c.Category == "BIOS");
-            var gameCount = result.AllCandidates.Count(c => c.Category == "GAME");
-            var datMatchCount = result.AllCandidates.Count(c => c.DatMatch);
-
-            var summary = new
-            {
-                Status = result.Status ?? "ok",
-                ExitCode = result.ExitCode,
-                Mode = "DryRun",
-                TotalFiles = result.TotalFilesScanned,
-                Candidates = result.AllCandidates.Count,
-                Games = gameCount,
-                Junk = junkCount,
-                Bios = biosCount,
-                DatMatches = datMatchCount,
-                Groups = result.GroupCount,
-                Keep = result.WinnerCount,
-                Move = result.LoserCount,
-                Results = result.DedupeGroups.Select(r => new
-                {
-                    r.GameKey,
-                    Winner = r.Winner.MainPath,
-                    WinnerDatMatch = r.Winner.DatMatch,
-                    Losers = r.Losers.Select(l => l.MainPath).ToArray()
-                }).ToArray()
-            };
-
-            var json = JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true });
-            Console.WriteLine(json);
+            SafeStandardWriteLine(CliOutputWriter.FormatDryRunJson(projection, result.DedupeGroups, result.ConversionReport));
         }
-        else if (opts.Mode == "Move")
+        else if (cliOpts.Mode == "Move")
         {
-            var mr = result.MoveResult;
-            Console.Error.WriteLine($"[Done] Moved {mr?.MoveCount ?? 0} files ({mr?.SavedBytes ?? 0:N0} bytes saved), {mr?.FailCount ?? 0} failed");
-
-            if (result.ConvertedCount > 0)
-                Console.Error.WriteLine($"[Convert] {result.ConvertedCount} files converted");
-
-            // Write final audit sidecar
-            if (!string.IsNullOrEmpty(auditPath) && File.Exists(auditPath))
-            {
-                audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object>
-                {
-                    ["mode"] = opts.Mode,
-                    ["roots"] = string.Join(";", opts.Roots),
-                    ["timestamp"] = DateTime.UtcNow.ToString("o"),
-                    ["totalFiles"] = result.TotalFilesScanned,
-                    ["keep"] = result.WinnerCount,
-                    ["move"] = result.LoserCount
-                });
-                Console.Error.WriteLine($"[Audit] {auditPath}");
-            }
+            CliOutputWriter.WriteMoveSummary(GetStderr(), projection,
+                runOptions.AuditPath, result.ReportPath, result.ConvertedCount);
         }
 
-        if (!string.IsNullOrEmpty(opts.ReportPath) && !string.IsNullOrEmpty(result.ReportPath))
+        if (!string.IsNullOrEmpty(cliOpts.ReportPath) && !string.IsNullOrEmpty(result.ReportPath))
         {
-            Console.Error.WriteLine($"[Report] {result.ReportPath}");
+            SafeErrorWriteLine($"[Report] {result.ReportPath}");
             log?.Info("CLI", "report", $"Report written: {result.ReportPath}", "report");
         }
-        else if (!string.IsNullOrEmpty(opts.ReportPath))
+        else if (!string.IsNullOrEmpty(cliOpts.ReportPath))
         {
-            Console.Error.WriteLine("[Warning] Report requested but not written");
+            SafeErrorWriteLine("[Warning] Report requested but not written");
             log?.Warning("CLI", "Report requested but not written", "report");
         }
 
-        // Log finalize + rotation
         if (log != null)
         {
             log.Info("CLI", "done", $"Run completed in {result.DurationMs}ms", "done");
             log.Dispose();
-            if (!string.IsNullOrEmpty(opts.LogPath))
-                JsonlLogRotation.Rotate(opts.LogPath);
+            if (!string.IsNullOrEmpty(cliOpts.LogPath))
+                JsonlLogRotation.Rotate(cliOpts.LogPath);
         }
 
-        return result.ExitCode;
-    }
-
-    internal static int RunForTests(CliOptions opts) => Run(opts);
-
-    internal static (CliOptions?, int exitCode) ParseArgs(string[] args)
-    {
-        if (args.Length == 0)
-            return (null, 0);
-
-        var opts = new CliOptions();
-        var rootsSpecified = false;
-
-        for (int i = 0; i < args.Length; i++)
+        // SEC-CLI-01: Normalize exit code to documented range [0-3]
+        return result.ExitCode switch
         {
-            var arg = args[i];
-            switch (arg.ToLowerInvariant())
-            {
-                case "-roots" or "--roots":
-                    rootsSpecified = true;
-                    if (++i >= args.Length)
-                    {
-                        Console.Error.WriteLine("[Error] Missing value for --roots.");
-                        return (null, 3);
-                    }
-
-                    if (!TryParseRootsArgument(args[i], out var parsedRoots, out var rootsError))
-                    {
-                        Console.Error.WriteLine($"[Error] {rootsError}");
-                        return (null, 3);
-                    }
-
-                    opts.Roots = parsedRoots;
-                    break;
-
-                case "-mode" or "--mode":
-                    if (++i < args.Length)
-                    {
-                        var modeVal = args[i];
-                        if (string.Equals(modeVal, "DryRun", StringComparison.OrdinalIgnoreCase))
-                            opts.Mode = "DryRun";
-                        else if (string.Equals(modeVal, "Move", StringComparison.OrdinalIgnoreCase))
-                            opts.Mode = "Move";
-                        else
-                        {
-                            Console.Error.WriteLine($"[Error] Invalid mode '{modeVal}'. Must be DryRun or Move.");
-                            return (null, 3);
-                        }
-                    }
-                    break;
-
-                case "-prefer" or "--prefer" or "-preferregions":
-                    if (++i < args.Length)
-                        opts.PreferRegions = args[i].Split(',', StringSplitOptions.RemoveEmptyEntries);
-                    break;
-
-                case "-extensions" or "--extensions":
-                    if (++i < args.Length)
-                    {
-                        var exts = args[i].Split(',', StringSplitOptions.RemoveEmptyEntries);
-                        opts.Extensions = new HashSet<string>(
-                            exts.Select(e => e.StartsWith(".") ? e : "." + e),
-                            StringComparer.OrdinalIgnoreCase);
-                        opts.ExtensionsExplicit = true;
-                    }
-                    break;
-
-                case "-trashroot" or "--trashroot":
-                    if (++i < args.Length)
-                        opts.TrashRoot = args[i];
-                    break;
-
-                case "-removejunk" or "--removejunk":
-                    opts.RemoveJunk = true;
-                    break;
-
-                case "-no-removejunk" or "--no-removejunk":
-                    opts.RemoveJunk = false;
-                    break;
-
-                case "-aggressivejunk" or "--aggressivejunk":
-                    opts.AggressiveJunk = true;
-                    break;
-
-                case "-sortconsole" or "--sortconsole":
-                    opts.SortConsole = true;
-                    break;
-
-                case "-report" or "--report":
-                    if (++i < args.Length)
-                        opts.ReportPath = args[i];
-                    break;
-
-                case "-audit" or "--audit":
-                    if (++i < args.Length)
-                        opts.AuditPath = args[i];
-                    break;
-
-                case "-log" or "--log":
-                    if (++i < args.Length)
-                        opts.LogPath = args[i];
-                    break;
-
-                case "-loglevel" or "--loglevel":
-                    if (++i < args.Length)
-                        opts.LogLevel = args[i];
-                    break;
-
-                case "-enabledat" or "--enabledat":
-                    opts.EnableDat = true;
-                    break;
-
-                case "-datroot" or "--datroot":
-                    if (++i < args.Length)
-                        opts.DatRoot = args[i];
-                    break;
-
-                case "-hashtype" or "--hashtype":
-                    if (++i < args.Length)
-                        opts.HashType = args[i];
-                    break;
-
-                case "-convertformat" or "--convertformat":
-                    opts.ConvertFormat = true;
-                    break;
-
-                case "-help" or "--help" or "-h" or "-?":
-                    return (null, 0);
-
-                default:
-                    // Positional: treat as root path
-                    if (!arg.StartsWith("-"))
-                    {
-                        var roots = new List<string>(opts.Roots) { arg };
-                        opts.Roots = roots.ToArray();
-                    }
-                    else
-                    {
-                        // V2-BUG-L02: Exit with error code for unknown flags instead of warning
-                        Console.Error.WriteLine($"[Error] Unknown flag '{arg}'. Use --help for usage.");
-                        return (null, 3);
-                    }
-                    break;
-            }
-        }
-
-        if (opts.Roots.Length == 0)
-        {
-            if (rootsSpecified)
-            {
-                Console.Error.WriteLine("[Error] No valid root paths were provided.");
-                return (null, 3);
-            }
-
-            return (null, 0);
-        }
-
-        // Validate root directories exist
-        foreach (var root in opts.Roots)
-        {
-            if (string.IsNullOrWhiteSpace(root))
-            {
-                Console.Error.WriteLine("[Error] Empty root path provided.");
-                return (null, 3);
-            }
-
-            // Path-traversal validation: resolve to absolute path
-            var fullRoot = Path.GetFullPath(root);
-            var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-            var sysDir = Environment.GetFolderPath(Environment.SpecialFolder.System);
-            var progDir = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            if ((!string.IsNullOrEmpty(winDir) && fullRoot.StartsWith(winDir, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(sysDir) && fullRoot.StartsWith(sysDir, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(progDir) && fullRoot.StartsWith(progDir, StringComparison.OrdinalIgnoreCase)))
-            {
-                Console.Error.WriteLine($"[Error] Root directory is in a protected system path: {fullRoot}");
-                return (null, 3);
-            }
-
-            if (!Directory.Exists(fullRoot))
-            {
-                Console.Error.WriteLine($"[Error] Root directory not found: {fullRoot}");
-                return (null, 3);
-            }
-        }
-
-        // Validate extensions have dot prefix
-        var invalidExts = opts.Extensions.Where(e => !e.StartsWith('.')).ToList();
-        if (invalidExts.Count > 0)
-        {
-            Console.Error.WriteLine($"[Error] Extensions must start with '.': {string.Join(", ", invalidExts)}");
-            return (null, 3);
-        }
-
-        return (opts, 0);
-    }
-
-    private static bool TryParseRootsArgument(string rawValue, out string[] roots, out string? error)
-    {
-        roots = Array.Empty<string>();
-        error = null;
-
-        if (string.IsNullOrWhiteSpace(rawValue))
-        {
-            error = "No valid root paths were provided.";
-            return false;
-        }
-
-        var parsedRoots = rawValue
-            .Split(';', StringSplitOptions.None)
-            .Select(part => part.Trim())
-            .Where(part => !string.IsNullOrWhiteSpace(part))
-            .ToArray();
-
-        if (parsedRoots.Length == 0)
-        {
-            error = "No valid root paths were provided.";
-            return false;
-        }
-
-        roots = parsedRoots;
-        return true;
-    }
-
-    private static void PrintUsage()
-    {
-        Console.WriteLine(@"ROM Cleanup CLI — Region Deduplication
-
-Usage:
-  romcleanup -Roots ""D:\Roms"" [-Mode DryRun|Move] [-Prefer EU,US,JP]
-
-Options:
-  -Roots <paths>     Semicolon-separated root paths (required)
-  -Mode <mode>       DryRun (default) or Move
-  -Prefer <regions>  Comma-separated region priority (default: EU,US,WORLD,JP)
-  -Extensions <exts> Comma-separated extensions filter
-  -TrashRoot <path>  Custom trash folder for duplicates
-  -RemoveJunk        Move junk files (demos, betas, hacks) to trash
-  -AggressiveJunk    Also flag WIP/dev builds as junk
-  -SortConsole       Sort winners into console-specific subfolders
-  -EnableDat         Enable DAT verification (hash-match against No-Intro/Redump)
-  -DatRoot <path>    DAT file directory (overrides settings.json)
-  -HashType <type>   Hash algorithm: SHA1|SHA256|MD5 (default: SHA1)
-  -ConvertFormat     Convert winners to optimal format (CHD/RVZ/ZIP)
-  -Report <path>     Output HTML or CSV report (.html or .csv)
-  -Audit <path>      Write audit CSV log for Move operations
-  -Log <path>        Write structured JSONL log file
-  -LogLevel <level>  Log level: Debug|Info|Warning|Error (default: Info)
-  -Help              Show this help
-
-Exit codes:
-  0  Success
-  1  Runtime error
-  2  Cancelled
-  3  Preflight / validation failure");
-    }
-
-    internal sealed class CliOptions
-    {
-        public string[] Roots { get; set; } = Array.Empty<string>();
-        public string Mode { get; set; } = "DryRun";
-        public string[] PreferRegions { get; set; } = Array.Empty<string>();
-        public HashSet<string> Extensions { get; set; } = new(RunOptions.DefaultExtensions, StringComparer.OrdinalIgnoreCase);
-        public bool ExtensionsExplicit { get; set; }
-        public string? TrashRoot { get; set; }
-        public bool RemoveJunk { get; set; } = true;
-        public bool AggressiveJunk { get; set; }
-        public bool SortConsole { get; set; }
-        public bool EnableDat { get; set; }
-        public string? DatRoot { get; set; }
-        public string? HashType { get; set; }
-        public bool ConvertFormat { get; set; }
-        public string? ReportPath { get; set; }
-        public string? AuditPath { get; set; }
-        public string? LogPath { get; set; }
-        public string LogLevel { get; set; } = "Info";
-    }
-
-    /// <summary>
-    /// Build a console→DAT-filename map from dat-catalog.json.
-    /// Falls back to scanning datRoot for .dat files with console key as stem.
-    /// </summary>
-    private static Dictionary<string, string> BuildConsoleMap(string dataDir, string datRoot)
-    {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        // Try loading dat-catalog.json
-        var catalogPath = Path.Combine(dataDir, "dat-catalog.json");
-        if (File.Exists(catalogPath))
-        {
-            try
-            {
-                var json = File.ReadAllText(catalogPath);
-                var entries = JsonSerializer.Deserialize<List<DatCatalogEntry>>(json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                if (entries != null)
-                {
-                    foreach (var entry in entries)
-                    {
-                        if (string.IsNullOrWhiteSpace(entry.ConsoleKey))
-                            continue;
-
-                        // Look for matching .dat file in datRoot
-                        // Try Id-based name first (e.g. "redump-ps1.dat"), then system name
-                        var candidates = new[]
-                        {
-                            Path.Combine(datRoot, entry.Id + ".dat"),
-                            Path.Combine(datRoot, entry.System + ".dat"),
-                            Path.Combine(datRoot, entry.ConsoleKey + ".dat")
-                        };
-
-                        foreach (var candidate in candidates)
-                        {
-                            if (File.Exists(candidate))
-                            {
-                                map[entry.ConsoleKey] = candidate;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            catch (JsonException)
-            {
-                // Malformed catalog — fall through to directory scan
-            }
-        }
-
-        // Fallback: scan datRoot for any .dat files not yet mapped
-        if (Directory.Exists(datRoot))
-        {
-            foreach (var datFile in Directory.GetFiles(datRoot, "*.dat"))
-            {
-                var stem = Path.GetFileNameWithoutExtension(datFile).ToUpperInvariant();
-                if (!map.ContainsKey(stem))
-                    map[stem] = datFile;
-            }
-        }
-
-        return map;
-    }
-
-    private sealed class DatCatalogEntry
-    {
-        public string Group { get; set; } = "";
-        public string System { get; set; } = "";
-        public string Id { get; set; } = "";
-        public string ConsoleKey { get; set; } = "";
-    }
-
-    /// <summary>
-    /// Resolve the data/ directory by searching multiple candidate locations.
-    /// Priority: next to executable → workspace root → current working directory.
-    /// </summary>
-    private static string ResolveDataDir()
-    {
-        var candidates = new[]
-        {
-            Path.Combine(AppContext.BaseDirectory, "data"),
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data"),
-            Path.Combine(Directory.GetCurrentDirectory(), "data")
+            0 => 0,
+            2 => 2,
+            3 => 3,
+            _ => 1
         };
+    }
 
-        foreach (var candidate in candidates)
+    // --- Backward-compatible delegates for tests ---
+
+    private static int Rollback(CliRunOptions cliOpts)
+    {
+        var auditPath = cliOpts.RollbackAuditPath!;
+        var dryRun = cliOpts.RollbackDryRun;
+
+        SafeErrorWriteLine($"[Rollback] {(dryRun ? "DryRun" : "Execute")} — Audit: {auditPath}");
+
+        if (!dryRun && !cliOpts.Yes)
         {
-            var full = Path.GetFullPath(candidate);
-            if (Directory.Exists(full))
-                return full;
+            if (IsNonInteractiveExecution())
+            {
+                SafeErrorWriteLine("[Error] Non-interactive rollback execute requires --yes confirmation.");
+                return 3;
+            }
+
+            SafeErrorWriteLine("[Rollback] Execute mode will restore files. Continue? (y/N)");
+            var response = Console.ReadLine();
+            if (!string.Equals(response?.Trim(), "y", StringComparison.OrdinalIgnoreCase))
+            {
+                SafeErrorWriteLine("[Rollback] Aborted by user.");
+                return 2;
+            }
         }
 
-        // Fallback: return the first candidate path even if it doesn't exist
-        return Path.GetFullPath(candidates[0]);
+        var fs = new FileSystemAdapter();
+        var keyPath = AuditSecurityPaths.GetDefaultSigningKeyPath();
+        var signing = new AuditSigningService(fs, keyFilePath: keyPath);
+
+        // Derive allowed roots from audit CSV — same roots that were used in the original run
+        var roots = DeriveRootsFromAudit(auditPath);
+        if (roots.Length == 0)
+        {
+            SafeErrorWriteLine("[Error] Could not determine root paths from audit file.");
+            return 1;
+        }
+
+        // Current roots: original roots + trash paths (files may be in trash now)
+        var currentRoots = roots.ToList();
+        if (!string.IsNullOrWhiteSpace(cliOpts.TrashRoot))
+            currentRoots.Add(cliOpts.TrashRoot);
+        // Also add default trash folders within each root
+        foreach (var root in roots)
+        {
+            var trashDir = Path.Combine(root, "_TRASH");
+            if (Directory.Exists(trashDir))
+                currentRoots.Add(trashDir);
+            var trashConv = Path.Combine(root, "_TRASH_CONVERTED");
+            if (Directory.Exists(trashConv))
+                currentRoots.Add(trashConv);
+        }
+
+        var result = signing.Rollback(auditPath, roots, currentRoots.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), dryRun);
+
+        SafeErrorWriteLine($"[Rollback] Total rows: {result.TotalRows}");
+        SafeErrorWriteLine($"[Rollback] Eligible: {result.EligibleRows}");
+        if (dryRun)
+            SafeErrorWriteLine($"[Rollback] Planned: {result.DryRunPlanned}");
+        else
+            SafeErrorWriteLine($"[Rollback] Restored: {result.RolledBack}");
+        SafeErrorWriteLine($"[Rollback] Skipped (unsafe): {result.SkippedUnsafe}");
+        SafeErrorWriteLine($"[Rollback] Skipped (collision): {result.SkippedCollision}");
+        SafeErrorWriteLine($"[Rollback] Skipped (missing): {result.SkippedMissingDest}");
+        SafeErrorWriteLine($"[Rollback] Failed: {result.Failed}");
+
+        if (!string.IsNullOrWhiteSpace(result.RollbackAuditPath))
+            SafeErrorWriteLine($"[Rollback] Trail: {result.RollbackAuditPath}");
+
+        return result.Failed > 0 ? 1 : 0;
     }
+
+    /// <summary>
+    /// Extract unique root paths from the first column of an audit CSV.
+    /// </summary>
+    private static string[] DeriveRootsFromAudit(string auditCsvPath)
+    {
+        var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var line in File.ReadLines(auditCsvPath).Skip(1)) // skip header
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                var firstComma = line.IndexOf(',');
+                if (firstComma <= 0) continue;
+                var rootField = line[..firstComma].Trim().Trim('"');
+                if (!string.IsNullOrWhiteSpace(rootField) && Directory.Exists(rootField))
+                    roots.Add(rootField);
+            }
+        }
+        catch (IOException) { /* best-effort */ }
+        return roots.ToArray();
+    }
+
+    internal static int RunForTests(CliRunOptions opts)
+    {
+        var hadOverrides = ConsoleOverrideEnabled.Value;
+        var previousStdout = StdoutOverride.Value;
+        var previousStderr = StderrOverride.Value;
+
+        if (!hadOverrides)
+        {
+            StdoutOverride.Value = Console.Out;
+            StderrOverride.Value = Console.Error;
+            ConsoleOverrideEnabled.Value = true;
+        }
+
+        try
+        {
+            return Run(opts);
+        }
+        finally
+        {
+            if (!hadOverrides)
+            {
+                ConsoleOverrideEnabled.Value = false;
+                StdoutOverride.Value = null;
+                StderrOverride.Value = null;
+            }
+            else
+            {
+                StdoutOverride.Value = previousStdout;
+                StderrOverride.Value = previousStderr;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Backward-compatible ParseArgs: delegates to CliArgsParser.Parse + converts back.
+    /// </summary>
+    internal static (CliRunOptions?, int exitCode) ParseArgs(string[] args)
+    {
+        var result = CliArgsParser.Parse(args);
+
+        switch (result.Command)
+        {
+            case CliCommand.Help when result.Errors.Count > 0:
+                foreach (var err in result.Errors)
+                    SafeErrorWriteLine(err);
+                return (null, result.ExitCode);
+
+            case CliCommand.Help:
+                return (null, 0);
+
+            case CliCommand.Version:
+                return (null, -1);
+
+            case CliCommand.Run when result.ExitCode != 0:
+                foreach (var err in result.Errors)
+                    SafeErrorWriteLine(err);
+                return (null, result.ExitCode);
+
+            case CliCommand.Run:
+                return (result.Options!, 0);
+
+            default:
+                return (null, result.ExitCode);
+        }
+    }
+
+    private static TextWriter GetStdout()
+        => ConsoleOverrideEnabled.Value ? (StdoutOverride.Value ?? Console.Out) : Console.Out;
+
+    private static TextWriter GetStderr()
+        => ConsoleOverrideEnabled.Value ? (StderrOverride.Value ?? Console.Error) : Console.Error;
+
+    private static void SafeStandardWriteLine(string message)
+        => SafeWriteLine(GetStdout(), Console.Out, message);
+
+    private static void SafeErrorWriteLine(string message)
+        => SafeWriteLine(GetStderr(), Console.Error, message);
+
+    private static void SafeWriteLine(TextWriter writer, TextWriter fallbackWriter, string message)
+    {
+        try
+        {
+            writer.WriteLine(message);
+        }
+        catch (ObjectDisposedException)
+        {
+            if (!ReferenceEquals(writer, fallbackWriter))
+            {
+                try { fallbackWriter.WriteLine(message); }
+                catch { System.Diagnostics.Debug.WriteLine($"CLI fallback write failed for: {message}"); }
+            }
+        }
+        catch (IOException)
+        {
+            if (!ReferenceEquals(writer, fallbackWriter))
+            {
+                try { fallbackWriter.WriteLine(message); }
+                catch { System.Diagnostics.Debug.WriteLine($"CLI fallback write failed for: {message}"); }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Activates AsyncLocal-based Console overrides for thread-safe test isolation.
+    /// </summary>
+    internal static void SetConsoleOverrides(TextWriter? stdout, TextWriter? stderr)
+    {
+        StdoutOverride.Value = stdout;
+        StderrOverride.Value = stderr;
+        ConsoleOverrideEnabled.Value = stdout is not null || stderr is not null;
+    }
+
+    internal static void SetNonInteractiveOverride(bool? isNonInteractive)
+    {
+        NonInteractiveOverride.Value = isNonInteractive;
+    }
+
+    private static bool IsNonInteractiveExecution()
+    {
+        if (NonInteractiveOverride.Value is bool forced)
+            return forced;
+
+        // Test harnesses use console overrides for deterministic capture;
+        // do not treat that as non-interactive unless explicitly forced.
+        if (ConsoleOverrideEnabled.Value)
+            return false;
+
+        return Console.IsInputRedirected || !Environment.UserInteractive;
+    }
+
 }

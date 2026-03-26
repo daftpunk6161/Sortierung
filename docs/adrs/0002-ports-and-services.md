@@ -30,6 +30,6 @@ Implementierungen in `src/RomCleanup.Infrastructure/`:
 Orchestrierung via `RunOrchestrator` in `Infrastructure/Orchestration/`.
 
 ## Konsequenzen
-- Verbesserte Testbarkeit (alle 3090+ Tests nutzen Port-basierte Abstraktion)
+- Verbesserte Testbarkeit (alle 5200+ Tests nutzen Port-basierte Abstraktion)
 - Geringere UI-Kopplung (CLI, API, WPF nutzen gleiche Ports)
 - Einfachere Integration externer Adapter

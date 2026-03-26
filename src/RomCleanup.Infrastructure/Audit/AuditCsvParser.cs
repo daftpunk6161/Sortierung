@@ -66,7 +66,12 @@ internal static class AuditCsvParser
     {
         if (string.IsNullOrEmpty(value)) return value;
 
-        if (value[0] is '=' or '+' or '@')
+        var hadDangerousControlPrefix = value[0] is '\r' or '\n' or '\t';
+
+        // Normalize control characters to keep each CSV field on one logical line.
+        value = value.Replace("\r", string.Empty).Replace("\n", string.Empty).Replace("\t", " ");
+
+        if (hadDangerousControlPrefix || value[0] is '=' or '+' or '@')
             value = "'" + value;
         else if (value[0] == '-' && !IsPlainNegativeNumber(value))
             value = "'" + value;

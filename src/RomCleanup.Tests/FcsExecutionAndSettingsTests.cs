@@ -46,26 +46,26 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
         _vm.LastCandidates = new System.Collections.ObjectModel.ObservableCollection<RomCleanup.Contracts.Models.RomCandidate>
         {
             new RomCandidate { MainPath = Path.Combine(_tempDir, "SNES", "mario.sfc"), GameKey = "Super Mario World", Region = "EU",
-                Extension = ".sfc", SizeBytes = 512_000, Category = "GAME", ConsoleKey = "SNES", FormatScore = 500, RegionScore = 900 },
+                Extension = ".sfc", SizeBytes = 512_000, Category = FileCategory.Game, ConsoleKey = "SNES", FormatScore = 500, RegionScore = 900 },
             new RomCandidate { MainPath = Path.Combine(_tempDir, "SNES", "zelda.sfc"), GameKey = "Zelda", Region = "US",
-                Extension = ".sfc", SizeBytes = 1_024_000, Category = "GAME", ConsoleKey = "SNES", FormatScore = 500, RegionScore = 800 },
+                Extension = ".sfc", SizeBytes = 1_024_000, Category = FileCategory.Game, ConsoleKey = "SNES", FormatScore = 500, RegionScore = 800 },
             new RomCandidate { MainPath = Path.Combine(_tempDir, "NES", "tetris.nes"), GameKey = "Tetris", Region = "JP",
-                Extension = ".nes", SizeBytes = 64_000, Category = "GAME", ConsoleKey = "NES", FormatScore = 400, RegionScore = 700 },
+                Extension = ".nes", SizeBytes = 64_000, Category = FileCategory.Game, ConsoleKey = "NES", FormatScore = 400, RegionScore = 700 },
             new RomCandidate { MainPath = Path.Combine(_tempDir, "SNES", "demo.sfc"), GameKey = "Demo (Beta)", Region = "EU",
-                Extension = ".sfc", SizeBytes = 128_000, Category = "JUNK", ConsoleKey = "SNES" },
+                Extension = ".sfc", SizeBytes = 128_000, Category = FileCategory.Junk, ConsoleKey = "SNES" },
             new RomCandidate { MainPath = Path.Combine(_tempDir, "GBA", "pokemon.gba"), GameKey = "Pokemon Fire Red", Region = "US",
-                Extension = ".gba", SizeBytes = 16_000_000, Category = "GAME", ConsoleKey = "GBA", DatMatch = true }
+                Extension = ".gba", SizeBytes = 16_000_000, Category = FileCategory.Game, ConsoleKey = "GBA", DatMatch = true }
         };
 
         _vm.LastDedupeGroups =
         [
-            new DedupeResult
+            new DedupeGroup
             {
                 GameKey = "Super Mario World",
                 Winner = _vm.LastCandidates[0],
                 Losers = [_vm.LastCandidates[3]]
             },
-            new DedupeResult
+            new DedupeGroup
             {
                 GameKey = "Zelda",
                 Winner = _vm.LastCandidates[1],
@@ -703,7 +703,7 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
     public void FeatureService_EvaluateFilter_AllOperators()
     {
         var c = new RomCandidate { MainPath = @"D:\SNES\game.sfc", GameKey = "Game", Region = "EU",
-            Extension = ".sfc", SizeBytes = 2_097_152, Category = "GAME" };
+            Extension = ".sfc", SizeBytes = 2_097_152, Category = FileCategory.Game };
 
         Assert.True(FeatureService.EvaluateFilter(c, "region", "eq", "EU"));
         Assert.False(FeatureService.EvaluateFilter(c, "region", "neq", "EU"));
@@ -717,7 +717,7 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
     public void FeatureService_ResolveField_AllFields()
     {
         var c = new RomCandidate { MainPath = @"D:\SNES\game.sfc", GameKey = "TestKey", Region = "US",
-            Extension = ".sfc", SizeBytes = 1048576, Category = "GAME", DatMatch = true };
+            Extension = ".sfc", SizeBytes = 1048576, Category = FileCategory.Game, DatMatch = true };
 
         Assert.Equal("US", FeatureService.ResolveField(c, "region"));
         Assert.Equal(".sfc", FeatureService.ResolveField(c, "format"));
@@ -735,9 +735,9 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
         var candidates = new[]
         {
             new RomCandidate { MainPath = @"D:\Roms\a.sfc", GameKey = "A", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = "GAME" },
+                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game },
             new RomCandidate { MainPath = @"D:\Roms\b.iso", GameKey = "B", Region = "US",
-                Extension = ".iso", SizeBytes = 700_000_000, Category = "GAME" }
+                Extension = ".iso", SizeBytes = 700_000_000, Category = FileCategory.Game }
         };
         var result = FeatureService.AnalyzeStorageTiers(candidates);
         Assert.NotEmpty(result);
@@ -775,6 +775,7 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
     {
         public AppTheme Current => AppTheme.Dark;
         public bool IsDark => true;
+        public IReadOnlyList<AppTheme> AvailableThemes => [AppTheme.Dark];
         public void ApplyTheme(AppTheme theme) { }
         public void ApplyTheme(bool dark) { }
         public void Toggle() { }
@@ -843,5 +844,6 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
 
         public void ShowText(string title, string content) => ShowTextCalls.Add((title, content));
         public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
+        public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => true;
     }
 }

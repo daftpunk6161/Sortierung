@@ -65,10 +65,31 @@
           <TextBlock Text="{Binding Loc[Phase.Sort]}" FontSize="11" FontWeight="SemiBold"
                      Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
         </StackPanel>
-        <Border Height="3" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=5}" Margin="2,0"/>
+        <Border Height="3" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=5}" Margin="2,0">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="Opacity" Value="1"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsMovePhaseApplicable}" Value="False">
+                  <Setter Property="Opacity" Value="0.35"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+        </Border>
         <!-- Phase 5: Move -->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
                     ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=5}">
+          <StackPanel.Style>
+            <Style TargetType="StackPanel">
+              <Setter Property="Opacity" Value="1"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsMovePhaseApplicable}" Value="False">
+                  <Setter Property="Opacity" Value="0.35"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </StackPanel.Style>
           <Ellipse Width="28" Height="28" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
                    Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=5}"
                    VerticalAlignment="Center" Margin="0,0,6,0"
@@ -76,10 +97,31 @@
           <TextBlock Text="{Binding Loc[Phase.Move]}" FontSize="11" FontWeight="SemiBold"
                      Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
         </StackPanel>
-        <Border Height="3" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=6}" Margin="2,0"/>
+        <Border Height="3" VerticalAlignment="Center" Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=6}" Margin="2,0">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="Opacity" Value="1"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsConvertPhaseApplicable}" Value="False">
+                  <Setter Property="Opacity" Value="0.35"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+        </Border>
         <!-- Phase 6: Convert -->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Cursor="Hand"
                     ToolTip="{Binding CurrentRunState, Converter={StaticResource PhaseDetail}, ConverterParameter=6}">
+          <StackPanel.Style>
+            <Style TargetType="StackPanel">
+              <Setter Property="Opacity" Value="1"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsConvertPhaseApplicable}" Value="False">
+                  <Setter Property="Opacity" Value="0.35"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </StackPanel.Style>
           <Ellipse Width="28" Height="28" Stroke="{DynamicResource BrushBorder}" StrokeThickness="2"
                    Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=6}"
                    VerticalAlignment="Center" Margin="0,0,6,0"
@@ -119,6 +161,8 @@
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="24,0">
           <TextBlock Text="{Binding ProgressText}" FontSize="28" FontWeight="Bold"
                      Foreground="{DynamicResource BrushAccentCyan}" HorizontalAlignment="Center"/>
+          <TextBlock Text="{Binding Loc[Progress.CancelHint]}" FontSize="11"
+                     Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
         </StackPanel>
         <Button Grid.Column="2" Command="{Binding CancelCommand}" Style="{StaticResource DangerButton}"
                 Width="80" Height="44" VerticalAlignment="Center"

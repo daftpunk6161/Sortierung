@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#F5F0E8"/>
+  <g transform="translate(128,110) scale(0.55)">
+    <polygon points="-120,-180 -80,-60 -40,-120" fill="#2D1B69"/>
+    <polygon points="120,-180 80,-60 40,-120" fill="#2D1B69"/>
+    <polygon points="-80,-60 -110,30 -60,80 0,120 60,80 110,30 80,-60 40,-120 0,-80 -40,-120" fill="#2D1B69"/>
+    <ellipse cx="-35" cy="-10" rx="7" ry="7" fill="#C9A227"/><ellipse cx="35" cy="-10" rx="7" ry="7" fill="#C9A227"/>
+  </g>
+  <text x="128" y="210" text-anchor="middle" font-family="'Times New Roman',serif" font-size="30" font-weight="700" fill="#2D1B69" letter-spacing="6">ROMULUS</text>
+  <text x="128" y="232" text-anchor="middle" font-family="'Times New Roman',serif" font-size="9" fill="#C9A227" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

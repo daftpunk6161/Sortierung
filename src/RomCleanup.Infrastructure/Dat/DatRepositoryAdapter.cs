@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
 using RomCleanup.Contracts.Models;
-using RomCleanup.Contracts.Ports;
 
 namespace RomCleanup.Infrastructure.Dat;
 
@@ -11,7 +10,7 @@ namespace RomCleanup.Infrastructure.Dat;
 /// Port of Dat.ps1 — XML-based DAT parsing with XXE protection,
 /// parent/clone mapping, game key resolution.
 /// </summary>
-public sealed class DatRepositoryAdapter : IDatRepository
+public sealed class DatRepositoryAdapter
 {
     /// <summary>Maximum DAT file size to parse (100 MB).</summary>
     private const long MaxDatFileSizeBytes = 100 * 1024 * 1024;
@@ -48,7 +47,8 @@ public sealed class DatRepositoryAdapter : IDatRepository
                 {
                     if (rom.TryGetValue("hash", out var hash) && !string.IsNullOrWhiteSpace(hash))
                     {
-                        index.Add(consoleKey, hash, game.Key);
+                        rom.TryGetValue("name", out var romFileName);
+                        index.Add(consoleKey, hash, game.Key, romFileName);
                     }
                 }
             }
@@ -76,10 +76,24 @@ public sealed class DatRepositoryAdapter : IDatRepository
             if (fileSize > MaxDatFileSizeBytes)
                 return parentMap;
         }
-        catch { /* If we can't stat the file, let XmlReader handle it */ }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* If we can't stat the file, let XmlReader handle it */ }
 
         var settings = CreateSecureXmlSettings();
 
+        try
+        {
+            return ReadParentCloneIndex(datPath, settings);
+        }
+        catch (XmlException) when (settings.DtdProcessing == DtdProcessing.Prohibit)
+        {
+            _log?.Invoke($"[Info] DAT file '{datPath}' triggered DTD prohibition. Retrying with DtdProcessing.Ignore.");
+            return ReadParentCloneIndex(datPath, CreateFallbackXmlSettings());
+        }
+    }
+
+    private static Dictionary<string, string> ReadParentCloneIndex(string datPath, XmlReaderSettings settings)
+    {
+        var parentMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         using var reader = XmlReader.Create(datPath, settings);
         while (reader.Read())
         {
@@ -125,6 +139,10 @@ public sealed class DatRepositoryAdapter : IDatRepository
     }
 
     private Dictionary<string, List<Dictionary<string, string>>> ParseDatFile(string datPath, string hashType)
+        => ParseDatFileInternal(datPath, hashType, CreateSecureXmlSettings());
+
+    private Dictionary<string, List<Dictionary<string, string>>> ParseDatFileInternal(
+        string datPath, string hashType, XmlReaderSettings settings)
     {
         var games = new Dictionary<string, List<Dictionary<string, string>>>(StringComparer.OrdinalIgnoreCase);
 
@@ -138,7 +156,7 @@ public sealed class DatRepositoryAdapter : IDatRepository
                 return games;
             }
         }
-        catch { /* If we can't stat the file, let XmlReader handle it */ }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* If we can't stat the file, let XmlReader handle it */ }
 
         // Pre-check: reject empty or obviously non-XML files before parsing
         try
@@ -157,9 +175,7 @@ public sealed class DatRepositoryAdapter : IDatRepository
                 return games;
             }
         }
-        catch { /* If we can't read, let XmlReader produce the proper error */ }
-
-        var settings = CreateSecureXmlSettings();
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* If we can't read, let XmlReader produce the proper error */ }
 
         try
         {
@@ -209,6 +225,12 @@ public sealed class DatRepositoryAdapter : IDatRepository
                 }
             }
         }
+        catch (XmlException) when (settings.DtdProcessing == DtdProcessing.Prohibit)
+        {
+            // SEC-XML-01 fallback: real DATs with DOCTYPE → retry with Ignore
+            _log?.Invoke($"[Info] DAT file '{datPath}' triggered DTD prohibition. Retrying with DtdProcessing.Ignore.");
+            return ParseDatFileInternal(datPath, hashType, CreateFallbackXmlSettings());
+        }
         catch (XmlException ex)
         {
             // Malformed DAT file — return partial results with warning
@@ -220,11 +242,27 @@ public sealed class DatRepositoryAdapter : IDatRepository
 
     /// <summary>
     /// Creates XmlReaderSettings with XXE protection active.
-    /// DtdProcessing.Ignore skips DTD declarations (no entity expansion).
+    /// SEC-XML-01: DtdProcessing.Prohibit blocks all DTD declarations.
     /// XmlResolver=null prevents external resource resolution (SSRF protection).
-    /// Uses Ignore instead of Prohibit because real DATs (No-Intro, Redump) contain DOCTYPE declarations.
+    /// Callers should catch XmlException and retry with CreateFallbackXmlSettings
+    /// for real DATs (No-Intro, Redump) that contain DOCTYPE declarations.
     /// </summary>
     private static XmlReaderSettings CreateSecureXmlSettings()
+    {
+        return new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null,
+            IgnoreComments = true,
+            IgnoreWhitespace = true
+        };
+    }
+
+    /// <summary>
+    /// Fallback settings for DATs with DOCTYPE declarations.
+    /// DtdProcessing.Ignore skips DTD without entity expansion.
+    /// </summary>
+    private static XmlReaderSettings CreateFallbackXmlSettings()
     {
         return new XmlReaderSettings
         {

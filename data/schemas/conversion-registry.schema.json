@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://romcleanup.local/schemas/conversion-registry.schema.json",
+  "type": "object",
+  "required": ["schemaVersion", "capabilities"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "sourceExtension",
+          "targetExtension",
+          "tool",
+          "command",
+          "resultIntegrity",
+          "lossless",
+          "cost",
+          "verification"
+        ],
+        "properties": {
+          "sourceExtension": { "type": "string" },
+          "targetExtension": { "type": "string" },
+          "tool": {
+            "type": "object",
+            "required": ["toolName"],
+            "properties": {
+              "toolName": { "type": "string" },
+              "expectedHash": { "type": ["string", "null"] },
+              "minVersion": { "type": ["string", "null"] }
+            },
+            "additionalProperties": false
+          },
+          "command": { "type": "string" },
+          "applicableConsoles": {
+            "type": ["array", "null"],
+            "items": { "type": "string" }
+          },
+          "requiredSourceIntegrity": {
+            "type": ["string", "null"],
+            "enum": ["Lossless", "Lossy", "Unknown", null]
+          },
+          "resultIntegrity": {
+            "type": "string",
+            "enum": ["Lossless", "Lossy", "Unknown"]
+          },
+          "lossless": { "type": "boolean" },
+          "cost": { "type": "integer", "minimum": 0 },
+          "verification": {
+            "type": "string",
+            "enum": ["ChdmanVerify", "RvzMagicByte", "SevenZipTest", "FileExistenceCheck", "None"]
+          },
+          "description": { "type": ["string", "null"] },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "None",
+              "FileSizeLessThan700MB",
+              "FileSizeGreaterEqual700MB",
+              "IsNKitSource",
+              "IsWadFile",
+              "IsCdiSource",
+              "IsEncryptedPbp"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

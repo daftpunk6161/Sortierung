@@ -47,7 +47,7 @@ public sealed class AuditSigningService
                     _persistedKey = Convert.FromHexString(hex);
                     return _persistedKey;
                 }
-                catch
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException)
                 {
                     _log?.Invoke("Failed to load HMAC key file, generating new key");
                 }
@@ -86,7 +86,7 @@ public sealed class AuditSigningService
                                 System.Security.AccessControl.AccessControlType.Allow));
                             fi.SetAccessControl(security);
                         }
-                        catch
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
                         {
                             _log?.Invoke("Could not restrict HMAC key file permissions — manual ACL recommended");
                         }
@@ -95,7 +95,7 @@ public sealed class AuditSigningService
                     else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
                     {
                         try { File.SetUnixFileMode(_keyFilePath, UnixFileMode.UserRead | UnixFileMode.UserWrite); }
-                        catch { _log?.Invoke("Could not set HMAC key file permissions to 0600"); }
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log?.Invoke("Could not set HMAC key file permissions to 0600"); }
                     }
                 }
                 catch (Exception ex)
@@ -195,13 +195,15 @@ public sealed class AuditSigningService
         if (metadata is null)
             throw new InvalidDataException("Failed to deserialize audit sidecar");
 
-        // Verify CSV hash
+        // Verify CSV hash (constant-time comparison to prevent timing attacks — SEC-AUDIT-01)
         var actualSha256 = ComputeFileSha256(auditCsvPath);
-        if (!string.Equals(actualSha256, metadata.CsvSha256, StringComparison.OrdinalIgnoreCase))
+        var actualBytes = Encoding.UTF8.GetBytes(actualSha256.ToLowerInvariant());
+        var expectedBytes = Encoding.UTF8.GetBytes((metadata.CsvSha256 ?? "").ToLowerInvariant());
+        if (!CryptographicOperations.FixedTimeEquals(actualBytes, expectedBytes))
             throw new InvalidDataException($"CSV hash mismatch: expected {metadata.CsvSha256}, got {actualSha256}");
 
         // Verify HMAC (constant-time comparison to prevent timing attacks)
-        var payload = BuildSignaturePayload(metadata.AuditFileName, metadata.CsvSha256, metadata.RowCount, metadata.CreatedUtc);
+        var payload = BuildSignaturePayload(metadata.AuditFileName, metadata.CsvSha256 ?? "", metadata.RowCount, metadata.CreatedUtc);
         var expectedHmac = ComputeHmacSha256(payload);
         if (!CryptographicOperations.FixedTimeEquals(
                 Encoding.UTF8.GetBytes(expectedHmac),
@@ -231,7 +233,8 @@ public sealed class AuditSigningService
             };
         }
 
-        // Verify audit file integrity before executing rollback
+        // SEC-ROLLBACK-03: Verify audit file integrity before executing rollback.
+        // DryRun is safe without sidecar (no files moved). Execute requires verified sidecar.
         var metaPath = auditCsvPath + ".meta.json";
         if (File.Exists(metaPath))
         {
@@ -250,6 +253,21 @@ public sealed class AuditSigningService
                 };
             }
         }
+        else if (!dryRun)
+        {
+            // Execute-mode rollback without sidecar is blocked — cannot verify audit integrity
+            _log?.Invoke("Rollback blocked: No integrity sidecar (.meta.json) found. Cannot verify audit integrity for execute-mode rollback.");
+            return new AuditRollbackResult
+            {
+                AuditCsvPath = auditCsvPath,
+                DryRun = dryRun,
+                Failed = 1
+            };
+        }
+        else
+        {
+            _log?.Invoke("DryRun rollback proceeding without sidecar verification (no changes will be made).");
+        }
 
         var lines = File.ReadAllLines(auditCsvPath, Encoding.UTF8);
         if (lines.Length <= 1) // header only
@@ -265,11 +283,17 @@ public sealed class AuditSigningService
         int rolledBack = 0, dryRunPlanned = 0;
         int skippedMissingDest = 0, skippedCollision = 0, failed = 0;
         string? rollbackAuditPath = null;
+        string? rollbackTrailPath = null;
+        var restoredPaths = new List<string>();
+        var plannedPaths = new List<string>();
 
         if (!dryRun)
         {
             rollbackAuditPath = Path.ChangeExtension(auditCsvPath, ".rollback-audit.csv");
             File.WriteAllText(rollbackAuditPath, "Timestamp,Action,OldPath,NewPath,Status\n", Encoding.UTF8);
+
+            rollbackTrailPath = Path.ChangeExtension(auditCsvPath, ".rollback-trail.csv");
+            File.WriteAllText(rollbackTrailPath, "RestoredPath,RestoredFrom,OriginalAction,Timestamp\n", Encoding.UTF8);
         }
 
         // Pre-cache normalized root paths to avoid Path.GetFullPath per root per row (expensive on UNC)
@@ -298,10 +322,13 @@ public sealed class AuditSigningService
             var newPath = fields.Length > 2 ? fields[2] : "";
             var action = fields.Length > 3 ? fields[3] : "";
 
-            // Rollback MOVE and JUNK_REMOVE actions (Issue #22)
+            // Rollback MOVE, JUNK_REMOVE, CONSOLE_SORT, CONVERT, and DAT_RENAME actions
             if (!string.Equals(action, "MOVE", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(action, "MOVED", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(action, "JUNK_REMOVE", StringComparison.OrdinalIgnoreCase))
+                !string.Equals(action, "JUNK_REMOVE", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, "CONSOLE_SORT", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, "CONVERT", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, "DAT_RENAME", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             eligible++;
@@ -321,9 +348,12 @@ public sealed class AuditSigningService
             }
 
             // Check current file/dir exists at newPath
+            // Missing dest = recovery failure (user can't roll back this entry)
             if (!File.Exists(newPath) && !Directory.Exists(newPath))
             {
+                failed++;
                 skippedMissingDest++;
+                _log?.Invoke($"Rollback failed (missing dest): {newPath}");
                 continue;
             }
 
@@ -336,23 +366,57 @@ public sealed class AuditSigningService
 
             if (dryRun)
             {
+                // SEC-ROLLBACK-01: In dry run, check reparse points → count as failed (unsafe to plan)
+                if (_fs.IsReparsePoint(newPath))
+                {
+                    failed++;
+                    _log?.Invoke($"DRYRUN rollback blocked (reparse point): {newPath}");
+                    continue;
+                }
+
+                // SEC-ROLLBACK-04b: In dry run, also check restore target parent for reparse points (Preview/Execute parity)
+                var dryRunParent = Path.GetDirectoryName(oldPath);
+                if (dryRunParent is not null && Directory.Exists(dryRunParent) && _fs.IsReparsePoint(dryRunParent))
+                {
+                    failed++;
+                    _log?.Invoke($"DRYRUN rollback blocked (restore parent is reparse point): {dryRunParent}");
+                    continue;
+                }
+
                 dryRunPlanned++;
+                plannedPaths.Add(oldPath);
                 _log?.Invoke($"DRYRUN rollback: {newPath} -> {oldPath}");
             }
             else
             {
+                // SEC-ROLLBACK-02: In execute, check reparse points → skip as unsafe
+                if (_fs.IsReparsePoint(newPath))
+                {
+                    skippedUnsafe++;
+                    _log?.Invoke($"Rollback skipped (reparse point): {newPath}");
+                    continue;
+                }
+
                 try
                 {
-                    // Ensure parent directory exists
+                    // SEC-ROLLBACK-04: Check restore target parent for reparse points
                     var parentDir = Path.GetDirectoryName(oldPath);
+                    if (parentDir is not null && Directory.Exists(parentDir) && _fs.IsReparsePoint(parentDir))
+                    {
+                        skippedUnsafe++;
+                        _log?.Invoke($"Rollback skipped (restore parent is reparse point): {parentDir}");
+                        continue;
+                    }
                     if (parentDir is not null)
                         _fs.EnsureDirectory(parentDir);
 
                     if (_fs.MoveItemSafely(newPath, oldPath) is not null)
                     {
                         rolledBack++;
+                        restoredPaths.Add(oldPath);
                         _log?.Invoke($"Rolled back: {newPath} -> {oldPath}");
                         AppendRollbackRow(rollbackAuditPath!, "ROLLBACK", newPath, oldPath, "OK");
+                        AppendRollbackTrailRow(rollbackTrailPath!, oldPath, newPath, action);
                     }
                     else
                     {
@@ -381,7 +445,10 @@ public sealed class AuditSigningService
             SkippedCollision = skippedCollision,
             Failed = failed,
             DryRun = dryRun,
-            RollbackAuditPath = rollbackAuditPath
+            RollbackAuditPath = rollbackAuditPath,
+            RollbackTrailPath = rollbackTrailPath,
+            RestoredPaths = restoredPaths,
+            PlannedPaths = plannedPaths
         };
     }
 
@@ -406,6 +473,13 @@ public sealed class AuditSigningService
     {
         var timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
         var line = $"{SanitizeCsvField(timestamp)},{SanitizeCsvField(action)},{SanitizeCsvField(from)},{SanitizeCsvField(to)},{SanitizeCsvField(status)}\n";
+        File.AppendAllText(path, line, Encoding.UTF8);
+    }
+
+    private static void AppendRollbackTrailRow(string path, string restoredPath, string restoredFrom, string originalAction)
+    {
+        var timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+        var line = $"{SanitizeCsvField(restoredPath)},{SanitizeCsvField(restoredFrom)},{SanitizeCsvField(originalAction)},{SanitizeCsvField(timestamp)}\n";
         File.AppendAllText(path, line, Encoding.UTF8);
     }
 }

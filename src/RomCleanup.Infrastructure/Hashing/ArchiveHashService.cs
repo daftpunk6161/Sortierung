@@ -52,10 +52,12 @@ public sealed class ArchiveHashService
                         continue;
                     Directory.Delete(dir, recursive: true);
                 }
-                catch { /* best effort */ }
+                catch (IOException) { /* best-effort cleanup of stale temp dir */ }
+                catch (UnauthorizedAccessException) { /* permission denied — skip stale temp dir */ }
             }
         }
-        catch { /* temp path inaccessible — ignore */ }
+        catch (IOException) { /* temp path inaccessible — ignore */ }
+        catch (UnauthorizedAccessException) { /* temp path access denied — ignore */ }
     }
 
     /// <summary>
@@ -84,7 +86,8 @@ public sealed class ArchiveHashService
                 return Array.Empty<string>();
             }
         }
-        catch { return Array.Empty<string>(); }
+        catch (IOException) { return Array.Empty<string>(); }
+        catch (UnauthorizedAccessException) { return Array.Empty<string>(); }
 
         var ext = Path.GetExtension(archivePath).ToLowerInvariant();
         string[] hashes;
@@ -111,6 +114,45 @@ public sealed class ArchiveHashService
     /// <summary>Current number of cached archive hash entries.</summary>
     public int CacheCount => _cache.Count;
 
+    /// <summary>
+    /// Get the entry names inside a 7z archive (for console detection by inner extension).
+    /// Returns a list of relative entry paths. Returns empty list on failure.
+    /// For ZIP files, uses System.IO.Compression to list entries directly.
+    /// </summary>
+    public IReadOnlyList<string> GetArchiveEntryNames(string archivePath)
+    {
+        if (string.IsNullOrWhiteSpace(archivePath) || !File.Exists(archivePath))
+            return Array.Empty<string>();
+
+        var ext = Path.GetExtension(archivePath).ToLowerInvariant();
+
+        if (ext == ".zip")
+        {
+            try
+            {
+                using var archive = ZipFile.OpenRead(archivePath);
+                return archive.Entries
+                    .Where(e => !string.IsNullOrEmpty(e.Name))
+                    .Select(e => e.FullName)
+                    .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            catch (InvalidDataException) { return Array.Empty<string>(); }
+            catch (IOException) { return Array.Empty<string>(); }
+        }
+
+        if (ext == ".7z" && _toolRunner is not null)
+        {
+            var sevenZipPath = _toolRunner.FindTool("7z");
+            if (string.IsNullOrEmpty(sevenZipPath))
+                return Array.Empty<string>();
+
+            return ListArchiveEntries(archivePath, sevenZipPath);
+        }
+
+        return Array.Empty<string>();
+    }
+
     // ── ZIP: in-memory stream hashing ──
 
     private static string[] HashZipEntries(string zipPath, string hashType,
@@ -119,7 +161,12 @@ public sealed class ArchiveHashService
         var hashes = new List<string>();
         using var archive = ZipFile.OpenRead(zipPath);
 
-        foreach (var entry in archive.Entries)
+        // TASK-150: Sort entries alphabetically for deterministic hash order
+        var sortedEntries = archive.Entries
+            .OrderBy(e => e.FullName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var entry in sortedEntries)
         {
             ct.ThrowIfCancellationRequested();
             if (entry.Length <= 0) continue;
@@ -130,7 +177,8 @@ public sealed class ArchiveHashService
                 if (h is not null)
                     hashes.Add(h);
             }
-            catch { /* skip corrupt entries */ }
+            catch (InvalidDataException) { /* skip corrupt entries */ }
+            catch (IOException) { /* skip unreadable entries */ }
         }
 
         return hashes.ToArray();
@@ -183,6 +231,8 @@ public sealed class ArchiveHashService
 
             ct.ThrowIfCancellationRequested();
             var extractedFiles = Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories);
+            // TASK-150: Sort extracted files alphabetically for deterministic hash order
+            Array.Sort(extractedFiles, StringComparer.OrdinalIgnoreCase);
             var hashes = new List<string>();
 
             foreach (var file in extractedFiles)
@@ -204,7 +254,8 @@ public sealed class ArchiveHashService
                     if (h is not null)
                         hashes.Add(h);
                 }
-                catch { /* skip inaccessible */ }
+                catch (IOException) { /* skip inaccessible */ }
+                catch (UnauthorizedAccessException) { /* skip inaccessible */ }
             }
 
             return hashes.ToArray();
@@ -212,7 +263,9 @@ public sealed class ArchiveHashService
         finally
         {
             if (Directory.Exists(tempDir))
-                try { Directory.Delete(tempDir, true); } catch { }
+                try { Directory.Delete(tempDir, true); }
+                catch (IOException) { /* Best-effort cleanup — dir may be locked by AV or other process */ }
+                catch (UnauthorizedAccessException) { /* Permission denied on temp cleanup — non-fatal */ }
         }
     }
 
@@ -246,6 +299,8 @@ public sealed class ArchiveHashService
             paths.Add(entryPath);
         }
 
+        // TASK-150: Sort entries alphabetically for deterministic order
+        paths.Sort(StringComparer.OrdinalIgnoreCase);
         return paths;
     }
 

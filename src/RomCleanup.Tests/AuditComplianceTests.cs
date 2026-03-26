@@ -232,15 +232,15 @@ public sealed class AuditComplianceTests : IDisposable
                 VersionScore = (int)new VersionScorer().GetVersionScore(fileName),
                 SizeBytes = f.SizeBytes,
                 Extension = f.Extension,
-                Category = "GAME"
+                Category = FileCategory.Game
             };
         }).ToList();
 
-        var dedupeResult = DeduplicationEngine.Deduplicate(candidates);
+        var DedupeGroup = DeduplicationEngine.Deduplicate(candidates);
 
         // Both should pick the same winner
-        Assert.Single(dedupeResult);
-        Assert.Equal(mergeAdvice.Keep.Path, dedupeResult[0].Winner.MainPath);
+        Assert.Single(DedupeGroup);
+        Assert.Equal(mergeAdvice.Keep.Path, DedupeGroup[0].Winner.MainPath);
     }
 
     /// <summary>
@@ -300,7 +300,7 @@ public sealed class AuditComplianceTests : IDisposable
         // Additional edge cases with heatmap detection:
         var shortResult = FeatureService.GetDuplicateHeatmap(
         [
-            new DedupeResult
+            new DedupeGroup
             {
                 Winner = new RomCandidate { MainPath = "game.zip" },
                 Losers = []
@@ -310,7 +310,7 @@ public sealed class AuditComplianceTests : IDisposable
 
         var longPathResult = FeatureService.GetDuplicateHeatmap(
         [
-            new DedupeResult
+            new DedupeGroup
             {
                 Winner = new RomCandidate { MainPath = @"a\b\c\d\e\f\g\h\i\j\game.zip" },
                 Losers = []
@@ -364,14 +364,26 @@ public sealed class AuditComplianceTests : IDisposable
     }
 
     /// <summary>
-    /// AUDIT1-TEST-013: OnClosing Rekursion — WPF close guard.
-    /// Tests that double-close doesn't cause stack overflow.
+    /// AUDIT1-TEST-013: OnClosing Rekursion — headless Contract-Test.
+    /// Validiert den Guard-/Reclose-Pfad im Source-Code ohne Dispatcher/UI-Automation.
     /// </summary>
-    [Fact(Skip = "DEFERRED: Requires MainWindow instantiation with WPF Dispatcher")]
-    public void Audit1_Test013_OnClosing_NoRecursion()
+    [Fact]
+    public void Audit1_Test013_OnClosing_NoRecursion_HeadlessContract()
     {
-        // Deferred: MainWindow.OnClosing uses _isClosing flag to prevent re-entry
-        // This flag pattern is a simple bool guard — code review verified, not unit-testable without Dispatcher
+        // Headless contract: OnClosing muss Re-Entry blocken und im Busy-Cancel-Pfad sauber re-closen.
+        var codePath = Path.Combine(FindUiProjectDir(), "MainWindow.xaml.cs");
+
+        Assert.True(File.Exists(codePath), "MainWindow.xaml.cs must exist");
+        var code = File.ReadAllText(codePath);
+
+        Assert.Contains("if (_isClosing) return;", code, StringComparison.Ordinal);
+        Assert.Contains("_isClosing = true;", code, StringComparison.Ordinal);
+        Assert.Contains("Close(); // Re-trigger close now that task is done", code, StringComparison.Ordinal);
+
+        var guardIndex = code.IndexOf("if (_isClosing) return;", StringComparison.Ordinal);
+        var setIndex = code.IndexOf("_isClosing = true;", StringComparison.Ordinal);
+        Assert.True(guardIndex >= 0 && setIndex > guardIndex,
+            "OnClosing must check the recursion guard before setting close state");
     }
 
     /// <summary>
@@ -381,14 +393,15 @@ public sealed class AuditComplianceTests : IDisposable
     [Fact]
     public void Audit1_Test014_RepairNesHeader_LargeFile_HandledGracefully()
     {
-        // We can't create a real >1GB file in tests, but verify edge cases:
-        // 1. Empty file → false
-        Assert.False(FeatureService.RepairNesHeader(Path.Combine(_tempDir, "nonexistent.nes")));
+        IHeaderRepairService sut = new HeaderRepairService(new FileSystemAdapter());
+
+        // 1. Missing file → false
+        Assert.False(sut.RepairNesHeader(Path.Combine(_tempDir, "nonexistent.nes")));
 
         // 2. Non-NES file → false
         var smallFile = Path.Combine(_tempDir, "small.nes");
         File.WriteAllBytes(smallFile, new byte[10]);
-        Assert.False(FeatureService.RepairNesHeader(smallFile));
+        Assert.False(sut.RepairNesHeader(smallFile));
 
         // 3. Valid NES with clean header → false (no repair needed)
         var validNes = Path.Combine(_tempDir, "valid.nes");
@@ -396,7 +409,7 @@ public sealed class AuditComplianceTests : IDisposable
         header[0] = 0x4E; header[1] = 0x45; header[2] = 0x53; header[3] = 0x1A; // NES magic
         // bytes 12-15 already zero → no repair needed
         File.WriteAllBytes(validNes, header);
-        Assert.False(FeatureService.RepairNesHeader(validNes));
+        Assert.False(sut.RepairNesHeader(validNes));
 
         // 4. Valid NES with dirty header → true (repair applied)
         var dirtyNes = Path.Combine(_tempDir, "dirty.nes");
@@ -404,7 +417,7 @@ public sealed class AuditComplianceTests : IDisposable
         dirtyHeader[0] = 0x4E; dirtyHeader[1] = 0x45; dirtyHeader[2] = 0x53; dirtyHeader[3] = 0x1A;
         dirtyHeader[12] = 0xFF; // dirty byte
         File.WriteAllBytes(dirtyNes, dirtyHeader);
-        Assert.True(FeatureService.RepairNesHeader(dirtyNes));
+        Assert.True(sut.RepairNesHeader(dirtyNes));
 
         // Verify bytes 12-15 were zeroed
         var repaired = File.ReadAllBytes(dirtyNes);
@@ -523,33 +536,87 @@ public sealed class AuditComplianceTests : IDisposable
     }
 
     /// <summary>
-    /// AUDIT2-TEST-005: ShowTextDialog im Light-Theme hat hellen Hintergrund.
+    /// AUDIT2-TEST-005: ShowTextDialog im Light-Theme — headless Contract-Test.
     /// </summary>
-    [Fact(Skip = "DEFERRED: Requires WPF visual comparison infrastructure (screenshot diffing)")]
-    public void Audit2_Test005_ShowTextDialog_LightTheme()
+    [Fact]
+    public void Audit2_Test005_ShowTextDialog_LightTheme_HeadlessContract()
     {
-        // Deferred: Needs visual regression test framework (e.g., Appium + image comparison)
-        // Theme styling is verified at resource level in ThemeParity tests
+        // Headless contract: Dialogpfad nutzt themed Dialog + Light Theme hat die erwarteten hellen Brushes.
+        var uiDir = FindUiProjectDir();
+        var mainWindowCode = Path.Combine(uiDir, "MainWindow.xaml.cs");
+        var resultDialogXaml = Path.Combine(uiDir, "ResultDialog.xaml");
+        var lightThemeXaml = Path.Combine(uiDir, "Themes", "Light.xaml");
+
+        Assert.True(File.Exists(mainWindowCode), "MainWindow.xaml.cs must exist");
+        Assert.True(File.Exists(resultDialogXaml), "ResultDialog.xaml must exist");
+        Assert.True(File.Exists(lightThemeXaml), "Light.xaml must exist");
+
+        var mainWindow = File.ReadAllText(mainWindowCode);
+        var resultDialog = File.ReadAllText(resultDialogXaml);
+        var lightTheme = File.ReadAllText(lightThemeXaml);
+
+        Assert.Contains("ResultDialog.ShowText(title, content, this);", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("Background=\"{DynamicResource BrushBackground}\"", resultDialog, StringComparison.Ordinal);
+        // Whitespace-flexible: Light.xaml uses column-aligned spacing
+        Assert.Matches(@"<SolidColorBrush\s+x:Key=""BrushBackground""\s+Color=""#F4F6FF""\s*/>", lightTheme);
+        Assert.Matches(@"<SolidColorBrush\s+x:Key=""BrushSurface""\s+Color=""#FFFFFF""\s*/>", lightTheme);
     }
 
     /// <summary>
-    /// AUDIT2-TEST-006: Accessibility — alle Controls haben Name + Role.
+    /// AUDIT2-TEST-006: Accessibility — headless Contract-Test fuer Automation-Namen.
     /// </summary>
-    [Fact(Skip = "DEFERRED: Requires Accessibility Insights SDK or UIAutomation framework")]
-    public void Audit2_Test006_Accessibility_AllControlsHaveNameAndRole()
+    [Fact]
+    public void Audit2_Test006_Accessibility_AllControlsHaveNameAndRole_HeadlessContract()
     {
-        // Deferred: Full a11y scan needs UIAutomation framework + running WPF app
-        // Basic annotation count verified in Consolidated_Test008
+        // Headless contract: interaktive Controls in MainWindow tragen AutomationProperties.Name.
+        var xamlPath = Path.Combine(FindUiProjectDir(), "MainWindow.xaml");
+
+        Assert.True(File.Exists(xamlPath), "MainWindow.xaml must exist");
+        var xaml = File.ReadAllText(xamlPath);
+
+        var buttonRegex = new System.Text.RegularExpressions.Regex(@"<Button\b[^>]*>", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var textBoxRegex = new System.Text.RegularExpressions.Regex(@"<TextBox\b[^>]*>", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var comboBoxRegex = new System.Text.RegularExpressions.Regex(@"<ComboBox\b[^>]*>", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        var buttonTags = buttonRegex.Matches(xaml).Cast<System.Text.RegularExpressions.Match>().Select(m => m.Value).ToList();
+        var textBoxTags = textBoxRegex.Matches(xaml).Cast<System.Text.RegularExpressions.Match>().Select(m => m.Value).ToList();
+        var comboBoxTags = comboBoxRegex.Matches(xaml).Cast<System.Text.RegularExpressions.Match>().Select(m => m.Value).ToList();
+
+        Assert.NotEmpty(buttonTags);
+        Assert.All(buttonTags, tag => Assert.Contains("AutomationProperties.Name", tag, StringComparison.Ordinal));
+        Assert.All(textBoxTags, tag => Assert.Contains("AutomationProperties.Name", tag, StringComparison.Ordinal));
+        Assert.All(comboBoxTags, tag => Assert.Contains("AutomationProperties.Name", tag, StringComparison.Ordinal));
     }
 
     /// <summary>
-    /// AUDIT2-TEST-007: Keyboard-Navigation — Tab durch alle Controls in logischer Reihenfolge.
+    /// AUDIT2-TEST-007: Keyboard-Navigation — headless Contract-Test fuer TabIndex-Gruppen.
     /// </summary>
-    [Fact(Skip = "DEFERRED: Requires UIAutomation SendKeys simulation on running WPF")]
-    public void Audit2_Test007_KeyboardNavigation_LogicalTabOrder()
+    [Fact]
+    public void Audit2_Test007_KeyboardNavigation_LogicalTabOrder_HeadlessContract()
     {
-        // Deferred: Tab order testing requires keyboard simulation on running Window
-        // TabIndex configuration is validated via XAML parsing in VERIFY-001 tests
+        // Headless contract: explizite TabIndex-Gruppen fuer Run-/Nav-Bereiche muessen vorhanden sein.
+        var xamlPath = Path.Combine(FindUiProjectDir(), "MainWindow.xaml");
+
+        Assert.True(File.Exists(xamlPath), "MainWindow.xaml must exist");
+        var xaml = File.ReadAllText(xamlPath);
+
+        var tabIndexRegex = new System.Text.RegularExpressions.Regex(@"TabIndex=\""(\d+)\""", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var indices = tabIndexRegex.Matches(xaml)
+            .Cast<System.Text.RegularExpressions.Match>()
+            .Select(m => int.Parse(m.Groups[1].Value))
+            .ToList();
+
+        Assert.True(indices.Count >= 9, $"Expected at least 9 controls with TabIndex, found {indices.Count}");
+        Assert.Contains(1, indices);
+        Assert.Contains(2, indices);
+        Assert.Contains(3, indices);
+        Assert.Contains(4, indices);
+
+        var navIndices = indices.Where(i => i >= 50 && i <= 70).OrderBy(i => i).ToList();
+        Assert.True(navIndices.Count >= 5, "Expected at least five navigation TabIndex entries");
+
+        var sorted = indices.OrderBy(i => i).ToList();
+        Assert.Equal(sorted.Distinct().Count(), indices.Distinct().Count());
     }
 
     /// <summary>
@@ -606,13 +673,21 @@ public sealed class AuditComplianceTests : IDisposable
     }
 
     /// <summary>
-    /// AUDIT2-TEST-010: GDI-Handle-Leak-Test: System-Tray Toggle.
+    /// AUDIT2-TEST-010: System-Tray Toggle — headless Lifecycle-Contract-Test.
     /// </summary>
-    [Fact(Skip = "DEFERRED: Requires running WPF app + GDI handle monitoring (Process.GetCurrentProcess)")]
-    public void Audit2_Test010_TrayToggle_NoGdiLeak()
+    [Fact]
+    public void Audit2_Test010_TrayToggle_NoGdiLeak_HeadlessContract()
     {
-        // Deferred: GDI leak detection needs Process.GetCurrentProcess().HandleCount before/after
-        // TrayService.Toggle guard logic verified in WatchService tests
+        // Headless contract: TrayService wird lazy erstellt und im Cleanup deterministisch disposed.
+        var codePath = Path.Combine(FindUiProjectDir(), "MainWindow.xaml.cs");
+
+        Assert.True(File.Exists(codePath), "MainWindow.xaml.cs must exist");
+        var code = File.ReadAllText(codePath);
+
+        Assert.Contains("_trayService ??= new TrayService(this, _vm);", code, StringComparison.Ordinal);
+        Assert.Contains("_trayService.Toggle();", code, StringComparison.Ordinal);
+        Assert.Contains("_trayService?.Dispose();", code, StringComparison.Ordinal);
+        Assert.Contains("_trayService = null;", code, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -633,13 +708,23 @@ public sealed class AuditComplianceTests : IDisposable
     }
 
     /// <summary>
-    /// AUDIT2-TEST-012: DispatcherUnhandledException → Fehlerdialog statt Crash.
+    /// AUDIT2-TEST-012: DispatcherUnhandledException — headless Contract-Test.
     /// </summary>
-    [Fact(Skip = "DEFERRED: Requires running WPF Dispatcher + DispatcherUnhandledException event")]
-    public void Audit2_Test012_UnhandledException_ShowsErrorDialog()
+    [Fact]
+    public void Audit2_Test012_UnhandledException_ShowsErrorDialog_HeadlessContract()
     {
-        // Deferred: Dispatcher exception handling needs running Application + Dispatcher
-        // Error dialog service (DialogService.Error) is tested separately
+        // Headless contract: Dispatcher-/Domain-Hooks sind registriert und der UI-Exception-Handler markiert handled.
+        var appCodePath = Path.Combine(FindUiProjectDir(), "App.xaml.cs");
+
+        Assert.True(File.Exists(appCodePath), "App.xaml.cs must exist");
+        var appCode = File.ReadAllText(appCodePath);
+
+        Assert.Contains("DispatcherUnhandledException += OnDispatcherUnhandledException;", appCode, StringComparison.Ordinal);
+        Assert.Contains("AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;", appCode, StringComparison.Ordinal);
+        Assert.Contains("private static void OnDispatcherUnhandledException", appCode, StringComparison.Ordinal);
+        Assert.Contains("MessageBox.Show(", appCode, StringComparison.Ordinal);
+        Assert.Contains("e.Handled = true;", appCode, StringComparison.Ordinal);
+        Assert.Contains("LogFatalException(e.Exception);", appCode, StringComparison.Ordinal);
     }
 
     #endregion
@@ -824,7 +909,7 @@ public sealed class AuditComplianceTests : IDisposable
                     VersionScore = (int)versionScorer.GetVersionScore(fn),
                     SizeBytes = new FileInfo(Path.Combine(root, fn)).Length,
                     Extension = Path.GetExtension(fn).ToLowerInvariant(),
-                    Category = "GAME"
+                    Category = FileCategory.Game
                 };
             }).ToList();
 
@@ -1237,8 +1322,8 @@ public sealed class AuditComplianceTests : IDisposable
         // DeduplicationEngine winner selection determinism
         var candidates = new[]
         {
-            new RomCandidate { MainPath = @"C:\Roms\game1.zip", GameKey = "game", Region = "USA", RegionScore = 900, FormatScore = 500, VersionScore = 0, SizeBytes = 1000, Category = "GAME", Extension = ".zip" },
-            new RomCandidate { MainPath = @"C:\Roms\game2.zip", GameKey = "game", Region = "EU", RegionScore = 800, FormatScore = 500, VersionScore = 0, SizeBytes = 1000, Category = "GAME", Extension = ".zip" },
+            new RomCandidate { MainPath = @"C:\Roms\game1.zip", GameKey = "game", Region = "USA", RegionScore = 900, FormatScore = 500, VersionScore = 0, SizeBytes = 1000, Category = FileCategory.Game, Extension = ".zip" },
+            new RomCandidate { MainPath = @"C:\Roms\game2.zip", GameKey = "game", Region = "EU", RegionScore = 800, FormatScore = 500, VersionScore = 0, SizeBytes = 1000, Category = FileCategory.Game, Extension = ".zip" },
         }.ToList();
 
         var result1 = DeduplicationEngine.Deduplicate(candidates);
@@ -1314,9 +1399,7 @@ public sealed class AuditComplianceTests : IDisposable
     public void Consolidated_Test007_Theme_BothThemes_LoadCorrectly()
     {
         // Stub: verify theme XAML files exist and are parseable XML
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var themeDir = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..",
-            "RomCleanup.UI.Wpf", "Themes"));
+        var themeDir = Path.Combine(FindUiProjectDir(), "Themes");
 
         if (Directory.Exists(themeDir))
         {
@@ -1342,9 +1425,7 @@ public sealed class AuditComplianceTests : IDisposable
     public void Consolidated_Test008_Accessibility_AllControlsHaveNameAndRole()
     {
         // Stub: verify MainWindow.xaml contains AutomationProperties annotations
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var xamlPath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..",
-            "RomCleanup.UI.Wpf", "MainWindow.xaml"));
+        var xamlPath = Path.Combine(FindUiProjectDir(), "MainWindow.xaml");
 
         if (File.Exists(xamlPath))
         {
@@ -1507,4 +1588,52 @@ public sealed class AuditComplianceTests : IDisposable
     }
 
     #endregion
+
+    /// <summary>
+    /// Walk up from test output directory to find the RomCleanup.UI.Wpf source project directory.
+    /// More robust than hard-coded relative paths that break under coverage instrumentation.
+    /// </summary>
+    private static string FindUiProjectDir([System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
+    {
+        var repoRoot = FindRepoRoot(callerPath);
+        var candidate = Path.Combine(repoRoot, "src", "RomCleanup.UI.Wpf");
+        if (Directory.Exists(candidate))
+            return candidate;
+
+        return Path.Combine("src", "RomCleanup.UI.Wpf");
+    }
+
+    private static string FindRepoRoot(string? callerPath)
+    {
+        // Prefer compile-time source location to avoid archived/duplicate files.
+        if (!string.IsNullOrWhiteSpace(callerPath))
+        {
+            var dir = Path.GetDirectoryName(callerPath);
+            while (dir is not null)
+            {
+                if (File.Exists(Path.Combine(dir, "src", "RomCleanup.sln")) ||
+                    File.Exists(Path.Combine(dir, "src", "RomCleanup.UI.Wpf", "RomCleanup.UI.Wpf.csproj")))
+                {
+                    return dir;
+                }
+
+                dir = Path.GetDirectoryName(dir);
+            }
+        }
+
+        // Fallback for hosts that do not expose a stable caller path.
+        var probe = AppDomain.CurrentDomain.BaseDirectory;
+        while (probe is not null)
+        {
+            if (File.Exists(Path.Combine(probe, "src", "RomCleanup.sln")) ||
+                File.Exists(Path.Combine(probe, "src", "RomCleanup.UI.Wpf", "RomCleanup.UI.Wpf.csproj")))
+            {
+                return probe;
+            }
+
+            probe = Path.GetDirectoryName(probe);
+        }
+
+        return Directory.GetCurrentDirectory();
+    }
 }

@@ -185,4 +185,35 @@ public class RegionDetectorTests
         var result = RegionDetector.GetRegionTag("Game (USA) (USA)");
         Assert.Equal("US", result);
     }
+
+    // --- Determinism ---
+
+    [Theory]
+    [InlineData("Game (Europe)", "EU")]
+    [InlineData("Game (USA)", "US")]
+    [InlineData("Game (Japan)", "JP")]
+    [InlineData("Game (World)", "WORLD")]
+    [InlineData("Game (USA, Europe)", "WORLD")]
+    [InlineData("Game (Austria, Switzerland)", "EU")]
+    [InlineData("Random Game Name", "UNKNOWN")]
+    public void GetRegionTag_IsDeterministic(string input, string expected)
+    {
+        for (var run = 0; run < 100; run++)
+        {
+            Assert.Equal(expected, RegionDetector.GetRegionTag(input));
+        }
+    }
+
+    // --- Token-based resolution returns stable result ---
+
+    [Fact]
+    public void ResolveRegionFromTokens_SingleRegion_IsDeterministic()
+    {
+        // Ensure single-element HashSet always returns same value
+        for (var run = 0; run < 100; run++)
+        {
+            var result = RegionDetector.GetRegionTag("Game (USA) (En)");
+            Assert.Equal("US", result);
+        }
+    }
 }

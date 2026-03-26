@@ -115,6 +115,32 @@ public class AuditCsvStoreTests : IDisposable
     }
 
     [Fact]
+    public void Rollback_DryRun_MissingCurrentFile_DoesNotReportRestorablePath()
+    {
+        var csvPath = Path.Combine(_tempDir, "audit.csv");
+        var oldPath = Path.Combine(_tempDir, "original", "game.rom");
+        var newPath = Path.Combine(_tempDir, "moved", "game.rom");
+
+        // Create then remove the current file to simulate stale audit entries.
+        Directory.CreateDirectory(Path.GetDirectoryName(newPath)!);
+        File.WriteAllText(newPath, "data");
+        File.Delete(newPath);
+
+        File.WriteAllLines(csvPath, new[]
+        {
+            "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
+            $"{_tempDir},{oldPath},{newPath},Move,GAME,abc,dedupe,2025-01-01"
+        });
+
+        var result = _audit.Rollback(csvPath,
+            allowedRestoreRoots: new[] { _tempDir },
+            allowedCurrentRoots: new[] { _tempDir },
+            dryRun: true);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public void Rollback_ActualMove_RestoresFile()
     {
         var csvPath = Path.Combine(_tempDir, "audit.csv");

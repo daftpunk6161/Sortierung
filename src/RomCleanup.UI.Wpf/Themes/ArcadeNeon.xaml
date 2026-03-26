@@ -1,0 +1,59 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<!-- ═══ ARCADE NEON ═══════════════════════════════════════════════════════
+     Hot pink / electric magenta on deep navy — maximum neon energy,
+     arcade cabinet feel. Colours only — templates in _ControlTemplates.xaml.
+     ════════════════════════════════════════════════════════════════════════ -->
+
+    <!-- ── Core Surfaces ──────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushBackground"   Color="#0A0A1E"/>
+    <SolidColorBrush x:Key="BrushSurface"      Color="#141432"/>
+    <SolidColorBrush x:Key="BrushSurfaceAlt"   Color="#101028"/>
+    <SolidColorBrush x:Key="BrushSurfaceLight" Color="#1E1E48"/>
+
+    <!-- ── Accent ─────────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushAccentCyan"   Color="#FF2D95"/>
+    <SolidColorBrush x:Key="BrushAccentPurple" Color="#7B2FFF"/>
+
+    <!-- ── Semantic ───────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushDanger"       Color="#FF4444"/>
+    <SolidColorBrush x:Key="BrushSuccess"      Color="#00FF99"/>
+    <SolidColorBrush x:Key="BrushWarning"      Color="#FFD500"/>
+
+    <!-- ── Text ───────────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushTextPrimary"  Color="#F0E8FF"/>
+    <SolidColorBrush x:Key="BrushTextMuted"    Color="#9988CC"/>
+    <SolidColorBrush x:Key="BrushBorder"       Color="#2A2A5E"/>
+
+    <!-- ── Semantic Backgrounds ──────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushDangerBg"  Color="#1E0A0E"/>
+    <SolidColorBrush x:Key="BrushSuccessBg" Color="#0A1E14"/>
+    <SolidColorBrush x:Key="BrushInfoBg"    Color="#0E0A1E"/>
+    <SolidColorBrush x:Key="BrushWarningBg" Color="#1E1A08"/>
+
+    <!-- ── Interaction ───────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrushButtonPressed"   Color="#FF2D9522"/>
+    <SolidColorBrush x:Key="BrushInputSelection"  Color="#FF2D9544"/>
+    <SolidColorBrush x:Key="BrushBorderHover"     Color="#AA2070"/>
+    <SolidColorBrush x:Key="BrushPrimaryBg"       Color="#FF2D9533"/>
+    <SolidColorBrush x:Key="BrushTextOnAccent"    Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="BrushPrimaryHover"    Color="#FF2D9555"/>
+    <SolidColorBrush x:Key="BrushPrimaryActive"   Color="#FF2D9577"/>
+    <SolidColorBrush x:Key="BrushDangerHover"     Color="#FF444422"/>
+    <SolidColorBrush x:Key="BrushScrimOverlay"    Color="#CC0A0020"/>
+
+    <!-- ── Theme-specific override: neon glow on ProgressBar ─────────── -->
+    <Style TargetType="ProgressBar">
+      <Setter Property="Background"      Value="{DynamicResource BrushSurface}"/>
+      <Setter Property="Foreground"      Value="{DynamicResource BrushAccentCyan}"/>
+      <Setter Property="BorderBrush"     Value="{DynamicResource BrushBorder}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Height"          Value="8"/>
+      <Setter Property="Effect">
+        <Setter.Value>
+          <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.5" Color="#FF2D95"/>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+</ResourceDictionary>

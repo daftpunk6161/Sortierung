@@ -36,7 +36,7 @@ public sealed class DatSourceService : IDisposable
         {
             var handler = new HttpClientHandler { AllowAutoRedirect = true };
             _http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(60) };
-            _http.DefaultRequestHeaders.UserAgent.ParseAdd("RomCleanup/2.0 (DAT-Updater)");
+            _http.DefaultRequestHeaders.UserAgent.ParseAdd("Romulus/2.0 (DAT-Updater)");
             _http.DefaultRequestHeaders.Accept.ParseAdd("application/zip, application/octet-stream, application/xml, text/xml, */*");
         }
     }
@@ -126,21 +126,31 @@ public sealed class DatSourceService : IDisposable
 
             // Extract ZIP — use safe extraction with Zip-Slip protection
             Directory.CreateDirectory(tempExtract);
+            var normalizedExtractRoot = Path.GetFullPath(tempExtract).TrimEnd(Path.DirectorySeparatorChar)
+                                      + Path.DirectorySeparatorChar;
             using (var archive = ZipFile.OpenRead(tempZip))
             {
                 foreach (var entry in archive.Entries)
                 {
                     if (string.IsNullOrEmpty(entry.Name)) continue; // Skip directories
-                    var destPath = Path.GetFullPath(Path.Combine(tempExtract, entry.Name));
-                    if (!destPath.StartsWith(Path.GetFullPath(tempExtract), StringComparison.OrdinalIgnoreCase))
-                        continue; // Zip-Slip protection
-                    entry.ExtractToFile(destPath, overwrite: true);
+
+                    // Preserve archive structure and fail closed on Zip-Slip attempts.
+                    var destPath = Path.GetFullPath(Path.Combine(tempExtract, entry.FullName));
+                    if (!destPath.StartsWith(normalizedExtractRoot, StringComparison.OrdinalIgnoreCase))
+                        return null;
+
+                    var parentDir = Path.GetDirectoryName(destPath);
+                    if (!string.IsNullOrEmpty(parentDir))
+                        Directory.CreateDirectory(parentDir);
+
+                    // Do not overwrite extracted files to avoid ambiguous archive collisions.
+                    entry.ExtractToFile(destPath, overwrite: false);
                 }
             }
 
             // Find first .dat or .xml file in extracted contents
-            var datFile = Directory.GetFiles(tempExtract, "*.dat", SearchOption.TopDirectoryOnly).FirstOrDefault()
-                       ?? Directory.GetFiles(tempExtract, "*.xml", SearchOption.TopDirectoryOnly).FirstOrDefault();
+            var datFile = Directory.GetFiles(tempExtract, "*.dat", SearchOption.AllDirectories).Order(StringComparer.Ordinal).FirstOrDefault()
+                       ?? Directory.GetFiles(tempExtract, "*.xml", SearchOption.AllDirectories).Order(StringComparer.Ordinal).FirstOrDefault();
             if (datFile is null)
                 return null;
 
@@ -149,7 +159,7 @@ public sealed class DatSourceService : IDisposable
                 && !finalPath.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
                 finalPath = Path.ChangeExtension(finalPath, ".dat");
 
-            File.Copy(datFile, finalPath, overwrite: true);
+            ReplaceWithBackup(datFile, finalPath);
             return finalPath;
         }
         catch (HttpRequestException) { return null; }
@@ -158,9 +168,13 @@ public sealed class DatSourceService : IDisposable
         catch (InvalidDataException) { return null; } // Corrupt ZIP
         finally
         {
-            // Cleanup temp files
-            try { if (File.Exists(tempZip)) File.Delete(tempZip); } catch { /* best-effort */ }
-            try { if (Directory.Exists(tempExtract)) Directory.Delete(tempExtract, true); } catch { /* best-effort */ }
+            // Cleanup temp files — specific exceptions to avoid hiding unexpected errors
+            try { if (File.Exists(tempZip)) File.Delete(tempZip); }
+            catch (IOException) { /* file locked — will be cleaned on next run or OS temp cleanup */ }
+            catch (UnauthorizedAccessException) { /* permission denied — non-fatal for temp files */ }
+            try { if (Directory.Exists(tempExtract)) Directory.Delete(tempExtract, true); }
+            catch (IOException) { /* dir locked — will be cleaned on next run or OS temp cleanup */ }
+            catch (UnauthorizedAccessException) { /* permission denied — non-fatal for temp dirs */ }
         }
     }
 
@@ -283,7 +297,7 @@ public sealed class DatSourceService : IDisposable
             var actual = ComputeFileSha256(localPath);
             return string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
         {
             return true; // Network error checking sidecar — allow (HTTPS integrity)
         }
@@ -313,6 +327,7 @@ public sealed class DatSourceService : IDisposable
         var sourceFiles = Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories)
             .Where(f => f.EndsWith(".dat", StringComparison.OrdinalIgnoreCase)
                      || f.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            .Order(StringComparer.Ordinal)
             .ToList();
 
         int imported = 0;
@@ -340,7 +355,7 @@ public sealed class DatSourceService : IDisposable
                 && !targetPath.Equals(datRoot, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            File.Copy(match, targetPath, overwrite: true);
+            ReplaceWithBackup(match, targetPath);
             imported++;
         }
 
@@ -378,6 +393,41 @@ public sealed class DatSourceService : IDisposable
         using var stream = File.OpenRead(path);
         var hashBytes = sha256.ComputeHash(stream);
         return Convert.ToHexString(hashBytes).ToLowerInvariant();
+    }
+
+    private static void ReplaceWithBackup(string sourcePath, string destinationPath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+            throw new ArgumentException("Source path must not be empty.", nameof(sourcePath));
+        if (string.IsNullOrWhiteSpace(destinationPath))
+            throw new ArgumentException("Destination path must not be empty.", nameof(destinationPath));
+
+        var backupPath = destinationPath + ".bak";
+        var hadExistingTarget = File.Exists(destinationPath);
+
+        if (hadExistingTarget)
+        {
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
+
+            File.Move(destinationPath, backupPath, overwrite: true);
+        }
+
+        try
+        {
+            File.Copy(sourcePath, destinationPath, overwrite: false);
+        }
+        catch (IOException)
+        {
+            // Restore previous file if replacement fails mid-flight.
+            if (hadExistingTarget && File.Exists(backupPath) && !File.Exists(destinationPath))
+            {
+                try { File.Move(backupPath, destinationPath, overwrite: true); }
+                catch (IOException) { /* best-effort restore — file may be locked */ }
+            }
+
+            throw;
+        }
     }
 
     public void Dispose()

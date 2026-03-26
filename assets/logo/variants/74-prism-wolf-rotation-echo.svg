@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="holo74" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="25%" stop-color="#8B5CF6"/>
+      <stop offset="50%" stop-color="#EC4899"/>
+      <stop offset="75%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <filter id="glow74">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#0A0A0E"/>
+  <!-- Rotating prism effect — 3 triangles offset by rotation -->
+  <g transform="translate(128,88)">
+    <polygon points="0,-62 -58,52 58,52" fill="none" stroke="url(#holo74)" stroke-width="2" opacity="0.3" transform="rotate(-10)"/>
+    <polygon points="0,-62 -58,52 58,52" fill="none" stroke="url(#holo74)" stroke-width="2.5" opacity="1"/>
+    <polygon points="0,-62 -58,52 58,52" fill="none" stroke="url(#holo74)" stroke-width="2" opacity="0.3" transform="rotate(10)"/>
+  </g>
+  <!-- Beam -->
+  <line x1="0" y1="95" x2="78" y2="95" stroke="white" stroke-width="2" opacity="0.3"/>
+  <!-- Rays -->
+  <line x1="184" y1="78" x2="255" y2="45" stroke="#EF4444" stroke-width="2.2" opacity="0.65"/>
+  <line x1="186" y1="88" x2="255" y2="62" stroke="#F97316" stroke-width="2.2" opacity="0.65"/>
+  <line x1="187" y1="98" x2="255" y2="80" stroke="#FBBF24" stroke-width="2.2" opacity="0.65"/>
+  <line x1="188" y1="108" x2="255" y2="100" stroke="#22C55E" stroke-width="2.2" opacity="0.65"/>
+  <line x1="188" y1="118" x2="255" y2="120" stroke="#3B82F6" stroke-width="2.2" opacity="0.65"/>
+  <line x1="188" y1="128" x2="254" y2="140" stroke="#8B5CF6" stroke-width="2.2" opacity="0.65"/>
+  <!-- Wolf with glow -->
+  <g transform="translate(128,88) scale(0.40)" filter="url(#glow74)">
+    <polygon points="0,-68 -50,-12 -34,48 0,28 34,48 50,-12" fill="white" opacity="0.9"/>
+    <polygon points="-38,-8 -58,-50 -18,-28" fill="white" opacity="0.9"/>
+    <polygon points="38,-8 58,-50 18,-28" fill="white" opacity="0.9"/>
+  </g>
+  <text x="128" y="186" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="28" font-weight="600" fill="url(#holo74)" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="208" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="8" fill="#6B7280" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

@@ -4,7 +4,7 @@ namespace RomCleanup.Infrastructure.Linking;
 
 /// <summary>
 /// Hardlink/symlink mode support for storage-efficient ROM organization.
-/// Mirrors HardlinkMode.ps1.
+/// Mirrors HardlinkMode.ps1. Integrated as support preview in RunOrchestrator.
 /// </summary>
 public sealed class HardlinkService
 {
@@ -21,7 +21,7 @@ public sealed class HardlinkService
             // Hardlinks require NTFS
             return string.Equals(driveInfo.DriveFormat, "NTFS", StringComparison.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return false;
         }
@@ -96,7 +96,8 @@ public sealed class HardlinkService
                 Status = "Pending"
             });
 
-            try { if (File.Exists(filePath)) totalSourceBytes += new FileInfo(filePath).Length; } catch { }
+            try { if (File.Exists(filePath)) totalSourceBytes += new FileInfo(filePath).Length; }
+            catch (IOException) { /* File locked or inaccessible — savings estimate will undercount */ }
         }
 
         // Hardlinks save 100%, symlinks save ~0%

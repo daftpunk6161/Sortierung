@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="synthGrad49" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2D1B69"/>
+      <stop offset="100%" stop-color="#1A0533"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="url(#synthGrad49)"/>
+  <!-- Pixel Gameboy DMG mit Wolf auf dem Screen -->
+  <!-- Gameboy body -->
+  <rect x="72" y="20" width="112" height="180" rx="10" fill="#C4B8A0"/>
+  <rect x="72" y="20" width="112" height="180" rx="10" fill="none" stroke="#A09880" stroke-width="1"/>
+  <!-- Screen indent -->
+  <rect x="82" y="32" width="92" height="80" rx="4" fill="#7B8471"/>
+  <!-- Screen contents (green LCD) -->
+  <rect x="88" y="38" width="80" height="68" rx="2" fill="#9BBC0F"/>
+  <!-- Wolf pixel art on screen (GB green palette) -->
+  <g transform="translate(128,66)">
+    <!-- Ears -->
+    <rect x="-16" y="-20" width="4" height="8" fill="#306230"/>
+    <rect x="12" y="-20" width="4" height="8" fill="#306230"/>
+    <!-- Head -->
+    <rect x="-12" y="-12" width="24" height="16" fill="#0F380F"/>
+    <!-- Face -->
+    <rect x="-8" y="-8" width="16" height="8" fill="#306230"/>
+    <!-- Eyes -->
+    <rect x="-8" y="-8" width="4" height="4" fill="#0F380F"/>
+    <rect x="4" y="-8" width="4" height="4" fill="#0F380F"/>
+    <!-- Nose -->
+    <rect x="-2" y="0" width="4" height="4" fill="#0F380F"/>
+    <!-- Body -->
+    <rect x="-8" y="4" width="16" height="8" fill="#306230"/>
+  </g>
+  <!-- "ROMULUS" text on screen -->
+  <text x="128" y="98" text-anchor="middle" font-family="'Courier New',monospace" font-size="7" fill="#0F380F" font-weight="700" letter-spacing="1">ROMULUS</text>
+  <!-- Power LED -->
+  <circle cx="87" cy="118" r="2" fill="#DC2626"/>
+  <text x="93" y="120" font-family="'Arial',sans-serif" font-size="4" fill="#5C5445">POWER</text>
+  <!-- D-Pad -->
+  <rect x="88" y="132" width="6" height="20" rx="1" fill="#3C3C3C"/>
+  <rect x="81" y="139" width="20" height="6" rx="1" fill="#3C3C3C"/>
+  <!-- A/B buttons -->
+  <circle cx="156" cy="140" r="7" fill="#8B1A54"/>
+  <circle cx="142" cy="148" r="7" fill="#8B1A54"/>
+  <text x="156" y="143" text-anchor="middle" font-family="'Arial',sans-serif" font-size="6" fill="#C4B8A0" font-weight="700">A</text>
+  <text x="142" y="151" text-anchor="middle" font-family="'Arial',sans-serif" font-size="6" fill="#C4B8A0" font-weight="700">B</text>
+  <!-- Start/Select -->
+  <rect x="108" y="162" width="14" height="4" rx="2" fill="#5C5445" transform="rotate(-25,115,164)"/>
+  <rect x="126" y="162" width="14" height="4" rx="2" fill="#5C5445" transform="rotate(-25,133,164)"/>
+  <!-- Speaker grille -->
+  <line x1="148" y1="170" x2="168" y2="165" stroke="#A09880" stroke-width="1"/>
+  <line x1="148" y1="174" x2="168" y2="169" stroke="#A09880" stroke-width="1"/>
+  <line x1="148" y1="178" x2="168" y2="173" stroke="#A09880" stroke-width="1"/>
+  <line x1="148" y1="182" x2="168" y2="177" stroke="#A09880" stroke-width="1"/>
+  <text x="128" y="225" text-anchor="middle" font-family="'Press Start 2P','Courier New',monospace" font-size="14" font-weight="700" fill="#9BBC0F" letter-spacing="2">ROMULUS</text>
+  <text x="128" y="245" text-anchor="middle" font-family="'Courier New',monospace" font-size="7" fill="#4C1D95" letter-spacing="2">YOUR COLLECTION, PERFECTED.</text>
+</svg>

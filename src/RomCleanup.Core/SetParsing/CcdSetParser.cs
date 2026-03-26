@@ -10,7 +10,7 @@ public static class CcdSetParser
 
     public static IReadOnlyList<string> GetRelatedFiles(string ccdPath)
     {
-        if (string.IsNullOrWhiteSpace(ccdPath) || !File.Exists(ccdPath))
+        if (string.IsNullOrWhiteSpace(ccdPath) || !SetParserIo.Exists(ccdPath))
             return Array.Empty<string>();
 
         var dir = Path.GetDirectoryName(ccdPath) ?? "";
@@ -20,7 +20,7 @@ public static class CcdSetParser
         foreach (var ext in CompanionExts)
         {
             var companion = Path.Combine(dir, baseName + ext);
-            if (File.Exists(companion))
+            if (SetParserIo.Exists(companion))
                 result.Add(Path.GetFullPath(companion));
         }
 
@@ -39,7 +39,7 @@ public static class CcdSetParser
         foreach (var ext in CompanionExts)
         {
             var companion = Path.Combine(dir, baseName + ext);
-            if (!File.Exists(companion))
+            if (!SetParserIo.Exists(companion))
                 result.Add(Path.GetFullPath(companion));
         }
 

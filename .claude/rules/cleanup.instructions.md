@@ -1,5 +1,5 @@
 ---
-description: Projektweite Instructions für RomCleanup (C# .NET 10 + WPF/XAML). Laden für alle Dateien im Repo, insbesondere C#-Code, UI und Tests.
+description: Projektweite Instructions für Romulus / RomCleanup (C# .NET 10 + WPF/XAML). Gilt für alle Dateien im Repo, insbesondere C#-Code, UI, Tests, Build- und Konfigurationsdateien.
 paths:
   - "**/*.cs"
   - "**/*.xaml"
@@ -11,117 +11,341 @@ paths:
   - "**/*.yaml"
   - "src/**/*"
 ---
-Provide coding guidelines that AI should follow when generating code, answering questions, or reviewing changes.
 
-# RomCleanup – Workspace Coding Guidelines (immer gültig)
+# Romulus (RomCleanup) – Workspace Coding Guidelines
 
-Diese Regeln gelten **projektweit und dauerhaft**. Sie sind **nicht task-spezifisch**.  
-Ziel ist ein **release-fähiges**, **sicheres**, **wartbares** und **testbares** Tool mit **modernem, retro-stylischem, selbsterklärendem GUI/UX** (primär **WPF/XAML**).
+Diese Regeln gelten **projektweit, dauerhaft und unabhängig vom konkreten Task**.  
+Sie sind die verbindliche Qualitätsbasis für **Code-Generierung, Refactoring, Reviews, Bugfixing, UI-Arbeit und Tests**.
 
-> **Hinweis:** Die PowerShell-Version wurde vollständig nach C# .NET 10 migriert. PS-Code liegt im `archive/powershell/` Ordner als Referenz. Aktive Entwicklung erfolgt ausschließlich in `src/`.
+Ziel ist ein **release-fähiges**, **sicheres**, **deterministisches**, **wartbares** und **testbares** Tool mit **moderner, retro-inspirierter, klar verständlicher GUI/UX** auf Basis von **C# .NET 10 + WPF/XAML**.
 
-## 1) Grundprinzipien (Quality Bar)
-- **Stabilität vor Feature-Hype:** Keine Änderung ohne klaren Nutzen, Risikoabschätzung und Verifikation.
-- **Kein Datenverlust:** Default ist **verschieben** (Trash/Audit), nicht löschen. Wenn gelöscht werden muss: explizit, bestätigt, dokumentiert.
-- **Keine Alibi-Tests:** Tests müssen **Fehler finden** (Negativfälle, Edge Cases, Regressionen). “Immer grün” ohne Aussagekraft ist wertlos.
-- **Keine Dubletten / toter Code:** Doppelte Logik konsolidieren, ungenutzten Code entfernen, eine Quelle der Wahrheit.
-- **Determinismus:** Gleiche Inputs ⇒ gleiche Outputs (besonders Winner-Selection, Sort-Entscheidungen, Reports).
-- **Zukunftssicherheit:** Architektur so gestalten, dass neue Features ohne UI-Chaos und ohne Core-Spaghetti integrierbar sind.
+> Die frühere PowerShell-Version ist archiviert und dient nur als historische Referenz.  
+> Aktive Entwicklung erfolgt ausschließlich in `src/`.  
+> Neue Features, Fixes und Refactorings dürfen nicht auf der archivierten PowerShell-Logik aufbauen, ohne sie zuerst kritisch gegen die aktuelle C#-Architektur zu validieren.
 
-## 2) Architekturregeln (Separation of Concerns)
-Trenne konsequent in Schichten/Module:
-- **UI (WPF/XAML)**: Darstellung, Interaktion, Bindings, Commands, Visual States.
-- **App/Orchestration**: Ablaufsteuerung, Progress/Cancel, Konfiguration laden/speichern.
-- **Core Engine (pure logic)**: Scoring, Keying, Region-Erkennung, Winner-Auswahl, Policies.
-- **IO/Safety Layer**: File-Enum, Move/Trash, Path-Sicherheitschecks, Reparse-Point/Zip-Slip-Schutz.
-- **Tools Integration**: chdman/dolphintool/7z/psxtract, quoting/args, exit codes, retries, timeouts.
-- **Reports**: CSV/HTML, Encoding/Escaping, Injection-Schutz.
-- **DAT/Hashing**: Indexing, Streaming XML, Hash Cache, Thresholds.
+---
 
-**Regeln:**
-- Core-Logik möglichst **ohne UI/Globals/Side-Effects** (für Testbarkeit).
-- “Seams” einbauen: IO/Process-Aufrufe so kapseln, dass sie testbar/mocking-fähig sind.
-- Gemeinsame Helpers zentralisieren (Quoting, TempFiles, Logging, Encoding).
+## 1) Nicht verhandelbare Grundprinzipien
 
-## 3) GUI/UX Regeln (WPF/XAML – höchste Priorität)
-Ziel: **selbsterklärend, nicht überladen, klare Bereiche, viel Luft, keine Overlaps**.
+- **Stabilität vor Feature-Hype.**  
+  Jede Änderung muss einen klaren Nutzen haben und gegen Risiko, Testaufwand und Wartbarkeit abgewogen werden.
 
-### Informationsarchitektur & Navigation
-- **Progressive Disclosure:** “Basic” vs “Advanced” sauber trennen.
-- Häufige Aktionen nach vorne, seltene Optionen in “Erweitert”, “Tools”, “Maintenance”.
-- Komplexe Abläufe als **Wizard/Stepper** (z.B. Roots → Optionen → Preview → Confirm → Run → Report/Undo).
+- **Kein Datenverlust.**  
+  Standardverhalten ist **Move to Trash / Audit / Undo-fähig**, nicht permanentes Löschen.  
+  Permanentes Löschen ist nur zulässig, wenn es explizit angefordert, klar bestätigt und sauber protokolliert wird.
 
-### Layout/Design (WPF)
-- Verwende **Grid**-Layouts mit klaren Rows/Columns, konsistenten Margins/Paddings.
-- Keine überfüllten Screens: scrollbare Bereiche (ScrollViewer) wo nötig.
-- Einheitliche Komponenten: Cards/GroupBoxes/Expander, konsistente Buttons/Icons/Labels/Tooltips.
-- **Responsiveness:** sauberes Resize-Verhalten, keine überlappenden Panels, klare MinSizes.
-- Status nicht als Textwall: dedizierte UI für **Phase/Progress/Warnings/Summary**.
+- **Determinismus ist Pflicht.**  
+  Gleiche Inputs müssen zu gleichen Outputs führen.  
+  Das gilt insbesondere für:
+  - Grouping / GameKey
+  - Region-Erkennung
+  - Score-Berechnung
+  - Winner Selection
+  - Report-Zahlen
+  - Preview vs. Execute
+  - CLI/API/GUI-Parität
 
-### Styling (retro-modern, aber lesbar)
-- Zentrales **ResourceDictionary** für Farben/Typografie/Spacing.
-- Theme-fähig denken (später): Dark + Neon Accent möglich, aber Kontrast/Lesbarkeit sicherstellen.
-- Einheitliche Visual Hierarchy: Headings, Subheadings, Dividers, Badges.
+- **Keine doppelte Logik.**  
+  Es muss eine klare Source of Truth geben.  
+  Duplikate, parallele Implementierungen und toter Code sind aktiv zu identifizieren und zu entfernen.
 
-## 4) Sicherheit & Datenintegrität (nicht verhandelbar)
-- **Path Traversal verhindern**: alle Moves innerhalb erlaubter Roots validieren.
-- **Zip-Slip** erkennen und blocken (Archive Entry Paths).
-- **Reparse Points** (Symlink/Junction) strikt behandeln (blocken oder klar definieren).
-- **CSV Injection** verhindern (Excel-Formeln), **HTML Escaping** konsequent.
-- Aktionen mit Risiko (Move/Delete/Convert) brauchen:
-  - klare Summary vor Ausführung
-  - bestätigte “Danger Zone”
+- **Keine Scheinlösungen.**  
+  Keine Platzhalter, kein Pseudocode, keine “TODO-only”-Antworten, keine halbfertigen Snippets, wenn produktionsreifer Code erwartet ist.
+
+- **Keine Alibi-Tests.**  
+  Tests müssen reale Fehler finden können.  
+  Ein grüner Test ohne Aussagekraft ist wertlos.
+
+- **Release-Fokus.**  
+  Entscheidungen müssen sich daran orientieren, ob sie das Produkt sicherer, stabiler, verständlicher und release-fähiger machen.
+
+---
+
+## 2) Architekturregeln
+
+Das System muss klar in Schichten getrennt bleiben:
+
+- **UI (WPF/XAML)**  
+  Darstellung, Bindings, Commands, Visual States, Styles, Templates
+
+- **ViewModels / Presentation Logic**  
+  Zustandslogik der Oberfläche, Commands, UI-orientierte Validierung, orchestration-nahe Darstellung
+
+- **Application / Orchestration Layer**  
+  Ablaufsteuerung, Use Cases, Progress, Cancellation, Config laden/speichern, Koordination von Services
+
+- **Core Engine**  
+  Pure logic ohne UI-Abhängigkeiten: Scoring, Policies, GameKey, Region Detection, Winner Selection, Sortierentscheidungen
+
+- **IO / Safety Layer**  
+  Dateisystemzugriffe, Enumerierung, Move/Trash, Root-Validierung, Reparse-Point-Schutz, Archive-Schutz
+
+- **External Tool Integration**  
+  `chdman`, `dolphintool`, `7z`, `psxtract` etc.; Argumentaufbau, Quoting, Exit-Code-Handling, Timeouts, Retries
+
+- **Reports / Export**  
+  CSV/HTML/JSON-Ausgabe, Escaping, Encoding, Injection-Schutz, konsistente Kennzahlen
+
+- **DAT / Hashing / Indexing**  
+  Streaming XML, Cache, Lookup, Thresholds, Matching
+
+- **Conversion**  
+  Formatkonvertierung (chdman, dolphintool, 7z, psxtract etc.), ConversionRegistry, ConversionExecutor, Tool-Validierung, Safety-Einstufung
+
+### Verbindliche Architekturregeln
+- Core-Logik muss **ohne UI, Globals und unnötige Side Effects** testbar sein.
+- Code-Behind in WPF nur für echte View-spezifische Fälle, nicht für Businesslogik.
+- MVVM ist der Standard. Logik gehört in ViewModels/Services, nicht in XAML-Hacks oder Code-Behind.
+- IO, Prozessaufrufe, Zeit, Zufall und Umgebungszugriffe müssen hinter testbaren Abstraktionen liegen.
+- Gemeinsame Infrastruktur wie Logging, Quoting, Temp-Dateien, Sanitizing, Encoding und Error Handling muss zentralisiert sein.
+- Neue Features dürfen die Trennung der Schichten nicht aufweichen.
+
+---
+
+## 3) GUI / UX Regeln (höchste Priorität für WPF/XAML)
+
+Ziel ist eine Oberfläche, die **selbsterklärend, luftig, robust, nicht überladen und ohne Footguns** ist.
+
+### Informationsarchitektur
+- Häufige Aktionen nach vorne, seltene Optionen in klar getrennte Advanced-Bereiche.
+- Komplexe Workflows als **Wizard / Stepper / klar geführter Ablauf** gestalten.
+- Typischer Flow soll klar erkennbar sein:  
+  **Roots → Optionen → Preview → Confirm → Run → Report / Undo**
+
+### Layout
+- Verwende bevorzugt `Grid` mit klaren Rows/Columns.
+- Konsistente Margins, Padding, Section-Abstände und MinSizes.
+- Keine überlappenden Controls, keine abgeschnittenen Inhalte, kein unvorhersehbares Resize-Verhalten.
+- Scrollbare Bereiche nur dort, wo sie fachlich sinnvoll sind.
+- Statusinformationen nicht als Textwüste darstellen, sondern als klar getrennte Bereiche für:
+  - aktuelle Phase
+  - Fortschritt
+  - Warnungen
+  - Zusammenfassung
+  - nächste sinnvolle Aktion
+
+### Interaktion
+- Gefährliche Aktionen müssen visuell und logisch klar getrennt sein.
+- Preview und Execute dürfen nie missverständlich wirken.
+- Buttons, Labels, Tooltips und Warntexte müssen eindeutig und nicht doppeldeutig sein.
+- Abbruch, Retry, Undo und Fehlerzustände müssen für Benutzer klar nachvollziehbar sein.
+
+### Styling
+- Farben, Typografie, Spacing und Control-Styles zentral über `ResourceDictionary`.
+- Retro-modern ist erlaubt, aber **Lesbarkeit und Kontrast haben immer Vorrang**.
+- Theme-Fähigkeit mitdenken, ohne Accessibility zu opfern.
+- Keine visuelle Spielerei, die die Informationsklarheit verschlechtert.
+
+### Accessibility / Usability
+- Ausreichender Kontrast
+- Saubere Fokus-Reihenfolge
+- Klare Tastaturbedienbarkeit
+- Sinnvolle Fehlermeldungen
+- Keine rein farbbasierte Zustandskommunikation
+
+---
+
+## 4) Sicherheit und Datenintegrität
+
+Diese Regeln sind zwingend:
+
+- **Path Traversal verhindern**  
+  Jeder Zielpfad muss normalisiert und gegen erlaubte Roots validiert werden.
+
+- **Zip-Slip verhindern**  
+  Archive Entries dürfen nie außerhalb des erlaubten Zielpfads extrahieren.
+
+- **Reparse Points strikt behandeln**  
+  Symlinks/Junctions entweder blockieren oder explizit und sicher definieren.  
+  Niemals implizit folgen.
+
+- **CSV Injection verhindern**  
+  Zellen mit potenziellen Formeln absichern.
+
+- **HTML Escaping konsequent durchführen**  
+  Reports dürfen keine unescaped Nutzdaten rendern.
+
+- **Externe Tools nie blind vertrauen**  
+  Exit Codes, stderr/stdout, Timeouts, Pfad-Quoting und Fehlerbilder sauber behandeln.
+
+- **Risky Operations absichern**  
+  Move/Delete/Convert nur mit:
+  - klarer Summary vor Ausführung
+  - nachvollziehbarer Benutzerbestätigung
   - Audit-Log
+  - soweit möglich Undo/Recovery-Pfad
 
-## 5) Performance & Skalierung
-- Enumeration iterativ (keine unkontrollierte Rekursion), caching wo sinnvoll (FileInfo, Archive Entries).
-- Hashing/Indexing streaming-basiert und mit Thresholds.
-- Regex: compiled, Hotspots prüfen, unnötige mehrfach-Scans vermeiden.
-- UI darf nicht frieren:
-  - lange Tasks off-UI-thread
-  - Progress/Cancel robust
-  - keine DoEvents-Spaghetti (in WPF bevorzugt Dispatcher/Async Pattern)
+---
 
-## 6) Tests (Bug-Finder, keine Alibis)
-Pflicht-Testarten:
-- **Unit**: RegionTag, GameKey, VersionScore/FormatScore, Winner-Selection, Sanitizer.
-- **Integration**: TempDirs, Move→Trash, Reports, Archive Handling (ZIP/7Z), DAT Index/Hits.
-- **Regression**: reale Problemfälle als Fixtures.
-- **Negative/Edge**: beschädigte Archive, fehlende Tracks (cue/gdi), Path Traversal, Reparse Points, Sonderzeichen.
-- **Property/Fuzz**: random Filenames/Tags/Region-Kombos, Parser Robustheit.
+## 5) Performance und Skalierung
 
-Tests müssen:
-- echte Fehlerfälle erzeugen können
-- Invarianten prüfen (z.B. niemals außerhalb Root verschieben; nie leere Keys für Gruppierung)
-- deterministische Ergebnisse sicherstellen
+- Keine unkontrollierte Rekursion über grosse Dateibäume.
+- Dateisystem-Enumeration iterativ und ressourcenschonend gestalten.
+- Hashing und Parsing streaming-basiert umsetzen.
+- Hotspots identifizieren und unnötige Mehrfachscans vermeiden.
+- Regex nur gezielt einsetzen; Hotspot-Regex prüfen und bei Bedarf kompilieren.
+- UI darf niemals durch lange Operationen blockieren.
+- Lange Tasks gehören off the UI thread.
+- Progress, Cancellation und Fehlerzustände müssen robust sein.
+- Keine DoEvents-ähnlichen Workarounds; nutze saubere Async-/Dispatcher-Muster.
+
+---
+
+## 6) Testregeln
+
+Tests sind Pflicht für jede relevante Änderung an Core-Logik, IO-Verhalten, Safety, Reports oder UI-naher Ablaufsteuerung.
+
+### Erforderliche Testarten
+- **Unit Tests**
+  - RegionTag
+  - GameKey
+  - VersionScore
+  - FormatScore
+  - Winner Selection
+  - Sanitizer
+  - Path Guards
+  - Escaping / Encoding
+  - Policy-Entscheidungen
+
+- **Integration Tests**
+  - TempDirs
+  - Move → Trash
+  - Report-Erzeugung
+  - ZIP/7Z Handling
+  - DAT Index / Matching
+  - Tool Integration mit kontrollierten Testdoubles oder sicheren Fixtures
+
+- **Regression Tests**
+  - Reale Bugfälle
+  - Früher fehlerhafte Dateinamen
+  - Problematische Regionen/Tags
+  - Archiv-Sonderfälle
+  - Preview/Run-Paritätsprobleme
+
+- **Negative / Edge Tests**
+  - beschädigte Archive
+  - fehlende Tracks
+  - leere Dateien
+  - ungültige Namen
+  - Unicode / Sonderzeichen
+  - Path Traversal
+  - Reparse Points
+  - doppelte Inputs
+  - fehlende Metadaten
+
+- **Property / Fuzz Tests**, wo sinnvoll
+  - zufällige Filenamen
+  - Tag-Kombinationen
+  - Parser-Robustheit
+  - Invarianten der Gruppierung und Gewinnerauswahl
+
+### Test-Invarianten
+Tests müssen explizit prüfen, dass:
+- nie außerhalb erlaubter Roots geschrieben/verschoben wird
+- keine leeren oder inkonsistenten Gruppierungs-Keys entstehen
+- Winner Selection deterministisch bleibt
+- Preview, Execute und Reports konsistente Zahlen und Entscheidungen liefern
+- Fehler sauber signalisiert und nicht still geschluckt werden
+
+---
 
 ## 7) Refactoring-Regeln
-- Kein Refactor “nur weil”: immer Ziel + Nutzen + Risiko + Verifikation.
-- Schrittweise Migration (“Strangler Pattern”), Feature-Parität sichern.
-- Jede größere Umstrukturierung braucht:
-  - Migrationsplan
+
+- Refactoring nur mit klarem Ziel, Nutzen und Verifikation.
+- Kein “grosses Umschreiben”, wenn ein gezielter Fix sicherer ist.
+- Grössere Umbauten nur schrittweise.
+- Bestehende Feature-Parität muss abgesichert werden.
+- Jede grössere Umstrukturierung braucht mindestens:
+  - Zielbild
+  - Risikoabschätzung
+  - betroffene Komponenten
   - Testplan
-  - Rollback-Strategie (mind. konzeptionell)
+  - konzeptionelle Rollback-Strategie
 
-## 8) Reviews (wie du antworten sollst)
-Wenn du Code reviewst oder Änderungen vorschlägst:
-- Priorisiere **Release-Blocker**: Datenverlust, Security, falsche Gewinner-Auswahl, falsches Sorting, UI Overlaps/Unklarheit.
-- Liste Findings mit **Impact**, **Repro/Beispiel**, **Fix-Strategie**, **Test-Absicherung**.
-- Zeige auch “tote/duplizierte” Bereiche und nenne Konsolidierungsstrategie.
-- UX-Kritik muss konkret sein: Was ist unklar? Wo sind Footguns? Was gehört wohin?
+---
 
-## 9) Tracking-Checklist Pflicht bei größerer Arbeit
-Wenn eine Aufgabe mehr als trivial ist, erzeuge/aktualisiere am Ende eine Markdown-Checklist mit Checkboxen:
+## 8) Regeln für generierten Code
 
-- Release-Blocker
-- GUI/UX Tasks (IA, Layout, Styling, Flow, Accessibility)
-- Refactoring Tasks
-- IO/Safety Tasks
-- Performance Tasks
-- Tests/QA Tasks
-- Feature-Backlog
+Wenn du Code erzeugst oder änderst:
 
-Template:
+- Liefere **konkreten, kompilierbaren, konsistenten Code**.
+- Verwende bestehende Patterns des Projekts, sofern sie nicht nachweislich fehlerhaft sind.
+- Ändere nicht unnötig Stil, Namenskonventionen oder Architektur.
+- Erfinde keine APIs, Klassen oder Properties, die im Projektkontext nicht plausibel sind.
+- Hinterlasse keine unverbundenen Fragmente.
+- Zeige klar:
+  - welche Dateien neu sind
+  - welche Dateien geändert werden
+  - was fachlich geändert wurde
+  - welche Tests ergänzt oder angepasst werden müssen
+
+Wenn eine Änderung mehrere Dateien betrifft, arbeite vollständig und konsistent über alle betroffenen Schichten hinweg statt nur einen Teil anzudeuten.
+
+---
+
+## 9) Regeln für Code Reviews und Analysen
+
+Wenn du reviewst, audittest oder Probleme analysierst, priorisiere nach Schweregrad:
+
+### Priorität 1 – Release-Blocker
+- Datenverlust
+- Security-Lücken
+- falsche Winner-Auswahl
+- falsches Grouping / Sorting
+- Preview/Execute/Report-Divergenz
+- UI-Fehlverhalten mit Fehlbedienungsrisiko
+- Abstürze / Hänger / Deadlocks / nicht abbrechbare Läufe
+
+### Priorität 2 – Hohe Risiken
+- schlechte Testbarkeit
+- doppelte Logik
+- versteckte Seiteneffekte
+- fragile Tool-Integration
+- inkonsistente Reports
+- schlecht verständliche UX in kritischen Abläufen
+
+### Priorität 3 – Wartbarkeit / Qualität
+- unnötige Komplexität
+- Naming-Probleme
+- Strukturprobleme
+- geringe Erweiterbarkeit
+- visuelle Unruhe
+- technische Schulden
+
+### Review-Ausgabeformat
+Jedes Finding soll möglichst dieses Format haben:
+
+- **Titel**
+- **Schweregrad**
+- **Impact**
+- **Betroffene Datei(en) / Komponente(n)**
+- **Reproduktion oder Beispiel**
+- **Ursache**
+- **Fix-Strategie**
+- **Erforderliche Testabsicherung**
+
+Wenn keine Probleme gefunden werden, nicht nur pauschal “sieht gut aus” sagen, sondern kurz benennen, welche risikoreichen Bereiche geprüft wurden und warum sie aktuell tragfähig wirken.
+
+---
+
+## 10) Regeln für Antworten bei grösseren Aufgaben
+
+Bei nicht-trivialen Aufgaben muss die Antwort strukturiert sein und enthalten:
+
+1. **Kurzfazit**
+2. **Risiken / Blocker**
+3. **konkrete Änderungen**
+4. **betroffene Dateien**
+5. **Testauswirkungen**
+6. **offene Punkte / Annahmen**
+7. **aktualisierte Tracking Checklist**, falls relevant
+
+---
+
+## 11) Tracking Checklist Pflicht bei grösserer Arbeit
+
+Wenn die Aufgabe mehr als trivial ist, erzeuge oder aktualisiere am Ende eine Markdown-Checklist.
+
 ```markdown
 ## Tracking Checklist (RomCleanup)
 
@@ -139,14 +363,17 @@ Template:
 - [ ] Duplikate entfernt / Helpers vereinheitlicht
 - [ ] Pure functions testbar
 - [ ] Determinismus geprüft
+- [ ] Preview/Execute/Report-Parität geprüft
 
 ### IO/Safety
 - [ ] Path traversal / Zip-slip / Reparse Points abgesichert
 - [ ] Trash/Audit/Undo konsistent
+- [ ] Externe Tool-Aufrufe robust abgesichert
 
 ### Performance
 - [ ] Enumeration/Hashing/Regex Hotspots geprüft
 - [ ] UI bleibt responsiv
+- [ ] Progress/Cancel robust
 
 ### Tests (keine Alibi-Tests)
 - [ ] Unit

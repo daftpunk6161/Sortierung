@@ -15,7 +15,7 @@ public static class M3uPlaylistParser
     /// </summary>
     public static IReadOnlyList<string> GetRelatedFiles(string m3uPath)
     {
-        if (string.IsNullOrWhiteSpace(m3uPath) || !File.Exists(m3uPath))
+        if (string.IsNullOrWhiteSpace(m3uPath) || !SetParserIo.Exists(m3uPath))
             return Array.Empty<string>();
 
         var result = new List<string>();
@@ -28,7 +28,7 @@ public static class M3uPlaylistParser
 
     public static IReadOnlyList<string> GetMissingFiles(string m3uPath)
     {
-        if (string.IsNullOrWhiteSpace(m3uPath) || !File.Exists(m3uPath))
+        if (string.IsNullOrWhiteSpace(m3uPath) || !SetParserIo.Exists(m3uPath))
             return Array.Empty<string>();
 
         var result = new List<string>();
@@ -36,7 +36,7 @@ public static class M3uPlaylistParser
 
         ResolveRecursive(m3uPath, result, visited, 0, existingOnly: false);
 
-        return result.Where(f => !File.Exists(f)).ToList();
+        return result.Where(f => !SetParserIo.Exists(f)).ToList();
     }
 
     private static void ResolveRecursive(
@@ -52,11 +52,11 @@ public static class M3uPlaylistParser
 
         var normalizedPath = Path.GetFullPath(m3uPath);
         if (!visited.Add(normalizedPath)) return; // circular reference guard
-        if (!File.Exists(normalizedPath)) return;
+        if (!SetParserIo.Exists(normalizedPath)) return;
 
         var dir = Path.GetDirectoryName(normalizedPath) ?? "";
 
-        foreach (var rawLine in File.ReadLines(normalizedPath))
+        foreach (var rawLine in SetParserIo.ReadLines(normalizedPath))
         {
             var line = rawLine.Trim();
             if (string.IsNullOrEmpty(line) || line.StartsWith("#"))
@@ -80,7 +80,7 @@ public static class M3uPlaylistParser
                 continue;
             }
 
-            if (!visited.Contains(refPath) && (!existingOnly || File.Exists(refPath)))
+            if (!visited.Contains(refPath) && (!existingOnly || SetParserIo.Exists(refPath)))
             {
                 visited.Add(refPath);
                 result.Add(refPath);

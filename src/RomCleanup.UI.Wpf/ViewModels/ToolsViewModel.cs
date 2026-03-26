@@ -250,4 +250,70 @@ public sealed class ToolsViewModel : ObservableObject
             || item.Category.Contains(_toolFilterText, StringComparison.OrdinalIgnoreCase)
             || item.Description.Contains(_toolFilterText, StringComparison.OrdinalIgnoreCase);
     }
+
+    // ═══ CONVERSION REGISTRY (moved from ToolsConversionView code-behind) ═══
+
+    public ObservableCollection<ConversionCapabilityRow> ConversionCapabilities { get; } = [];
+
+    private bool _hasConversionCapabilities;
+    public bool HasConversionCapabilities { get => _hasConversionCapabilities; set => SetProperty(ref _hasConversionCapabilities, value); }
+
+    public void LoadConversionRegistry()
+    {
+        ConversionCapabilities.Clear();
+        var registryPath = FindDataFile("conversion-registry.json");
+        var consolesPath = FindDataFile("consoles.json");
+
+        if (registryPath is null || consolesPath is null)
+        {
+            HasConversionCapabilities = false;
+            return;
+        }
+
+        try
+        {
+            var loader = new RomCleanup.Infrastructure.Conversion.ConversionRegistryLoader(registryPath, consolesPath);
+            var capabilities = loader.GetCapabilities();
+            foreach (var c in capabilities)
+            {
+                ConversionCapabilities.Add(new ConversionCapabilityRow(
+                    c.SourceExtension,
+                    c.TargetExtension,
+                    c.Tool.ToolName,
+                    c.Command,
+                    c.Lossless ? "✓" : "✗",
+                    c.Cost,
+                    c.ApplicableConsoles is not null ? string.Join(", ", c.ApplicableConsoles) : _loc["Label.All"]
+                ));
+            }
+            HasConversionCapabilities = ConversionCapabilities.Count > 0;
+        }
+        catch
+        {
+            HasConversionCapabilities = false;
+        }
+    }
+
+    private static string? FindDataFile(string name)
+    {
+        var dir = AppDomain.CurrentDomain.BaseDirectory;
+        for (var i = 0; i < 6; i++)
+        {
+            var candidate = System.IO.Path.Combine(dir, "data", name);
+            if (System.IO.File.Exists(candidate)) return candidate;
+            var parent = System.IO.Directory.GetParent(dir)?.FullName;
+            if (parent is null || parent == dir) break;
+            dir = parent;
+        }
+        return null;
+    }
 }
+
+public sealed record ConversionCapabilityRow(
+    string Source,
+    string Target,
+    string Tool,
+    string Command,
+    string LosslessDisplay,
+    int Cost,
+    string Consoles);

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="holo71" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="25%" stop-color="#8B5CF6"/>
+      <stop offset="50%" stop-color="#EC4899"/>
+      <stop offset="75%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <radialGradient id="aura71" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#0A0A12"/>
+  <!-- Aura background glow -->
+  <circle cx="128" cy="90" r="80" fill="url(#aura71)"/>
+  <!-- Prism -->
+  <polygon points="128,28 60,148 196,148" fill="none" stroke="url(#holo71)" stroke-width="2.5"/>
+  <!-- Beam -->
+  <line x1="0" y1="98" x2="74" y2="98" stroke="white" stroke-width="2" opacity="0.3"/>
+  <!-- Rainbow — curved arcs instead of straight lines -->
+  <path d="M182,85 Q220,55 255,48" fill="none" stroke="#EF4444" stroke-width="2" opacity="0.65"/>
+  <path d="M184,95 Q222,70 255,66" fill="none" stroke="#F97316" stroke-width="2" opacity="0.65"/>
+  <path d="M186,105 Q224,86 255,84" fill="none" stroke="#FBBF24" stroke-width="2" opacity="0.65"/>
+  <path d="M188,115 Q225,102 255,102" fill="none" stroke="#22C55E" stroke-width="2" opacity="0.65"/>
+  <path d="M189,125 Q224,120 255,122" fill="none" stroke="#3B82F6" stroke-width="2" opacity="0.65"/>
+  <path d="M190,135 Q222,138 255,142" fill="none" stroke="#8B5CF6" stroke-width="2" opacity="0.65"/>
+  <!-- Wolf solid, white, big -->
+  <g transform="translate(128,92) scale(0.43)">
+    <polygon points="0,-68 -50,-12 -34,48 0,28 34,48 50,-12" fill="white" opacity="0.88"/>
+    <polygon points="-38,-8 -58,-50 -18,-28" fill="white" opacity="0.88"/>
+    <polygon points="38,-8 58,-50 18,-28" fill="white" opacity="0.88"/>
+  </g>
+  <text x="128" y="186" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="28" font-weight="600" fill="url(#holo71)" letter-spacing="5">ROMULUS</text>
+  <text x="128" y="208" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="8" fill="#6B7280" letter-spacing="3">YOUR COLLECTION, PERFECTED.</text>
+</svg>

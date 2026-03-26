@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Core.Scoring;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Tools;
 using RomCleanup.Infrastructure.Reporting;
@@ -20,19 +21,13 @@ public static partial class FeatureService
     // Port of WpfSlice.ReportPreview.ps1
 
     public static int CalculateHealthScore(int totalFiles, int dupes, int junk, int verified)
-    {
-        if (totalFiles <= 0) return 0;
-        var dupePct = 100.0 * dupes / totalFiles;
-        var junkPct = 100.0 * junk / totalFiles;
-        var verifiedBonus = verified > 0 ? 10.0 * verified / totalFiles : 0;
-        return (int)Math.Clamp(100 - Math.Min(60, dupePct) - Math.Min(30, junkPct) + verifiedBonus, 0, 100);
-    }
+        => HealthScorer.GetHealthScore(totalFiles, dupes, junk, verified);
 
 
     // ═══ DUPLICATE HEATMAP ══════════════════════════════════════════════
     // Port of DuplicateHeatmap.ps1
 
-    public static List<HeatmapEntry> GetDuplicateHeatmap(IReadOnlyList<DedupeResult> groups)
+    public static List<HeatmapEntry> GetDuplicateHeatmap(IReadOnlyList<DedupeGroup> groups)
     {
         var consoleMap = new Dictionary<string, (int total, int dupes)>(StringComparer.OrdinalIgnoreCase);
         foreach (var g in groups)
@@ -92,7 +87,7 @@ public static partial class FeatureService
             c.MainPath.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
             c.GameKey.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
             c.Region.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-            c.Category.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            ToCategoryLabel(c.Category).Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
             c.Extension.Contains(searchText, StringComparison.OrdinalIgnoreCase)
         ).ToList();
     }
@@ -132,7 +127,7 @@ public static partial class FeatureService
     // ═══ HARDLINK ESTIMATE ══════════════════════════════════════════════
     // Port of HardlinkMode.ps1
 
-    public static string GetHardlinkEstimate(IReadOnlyList<DedupeResult> groups)
+    public static string GetHardlinkEstimate(IReadOnlyList<DedupeGroup> groups)
     {
         long savedBytes = 0;
         int linkCount = 0;
@@ -220,7 +215,7 @@ public static partial class FeatureService
     // ═══ CLONE LIST VIEWER ══════════════════════════════════════════════
     // Port of CloneListViewer.ps1
 
-    public static string BuildCloneTree(IReadOnlyList<DedupeResult> groups)
+    public static string BuildCloneTree(IReadOnlyList<DedupeGroup> groups)
     {
         var sb = new StringBuilder();
         sb.AppendLine("Parent/Clone-Baum");

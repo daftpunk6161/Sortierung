@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<datafile>
+  <header><name>RomCleanup Test DAT - No-Intro SNES</name></header>
+  <game name="Super Metroid (USA)"><rom name="Super Metroid (USA).sfc" size="3145728" crc="10000001" sha1="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" /></game>
+  <game name="Chrono Trigger (USA)"><rom name="Chrono Trigger (USA).sfc" size="4194304" crc="10000002" sha1="cccccccccccccccccccccccccccccccccccccccc" /></game>
+  <game name="Zelda ALTTP (USA)"><rom name="Zelda ALTTP (USA).sfc" size="1048576" crc="10000003" sha1="dddddddddddddddddddddddddddddddddddddddd" /></game>
+  <game name="Donkey Kong Country (USA)"><rom name="Donkey Kong Country (USA).sfc" size="4194304" crc="10000004" sha1="eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" /></game>
+  <game name="Mega Man X (USA)"><rom name="Mega Man X (USA).sfc" size="2097152" crc="10000005" sha1="ffffffffffffffffffffffffffffffffffffffff" /></game>
+</datafile>

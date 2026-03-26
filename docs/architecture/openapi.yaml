@@ -1,0 +1,363 @@
+openapi: 3.0.3
+info:
+  title: Romulus API
+  version: 1.1.0
+  description: "Romulus REST API — Your Collection, Perfected. Region deduplication, junk removal, format conversion."
+servers:
+  - url: http://127.0.0.1:7878
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Server status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /runs:
+    post:
+      summary: Create and execute a deduplication run
+      parameters:
+        - name: wait
+          in: query
+          schema:
+            type: boolean
+          description: Wait for completion without cancelling the server-side run on client disconnect
+        - name: waitTimeoutMs
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1800000
+          description: Maximum wait time before returning 202 with the current run state
+        - name: X-Idempotency-Key
+          in: header
+          schema:
+            type: string
+          description: Reuse the same run for retries of the same request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunRequest"
+      responses:
+        "202":
+          description: Run created (async)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run:
+                    $ref: "#/components/schemas/RunRecord"
+                  reused:
+                    type: boolean
+                    description: Whether an existing idempotent run was reused
+        "200":
+          description: Run completed or an existing completed idempotent run was reused
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run:
+                    $ref: "#/components/schemas/RunRecord"
+                  result:
+                    $ref: "#/components/schemas/ApiRunResult"
+                  reused:
+                    type: boolean
+        "400":
+          description: Validation error
+        "409":
+          description: Run already active
+  /runs/{runId}:
+    get:
+      summary: Get run status
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Run status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run:
+                    $ref: "#/components/schemas/RunRecord"
+        "404":
+          description: Run not found
+  /runs/{runId}/result:
+    get:
+      summary: Get completed run result
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Full result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run:
+                    $ref: "#/components/schemas/RunRecord"
+                  result:
+                    $ref: "#/components/schemas/ApiRunResult"
+        "404":
+          description: Run not found
+        "409":
+          description: Run still in progress
+  /runs/{runId}/cancel:
+    post:
+      summary: Cancel a run idempotently
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cancel accepted or no-op for an already terminal run
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run:
+                    $ref: "#/components/schemas/RunRecord"
+                  cancelAccepted:
+                    type: boolean
+                    description: Whether the cancellation was newly accepted
+                  idempotent:
+                    type: boolean
+                    description: Whether the run was already in a terminal state
+        "404":
+          description: Run not found
+  /runs/{runId}/stream:
+    get:
+      summary: SSE progress stream
+      description: |
+        Server-Sent Events stream for real-time run progress. Event types:
+        - `ready`: Stream connected, run is active
+        - `status`: Progress update with current phase message
+        - `completed`: Run finished successfully (includes result)
+        - `cancelled`: Run was cancelled
+        - `failed`: Run failed (includes error)
+        - `timeout`: Wait timeout reached, run still in progress
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Server-Sent Events stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "404":
+          description: Run not found
+components:
+  schemas:
+    RunRequest:
+      type: object
+      required:
+        - roots
+      properties:
+        roots:
+          type: array
+          items:
+            type: string
+          description: Root directories to scan for ROMs
+        mode:
+          type: string
+          enum: [DryRun, Move]
+          default: DryRun
+          description: "DryRun: preview only; Move: actually move duplicates to trash"
+        preferRegions:
+          type: array
+          items:
+            type: string
+          description: Region preference order (e.g. EU, US, JP)
+    RunRecord:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: Unique run identifier (hex UUID without dashes)
+        idempotencyKey:
+          type: string
+          nullable: true
+          description: User-provided idempotency key (if supplied via X-Idempotency-Key header)
+        requestFingerprint:
+          type: string
+          description: SHA256 hash of the normalized request for deduplication
+        status:
+          type: string
+          enum: [running, completed, failed, cancelled]
+          description: Run lifecycle status
+        mode:
+          type: string
+          enum: [DryRun, Move]
+        roots:
+          type: array
+          items:
+            type: string
+        preferRegions:
+          type: array
+          items:
+            type: string
+        startedUtc:
+          type: string
+          format: date-time
+        completedUtc:
+          type: string
+          format: date-time
+          nullable: true
+        result:
+          $ref: "#/components/schemas/ApiRunResult"
+        progressMessage:
+          type: string
+          nullable: true
+          description: Current pipeline phase/progress text
+        recoveryModel:
+          type: string
+          description: Recovery strategy (always "audit-rollback-only")
+          example: audit-rollback-only
+        restartRecovery:
+          type: string
+          description: Restart capability (always "not-persisted")
+          example: not-persisted
+        resumeSupported:
+          type: boolean
+          description: Whether the run can be resumed (always false)
+        canRetry:
+          type: boolean
+          description: Whether the run can be retried (true when not running)
+        canRollback:
+          type: boolean
+          description: Whether the run can be rolled back (true when audit path exists)
+        recoveryState:
+          type: string
+          enum: [in-progress, completed]
+          description: Recovery lifecycle state
+    ApiRunResult:
+      type: object
+      description: Pipeline execution result with all KPI metrics
+      properties:
+        orchestratorStatus:
+          type: string
+          enum: [ok, completed_with_errors, blocked, cancelled]
+          description: Pipeline-level outcome (distinct from RunRecord.status which is lifecycle)
+        exitCode:
+          type: integer
+          description: "0: success, 1: error, 2: cancelled, 3: preflight failed"
+          enum: [0, 1, 2, 3]
+        totalFiles:
+          type: integer
+          description: Total files scanned across all roots
+        candidates:
+          type: integer
+          description: Files matched to known console extensions
+        groups:
+          type: integer
+          description: Number of deduplication groups (unique game keys)
+        keep:
+          type: integer
+          description: Number of winners (best version per game key)
+        dupes:
+          type: integer
+          description: Number of duplicate losers. In DryRun mode this is the count of files that would be moved.
+        games:
+          type: integer
+          description: Number of GAME category entries
+        junk:
+          type: integer
+          description: Number of JUNK category files (demos, betas, hacks, etc.)
+        bios:
+          type: integer
+          description: Number of BIOS files detected
+        datMatches:
+          type: integer
+          description: Files verified against DAT database (No-Intro, Redump, FBNEO)
+        healthScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Collection quality score (0-100)
+        convertedCount:
+          type: integer
+          description: Files successfully converted to target format
+        convertErrorCount:
+          type: integer
+          description: Format conversion failures
+        convertSkippedCount:
+          type: integer
+          description: Files skipped during conversion (already target format)
+        junkRemovedCount:
+          type: integer
+          description: Junk files moved to trash
+        junkFailCount:
+          type: integer
+          description: Junk move failures
+        moveCount:
+          type: integer
+          description: Duplicate files actually moved to trash (Move mode only)
+        skipCount:
+          type: integer
+          description: Files skipped during move (symlinks, locked files, etc.)
+        consoleSortMoved:
+          type: integer
+          description: Files reorganized by console sort
+        consoleSortFailed:
+          type: integer
+          description: Console sort failures
+        failCount:
+          type: integer
+          description: Total failure count (move failures + convert errors)
+        savedBytes:
+          type: integer
+          format: int64
+          description: Bytes freed by deduplication
+        durationMs:
+          type: integer
+          format: int64
+          description: Pipeline execution time in milliseconds
+        error:
+          type: string
+          nullable: true
+          description: Error message if orchestratorStatus is not ok
+        auditPath:
+          type: string
+          nullable: true
+          description: Path to the generated audit CSV log
+        reportPath:
+          type: string
+          nullable: true
+          description: Path to the generated HTML report
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+security:
+  - ApiKey: []

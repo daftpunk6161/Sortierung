@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace RomCleanup.Core.GameKeys;
@@ -157,6 +158,15 @@ public static class GameKeyNormalizer
             System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
             RegexTimeout);
 
+    private static readonly System.Text.RegularExpressions.Regex LeadingArticleRegex =
+        new(@"^\s*the\s+", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled, RegexTimeout);
+
+    private static readonly System.Text.RegularExpressions.Regex TrailingArticleRegex =
+        new(@"\s*,\s*the\s*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled, RegexTimeout);
+
+    private static readonly System.Text.RegularExpressions.Regex DiscPaddingRegex =
+        new(@"\((disc|disk|cd)\s*0+(\d+)\)", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled, RegexTimeout);
+
     private static readonly IReadOnlyDictionary<string, string> EmptyAliasMap =
         new Dictionary<string, string>();
 
@@ -237,12 +247,19 @@ public static class GameKeyNormalizer
         // Apply all tag patterns (region, version, junk)
         foreach (var rx in tagPatterns)
         {
-            s = rx.Replace(s, " ");
+            s = SafeRegex.Replace(rx, s, " ");
         }
+
+        // Deterministic fallback: strip parenthesized ISO date tags without regex.
+        // This prevents behavior drift if a regex replacement path times out.
+        s = StripIsoDateTags(s);
+
+        // Normalize common title variants so article/disc naming maps to one key.
+        s = NormalizeTitleVariants(s);
 
         // Normalize and collapse whitespace
         var key = s.Trim().ToLowerInvariant();
-        key = System.Text.RegularExpressions.Regex.Replace(key, @"\s+", "", System.Text.RegularExpressions.RegexOptions.None, RegexTimeout);
+        key = SafeRegex.Replace(key, @"\s+", "", System.Text.RegularExpressions.RegexOptions.None, RegexTimeout);
 
         // Apply alias maps
         if (alwaysAliasMap.TryGetValue(key, out var aliased))
@@ -257,9 +274,73 @@ public static class GameKeyNormalizer
             key = baseName.Trim().ToLowerInvariant();
 
         if (string.IsNullOrWhiteSpace(key))
-            key = "__empty_key_" + baseName.GetHashCode().ToString("x8");
+            key = "__empty_key_" + ComputeStableKeySuffix(baseName);
 
         return key;
+    }
+
+    private static string ComputeStableKeySuffix(string value)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+        return Convert.ToHexString(bytes.AsSpan(0, 4)).ToLowerInvariant();
+    }
+
+    private static string NormalizeTitleVariants(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return value;
+
+        var normalized = SafeRegex.Replace(TrailingArticleRegex, value, string.Empty);
+        normalized = SafeRegex.Replace(LeadingArticleRegex, normalized, string.Empty);
+        normalized = SafeRegex.Replace(DiscPaddingRegex, normalized, "($1 $2)");
+        return normalized;
+    }
+
+    private static string StripIsoDateTags(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return value;
+
+        var text = value;
+        var index = 0;
+        while (index < text.Length)
+        {
+            var open = text.IndexOf('(', index);
+            if (open < 0)
+                break;
+
+            var close = text.IndexOf(')', open + 1);
+            if (close < 0)
+                break;
+
+            var len = close - open - 1;
+            if (len == 10)
+            {
+                var token = text.Substring(open + 1, len);
+                if (IsIsoDateToken(token))
+                {
+                    text = text.Remove(open, (close - open) + 1);
+                    continue;
+                }
+            }
+
+            index = close + 1;
+        }
+
+        return text;
+    }
+
+    private static bool IsIsoDateToken(string token)
+    {
+        // Expected format: YYYY-MM-DD
+        if (token.Length != 10)
+            return false;
+
+        return char.IsDigit(token[0]) && char.IsDigit(token[1]) && char.IsDigit(token[2]) && char.IsDigit(token[3])
+            && token[4] == '-'
+            && char.IsDigit(token[5]) && char.IsDigit(token[6])
+            && token[7] == '-'
+            && char.IsDigit(token[8]) && char.IsDigit(token[9]);
     }
 
     /// <summary>
@@ -272,12 +353,12 @@ public static class GameKeyNormalizer
             return text;
 
         // Remove trailing bracket tags: [anything]
-        var value = MsDosTrailingBracketRegex.Replace(text, " ");
+        var value = SafeRegex.Replace(MsDosTrailingBracketRegex, text, " ");
 
         // Remove trailing non-disc parenthesized tags (limit iterations to prevent infinite loop)
-        for (int i = 0; i < 20 && MsDosTrailingParenRegex.IsMatch(value); i++)
+        for (int i = 0; i < 20 && SafeRegex.IsMatch(MsDosTrailingParenRegex, value); i++)
         {
-            value = MsDosTrailingParenRegex.Replace(value, " ");
+            value = SafeRegex.Replace(MsDosTrailingParenRegex, value, " ");
         }
 
         return value;

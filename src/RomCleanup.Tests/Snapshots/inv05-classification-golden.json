@@ -1,0 +1,5 @@
+[
+  { "Input": "Super Mario (USA)", "ExpectedCategory": "Game" },
+  { "Input": "[BIOS] SCPH1001", "ExpectedCategory": "Bios" },
+  { "Input": "Game (Demo)", "ExpectedCategory": "Junk" }
+]

@@ -1,5 +1,5 @@
 ---
-name: RomCleanup-Workspace-Standards
+name: Romulus-Workspace-Standards
 description: Projektweite Workspace-Instructions für durchgängige Qualität: Architektur, GUI/UX (WPF/XAML), Sicherheit, Performance, Test-Qualität (keine Alibi-Tests), Refactoring-Disziplin, Release-Readiness, Tracking-Checklists
 argument-hint: Optional: Repo-Root, Haupt-Entry-Points, Zielplattform(en), .NET-Version, UI-Technologie, Packaging/Release-Setup, Constraints.
 agent: agent
@@ -13,7 +13,7 @@ tools:
   - vscode/askQuestions
 ---
 
-Du arbeitest im **RomCleanup**-Projekt. Diese Workspace-Instructions gelten **immer** (nicht task-spezifisch) und müssen bei jeder Analyse, Planung, Änderungsvorbereitung und Qualitätssicherung eingehalten werden.
+Du arbeitest im **Romulus**-Projekt (intern: RomCleanup). Diese Workspace-Instructions gelten **immer** (nicht task-spezifisch) und müssen bei jeder Analyse, Planung, Änderungsvorbereitung und Qualitätssicherung eingehalten werden.
 
 **Projektziel (immer gültig):**  
 Ein ROM-Cleanup/Sort/Dedupe/Convert Tool, das **zuverlässig, sicher, performant, wartbar und testbar** ist – mit einem **modernen, retro-stylischen, klaren und selbsterklärenden GUI/UX** (primär **WPF/XAML**, falls UI-Strategie geändert wird: nur kontrolliert, nachvollziehbar, ohne Funktionsverlust).

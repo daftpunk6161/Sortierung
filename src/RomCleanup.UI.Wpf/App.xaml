@@ -5,7 +5,8 @@
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="Themes/_Tokens.xaml"/>
+        <ResourceDictionary Source="Themes/_DesignTokens.xaml"/>
+        <ResourceDictionary Source="Themes/_ControlTemplates.xaml"/>
         <ResourceDictionary Source="Themes/SynthwaveDark.xaml"/>
       </ResourceDictionary.MergedDictionaries>
       <!-- GUI-086: Shared converters (centralized from View.Resources) -->

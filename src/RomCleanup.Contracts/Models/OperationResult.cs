@@ -1,5 +1,37 @@
 namespace RomCleanup.Contracts.Models;
 
+public enum RunOutcome
+{
+    Ok,
+    CompletedWithErrors,
+    Blocked,
+    Cancelled,
+    Failed
+}
+
+public static class RunOutcomeExtensions
+{
+    public static string ToStatusString(this RunOutcome outcome) => outcome switch
+    {
+        RunOutcome.Ok => "ok",
+        RunOutcome.CompletedWithErrors => "completed_with_errors",
+        RunOutcome.Blocked => "blocked",
+        RunOutcome.Cancelled => "cancelled",
+        RunOutcome.Failed => "failed",
+        _ => "failed"
+    };
+
+    public static RunOutcome ParseRunOutcome(string? status) => status switch
+    {
+        "ok" => RunOutcome.Ok,
+        "completed_with_errors" => RunOutcome.CompletedWithErrors,
+        "blocked" => RunOutcome.Blocked,
+        "cancelled" => RunOutcome.Cancelled,
+        "failed" => RunOutcome.Failed,
+        _ => RunOutcome.Failed
+    };
+}
+
 /// <summary>
 /// Standardized operation result contract.
 /// Port of New-OperationResult from RunHelpers.Execution.ps1.

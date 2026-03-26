@@ -1,4 +1,6 @@
-using RomCleanup.UI.Wpf.Services;
+using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.FileSystem;
+using RomCleanup.Infrastructure.Hashing;
 using Xunit;
 
 namespace RomCleanup.Tests;
@@ -41,7 +43,8 @@ public sealed class FeatureServiceLargeFileTests : IDisposable
 
         var beforeLength = new FileInfo(path).Length;
 
-        var repaired = FeatureService.RepairNesHeader(path);
+        IHeaderRepairService sut = new HeaderRepairService(new FileSystemAdapter());
+        var repaired = sut.RepairNesHeader(path);
 
         Assert.True(repaired);
         Assert.Equal(beforeLength, new FileInfo(path).Length);

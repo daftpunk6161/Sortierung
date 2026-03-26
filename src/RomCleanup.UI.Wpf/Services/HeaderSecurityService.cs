@@ -1,12 +1,35 @@
+using System.IO;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
+using RomCleanup.Core.Classification;
 
 namespace RomCleanup.UI.Wpf.Services;
 
-/// <summary>GUI-039: Delegates to static FeatureService.Security methods.</summary>
+/// <summary>GUI-039: Delegates header operations to Core/Infrastructure.</summary>
 public sealed class HeaderSecurityService : IHeaderService
 {
+    private readonly IHeaderRepairService _headerRepairService;
+
+    public HeaderSecurityService(IHeaderRepairService headerRepairService)
+    {
+        _headerRepairService = headerRepairService ?? throw new ArgumentNullException(nameof(headerRepairService));
+    }
+
     public RomHeaderInfo? AnalyzeHeader(string filePath)
-        => FeatureService.AnalyzeHeader(filePath);
+    {
+        if (!System.IO.File.Exists(filePath)) return null;
+        try
+        {
+            using var fs = System.IO.File.OpenRead(filePath);
+            var header = new byte[Math.Min(65536, fs.Length)];
+            _ = fs.Read(header, 0, header.Length);
+            return HeaderAnalyzer.AnalyzeHeader(header, fs.Length);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+    }
 
     public void SaveTrendSnapshot(int totalFiles, long sizeBytes, int verified, int dupes, int junk)
         => FeatureService.SaveTrendSnapshot(totalFiles, sizeBytes, verified, dupes, junk);
@@ -36,8 +59,8 @@ public sealed class HeaderSecurityService : IHeaderService
         => FeatureService.DetectPatchFormat(patchPath);
 
     public bool RepairNesHeader(string path)
-        => FeatureService.RepairNesHeader(path);
+        => _headerRepairService.RepairNesHeader(path);
 
     public bool RemoveCopierHeader(string path)
-        => FeatureService.RemoveCopierHeader(path);
+        => _headerRepairService.RemoveCopierHeader(path);
 }

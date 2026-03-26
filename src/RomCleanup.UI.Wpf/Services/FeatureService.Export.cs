@@ -80,7 +80,7 @@ public static partial class FeatureService
         sb.AppendLine();
 
         var junkItems = new List<(string file, JunkReportEntry reason)>();
-        foreach (var c in candidates.Where(c => c.Category == "JUNK"))
+        foreach (var c in candidates.Where(c => c.Category == FileCategory.Junk))
         {
             var name = Path.GetFileNameWithoutExtension(c.MainPath);
             var reason = GetJunkReason(name, aggressive) ?? new JunkReportEntry("JUNK", "Klassifiziert als Junk", "core");
@@ -123,7 +123,7 @@ public static partial class FeatureService
             sb.Append(delimiter);
             sb.Append((c.SizeBytes / 1048576.0).ToString("F2", CultureInfo.InvariantCulture));
             sb.Append(delimiter);
-            sb.Append(SanitizeCsvField(c.Category));
+            sb.Append(SanitizeCsvField(ToCategoryLabel(c.Category)));
             sb.Append(delimiter);
             sb.Append(c.DatMatch ? "Verified" : "Unverified");
             sb.Append(delimiter);
@@ -160,7 +160,7 @@ public static partial class FeatureService
             sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(c.Region)}</Data></Cell>");
             sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(c.Extension)}</Data></Cell>");
             sb.AppendLine($"<Cell><Data ss:Type=\"Number\">{(c.SizeBytes / 1048576.0).ToString("F2", CultureInfo.InvariantCulture)}</Data></Cell>");
-            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(c.Category)}</Data></Cell>");
+            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(ToCategoryLabel(c.Category))}</Data></Cell>");
             sb.AppendLine($"<Cell><Data ss:Type=\"String\">{(c.DatMatch ? "Verified" : "Unverified")}</Data></Cell>");
             sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(c.MainPath)}</Data></Cell>");
             sb.AppendLine("</Row>");
@@ -256,8 +256,35 @@ public static partial class FeatureService
         sb.AppendLine(new string('═', 50));
         sb.AppendLine($"\n  Datei: {rulesPath}\n");
 
+        JsonElement rulesElement;
+        if (doc.RootElement.ValueKind == JsonValueKind.Array)
+        {
+            rulesElement = doc.RootElement;
+        }
+        else if (doc.RootElement.ValueKind == JsonValueKind.Object)
+        {
+            if (doc.RootElement.TryGetProperty("rules", out var lowerRules) && lowerRules.ValueKind == JsonValueKind.Array)
+            {
+                rulesElement = lowerRules;
+            }
+            else if (doc.RootElement.TryGetProperty("Rules", out var upperRules) && upperRules.ValueKind == JsonValueKind.Array)
+            {
+                rulesElement = upperRules;
+            }
+            else
+            {
+                sb.AppendLine("  Keine Regel-Liste im erwarteten Format gefunden.");
+                return sb.ToString();
+            }
+        }
+        else
+        {
+            sb.AppendLine("  Ungültiges rules.json Format.");
+            return sb.ToString();
+        }
+
         int idx = 0;
-        foreach (var rule in doc.RootElement.EnumerateArray())
+        foreach (var rule in rulesElement.EnumerateArray())
         {
             idx++;
             var name = rule.TryGetProperty("name", out var np) ? np.GetString() : $"Regel {idx}";
@@ -288,7 +315,7 @@ public static partial class FeatureService
 
     /// <summary>Build report data for HTML export.</summary>
     public static (ReportSummary Summary, List<ReportEntry> Entries) BuildHtmlReportData(
-        IReadOnlyList<RomCandidate> candidates, IReadOnlyList<DedupeResult> groups,
+        IReadOnlyList<RomCandidate> candidates, IReadOnlyList<DedupeGroup> groups,
         RunResult? runResult, bool dryRun)
     {
         var summary = new ReportSummary
@@ -297,7 +324,7 @@ public static partial class FeatureService
             TotalFiles = candidates.Count,
             KeepCount = groups.Count,
             MoveCount = groups.Sum(g => g.Losers.Count),
-            JunkCount = candidates.Count(c => c.Category == "JUNK"),
+            JunkCount = candidates.Count(c => c.Category == FileCategory.Junk),
             GroupCount = groups.Count,
             Duration = TimeSpan.FromMilliseconds(runResult?.DurationMs ?? 0)
         };
@@ -310,8 +337,8 @@ public static partial class FeatureService
         var entries = candidates.Select(c => new ReportEntry
         {
             GameKey = c.GameKey,
-            Action = c.Category == "JUNK" ? "JUNK" : loserPaths.Contains(c.MainPath) ? "MOVE" : "KEEP",
-            Category = c.Category, Region = c.Region, FilePath = c.MainPath,
+            Action = c.Category == FileCategory.Junk ? "JUNK" : loserPaths.Contains(c.MainPath) ? "MOVE" : "KEEP",
+            Category = ToCategoryLabel(c.Category), Region = c.Region, FilePath = c.MainPath,
             FileName = Path.GetFileName(c.MainPath), Extension = c.Extension,
             SizeBytes = c.SizeBytes, RegionScore = c.RegionScore, FormatScore = c.FormatScore,
             VersionScore = (int)c.VersionScore, DatMatch = c.DatMatch

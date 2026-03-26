@@ -24,7 +24,7 @@ public sealed class SettingsLoader
     public static string UserSettingsPath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "RomCleanupRegionDedupe",
+            Contracts.AppIdentity.AppFolderName,
             "settings.json");
 
     /// <summary>
@@ -59,10 +59,34 @@ public sealed class SettingsLoader
     }
 
     /// <summary>
+    /// Load settings with an explicit user settings path instead of %APPDATA% (TASK-161).
+    /// Used by the API to decouple from per-user desktop settings on server deployments.
+    /// </summary>
+    public static RomCleanupSettings LoadWithExplicitUserPath(string? defaultsJsonPath, string userSettingsPath)
+    {
+        var settings = LoadDefaultsOnly(defaultsJsonPath);
+
+        if (File.Exists(userSettingsPath))
+            MergeFromUserSettings(settings, userSettingsPath);
+
+        return settings;
+    }
+
+    /// <summary>
     /// Resolve data/defaults.json from the current application or workspace layout.
+    /// Honors ROMCLEANUP_DATA_DIR environment variable as highest-priority override.
     /// </summary>
     public static string? ResolveDefaultsJsonPath()
     {
+        // Highest priority: explicit environment override
+        var envOverride = Environment.GetEnvironmentVariable("ROMCLEANUP_DATA_DIR");
+        if (!string.IsNullOrWhiteSpace(envOverride))
+        {
+            var envCandidate = Path.Combine(Path.GetFullPath(envOverride), "defaults.json");
+            if (File.Exists(envCandidate))
+                return envCandidate;
+        }
+
         var searchRoots = new[]
         {
             AppContext.BaseDirectory,
@@ -93,8 +117,18 @@ public sealed class SettingsLoader
     /// </summary>
     public static RomCleanupSettings LoadFrom(string path)
     {
+        return LoadFromSafe(path).Settings;
+    }
+
+    /// <summary>
+    /// TASK-173: Safe settings load with corruption detection and .bak backup.
+    /// Returns a <see cref="SettingsLoadResult"/> with WasCorrupt=true if the file
+    /// contained malformed JSON. Creates a .bak backup of the corrupt file.
+    /// </summary>
+    public static SettingsLoadResult LoadFromSafe(string path)
+    {
         if (!File.Exists(path))
-            return new RomCleanupSettings();
+            return new SettingsLoadResult(new RomCleanupSettings());
 
         try
         {
@@ -103,12 +137,26 @@ public sealed class SettingsLoader
             // FEAT-05: Validate JSON structure before deserializing
             ValidateSettingsStructure(json);
 
-            return JsonSerializer.Deserialize<RomCleanupSettings>(json, JsonOptions)
+            var settings = JsonSerializer.Deserialize<RomCleanupSettings>(json, JsonOptions)
                    ?? new RomCleanupSettings();
+            return new SettingsLoadResult(settings);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return new RomCleanupSettings();
+            // TASK-173: Create .bak backup of corrupt file before resetting
+            try
+            {
+                File.Copy(path, path + ".bak", overwrite: true);
+            }
+            catch (IOException)
+            {
+                // Best-effort backup — if it fails, still return defaults
+            }
+
+            return new SettingsLoadResult(
+                new RomCleanupSettings(),
+                WasCorrupt: true,
+                CorruptionMessage: ex.Message);
         }
     }
 

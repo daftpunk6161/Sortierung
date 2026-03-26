@@ -10,7 +10,7 @@ namespace RomCleanup.UI.Wpf.Services;
 public sealed class ProfileService
 {
     private static readonly string SettingsDir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RomCleanupRegionDedupe");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), RomCleanup.Contracts.AppIdentity.AppFolderName);
 
     private static string SettingsPath => Path.Combine(SettingsDir, "settings.json");
 
@@ -18,8 +18,28 @@ public sealed class ProfileService
     public static bool Delete()
     {
         if (!File.Exists(SettingsPath)) return false;
-        File.Delete(SettingsPath);
-        return true;
+
+        // Bounded retry for transient file locks (parallel tests, autosave race).
+        // Deterministic behavior: max 3 retries, then fail with false.
+        const int maxAttempts = 4;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                File.Delete(SettingsPath);
+                return true;
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(25 * attempt);
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(25 * attempt);
+            }
+        }
+
+        return !File.Exists(SettingsPath);
     }
 
     /// <summary>Import a JSON profile from the given path. Creates backup of existing.</summary>
