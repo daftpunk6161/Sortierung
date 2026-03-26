@@ -547,6 +547,23 @@ public sealed partial class MainViewModel
     // Theme
     public string CurrentThemeName => _theme.Current.ToString();
 
+    /// <summary>TASK-129: All available themes for the theme-switcher dropdown.</summary>
+    public IReadOnlyList<AppTheme> AvailableThemes => _theme.AvailableThemes;
+
+    /// <summary>TASK-129: Currently selected theme (two-way binding for ComboBox).</summary>
+    public AppTheme SelectedTheme
+    {
+        get => _theme.Current;
+        set
+        {
+            if (_theme.Current == value) return;
+            _theme.ApplyTheme(value);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ThemeToggleText));
+            OnPropertyChanged(nameof(CurrentThemeName));
+        }
+    }
+
     public string ThemeToggleText => _theme.Current switch
     {
         AppTheme.Dark         => "⮞ Clean Dark",
@@ -723,6 +740,7 @@ public sealed partial class MainViewModel
         _theme.Toggle();
         OnPropertyChanged(nameof(ThemeToggleText));
         OnPropertyChanged(nameof(CurrentThemeName));
+        OnPropertyChanged(nameof(SelectedTheme));
     }
 
     private void OnGameKeyPreview()

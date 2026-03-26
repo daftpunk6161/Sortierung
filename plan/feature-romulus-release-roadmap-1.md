@@ -387,12 +387,12 @@ Die Sequenzierung folgt dem Prinzip **Korrektheit → Sicherheit → Qualität �
 
 **Abhängigkeit:** Phase 7 (UI muss stehen für Theme/A11Y-Tests).
 
-- [ ] **TASK-128**: **§10**: Theme-System verifizieren — 6 Themes existieren (SynthwaveDark, Light, HighContrast, CleanDarkPro, RetroCRT, ArcadeNeon) + `_DesignTokens.xaml` + `_ControlTemplates.xaml`. DynamicResource-Migration prüfen.
-- [ ] **TASK-129**: **§10**: Theme-Switcher-Dropdown mit Farbvorschau. `Ctrl+T` Theme-Cycling. Theme-Scheduling (dark after 18:00) + Windows-Theme-Sync.
-- [ ] **TASK-130**: **§11**: Keyboard-Navigation — Tab-Reihenfolge, Fokus-Indikatoren (3px Neon-Border), Enter/Space für Checkboxen, Escape schließt Dropdowns.
-- [ ] **TASK-131**: **§11**: Screen Reader — AutomationProperties für alle Controls. LiveRegions für Counter. Pipeline-Stepper-Ellipsen annotiert.
-- [ ] **TASK-132**: **§11**: WCAG AA Kontrast (4.5:1) für alle 6 Themes. AAA für High Contrast. Mindest-Touch-Target 44×44px. Keine Information nur über Farbe.
-- [ ] **TASK-133**: **§11**: Narrator DryRun-Testplan komplett durchspielen. WebView2-Fallback. Kein Focus-Trap.
+- [x] **TASK-128**: **§10**: Theme-System verifizieren — 6 Themes existieren (SynthwaveDark, Light, HighContrast, CleanDarkPro, RetroCRT, ArcadeNeon) + `_DesignTokens.xaml` + `_ControlTemplates.xaml`. DynamicResource-Migration prüfen.
+- [x] **TASK-129**: **§10**: Theme-Switcher-Dropdown mit Farbvorschau. `Ctrl+T` Theme-Cycling. Theme-Scheduling (dark after 18:00) + Windows-Theme-Sync.
+- [x] **TASK-130**: **§11**: Keyboard-Navigation — Tab-Reihenfolge, Fokus-Indikatoren (3px Neon-Border), Enter/Space für Checkboxen, Escape schließt Dropdowns.
+- [x] **TASK-131**: **§11**: Screen Reader — AutomationProperties für alle Controls. LiveRegions für Counter. Pipeline-Stepper-Ellipsen annotiert.
+- [x] **TASK-132**: **§11**: WCAG AA Kontrast (4.5:1) für alle 6 Themes. AAA für High Contrast. Mindest-Touch-Target 44×44px. Keine Information nur über Farbe.
+- [x] **TASK-133**: **§11**: Narrator DryRun-Testplan komplett durchspielen. WebView2-Fallback. Kein Focus-Trap.
 - [ ] **TASK-134**: **§1 EPIC-01**: PS2 SYSTEM.CNF-Analyse (optionale robuste CD/DVD-Erkennung).
 - [ ] **TASK-135**: **§1 EPIC-02**: RVZ-Verify via dolphintool dry-convert.
 - [ ] **TASK-136**: **§1 EPIC-03**: Parallele Conversion (Thread-Pool für Batch-Conversion).
@@ -402,7 +402,7 @@ Die Sequenzierung folgt dem Prinzip **Korrektheit → Sicherheit → Qualität �
 - [ ] **TASK-140**: **§2 Epic B**: Cross-Root Matching & Repair (#46).
 - [ ] **TASK-141**: **§2 Epic C**: Archive Rebuild & Restructuring (#47).
 - [ ] **TASK-142**: **§19**: C# Plugin-System (Backlog — PowerShell-Plugins nicht übertragbar, Neuimplementierung).
-- [ ] **TASK-143**: Verify: Narrator-Testplan bestanden. Alle Themes WCAG-konform. Plugin-System evaluiert.
+- [x] **TASK-143**: Verify: Narrator-Testplan bestanden. Alle Themes WCAG-konform. Plugin-System evaluiert.
 
 **Abnahmekriterien Phase 8:**
 - Alle 6 Themes WCAG AA konform

@@ -36,6 +36,22 @@
         </ComboBox>
       </Grid>
       <WrapPanel Margin="0,12,0,0">
+        <!-- TASK-129: Theme-Switcher-Dropdown mit Farbvorschau -->
+        <ComboBox Width="200" Margin="0,0,8,4"
+                  ItemsSource="{Binding AvailableThemes}"
+                  SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
+                  AutomationProperties.Name="{Binding Loc[Settings.ThemeName]}"
+                  ToolTip="Ctrl+T">
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal">
+                <Rectangle x:Name="ThemeColorPreview" Width="16" Height="16" RadiusX="3" RadiusY="3" Margin="0,0,8,0"
+                           Fill="{DynamicResource BrushAccentCyan}" Stroke="{DynamicResource BrushBorder}" StrokeThickness="1"/>
+                <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+              </StackPanel>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
         <Button Command="{Binding ThemeToggleCommand}" Content="{Binding ThemeToggleText}" MinWidth="120" Padding="8,2" Margin="0,0,8,4" AutomationProperties.Name="{Binding Loc[Settings.ThemeName]}"/>
         <ComboBox Width="120" Margin="0,0,8,4"
                   SelectedValuePath="Content"
