@@ -33,7 +33,7 @@ public sealed class GeneralSettings
     public bool AliasEditionKeying { get; set; }
 
     [JsonPropertyName("mode")]
-    public string Mode { get; set; } = "DryRun";
+    public string Mode { get; set; } = RunConstants.ModeDryRun;
 
     [JsonPropertyName("extensions")]
     public string Extensions { get; set; } = ".zip,.7z,.rar,.chd,.iso,.rvz,.cso,.gcz,.wbfs,.nsp,.xci,.3ds,.cia,.nes,.sfc,.smc,.gba,.gb,.gbc,.gen,.sms,.gg,.n64,.z64,.pce,.lnx,.nds,.ngp,.ngc,.a26,.col,.bin,.cue,.gdi,.ccd,.m3u,.pbp";

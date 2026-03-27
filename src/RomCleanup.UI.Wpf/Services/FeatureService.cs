@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Tools;
@@ -116,14 +117,8 @@ public static partial class FeatureService
 
     // ═══ HELPER ═════════════════════════════════════════════════════════
 
-    public static string FormatSize(long bytes) => bytes switch
-    {
-        >= 1L << 40 => $"{bytes / (double)(1L << 40):F2} TB",
-        >= 1L << 30 => $"{bytes / (double)(1L << 30):F2} GB",
-        >= 1L << 20 => $"{bytes / (double)(1L << 20):F2} MB",
-        >= 1L << 10 => $"{bytes / (double)(1L << 10):F2} KB",
-        _ => $"{bytes} B"
-    };
+    public static string FormatSize(long bytes)
+        => RomCleanup.Contracts.Formatting.FormatSize(bytes);
 
 
     internal static string[] ParseCsvLine(string line)

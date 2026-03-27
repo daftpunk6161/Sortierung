@@ -1,4 +1,6 @@
 using System.Reflection;
+using RomCleanup.Contracts;
+using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Configuration;
 using RomCleanup.Infrastructure.Paths;
 using RomCleanup.UI.Wpf.Models;
@@ -298,6 +300,139 @@ public sealed class HygieneCleanupRegressionTests
         var xamlPath = FindMainWindowCodePath().Replace("MainWindow.xaml.cs", "App.xaml");
         var xaml = File.ReadAllText(xamlPath);
         Assert.Contains("ShutdownMode=\"OnExplicitShutdown\"", xaml, StringComparison.Ordinal);
+    }
+
+    // ── Round 3: RunConstants, Formatting, magic-string guards ──
+
+    [Fact]
+    public void RunConstants_ModeDryRun_IsCorrectValue()
+        => Assert.Equal("DryRun", RunConstants.ModeDryRun);
+
+    [Fact]
+    public void RunConstants_ModeMove_IsCorrectValue()
+        => Assert.Equal("Move", RunConstants.ModeMove);
+
+    [Fact]
+    public void RunConstants_ValidModes_ContainsBothModes()
+    {
+        Assert.Contains(RunConstants.ModeDryRun, RunConstants.ValidModes);
+        Assert.Contains(RunConstants.ModeMove, RunConstants.ValidModes);
+        Assert.Equal(2, RunConstants.ValidModes.Count);
+    }
+
+    [Fact]
+    public void RunConstants_StatusConstants_AreCorrectValues()
+    {
+        Assert.Equal("ok", RunConstants.StatusOk);
+        Assert.Equal("completed_with_errors", RunConstants.StatusCompletedWithErrors);
+        Assert.Equal("blocked", RunConstants.StatusBlocked);
+        Assert.Equal("cancelled", RunConstants.StatusCancelled);
+        Assert.Equal("failed", RunConstants.StatusFailed);
+    }
+
+    [Theory]
+    [InlineData(0L, "0 B")]
+    [InlineData(1023L, "1023 B")]
+    [InlineData(1024L, "1.00 KB")]
+    [InlineData(1_048_576L, "1.00 MB")]
+    [InlineData(1_073_741_824L, "1.00 GB")]
+    [InlineData(1_099_511_627_776L, "1.00 TB")]
+    public void Formatting_FormatSize_ReturnsExpectedOutput(long bytes, string expected)
+        => Assert.Equal(expected, Formatting.FormatSize(bytes));
+
+    [Fact]
+    public void OperationResult_Ok_UsesStatusConstant()
+        => Assert.Equal(OperationResult.StatusOk, OperationResult.Ok().Status);
+
+    [Fact]
+    public void OperationResult_Completed_UsesStatusConstant()
+        => Assert.Equal(OperationResult.StatusCompleted, OperationResult.Completed().Status);
+
+    [Fact]
+    public void OperationResult_Blocked_UsesStatusConstant()
+        => Assert.Equal(OperationResult.StatusBlocked, OperationResult.Blocked("x").Status);
+
+    [Fact]
+    public void OperationResult_Error_UsesStatusConstant()
+        => Assert.Equal(OperationResult.StatusError, OperationResult.Error("x").Status);
+
+    [Fact]
+    public void OperationResult_Skipped_UsesStatusConstant()
+        => Assert.Equal(OperationResult.StatusSkipped, OperationResult.Skipped("x").Status);
+
+    [Fact]
+    public void RunOutcome_ToStatusString_UsesRunConstants()
+    {
+        Assert.Equal(RunConstants.StatusOk, RunOutcome.Ok.ToStatusString());
+        Assert.Equal(RunConstants.StatusCompletedWithErrors, RunOutcome.CompletedWithErrors.ToStatusString());
+        Assert.Equal(RunConstants.StatusBlocked, RunOutcome.Blocked.ToStatusString());
+        Assert.Equal(RunConstants.StatusCancelled, RunOutcome.Cancelled.ToStatusString());
+        Assert.Equal(RunConstants.StatusFailed, RunOutcome.Failed.ToStatusString());
+    }
+
+    [Theory]
+    [InlineData("RunOptions.cs")]
+    [InlineData("RunResult")]
+    public void RunOptions_And_RunResult_DefaultToConstants(string _)
+    {
+        var opts = new RunOptions();
+        Assert.Equal(RunConstants.ModeDryRun, opts.Mode);
+
+        var result = new RunResult();
+        Assert.Equal(RunConstants.StatusOk, result.Status);
+    }
+
+    [Fact]
+    public void NoMagicDryRunMove_InKeyInfrastructureFiles()
+    {
+        var srcDir = ResolveSrcDir();
+        var targetFiles = new[]
+        {
+            Path.Combine(srcDir, "RomCleanup.Infrastructure", "Orchestration", "PhasePlanning.cs"),
+            Path.Combine(srcDir, "RomCleanup.Infrastructure", "Orchestration", "RunOrchestrator.StandardPhaseSteps.cs"),
+            Path.Combine(srcDir, "RomCleanup.Infrastructure", "Deduplication", "FolderDeduplicator.cs"),
+            Path.Combine(srcDir, "RomCleanup.Infrastructure", "Quarantine", "QuarantineService.cs"),
+            Path.Combine(srcDir, "RomCleanup.Infrastructure", "Reporting", "RunReportWriter.cs"),
+            Path.Combine(srcDir, "RomCleanup.Infrastructure", "Configuration", "SettingsLoader.cs"),
+        };
+
+        // Check for mode comparison patterns like == "DryRun" or == "Move"
+        // but NOT phase display labels like new ActionPhaseStep("Move", ...)
+        var forbidden = new[] { "== \"DryRun\"", "== \"Move\"", "!= \"DryRun\"", "!= \"Move\"" };
+
+        foreach (var file in targetFiles)
+        {
+            if (!File.Exists(file)) continue;
+            var lines = File.ReadAllLines(file);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                // Skip comments
+                var trimmed = line.TrimStart();
+                if (trimmed.StartsWith("//") || trimmed.StartsWith("/*") || trimmed.StartsWith("*"))
+                    continue;
+
+                foreach (var magic in forbidden)
+                {
+                    Assert.False(
+                        line.Contains(magic, StringComparison.Ordinal),
+                        $"Magic string {magic} found in {Path.GetFileName(file)} line {i + 1}: {line.Trim()}");
+                }
+            }
+        }
+    }
+
+    private static string ResolveSrcDir([System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
+    {
+        var dir = Path.GetDirectoryName(callerPath);
+        while (dir is not null)
+        {
+            var src = Path.Combine(dir, "src");
+            if (Directory.Exists(src) && File.Exists(Path.Combine(src, "RomCleanup.sln")))
+                return src;
+            dir = Path.GetDirectoryName(dir);
+        }
+        return Path.Combine("src");
     }
 
     private static string FindMainWindowCodePath([System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)

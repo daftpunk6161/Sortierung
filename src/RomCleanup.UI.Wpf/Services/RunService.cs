@@ -48,7 +48,7 @@ public sealed class RunService : IRunService
         BuildOrchestrator(MainViewModel vm, Action<string>? onProgress = null)
     {
         _appState.SetValue("run.build.startedUtc", DateTime.UtcNow);
-        _appState.SetValue("run.mode", vm.DryRun ? "DryRun" : "Move");
+        _appState.SetValue("run.mode", vm.DryRun ? RunConstants.ModeDryRun : RunConstants.ModeMove);
 
         onProgress?.Invoke("[Init] Initialisiere Infrastruktur…");
 
@@ -141,7 +141,7 @@ public sealed class RunService : IRunService
         {
             _vm = vm;
             Roots = vm.Roots.ToList();
-            Mode = vm.DryRun ? "DryRun" : "Move";
+            Mode = vm.DryRun ? RunConstants.ModeDryRun : RunConstants.ModeMove;
             PreferRegions = vm.GetPreferredRegions();
             Extensions = selectedExtensions.Count > 0 ? selectedExtensions : RunOptions.DefaultExtensions;
             RemoveJunk = vm.RemoveJunk;

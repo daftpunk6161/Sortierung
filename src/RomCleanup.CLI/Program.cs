@@ -1,3 +1,4 @@
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Errors;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.FileSystem;
@@ -69,7 +70,7 @@ internal static class Program
 
     private static int Run(CliRunOptions cliOpts)
     {
-        if (string.Equals(cliOpts.Mode, "Move", StringComparison.OrdinalIgnoreCase)
+        if (string.Equals(cliOpts.Mode, RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase)
             && IsNonInteractiveExecution()
             && !cliOpts.Yes)
         {
@@ -132,11 +133,11 @@ internal static class Program
             $"{result.GroupCount} groups: Keep={result.WinnerCount}, Move={result.LoserCount}", "dedupe");
 
         // Output
-        if (cliOpts.Mode == "DryRun")
+        if (cliOpts.Mode == RunConstants.ModeDryRun)
         {
             SafeStandardWriteLine(CliOutputWriter.FormatDryRunJson(projection, result.DedupeGroups, result.ConversionReport));
         }
-        else if (cliOpts.Mode == "Move")
+        else if (cliOpts.Mode == RunConstants.ModeMove)
         {
             CliOutputWriter.WriteMoveSummary(GetStderr(), projection,
                 runOptions.AuditPath, result.ReportPath, result.ConvertedCount);

@@ -1,3 +1,4 @@
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 
@@ -76,7 +77,7 @@ public sealed class QuarantineService
     /// Creates a quarantine action for a file.
     /// </summary>
     public QuarantineAction CreateAction(string sourcePath, string quarantineRoot,
-        IReadOnlyList<string>? reasons = null, string mode = "DryRun")
+        IReadOnlyList<string>? reasons = null, string mode = RunConstants.ModeDryRun)
     {
         var fileName = Path.GetFileName(sourcePath);
 
@@ -116,7 +117,7 @@ public sealed class QuarantineService
     /// <summary>
     /// Executes quarantine actions.
     /// </summary>
-    public QuarantineResult Execute(IReadOnlyList<QuarantineAction> actions, string mode = "DryRun")
+    public QuarantineResult Execute(IReadOnlyList<QuarantineAction> actions, string mode = RunConstants.ModeDryRun)
     {
         if (actions.Count == 0)
             return new QuarantineResult();
@@ -126,9 +127,9 @@ public sealed class QuarantineService
 
         foreach (var action in actions)
         {
-            if (mode == "DryRun")
+            if (mode == RunConstants.ModeDryRun)
             {
-                action.Status = "DryRun";
+                action.Status = RunConstants.ModeDryRun;
                 results.Add(action);
                 continue;
             }
@@ -223,7 +224,7 @@ public sealed class QuarantineService
     /// <summary>
     /// Restores a file from quarantine to its original location.
     /// </summary>
-    public QuarantineRestoreResult Restore(string quarantinePath, string originalPath, string mode = "DryRun",
+    public QuarantineRestoreResult Restore(string quarantinePath, string originalPath, string mode = RunConstants.ModeDryRun,
         IReadOnlyList<string>? allowedRestoreRoots = null)
     {
         if (!_fs.TestPath(quarantinePath, "Leaf"))
@@ -255,8 +256,8 @@ public sealed class QuarantineService
                 return new QuarantineRestoreResult { Status = "Error", Reason = "PathTraversalBlocked" };
         }
 
-        if (mode == "DryRun")
-            return new QuarantineRestoreResult { Status = "DryRun", From = quarantinePath, To = fullOriginal };
+        if (mode == RunConstants.ModeDryRun)
+            return new QuarantineRestoreResult { Status = RunConstants.ModeDryRun, From = quarantinePath, To = fullOriginal };
 
         try
         {

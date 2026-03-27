@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.GameKeys;
@@ -197,7 +198,7 @@ public sealed class FolderDeduplicator
     public FolderDedupeResult DeduplicateByBaseName(
         IReadOnlyList<string> roots,
         string? dupeRoot = null,
-        string mode = "DryRun",
+        string mode = RunConstants.ModeDryRun,
         CancellationToken ct = default)
     {
         int totalFolders = 0, dupeGroups = 0, movedFolders = 0, errorCount = 0;
@@ -217,7 +218,7 @@ public sealed class FolderDeduplicator
                 ? Path.Combine(normalizedRoot, "_FOLDER_DUPES")
                 : Path.GetFullPath(dupeRoot);
 
-            if (mode == "Move")
+            if (mode == RunConstants.ModeMove)
                 _fs.EnsureDirectory(dupeBase);
 
             // Cache normalized dupe path to avoid repeated GetFullPath on UNC per directory
@@ -279,7 +280,7 @@ public sealed class FolderDeduplicator
                         Winner = winner.Dir.FullName
                     };
 
-                    if (mode == "DryRun")
+                    if (mode == RunConstants.ModeDryRun)
                     {
                         action = action with { Action = "DRYRUN-MOVE" };
                         _log?.Invoke($"    DRYRUN -> {loser.Dir.Name}");
@@ -352,7 +353,7 @@ public sealed class FolderDeduplicator
     /// </summary>
     public AutoFolderDedupeResult AutoDeduplicate(
         IReadOnlyList<string> roots,
-        string mode = "DryRun",
+        string mode = RunConstants.ModeDryRun,
         string? dupeRoot = null,
         Func<string, string?>? consoleKeyDetector = null,
         CancellationToken ct = default)
@@ -379,7 +380,7 @@ public sealed class FolderDeduplicator
             }
         }
 
-        if (ps3Roots.Count > 0 && mode == "Move")
+        if (ps3Roots.Count > 0 && mode == RunConstants.ModeMove)
         {
             _log?.Invoke($"Auto-dedupe: running PS3 dedupe on {ps3Roots.Count} root(s)...");
             try

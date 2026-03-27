@@ -29,4 +29,33 @@ public static class RunConstants
 
     /// <summary>Default hash type.</summary>
     public const string DefaultHashType = "SHA1";
+
+    // ── Run Mode constants ──────────────────────────────────────────
+
+    /// <summary>DryRun mode — preview only, no file operations.</summary>
+    public const string ModeDryRun = "DryRun";
+
+    /// <summary>Move mode — execute file operations (move, trash, convert).</summary>
+    public const string ModeMove = "Move";
+
+    /// <summary>Valid run modes.</summary>
+    public static readonly IReadOnlySet<string> ValidModes =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ModeDryRun, ModeMove };
+
+    // ── Run Status constants (match RunOutcome.ToStatusString()) ─────
+
+    /// <summary>Run completed successfully.</summary>
+    public const string StatusOk = "ok";
+
+    /// <summary>Run completed with some non-fatal errors.</summary>
+    public const string StatusCompletedWithErrors = "completed_with_errors";
+
+    /// <summary>Run was blocked before execution.</summary>
+    public const string StatusBlocked = "blocked";
+
+    /// <summary>Run was cancelled by user.</summary>
+    public const string StatusCancelled = "cancelled";
+
+    /// <summary>Run failed with fatal error.</summary>
+    public const string StatusFailed = "failed";
 }

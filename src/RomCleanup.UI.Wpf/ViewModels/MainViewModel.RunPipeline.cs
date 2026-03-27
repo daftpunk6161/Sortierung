@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Text;
 using System.Windows.Input;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Conversion;
 using RomCleanup.Infrastructure.Orchestration;
@@ -452,7 +453,7 @@ public sealed partial class MainViewModel
         if (DryRun || runOptions.ConvertFormat is null)
             return true;
 
-        if (runOptions.Mode != "Move" && !runOptions.ConvertOnly)
+        if (runOptions.Mode != RunConstants.ModeMove && !runOptions.ConvertOnly)
             return true;
 
         if (runOptions.ConvertOnly)
@@ -480,7 +481,7 @@ public sealed partial class MainViewModel
 
     private Task<bool> ConfirmDatRenamePreviewDialogAsync(RunOptions runOptions, CancellationToken cancellationToken)
     {
-        if (DryRun || runOptions.Mode != "Move" || !runOptions.EnableDatRename)
+        if (DryRun || runOptions.Mode != RunConstants.ModeMove || !runOptions.EnableDatRename)
             return Task.FromResult(true);
 
         cancellationToken.ThrowIfCancellationRequested();

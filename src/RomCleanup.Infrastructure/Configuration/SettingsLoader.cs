@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Paths;
 
@@ -370,7 +371,7 @@ public sealed class SettingsLoader
         { "Debug", "Info", "Warning", "Error" };
 
     private static readonly HashSet<string> AllowedModes = new(StringComparer.OrdinalIgnoreCase)
-        { "DryRun", "Move" };
+        { RunConstants.ModeDryRun, RunConstants.ModeMove };
 
     private static readonly HashSet<string> AllowedHashTypes = new(StringComparer.OrdinalIgnoreCase)
         { "SHA1", "SHA256", "MD5", "CRC32" };

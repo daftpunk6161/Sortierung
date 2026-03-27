@@ -1,3 +1,4 @@
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 
 namespace RomCleanup.Infrastructure.Orchestration;
@@ -139,16 +140,16 @@ public sealed class PhasePlanBuilder : IPhasePlanBuilder
         phases.Add(new ActionPhaseStep("Deduplicate", actions.Deduplicate));
         phases.Add(new ActionPhaseStep("JunkRemoval", actions.JunkRemoval));
 
-        if (options.EnableDatRename && options.Mode == "Move" && actions.DatRename is not null)
+        if (options.EnableDatRename && options.Mode == RunConstants.ModeMove && actions.DatRename is not null)
             phases.Add(new ActionPhaseStep("DatRename", actions.DatRename));
 
-        if (options.Mode == "Move")
+        if (options.Mode == RunConstants.ModeMove)
             phases.Add(new ActionPhaseStep("Move", actions.Move));
 
-        if (options.SortConsole && options.Mode == "Move")
+        if (options.SortConsole && options.Mode == RunConstants.ModeMove)
             phases.Add(new ActionPhaseStep("ConsoleSort", actions.ConsoleSort));
 
-        if (options.ConvertFormat is not null && options.Mode == "Move")
+        if (options.ConvertFormat is not null && options.Mode == RunConstants.ModeMove)
             phases.Add(new ActionPhaseStep("WinnerConversion", actions.WinnerConversion));
 
         return phases;

@@ -1,3 +1,4 @@
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Metrics;
 using RomCleanup.Infrastructure.Sorting;
@@ -70,7 +71,7 @@ public sealed partial class RunOrchestrator
         PhaseMetricsCollector metrics,
         CancellationToken cancellationToken)
     {
-        if (options.Mode != "Move")
+        if (options.Mode != RunConstants.ModeMove)
             return PhaseStepResult.Skipped();
 
         metrics.StartPhase("Move");
@@ -103,7 +104,7 @@ public sealed partial class RunOrchestrator
         PhaseMetricsCollector metrics,
         CancellationToken cancellationToken)
     {
-        if (!options.EnableDatRename || options.Mode != "Move")
+        if (!options.EnableDatRename || options.Mode != RunConstants.ModeMove)
             return PhaseStepResult.Skipped();
 
         var entries = state.DatAuditResult?.Entries;
@@ -132,7 +133,7 @@ public sealed partial class RunOrchestrator
         PhaseMetricsCollector metrics,
         CancellationToken cancellationToken)
     {
-        if (!options.SortConsole || options.Mode != "Move" || _consoleDetector is null)
+        if (!options.SortConsole || options.Mode != RunConstants.ModeMove || _consoleDetector is null)
             return PhaseStepResult.Skipped();
 
         metrics.StartPhase("ConsoleSort");
@@ -193,7 +194,7 @@ public sealed partial class RunOrchestrator
         PhaseMetricsCollector metrics,
         CancellationToken cancellationToken)
     {
-        if (options.ConvertFormat is null || options.Mode != "Move" || _converter is null)
+        if (options.ConvertFormat is null || options.Mode != RunConstants.ModeMove || _converter is null)
             return PhaseStepResult.Skipped();
 
         ExecuteWinnerConversionPhase(

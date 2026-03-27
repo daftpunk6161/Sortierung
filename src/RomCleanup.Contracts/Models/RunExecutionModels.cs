@@ -18,7 +18,7 @@ public sealed class RunOptions
     };
 
     public IReadOnlyList<string> Roots { get; init; } = Array.Empty<string>();
-    public string Mode { get; init; } = "DryRun";
+    public string Mode { get; init; } = RunConstants.ModeDryRun;
     public string[] PreferRegions { get; init; } = RunConstants.DefaultPreferRegions;
     public IReadOnlyList<string> Extensions { get; init; } = Array.Empty<string>();
     public bool RemoveJunk { get; init; } = true;
@@ -50,7 +50,7 @@ public sealed record MovePhaseResult(int MoveCount, int FailCount, long SavedByt
 /// </summary>
 public sealed class RunResult
 {
-    public string Status { get; init; } = "ok";
+    public string Status { get; init; } = RunConstants.StatusOk;
     public int ExitCode { get; init; }
     public OperationResult? Preflight { get; init; }
     public int TotalFilesScanned { get; init; }

@@ -1,4 +1,5 @@
 using System.Text;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Orchestration;
 
@@ -9,9 +10,9 @@ namespace RomCleanup.Infrastructure.Reporting;
 /// </summary>
 public static class RunReportWriter
 {
-    public static IReadOnlyList<ReportEntry> BuildEntries(RunResult result, string mode = "Move")
+    public static IReadOnlyList<ReportEntry> BuildEntries(RunResult result, string mode = RunConstants.ModeMove)
     {
-        var isDryRun = string.Equals(mode, "DryRun", StringComparison.OrdinalIgnoreCase);
+        var isDryRun = string.Equals(mode, RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase);
         var entries = new List<ReportEntry>();
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -99,7 +100,7 @@ public static class RunReportWriter
     {
         var entries = BuildEntries(result, mode);
         var projection = RunProjectionFactory.Create(result);
-        var moveCount = string.Equals(mode, "DryRun", StringComparison.OrdinalIgnoreCase)
+        var moveCount = string.Equals(mode, RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase)
             ? projection.Dupes
             : projection.MoveCount;
         var junkCount = projection.Junk;

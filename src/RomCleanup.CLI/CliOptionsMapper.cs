@@ -44,7 +44,7 @@ internal static class CliOptionsMapper
 
         // Audit path default for Move mode
         var auditPath = cli.AuditPath;
-        if (string.IsNullOrEmpty(auditPath) && cli.Mode == "Move")
+        if (string.IsNullOrEmpty(auditPath) && cli.Mode == RunConstants.ModeMove)
         {
             var auditDir = ArtifactPathResolver.GetArtifactDirectory(cli.Roots, AppIdentity.ArtifactDirectories.AuditLogs);
             auditPath = Path.Combine(Path.GetFullPath(auditDir),
