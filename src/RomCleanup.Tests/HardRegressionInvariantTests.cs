@@ -945,21 +945,24 @@ public sealed class HardRegressionInvariantTests : IDisposable
 
     private static (int ExitCode, string Stdout, string Stderr) RunCli(CliRunOptions options)
     {
-        var origOut = Console.Out;
-        var origErr = Console.Error;
-        using var stdout = new StringWriter();
-        using var stderr = new StringWriter();
-        try
+        lock (SharedTestLocks.ConsoleLock)
         {
-            Console.SetOut(stdout);
-            Console.SetError(stderr);
-            var exitCode = CliProgram.RunForTests(options);
-            return (exitCode, stdout.ToString(), stderr.ToString());
-        }
-        finally
-        {
-            Console.SetOut(origOut);
-            Console.SetError(origErr);
+            var origOut = Console.Out;
+            var origErr = Console.Error;
+            using var stdout = new StringWriter();
+            using var stderr = new StringWriter();
+            try
+            {
+                Console.SetOut(stdout);
+                Console.SetError(stderr);
+                var exitCode = CliProgram.RunForTests(options);
+                return (exitCode, stdout.ToString(), stderr.ToString());
+            }
+            finally
+            {
+                Console.SetOut(origOut);
+                Console.SetError(origErr);
+            }
         }
     }
 

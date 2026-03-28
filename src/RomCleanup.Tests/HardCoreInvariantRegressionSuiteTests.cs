@@ -24,7 +24,6 @@ namespace RomCleanup.Tests;
 /// </summary>
 public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
 {
-    private static readonly object ConsoleLock = new();
     private readonly string _tempDir;
 
     public HardCoreInvariantRegressionSuiteTests()
@@ -1199,7 +1198,7 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
 
     private static (int ExitCode, string Stdout, string Stderr) RunCli(CliRunOptions options)
     {
-        lock (ConsoleLock)
+        lock (SharedTestLocks.ConsoleLock)
         {
             var origOut = Console.Out;
             var origErr = Console.Error;

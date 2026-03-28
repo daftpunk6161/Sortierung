@@ -655,20 +655,23 @@ public sealed class HardAuditInvariantTests : IDisposable
 
     private static void RunCliSilent(CliRunOptions options)
     {
-        var originalOut = Console.Out;
-        var originalError = Console.Error;
-        using var stdout = new StringWriter();
-        using var stderr = new StringWriter();
-        try
+        lock (SharedTestLocks.ConsoleLock)
         {
-            Console.SetOut(stdout);
-            Console.SetError(stderr);
-            CliProgram.RunForTests(options);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-            Console.SetError(originalError);
+            var originalOut = Console.Out;
+            var originalError = Console.Error;
+            using var stdout = new StringWriter();
+            using var stderr = new StringWriter();
+            try
+            {
+                Console.SetOut(stdout);
+                Console.SetError(stderr);
+                CliProgram.RunForTests(options);
+            }
+            finally
+            {
+                Console.SetOut(originalOut);
+                Console.SetError(originalError);
+            }
         }
     }
 

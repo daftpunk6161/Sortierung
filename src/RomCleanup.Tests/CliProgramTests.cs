@@ -599,31 +599,34 @@ public sealed class CliProgramTests : IDisposable
     [Fact]
     public void RunForTests_MoveNonInteractive_WithoutYes_ReturnsExitCode3()
     {
-        using var stdout = new StringWriter();
-        using var stderr = new StringWriter();
-        var originalOut = Console.Out;
-        var originalErr = Console.Error;
-
-        try
+        lock (SharedTestLocks.ConsoleLock)
         {
-            Console.SetOut(stdout);
-            Console.SetError(stderr);
-            CliProgram.SetNonInteractiveOverride(true);
+            using var stdout = new StringWriter();
+            using var stderr = new StringWriter();
+            var originalOut = Console.Out;
+            var originalErr = Console.Error;
 
-            var exitCode = CliProgram.RunForTests(new CliRunOptions
+            try
             {
-                Roots = new[] { _tempDir },
-                Mode = "Move"
-            });
+                Console.SetOut(stdout);
+                Console.SetError(stderr);
+                CliProgram.SetNonInteractiveOverride(true);
 
-            Assert.Equal(3, exitCode);
-            Assert.Contains("requires --yes", stderr.ToString(), StringComparison.OrdinalIgnoreCase);
-        }
-        finally
-        {
-            CliProgram.SetNonInteractiveOverride(null);
-            Console.SetOut(originalOut);
-            Console.SetError(originalErr);
+                var exitCode = CliProgram.RunForTests(new CliRunOptions
+                {
+                    Roots = new[] { _tempDir },
+                    Mode = "Move"
+                });
+
+                Assert.Equal(3, exitCode);
+                Assert.Contains("requires --yes", stderr.ToString(), StringComparison.OrdinalIgnoreCase);
+            }
+            finally
+            {
+                CliProgram.SetNonInteractiveOverride(null);
+                Console.SetOut(originalOut);
+                Console.SetError(originalErr);
+            }
         }
     }
 

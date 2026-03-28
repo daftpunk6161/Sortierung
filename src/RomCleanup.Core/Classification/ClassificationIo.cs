@@ -4,25 +4,35 @@ namespace RomCleanup.Core.Classification;
 
 /// <summary>
 /// Abstracts I/O for classification detectors so Core stays testable.
-/// Defaults to System.IO; Infrastructure or tests can override via <see cref="Configure"/>.
+/// Defaults to System.IO; tests can override via <see cref="Configure"/>.
+/// Uses AsyncLocal so overrides are scoped to the calling execution context
+/// and never leak across parallel test threads.
 /// </summary>
 internal static class ClassificationIo
 {
-    private static Func<string, bool> _fileExists = System.IO.File.Exists;
-    private static Func<string, Stream> _openRead = path =>
+    // ── Immutable defaults (shared, thread-safe) ─────────────────────
+    private static readonly Func<string, bool> DefaultFileExists = File.Exists;
+    private static readonly Func<string, Stream> DefaultOpenRead = path =>
         new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-    private static Func<string, long> _fileLength = path => new FileInfo(path).Length;
-    private static Func<string, FileAttributes> _getAttributes = System.IO.File.GetAttributes;
-    private static Func<string, ZipArchive> _openZipRead = ZipFile.OpenRead;
+    private static readonly Func<string, long> DefaultFileLength = path => new FileInfo(path).Length;
+    private static readonly Func<string, FileAttributes> DefaultGetAttributes = File.GetAttributes;
+    private static readonly Func<string, ZipArchive> DefaultOpenZipRead = ZipFile.OpenRead;
 
-    public static bool FileExists(string path) => _fileExists(path);
-    public static Stream OpenRead(string path) => _openRead(path);
-    public static long FileLength(string path) => _fileLength(path);
-    public static FileAttributes GetAttributes(string path) => _getAttributes(path);
-    public static ZipArchive OpenZipRead(string path) => _openZipRead(path);
+    // ── Per-context overrides (test isolation) ───────────────────────
+    private static readonly AsyncLocal<Func<string, bool>?> FileExistsOverride = new();
+    private static readonly AsyncLocal<Func<string, Stream>?> OpenReadOverride = new();
+    private static readonly AsyncLocal<Func<string, long>?> FileLengthOverride = new();
+    private static readonly AsyncLocal<Func<string, FileAttributes>?> GetAttributesOverride = new();
+    private static readonly AsyncLocal<Func<string, ZipArchive>?> OpenZipReadOverride = new();
+
+    public static bool FileExists(string path) => (FileExistsOverride.Value ?? DefaultFileExists)(path);
+    public static Stream OpenRead(string path) => (OpenReadOverride.Value ?? DefaultOpenRead)(path);
+    public static long FileLength(string path) => (FileLengthOverride.Value ?? DefaultFileLength)(path);
+    public static FileAttributes GetAttributes(string path) => (GetAttributesOverride.Value ?? DefaultGetAttributes)(path);
+    public static ZipArchive OpenZipRead(string path) => (OpenZipReadOverride.Value ?? DefaultOpenZipRead)(path);
 
     /// <summary>
-    /// Replace I/O delegates (for Infrastructure wiring or testing).
+    /// Replace I/O delegates for the current execution context only.
     /// Pass null to keep current delegate.
     /// </summary>
     public static void Configure(
@@ -32,22 +42,22 @@ internal static class ClassificationIo
         Func<string, FileAttributes>? getAttributes = null,
         Func<string, ZipArchive>? openZipRead = null)
     {
-        if (fileExists is not null) _fileExists = fileExists;
-        if (openRead is not null) _openRead = openRead;
-        if (fileLength is not null) _fileLength = fileLength;
-        if (getAttributes is not null) _getAttributes = getAttributes;
-        if (openZipRead is not null) _openZipRead = openZipRead;
+        if (fileExists is not null) FileExistsOverride.Value = fileExists;
+        if (openRead is not null) OpenReadOverride.Value = openRead;
+        if (fileLength is not null) FileLengthOverride.Value = fileLength;
+        if (getAttributes is not null) GetAttributesOverride.Value = getAttributes;
+        if (openZipRead is not null) OpenZipReadOverride.Value = openZipRead;
     }
 
     /// <summary>
-    /// Reset to default System.IO delegates.
+    /// Reset to default System.IO delegates for the current execution context.
     /// </summary>
     public static void ResetDefaults()
     {
-        _fileExists = System.IO.File.Exists;
-        _openRead = path => new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        _fileLength = path => new FileInfo(path).Length;
-        _getAttributes = System.IO.File.GetAttributes;
-        _openZipRead = ZipFile.OpenRead;
+        FileExistsOverride.Value = null;
+        OpenReadOverride.Value = null;
+        FileLengthOverride.Value = null;
+        GetAttributesOverride.Value = null;
+        OpenZipReadOverride.Value = null;
     }
 }
