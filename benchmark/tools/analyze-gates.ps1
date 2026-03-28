@@ -50,14 +50,19 @@ function Get-Fallklassen($tags) {
     if ($tagSet.Contains("clean-reference") -or $tagSet.Contains("region-variant") -or $tagSet.Contains("revision-variant")) { $result += "FC-01" }
     if ($tagSet.Contains("wrong-name")) { $result += "FC-02" }
     if ($tagSet.Contains("header-conflict")) { $result += "FC-03" }
+    if ($tagSet.Contains("header-vs-headerless-pair")) { $result += "FC-03" }
     if ($tagSet.Contains("wrong-extension")) { $result += "FC-04" }
+    if ($tagSet.Contains("extension-conflict")) { $result += "FC-04" }
     if ($tagSet.Contains("folder-header-conflict") -or $tagSet.Contains("folder-only-detection") -or $tagSet.Contains("folder-vs-header-conflict")) { $result += "FC-05" }
     if ($tagSet.Contains("dat-exact-match") -or $tagSet.Contains("dat-exact") -or $tagSet.Contains("dat-tosec") -or $tagSet.Contains("dat-nointro") -or $tagSet.Contains("dat-redump")) { $result += "FC-06" }
     if ($tagSet.Contains("dat-weak") -or $tagSet.Contains("dat-none")) { $result += "FC-07" }
     if ($tagSet.Contains("bios")) { $result += "FC-08" }
+    if ($tagSet.Contains("bios-wrong-name") -or $tagSet.Contains("bios-wrong-folder") -or $tagSet.Contains("bios-false-positive") -or $tagSet.Contains("bios-shared")) { $result += "FC-08" }
     if ($tagSet.Contains("parent") -or $tagSet.Contains("clone")) { $result += "FC-09" }
+    if ($tagSet.Contains("arcade-parent") -or $tagSet.Contains("arcade-clone")) { $result += "FC-09" }
     if ($tagSet.Contains("multi-disc")) { $result += "FC-10" }
     if ($tagSet.Contains("multi-file")) { $result += "FC-11" }
+    if ($tagSet.Contains("cue-bin") -or $tagSet.Contains("gdi-tracks") -or $tagSet.Contains("ccd-img") -or $tagSet.Contains("mds-mdf") -or $tagSet.Contains("m3u-playlist")) { $result += "FC-11" }
     if ($tagSet.Contains("archive-inner")) { $result += "FC-12" }
     if ($tagSet.Contains("directory-based")) { $result += "FC-13" }
     if ($tagSet.Contains("expected-unknown") -or $tagSet.Contains("unknown-expected")) { $result += "FC-14" }
@@ -65,6 +70,7 @@ function Get-Fallklassen($tags) {
     if ($tagSet.Contains("negative-control")) { $result += "FC-16" }
     if ($tagSet.Contains("sort-blocked") -or $tagSet.Contains("repair-safety") -or $tagSet.Contains("confidence-low") -or $tagSet.Contains("confidence-borderline") -or $tagSet.Contains("repair-unsafe")) { $result += "FC-17" }
     if ($tagSet.Contains("cross-system") -or $tagSet.Contains("cross-system-ambiguity") -or $tagSet.Contains("gb-gbc-ambiguity") -or $tagSet.Contains("md-32x-ambiguity") -or $tagSet.Contains("ps-disambiguation")) { $result += "FC-18" }
+    if ($tagSet.Contains("arcade-confusion-split-merged") -or $tagSet.Contains("arcade-confusion-merged-nonmerged")) { $result += "FC-18" }
     if ($tagSet.Contains("junk") -or $tagSet.Contains("non-game") -or $tagSet.Contains("demo") -or $tagSet.Contains("homebrew") -or $tagSet.Contains("hack")) { $result += "FC-19" }
     if ($tagSet.Contains("corrupt") -or $tagSet.Contains("truncated") -or $tagSet.Contains("broken-set") -or $tagSet.Contains("corrupt-archive") -or $tagSet.Contains("truncated-rom")) { $result += "FC-20" }
     
@@ -105,23 +111,35 @@ foreach ($entry in $entries) {
     }
     if ($tagSet.Contains("parent")) { Inc-SpecialArea "arcadeParent" }
     if ($tagSet.Contains("clone")) { Inc-SpecialArea "arcadeClone" }
-    if ($tagSet.Contains("arcade-split") -or $tagSet.Contains("arcade-merged") -or $tagSet.Contains("arcade-non-merged")) { Inc-SpecialArea "arcadeSplitMergedNonMerged" }
+    if ($tagSet.Contains("arcade-split") -or $tagSet.Contains("arcade-merged") -or $tagSet.Contains("arcade-non-merged") -or $tagSet.Contains("arcade-nonmerged")) { Inc-SpecialArea "arcadeSplitMergedNonMerged" }
     if ($tagSet.Contains("arcade-bios")) { Inc-SpecialArea "arcadeBios" }
-    if ($tagSet.Contains("arcade-chd")) { Inc-SpecialArea "arcadeChdSupplement" }
-    if ($tagSet.Contains("cross-system")) {
-        if ($ck -in @("PS1","PS2","PS3")) { Inc-SpecialArea "psDisambiguation" }
+    if ($tagSet.Contains("arcade-chd") -or $tagSet.Contains("arcade-game-chd")) { Inc-SpecialArea "arcadeChdSupplement" }
+    if ($tagSet.Contains("bios-wrong-name") -or $tagSet.Contains("bios-wrong-folder") -or $tagSet.Contains("bios-false-positive") -or $tagSet.Contains("bios-shared")) { Inc-SpecialArea "biosErrorModes" }
+    if ($tagSet.Contains("arcade-confusion-split-merged") -or $tagSet.Contains("arcade-confusion-merged-nonmerged")) { Inc-SpecialArea "arcadeConfusion" }
+    if ($tagSet.Contains("cross-system") -or $tagSet.Contains("cross-system-ambiguity")) {
+        if ($ck -in @("PS1","PS2","PS3","PSP")) { Inc-SpecialArea "psDisambiguation" }
         if ($ck -in @("GB","GBC")) { Inc-SpecialArea "gbGbcCgb" }
         if ($ck -in @("MD","32X")) { Inc-SpecialArea "md32x" }
+        if ($ck -in @("SAT","DC")) { Inc-SpecialArea "satDcDisambiguation" }
+        if ($ck -in @("PCE","PCECD")) { Inc-SpecialArea "pcePcecdDisambiguation" }
     }
     if ($tagSet.Contains("multi-file")) { Inc-SpecialArea "multiFileSets" }
     if ($tagSet.Contains("multi-disc")) { Inc-SpecialArea "multiDisc" }
     if ($tagSet.Contains("chd-raw-sha1")) { Inc-SpecialArea "chdRawSha1" }
-    if ($tagSet.Contains("no-intro")) { Inc-SpecialArea "datNoIntro" }
-    if ($tagSet.Contains("redump")) { Inc-SpecialArea "datRedump" }
-    if ($tagSet.Contains("mame")) { Inc-SpecialArea "datMame" }
-    if ($tagSet.Contains("tosec")) { Inc-SpecialArea "datTosec" }
+    if ($tagSet.Contains("no-intro") -or $tagSet.Contains("dat-nointro")) { Inc-SpecialArea "datNoIntro" }
+    if ($tagSet.Contains("redump") -or $tagSet.Contains("dat-redump")) { Inc-SpecialArea "datRedump" }
+    if ($tagSet.Contains("mame") -or $tagSet.Contains("dat-mame")) { Inc-SpecialArea "datMame" }
+    if ($tagSet.Contains("tosec") -or $tagSet.Contains("dat-tosec")) { Inc-SpecialArea "datTosec" }
     if ($tagSet.Contains("directory-based")) { Inc-SpecialArea "directoryBased" }
     if ($tagSet.Contains("headerless")) { Inc-SpecialArea "headerless" }
+    if ($tagSet.Contains("cue-bin")) { Inc-SpecialArea "cueBin" }
+    if ($tagSet.Contains("gdi-tracks")) { Inc-SpecialArea "gdiTracks" }
+    if ($tagSet.Contains("ccd-img") -or $tagSet.Contains("mds-mdf")) { Inc-SpecialArea "ccdMds" }
+    if ($tagSet.Contains("m3u-playlist")) { Inc-SpecialArea "m3uPlaylist" }
+    if ($tagSet.Contains("serial-number")) { Inc-SpecialArea "serialNumber" }
+    if ($tagSet.Contains("header-vs-headerless-pair")) { Inc-SpecialArea "headerVsHeaderlessPairs" }
+    if ($tagSet.Contains("container-cso") -or $tagSet.Contains("container-wia") -or $tagSet.Contains("container-rvz") -or $tagSet.Contains("container-wbfs")) { Inc-SpecialArea "containerVariants" }
+    if ($tagSet.Contains("keyword-detection")) { Inc-SpecialArea "keywordOnly" }
 }
 
 $specialAreas["biosSystems"] = $biosSystems.Count

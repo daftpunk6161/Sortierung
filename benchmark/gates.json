@@ -6,7 +6,7 @@
     "note": "Calibrated against 2073-entry ground-truth dataset. hardFail ≈ 80% of actual, target ≈ actual or slightly above."
   },
   "s1": {
-    "totalEntries": { "target": 2100, "hardFail": 1650 },
+    "totalEntries": { "target": 2400, "hardFail": 2000 },
     "systemsCovered": { "target": 65, "hardFail": 52 },
     "fallklassenCovered": { "target": 20, "hardFail": 16 },
 
@@ -28,28 +28,28 @@
     "caseClasses": {
       "FC-01": { "name": "Saubere Referenz",          "target": 900, "hardFail": 710 },
       "FC-02": { "name": "Falsch benannt",            "target": 100, "hardFail": 76 },
-      "FC-03": { "name": "Header-Konflikt",           "target": 35,  "hardFail": 24 },
+      "FC-03": { "name": "Header-Konflikt",           "target": 45,  "hardFail": 32 },
       "FC-04": { "name": "Extension-Konflikt",        "target": 65,  "hardFail": 48 },
       "FC-05": { "name": "Folder-vs-Header",          "target": 60,  "hardFail": 46 },
       "FC-06": { "name": "DAT exact",                 "target": 320, "hardFail": 250 },
       "FC-07": { "name": "DAT weak/none",             "target": 70,  "hardFail": 52 },
-      "FC-08": { "name": "BIOS",                      "target": 55,  "hardFail": 40 },
+      "FC-08": { "name": "BIOS",                      "target": 75, "hardFail": 55 },
       "FC-09": { "name": "Parent/Clone",              "target": 135, "hardFail": 105 },
       "FC-10": { "name": "Multi-Disc",                "target": 38,  "hardFail": 27 },
-      "FC-11": { "name": "Multi-File",                "target": 25,  "hardFail": 16 },
+      "FC-11": { "name": "Multi-File",                "target": 35,  "hardFail": 25 },
       "FC-12": { "name": "Archive-Inner",             "target": 45,  "hardFail": 34 },
-      "FC-13": { "name": "Directory-based",           "target": 35,  "hardFail": 24 },
+      "FC-13": { "name": "Directory-based",           "target": 45,  "hardFail": 32 },
       "FC-14": { "name": "UNKNOWN expected",           "target": 35,  "hardFail": 24 },
       "FC-15": { "name": "Ambiguous",                 "target": 25,  "hardFail": 16 },
-      "FC-16": { "name": "Negative Control",          "target": 55,  "hardFail": 40 },
+      "FC-16": { "name": "Negative Control",          "target": 70,  "hardFail": 50 },
       "FC-17": { "name": "Repair/Sort-blocked",       "target": 105, "hardFail": 80 },
-      "FC-18": { "name": "Cross-System",              "target": 100, "hardFail": 76 },
-      "FC-19": { "name": "Junk/NonGame",              "target": 170, "hardFail": 133 },
-      "FC-20": { "name": "Kaputte Sets",              "target": 85,  "hardFail": 64 }
+      "FC-18": { "name": "Cross-System",              "target": 120, "hardFail": 90 },
+      "FC-19": { "name": "Junk/NonGame",              "target": 200, "hardFail": 155 },
+      "FC-20": { "name": "Kaputte Sets",              "target": 100, "hardFail": 75 }
     },
 
     "specialAreas": {
-      "biosTotal":                     { "target": 55, "hardFail": 40 },
+      "biosTotal":                     { "target": 75, "hardFail": 55 },
       "biosSystems":                   { "target": 25, "hardFail": 18 },
       "arcadeParent":                  { "target": 100, "hardFail": 77 },
       "arcadeClone":                   { "target": 38, "hardFail": 28 },
@@ -66,9 +66,29 @@
       "datRedump":                     { "target": 260, "hardFail": 201 },
       "datMame":                       { "target": 28, "hardFail": 20 },
       "datTosec":                      { "target": 155, "hardFail": 120 },
-      "directoryBased":                { "target": 33, "hardFail": 24 },
+      "directoryBased":                { "target": 45, "hardFail": 32 },
       "headerless":                    { "target": 55, "hardFail": 40 },
-      "holdout":                       { "target": 50, "hardFail": 20 }
+      "holdout":                       { "target": 50, "hardFail": 20 },
+      "biosErrorModes":                { "target": 25, "hardFail": 18 },
+      "arcadeConfusion":               { "target": 25, "hardFail": 16 },
+      "arcadeGameChd":                 { "target": 8,  "hardFail": 5 },
+      "cueBin":                        { "target": 20, "hardFail": 0 },
+      "gdiTracks":                     { "target": 8,  "hardFail": 0 },
+      "ccdMds":                        { "target": 10, "hardFail": 0 },
+      "m3uPlaylist":                   { "target": 8,  "hardFail": 0 },
+      "serialNumber":                  { "target": 15, "hardFail": 0 },
+      "headerVsHeaderlessPairs":       { "target": 25, "hardFail": 10 },
+      "containerVariants":             { "target": 20, "hardFail": 0 },
+      "keywordOnly":                   { "target": 20, "hardFail": 12 },
+      "satDcDisambiguation":           { "target": 10, "hardFail": 5 },
+      "pcePcecdDisambiguation":        { "target": 8,  "hardFail": 3 }
+    },
+
+    "difficultyDistribution": {
+      "easyMax":        { "target": 0.55, "hardFail": 0.60 },
+      "mediumMin":      { "target": 0.25, "hardFail": 0.20 },
+      "hardMin":        { "target": 0.12, "hardFail": 0.10 },
+      "adversarialMin": { "target": 0.01, "hardFail": 0.005 }
     }
   }
 }

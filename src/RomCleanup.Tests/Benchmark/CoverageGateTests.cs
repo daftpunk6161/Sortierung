@@ -153,6 +153,108 @@ public sealed class CoverageGateTests
             $"has {gate.Actual} entries, below hard-fail {gate.HardFail} (target: {gate.Target})");
     }
 
+    // ═══ GATE: SPECIAL AREAS ═══════════════════════════════════════════
+
+    [Theory]
+    [InlineData("biosTotal")]
+    [InlineData("arcadeParent")]
+    [InlineData("arcadeClone")]
+    [InlineData("arcadeSplitMergedNonMerged")]
+    [InlineData("arcadeBios")]
+    [InlineData("arcadeChdSupplement")]
+    [InlineData("psDisambiguation")]
+    [InlineData("gbGbcCgb")]
+    [InlineData("md32x")]
+    [InlineData("multiFileSets")]
+    [InlineData("multiDisc")]
+    [InlineData("chdRawSha1")]
+    [InlineData("datNoIntro")]
+    [InlineData("datRedump")]
+    [InlineData("datMame")]
+    [InlineData("datTosec")]
+    [InlineData("directoryBased")]
+    [InlineData("headerless")]
+    [InlineData("biosErrorModes")]
+    [InlineData("arcadeConfusion")]
+    [InlineData("cueBin")]
+    [InlineData("gdiTracks")]
+    [InlineData("ccdMds")]
+    [InlineData("m3uPlaylist")]
+    [InlineData("serialNumber")]
+    [InlineData("headerVsHeaderlessPairs")]
+    [InlineData("containerVariants")]
+    [InlineData("keywordOnly")]
+    [InlineData("satDcDisambiguation")]
+    [InlineData("pcePcecdDisambiguation")]
+    public void Gate_SpecialArea_MeetsHardFail(string area)
+    {
+        var report = BuildReport();
+        var gate = report.GateResults.FirstOrDefault(g =>
+            g.GateName.Equals($"s1.specialAreas.{area}", StringComparison.OrdinalIgnoreCase));
+
+        // New gates with hardFail=0 pass trivially if no entries; only assert if gate exists
+        if (gate == null) return;
+
+        Assert.True(gate.Actual >= gate.HardFail,
+            $"Special area '{area}' has {gate.Actual} entries, below hard-fail {gate.HardFail} (target: {gate.Target})");
+    }
+
+    // ═══ GATE: DIFFICULTY DISTRIBUTION ══════════════════════════════════
+
+    [Fact]
+    public void Gate_DifficultyDistribution_CoversAllLevels()
+    {
+        var entries = GroundTruthLoader.LoadAll();
+        var byDiff = entries.GroupBy(e => e.Difficulty).ToDictionary(g => g.Key, g => g.Count());
+
+        Assert.True(byDiff.GetValueOrDefault("easy") > 0, "No difficulty=easy entries");
+        Assert.True(byDiff.GetValueOrDefault("medium") > 0, "No difficulty=medium entries");
+        Assert.True(byDiff.GetValueOrDefault("hard") > 0, "No difficulty=hard entries");
+    }
+
+    [Theory]
+    [InlineData("s1.difficultyDistribution.easyMax")]
+    [InlineData("s1.difficultyDistribution.mediumMin")]
+    [InlineData("s1.difficultyDistribution.hardMin")]
+    [InlineData("s1.difficultyDistribution.adversarialMin")]
+    [Trait("Category", "CoverageGate")]
+    public void Gate_DifficultyDistribution_MeetsHardFail(string gateName)
+    {
+        var report = BuildReport();
+        var gate = FindGate(report, gateName);
+
+        Assert.NotNull(gate);
+        Assert.True(gate.Status != GateStatus.Fail,
+            $"Difficulty gate '{gateName}' failed: actual={gate.Actual}‰, target={gate.Target}‰, hardFail={gate.HardFail}‰");
+    }
+
+    [Fact]
+    [Trait("Category", "CoverageGate")]
+    public void Gate_DifficultyDistribution_EasyNotDominant()
+    {
+        var report = BuildReport();
+        var easyGate = FindGate(report, "s1.difficultyDistribution.easyMax");
+
+        Assert.NotNull(easyGate);
+        // Easy should not exceed hardFail threshold (60%)
+        Assert.True(easyGate.Status != GateStatus.Fail,
+            $"Easy entries dominate: {easyGate.Actual}‰ exceeds hardFail {easyGate.HardFail}‰");
+    }
+
+    [Fact]
+    [Trait("Category", "CoverageGate")]
+    public void Gate_DifficultyDistribution_HardAndAdversarialPresent()
+    {
+        var report = BuildReport();
+        var hardGate = FindGate(report, "s1.difficultyDistribution.hardMin");
+        var advGate = FindGate(report, "s1.difficultyDistribution.adversarialMin");
+
+        Assert.NotNull(hardGate);
+        Assert.NotNull(advGate);
+        Assert.True(hardGate.Actual > 0, "No hard entries detected in ratio gate");
+        Assert.True(advGate.Actual > 0, "No adversarial entries detected in ratio gate");
+    }
+
     // ═══ STUB GENERATOR ═════════════════════════════════════════════════
 
     [Fact]
@@ -161,6 +263,9 @@ public sealed class CoverageGateTests
         var registry = new StubGeneratorRegistry();
         Assert.Contains("nes-ines", registry.RegisteredIds);
         Assert.Contains("ps1-pvd", registry.RegisteredIds);
+        Assert.Contains("ccd-img", registry.RegisteredIds);
+        Assert.Contains("mds-mdf", registry.RegisteredIds);
+        Assert.Contains("m3u-playlist", registry.RegisteredIds);
     }
 
     [Fact]
@@ -191,6 +296,44 @@ public sealed class CoverageGateTests
         Assert.Equal((byte)'0', data[pvdOffset + 3]);
         Assert.Equal((byte)'0', data[pvdOffset + 4]);
         Assert.Equal((byte)'1', data[pvdOffset + 5]);
+    }
+
+    [Fact]
+    public void CcdImgGenerator_ProducesValidCcd()
+    {
+        var gen = new CcdImgGenerator();
+        var data = gen.Generate("single-track");
+        var text = System.Text.Encoding.UTF8.GetString(data);
+
+        Assert.Contains("[CloneCD]", text);
+        Assert.Contains("Version=3", text);
+        Assert.Contains("[Disc]", text);
+    }
+
+    [Fact]
+    public void MdsMdfGenerator_ProducesValidMds()
+    {
+        var gen = new MdsMdfGenerator();
+        var data = gen.Generate("single-track");
+
+        // MDS signature: "MEDIA DESCRIPTOR"
+        var sig = System.Text.Encoding.ASCII.GetString(data, 0, 16);
+        Assert.Equal("MEDIA DESCRIPTOR", sig);
+    }
+
+    [Fact]
+    public void M3uPlaylistGenerator_ProducesValidPlaylist()
+    {
+        var gen = new M3uPlaylistGenerator();
+        var data = gen.Generate("two-disc", new Dictionary<string, string>
+        {
+            ["baseName"] = "TestGame",
+            ["discExt"] = ".cue"
+        });
+        var text = System.Text.Encoding.UTF8.GetString(data);
+
+        Assert.Contains("TestGame (Disc 1).cue", text);
+        Assert.Contains("TestGame (Disc 2).cue", text);
     }
 
     // ═══ CLASSIFIER UNIT TESTS ══════════════════════════════════════════
@@ -236,6 +379,25 @@ public sealed class CoverageGateTests
     {
         var result = FallklasseClassifier.Classify([]);
         Assert.Empty(result);
+    }
+
+    // ═══ MANIFEST CALCULATOR ═══════════════════════════════════════════
+
+    [Fact]
+    public void ManifestCalculator_ProducesConsistentTotals()
+    {
+        var manifest = ManifestCalculator.Calculate();
+        var entries = GroundTruthLoader.LoadAll();
+
+        Assert.Equal(entries.Count, manifest.TotalEntries);
+        Assert.True(manifest.SystemsCovered > 0, "No systems covered");
+        Assert.True(manifest.BySet.Count > 0, "No sets in manifest");
+        Assert.True(manifest.ByPlatformFamily.Count > 0, "No platform families");
+        Assert.True(manifest.ByDifficulty.Count > 0, "No difficulty levels");
+
+        // Sum of bySet entries should equal total
+        var setSum = manifest.BySet.Values.Sum();
+        Assert.Equal(manifest.TotalEntries, setSum);
     }
 
     // ═══ COVERAGE REPORT DIAGNOSTICS ════════════════════════════════════

@@ -140,6 +140,21 @@ internal sealed class CoverageValidator
             gateResults.Add(EvaluateGate($"s1.specialAreas.{area}", count, threshold));
         }
 
+        // Difficulty distribution gates (ratio-based)
+        if (s1.DifficultyDistribution is { } dd && entries.Count > 0)
+        {
+            double total = entries.Count;
+            double easyRatio = byDifficulty.GetValueOrDefault("easy") / total;
+            double mediumRatio = byDifficulty.GetValueOrDefault("medium") / total;
+            double hardRatio = byDifficulty.GetValueOrDefault("hard") / total;
+            double adversarialRatio = byDifficulty.GetValueOrDefault("adversarial") / total;
+
+            gateResults.Add(EvaluateRatioMaxGate("s1.difficultyDistribution.easyMax", easyRatio, dd.EasyMax));
+            gateResults.Add(EvaluateRatioMinGate("s1.difficultyDistribution.mediumMin", mediumRatio, dd.MediumMin));
+            gateResults.Add(EvaluateRatioMinGate("s1.difficultyDistribution.hardMin", hardRatio, dd.HardMin));
+            gateResults.Add(EvaluateRatioMinGate("s1.difficultyDistribution.adversarialMin", adversarialRatio, dd.AdversarialMin));
+        }
+
         var overallPass = gateResults.All(g => g.Status != GateStatus.Fail);
 
         return new CoverageReport
@@ -174,6 +189,46 @@ internal sealed class CoverageValidator
         };
     }
 
+    /// <summary>
+    /// Evaluates a ratio-based MIN gate: actual ratio must be >= target.
+    /// Stores permille (×1000) in Actual/Target/HardFail for integer display.
+    /// </summary>
+    private static GateResult EvaluateRatioMinGate(string name, double actualRatio, RatioThreshold threshold)
+    {
+        var status = actualRatio >= threshold.Target ? GateStatus.Pass
+            : actualRatio >= threshold.HardFail ? GateStatus.Warning
+            : GateStatus.Fail;
+
+        return new GateResult
+        {
+            GateName = name,
+            Actual = (int)(actualRatio * 1000),
+            Target = (int)(threshold.Target * 1000),
+            HardFail = (int)(threshold.HardFail * 1000),
+            Status = status
+        };
+    }
+
+    /// <summary>
+    /// Evaluates a ratio-based MAX gate: actual ratio must be <= target.
+    /// Stores permille (×1000) in Actual/Target/HardFail for integer display.
+    /// </summary>
+    private static GateResult EvaluateRatioMaxGate(string name, double actualRatio, RatioThreshold threshold)
+    {
+        var status = actualRatio <= threshold.Target ? GateStatus.Pass
+            : actualRatio <= threshold.HardFail ? GateStatus.Warning
+            : GateStatus.Fail;
+
+        return new GateResult
+        {
+            GateName = name,
+            Actual = (int)(actualRatio * 1000),
+            Target = (int)(threshold.Target * 1000),
+            HardFail = (int)(threshold.HardFail * 1000),
+            Status = status
+        };
+    }
+
     private static void ClassifySpecialAreas(GroundTruthEntry entry, Dictionary<string, int> counts)
     {
         var tags = new HashSet<string>(entry.Tags, StringComparer.OrdinalIgnoreCase);
@@ -190,23 +245,33 @@ internal sealed class CoverageValidator
             // biosSystems tracked at validation level (unique systems with BIOS entries)
         }
 
+        // BIOS error modes
+        if (tags.Contains("bios-wrong-name") || tags.Contains("bios-wrong-folder")
+            || tags.Contains("bios-false-positive") || tags.Contains("bios-shared"))
+            Inc("biosErrorModes");
+
         // Arcade
-        if (tags.Contains("parent"))
+        if (tags.Contains("parent") || tags.Contains("arcade-parent"))
             Inc("arcadeParent");
-        if (tags.Contains("clone"))
+        if (tags.Contains("clone") || tags.Contains("arcade-clone"))
             Inc("arcadeClone");
-        if (tags.Contains("arcade-split") || tags.Contains("arcade-merged") || tags.Contains("arcade-non-merged"))
+        if (tags.Contains("arcade-split") || tags.Contains("arcade-merged") || tags.Contains("arcade-non-merged")
+            || tags.Contains("arcade-nonmerged"))
             Inc("arcadeSplitMergedNonMerged");
         if (tags.Contains("arcade-bios"))
             Inc("arcadeBios");
-        if (tags.Contains("arcade-chd"))
+        if (tags.Contains("arcade-chd") || tags.Contains("arcade-game-chd"))
             Inc("arcadeChdSupplement");
+
+        // Arcade confusion
+        if (tags.Contains("arcade-confusion-split-merged") || tags.Contains("arcade-confusion-merged-nonmerged"))
+            Inc("arcadeConfusion");
 
         // Disambiguation
         var consoleKey = entry.Expected.ConsoleKey ?? "";
-        if (tags.Contains("cross-system"))
+        if (tags.Contains("cross-system") || tags.Contains("cross-system-ambiguity"))
         {
-            if (consoleKey is "PS1" or "PS2" or "PS3")
+            if (consoleKey is "PS1" or "PS2" or "PS3" or "PSP")
                 Inc("psDisambiguation");
             if (consoleKey is "GB" or "GBC")
                 Inc("gbGbcCgb");
@@ -214,29 +279,64 @@ internal sealed class CoverageValidator
                 Inc("md32x");
         }
 
+        // SAT/DC disambiguation
+        if (tags.Contains("cross-system-ambiguity") && consoleKey is "SAT" or "DC")
+            Inc("satDcDisambiguation");
+
+        // PCE/PCECD disambiguation
+        if (tags.Contains("cross-system-ambiguity") && consoleKey is "PCE" or "PCECD")
+            Inc("pcePcecdDisambiguation");
+
         // Multi-file / multi-disc
         if (tags.Contains("multi-file"))
             Inc("multiFileSets");
         if (tags.Contains("multi-disc"))
             Inc("multiDisc");
 
+        // Disc format variants
+        if (tags.Contains("cue-bin"))
+            Inc("cueBin");
+        if (tags.Contains("gdi-tracks"))
+            Inc("gdiTracks");
+        if (tags.Contains("ccd-img") || tags.Contains("mds-mdf"))
+            Inc("ccdMds");
+        if (tags.Contains("m3u-playlist"))
+            Inc("m3uPlaylist");
+
+        // Serial number
+        if (tags.Contains("serial-number"))
+            Inc("serialNumber");
+
+        // Header vs headerless pairs
+        if (tags.Contains("header-vs-headerless-pair"))
+            Inc("headerVsHeaderlessPairs");
+
+        // Container variants
+        if (tags.Contains("container-cso") || tags.Contains("container-wia")
+            || tags.Contains("container-rvz") || tags.Contains("container-wbfs"))
+            Inc("containerVariants");
+
         // CHD
         if (tags.Contains("chd-raw-sha1"))
             Inc("chdRawSha1");
 
         // DAT ecosystems
-        if (tags.Contains("no-intro"))
+        if (tags.Contains("no-intro") || tags.Contains("dat-nointro"))
             Inc("datNoIntro");
-        if (tags.Contains("redump"))
+        if (tags.Contains("redump") || tags.Contains("dat-redump"))
             Inc("datRedump");
-        if (tags.Contains("mame"))
+        if (tags.Contains("mame") || tags.Contains("dat-mame"))
             Inc("datMame");
-        if (tags.Contains("tosec"))
+        if (tags.Contains("tosec") || tags.Contains("dat-tosec"))
             Inc("datTosec");
 
         // Directory-based
         if (tags.Contains("directory-based"))
             Inc("directoryBased");
+
+        // Keyword-only detection
+        if (tags.Contains("keyword-detection"))
+            Inc("keywordOnly");
 
         // Headerless
         if (tags.Contains("headerless"))

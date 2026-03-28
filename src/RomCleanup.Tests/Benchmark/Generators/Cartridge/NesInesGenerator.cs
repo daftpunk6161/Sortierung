@@ -11,7 +11,7 @@ internal sealed class NesInesGenerator : IStubGenerator
 
     public string GeneratorId => "nes-ines";
     public string Extension => ".nes";
-    public IReadOnlyList<string> SupportedVariants { get; } = ["standard", "headerless", "truncated"];
+    public IReadOnlyList<string> SupportedVariants { get; } = ["standard", "headerless", "truncated", "copier-header"];
 
     public byte[] Generate(string? variant = null, IReadOnlyDictionary<string, string>? parameters = null)
     {
@@ -22,6 +22,7 @@ internal sealed class NesInesGenerator : IStubGenerator
             "standard" => GenerateStandard(parameters),
             "headerless" => GenerateHeaderless(parameters),
             "truncated" => GenerateTruncated(),
+            "copier-header" => GenerateCopierHeader(parameters),
             _ => throw new ArgumentException($"Unknown variant '{variant}' for {GeneratorId}")
         };
     }
@@ -66,6 +67,16 @@ internal sealed class NesInesGenerator : IStubGenerator
         var data = new byte[8];
         InesMagic.CopyTo(data, 0);
         data[4] = 1; // Claims 1 PRG bank but file is too short
+        return data;
+    }
+
+    private static byte[] GenerateCopierHeader(IReadOnlyDictionary<string, string>? parameters)
+    {
+        // 512-byte copier header prefix (e.g. from old NES copiers) + standard iNES ROM
+        var standard = GenerateStandard(parameters);
+        var data = new byte[512 + standard.Length];
+        // Copier header is typically 512 zero bytes (or vendor-specific); iNES follows at offset 512
+        standard.CopyTo(data, 512);
         return data;
     }
 }

@@ -33,7 +33,7 @@ internal sealed class SchemaValidator
 
     private static readonly HashSet<string> ValidFileModelTypes = new(StringComparer.Ordinal)
     {
-        "single-file", "multi-file-set", "multi-disc", "archive", "directory"
+        "single-file", "multi-file-set", "multi-disc", "archive", "directory", "playlist"
     };
 
     private static readonly HashSet<string> ValidDatMatchLevels = new(StringComparer.Ordinal)

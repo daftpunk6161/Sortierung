@@ -21,9 +21,9 @@ internal static class FallklasseClassifier
             result.Add("FC-01");
         if (tagSet.Contains("wrong-name"))
             result.Add("FC-02");
-        if (tagSet.Contains("header-conflict"))
+        if (tagSet.Contains("header-conflict") || tagSet.Contains("header-vs-headerless-pair"))
             result.Add("FC-03");
-        if (tagSet.Contains("wrong-extension"))
+        if (tagSet.Contains("wrong-extension") || tagSet.Contains("extension-conflict"))
             result.Add("FC-04");
         if (tagSet.Contains("folder-header-conflict"))
             result.Add("FC-05");
@@ -33,11 +33,16 @@ internal static class FallklasseClassifier
             result.Add("FC-07");
         if (tagSet.Contains("bios"))
             result.Add("FC-08");
-        if (tagSet.Contains("parent") || tagSet.Contains("clone"))
+        if (tagSet.Contains("bios-wrong-name") || tagSet.Contains("bios-wrong-folder")
+            || tagSet.Contains("bios-false-positive") || tagSet.Contains("bios-shared"))
+            result.Add("FC-08");
+        if (tagSet.Contains("parent") || tagSet.Contains("clone")
+            || tagSet.Contains("arcade-parent") || tagSet.Contains("arcade-clone"))
             result.Add("FC-09");
         if (tagSet.Contains("multi-disc"))
             result.Add("FC-10");
-        if (tagSet.Contains("multi-file"))
+        if (tagSet.Contains("multi-file") || tagSet.Contains("cue-bin") || tagSet.Contains("gdi-tracks")
+            || tagSet.Contains("ccd-img") || tagSet.Contains("mds-mdf") || tagSet.Contains("m3u-playlist"))
             result.Add("FC-11");
         if (tagSet.Contains("archive-inner"))
             result.Add("FC-12");
@@ -67,7 +72,8 @@ internal static class FallklasseClassifier
         if (tagSet.Contains("unknown-expected"))
             result.Add("FC-14");
         if (tagSet.Contains("cross-system-ambiguity") || tagSet.Contains("gb-gbc-ambiguity")
-            || tagSet.Contains("md-32x-ambiguity") || tagSet.Contains("ps-disambiguation"))
+            || tagSet.Contains("md-32x-ambiguity") || tagSet.Contains("ps-disambiguation")
+            || tagSet.Contains("arcade-confusion-split-merged") || tagSet.Contains("arcade-confusion-merged-nonmerged"))
             result.Add("FC-18");
         if (tagSet.Contains("confidence-low") || tagSet.Contains("confidence-borderline")
             || tagSet.Contains("repair-unsafe"))

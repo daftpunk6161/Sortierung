@@ -33,6 +33,33 @@ public sealed record S1Gate
 
     [JsonPropertyName("specialAreas")]
     public required Dictionary<string, GateThreshold> SpecialAreas { get; init; }
+
+    [JsonPropertyName("difficultyDistribution")]
+    public DifficultyDistributionGate? DifficultyDistribution { get; init; }
+}
+
+public sealed record DifficultyDistributionGate
+{
+    [JsonPropertyName("easyMax")]
+    public required RatioThreshold EasyMax { get; init; }
+
+    [JsonPropertyName("mediumMin")]
+    public required RatioThreshold MediumMin { get; init; }
+
+    [JsonPropertyName("hardMin")]
+    public required RatioThreshold HardMin { get; init; }
+
+    [JsonPropertyName("adversarialMin")]
+    public required RatioThreshold AdversarialMin { get; init; }
+}
+
+public sealed record RatioThreshold
+{
+    [JsonPropertyName("target")]
+    public required double Target { get; init; }
+
+    [JsonPropertyName("hardFail")]
+    public required double HardFail { get; init; }
 }
 
 public sealed record GateThreshold

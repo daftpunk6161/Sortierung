@@ -32,6 +32,9 @@ internal sealed class StubGeneratorRegistry
         Register(new Disc.XdvdfsGenerator());
         Register(new Disc.FmTownsPvdGenerator());
         Register(new Disc.CdiDiscGenerator());
+        Register(new Disc.CcdImgGenerator());
+        Register(new Disc.MdsMdfGenerator());
+        Register(new Disc.M3uPlaylistGenerator());
 
         // Utility generators
         Register(new ExtOnlyGenerator());
