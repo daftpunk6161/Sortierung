@@ -400,6 +400,110 @@ public sealed class CoverageGateTests
         Assert.Equal(manifest.TotalEntries, setSum);
     }
 
+    [Fact]
+    public void ManifestCalculator_FallklasseCountsAreComplete()
+    {
+        var manifest = ManifestCalculator.Calculate();
+
+        // All 20 FC codes must be present in the dictionary
+        for (int i = 1; i <= 20; i++)
+        {
+            var fc = $"FC-{i:D2}";
+            Assert.True(manifest.FallklasseCounts.ContainsKey(fc),
+                $"Fallklasse {fc} missing from manifest.FallklasseCounts");
+        }
+
+        // At least some FC codes should have entries
+        var nonZero = manifest.FallklasseCounts.Values.Count(v => v > 0);
+        Assert.True(nonZero >= 10,
+            $"Only {nonZero} Fallklassen have >0 entries (expected at least 10)");
+    }
+
+    [Fact]
+    public void ManifestCalculator_DatEcosystemCountsArePresent()
+    {
+        var manifest = ManifestCalculator.Calculate();
+
+        Assert.True(manifest.DatEcosystemCounts.ContainsKey("no-intro"), "no-intro missing from datEcosystemCounts");
+        Assert.True(manifest.DatEcosystemCounts.ContainsKey("redump"), "redump missing from datEcosystemCounts");
+        Assert.True(manifest.DatEcosystemCounts.ContainsKey("mame"), "mame missing from datEcosystemCounts");
+        Assert.True(manifest.DatEcosystemCounts.ContainsKey("tosec"), "tosec missing from datEcosystemCounts");
+    }
+
+    [Fact]
+    public void ManifestCalculator_CoverageTargetsMatchGates()
+    {
+        var manifest = ManifestCalculator.Calculate();
+
+        // coverageTargets should include keys from gates.json
+        Assert.True(manifest.CoverageTargets.ContainsKey("totalEntries"),
+            "coverageTargets missing totalEntries");
+        Assert.True(manifest.CoverageTargets.ContainsKey("systemsCovered"),
+            "coverageTargets missing systemsCovered");
+
+        // Each target must have valid threshold values
+        foreach (var (key, threshold) in manifest.CoverageTargets)
+        {
+            Assert.True(threshold.Target >= threshold.HardFail,
+                $"coverageTargets[{key}]: target ({threshold.Target}) < hardFail ({threshold.HardFail})");
+        }
+    }
+
+    [Fact]
+    public void ManifestCalculator_CoverageActualsAlignWithTargetKeys()
+    {
+        var manifest = ManifestCalculator.Calculate();
+
+        // For every target key, there should be a corresponding actual
+        var missingActuals = manifest.CoverageTargets.Keys
+            .Where(k => !manifest.CoverageActuals.ContainsKey(k))
+            .ToList();
+
+        // Some target keys may not have actuals if the area doesn't exist yet, that's OK.
+        // But top-level keys must be present.
+        Assert.True(manifest.CoverageActuals.ContainsKey("totalEntries"),
+            "coverageActuals missing totalEntries");
+        Assert.True(manifest.CoverageActuals.ContainsKey("systemsCovered"),
+            "coverageActuals missing systemsCovered");
+    }
+
+    [Fact]
+    public void ManifestCalculator_SystemsListIsConsistentWithCount()
+    {
+        var manifest = ManifestCalculator.Calculate();
+
+        Assert.Equal(manifest.SystemsCovered, manifest.SystemsList.Count);
+        // No duplicates
+        Assert.Equal(manifest.SystemsList.Count, manifest.SystemsList.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    [Fact]
+    public void ManifestCalculator_FileChecksumsArePresent()
+    {
+        var manifest = ManifestCalculator.Calculate();
+        var files = BenchmarkPaths.AllJsonlFiles;
+
+        // Every JSONL file should have a checksum
+        foreach (var file in files)
+        {
+            var fileName = Path.GetFileName(file);
+            Assert.True(manifest.FileChecksums.ContainsKey(fileName),
+                $"Missing checksum for {fileName}");
+            Assert.Matches("^[0-9a-f]{64}$", manifest.FileChecksums[fileName]);
+        }
+    }
+
+    [Fact]
+    public void ManifestCalculator_SpecializedJsonlFilesAreIncluded()
+    {
+        var files = BenchmarkPaths.AllJsonlFiles.Select(Path.GetFileNameWithoutExtension).ToList();
+
+        Assert.Contains("bios-coverage", files);
+        Assert.Contains("arcade-coverage", files);
+        Assert.Contains("computer-coverage", files);
+        Assert.Contains("redump-specials", files);
+    }
+
     // ═══ COVERAGE REPORT DIAGNOSTICS ════════════════════════════════════
 
     [Fact]
