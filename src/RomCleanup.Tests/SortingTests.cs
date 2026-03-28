@@ -229,6 +229,143 @@ public class ConsoleSorterTests : IDisposable
         public void AppendAuditRow(string auditCsvPath, string rootPath, string oldPath, string newPath, string action, string category = "", string hash = "", string reason = "")
             => Rows.Add((action, reason));
     }
+
+    private static Dictionary<string, string> SortDecisions(params (string Path, string Decision)[] pairs)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (path, decision) in pairs)
+            map[path] = decision;
+        return map;
+    }
+
+    private static Dictionary<string, string> Categories(params (string Path, string Category)[] pairs)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (path, cat) in pairs)
+            map[path] = cat;
+        return map;
+    }
+
+    // ── SortDecision Routing Tests ──
+
+    [Fact]
+    public void Sort_ReviewDecision_MovesToReviewSubdir()
+    {
+        var romPath = CreateFile("Game.nes", "nes content");
+        var detector = BuildDetector();
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var sorter = new ConsoleSorter(fs, detector);
+
+        var result = sorter.Sort(
+            new[] { _tempDir },
+            new[] { ".nes" },
+            dryRun: false,
+            enrichedConsoleKeys: EnrichedKeys((romPath, "NES")),
+            enrichedSortDecisions: SortDecisions((romPath, "Review")));
+
+        Assert.Equal(1, result.Reviewed);
+        Assert.Equal(0, result.Moved);
+        Assert.True(File.Exists(Path.Combine(_tempDir, "_REVIEW", "NES", "Game.nes")));
+    }
+
+    [Fact]
+    public void Sort_BlockedGame_NotMoved()
+    {
+        var romPath = CreateFile("Game.nes", "nes content");
+        var detector = BuildDetector();
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var sorter = new ConsoleSorter(fs, detector);
+
+        var result = sorter.Sort(
+            new[] { _tempDir },
+            new[] { ".nes" },
+            dryRun: false,
+            enrichedConsoleKeys: EnrichedKeys((romPath, "NES")),
+            enrichedSortDecisions: SortDecisions((romPath, "Blocked")),
+            enrichedCategories: Categories((romPath, "Game")));
+
+        Assert.Equal(1, result.Blocked);
+        Assert.Equal(0, result.Moved);
+        Assert.True(File.Exists(romPath), "Blocked game should NOT be moved");
+    }
+
+    [Fact]
+    public void Sort_BlockedJunk_MovesToTrashJunkConsoleSubdir()
+    {
+        var romPath = CreateFile("Junk.nes", "junk content");
+        var detector = BuildDetector();
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var sorter = new ConsoleSorter(fs, detector);
+
+        var result = sorter.Sort(
+            new[] { _tempDir },
+            new[] { ".nes" },
+            dryRun: false,
+            enrichedConsoleKeys: EnrichedKeys((romPath, "NES")),
+            enrichedSortDecisions: SortDecisions((romPath, "Blocked")),
+            enrichedCategories: Categories((romPath, "Junk")));
+
+        Assert.Equal(1, result.Blocked);
+        Assert.True(File.Exists(Path.Combine(_tempDir, "_TRASH_JUNK", "NES", "Junk.nes")));
+    }
+
+    [Fact]
+    public void Sort_DatVerified_MovesToConsoleSubdir()
+    {
+        var romPath = CreateFile("Verified.nes", "verified content");
+        var detector = BuildDetector();
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var sorter = new ConsoleSorter(fs, detector);
+
+        var result = sorter.Sort(
+            new[] { _tempDir },
+            new[] { ".nes" },
+            dryRun: false,
+            enrichedConsoleKeys: EnrichedKeys((romPath, "NES")),
+            enrichedSortDecisions: SortDecisions((romPath, "DatVerified")));
+
+        Assert.Equal(1, result.Moved);
+        Assert.True(File.Exists(Path.Combine(_tempDir, "NES", "Verified.nes")));
+    }
+
+    [Fact]
+    public void Sort_NoSortDecision_DefaultsToStandardMove()
+    {
+        var romPath = CreateFile("Default.nes", "content");
+        var detector = BuildDetector();
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var sorter = new ConsoleSorter(fs, detector);
+
+        var result = sorter.Sort(
+            new[] { _tempDir },
+            new[] { ".nes" },
+            dryRun: false,
+            enrichedConsoleKeys: EnrichedKeys((romPath, "NES")));
+
+        Assert.Equal(1, result.Moved);
+        Assert.True(File.Exists(Path.Combine(_tempDir, "NES", "Default.nes")));
+    }
+
+    [Fact]
+    public void Sort_CueSet_AtomicMoveWithMembers()
+    {
+        var cuePath = CreateFile("Game.cue", "FILE \"Game.bin\" BINARY\r\n  TRACK 01 MODE1/2352\r\n    INDEX 01 00:00:00");
+        var binPath = CreateFile("Game.bin", "binary data for CUE");
+        var detector = BuildDetector();
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var sorter = new ConsoleSorter(fs, detector);
+
+        var result = sorter.Sort(
+            new[] { _tempDir },
+            new[] { ".cue" },
+            dryRun: false,
+            enrichedConsoleKeys: EnrichedKeys((cuePath, "PS1")));
+
+        Assert.Equal(1, result.Moved);
+        Assert.True(result.SetMembersMoved >= 1, "BIN should move with CUE");
+        Assert.True(File.Exists(Path.Combine(_tempDir, "PS1", "Game.cue")));
+        Assert.True(File.Exists(Path.Combine(_tempDir, "PS1", "Game.bin")));
+    }
 }
 
 public class ZipSorterTests : IDisposable

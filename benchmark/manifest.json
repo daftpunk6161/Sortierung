@@ -3,7 +3,7 @@
     "description": "Benchmark dataset manifest",
     "version": "3.1.0",
     "groundTruthVersion": "2.0.0",
-    "lastModified": "2026-03-27"
+    "lastModified": "2026-03-28"
   },
   "totalEntries": 7073,
   "holdoutEntries": 200,

@@ -20,14 +20,7 @@ public static partial class FeatureService
     // Port of ConversionEstimate.ps1
 
     private static Dictionary<string, double> CompressionRatios =>
-        UiLookupData.Instance.CompressionRatios.Count > 0 ? UiLookupData.Instance.CompressionRatios
-        : new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["bin_chd"] = 0.50, ["cue_chd"] = 0.50, ["iso_chd"] = 0.60,
-        ["iso_rvz"] = 0.40, ["gcz_rvz"] = 0.70, ["zip_7z"] = 0.90,
-        ["rar_7z"] = 0.95, ["cso_chd"] = 0.80, ["pbp_chd"] = 0.70,
-        ["iso_cso"] = 0.65, ["wbfs_rvz"] = 0.45, ["nkit_rvz"] = 0.50
-    };
+        UiLookupData.Instance.CompressionRatios;
 
 
     public static ConversionEstimateResult GetConversionEstimate(IReadOnlyList<RomCandidate> candidates)
@@ -56,18 +49,9 @@ public static partial class FeatureService
 
     internal static string? GetTargetFormat(string ext)
     {
-        // TASK-054: Read from externalized ui-lookups.json; fall back to hardcoded map.
-        if (UiLookupData.Instance.ExtensionTargetFormats.TryGetValue(ext, out var target))
-            return target;
-
-        return ext switch
-        {
-            "bin" or "cue" or "iso" or "cso" or "pbp" => "chd",
-            "gcz" or "wbfs" or "nkit" => "rvz",
-            "zip" => "7z",
-            "rar" => "7z",
-            _ => null
-        };
+        return UiLookupData.Instance.ExtensionTargetFormats.TryGetValue(ext, out var target)
+            ? target
+            : null;
     }
 
 
@@ -92,27 +76,7 @@ public static partial class FeatureService
     // Port of FormatPriority.ps1
 
     private static Dictionary<string, string[]> ConsoleFormatPriority =>
-        UiLookupData.Instance.ConsoleFormatPriority.Count > 0 ? UiLookupData.Instance.ConsoleFormatPriority
-        : new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["ps1"] = ["chd", "bin/cue", "pbp", "cso", "iso"],
-        ["ps2"] = ["chd", "iso"],
-        ["psp"] = ["chd", "pbp", "cso", "iso"],
-        ["dreamcast"] = ["chd", "gdi", "cdi"],
-        ["saturn"] = ["chd", "bin/cue", "iso"],
-        ["gc"] = ["rvz", "iso", "nkit", "gcz"],
-        ["wii"] = ["rvz", "iso", "nkit", "wbfs"],
-        ["nes"] = ["zip", "7z", "nes"],
-        ["snes"] = ["zip", "7z", "sfc", "smc"],
-        ["gba"] = ["zip", "7z", "gba"],
-        ["n64"] = ["zip", "7z", "z64", "v64", "n64"],
-        ["gb"] = ["zip", "7z", "gb"],
-        ["gbc"] = ["zip", "7z", "gbc"],
-        ["nds"] = ["zip", "7z", "nds"],
-        ["3ds"] = ["zip", "7z", "3ds"],
-        ["genesis"] = ["zip", "7z", "md", "gen"],
-        ["arcade"] = ["zip", "7z"]
-    };
+        UiLookupData.Instance.ConsoleFormatPriority;
 
 
     public static string FormatFormatPriority()

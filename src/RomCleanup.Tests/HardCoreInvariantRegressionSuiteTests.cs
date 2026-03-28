@@ -1017,6 +1017,155 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
         Assert.Equal(guiProjection.Dupes, api.Losers);
     }
 
+    [Fact]
+    public void Sorting_ConflictWithDatEvidence_IsDeterministicallyDatVerified()
+    {
+        // Invariant: full DAT evidence (confidence 100 + hasDatEvidence=true)
+        // must always produce DatVerified, independent from conflict flag/source count.
+        var a = HypothesisResolver.DetermineSortDecision(
+            confidence: 100,
+            conflict: true,
+            hardEvidence: true,
+            sourceCount: 1,
+            hasDatEvidence: true);
+
+        var b = HypothesisResolver.DetermineSortDecision(
+            confidence: 100,
+            conflict: false,
+            hardEvidence: true,
+            sourceCount: 4,
+            hasDatEvidence: true);
+
+        Assert.Equal(SortDecision.DatVerified, a);
+        Assert.Equal(SortDecision.DatVerified, b);
+    }
+
+    [Fact]
+    public void DatRepository_DoctypeFallback_ParsesValidDatWithoutEntityExpansion()
+    {
+        var datRoot = Path.Combine(_tempDir, "dat_doctype_fallback");
+        Directory.CreateDirectory(datRoot);
+        var datPath = Path.Combine(datRoot, "fallback.dat");
+
+        // Real DATs may contain DOCTYPE. Adapter should fallback to DtdProcessing.Ignore,
+        // parse entries, and never require external entity resolution.
+        var payload = "<?xml version=\"1.0\"?>\n" +
+                      "<!DOCTYPE datafile SYSTEM \"noop.dtd\">\n" +
+                      "<datafile><game name=\"Game A\"><rom sha1=\"abc123\" /></game></datafile>";
+        File.WriteAllText(datPath, payload);
+
+        var repo = new RomCleanup.Infrastructure.Dat.DatRepositoryAdapter();
+        var index = repo.GetDatIndex(datRoot, new Dictionary<string, string> { ["DT"] = "fallback.dat" });
+
+        Assert.True(index.HasConsole("DT"));
+        Assert.True(index.TotalEntries >= 1);
+    }
+
+    [Fact]
+    public void Rollback_IsIdempotent_OnSecondExecution()
+    {
+        var root = Path.Combine(_tempDir, "rollback_idempotent");
+        Directory.CreateDirectory(root);
+        var original = CreateFileAt(root, "idempotent.zip", 9);
+
+        var fs = new FileSystemAdapter();
+        var audit = new AuditCsvStore(fs);
+        var trash = Path.Combine(root, "_TRASH_REGION_DEDUPE", "idempotent.zip");
+        Directory.CreateDirectory(Path.GetDirectoryName(trash)!);
+        File.Move(original, trash);
+
+        var auditPath = Path.Combine(_tempDir, "audit", "rollback_idempotent.csv");
+        audit.AppendAuditRow(auditPath, root, original, trash, "Move", "GAME", "", "idempotent");
+        audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object> { ["Mode"] = "Move" });
+
+        var first = audit.Rollback(auditPath, new[] { root }, new[] { root }, dryRun: false);
+        var second = audit.Rollback(auditPath, new[] { root }, new[] { root }, dryRun: false);
+
+        Assert.Single(first);
+        Assert.Empty(second);
+        Assert.True(File.Exists(original));
+        Assert.False(File.Exists(trash));
+    }
+
+    [Fact]
+    public async Task Parity_CoreAndApi_WinnerPathsMatchExactly()
+    {
+        var root = Path.Combine(_tempDir, "parity_winner");
+        Directory.CreateDirectory(root);
+        var us = CreateFileAt(root, "Legend (USA).zip", 10);
+        CreateFileAt(root, "Legend (Europe).zip", 11);
+
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".zip" },
+            Mode = "DryRun",
+            PreferRegions = new[] { "US", "EU", "WORLD" }
+        };
+
+        var core = new RunOrchestrator(new FileSystemAdapter(), new AuditCsvStore()).Execute(options);
+        var coreWinners = core.DedupeGroups
+            .Select(g => g.Winner.MainPath)
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var manager = new RomCleanup.Api.RunManager(new FileSystemAdapter(), new AuditCsvStore());
+        var created = manager.TryCreate(new RomCleanup.Api.RunRequest
+        {
+            Roots = new[] { root },
+            Mode = "DryRun",
+            PreferRegions = new[] { "US", "EU", "WORLD" },
+            Extensions = new[] { ".zip" }
+        }, "DryRun");
+
+        Assert.NotNull(created);
+        await manager.WaitForCompletion(created!.RunId, timeout: TimeSpan.FromSeconds(10));
+
+        var run = manager.Get(created.RunId);
+        Assert.NotNull(run);
+        Assert.NotNull(run!.CoreRunResult);
+
+        var apiWinners = run.CoreRunResult!.DedupeGroups
+            .Select(g => g.Winner.MainPath)
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        Assert.Contains(us, coreWinners);
+        Assert.Equal(coreWinners, apiWinners);
+    }
+
+    [Fact]
+    public void Conversion_PartialFailure_IsVisibleInProjectionCounters()
+    {
+        var root = Path.Combine(_tempDir, "api_partial_conversion");
+        Directory.CreateDirectory(root);
+        var ok = CreateFileAt(root, "ok.iso", 8);
+        var err = CreateFileAt(root, "err.iso", 8);
+        var skip = CreateFileAt(root, "skip.iso", 8);
+
+        var converter = new MixedOutcomeConverter(ok, err, skip);
+        var orchestrator = new RunOrchestrator(
+            new FileSystemAdapter(),
+            new AuditCsvStore(),
+            converter: converter);
+
+        var core = orchestrator.Execute(new RunOptions
+        {
+            Roots = new[] { root },
+            Mode = "Move",
+            ConvertOnly = true,
+            ConvertFormat = "auto",
+            Extensions = new[] { ".iso" }
+        });
+
+        var projection = RunProjectionFactory.Create(core);
+
+        // API counters are mapped from projection values.
+        Assert.Equal(1, projection.ConvertedCount);
+        Assert.Equal(1, projection.ConvertErrorCount);
+        Assert.Equal(1, projection.ConvertSkippedCount);
+    }
+
     // Helpers
 
     private PipelineContext CreateContext(RunOptions options)

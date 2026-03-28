@@ -382,22 +382,7 @@ internal static class CliArgsParser
         => path.StartsWith("\\\\", StringComparison.Ordinal);
 
     private static bool IsProtectedSystemPath(string fullPath)
-    {
-        var protectedRoots = new[]
-        {
-            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-            Environment.GetFolderPath(Environment.SpecialFolder.System),
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
-        }
-        .Where(p => !string.IsNullOrWhiteSpace(p))
-        .Select(p => ArtifactPathResolver.NormalizeRoot(p!))
-        .ToArray();
-
-        var normalized = ArtifactPathResolver.NormalizeRoot(fullPath);
-        return protectedRoots.Any(root =>
-            normalized.StartsWith(root, StringComparison.OrdinalIgnoreCase));
-    }
+        => RomCleanup.Infrastructure.Safety.SafetyValidator.IsProtectedSystemPath(fullPath);
 }
 
 /// <summary>

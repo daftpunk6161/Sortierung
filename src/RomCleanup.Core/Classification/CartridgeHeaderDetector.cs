@@ -49,7 +49,7 @@ public sealed class CartridgeHeaderDetector
     /// </summary>
     public string? Detect(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        if (string.IsNullOrWhiteSpace(path) || !ClassificationIo.FileExists(path))
             return null;
 
         var normalizedPath = Path.GetFullPath(path);
@@ -74,7 +74,7 @@ public sealed class CartridgeHeaderDetector
         Span<byte> buffer = stackalloc byte[512];
         int bytesRead;
 
-        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        using (var fs = ClassificationIo.OpenRead(path))
         {
             bytesRead = fs.Read(buffer);
         }
@@ -148,11 +148,11 @@ public sealed class CartridgeHeaderDetector
         // Some ROMs have a 512-byte copier header, shifting offsets by 512
         try
         {
-            var fileSize = new FileInfo(path).Length;
+            var fileSize = ClassificationIo.FileLength(path);
             if (fileSize < 0x8000) // Too small for SNES
                 return null;
 
-            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var fs = ClassificationIo.OpenRead(path);
             Span<byte> titleBuf = stackalloc byte[21];
             Span<byte> checksumBuf = stackalloc byte[4];
 

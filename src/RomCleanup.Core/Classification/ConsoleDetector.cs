@@ -315,12 +315,12 @@ public sealed class ConsoleDetector
 
     private static bool IsClearlyInvalidFile(string filePath)
     {
-        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        if (string.IsNullOrWhiteSpace(filePath) || !ClassificationIo.FileExists(filePath))
             return false;
 
         try
         {
-            return new FileInfo(filePath).Length == 0;
+            return ClassificationIo.FileLength(filePath) == 0;
         }
         catch (IOException)
         {
@@ -363,7 +363,7 @@ public sealed class ConsoleDetector
     {
         try
         {
-            using var archive = ZipFile.OpenRead(filePath);
+            using var archive = ClassificationIo.OpenZipRead(filePath);
             // Find the largest entry (most likely the actual ROM, not readme/nfo)
             ZipArchiveEntry? bestEntry = null;
             foreach (var entry in archive.Entries)

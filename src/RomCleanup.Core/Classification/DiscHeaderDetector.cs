@@ -57,7 +57,7 @@ public sealed class DiscHeaderDetector
     /// </summary>
     public string? DetectFromDiscImage(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        if (string.IsNullOrWhiteSpace(path) || !ClassificationIo.FileExists(path))
             return null;
 
         var normalizedPath = Path.GetFullPath(path);
@@ -82,7 +82,7 @@ public sealed class DiscHeaderDetector
     /// </summary>
     public string? DetectFromChd(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        if (string.IsNullOrWhiteSpace(path) || !ClassificationIo.FileExists(path))
             return null;
 
         var normalizedPath = Path.GetFullPath(path);
@@ -117,7 +117,7 @@ public sealed class DiscHeaderDetector
             // Skip reparse points (symlinks/junctions) — security rule
             try
             {
-                var attrs = File.GetAttributes(path);
+                var attrs = ClassificationIo.GetAttributes(path);
                 if ((attrs & FileAttributes.ReparsePoint) != 0)
                 {
                     results[path] = null;
@@ -195,7 +195,7 @@ public sealed class DiscHeaderDetector
 
     private static string? ScanDiscImage(string path)
     {
-        using var fs = File.OpenRead(path);
+        using var fs = ClassificationIo.OpenRead(path);
         if (fs.Length < 32)
             return null;
 
@@ -328,7 +328,7 @@ public sealed class DiscHeaderDetector
 
     private static string? ScanChdMetadata(string path)
     {
-        using var fs = File.OpenRead(path);
+        using var fs = ClassificationIo.OpenRead(path);
         if (fs.Length < 8)
             return null;
 

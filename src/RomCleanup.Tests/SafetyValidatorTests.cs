@@ -143,6 +143,57 @@ public sealed class SafetyValidatorTests
     }
 
     // =========================================================================
+    //  IsProtectedSystemPath Tests
+    // =========================================================================
+
+    [Theory]
+    [InlineData(@"C:\Windows")]
+    [InlineData(@"C:\WINDOWS")]
+    [InlineData(@"C:\Windows\System32")]
+    public void IsProtectedSystemPath_SystemPaths_ReturnsTrue(string path)
+        => Assert.True(SafetyValidator.IsProtectedSystemPath(path));
+
+    [Theory]
+    [InlineData(@"C:\Program Files")]
+    [InlineData(@"C:\Program Files (x86)")]
+    public void IsProtectedSystemPath_ProgramFiles_ReturnsTrue(string path)
+        => Assert.True(SafetyValidator.IsProtectedSystemPath(path));
+
+    [Theory]
+    [InlineData(@"C:\Users\TestUser\ROMs")]
+    [InlineData(@"D:\Games\SNES")]
+    [InlineData(@"E:\Backup")]
+    public void IsProtectedSystemPath_UserPaths_ReturnsFalse(string path)
+        => Assert.False(SafetyValidator.IsProtectedSystemPath(path));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void IsProtectedSystemPath_EmptyOrWhitespace_ReturnsTrue(string path)
+        => Assert.True(SafetyValidator.IsProtectedSystemPath(path));
+
+    // =========================================================================
+    //  IsDriveRoot Tests
+    // =========================================================================
+
+    [Theory]
+    [InlineData(@"C:\")]
+    [InlineData(@"C:")]
+    [InlineData(@"D:\")]
+    [InlineData(@"Z:")]
+    public void IsDriveRoot_DriveRoots_ReturnsTrue(string path)
+        => Assert.True(SafetyValidator.IsDriveRoot(path));
+
+    [Theory]
+    [InlineData(@"C:\Users")]
+    [InlineData(@"D:\Games")]
+    [InlineData(@"\\server\share")]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void IsDriveRoot_NonRoots_ReturnsFalse(string path)
+        => Assert.False(SafetyValidator.IsDriveRoot(path));
+
+    // =========================================================================
     //  TestTools Tests
     // =========================================================================
 

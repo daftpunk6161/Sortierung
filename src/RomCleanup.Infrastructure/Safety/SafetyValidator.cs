@@ -326,6 +326,47 @@ public sealed class SafetyValidator
         };
     }
 
+    /// <summary>
+    /// Single source of truth: checks whether a path is inside a protected system directory.
+    /// Used by CLI, API and SafetyValidator to avoid divergent implementations.
+    /// </summary>
+    public static bool IsProtectedSystemPath(string fullPath)
+    {
+        var protectedRoots = new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+        }
+        .Where(p => !string.IsNullOrWhiteSpace(p))
+        .ToArray();
+
+        var normalized = NormalizePath(fullPath);
+        if (normalized is null) return true; // invalid path → treat as protected
+
+        var normalizedWithSep = normalized.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        foreach (var root in protectedRoots)
+        {
+            var rootWithSep = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (normalizedWithSep.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Single source of truth: checks whether a path is a drive root (e.g. C:\).
+    /// Handles both trimmed ("C:") and untrimmed ("C:\") forms.
+    /// </summary>
+    public static bool IsDriveRoot(string fullPath)
+    {
+        if (string.IsNullOrWhiteSpace(fullPath)) return false;
+        var trimmed = fullPath.Trim().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return trimmed.Length == 2 && char.IsLetter(trimmed[0]) && trimmed[1] == ':';
+    }
+
     private static List<string> ParseProtectedPaths(string? text, bool strict)
     {
         if (!string.IsNullOrWhiteSpace(text))

@@ -216,34 +216,22 @@ app.MapPost("/runs", async (HttpContext ctx, RunLifecycleManager mgr) =>
         {
             var dirInfo = new DirectoryInfo(root);
             if ((dirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
-                return ApiError(400, "SEC-ROOT-REPARSE-POINT", $"Symlink/junction not allowed as root: {root}", ErrorKind.Critical);
+                return ApiError(400, SecurityErrorCodes.RootReparsePoint, $"Symlink/junction not allowed as root: {root}", ErrorKind.Critical);
         }
         catch (Exception ex)
         {
             // SEC: Fail closed — if we cannot verify attributes, reject the root
-            return ApiError(400, "SEC-ROOT-ATTRIBUTE-CHECK-FAILED",
+            return ApiError(400, SecurityErrorCodes.RootAttributeCheckFailed,
                 $"Cannot verify attributes for root: {root} ({ex.GetType().Name})", ErrorKind.Critical);
         }
 
-        // Block system directories
+        // Block system directories (single source of truth: SafetyValidator)
         var full = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
-        var systemDirs = new[]
-        {
-            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
-        };
-        foreach (var sys in systemDirs)
-        {
-            if (string.IsNullOrEmpty(sys)) continue;
-            var normalizedSys = sys.TrimEnd(Path.DirectorySeparatorChar);
-            if (full.Equals(normalizedSys, StringComparison.OrdinalIgnoreCase) ||
-                full.StartsWith(normalizedSys + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-                return ApiError(400, "SEC-SYSTEM-DIRECTORY-ROOT", $"System directory not allowed: {root}", ErrorKind.Critical);
-        }
+        if (RomCleanup.Infrastructure.Safety.SafetyValidator.IsProtectedSystemPath(full))
+            return ApiError(400, SecurityErrorCodes.SystemDirectoryRoot, $"System directory not allowed: {root}", ErrorKind.Critical);
         // Block drive root
-        if (full.Length <= 3)
-            return ApiError(400, "SEC-DRIVE-ROOT-NOT-ALLOWED", $"Drive root not allowed: {root}", ErrorKind.Critical);
+        if (RomCleanup.Infrastructure.Safety.SafetyValidator.IsDriveRoot(full))
+            return ApiError(400, SecurityErrorCodes.DriveRootNotAllowed, $"Drive root not allowed: {root}", ErrorKind.Critical);
     }
 
     var mode = request.Mode ?? "DryRun";
@@ -861,7 +849,7 @@ static IResult? ValidatePathSecurity(string path, string fieldName)
 
     string full;
     try { full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar); }
-    catch (Exception ex) when (ex is ArgumentException or NotSupportedException or System.Security.SecurityException) { return ApiError(400, "SEC-INVALID-PATH", $"Invalid path for {fieldName}.", ErrorKind.Critical); }
+    catch (Exception ex) when (ex is ArgumentException or NotSupportedException or System.Security.SecurityException) { return ApiError(400, SecurityErrorCodes.InvalidPath, $"Invalid path for {fieldName}.", ErrorKind.Critical); }
 
     // Block reparse points
     try
@@ -870,33 +858,21 @@ static IResult? ValidatePathSecurity(string path, string fieldName)
         {
             var dirInfo = new DirectoryInfo(full);
             if ((dirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
-                return ApiError(400, "SEC-REPARSE-POINT", $"Symlink/junction not allowed for {fieldName}.", ErrorKind.Critical);
+                return ApiError(400, SecurityErrorCodes.ReparsePoint, $"Symlink/junction not allowed for {fieldName}.", ErrorKind.Critical);
         }
     }
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
     {
-        return ApiError(400, "SEC-ATTRIBUTE-CHECK-FAILED", $"Cannot verify attributes for {fieldName}: {ex.GetType().Name}.", ErrorKind.Critical);
+        return ApiError(400, SecurityErrorCodes.AttributeCheckFailed, $"Cannot verify attributes for {fieldName}: {ex.GetType().Name}.", ErrorKind.Critical);
     }
 
-    // Block system directories
-    var systemDirs = new[]
-    {
-        Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
-    };
-    foreach (var sys in systemDirs)
-    {
-        if (string.IsNullOrEmpty(sys)) continue;
-        var normalizedSys = sys.TrimEnd(Path.DirectorySeparatorChar);
-        if (full.Equals(normalizedSys, StringComparison.OrdinalIgnoreCase) ||
-            full.StartsWith(normalizedSys + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-            return ApiError(400, "SEC-SYSTEM-DIRECTORY", $"System directory not allowed for {fieldName}.", ErrorKind.Critical);
-    }
+    // Block system directories (single source of truth: SafetyValidator)
+    if (RomCleanup.Infrastructure.Safety.SafetyValidator.IsProtectedSystemPath(full))
+        return ApiError(400, SecurityErrorCodes.SystemDirectory, $"System directory not allowed for {fieldName}.", ErrorKind.Critical);
 
     // Block drive root
-    if (full.Length <= 3)
-        return ApiError(400, "SEC-DRIVE-ROOT", $"Drive root not allowed for {fieldName}.", ErrorKind.Critical);
+    if (RomCleanup.Infrastructure.Safety.SafetyValidator.IsDriveRoot(full))
+        return ApiError(400, SecurityErrorCodes.DriveRoot, $"Drive root not allowed for {fieldName}.", ErrorKind.Critical);
 
     return null;
 }
