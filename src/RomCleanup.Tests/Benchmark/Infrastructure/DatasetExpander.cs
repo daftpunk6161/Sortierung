@@ -5386,6 +5386,20 @@ internal sealed class DatasetExpander
             S("X68K",  false,[],                     [],                     "x68k",       "FolderName",       "tosec",   false, ["Akumajou Dracula","Gradius"],                        1048576),
             S("XBOX",  true, [],                     [".iso",".bin",".chd"], "xbox",       "DiscHeader",       "redump",  false, ["Halo CE","Fable"],                                  4700000000),
             S("ZX",    false,[".tzx"],               [],                     "zx",         "UniqueExtension",  "tosec",   false, ["Manic Miner","Jet Set Willy"],                      32768),
+            // ── Phase 2 expansion: priority systems with uniqueExts ──
+            S("BSX",   false,[".bs"],                [],                     "bsx",        "UniqueExtension",  "no-intro",false, ["BS Zelda","Radical Dreamers"],                       262144),
+            S("FDS",   false,[".fds"],               [],                     "fds",        "UniqueExtension",  "no-intro",false, ["Zelda no Densetsu","Metroid FDS"],                   65536),
+            S("GAMECOM",false,[".tgc"],              [],                     "gamecom",    "UniqueExtension",  "no-intro",false, ["Sonic Jam","Resident Evil 2 GC"],                    524288),
+            S("GP32",  false,[".gxb"],               [],                     "gp32",       "UniqueExtension",  "no-intro",false, ["Pinball Dreams","Bubblex"],                          4194304),
+            S("N64DD", false,[".ndd"],               [],                     "n64dd",      "UniqueExtension",  "no-intro",false, ["Mario Artist","SimCity 64 DD"],                      67108864),
+            S("SGX",   false,[".sgx"],               [],                     "sgx",        "UniqueExtension",  "no-intro",false, ["Aldynes","1941 Counter Attack"],                     524288),
+            S("GP2X",  false,[".gpe"],               [],                     "gp2x",       "UniqueExtension",  "no-intro",false, ["Sqdef","Vektar"],                                   4194304),
+            S("STUDIO2",false,[".st2"],              [],                     "studio2",    "UniqueExtension",  "no-intro",false, ["SpacEwar","Doodle"],                                2048),
+            S("NDSI",  false,[".dsi"],               [".nds"],               "dsi",        "UniqueExtension",  "no-intro",false, ["WarioWare Snapped","Zelda Four Swords AE"],          134217728),
+            S("PS4",   true, [".pkg"],               [".iso",".bin"],        "ps4",        "UniqueExtension",  "redump",  false, ["Bloodborne","Uncharted 4"],                          50000000000),
+            S("MSX2",  false,[],                     [".dsk",".cas"],        "msx2",       "FolderName",       "tosec",   false, ["Space Manbow","Snatcher MSX2"],                      131072),
+            S("NAOMI", true, [],                     [".iso",".bin",".chd"], "naomi",      "FolderName",       "mame",    false, ["Crazy Taxi","Marvel vs Capcom 2"],                   734003200),
+            S("AWAVE", false,[],                     [],                     "atomiswave", "FolderName",       "mame",    false, ["Dolphin Blue","Metal Slug 6"],                       134217728),
         ];
     }
 

@@ -364,8 +364,11 @@ public class DiscHeaderDetectorTests : IDisposable
     [InlineData("PC Engine CD data", "PCECD")]
     [InlineData("turbografx game", "PCECD")]
     [InlineData("ATARI JAGUAR CD game", "JAGCD")]
+    [InlineData("CDTV disc image", "CDTV")]
     [InlineData("AMIGA BOOT stuff", "CD32")]
     [InlineData("CD32 game disc", "CD32")]
+    [InlineData("CD-RTOS disc data", "CDI")]
+    [InlineData("PHILIPS CD-I application", "CDI")]
     [InlineData("FM TOWNS application", "FMTOWNS")]
     [InlineData("Sony Computer Entertainment Inc.", "PS1")]
     [InlineData("PLAYSTATION PSP GAME disc", "PSP")]
@@ -413,5 +416,38 @@ public class DiscHeaderDetectorTests : IDisposable
         Encoding.ASCII.GetBytes("PLAYSTATION").CopyTo(data, 0x9320);
         var path = CreateImage("game.bin", data);
         Assert.Equal("PS1", _detector.DetectFromDiscImage(path));
+    }
+
+    // ── Wii U binary magic: "WUP-" at offset 0x00 ──
+
+    [Fact]
+    public void DetectFromDiscImage_WiiU_WupMagic()
+    {
+        var data = MakeBuffer(0x20);
+        Encoding.ASCII.GetBytes("WUP-").CopyTo(data, 0);
+        var path = CreateImage("game.iso", data);
+        Assert.Equal("WIIU", _detector.DetectFromDiscImage(path));
+    }
+
+    // ── CDI via PVD System Identifier "CD-RTOS" ──
+
+    [Fact]
+    public void DetectFromDiscImage_CDI_PvdCdRtos()
+    {
+        var data = MakeBuffer(0x8000 + 64);
+        data[0x8000] = 0x01; // PVD type
+        Encoding.ASCII.GetBytes("CD001").CopyTo(data, 0x8001);
+        Encoding.ASCII.GetBytes("CD-RTOS").CopyTo(data, 0x8008); // System Identifier
+        var path = CreateImage("game.iso", data);
+        Assert.Equal("CDI", _detector.DetectFromDiscImage(path));
+    }
+
+    // ── CDTV vs CD32 must not collide ──
+
+    [Fact]
+    public void ResolveConsoleFromText_Cdtv_NotCd32()
+    {
+        Assert.Equal("CDTV", DiscHeaderDetector.ResolveConsoleFromText("CDTV disc"));
+        Assert.Equal("CD32", DiscHeaderDetector.ResolveConsoleFromText("AMIGA BOOT disc"));
     }
 }

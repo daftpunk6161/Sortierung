@@ -37,8 +37,8 @@ public sealed class DatasetExpansionTests
             .Distinct(StringComparer.Ordinal)
             .OrderBy(k => k)
             .ToList();
-        Assert.True(coveredSystems.Count >= 65,
-            $"Expected >= 65 systems, got {coveredSystems.Count}: {string.Join(", ", coveredSystems)}");
+        Assert.True(coveredSystems.Count >= 78,
+            $"Expected >= 78 systems, got {coveredSystems.Count}: {string.Join(", ", coveredSystems)}");
 
         // Check all 20 Fallklassen covered
         var coveredFc = allGenerated

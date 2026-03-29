@@ -25,7 +25,9 @@ public sealed class DiscHeaderDetector
     private static readonly Regex RxPcFx = new(@"PC-FX:Hu_CD|PC-FX|NEC.*PC-FX", RxOpts, RxTimeout);
     private static readonly Regex RxPcEngine = new(@"PC\s*Engine|NEC\s*HOME\s*ELECTRONICS|TURBOGRAFX", RxOpts, RxTimeout);
     private static readonly Regex RxJaguar = new(@"ATARI\s*JAGUAR", RxOpts, RxTimeout);
-    private static readonly Regex RxCd32 = new(@"AMIGA\s*BOOT|CDTV|CD32", RxOpts, RxTimeout);
+    private static readonly Regex RxCdtv = new(@"CDTV", RxOpts, RxTimeout);
+    private static readonly Regex RxCd32 = new(@"AMIGA\s*BOOT|CD32", RxOpts, RxTimeout);
+    private static readonly Regex RxCdi = new(@"CD-RTOS|CD-I\s*READY|PHILIPS\s*CD-I", RxOpts, RxTimeout);
     private static readonly Regex RxFmTowns = new(@"FM\s*TOWNS", RxOpts, RxTimeout);
     private static readonly Regex RxPlayStation = new(@"Sony\s*Computer\s*Entertainment|PLAYSTATION", RxOpts, RxTimeout);
     private static readonly Regex RxPsp = new(@"PSP\s*GAME", RxOpts, RxTimeout);
@@ -170,8 +172,12 @@ public sealed class DiscHeaderDetector
             if (RxPcEngine.IsMatch(text)) return "PCECD";
             // Atari Jaguar CD
             if (RxJaguar.IsMatch(text)) return "JAGCD";
+            // Commodore CDTV (before CD32 to avoid substring overlap)
+            if (RxCdtv.IsMatch(text)) return "CDTV";
             // Amiga CD32
             if (RxCd32.IsMatch(text)) return "CD32";
+            // Philips CD-i
+            if (RxCdi.IsMatch(text)) return "CDI";
             // Fujitsu FM Towns
             if (RxFmTowns.IsMatch(text)) return "FMTOWNS";
             // Sony PlayStation family
@@ -214,6 +220,14 @@ public sealed class DiscHeaderDetector
         if (preBuffer[0x18] == 0x5D && preBuffer[0x19] == 0x1C &&
             preBuffer[0x1A] == 0x9E && preBuffer[0x1B] == 0xA3)
             return "WII";
+
+        // Wii U magic at offset 0x18: same as Wii but combined with unique disc type
+        // Wii U disc identifier: bytes 0x00-0x03 contain the game ID, byte 0x0F = 0x01 for Wii U
+        // More reliable: presence of "WUP-" prefix pattern at offset 0x00-0x03
+        if (preRead >= 0x20 &&
+            preBuffer[0x00] == 0x57 && preBuffer[0x01] == 0x55 &&
+            preBuffer[0x02] == 0x50 && preBuffer[0x03] == 0x2D)
+            return "WIIU";
 
         // 3DO: Opera filesystem — record type 0x01 + five 0x5A sync bytes
         // Additional check: offset 0x28 must be ASCII "CD-ROM" or offset 0x40 must contain "opera" label area
@@ -319,6 +333,10 @@ public sealed class DiscHeaderDetector
                     // FM Towns: PVD system identifier contains "FM TOWNS"
                     if (RxPvdFmTowns.IsMatch(sysId))
                         return "FMTOWNS";
+
+                    // Philips CD-i: PVD system identifier contains "CD-RTOS"
+                    if (RxCdi.IsMatch(sysId))
+                        return "CDI";
                 }
             }
         }

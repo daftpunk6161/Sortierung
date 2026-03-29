@@ -200,6 +200,7 @@ public sealed class ConversionRegistryLoader : IConversionRegistry
                     "folderAliases",
                     "aliases",
                     "hints",
+                    "keywords",
                     "conversionPolicy",
                     "preferredConversionTarget",
                     "alternativeTargets"

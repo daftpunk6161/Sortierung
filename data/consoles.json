@@ -1,4 +1,4 @@
-{
+﻿{
   "_meta": {
     "description": "Single Source of Truth fuer alle Konsolen-Definitionen (REF-10). Alle Maps in Classification.ps1 und console-maps.json werden aus dieser Datei generiert.",
     "version": "1.1",
@@ -22,7 +22,10 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "3DO"
+      ]
     },
     {
       "key": "3DS",
@@ -40,7 +43,11 @@
       ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "3DS",
+        "Nintendo 3DS"
+      ]
     },
     {
       "key": "32X",
@@ -58,7 +65,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "32X"
+      ]
     },
     {
       "key": "A26",
@@ -76,7 +86,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Atari 2600"
+      ]
     },
     {
       "key": "A52",
@@ -93,7 +106,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Atari 5200"
+      ]
     },
     {
       "key": "A78",
@@ -110,7 +126,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Atari 7800"
+      ]
     },
     {
       "key": "A800",
@@ -134,7 +153,8 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "AMIGA",
@@ -150,7 +170,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Amiga"
+      ]
     },
     {
       "key": "ARCADE",
@@ -166,7 +189,12 @@
       ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "MAME",
+        "Arcade",
+        "FBNeo"
+      ]
     },
     {
       "key": "ATARIST",
@@ -183,7 +211,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Atari ST"
+      ]
     },
     {
       "key": "C64",
@@ -193,14 +224,20 @@
         ".d64",
         ".t64"
       ],
-      "ambigExts": [".prg"],
+      "ambigExts": [
+        ".prg"
+      ],
       "folderAliases": [
         "c64",
         "commodore 64"
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "C64",
+        "Commodore 64"
+      ]
     },
     {
       "key": "CD32",
@@ -221,7 +258,10 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Amiga CD32"
+      ]
     },
     {
       "key": "CDI",
@@ -245,7 +285,10 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "CD-i"
+      ]
     },
     {
       "key": "CHANNELF",
@@ -260,7 +303,8 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "COLECO",
@@ -276,7 +320,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "ColecoVision"
+      ]
     },
     {
       "key": "CPC",
@@ -290,7 +337,8 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "DC",
@@ -312,7 +360,11 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "DC",
+        "Dreamcast"
+      ]
     },
     {
       "key": "DOS",
@@ -329,7 +381,8 @@
       ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "FMTOWNS",
@@ -352,7 +405,10 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "FM Towns"
+      ]
     },
     {
       "key": "GB",
@@ -369,7 +425,11 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "GB",
+        "Game Boy"
+      ]
     },
     {
       "key": "GBA",
@@ -386,7 +446,11 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "GBA",
+        "Game Boy Advance"
+      ]
     },
     {
       "key": "GBC",
@@ -403,7 +467,11 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "GBC",
+        "Game Boy Color"
+      ]
     },
     {
       "key": "GC",
@@ -431,7 +499,11 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".rvz",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "GC",
+        "GameCube"
+      ]
     },
     {
       "key": "GG",
@@ -448,7 +520,11 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "GG",
+        "Game Gear"
+      ]
     },
     {
       "key": "INTV",
@@ -464,7 +540,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Intellivision"
+      ]
     },
     {
       "key": "JAG",
@@ -481,7 +560,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Jaguar"
+      ]
     },
     {
       "key": "JAGCD",
@@ -501,7 +583,10 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Jaguar CD"
+      ]
     },
     {
       "key": "LYNX",
@@ -517,7 +602,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Lynx"
+      ]
     },
     {
       "key": "MD",
@@ -539,7 +627,12 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "MD",
+        "Genesis",
+        "Mega Drive"
+      ]
     },
     {
       "key": "MSX",
@@ -556,7 +649,8 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "N64",
@@ -575,7 +669,11 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "N64",
+        "Nintendo 64"
+      ]
     },
     {
       "key": "NDS",
@@ -592,7 +690,11 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "NDS",
+        "Nintendo DS"
+      ]
     },
     {
       "key": "NEOCD",
@@ -615,7 +717,11 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Neo Geo CD",
+        "NeoGeo CD"
+      ]
     },
     {
       "key": "NEOGEO",
@@ -631,7 +737,11 @@
       ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Neo Geo",
+        "NeoGeo"
+      ]
     },
     {
       "key": "NES",
@@ -649,7 +759,11 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "NES",
+        "Famicom"
+      ]
     },
     {
       "key": "NGP",
@@ -666,7 +780,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Neo Geo Pocket"
+      ]
     },
     {
       "key": "NGPC",
@@ -681,7 +798,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Neo Geo Pocket Color"
+      ]
     },
     {
       "key": "ODYSSEY2",
@@ -697,21 +817,25 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PC98",
       "displayName": "NEC PC-98",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".d88"],
+      "ambigExts": [
+        ".d88"
+      ],
       "folderAliases": [
         "pc98",
         "pc-98"
       ],
       "conversionPolicy": "ManualOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PCE",
@@ -731,7 +855,12 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "PCE",
+        "PC Engine",
+        "TurboGrafx"
+      ]
     },
     {
       "key": "PCECD",
@@ -755,7 +884,11 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "PC Engine CD",
+        "TurboGrafx CD"
+      ]
     },
     {
       "key": "PCFX",
@@ -777,7 +910,10 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "PC-FX"
+      ]
     },
     {
       "key": "POKEMINI",
@@ -793,7 +929,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Pokemon Mini"
+      ]
     },
     {
       "key": "PS1",
@@ -815,7 +954,12 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "PS1",
+        "PSX",
+        "PlayStation"
+      ]
     },
     {
       "key": "PS2",
@@ -836,7 +980,11 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "PS2",
+        "PlayStation 2"
+      ]
     },
     {
       "key": "PS3",
@@ -857,7 +1005,11 @@
       ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "PS3",
+        "PlayStation 3"
+      ]
     },
     {
       "key": "PSP",
@@ -878,7 +1030,10 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "PSP"
+      ]
     },
     {
       "key": "SAT",
@@ -900,7 +1055,11 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "SAT",
+        "Saturn"
+      ]
     },
     {
       "key": "SCD",
@@ -924,7 +1083,12 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "SCD",
+        "Sega CD",
+        "Mega CD"
+      ]
     },
     {
       "key": "SG1000",
@@ -941,7 +1105,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "SG-1000"
+      ]
     },
     {
       "key": "SMS",
@@ -959,7 +1126,11 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "SMS",
+        "Master System"
+      ]
     },
     {
       "key": "SNES",
@@ -978,7 +1149,12 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "SNES",
+        "Super Nintendo",
+        "Super Famicom"
+      ]
     },
     {
       "key": "SUPERVISION",
@@ -992,7 +1168,8 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "SWITCH",
@@ -1010,7 +1187,11 @@
       ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Switch",
+        "NSW"
+      ]
     },
     {
       "key": "VB",
@@ -1027,7 +1208,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Virtual Boy"
+      ]
     },
     {
       "key": "VECTREX",
@@ -1042,7 +1226,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Vectrex"
+      ]
     },
     {
       "key": "VITA",
@@ -1060,7 +1247,11 @@
       ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Vita",
+        "PS Vita"
+      ]
     },
     {
       "key": "WII",
@@ -1089,7 +1280,10 @@
       ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".rvz",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Wii"
+      ]
     },
     {
       "key": "WIIU",
@@ -1113,7 +1307,11 @@
       ],
       "conversionPolicy": "ManualOnly",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Wii U",
+        "WiiU"
+      ]
     },
     {
       "key": "WS",
@@ -1131,7 +1329,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "WonderSwan"
+      ]
     },
     {
       "key": "WSC",
@@ -1149,7 +1350,10 @@
       ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "WonderSwan Color"
+      ]
     },
     {
       "key": "X360",
@@ -1170,7 +1374,10 @@
       ],
       "conversionPolicy": "ManualOnly",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Xbox 360"
+      ]
     },
     {
       "key": "X68K",
@@ -1185,7 +1392,8 @@
       ],
       "conversionPolicy": "ManualOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "XBOX",
@@ -1204,7 +1412,10 @@
       ],
       "conversionPolicy": "ManualOnly",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "Xbox"
+      ]
     },
     {
       "key": "ZX",
@@ -1222,19 +1433,32 @@
       ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "ZX Spectrum"
+      ]
     },
-
     {
       "key": "ACD",
       "displayName": "Acorn Archimedes CD",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["acd", "archimedes cd", "acorn archimedes"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "acd",
+        "archimedes cd",
+        "acorn archimedes"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "ARCADIA",
@@ -1242,10 +1466,15 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["arcadia", "arcadia 2001", "emerson arcadia"],
+      "folderAliases": [
+        "arcadia",
+        "arcadia 2001",
+        "emerson arcadia"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "AWAVE",
@@ -1253,43 +1482,72 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["atomiswave", "awave"],
+      "folderAliases": [
+        "atomiswave",
+        "awave"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "BSX",
       "displayName": "Nintendo Satellaview",
       "discBased": false,
-      "uniqueExts": [".bs"],
+      "uniqueExts": [
+        ".bs"
+      ],
       "ambigExts": [],
-      "folderAliases": ["bsx", "satellaview"],
+      "folderAliases": [
+        "bsx",
+        "satellaview"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "CDTV",
       "displayName": "Commodore Amiga CDTV",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["cdtv", "amiga cdtv"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "cdtv",
+        "amiga cdtv"
+      ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "CHI",
       "displayName": "Sega Chihiro",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["chihiro"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "chihiro"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "CVISION",
@@ -1297,10 +1555,14 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["creativision", "cvision"],
+      "folderAliases": [
+        "creativision",
+        "cvision"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "DAPHNE",
@@ -1308,32 +1570,51 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["daphne"],
+      "folderAliases": [
+        "daphne"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "FDS",
       "displayName": "Famicom Disk System",
       "discBased": false,
-      "uniqueExts": [".fds"],
+      "uniqueExts": [
+        ".fds"
+      ],
       "ambigExts": [],
-      "folderAliases": ["fds", "famicom disk system"],
+      "folderAliases": [
+        "fds",
+        "famicom disk system"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "FDS",
+        "Famicom Disk System"
+      ]
     },
     {
       "key": "GAMECOM",
       "displayName": "Tiger Game.com",
       "discBased": false,
-      "uniqueExts": [".tgc"],
+      "uniqueExts": [
+        ".tgc"
+      ],
       "ambigExts": [],
-      "folderAliases": ["gamecom", "game.com", "game com"],
+      "folderAliases": [
+        "gamecom",
+        "game.com",
+        "game com"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "GMASTER",
@@ -1341,87 +1622,154 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["gmaster", "game master", "hartung"],
+      "folderAliases": [
+        "gmaster",
+        "game master",
+        "hartung"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "GP32",
       "displayName": "GamePark GP32",
       "discBased": false,
-      "uniqueExts": [".gxb"],
+      "uniqueExts": [
+        ".gxb"
+      ],
       "ambigExts": [],
-      "folderAliases": ["gp32"],
+      "folderAliases": [
+        "gp32"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "GW",
       "displayName": "ZAPiT Game Wave",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["gamewave", "game wave"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "gamewave",
+        "game wave"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "HS",
       "displayName": "Matsushita Video Now Color",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["videonow", "video now"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "videonow",
+        "video now"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "ITE",
       "displayName": "Incredible Technologies Eagle",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["ite", "eagle"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "ite",
+        "eagle"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "IXL",
       "displayName": "Mattel Fisher-Price iXL",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["ixl"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "ixl"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "KSITE",
       "displayName": "Konami e-Amusement",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["ksite"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "ksite"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "LIND",
       "displayName": "Sega Lindbergh",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["lindbergh"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "lindbergh"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "LOOPY",
@@ -1429,21 +1777,38 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["loopy", "casio loopy"],
+      "folderAliases": [
+        "loopy",
+        "casio loopy"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "MAC",
       "displayName": "Apple Macintosh",
       "discBased": true,
-      "uniqueExts": [".dmg"],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["mac", "macintosh", "apple mac"],
+      "uniqueExts": [
+        ".dmg"
+      ],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "mac",
+        "macintosh",
+        "apple mac"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "MAME",
@@ -1451,98 +1816,166 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["mame"],
+      "folderAliases": [
+        "mame"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "N64DD",
       "displayName": "Nintendo 64DD",
       "discBased": false,
-      "uniqueExts": [".ndd"],
+      "uniqueExts": [
+        ".ndd"
+      ],
       "ambigExts": [],
-      "folderAliases": ["n64dd", "64dd"],
+      "folderAliases": [
+        "n64dd",
+        "64dd"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "NAOMI",
       "displayName": "Sega Naomi",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["naomi"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "naomi"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "NAO2",
       "displayName": "Sega Naomi 2",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["naomi2", "naomi 2"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "naomi2",
+        "naomi 2"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "NGAGE",
       "displayName": "Nokia N-Gage",
       "discBased": false,
-      "uniqueExts": [".app"],
+      "uniqueExts": [
+        ".app"
+      ],
       "ambigExts": [],
-      "folderAliases": ["ngage", "n-gage", "nokia ngage"],
+      "folderAliases": [
+        "ngage",
+        "n-gage",
+        "nokia ngage"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "NUON",
       "displayName": "VM Labs NUON",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["nuon"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "nuon"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PALM",
       "displayName": "Palm OS",
       "discBased": false,
-      "uniqueExts": [".prc", ".pdb"],
+      "uniqueExts": [
+        ".prc",
+        ".pdb"
+      ],
       "ambigExts": [],
-      "folderAliases": ["palm", "palmos"],
+      "folderAliases": [
+        "palm",
+        "palmos"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PC88",
       "displayName": "NEC PC-88",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".d88"],
-      "folderAliases": ["pc88", "pc-88", "nec pc-88"],
+      "ambigExts": [
+        ".d88"
+      ],
+      "folderAliases": [
+        "pc88",
+        "pc-88",
+        "nec pc-88"
+      ],
       "conversionPolicy": "ManualOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PCD",
       "displayName": "Photo CD",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["photocd", "photo cd"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "photocd",
+        "photo cd"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PCV2",
@@ -1550,10 +1983,14 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["pcv2", "pocket challenge"],
+      "folderAliases": [
+        "pcv2",
+        "pocket challenge"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PICO",
@@ -1561,21 +1998,35 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["pico", "sega pico"],
+      "folderAliases": [
+        "pico",
+        "sega pico"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PIPPIN",
       "displayName": "Apple Bandai Pippin",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["pippin", "bandai pippin"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "pippin",
+        "bandai pippin"
+      ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "POCKET",
@@ -1583,10 +2034,14 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["pocket", "analogue pocket"],
+      "folderAliases": [
+        "pocket",
+        "analogue pocket"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PPC",
@@ -1594,76 +2049,144 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["ppc", "pocket pc"],
+      "folderAliases": [
+        "ppc",
+        "pocket pc"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PS4",
       "displayName": "PlayStation 4",
       "discBased": true,
-      "uniqueExts": [".pkg"],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["ps4", "playstation4", "playstation 4"],
+      "uniqueExts": [
+        ".pkg"
+      ],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "ps4",
+        "playstation4",
+        "playstation 4"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "PS4",
+        "PlayStation 4"
+      ]
     },
     {
       "key": "PS5",
       "displayName": "PlayStation 5",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin"],
-      "folderAliases": ["ps5", "playstation5", "playstation 5"],
+      "ambigExts": [
+        ".iso",
+        ".bin"
+      ],
+      "folderAliases": [
+        "ps5",
+        "playstation5",
+        "playstation 5"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "PS5",
+        "PlayStation 5"
+      ]
     },
     {
       "key": "QUIZ",
       "displayName": "TAB-Austria Quizard",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["quizard"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "quizard"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "RINGEDGE",
       "displayName": "Sega RingEdge",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["ringedge"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "ringedge"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "RINGEDGE2",
       "displayName": "Sega RingEdge 2",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["ringedge2", "ringedge 2"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "ringedge2",
+        "ringedge 2"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "RINGWIDE",
       "displayName": "Sega RingWide",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["ringwide"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "ringwide"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "SCV",
@@ -1671,21 +2194,32 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["scv", "super cassette vision"],
+      "folderAliases": [
+        "scv",
+        "super cassette vision"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "SGX",
       "displayName": "NEC SuperGrafx",
       "discBased": false,
-      "uniqueExts": [".sgx"],
+      "uniqueExts": [
+        ".sgx"
+      ],
       "ambigExts": [],
-      "folderAliases": ["sgx", "supergrafx", "pc engine supergrafx"],
+      "folderAliases": [
+        "sgx",
+        "supergrafx",
+        "pc engine supergrafx"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "SUFAMI",
@@ -1693,10 +2227,14 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["sufami", "sufami turbo"],
+      "folderAliases": [
+        "sufami",
+        "sufami turbo"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "SUPERACAN",
@@ -1704,593 +2242,1019 @@
       "discBased": false,
       "uniqueExts": [],
       "ambigExts": [],
-      "folderAliases": ["superacan", "super acan"],
+      "folderAliases": [
+        "superacan",
+        "super acan"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "TRIFORCE",
       "displayName": "Nintendo/Sega/Namco Triforce",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["triforce"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "triforce"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "VFLASH",
       "displayName": "VTech V.Flash / V.Smile Pro",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["vflash", "v.flash", "vsmile pro"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "vflash",
+        "v.flash",
+        "vsmile pro"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "VIC20",
       "displayName": "Commodore VIC-20",
       "discBased": false,
-      "uniqueExts": [".p00"],
-      "ambigExts": [".prg"],
-      "folderAliases": ["vic20", "vic-20", "commodore vic-20"],
+      "uniqueExts": [
+        ".p00"
+      ],
+      "ambigExts": [
+        ".prg"
+      ],
+      "folderAliases": [
+        "vic20",
+        "vic-20",
+        "commodore vic-20"
+      ],
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "VIS",
       "displayName": "Memorex Visual Information System",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["vis"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "vis"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "AMIGACD",
       "displayName": "Commodore Amiga CD",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["amigacd", "amiga-cd"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "amigacd",
+        "amiga-cd"
+      ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PLAYDIA",
       "displayName": "Bandai Playdia",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["playdia"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "playdia"
+      ],
       "conversionPolicy": "Auto",
       "preferredConversionTarget": ".chd",
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "FIREBEAT",
       "displayName": "Konami FireBeat",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["firebeat"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "firebeat"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "K573",
       "displayName": "Konami System 573",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["system573", "k573"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "system573",
+        "k573"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "KGV",
       "displayName": "Konami System GV",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["systemgv", "kgv"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "systemgv",
+        "kgv"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "N246",
       "displayName": "Namco System 246",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["system246", "n246"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "system246",
+        "n246"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PRO21",
       "displayName": "Sega Prologue 21",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["prologue21"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "prologue21"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "KISSSITE",
       "displayName": "Tomy Kiss-Site",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["kisssite", "kiss-site"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "kisssite",
+        "kiss-site"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PHOTOPLAY",
       "displayName": "funworld Photo Play",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["photoplay"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "photoplay"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "EAMUSE",
       "displayName": "Konami e-Amusement",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["eamusement", "e-amusement"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "eamusement",
+        "e-amusement"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "GSUPD",
       "displayName": "PlayStation GameShark Updates",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["gameshark-updates"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "gameshark-updates"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "MSX2",
       "displayName": "Microsoft MSX2",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".dsk", ".cas"],
-      "folderAliases": ["msx2"],
+      "ambigExts": [
+        ".dsk",
+        ".cas"
+      ],
+      "folderAliases": [
+        "msx2"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "MEGADUCK",
       "displayName": "Welback Mega Duck",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["megaduck", "mega-duck"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "megaduck",
+        "mega-duck"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "ASTROCADE",
       "displayName": "Bally Astrocade",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["astrocade"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "astrocade"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "VSMILE",
       "displayName": "VTech V.Smile",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["vsmile", "v.smile"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "vsmile",
+        "v.smile"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "VC4000",
       "displayName": "Interton VC 4000",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["vc4000"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "vc4000"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "STUDIO2",
       "displayName": "RCA Studio II",
       "discBased": false,
-      "uniqueExts": [".st2"],
-      "ambigExts": [".bin"],
-      "folderAliases": ["studio2", "studioii"],
+      "uniqueExts": [
+        ".st2"
+      ],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "studio2",
+        "studioii"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "VIDEOPAC",
       "displayName": "Philips Videopac+",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["videopac+", "videopac"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "videopac+",
+        "videopac"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "G7000",
       "displayName": "Philips Videopac G7000",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["g7000", "videopac-g7000"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "g7000",
+        "videopac-g7000"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PLUS4",
       "displayName": "Commodore Plus/4",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".prg", ".d64", ".bin", ".tap"],
-      "folderAliases": ["plus4", "commodore-plus4"],
+      "ambigExts": [
+        ".prg",
+        ".d64",
+        ".bin",
+        ".tap"
+      ],
+      "folderAliases": [
+        "plus4",
+        "commodore-plus4"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "GAMATE",
       "displayName": "Bit Corporation Gamate",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["gamate"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "gamate"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "GAMEPOCKET",
       "displayName": "Epoch Game Pocket Computer",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["gamepocket", "game-pocket"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "gamepocket",
+        "game-pocket"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "AVISION",
       "displayName": "Entex Adventure Vision",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["avision", "adventure-vision"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "avision",
+        "adventure-vision"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "MYVISION",
       "displayName": "Nichibutsu My Vision",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["myvision", "my-vision"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "myvision",
+        "my-vision"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PV1000",
       "displayName": "Casio PV-1000",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["pv1000", "pv-1000"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "pv1000",
+        "pv-1000"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "BEENA",
       "displayName": "Sega Beena",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["beena"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "beena"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "RX78",
       "displayName": "Bandai Gundam RX-78",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["rx78", "gundam"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "rx78",
+        "gundam"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "GIZMONDO",
       "displayName": "Tiger Gizmondo",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin", ".iso"],
-      "folderAliases": ["gizmondo"],
+      "ambigExts": [
+        ".bin",
+        ".iso"
+      ],
+      "folderAliases": [
+        "gizmondo"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "GP2X",
       "displayName": "GamePark GP2X",
       "discBased": false,
-      "uniqueExts": [".gpe"],
+      "uniqueExts": [
+        ".gpe"
+      ],
       "ambigExts": [],
-      "folderAliases": ["gp2x"],
+      "folderAliases": [
+        "gp2x"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "APF",
       "displayName": "APF MP-1000",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["apf", "mp1000"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "apf",
+        "mp1000"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "EVERCADE",
       "displayName": "Blaze Evercade",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["evercade"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "evercade"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "VISICOM",
       "displayName": "Toshiba Visicom",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".bin"],
-      "folderAliases": ["visicom"],
+      "ambigExts": [
+        ".bin"
+      ],
+      "folderAliases": [
+        "visicom"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "CPS3",
       "displayName": "Capcom Play System III",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["cps3", "cps-3"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "cps3",
+        "cps-3"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "KM2",
       "displayName": "Konami M2",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["konami-m2"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "konami-m2"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "KPYTHON2",
       "displayName": "Konami Python 2",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["python2", "konami-python2"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "python2",
+        "konami-python2"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "ALLS",
       "displayName": "Sega ALLS",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["alls", "sega-alls"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "alls",
+        "sega-alls"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "NU",
       "displayName": "Sega Nu",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["sega-nu", "nu"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "sega-nu",
+        "nu"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "POLYMEGA",
       "displayName": "Playmaji Polymega",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["polymega"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "polymega"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "EBOOK",
       "displayName": "Sony Electronic Book",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["electronic-book", "ebook"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "electronic-book",
+        "ebook"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "AUDIOCD",
       "displayName": "Audio CD",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".bin", ".cue"],
-      "folderAliases": ["audio-cd", "audiocd"],
+      "ambigExts": [
+        ".bin",
+        ".cue"
+      ],
+      "folderAliases": [
+        "audio-cd",
+        "audiocd"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "DVD",
       "displayName": "DVD-Video",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".img"],
-      "folderAliases": ["dvd-video", "dvd"],
+      "ambigExts": [
+        ".iso",
+        ".img"
+      ],
+      "folderAliases": [
+        "dvd-video",
+        "dvd"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "BD",
       "displayName": "Blu-ray Video",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".img"],
-      "folderAliases": ["bd-video", "bluray"],
+      "ambigExts": [
+        ".iso",
+        ".img"
+      ],
+      "folderAliases": [
+        "bd-video",
+        "bluray"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "ION",
       "displayName": "Hasbro iON Educational Gaming System",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["ion"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "ion"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "ZAURUS",
       "displayName": "Sharp Zaurus",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["zaurus"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "zaurus"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "PSION",
       "displayName": "Psion Series",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["psion"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "psion"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "MEGATOUCH",
       "displayName": "Merit Megatouch",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["megatouch"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "megatouch"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     },
     {
       "key": "NDSI",
       "displayName": "Nintendo DSi",
       "discBased": false,
-      "uniqueExts": [".dsi"],
-      "ambigExts": [".nds"],
-      "folderAliases": ["dsi", "ndsi"],
+      "uniqueExts": [
+        ".dsi"
+      ],
+      "ambigExts": [
+        ".nds"
+      ],
+      "folderAliases": [
+        "dsi",
+        "ndsi"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "DSi",
+        "NDSi"
+      ]
     },
     {
       "key": "NEW3DS",
       "displayName": "New Nintendo 3DS",
       "discBased": false,
       "uniqueExts": [],
-      "ambigExts": [".3ds", ".cia"],
-      "folderAliases": ["new3ds", "new-3ds"],
+      "ambigExts": [
+        ".3ds",
+        ".cia"
+      ],
+      "folderAliases": [
+        "new3ds",
+        "new-3ds"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": [
+        "New 3DS",
+        "New Nintendo 3DS"
+      ]
     },
     {
       "key": "HYPERSCAN",
       "displayName": "Mattel HyperScan",
       "discBased": true,
       "uniqueExts": [],
-      "ambigExts": [".iso", ".bin", ".chd", ".cue", ".img"],
-      "folderAliases": ["hyperscan"],
+      "ambigExts": [
+        ".iso",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".img"
+      ],
+      "folderAliases": [
+        "hyperscan"
+      ],
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
-      "alternativeTargets": []
+      "alternativeTargets": [],
+      "keywords": []
     }
   ]
 }
