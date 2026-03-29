@@ -103,11 +103,9 @@ public sealed class AuditFindingsFixTests : IDisposable
     //  F-08: CLI Runtime-Exit-Code-Tests
     // =====================================================================
 
-    private static readonly object ConsoleLock = new();
-
     private static (int ExitCode, string Stdout, string Stderr) RunCli(CliRunOptions options)
     {
-        lock (ConsoleLock)
+        lock (SharedTestLocks.ConsoleLock)
         {
             using var stdout = new StringWriter();
             using var stderr = new StringWriter();

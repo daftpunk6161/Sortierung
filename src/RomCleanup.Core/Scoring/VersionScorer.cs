@@ -85,7 +85,9 @@ public sealed class VersionScorer
                 long dottedScore = 0;
                 foreach (var segment in segments)
                 {
-                    dottedScore += int.Parse(segment) * weight;
+                    if (!long.TryParse(segment, out var segVal))
+                        break;
+                    dottedScore += segVal * weight;
                     if (weight > 1) weight /= 1000;
                 }
 
@@ -97,7 +99,8 @@ public sealed class VersionScorer
                 if (!numericMatch.Success)
                     return score;
 
-                var numeric = int.Parse(numericMatch.Groups[1].Value);
+                if (!long.TryParse(numericMatch.Groups[1].Value, out var numeric))
+                    return score;
                 var suffix = numericMatch.Groups[2].Value;
                 long suffixScore = 0;
                 if (!string.IsNullOrWhiteSpace(suffix))
@@ -117,7 +120,8 @@ public sealed class VersionScorer
                 if (!digitMatch.Success)
                     return score;
 
-                score += int.Parse(digitMatch.Value) * 10L;
+                if (long.TryParse(digitMatch.Value, out var leadingDigit))
+                    score += leadingDigit * 10L;
             }
         }
 
@@ -130,7 +134,8 @@ public sealed class VersionScorer
             {
                 foreach (Match seg in RxDigits.Matches(verMatch.Value))
                 {
-                    segments.Add(int.Parse(seg.Value));
+                    if (int.TryParse(seg.Value, out var segVal))
+                        segments.Add(segVal);
                 }
             }
             catch (RegexMatchTimeoutException) { }

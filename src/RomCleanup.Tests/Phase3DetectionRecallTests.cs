@@ -14,6 +14,7 @@ namespace RomCleanup.Tests;
 /// Phase 3 — Detection Recall &amp; Stub-Generatoren (TASK-036 bis TASK-046).
 /// Tests für Filename-Collision-Fixes, Stub-Generatoren, PS3-Detection und Benchmark-Gates.
 /// </summary>
+[Collection("BenchmarkGroundTruth")]
 public sealed class Phase3DetectionRecallTests : IDisposable
 {
     private readonly string _tempDir = Path.Combine(Path.GetTempPath(), $"phase3-{Guid.NewGuid():N}");

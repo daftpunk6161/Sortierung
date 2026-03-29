@@ -18,7 +18,6 @@ namespace RomCleanup.Tests;
 public sealed class AuditHardeningTests : IDisposable
 {
     private readonly string _tempDir;
-    private static readonly object ConsoleLock = new();
 
     public AuditHardeningTests()
     {
@@ -299,7 +298,7 @@ public sealed class AuditHardeningTests : IDisposable
 
     private static (int ExitCode, string Stdout, string Stderr) RunCli(CliRunOptions options)
     {
-        lock (ConsoleLock)
+        lock (SharedTestLocks.ConsoleLock)
         {
             using var stdout = new StringWriter();
             using var stderr = new StringWriter();

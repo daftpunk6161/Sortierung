@@ -1,3 +1,4 @@
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Core.Classification;
 using RomCleanup.Core.Deduplication;
@@ -302,7 +303,7 @@ public sealed partial class RunOrchestrator
         CancellationToken cancellationToken)
     {
         var junkRemovedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (!options.RemoveJunk || options.Mode != "Move")
+        if (!options.RemoveJunk || options.Mode != RunConstants.ModeMove)
             return new JunkPhaseResult(new MovePhaseResult(0, 0, 0, 0), junkRemovedPaths);
 
         var phase = new JunkRemovalPipelinePhase();

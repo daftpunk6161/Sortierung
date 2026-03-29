@@ -108,4 +108,21 @@ public class VersionScorerTests
         var enOnly = _sut.GetVersionScore("Game (en)");
         Assert.True(withAf > enOnly);
     }
+
+    // --- Overflow Protection ---
+
+    [Fact]
+    public void DottedRevision_ExtremeNumbers_DoesNotThrow()
+    {
+        // Regression test: int.Parse overflow on extreme revision segments
+        var score = _sut.GetVersionScore("Game (Rev 9999999999.1.1)");
+        Assert.True(score >= 0);
+    }
+
+    [Fact]
+    public void NumericRevision_ExtremeNumber_DoesNotThrow()
+    {
+        var score = _sut.GetVersionScore("Game (Rev 99999999999)");
+        Assert.True(score >= 0);
+    }
 }

@@ -14,7 +14,6 @@ namespace RomCleanup.Tests;
 /// </summary>
 public sealed class CliRedPhaseTests : IDisposable
 {
-    private static readonly object ConsoleLock = new();
     private readonly string _tempDir;
 
     public CliRedPhaseTests()
@@ -407,7 +406,7 @@ public sealed class CliRedPhaseTests : IDisposable
     private static (CliRunOptions? Options, int ExitCode, string Stdout, string Stderr)
         ParseArgsCapture(string[] args)
     {
-        lock (ConsoleLock)
+        lock (SharedTestLocks.ConsoleLock)
         {
             using var stdout = new StringWriter();
             using var stderr = new StringWriter();
@@ -427,7 +426,7 @@ public sealed class CliRedPhaseTests : IDisposable
     private static (int ExitCode, string Stdout, string Stderr)
         RunCliCapture(CliRunOptions options)
     {
-        lock (ConsoleLock)
+        lock (SharedTestLocks.ConsoleLock)
         {
             using var stdout = new StringWriter();
             using var stderr = new StringWriter();
@@ -453,5 +452,18 @@ public sealed class CliRedPhaseTests : IDisposable
             return JsonDocument.Parse(trimmed[start..(end + 1)]);
 
         return JsonDocument.Parse(trimmed);
+    }
+
+    // --- SEC-CLI-03: Drive root validation (parity with API) ---
+
+    [Fact]
+    public void ParseArgs_DriveRoot_ShouldReturnExitCode3()
+    {
+        var (opts, exitCode, _, stderr) = ParseArgsCapture(
+            ["--roots", @"C:\"]);
+
+        Assert.Null(opts);
+        Assert.Equal(3, exitCode);
+        Assert.Contains("Drive root not allowed", stderr, StringComparison.OrdinalIgnoreCase);
     }
 }

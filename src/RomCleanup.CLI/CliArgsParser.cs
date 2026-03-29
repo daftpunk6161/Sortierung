@@ -1,6 +1,7 @@
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Paths;
+using RomCleanup.Infrastructure.Safety;
 
 namespace RomCleanup.CLI;
 
@@ -313,6 +314,10 @@ internal static class CliArgsParser
             var fullRoot = Path.GetFullPath(root);
             if (IsProtectedSystemPath(fullRoot))
                 return CliParseResult.ValidationError([$"[Error] Root directory is in a protected system path: {fullRoot}"]);
+
+            // SEC-CLI-03: Block drive roots (C:\, D:\, etc.) — parity with API
+            if (SafetyValidator.IsDriveRoot(fullRoot))
+                return CliParseResult.ValidationError([$"[Error] Drive root not allowed as root directory: {fullRoot}"]);
 
             if (!Directory.Exists(fullRoot))
                 return CliParseResult.ValidationError([$"[Error] Root directory not found: {fullRoot}"]);

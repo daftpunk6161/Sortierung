@@ -78,7 +78,11 @@ public static class RunOptionsBuilder
         return new RunOptions
         {
             Roots = normalizedRoots,
-            Mode = string.IsNullOrWhiteSpace(options.Mode) ? "DryRun" : options.Mode,
+            Mode = string.IsNullOrWhiteSpace(options.Mode)
+                ? RunConstants.ModeDryRun
+                : (string.Equals(options.Mode, RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase)
+                    ? RunConstants.ModeMove
+                    : RunConstants.ModeDryRun),
             ConflictPolicy = string.IsNullOrWhiteSpace(options.ConflictPolicy) ? RunConstants.DefaultConflictPolicy : options.ConflictPolicy,
             Extensions = normalizedExtensions,
             PreferRegions = normalizedPreferRegions,

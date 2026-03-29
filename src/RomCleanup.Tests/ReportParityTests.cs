@@ -16,7 +16,6 @@ namespace RomCleanup.Tests;
 
 public sealed class ReportParityTests : IDisposable
 {
-    private static readonly object ConsoleLock = new();
     private readonly string _tempDir;
 
     public ReportParityTests()
@@ -285,7 +284,7 @@ public sealed class ReportParityTests : IDisposable
 
     private static (int ExitCode, string Stdout, string Stderr) RunCliWithCapturedConsole(CliRunOptions options)
     {
-        lock (ConsoleLock)
+        lock (SharedTestLocks.ConsoleLock)
         {
             using var stdout = new StringWriter();
             using var stderr = new StringWriter();

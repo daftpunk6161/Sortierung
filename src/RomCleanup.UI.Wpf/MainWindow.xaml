@@ -132,8 +132,6 @@
                   Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Options}"/>
               <views:ConfigProfilesView
                   Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Profiles}"/>
-              <views:ConfigAdvancedView
-                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Advanced}"/>
             </Grid>
 
             <!-- ── Tools (sub-tab-aware) ───────────────────────── -->

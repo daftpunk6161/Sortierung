@@ -61,9 +61,6 @@
         <RadioButton GroupName="SubTab" Content="Profiles" Style="{StaticResource SidebarNavItem}"
                      IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Profiles}"
                      AutomationProperties.Name="Profile Management"/>
-        <RadioButton GroupName="SubTab" Content="Advanced" Style="{StaticResource SidebarNavItem}"
-                     IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Advanced}"
-                     AutomationProperties.Name="Advanced Options"/>
       </StackPanel>
 
       <!-- ── Tools tabs ───────────────────────────────────────────── -->

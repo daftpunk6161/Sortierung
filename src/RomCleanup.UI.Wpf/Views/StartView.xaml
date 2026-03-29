@@ -19,6 +19,15 @@
               Cursor="Hand"
               Drop="OnHeroDrop" DragEnter="OnHeroDragEnter" DragLeave="OnHeroDragLeave"
               AutomationProperties.Name="{Binding Loc[Start.DropZoneLabel]}">
+        <Border.Style>
+          <Style TargetType="Border">
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding Shell.SelectedSubTab}" Value="RecentRuns">
+                <Setter Property="Visibility" Value="Collapsed"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Border.Style>
         <Grid>
           <!-- Empty state -->
           <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -71,9 +80,19 @@
         </Grid>
       </Border>
 
-      <!-- ── GUI-066: Intent Cards ── -->
-      <TextBlock Text="{Binding Loc[Start.WhatToDo]}" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomSM}"/>
-      <UniformGrid Columns="3" Margin="{DynamicResource SpaceBottomLG}">
+      <!-- ── GUI-066: Intent Cards (hidden on RecentRuns) ── -->
+      <StackPanel>
+        <StackPanel.Style>
+          <Style TargetType="StackPanel">
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding Shell.SelectedSubTab}" Value="RecentRuns">
+                <Setter Property="Visibility" Value="Collapsed"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </StackPanel.Style>
+        <TextBlock Text="{Binding Loc[Start.WhatToDo]}" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomSM}"/>
+        <UniformGrid Columns="3" Margin="{DynamicResource SpaceBottomLG}">
         <!-- Aufräumen -->
         <RadioButton GroupName="Intent" Margin="{DynamicResource SpaceRightSM}" Cursor="Hand"
                      IsChecked="{Binding ActivePreset, Converter={StaticResource StrEqualsToBool}, ConverterParameter=SafeDryRun}"
@@ -134,13 +153,23 @@
             </StackPanel>
           </Border>
         </RadioButton>
-      </UniformGrid>
+        </UniformGrid>
+      </StackPanel>
 
       <!-- ── GUI-067: CTA Button ── -->
-      <Button Command="{Binding RunCommand}" Style="{StaticResource PrimaryButton}"
+      <Button Command="{Binding RunCommand}"
               Height="56" HorizontalAlignment="Stretch" Margin="{DynamicResource SpaceBottomMD}"
               AutomationProperties.Name="{Binding Loc[Start.CtaPreview]}"
               AutomationProperties.AcceleratorKey="F5">
+        <Button.Style>
+          <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding Shell.SelectedSubTab}" Value="RecentRuns">
+                <Setter Property="Visibility" Value="Collapsed"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Button.Style>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
           <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE768;" FontSize="22" VerticalAlignment="Center"
                      Margin="{DynamicResource SpaceRightSM}"/>
@@ -148,8 +177,9 @@
         </StackPanel>
       </Button>
 
-      <!-- Guided workflow redesigned: compact stepper cards -->
-      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+      <!-- Guided workflow redesigned: compact stepper cards (only visible on QuickStart sub-tab) -->
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}"
+              Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=QuickStart}">
         <StackPanel>
           <TextBlock Text="{Binding Loc[Start.FlowTitle]}" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomSM}"/>
           <TextBlock Text="{Binding Loc[Start.FlowDesc]}" Style="{StaticResource CaptionText}" Margin="0,0,0,10" TextWrapping="Wrap"/>
@@ -265,8 +295,17 @@
       </Border>
 
       <!-- ── GUI-068: Last Run Info ── -->
-      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}"
-              Visibility="{Binding HasRunResult, Converter={StaticResource BoolToVis}}">
+      <Border Margin="{DynamicResource SpaceBottomMD}">
+        <Border.Style>
+          <Style TargetType="Border" BasedOn="{StaticResource SectionCard}">
+            <Setter Property="Visibility" Value="{Binding HasRunResult, Converter={StaticResource BoolToVis}}"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding Shell.SelectedSubTab}" Value="RecentRuns">
+                <Setter Property="Visibility" Value="Visible"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Border.Style>
         <StackPanel>
           <TextBlock Text="{Binding Loc[Start.LastRun]}" FontSize="14" FontWeight="SemiBold"
                      Foreground="{DynamicResource BrushTextPrimary}" Margin="{DynamicResource SpaceBottomSM}"/>

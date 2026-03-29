@@ -181,6 +181,41 @@
         </StackPanel>
       </Border>
 
+      <!-- ── Sicherheitsmodus ── -->
+      <TextBlock Text="{Binding Loc[Settings.SectionSecurity]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <StackPanel>
+          <CheckBox Content="{Binding Loc[Settings.SafetyStrict]}" Margin="0,4"
+                    IsChecked="{Binding SafetyStrict}"
+                    ToolTip="{Binding Loc[Settings.SafetyStrictTip]}" TabIndex="60"/>
+          <Grid Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="140"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="{Binding Loc[Settings.LabelProtectedPaths]}" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" Text="{Binding ProtectedPaths, UpdateSourceTrigger=PropertyChanged}"
+                     ToolTip="{Binding Loc[Settings.ProtectedPathsTip]}"
+                     AutomationProperties.Name="{Binding Loc[Settings.ProtectedPathsName]}"
+                     TabIndex="61"/>
+          </Grid>
+          <CheckBox Content="{Binding Loc[Settings.JpKeepSelected]}" Margin="0,8,0,0"
+                    IsChecked="{Binding JpOnlySelected}"
+                    ToolTip="{Binding Loc[Settings.JpKeepSelectedTip]}" TabIndex="62"/>
+          <Grid Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="140"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="{Binding Loc[Settings.JpKeepConsolesLabel]}" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" Text="{Binding JpKeepConsoles, UpdateSourceTrigger=PropertyChanged}"
+                     ToolTip="{Binding Loc[Settings.JpKeepConsolesTip]}"
+                     AutomationProperties.Name="{Binding Loc[Settings.JpKeepConsolesLabel]}"
+                     TabIndex="63"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+
     </StackPanel>
   </ScrollViewer>
 </UserControl>

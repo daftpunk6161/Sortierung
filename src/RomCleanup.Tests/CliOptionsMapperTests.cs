@@ -238,4 +238,24 @@ public sealed class CliOptionsMapperTests
         Assert.NotNull(runOptions);
         Assert.Empty(runOptions!.Roots);
     }
+
+    [Theory]
+    [InlineData("move", "Move")]
+    [InlineData("MOVE", "Move")]
+    [InlineData("Move", "Move")]
+    [InlineData("dryrun", "DryRun")]
+    [InlineData("DRYRUN", "DryRun")]
+    [InlineData("DryRun", "DryRun")]
+    [InlineData("garbage", "DryRun")]
+    [InlineData("", "DryRun")]
+    [InlineData(null, "DryRun")]
+    public void Normalize_Mode_CaseNormalized(string? inputMode, string expectedMode)
+    {
+        var settings = new RomCleanupSettings();
+        var cli = new CliRunOptions { Roots = new[] { "C:\\temp" }, Mode = inputMode! };
+
+        var (runOptions, _) = CliOptionsMapper.Map(cli, settings);
+
+        Assert.Equal(expectedMode, runOptions!.Mode);
+    }
 }
