@@ -106,76 +106,136 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                     setMembers = PipelinePhaseHelpers.GetSetMembers(loser.MainPath, ext.ToLowerInvariant());
                 }
 
+                var plannedMemberMoves = new List<(string SourcePath, string DestPath, long SizeBytes)>();
+                var setPreflightFailed = false;
+                foreach (var member in setMembers)
+                {
+                    if (alreadyMovedAsSetMember.Contains(member))
+                        continue;
+
+                    if (!File.Exists(member))
+                    {
+                        setPreflightFailed = true;
+                        break;
+                    }
+
+                    var memberRoot = PipelinePhaseHelpers.FindRootForPath(member, input.Options.Roots);
+                    if (memberRoot is null)
+                    {
+                        setPreflightFailed = true;
+                        break;
+                    }
+
+                    var memberFileName = Path.GetFileName(member);
+                    var memberDest = context.FileSystem.ResolveChildPathWithinRoot(
+                        trashBase, Path.Combine(RunConstants.WellKnownFolders.TrashRegionDedupe, memberFileName));
+
+                    if (memberDest is null)
+                    {
+                        setPreflightFailed = true;
+                        break;
+                    }
+
+                    if (string.Equals(input.Options.ConflictPolicy, "Skip", StringComparison.OrdinalIgnoreCase)
+                        && File.Exists(memberDest))
+                    {
+                        setPreflightFailed = true;
+                        break;
+                    }
+
+                    plannedMemberMoves.Add((member, memberDest, new FileInfo(member).Length));
+                }
+
+                if (setPreflightFailed)
+                {
+                    failCount++;
+                    if (hasAuditPath)
+                    {
+                        context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, loser.MainPath, destPath,
+                            "MOVE_FAILED", loser.Category.ToString().ToUpperInvariant(), "", "region-dedupe:set-member-preflight-failed");
+                    }
+
+                    if (processedLosers % 100 == 0 || processedLosers == totalLosers)
+                        context.OnProgress?.Invoke($"[Move] Fortschritt: {processedLosers}/{totalLosers} (moved={moveCount}, skipped={skipCount}, failed={failCount})");
+                    continue;
+                }
+
                 var actualDest = context.FileSystem.MoveItemSafely(loser.MainPath, destPath);
                 if (actualDest is not null)
                 {
-                    moveCount++;
-                    savedBytes += loser.SizeBytes;
+                    var movedItems = new List<(string SourcePath, string ActualDestPath, string Category)>();
+                    movedItems.Add((loser.MainPath, actualDest, loser.Category.ToString().ToUpperInvariant()));
 
-                    if (hasAuditPath)
+                    var memberMoveFailed = false;
+                    foreach (var plannedMemberMove in plannedMemberMoves)
                     {
-                        // Write definitive audit row with actual destination (may differ due to DUP suffix)
-                        context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, loser.MainPath, actualDest,
-                            "Move", loser.Category.ToString().ToUpperInvariant(), "", "region-dedupe");
-                    }
-
-                    // TASK-168: Co-move set members (BIN/TRACK files) when their descriptor (CUE/GDI/CCD/M3U) is moved.
-                    // This prevents orphaned members from being left behind in the source directory.
-                    foreach (var member in setMembers)
+                        if (hasAuditPath)
                         {
-                            if (alreadyMovedAsSetMember.Contains(member) || !File.Exists(member))
-                                continue;
+                            context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, plannedMemberMove.SourcePath, plannedMemberMove.DestPath,
+                                "MOVE_PENDING", "SET_MEMBER", "", "region-dedupe:set-member:write-ahead");
+                            context.AuditStore.Flush(input.Options.AuditPath!);
+                        }
 
-                            // SEC-MOVE-06: Validate set member path is within an allowed root.
-                            // CUE/GDI/CCD parsers return relative paths resolved from the descriptor;
-                            // a crafted descriptor could reference paths outside the root.
-                            var memberRoot = PipelinePhaseHelpers.FindRootForPath(member, input.Options.Roots);
-                            if (memberRoot is null)
-                            {
-                                context.OnProgress?.Invoke($"WARNING: Set member outside allowed roots, skipped: {member}");
-                                continue;
-                            }
-
-                            var memberFileName = Path.GetFileName(member);
-                            var memberDest = context.FileSystem.ResolveChildPathWithinRoot(
-                                trashBase, Path.Combine(RunConstants.WellKnownFolders.TrashRegionDedupe, memberFileName));
-
-                            if (memberDest is null) continue;
-
+                        var memberActual = context.FileSystem.MoveItemSafely(plannedMemberMove.SourcePath, plannedMemberMove.DestPath);
+                        if (memberActual is null)
+                        {
+                            memberMoveFailed = true;
                             if (hasAuditPath)
                             {
-                                context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, member, memberDest,
-                                    "MOVE_PENDING", "SET_MEMBER", "", "region-dedupe:set-member:write-ahead");
-                                context.AuditStore.Flush(input.Options.AuditPath!);
-                            }
-
-                            var memberActual = context.FileSystem.MoveItemSafely(member, memberDest);
-                            if (memberActual is not null)
-                            {
-                                alreadyMovedAsSetMember.Add(member);
-                                moveCount++;
-
-                                if (hasAuditPath)
-                                {
-                                    context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, member, memberActual,
-                                        "Move", "SET_MEMBER", "", "region-dedupe:set-member");
-                                }
-                            }
-                            else if (hasAuditPath)
-                            {
-                                context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, member, memberDest,
+                                context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, plannedMemberMove.SourcePath, plannedMemberMove.DestPath,
                                     "MOVE_FAILED", "SET_MEMBER", "", "region-dedupe:set-member:move-failed");
+                            }
+                            break;
+                        }
+
+                        movedItems.Add((plannedMemberMove.SourcePath, memberActual, "SET_MEMBER"));
+                    }
+
+                    if (memberMoveFailed)
+                    {
+                        foreach (var movedItem in movedItems.AsEnumerable().Reverse())
+                        {
+                            _ = context.FileSystem.MoveItemSafely(movedItem.ActualDestPath, movedItem.SourcePath);
+                        }
+
+                        failCount++;
+                        if (hasAuditPath)
+                        {
+                            context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, loser.MainPath, destPath,
+                                "MOVE_FAILED", loser.Category.ToString().ToUpperInvariant(), "", "region-dedupe:set-member-rollback");
+                        }
+                    }
+                    else
+                    {
+                        moveCount += movedItems.Count;
+                        savedBytes += loser.SizeBytes + plannedMemberMoves.Sum(static m => m.SizeBytes);
+
+                        foreach (var movedItem in movedItems)
+                        {
+                            if (hasAuditPath)
+                            {
+                                var reason = string.Equals(movedItem.Category, "SET_MEMBER", StringComparison.OrdinalIgnoreCase)
+                                    ? "region-dedupe:set-member"
+                                    : "region-dedupe";
+                                context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, movedItem.SourcePath, movedItem.ActualDestPath,
+                                    "Move", movedItem.Category, "", reason);
                             }
                         }
 
-                    if (moveCount % 10 == 0 && hasAuditPath)
-                    {
-                        context.AuditStore.Flush(input.Options.AuditPath!);
-                        context.AuditStore.WriteMetadataSidecar(input.Options.AuditPath!, new Dictionary<string, object>
+                        foreach (var plannedMemberMove in plannedMemberMoves)
                         {
-                            ["IncrementalFlush"] = true,
-                            ["MoveCount"] = moveCount
-                        });
+                            alreadyMovedAsSetMember.Add(plannedMemberMove.SourcePath);
+                        }
+
+                        if (moveCount % 10 == 0 && hasAuditPath)
+                        {
+                            context.AuditStore.Flush(input.Options.AuditPath!);
+                            context.AuditStore.WriteMetadataSidecar(input.Options.AuditPath!, new Dictionary<string, object>
+                            {
+                                ["IncrementalFlush"] = true,
+                                ["MoveCount"] = moveCount
+                            });
+                        }
                     }
                 }
                 else

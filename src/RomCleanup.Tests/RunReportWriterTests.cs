@@ -159,6 +159,40 @@ public class RunReportWriterTests
     }
 
     [Fact]
+    public void BuildSummary_ErrorCount_EqualsFailCountWithoutDoubleCounting()
+    {
+        var winner = new RomCandidate { MainPath = @"C:\roms\Game (EU).chd", Category = FileCategory.Game };
+        var loser = new RomCandidate { MainPath = @"C:\roms\Game (US).chd", Category = FileCategory.Game };
+
+        var result = new RunResult
+        {
+            Status = "completed_with_errors",
+            TotalFilesScanned = 2,
+            WinnerCount = 1,
+            LoserCount = 1,
+            GroupCount = 1,
+            DedupeGroups = new[]
+            {
+                new DedupeGroup
+                {
+                    GameKey = "game",
+                    Winner = winner,
+                    Losers = new[] { loser }
+                }
+            },
+            AllCandidates = new[] { winner, loser },
+            MoveResult = new MovePhaseResult(MoveCount: 0, FailCount: 1, SavedBytes: 0, SkipCount: 0),
+            JunkMoveResult = new MovePhaseResult(MoveCount: 0, FailCount: 2, SavedBytes: 0, SkipCount: 0),
+            ConsoleSortResult = new ConsoleSortResult(2, 0, 0, 0, 0, new Dictionary<string, int>(), Failed: 3)
+        };
+
+        var summary = RunReportWriter.BuildSummary(result, "Move");
+
+        Assert.Equal(summary.FailCount, summary.ErrorCount);
+        Assert.Equal(6, summary.FailCount);
+    }
+
+    [Fact]
     public void BuildEntries_NoDedupeGroups_IncludesAllCandidates()
     {
         var game = new RomCandidate { MainPath = @"C:\roms\Game (EU).chd", Category = FileCategory.Game, GameKey = "game" };

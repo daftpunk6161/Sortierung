@@ -71,6 +71,30 @@ public sealed class ConversionGraphTests
         Assert.Empty(path!);
     }
 
+    [Fact]
+    public void FindPath_EqualCostAlternativePaths_IsDeterministic()
+    {
+        var graph = new ConversionGraph([
+            Edge(".cso", ".iso", "b-tool", 5),
+            Edge(".cso", ".cue", "a-tool", 5),
+            Edge(".iso", ".chd", "z-tool", 5),
+            Edge(".cue", ".chd", "z-tool", 5)
+        ]);
+
+        var firstPath = graph.FindPath(".cso", ".chd", "PSP", _ => true);
+        Assert.NotNull(firstPath);
+
+        for (var i = 0; i < 20; i++)
+        {
+            var nextPath = graph.FindPath(".cso", ".chd", "PSP", _ => true);
+            Assert.NotNull(nextPath);
+            Assert.Equal(firstPath!.Count, nextPath!.Count);
+            Assert.Equal(firstPath[0].TargetExtension, nextPath[0].TargetExtension);
+            Assert.Equal(firstPath[0].Tool.ToolName, nextPath[0].Tool.ToolName);
+            Assert.Equal(firstPath[1].TargetExtension, nextPath[1].TargetExtension);
+        }
+    }
+
     private static ConversionCapability Edge(
         string source,
         string target,

@@ -27,17 +27,19 @@ public sealed class ConversionGraph(IReadOnlyList<ConversionCapability> capabili
 
         var source = sourceExtension.Trim().ToLowerInvariant();
         var target = targetExtension.Trim().ToLowerInvariant();
-        var queue = new PriorityQueue<(string Ext, int Depth), int>();
+        var queue = new PriorityQueue<(string Ext, int Depth), (int Cost, int Order)>();
         var distances = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
         {
             [source] = 0
         };
         var previous = new Dictionary<string, (string PrevExt, ConversionCapability Edge)>(StringComparer.OrdinalIgnoreCase);
 
-        queue.Enqueue((source, 0), 0);
+        var enqueueOrder = 0;
+        queue.Enqueue((source, 0), (0, enqueueOrder++));
 
-        while (queue.TryDequeue(out var current, out var currentCost))
+        while (queue.TryDequeue(out var current, out var currentPriority))
         {
+            var currentCost = currentPriority.Cost;
             if (current.Depth > 5)
                 continue;
 
@@ -57,7 +59,7 @@ public sealed class ConversionGraph(IReadOnlyList<ConversionCapability> capabili
 
                 distances[nextExt] = nextCost;
                 previous[nextExt] = (current.Ext, edge);
-                queue.Enqueue((nextExt, current.Depth + 1), nextCost);
+                queue.Enqueue((nextExt, current.Depth + 1), (nextCost, enqueueOrder++));
             }
         }
 
@@ -85,7 +87,10 @@ public sealed class ConversionGraph(IReadOnlyList<ConversionCapability> capabili
         Func<ConversionCondition, bool> conditionEvaluator,
         SourceIntegrity sourceIntegrity)
     {
-        foreach (var capability in _capabilities)
+        foreach (var capability in _capabilities
+            .OrderBy(static c => c.Tool.ToolName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(static c => c.TargetExtension, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(static c => c.Command, StringComparer.OrdinalIgnoreCase))
         {
             if (!string.Equals(capability.SourceExtension, fromExtension, StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(capability.SourceExtension, "*", StringComparison.OrdinalIgnoreCase))

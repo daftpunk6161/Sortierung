@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Reflection;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Classification;
 using RomCleanup.Infrastructure.Sorting;
@@ -344,6 +345,20 @@ public class ConsoleSorterTests : IDisposable
 
         Assert.Equal(1, result.Moved);
         Assert.True(File.Exists(Path.Combine(_tempDir, "NES", "Default.nes")));
+    }
+
+    [Fact]
+    public void FindActualDestination_WithDuplicateSuffixAboveTen_UsesNumericOrder()
+    {
+        var intended = Path.Combine(_tempDir, "Game.chd");
+        File.WriteAllText(Path.Combine(_tempDir, "Game__DUP2.chd"), "2");
+        File.WriteAllText(Path.Combine(_tempDir, "Game__DUP10.chd"), "10");
+
+        var method = typeof(ConsoleSorter).GetMethod("FindActualDestination", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var actual = (string?)method!.Invoke(null, new object[] { intended });
+        Assert.Equal(Path.Combine(_tempDir, "Game__DUP10.chd"), actual);
     }
 
     [Fact]

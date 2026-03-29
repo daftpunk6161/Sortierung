@@ -122,7 +122,7 @@ public static class RunReportWriter
                 throw new InvalidOperationException($"Report summary invariant failed: accounted={accountedTotal}, scanned={projection.TotalFiles}");
         }
 
-        var totalErrorCount = projection.FailCount + projection.JunkFailCount + projection.ConsoleSortFailed;
+        var totalErrorCount = projection.FailCount;
 
         return new ReportSummary
         {

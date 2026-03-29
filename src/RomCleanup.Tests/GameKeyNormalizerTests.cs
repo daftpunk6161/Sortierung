@@ -115,9 +115,7 @@ public class GameKeyNormalizerTests
     {
         var first = GameKeyNormalizer.Normalize(input);
         var second = GameKeyNormalizer.Normalize(first);
-        // Second normalization should also produce a non-empty result if first was non-empty
-        if (!string.IsNullOrEmpty(first))
-            Assert.False(string.IsNullOrEmpty(second));
+        Assert.Equal(first, second);
     }
 
     [Fact]

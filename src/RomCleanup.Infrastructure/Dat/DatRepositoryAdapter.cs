@@ -98,7 +98,7 @@ public sealed class DatRepositoryAdapter
         using var reader = XmlReader.Create(datPath, settings);
         while (reader.Read())
         {
-            if (reader.NodeType == XmlNodeType.Element && reader.LocalName == "game")
+            if (reader.NodeType == XmlNodeType.Element && IsDatGameElement(reader.LocalName))
             {
                 var name = reader.GetAttribute("name");
                 var cloneOf = reader.GetAttribute("cloneof");
@@ -183,21 +183,24 @@ public sealed class DatRepositoryAdapter
             using var reader = XmlReader.Create(datPath, settings);
             while (reader.Read())
             {
-                if (reader.NodeType == XmlNodeType.Element && reader.LocalName == "game")
+                if (reader.NodeType == XmlNodeType.Element && IsDatGameElement(reader.LocalName))
                 {
                     var gameName = reader.GetAttribute("name");
                     if (string.IsNullOrEmpty(gameName))
                         continue;
+
+                    var gameElementName = reader.LocalName;
 
                     var roms = new List<Dictionary<string, string>>();
 
                     // Read inner elements until end of game
                     while (reader.Read())
                     {
-                        if (reader.NodeType == XmlNodeType.EndElement && reader.LocalName == "game")
+                        if (reader.NodeType == XmlNodeType.EndElement &&
+                            string.Equals(reader.LocalName, gameElementName, StringComparison.OrdinalIgnoreCase))
                             break;
 
-                        if (reader.NodeType == XmlNodeType.Element && reader.LocalName == "rom")
+                        if (reader.NodeType == XmlNodeType.Element && IsDatRomElement(reader.LocalName))
                         {
                             var rom = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                             var romName = reader.GetAttribute("name");
@@ -239,6 +242,20 @@ public sealed class DatRepositoryAdapter
         }
 
         return games;
+    }
+
+    private static bool IsDatGameElement(string localName)
+    {
+        return localName.Equals("game", StringComparison.OrdinalIgnoreCase)
+            || localName.Equals("machine", StringComparison.OrdinalIgnoreCase)
+            || localName.Equals("software", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsDatRomElement(string localName)
+    {
+        return localName.Equals("rom", StringComparison.OrdinalIgnoreCase)
+            || localName.Equals("disk", StringComparison.OrdinalIgnoreCase)
+            || localName.Equals("chd", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsLikelyBiosGameName(string gameName, string? romFileName)

@@ -55,6 +55,9 @@ public sealed class SecurityTests : IDisposable
         var key = GameKeyNormalizer.Normalize(input);
         Assert.NotNull(key);
         Assert.NotEmpty(key);
+        Assert.Equal(key, key.ToLowerInvariant());
+        Assert.Equal(key, GameKeyNormalizer.Normalize(key));
+        Assert.DoesNotContain('\0', key);
     }
 
     // ── TEST-SEC-05: Zip-Slip path traversal ──
@@ -68,6 +71,9 @@ public sealed class SecurityTests : IDisposable
         var key = GameKeyNormalizer.Normalize(input);
         Assert.NotNull(key);
         Assert.False(string.IsNullOrWhiteSpace(key));
+        Assert.Equal(key, key.ToLowerInvariant());
+        Assert.Equal(key, GameKeyNormalizer.Normalize(key));
+        Assert.DoesNotContain('\0', key);
     }
 
     // ── TEST-SEC: CSV injection vectors ──

@@ -114,15 +114,20 @@ public class VersionScorerTests
     [Fact]
     public void DottedRevision_ExtremeNumbers_DoesNotThrow()
     {
-        // Regression test: int.Parse overflow on extreme revision segments
-        var score = _sut.GetVersionScore("Game (Rev 9999999999.1.1)");
-        Assert.True(score >= 0);
+        var first = _sut.GetVersionScore("Game (Rev 9999999999.1.1)");
+        var second = _sut.GetVersionScore("Game (Rev 9999999999.1.1)");
+
+        Assert.Equal(9_999_999_999_001_001L, first);
+        Assert.Equal(first, second);
     }
 
     [Fact]
     public void NumericRevision_ExtremeNumber_DoesNotThrow()
     {
-        var score = _sut.GetVersionScore("Game (Rev 99999999999)");
-        Assert.True(score >= 0);
+        var first = _sut.GetVersionScore("Game (Rev 99999999999)");
+        var second = _sut.GetVersionScore("Game (Rev 99999999999)");
+
+        Assert.Equal(999_999_999_990L, first);
+        Assert.Equal(first, second);
     }
 }

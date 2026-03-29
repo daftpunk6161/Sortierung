@@ -1294,3 +1294,421 @@ Es wurden **6 Befunde** identifiziert (2× P2, 2× P2, 2× P3). Keiner ist ein u
 - [x] PipelinePhaseHelpers: Separator-Guards bei FindRootForPath, Reparse-Check vor Source-Trash
 
 ---
+
+## Bughunt #8 – Tool-Katalog / Sichtbare Features
+
+**Scope:** Alle 41 sichtbaren Tool-Items im GUI Tool-Katalog, 73 FeatureCommandKeys, 8 FeatureCommandService-Partials, 8 FeatureService-Partials, i18n-Keys (en/de), ui-lookups.json, CLI/API Paritaet.
+
+**Suchfelder:**
+1. Sichtbare Kachel ohne echte Funktion
+2. Stub / Coming Soon
+3. Falscher Name
+4. Redundantes Tool
+5. Gebrochener Handler
+6. Tool-Registrierung ohne saubere Integration
+7. i18n / Pinned / Lookup Ghosts
+8. Tool tut nicht was der Name verspricht
+9. Report-Starter ohne echten Mehrwert
+10. Kaputtes oder irrefuehrend sichtbares Tool
+11. Tool sollte Unter-Funktion sein
+12. CommandPalette findet Tool nicht
+13. Sichtbare Kachel nicht release-ready
+
+### Executive Verdict
+
+**Keine Stubs gefunden.** Alle 41 Tool-Items haben echte Handler mit realer Funktionalitaet. Die FeatureService-Backing-Methoden sind vollstaendig implementiert. i18n-Keys (en.json + de.json) sind lueckenlos. CLI und API sind korrekt getrennt und haben keine Tool-Katalog-Duplikation.
+
+**9 echte Bugs gefunden (BUG-75..BUG-83).** Schwerpunkte:
+- **RequiresRunResult-Mismatches**: Tool ist gesperrt obwohl es keinen Run braucht (oder umgekehrt)
+- **Hardcoded German Strings**: 12+ Stellen umgehen das i18n-System komplett
+- **Irreführende Namen**: 3 Tools versprechen Aktionen, liefern aber nur Reports
+- **HashDatabaseExport ohne Hashes**: Kern-Feature-Versprechen wird nicht eingeloest
+
+Release-kritisch: BUG-75 (Feature kuenstlich gesperrt), BUG-79 (i18n broken fuer Englisch), BUG-81 (Export liefert nicht was der Name verspricht).
+
+### Kritische Tool-/Feature-Probleme
+
+| Bug-ID | Schwere | Tool | Problem |
+|--------|---------|------|---------|
+| BUG-75 | P2 | HeaderAnalysis | RequiresRunResult=true aber Handler braucht keinen Run → Tool unnoetig gesperrt |
+| BUG-76 | P3 | ConversionPipeline | RequiresRunResult=false aber Handler prueft LastCandidates → sieht klickbar aus, zeigt sofort Fehler |
+| BUG-77 | P3 | CommandPalette, ApiServer, Accessibility, SystemTray | Conditional Registration wenn IWindowHost null → sichtbar aber Dead Click |
+| BUG-78 | P3 UX | ExportCollection | InputBox "1/2/3" statt Dropdown; hardcoded German auf Fehleingabe |
+| BUG-79 | P2 | Alle Handler-Partials | 12+ hardcoded German Strings umgehen _vm.Loc[] i18n System |
+| BUG-80 | P3 UX | ConversionPipeline | Name "Pipeline" suggeriert Aktion, ist aber nur Schaetzung/Info-Dialog |
+| BUG-81 | P2 | HashDatabaseExport | Exportiert Metadaten (GameKey, Region, Size) aber KEINE Hashes (Hash, HeaderlessHash existieren auf RomCandidate) |
+| BUG-82 | P3 | Alle 41 Tools | IsPlanned=false hardcoded fuer alle Tools → Dead Code Path, XAML-Binding nutzlos |
+| BUG-83 | P3 UX | Quarantine | Name suggeriert Quarantaene-Aktion, zeigt aber nur Read-Only Kandidatenliste |
+
+---
+
+### BUG-75: HeaderAnalysis – RequiresRunResult=true sperrt Tool unnoetig
+
+- **Schweregrad:** P2
+- **Impact:** HeaderAnalysis ist in der Tool-Kachel als `RequiresRunResult=true` markiert. Das Tool wird erst nach einem abgeschlossenen Run freigegeben (IsLocked=true vorher). Aber der Handler oeffnet einen Datei-Browser und ruft `FeatureService.AnalyzeHeader(path)` auf — komplett unabhaengig von LastCandidates oder LastDedupeGroups. Nutzer koennen das Tool nicht verwenden, bevor sie einen kompletten Pipeline-Run starten, obwohl es standalone funktioniert.
+- **Betroffene Datei(en):** [ToolsViewModel.cs](src/RomCleanup.UI.Wpf/ViewModels/ToolsViewModel.cs#L142), [FeatureCommandService.Analysis.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Analysis.cs#L79-L89)
+- **Reproduktion:** GUI starten → Tool-Katalog → "Header-Analyse" Kachel → gesperrt/ausgegraut → erst nach Run nutzbar.
+- **Erwartetes Verhalten:** `RequiresRunResult = false` — Tool ist jederzeit klickbar, oeffnet Datei-Browser, analysiert Header.
+- **Tatsaechliches Verhalten:** Tool erst nach Run freigegeben, obwohl Handler keine Run-Daten braucht.
+- **Ursache:** Initiale Katalog-Definition hat `true` statt `false` fuer HeaderAnalysis.
+- **Fix:** In ToolsViewModel.cs InitToolItems(): `("HeaderAnalysis", "Analysis", "\xE9D9", true)` aendern zu `("HeaderAnalysis", "Analysis", "\xE9D9", false)`.
+- **Testabsicherung:** Unit-Test: HeaderAnalysis ToolItem hat `RequiresRunResult == false`. Regression-Test: HeaderAnalysis Handler funktioniert ohne vorherigen Run.
+
+---
+
+### BUG-76: ConversionPipeline – RequiresRunResult mismatch (false aber braucht Daten)
+
+- **Schweregrad:** P3
+- **Impact:** ConversionPipeline ist mit `RequiresRunResult=false` markiert — das Tool erscheint klickbar bevor ein Run stattfand. Aber der Handler prueft sofort `_vm.LastCandidates.Count == 0` und zeigt "Erst einen Lauf starten." wenn keine Daten vorhanden. Nutzer sehen ein klickbares Tool, das sofort eine Fehlermeldung wirft.
+- **Betroffene Datei(en):** [ToolsViewModel.cs](src/RomCleanup.UI.Wpf/ViewModels/ToolsViewModel.cs#L147), [FeatureCommandService.Conversion.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Conversion.cs#L18-L27)
+- **Reproduktion:** GUI starten → Tool-Katalog → "Konvertierungs-Pipeline" klicken → Fehlerdialog "Erst einen Lauf starten."
+- **Erwartetes Verhalten:** Entweder (a) `RequiresRunResult = true` setzen → Tool korrekt gesperrt, oder (b) Handler ohne Run-Daten nutzbar machen (z.B. Conversion-Registry-Info anzeigen).
+- **Tatsaechliches Verhalten:** Tool klickbar, aber Handler blockiert sofort.
+- **Ursache:** RequiresRunResult wurde auf `false` gesetzt, aber Handler-Logik setzt Run-Daten voraus.
+- **Fix:** `("ConversionPipeline", "Conversion", "\xE8AB", false)` aendern zu `("ConversionPipeline", "Conversion", "\xE8AB", true)`.
+- **Testabsicherung:** Unit-Test: ConversionPipeline ToolItem hat `RequiresRunResult == true`.
+
+---
+
+### BUG-77: Conditional Command Registration ohne UI-Feedback
+
+- **Schweregrad:** P3
+- **Impact:** Vier Commands (CommandPalette, SystemTray, ApiServer, Accessibility) werden in `RegisterCommands()` nur innerhalb eines `if (_windowHost is not null)` Blocks registriert. Die zugehoerigen Tool-Kacheln sind IMMER im Katalog sichtbar. Wenn `_windowHost` null ist (z.B. in Test-Szenarien oder alternativer Komposition), sind die Kacheln sichtbar und klickbar, aber `Command = null` → Klick bewirkt nichts, kein Feedback. In Production ist MainWindow der WindowHost, daher tritt das Problem dort nicht auf.
+- **Betroffene Datei(en):** [FeatureCommandService.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.cs#L225-L231), [ToolsViewModel.cs](src/RomCleanup.UI.Wpf/ViewModels/ToolsViewModel.cs)
+- **Reproduktion:** FeatureCommandService mit `windowHost: null` konstruieren → RegisterCommands() → WireToolItemCommands() → CommandPalette-Kachel klicken → nichts passiert.
+- **Erwartetes Verhalten:** Entweder (a) Kacheln nur anzeigen wenn Command verfuegbar, oder (b) immer registrieren mit Fallback-Nachricht, oder (c) Guard in ToolItem (IsAvailable property).
+- **Tatsaechliches Verhalten:** Sichtbare Kachel, klickbar, Dead Click.
+- **Ursache:** Defensive Registrierung (windowHost koennte null sein), aber keine Kopplung zur Kachel-Sichtbarkeit.
+- **Fix:** Kacheln konditional filtern wenn Command null bleibt, oder Commands immer registrieren mit Fehler-Dialog wenn windowHost fehlt.
+- **Testabsicherung:** Test: FeatureCommandService mit null windowHost → pruefen dass betroffene Commands nicht in FeatureCommands-Dictionary sind ODER dass Kacheln gefiltert werden.
+
+---
+
+### BUG-78: ExportCollection – InputBox "1/2/3" statt Auswahl-Dialog
+
+- **Schweregrad:** P3 UX
+- **Impact:** ExportCollection fragt das Exportformat per Text-InputBox: "Nummer eingeben: 1 — CSV, 2 — Excel-XML, 3 — CSV (nur Duplikate)". Nutzer muessen eine Zahl tippen statt aus einer Dropdown/Radio-Liste zu waehlen. Bei Fehleingabe erscheint hardcoded German: "Ungültige Auswahl. Bitte 1, 2 oder 3 eingeben." — auch wenn die GUI auf Englisch steht.
+- **Betroffene Datei(en):** [FeatureCommandService.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.cs#L468-L505)
+- **Reproduktion:** Tool-Katalog → "Sammlung exportieren" → InputBox → "abc" eingeben → German Fehlermeldung.
+- **Erwartetes Verhalten:** `IDialogService.ShowSelectionDialog()` oder Enum-basierte Auswahl. Fehlermeldung ueber i18n.
+- **Tatsaechliches Verhalten:** InputBox mit Freitext-Eingabe und hardcoded German Error.
+- **Ursache:** Schnelle Implementierung ohne Dialog-Erweiterung.
+- **Fix:** (a) IDialogService um ShowSelectionDialog erweitern, oder (b) ComboBox-basierter InputDialog, oder (c) Mindestens Fehlermeldung ueber `_vm.Loc[...]` leiten.
+- **Testabsicherung:** Test: Alle Auswahl-Dialoge nutzen i18n. UX-Test: Kein Freitext-Eingabe fuer Enum-Auswahlen.
+
+---
+
+### BUG-79: Hardcoded German Strings umgehen i18n System
+
+- **Schweregrad:** P2
+- **Impact:** Mindestens 12 Instanzen von `"Erst einen Lauf starten."` und zahlreiche weitere hardcoded German Strings in Dialog-Titeln, Beschreibungen und Fehlermeldungen. Diese Strings werden NICHT durch `_vm.Loc[...]` geleitet. Englische Nutzer sehen German Fehlermeldungen und Dialog-Texte. Betroffen sind alle 8 FeatureCommandService-Partials.
+- **Betroffene Datei(en):** [FeatureCommandService.Analysis.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Analysis.cs), [FeatureCommandService.Collection.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Collection.cs), [FeatureCommandService.Conversion.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Conversion.cs), [FeatureCommandService.Dat.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Dat.cs), [FeatureCommandService.Export.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Export.cs), [FeatureCommandService.Infra.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Infra.cs), [FeatureCommandService.Security.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Security.cs), [FeatureCommandService.Workflow.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Workflow.cs)
+- **Reproduktion:** GUI-Sprache auf Englisch stellen → beliebiges Tool ohne vorherigen Run klicken → "Erst einen Lauf starten." (German).
+- **Erwartetes Verhalten:** Alle sichtbaren Strings ueber `_vm.Loc["..."]` aufloesen.
+- **Tatsaechliches Verhalten:** Hardcoded German Strings direkt in `_dialog.Warn(...)`, `_dialog.Info(...)`, etc.
+- **Ursache:** Systematisches i18n-Vergessen bei Handler-Implementierung. Die Loc-Keys existieren fuer Tool-Namen und Kategorien (Tool.*, Cmd.*), aber die Dialog-Inhalte wurden nicht migriert.
+- **Fix:** Alle hardcoded German Strings durch `_vm.Loc[...]` oder `_vm.Loc.Format(...)` Aufrufe ersetzen. Fehlende i18n-Keys in en.json und de.json ergaenzen. Systematischer Grep fuer alle String-Literale in FeatureCommandService*.cs.
+- **Testabsicherung:** Regression-Test: Grep ueber alle FeatureCommandService-Dateien. Kein deutsches String-Literal ausserhalb von Loc[]-Aufrufen. Oder: Localization-Completeness-Test der alle Dialog-Aufrufe auf Loc-Nutzung prueft.
+
+---
+
+### BUG-80: ConversionPipeline – Name suggeriert Aktion, liefert nur Report
+
+- **Schweregrad:** P3 UX
+- **Impact:** "Konvertierungs-Pipeline" suggeriert dem Nutzer, dass eine Konvertierung durchgefuehrt wird. Der Handler zeigt aber nur einen Info-Dialog mit geschaetzter Ersparnis und "Aktiviere 'Konvertierung' und starte einen Move-Lauf." — keine Aktion, nur eine Schaetzung/Info.
+- **Betroffene Datei(en):** [FeatureCommandService.Conversion.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Conversion.cs#L18-L27), i18n: `Tool.ConversionPipeline.*`
+- **Reproduktion:** Run durchfuehren → Tool-Katalog → "Konvertierungs-Pipeline" klicken → nur Info-Dialog, keine Konvertierung.
+- **Erwartetes Verhalten:** Entweder (a) Tool umbenennen zu "Konvertierungs-Vorschau" / "Conversion Estimate", oder (b) tatsaechliche Konvertierung starten koennen.
+- **Tatsaechliches Verhalten:** Info-Dialog mit Schaetzwerten.
+- **Ursache:** Das Tool wurde als Einstieg/Preview implementiert, aber der Name impliziert eine Pipeline-Ausfuehrung.
+- **Fix:** i18n Keys `Tool.ConversionPipeline.Name` und `Tool.ConversionPipeline.Description` auf "Konvertierungs-Vorschau" / "Conversion Estimate" aendern. FeatureCommandKey Konstante kann bleiben.
+- **Testabsicherung:** Kein funktionaler Test noetig — reine Namensaenderung in i18n.
+
+---
+
+### BUG-81: HashDatabaseExport – Exportiert Metadaten ohne Hashes
+
+- **Schweregrad:** P2
+- **Impact:** "Hash-Datenbank-Export" exportiert `{ MainPath, GameKey, Extension, Region, DatMatch, SizeBytes }` — aber KEINE Hashes. RomCandidate hat `Hash` (L22) und `HeaderlessHash` (L23) Properties, die befuellt sind wenn ein Run mit Hashing gelaufen ist. Der Export ignoriert diese Felder. Nutzer die eine Hash-Datenbank erwarten bekommen nur Metadaten.
+- **Betroffene Datei(en):** [FeatureCommandService.Dat.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Dat.cs#L337-L345), [RomCandidate.cs](src/RomCleanup.Contracts/Models/RomCandidate.cs#L22-L23)
+- **Reproduktion:** Run mit Hashing → Tool-Katalog → "Hash-Datenbank-Export" → JSON oeffnen → keine Hashes.
+- **Erwartetes Verhalten:** Export enthaelt mindestens `Hash` und `HeaderlessHash` Felder pro Eintrag.
+- **Tatsaechliches Verhalten:** Nur MainPath, GameKey, Extension, Region, DatMatch, SizeBytes.
+- **Ursache:** Anonymes Objekt bei Export-Erstellung vergisst Hash-Properties.
+- **Fix:** Anonymous Object um `c.Hash` und `c.HeaderlessHash` erweitern: `new { c.MainPath, c.GameKey, c.Extension, c.Region, c.DatMatch, c.SizeBytes, c.Hash, c.HeaderlessHash }`.
+- **Testabsicherung:** Unit-Test: HashDatabaseExport enthaelt Hash/HeaderlessHash Felder. Regression-Test: Export-JSON parsen und Hash-Felder pruefen.
+
+---
+
+### BUG-82: IsPlanned Dead Code – Hardcoded false fuer alle Tools
+
+- **Schweregrad:** P3
+- **Impact:** `ToolItem.IsPlanned` Property existiert, ist in XAML gebunden (fuer ein "Geplant"-Badge). Aber `var isPlanned = false;` in ToolsViewModel.cs L196 ist hardcoded fuer alle 41 Tools. Der IsPlanned-Code-Pfad ist komplett tot — die XAML-Bindung wird nie ausgeloest. Kein funktionaler Impact, aber Dead Code in einer release-relevanten UI-Komponente.
+- **Betroffene Datei(en):** [ToolsViewModel.cs](src/RomCleanup.UI.Wpf/ViewModels/ToolsViewModel.cs#L196)
+- **Reproduktion:** Alle 41 Tools inspizieren → keines hat IsPlanned=true.
+- **Erwartetes Verhalten:** Entweder (a) IsPlanned-Mechanismus nutzen (z.B. per data-driven Config), oder (b) Dead Code entfernen (Property + XAML-Binding + Logik).
+- **Tatsaechliches Verhalten:** Hardcoded false, toter Code.
+- **Ursache:** Feature-Gate Mechanismus wurde angelegt aber nie aktiviert.
+- **Fix:** Dead Code entfernen: `IsPlanned` Property aus ToolItem, `isPlanned` Variable aus InitToolItems, XAML-Binding fuer Planned-Badge entfernen. Oder: Planungs-Funktion als Feature nachrüsten.
+- **Testabsicherung:** Hygiene-Test: Kein ToolItem hat IsPlanned-Bindung ohne Setter-Logik.
+
+---
+
+### BUG-83: Quarantine – Name suggeriert Aktion, ist nur Read-Only Report
+
+- **Schweregrad:** P3 UX
+- **Impact:** "Quarantäne" suggeriert, dass verdaechtige Dateien in einen Quarantaene-Ordner verschoben werden. Der Handler filtert aber nur Candidates (`Junk` Kategorie oder `!DatMatch && Region == "UNKNOWN"`) und zeigt sie in einem Text-Dialog als Liste. Keine Move-Aktion, kein Quarantaene-Verzeichnis, kein Follow-Up moeglich.
+- **Betroffene Datei(en):** [FeatureCommandService.Security.cs](src/RomCleanup.UI.Wpf/Services/FeatureCommandService.Security.cs#L68-L82)
+- **Reproduktion:** Run durchfuehren → Tool-Katalog → "Quarantäne" → Text-Dialog mit Kandidatenliste → kein Button zum Verschieben.
+- **Erwartetes Verhalten:** Entweder (a) Tool umbenennen zu "Quarantäne-Vorschau" / "Quarantine Preview", oder (b) tatsaechliche Quarantaene-Move-Aktion anbieten.
+- **Tatsaechliches Verhalten:** Read-Only Text-Dialog mit Kandidatenliste.
+- **Ursache:** Service wurde als Report implementiert, Name impliziert Aktion.
+- **Fix:** (a) Kurzfristig: i18n Keys auf "Quarantäne-Vorschau" aendern. (b) Langfristig: Move-to-Quarantine Aktion ueber RunConstants.WellKnownFolders.Quarantine implementieren.
+- **Testabsicherung:** Falls Move implementiert: Unit-Test fuer Quarantaene-Move in _QUARANTINE Folder. Test dass Quarantaene-Move kein Silent-Delete ist.
+
+---
+
+### TGAP-Eintraege (Bughunt #8)
+
+| ID | Bug-Ref | Beschreibung | Status |
+|----|---------|-------------|--------|
+| TGAP-65 | BUG-75 | HeaderAnalysis RequiresRunResult auf false setzen | offen |
+| TGAP-66 | BUG-76 | ConversionPipeline RequiresRunResult auf true setzen | offen |
+| TGAP-67 | BUG-77 | Conditional Commands: Kachel-Sichtbarkeit an Command-Verfuegbarkeit koppeln | offen |
+| TGAP-68 | BUG-78 | ExportCollection InputBox durch Selection-Dialog ersetzen; Fehlermeldung i18n | offen |
+| TGAP-69 | BUG-79 | Hardcoded German Strings systematisch durch _vm.Loc[] ersetzen | offen |
+| TGAP-70 | BUG-80 | ConversionPipeline i18n-Name auf "Konvertierungs-Vorschau" aendern | offen |
+| TGAP-71 | BUG-81 | HashDatabaseExport: Hash + HeaderlessHash in Export aufnehmen | offen |
+| TGAP-72 | BUG-82 | IsPlanned Dead Code entfernen oder Feature nachrüsten | offen |
+| TGAP-73 | BUG-83 | Quarantine: Umbenennen oder Move-Aktion implementieren | offen |
+
+### RequiresRunResult-Audit (komplett)
+
+Alle 41 Tool-Items wurden auf RequiresRunResult-Korrektheit geprueft:
+
+| Tool | RequiresRunResult | Tatsaechlich benoetigt | Status |
+|------|-------------------|------------------------|--------|
+| HeaderAnalysis | true | false (Datei-Browser) | **MISMATCH → BUG-75** |
+| ConversionPipeline | false | true (LastCandidates) | **MISMATCH → BUG-76** |
+| Alle anderen 39 Tools | korrekt | korrekt | OK |
+
+### Release-Ballast im Katalog
+
+| Bereich | Beschreibung | Empfehlung |
+|---------|-------------|------------|
+| IsPlanned Dead Code | Property, Variable, XAML-Binding — nie aktiviert | Entfernen oder nachrüsten (BUG-82) |
+| 12+ hardcoded German Strings | Bypass i18n in allen Handler-Partials | Systematisch ersetzen (BUG-79) |
+| ExportCollection InputBox UX | Freitext statt Selection | Dialog-Typ upgraden (BUG-78) |
+| 3 irrefuehrende Tool-Namen | ConversionPipeline, Quarantine, HashDatabaseExport | Umbenennen (BUG-80, BUG-83, BUG-81) |
+
+### Top 10 Fixes (priorisiert)
+
+1. **BUG-75** – HeaderAnalysis `RequiresRunResult = false` setzen (1 Zeile)
+2. **BUG-81** – HashDatabaseExport: `Hash` + `HeaderlessHash` in Export-Objekt aufnehmen (1 Zeile)
+3. **BUG-79** – Hardcoded German Strings durch `_vm.Loc[]` ersetzen (12+ Stellen, i18n-Keys ergaenzen)
+4. **BUG-76** – ConversionPipeline `RequiresRunResult = true` setzen (1 Zeile)
+5. **BUG-80** – ConversionPipeline i18n-Name auf "Konvertierungs-Vorschau" / "Conversion Estimate"
+6. **BUG-83** – Quarantine i18n-Name auf "Quarantäne-Vorschau" / "Quarantine Preview"
+7. **BUG-78** – ExportCollection Fehlermeldung mindestens ueber i18n leiten
+8. **BUG-77** – Conditional Commands: IsVisible an Command-Verfuegbarkeit koppeln
+9. **BUG-82** – IsPlanned Dead Code entfernen
+10. **BUG-78** – ExportCollection InputBox durch Selection-Dialog ersetzen (erfordert IDialogService-Erweiterung)
+
+### Positiv-Befunde (Bughunt #8)
+
+- [x] **Keine Stubs**: Alle 41 Tool-Items haben echte, funktionale Handler
+- [x] **Alle FeatureService-Backing-Methoden real**: CalculateHealthScore, AnalyzeHeader, GetConversionEstimate, CompareDatFiles, BuildCloneTree, etc. — keine Pseudocode-Methoden
+- [x] **i18n-Keys komplett**: Alle `Tool.*` und `Cmd.*` Keys in en.json und de.json vorhanden, keine Orphans
+- [x] **FeatureCommandKeys**: 73 typisierte Konstanten, keine Magic Strings fuer Tool-Identifikation
+- [x] **Tool-Wiring sauber**: WireToolItemCommands() matched korrekt, keine verwaisten Kacheln
+- [x] **Kategorie-Icons komplett**: Alle 8 Kategorien (Analysis, Conversion, DatVerify, Collection, Security, Workflow, Export, Infra) haben Icons
+- [x] **Quick Access funktional**: Pinning (DefaultPinnedKeys: 6), Recent (max 4), Search Filter — alles korrekt implementiert
+- [x] **CLI/API keine Tool-Duplikation**: CLI hat Run/Rollback/UpdateDats/Help/Version, API hat 10 Endpoints — keine Schatten-Tool-Logik
+- [x] **DatAutoUpdate**: Vollstaendige async Implementierung mit Catalog-Loading, Stale-Detection, Download, No-Intro Import, Redump-Hint
+- [x] **CustomDatEditor**: Multi-Step Logiqx XML Builder mit Crash-Safe Temp+Rename
+- [x] **IntegrityMonitor**: Async SHA256 Baseline Create/Verify — real
+- [x] **HeaderRepair**: NES Dirty-Byte Repair, SNES Copier-Header Removal mit Backup+Restore — real
+- [x] **CommandPalette**: Fuzzy-Search ueber alle FeatureCommands mit Auto-Execute bei Exact Match — real
+- [x] **FilterBuilder**: Expression Parser (field=value, field>value Syntax) — real
+- [x] **ArcadeMergeSplit**: DAT-basierter Arcade Merge/Split Report — real
+
+---
+
+## Bughunt #9 - Testsuite / Invarianten / QA-Luecken
+
+### Deep Bughunt - Tests / Invarianten / QA-Luecken
+
+## 1. Executive Verdict
+
+Die Testsuite ist breit und deckt viele Kernpfade ab, aber es bestehen mehrere QA-Luecken mit hoher Release-Relevanz.
+
+Hauptprobleme:
+- no-crash-only Tests in Security-/Determinismus-nahen Bereichen
+- einzelne irrefuehrende Testnamen (Name widerspricht Assertion)
+- Benchmark-Gates sind teils standardmaessig nur informativ
+- Snapshot-Tests sind teilweise nur Datei-Existenz statt inhaltlicher Regression
+- Meta-Tests pruefen Dateiinhalt/Stringsuche statt Laufzeitverhalten
+
+Bewertung: **bedingt release-faehig**, aber mit klaren Testqualitaets-Schulden.
+
+## 2. Kritische Testluecken
+
+1. **Security no-crash-only statt Sicherheitsinvariante**
+2. **Idempotenz-/Overflow-Regressionen mit schwachen Assertions**
+3. **Benchmark-Gates nicht ueberall hard-enforced**
+4. **Snapshot-Luecken (inv04/inv05 ohne semantische Verifikation)**
+5. **Meta-Tests liefern strukturelle statt fachliche Sicherheit**
+6. **Mid-run Cancellation nicht real abgesichert**
+7. **Conversion-Fehlerpfade nicht granular genug getestet**
+
+## 3. Findings
+
+### BUG-84: Security-Tests sind no-crash-only statt Sanitizing-Assertions
+
+- **Schweregrad:** P1
+- **Betroffene Dateien:** [SecurityTests.cs](src/RomCleanup.Tests/SecurityTests.cs#L53), [SecurityTests.cs](src/RomCleanup.Tests/SecurityTests.cs#L66), [SecurityTests.cs](src/RomCleanup.Tests/SecurityTests.cs#L133), [SecurityTests.cs](src/RomCleanup.Tests/SecurityTests.cs#L140)
+- **Problem:** Tests wie `GameKeyNormalizer_PathTraversalInFileName_DoesNotCrash` und `GameKeyNormalizer_ZipSlipPaths_Normalized` pruefen nur `NotNull`/`NotEmpty` bzw. `Null(ex)`, nicht aber echte Sicherheitsinvarianten.
+- **Warum gefaehrlich:** Falsche Sicherheit bei Security-Fixes; unsichere Outputs koennen unbemerkt bleiben.
+- **Fix:** Assertions auf echte Invarianten erweitern (`..` entfernt, kein Root-Escape, erwartete Key-Form).
+- **Empfohlene neue Tests:** `Security_PathTraversal_IsSanitized_NotOnlyNoCrash()`, `Security_ZipSlipInput_DoesNotLeakTraversalTokens()`.
+
+---
+
+### BUG-85: Idempotenz-Test prueft keine Idempotenz
+
+- **Schweregrad:** P1
+- **Betroffene Dateien:** [GameKeyNormalizerTests.cs](src/RomCleanup.Tests/GameKeyNormalizerTests.cs#L114)
+- **Problem:** `Normalize_IsIdempotent` assertiert nur "nicht leer" statt `first == second`.
+- **Warum gefaehrlich:** Regessionen in der Key-Bildung bleiben unentdeckt.
+- **Fix:** `Assert.Equal(first, second)` als Kernassertion.
+- **Empfohlene neue Tests:** Theorie mit problematischen Inputs (Unicode, lange Tag-Ketten, gemischte Varianten).
+
+---
+
+### BUG-86: Overflow-Regressionstests sind fachlich zu schwach
+
+- **Schweregrad:** P1
+- **Betroffene Dateien:** [VersionScorerTests.cs](src/RomCleanup.Tests/VersionScorerTests.cs#L115), [VersionScorerTests.cs](src/RomCleanup.Tests/VersionScorerTests.cs#L123)
+- **Problem:** Tests mit "DoesNotThrow" pruefen nur `score >= 0`.
+- **Warum gefaehrlich:** Overflow-/Parsing-Fehler koennen weiter existieren, solange Ergebnis nicht negativ ist.
+- **Fix:** Zusatzaussagen auf erwartetes Clamp-/Fallback-Verhalten und Determinismus.
+- **Empfohlene neue Tests:** `VersionScore_ExtremeRevision_UsesStableFallbackRange()`, `VersionScore_ExtremeInput_IsDeterministicAcrossRuns()`.
+
+---
+
+### BUG-87: Irrefuehrender Testname widerspricht Assertion
+
+- **Schweregrad:** P2
+- **Betroffene Dateien:** [DeduplicationEngineTests.cs](src/RomCleanup.Tests/DeduplicationEngineTests.cs#L305)
+- **Problem:** `SelectWinner_BiosCategory_BeatsGameDespiteHigherScores` behauptet BIOS gewinnt, Assertion prueft aber `Game` gewinnt.
+- **Warum gefaehrlich:** Reviewer werden in zentrale Ranking-Logik fehlgeleitet.
+- **Fix:** Testname + Kommentar an reale Regel angleichen.
+- **Empfohlene neue Tests:** Matrix-Test fuer Kategorie-Ranking mit expliziter Erwartung pro Paar.
+
+---
+
+### BUG-88: Holdout/Tier Benchmark-Gates sind standardmaessig optional
+
+- **Schweregrad:** P1
+- **Betroffene Dateien:** [HoldoutGateTests.cs](src/RomCleanup.Tests/Benchmark/HoldoutGateTests.cs#L21), [HoldoutGateTests.cs](src/RomCleanup.Tests/Benchmark/HoldoutGateTests.cs#L55), [SystemTierGateTests.cs](src/RomCleanup.Tests/Benchmark/SystemTierGateTests.cs#L41)
+- **Problem:** Gates returnen ohne Hard-Fail, wenn `ROMCLEANUP_ENFORCE_QUALITY_GATES` nicht gesetzt ist.
+- **Warum gefaehrlich:** CI kann gruen sein, obwohl Qualitaetsschwellen verletzt sind.
+- **Fix:** Release-Pipeline mit verpflichtendem Hard-Fail-Modus; informational nur in explizitem Non-Release-Job.
+- **Empfohlene neue Tests:** `QualityGate_ReleaseMode_AlwaysEnforced()` als CI-Contract-Test.
+
+---
+
+### BUG-89: Snapshot-Luecke fuer inv04/inv05 (nur Existenz, keine Semantik)
+
+- **Schweregrad:** P2
+- **Betroffene Dateien:** [Issue9InvariantRegressionRedPhaseTests.cs](src/RomCleanup.Tests/Issue9InvariantRegressionRedPhaseTests.cs#L500)
+- **Problem:** `inv04-score-golden.json` und `inv05-classification-golden.json` werden nur auf Existenz geprueft.
+- **Warum gefaehrlich:** Snapshot-Drift bleibt unerkannt.
+- **Fix:** Snapshot laden und gegen Runtime-Berechnung vergleichen.
+- **Empfohlene neue Tests:** `ScoreGoldenSnapshot_MatchesCurrentScoring()`, `ClassificationGoldenSnapshot_MatchesCurrentClassifier()`.
+
+---
+
+### BUG-90: Meta-Tests pruefen Quelltext statt Verhalten
+
+- **Schweregrad:** P2
+- **Betroffene Dateien:** [Issue9InvariantRegressionRedPhaseTests.cs](src/RomCleanup.Tests/Issue9InvariantRegressionRedPhaseTests.cs#L546), [Issue9InvariantRegressionRedPhaseTests.cs](src/RomCleanup.Tests/Issue9InvariantRegressionRedPhaseTests.cs#L558), [Issue9InvariantRegressionRedPhaseTests.cs](src/RomCleanup.Tests/Issue9InvariantRegressionRedPhaseTests.cs#L590)
+- **Problem:** Tests wie `Should_ContainExpandedPipelineIsolationScenarios...` oder `Should_HaveUnifiedRunOptionsBuilder...` pruefen nur Dateiinhalte/Type.Exists.
+- **Warum gefaehrlich:** Fachliches Verhalten kann brechen, obwohl Tests gruen bleiben.
+- **Fix:** Meta-Checks durch verhaltensorientierte Integrations-/Invariantentests ersetzen.
+- **Empfohlene neue Tests:** End-to-end Tests fuer Pipeline-Isolation, Audit-Roundtrip und RunOptionsBuilder-Validierung.
+
+---
+
+### BUG-91: Mid-run Cancellation wird nicht real getestet
+
+- **Schweregrad:** P2
+- **Betroffene Dateien:** [RunOrchestratorTests.cs](src/RomCleanup.Tests/RunOrchestratorTests.cs#L219)
+- **Problem:** `Execute_Cancellation_ThrowsOperationCanceled` cancelt den Token vor Start (`cts.Cancel()`), kein echter Mid-Run-Abbruch.
+- **Warum gefaehrlich:** Teilzustandsfehler bei Abbruch in laufenden Phasen bleiben unentdeckt.
+- **Fix:** Test mit `CancelAfter` in einem echten Mehrdatei-/Langlauf-Szenario.
+- **Empfohlene neue Tests:** `Execute_CancelDuringMovePhase_PreservesAuditAndStateInvariant()`.
+
+---
+
+### BUG-92: Conversion-Fehlerpfad-Audit nicht explizit abgesichert
+
+- **Schweregrad:** P2
+- **Betroffene Dateien:** [ConversionPhaseHelper.cs](src/RomCleanup.Infrastructure/Orchestration/ConversionPhaseHelper.cs#L130), [PipelinePhaseHelpers.cs](src/RomCleanup.Infrastructure/Orchestration/PipelinePhaseHelpers.cs#L52)
+- **Problem:** Kein dedizierter Test, der sicherstellt, dass `AppendConversionErrorAudit` im Error-Zweig immer korrekt geschrieben wird.
+- **Warum gefaehrlich:** Forensik-Luecke bei Conversion-Fehlern moeglich.
+- **Fix:** Error-Branch mit kontrolliertem Converter-Testdouble und Audit-Assertion absichern.
+- **Empfohlene neue Tests:** `Conversion_ErrorOutcome_WritesConversionErrorAuditRow()`.
+
+---
+
+### BUG-93: CI-Coverage-Gate-Test ist semantisch weich
+
+- **Schweregrad:** P2
+- **Betroffene Dateien:** [AuditComplianceTests.cs](src/RomCleanup.Tests/AuditComplianceTests.cs#L174)
+- **Problem:** `Audit1_Test005_CoverageGate_CI` faellt nicht, wenn die Workflow-Datei fehlt.
+- **Warum gefaehrlich:** Testname suggeriert harte CI-Gate-Verifikation, liefert aber nur bedingte Aussage.
+- **Fix:** Entweder klar als informational benennen oder fehlende Pipeline-Datei hart failen lassen.
+- **Empfohlene neue Tests:** `CiCoverageWorkflow_MustExistAndContainCoverageGate()`.
+
+---
+
+### TGAP-Eintraege (Bughunt #9)
+
+| ID | Bug-Ref | Beschreibung | Status |
+|----|---------|-------------|--------|
+| TGAP-74 | BUG-84 | Security no-crash-only durch Sanitizing-Invarianten ersetzen | offen |
+| TGAP-75 | BUG-85 | Idempotenz-Test auf `Assert.Equal(first, second)` umstellen | offen |
+| TGAP-76 | BUG-86 | Overflow-Regressionen mit Fachassertions absichern | offen |
+| TGAP-77 | BUG-87 | Irrefuehrenden Dedupe-Testnamen korrigieren + Ranking-Matrix-Test | offen |
+| TGAP-78 | BUG-88 | Holdout/Tier-Gates im Release-Mode hard-enforced absichern | offen |
+| TGAP-79 | BUG-89 | inv04/inv05 Snapshot inhaltlich validieren | offen |
+| TGAP-80 | BUG-90 | Meta-Tests in Verhaltens-/Integrations-Tests umwandeln | offen |
+| TGAP-81 | BUG-91 | Mid-run Cancellation mit `CancelAfter` absichern | offen |
+| TGAP-82 | BUG-92 | Conversion Error-Audit branch explizit testen | offen |
+| TGAP-83 | BUG-93 | CI Coverage-Gate als harte Bedingung testen | offen |
+
+## 4. Top 10 QA-Luecken
+
+1. Security no-crash-only in [SecurityTests.cs](src/RomCleanup.Tests/SecurityTests.cs#L53)
+2. Idempotenz-Test ohne Gleichheitsassertion in [GameKeyNormalizerTests.cs](src/RomCleanup.Tests/GameKeyNormalizerTests.cs#L114)
+3. Overflow-Regressionen mit schwacher Aussage in [VersionScorerTests.cs](src/RomCleanup.Tests/VersionScorerTests.cs#L115)
+4. Optionalisierte Holdout/Tier-Gates in [HoldoutGateTests.cs](src/RomCleanup.Tests/Benchmark/HoldoutGateTests.cs#L21)
+5. Snapshot-Semantikluecke in [Issue9InvariantRegressionRedPhaseTests.cs](src/RomCleanup.Tests/Issue9InvariantRegressionRedPhaseTests.cs#L500)
+6. Meta-Tests statt Verhaltensabsicherung in [Issue9InvariantRegressionRedPhaseTests.cs](src/RomCleanup.Tests/Issue9InvariantRegressionRedPhaseTests.cs#L546)
+7. Irrefuehrender Dedup-Testname in [DeduplicationEngineTests.cs](src/RomCleanup.Tests/DeduplicationEngineTests.cs#L305)
+8. Mid-run Cancellation nicht getestet in [RunOrchestratorTests.cs](src/RomCleanup.Tests/RunOrchestratorTests.cs#L219)
+9. Conversion Error-Audit branch nicht explizit getestet in [ConversionPhaseHelper.cs](src/RomCleanup.Infrastructure/Orchestration/ConversionPhaseHelper.cs#L130)
+10. CI Coverage Gate Test semantisch weich in [AuditComplianceTests.cs](src/RomCleanup.Tests/AuditComplianceTests.cs#L174)
+
+## 5. Priorisierter Test-Sanierungsplan
+
+1. **P1 sofort:** BUG-84/85/86 (Security + Idempotenz + Overflow) auf echte Fachinvarianten umstellen.
+2. **P1 sofort:** BUG-88 (Benchmark Holdout/Tier Gates fuer Release hard-enforce).
+3. **P2 kurzfristig:** BUG-89/90 (Snapshot-Semantik + Meta-Tests zu Verhaltens-Tests).
+4. **P2 kurzfristig:** BUG-91/92 (Mid-run Cancellation + Conversion Error-Audit branch).
+5. **P2 kurzfristig:** BUG-93 (CI Coverage Gate Test hart/spezifisch machen).
+6. **Hygiene:** BUG-87 (irrefuehrender Name) als schneller Klarheitsfix.
+7. **Verifikation:** Nach Sanierung Unit + Integration + Benchmark-Gates laufen lassen; Paritaets-/Determinismus-Suites als Pflichtgate markieren.
+
+---

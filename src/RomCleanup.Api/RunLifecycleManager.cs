@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Errors;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
@@ -107,11 +108,13 @@ public sealed class RunLifecycleManager
                 Roots = request.Roots!,
                 PreferRegions = request.PreferRegions is { Length: > 0 }
                     ? request.PreferRegions
-                    : new[] { "EU", "US", "WORLD", "JP" },
+                    : RunConstants.DefaultPreferRegions,
                 RemoveJunk = request.RemoveJunk,
                 AggressiveJunk = request.AggressiveJunk,
                 SortConsole = request.SortConsole,
                 EnableDat = request.EnableDat,
+                EnableDatAudit = request.EnableDatAudit,
+                EnableDatRename = request.EnableDatRename,
                 DatRoot = string.IsNullOrWhiteSpace(request.DatRoot) ? null : request.DatRoot.Trim(),
                 OnlyGames = request.OnlyGames,
                 KeepUnknownWhenOnlyGames = request.KeepUnknownWhenOnlyGames,

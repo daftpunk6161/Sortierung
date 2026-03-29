@@ -1,4 +1,5 @@
 using RomCleanup.Api;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Errors;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.FileSystem;
@@ -187,6 +188,39 @@ public class RunManagerTests
     {
         var request = new RunRequest { Roots = new[] { "C:\\test" } };
         Assert.Null(request.PreferRegions);
+    }
+
+    [Fact]
+    public void TryCreateOrReuse_WithoutPreferRegions_UsesRunConstantsDefaults()
+    {
+        var mgr = CreateManager();
+        var request = new RunRequest { Roots = new[] { GetTestRoot() }, Mode = "DryRun" };
+
+        var create = mgr.TryCreateOrReuse(request, "DryRun", "prefer-defaults");
+
+        Assert.Equal(RunCreateDisposition.Created, create.Disposition);
+        Assert.Equal(RunConstants.DefaultPreferRegions, create.Run!.PreferRegions);
+    }
+
+    [Fact]
+    public void TryCreateOrReuse_PropagatesDatAuditAndRenameFlags()
+    {
+        var mgr = CreateManager();
+        var request = new RunRequest
+        {
+            Roots = new[] { GetTestRoot() },
+            Mode = "DryRun",
+            EnableDat = true,
+            EnableDatAudit = true,
+            EnableDatRename = true
+        };
+
+        var create = mgr.TryCreateOrReuse(request, "DryRun", "dat-flags");
+
+        Assert.Equal(RunCreateDisposition.Created, create.Disposition);
+        Assert.True(create.Run!.EnableDat);
+        Assert.True(create.Run.EnableDatAudit);
+        Assert.True(create.Run.EnableDatRename);
     }
 
     [Fact]

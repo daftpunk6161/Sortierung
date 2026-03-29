@@ -1,5 +1,6 @@
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Contracts;
 using RomCleanup.Infrastructure.Metrics;
 using RomCleanup.Infrastructure.Orchestration;
 using Xunit;
@@ -190,6 +191,55 @@ public sealed class MovePhaseAuditInvariantTests : IDisposable
         Assert.Empty(audit.Rows);
     }
 
+    [Fact]
+    public void MovePhase_SetMemberFailure_RollsBackDescriptorAndDoesNotCountMove()
+    {
+        var root = Path.Combine(_tempDir, "set-atomic");
+        Directory.CreateDirectory(root);
+
+        var cue = CreateFile(root, "game.cue");
+        var bin1 = CreateFile(root, "game (track 1).bin");
+        var bin2 = CreateFile(root, "game (track 2).bin");
+
+        File.WriteAllText(cue,
+            "FILE \"game (track 1).bin\" BINARY\n" +
+            "  TRACK 01 MODE1/2352\n" +
+            "    INDEX 01 00:00:00\n" +
+            "FILE \"game (track 2).bin\" BINARY\n" +
+            "  TRACK 02 MODE1/2352\n" +
+            "    INDEX 01 00:00:00\n");
+
+        var fs = new SetAtomicFs
+        {
+            FailSourcePath = bin2
+        };
+
+        var audit = new InvariantAuditStore();
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Mode = "Move",
+            ConflictPolicy = "Rename",
+            AuditPath = Path.Combine(_tempDir, "audit-set-atomic.csv")
+        };
+
+        var group = new DedupeGroup
+        {
+            GameKey = "set-game",
+            Winner = Candidate(Path.Combine(root, "winner.zip")),
+            Losers = new[] { Candidate(cue) }
+        };
+
+        var result = new MovePipelinePhase().Execute(
+            new MovePhaseInput(new[] { group }, options),
+            Context(options, fs, audit),
+            CancellationToken.None);
+
+        Assert.Equal(0, result.MoveCount);
+        Assert.Equal(1, result.FailCount);
+        Assert.True(fs.RollbackCalls > 0);
+    }
+
     private static string CreateFile(string dir, string name)
     {
         Directory.CreateDirectory(dir);
@@ -257,6 +307,52 @@ public sealed class MovePhaseAuditInvariantTests : IDisposable
 
         public bool IsReparsePoint(string path)
             => false;
+
+        public void DeleteFile(string path)
+        {
+        }
+
+        public void CopyFile(string sourcePath, string destinationPath, bool overwrite = false)
+        {
+        }
+    }
+
+    private sealed class SetAtomicFs : IFileSystem
+    {
+        public string? FailSourcePath { get; init; }
+        public int RollbackCalls { get; private set; }
+
+        public bool TestPath(string literalPath, string pathType = "Any") => true;
+
+        public string EnsureDirectory(string path)
+        {
+            Directory.CreateDirectory(path);
+            return path;
+        }
+
+        public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? allowedExtensions = null)
+            => Array.Empty<string>();
+
+        public string? MoveItemSafely(string sourcePath, string destinationPath)
+        {
+            if (!string.IsNullOrEmpty(FailSourcePath)
+                && string.Equals(sourcePath, FailSourcePath, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            if (sourcePath.Contains(RunConstants.WellKnownFolders.TrashRegionDedupe, StringComparison.OrdinalIgnoreCase))
+                RollbackCalls++;
+
+            return destinationPath;
+        }
+
+        public bool MoveDirectorySafely(string sourcePath, string destinationPath) => true;
+
+        public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
+            => Path.GetFullPath(Path.Combine(rootPath, relativePath));
+
+        public bool IsReparsePoint(string path) => false;
 
         public void DeleteFile(string path)
         {

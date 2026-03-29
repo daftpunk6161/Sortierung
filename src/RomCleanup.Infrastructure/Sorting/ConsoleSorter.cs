@@ -336,10 +336,36 @@ public sealed class ConsoleSorter
         var matches = Directory.GetFiles(dir, pattern);
         if (matches.Length == 0) return null;
         if (matches.Length == 1) return matches[0];
-        // SEC-SORT-01: Sort for determinism — Directory.GetFiles order is not guaranteed.
-        // Take the last alphabetically, which corresponds to the highest __DUP suffix.
-        Array.Sort(matches, StringComparer.OrdinalIgnoreCase);
+        // SEC-SORT-01: Sort for determinism using numeric DUP suffix first.
+        // Lexical ordering breaks for 10+ duplicates (__DUP10 comes before __DUP2).
+        Array.Sort(matches, (left, right) =>
+        {
+            var leftDup = ParseDupSuffix(left, baseName, ext);
+            var rightDup = ParseDupSuffix(right, baseName, ext);
+            var byDup = leftDup.CompareTo(rightDup);
+            if (byDup != 0)
+                return byDup;
+
+            return StringComparer.OrdinalIgnoreCase.Compare(left, right);
+        });
         return matches[^1];
+    }
+
+    private static int ParseDupSuffix(string path, string baseName, string ext)
+    {
+        var fileName = Path.GetFileName(path);
+        if (string.IsNullOrEmpty(fileName))
+            return 0;
+
+        var expectedPrefix = baseName + "__DUP";
+        if (!fileName.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase)
+            || !fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
+        {
+            return 0;
+        }
+
+        var numberPart = fileName.Substring(expectedPrefix.Length, fileName.Length - expectedPrefix.Length - ext.Length);
+        return int.TryParse(numberPart, out var parsed) ? parsed : 0;
     }
 
     private bool MoveFile(string root, string sourcePath, string destDir, string fileName, bool dryRun)

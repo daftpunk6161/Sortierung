@@ -65,6 +65,50 @@ public class DatRepositoryAdapterTests : IDisposable
     }
 
         [Fact]
+        public void GetDatIndex_ParsesMachineBasedDat()
+        {
+                var datContent = @"<?xml version=""1.0""?>
+<mame>
+    <machine name=""sf2"">
+        <rom name=""sf2u.30g"" size=""524288"" sha1=""mamehash1"" />
+    </machine>
+    <machine name=""sf2ce"" cloneof=""sf2"">
+        <rom name=""sf2ce.23"" size=""524288"" sha1=""mamehash2"" />
+    </machine>
+</mame>";
+
+                File.WriteAllText(Path.Combine(_tempDir, "arcade.dat"), datContent);
+
+                var index = _dat.GetDatIndex(
+                        _tempDir,
+                        new Dictionary<string, string> { ["ARCADE"] = "arcade.dat" });
+
+                Assert.Equal(2, index.TotalEntries);
+                Assert.True(index.HasConsole("ARCADE"));
+                Assert.Equal("sf2", index.Lookup("ARCADE", "mamehash1"));
+                Assert.Equal("sf2ce", index.Lookup("ARCADE", "mamehash2"));
+        }
+
+        [Fact]
+        public void GetDatIndex_ParsesDiskEntries()
+        {
+                var datContent = @"<?xml version=""1.0""?>
+<datafile>
+    <game name=""Game Disc (USA)"">
+        <disk name=""gamedisc"" sha1=""diskhash1"" />
+    </game>
+</datafile>";
+
+                File.WriteAllText(Path.Combine(_tempDir, "disc.dat"), datContent);
+
+                var index = _dat.GetDatIndex(
+                        _tempDir,
+                        new Dictionary<string, string> { ["PSX"] = "disc.dat" });
+
+                Assert.Equal("Game Disc (USA)", index.Lookup("PSX", "diskhash1"));
+        }
+
+        [Fact]
         public void GetDatIndex_BiosGameName_SetsIsBiosFlag()
         {
                 var datContent = @"<?xml version=""1.0""?>
@@ -110,6 +154,24 @@ public class DatRepositoryAdapterTests : IDisposable
         Assert.Equal("sf2", parentMap["sf2ce"]);
         Assert.Equal("sf2", parentMap["sf2hf"]);
         Assert.False(parentMap.ContainsKey("sf2")); // parent itself not in map
+    }
+
+    [Fact]
+    public void GetDatParentCloneIndex_ParsesMachineCloneRelations()
+    {
+        var datContent = @"<?xml version=""1.0""?>
+<mame>
+  <machine name=""sf2"" />
+  <machine name=""sf2ce"" cloneof=""sf2"" />
+</mame>";
+
+        var datPath = Path.Combine(_tempDir, "mame-parent.dat");
+        File.WriteAllText(datPath, datContent);
+
+        var parentMap = _dat.GetDatParentCloneIndex(datPath);
+
+        Assert.Single(parentMap);
+        Assert.Equal("sf2", parentMap["sf2ce"]);
     }
 
     [Fact]
