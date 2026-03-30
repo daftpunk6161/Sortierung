@@ -59,6 +59,21 @@ public static class RunConstants
     /// <summary>Run failed with fatal error.</summary>
     public const string StatusFailed = "failed";
 
+    /// <summary>
+    /// Canonical audit action names used in CSV rows and rollback parsing.
+    /// Keep values centralized to avoid drift between writers and rollback readers.
+    /// </summary>
+    public static class AuditActions
+    {
+        public const string Move = "MOVE";
+        public const string Moved = "MOVED";
+        public const string MoveFailed = "MOVE_FAILED";
+        public const string JunkRemove = "JUNK_REMOVE";
+        public const string ConsoleSort = "CONSOLE_SORT";
+        public const string Convert = "CONVERT";
+        public const string DatRename = "DAT_RENAME";
+    }
+
     // ── Well-known folder names ─────────────────────────────────────
     // Single source of truth for special directory names used across orchestration,
     // sorting, blocklists, and CLI rollback discovery.

@@ -218,7 +218,7 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                                     ? "region-dedupe:set-member"
                                     : "region-dedupe";
                                 context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, movedItem.SourcePath, movedItem.ActualDestPath,
-                                    "Move", movedItem.Category, "", reason);
+                                    RunConstants.AuditActions.Move, movedItem.Category, "", reason);
                             }
                         }
 

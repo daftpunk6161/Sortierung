@@ -617,7 +617,9 @@ function Select-Winner {
     $dB = if ($b.PSObject.Properties['DatMatch'] -and $b.DatMatch) { 1 } else { 0 }
     if ($dA -ne $dB) { return $(if ($dA -gt $dB) { $a } else { $b }) }
     if ($a.RegionScore -ne $b.RegionScore) { return $(if ($a.RegionScore -gt $b.RegionScore) { $a } else { $b }) }
-    if ($a.HeaderScore -ne $b.HeaderScore) { return $(if ($a.HeaderScore -gt $b.HeaderScore) { $a } else { $b }) }
+    $hA = if ($a.PSObject.Properties['HeaderScore']) { $a.HeaderScore } else { 0 }
+    $hB = if ($b.PSObject.Properties['HeaderScore']) { $b.HeaderScore } else { 0 }
+    if ($hA -ne $hB) { return $(if ($hA -gt $hB) { $a } else { $b }) }
     if ($a.VersionScore -ne $b.VersionScore) { return $(if ($a.VersionScore -gt $b.VersionScore) { $a } else { $b }) }
     if ($a.FormatScore -ne $b.FormatScore) { return $(if ($a.FormatScore -gt $b.FormatScore) { $a } else { $b }) }
     $sA = if ($a.PSObject.Properties['SizeTieBreakScore']) { $a.SizeTieBreakScore } else { -1 * [long]$a.SizeBytes }
@@ -631,7 +633,7 @@ function Select-Winner {
       @{Expression={if ($_.PSObject.Properties['CompletenessScore']) { $_.CompletenessScore } else { 0 }};Descending=$true},
       @{Expression={if ($_.PSObject.Properties['DatMatch'] -and $_.DatMatch) { 1 } else { 0 }};Descending=$true},
       @{Expression='RegionScore';Descending=$true},
-      @{Expression='HeaderScore';Descending=$true},
+      @{Expression={if ($_.PSObject.Properties['HeaderScore']) { $_.HeaderScore } else { 0 }};Descending=$true},
       @{Expression='VersionScore';Descending=$true},
       @{Expression='FormatScore';Descending=$true},
       @{Expression={if ($_.PSObject.Properties['SizeTieBreakScore']) { $_.SizeTieBreakScore } else { -1 * [long]$_.SizeBytes }};Descending=$true},

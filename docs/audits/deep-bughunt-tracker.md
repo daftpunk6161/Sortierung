@@ -130,7 +130,7 @@
   - Fix: `ExtractFirstCsvField()` mit RFC-4180-Quoting statt manuelles `IndexOf(',')`
   - [x] TGAP-06: `ExtractFirstCsvField_HandlesQuotedPaths()` (5 Theory-Cases) — erledigt
 
-- [ ] **BUG-11** – CLI: `GetAwaiter().GetResult()` in `UpdateDats()`
+- [x] **BUG-11** – CLI: `GetAwaiter().GetResult()` in `UpdateDats()` — erledigt (2026-03-30)
   - Datei: `Program.cs:237`
   - Impact: Deadlock-Risiko (gering im CLI, aber Anti-Pattern)
   - Fix: Methode async machen oder `.Result` mit `ConfigureAwait(false)`
@@ -140,7 +140,7 @@
   - Impact: Exceptions können unobserved bleiben
   - Fix: Return-Type auf `async Task` ändern, Caller anpassen
 
-- [ ] **BUG-08** – Audit-Action-Strings: Inkonsistente Großschreibung
+- [x] **BUG-08** – Audit-Action-Strings: Inkonsistente Großschreibung — erledigt (2026-03-30)
   - Datei: `MovePipelinePhase.cs:96` vs `AuditSigningService.cs:262-268`
   - Impact: Audit-Trail inkonsistent (funktional mitigiert durch OrdinalIgnoreCase)
   - Fix: Zentrale Action-Constants einführen (`AuditActions.Move`, etc.)

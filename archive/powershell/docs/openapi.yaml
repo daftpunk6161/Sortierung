@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: ROM Cleanup API
+  version: 1.0.0
+  description: Lokale API zur Steuerung von ROM Cleanup Runs.
+servers:
+  - url: http://127.0.0.1:{port}
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+  /runs:
+    post:
+      summary: Run erstellen
+      responses:
+        '202':
+          description: Accepted
+  /runs/{runId}:
+    get:
+      summary: Run-Status lesen
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Not found
+  /runs/{runId}/result:
+    get:
+      summary: Run-Ergebnis lesen
+      responses:
+        '200':
+          description: OK
+        '409':
+          description: Running
+  /runs/{runId}/cancel:
+    post:
+      summary: Run abbrechen
+      responses:
+        '200':
+          description: Canceled
+        '409':
+          description: Not running
+  /openapi:
+    get:
+      summary: OpenAPI-Spezifikation
+      responses:
+        '200':
+          description: OK

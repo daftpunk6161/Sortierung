@@ -521,4 +521,31 @@ public sealed class HygieneCleanupRegressionTests
             }
         }
     }
+
+    [Fact]
+    public void CliUpdateDats_DoesNotBlockWithGetAwaiterGetResult()
+    {
+        var srcDir = ResolveSrcDir();
+        var codePath = Path.Combine(srcDir, "RomCleanup.CLI", "Program.cs");
+        Assert.True(File.Exists(codePath), $"Missing file: {codePath}");
+
+        var code = File.ReadAllText(codePath);
+
+        Assert.DoesNotContain(
+            "DownloadDatByFormatAsync(entry.Url, fileName, entry.Format).GetAwaiter().GetResult()",
+            code,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MovePipelinePhase_UsesCentralAuditActionConstant_ForMoveRows()
+    {
+        var srcDir = ResolveSrcDir();
+        var codePath = Path.Combine(srcDir, "RomCleanup.Infrastructure", "Orchestration", "MovePipelinePhase.cs");
+        Assert.True(File.Exists(codePath), $"Missing file: {codePath}");
+
+        var code = File.ReadAllText(codePath);
+
+        Assert.Contains("RunConstants.AuditActions.Move", code, StringComparison.Ordinal);
+    }
 }

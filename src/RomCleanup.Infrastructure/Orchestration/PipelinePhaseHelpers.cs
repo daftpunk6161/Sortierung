@@ -36,7 +36,7 @@ internal static class PipelinePhaseHelpers
 
         var root = FindRootForPath(sourcePath, options.Roots);
         if (root is not null)
-            context.AuditStore.AppendAuditRow(options.AuditPath, root, sourcePath, targetPath, "CONVERT", "GAME", "", $"format-convert:{toolName}");
+            context.AuditStore.AppendAuditRow(options.AuditPath, root, sourcePath, targetPath, RunConstants.AuditActions.Convert, "GAME", "", $"format-convert:{toolName}");
     }
 
     internal static void AppendConversionFailedAudit(PipelineContext context, RunOptions options, string sourcePath, string? targetPath, string toolName)

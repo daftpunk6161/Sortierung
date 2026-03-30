@@ -184,6 +184,9 @@ internal static class Program
     // --- Backward-compatible delegates for tests ---
 
     private static int UpdateDats(CliRunOptions cliOpts)
+        => Task.Run(() => UpdateDatsAsync(cliOpts)).Result;
+
+    private static async Task<int> UpdateDatsAsync(CliRunOptions cliOpts)
     {
         var dataDir = RunEnvironmentBuilder.ResolveDataDir();
         var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
@@ -238,7 +241,8 @@ internal static class Program
 
                 try
                 {
-                    var result = datService.DownloadDatByFormatAsync(entry.Url, fileName, entry.Format).GetAwaiter().GetResult();
+                    var result = await datService.DownloadDatByFormatAsync(entry.Url, fileName, entry.Format)
+                        .ConfigureAwait(false);
                     if (result is null)
                     {
                         failed++;

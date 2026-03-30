@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 
@@ -318,12 +319,12 @@ public sealed class AuditSigningService
             var action = fields.Length > 3 ? fields[3] : "";
 
             // Rollback MOVE, JUNK_REMOVE, CONSOLE_SORT, CONVERT, and DAT_RENAME actions
-            if (!string.Equals(action, "MOVE", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(action, "MOVED", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(action, "JUNK_REMOVE", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(action, "CONSOLE_SORT", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(action, "CONVERT", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(action, "DAT_RENAME", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(action, RunConstants.AuditActions.Move, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, RunConstants.AuditActions.Moved, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, RunConstants.AuditActions.JunkRemove, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, RunConstants.AuditActions.ConsoleSort, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, RunConstants.AuditActions.Convert, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, RunConstants.AuditActions.DatRename, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             eligible++;
