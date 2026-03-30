@@ -16,6 +16,7 @@ Permanente Referenzdoku liegt in [`docs/`](../docs/README.md).
 | [feature-benchmark-coverage-matrix-impl-1.md](feature-benchmark-coverage-matrix-impl-1.md) | Benchmark: Coverage Matrix | **Mostly Complete** | CoverageValidator + gates.json + CoverageGateTests implementiert |
 | [feature-benchmark-evaluation-pipeline-1.md](feature-benchmark-evaluation-pipeline-1.md) | Benchmark: Eval Pipeline | **Mostly Complete** | Quality Gates M4/M6/M7/M9a, HTML-Reports, Regressions-Gate implementiert |
 | [feature-benchmark-testset-1.md](feature-benchmark-testset-1.md) | Benchmark: Testset System | **Mostly Complete** | JSONL-Testset (8 Dateien), GroundTruthLoader, EvaluationRunner, CI-Gate implementiert |
+| [dat-first-recognition-redesign-1.md](dat-first-recognition-redesign-1.md) | DAT-first Recognition Redesign | **Completed** | Vollständige DAT-first Zielarchitektur mit Evidence-Tiers, MatchKind, Family-Routing, Decision-Resolver und Quality-Gates |
 
 ---
 

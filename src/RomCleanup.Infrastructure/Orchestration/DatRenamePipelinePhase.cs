@@ -21,6 +21,7 @@ public sealed class DatRenamePipelinePhase : IPipelinePhase<DatRenameInput, DatR
         var skippedCount = 0;
         var failedCount = 0;
         var executeMode = string.Equals(input.Options.Mode, "Move", StringComparison.OrdinalIgnoreCase);
+        var skipOnConflict = string.Equals(input.Options.ConflictPolicy, "Skip", StringComparison.OrdinalIgnoreCase);
 
         foreach (var entry in input.Entries)
         {
@@ -49,6 +50,16 @@ public sealed class DatRenamePipelinePhase : IPipelinePhase<DatRenameInput, DatR
             // DryRun should never mutate file system or audit trail.
             if (!executeMode)
                 continue;
+
+            if (skipOnConflict)
+            {
+                var targetPath = Path.Combine(Path.GetDirectoryName(entry.FilePath) ?? string.Empty, proposal.TargetFileName);
+                if (context.FileSystem.TestPath(targetPath, "Leaf"))
+                {
+                    skippedCount++;
+                    continue;
+                }
+            }
 
             var renamedPath = context.FileSystem.RenameItemSafely(entry.FilePath, proposal.TargetFileName);
             if (renamedPath is null)

@@ -43,7 +43,7 @@ Dies ist das maßgebliche Plandokument mit 4 Phasen / 66 Tasks.
 | 11 | Phase 3 / TASK-040–044 | BenchmarkHtmlReportWriter — **existiert** mit HTML-Escape, Confusion Matrix, Calibration, Trend-Sektion | — | **Erledigt** ✅ |
 | 12 | Phase 3 / TASK-045–046 | CSV-Export — `BenchmarkArtifactWriter.WriteConfusionCsv()` + `WriteCategoryConfusionCsv()` existieren | — | **Erledigt** ✅ |
 | 13 | Phase 3 / TASK-047–050 | TrendAnalyzer — **existiert** mit `TrendAnalyzerTests` | — | **Erledigt** ✅ |
-| 14 | Phase 3 / TASK-051–054 | CI-Pipeline — `.github/workflows/benchmark.yml` existiert (PR-Gate + Nightly + Baseline-Publish) | — | **Erledigt** ✅ |
+| 14 | Phase 3 / TASK-051–054 | CI-Pipeline — `.github/workflows/benchmark-gate.yml` existiert (PR-Gate + Nightly + Baseline-Publish) | — | **Erledigt** ✅ |
 | 15 | Phase 4 / TASK-056–060 | ~~**`AntiGamingGateTests.cs` fehlt komplett**~~ — **BEHOBEN**: `AntiGamingGateTests.cs` existiert mit 2 Tests (M15 UnknownToWrongMigration + M16 ECE), `ConfidenceCalibrationTests.cs` existiert mit 3 Tests | **Medium** | **Erledigt** ✅ |
 | 16 | Phase 4 / TASK-061–062 | Repair Gate Feature-Flag — `RepairGateEvaluator.IsRepairFeatureReady()` existiert, in QualityGateTests ist M14 nur info | **Low** | Teilweise |
 | 17 | Phase 4 / TASK-063–066 | ~~**Plan-Dateien Status-Update**~~ — **BEHOBEN**: Alle 4 Plans auf "Mostly Complete" aktualisiert (2026-03-22) | **Low** | **Erledigt** ✅ |
@@ -194,7 +194,7 @@ Dies ist das maßgebliche Plandokument mit 4 Phasen / 66 Tasks.
 ### High (Sollte vor nächstem Meilenstein gelöst werden)
 | # | Item | Betroffene Dokumente |
 |---|------|---------------------|
-| H1 | Quality Gates nur informativ statt Hard-Fail im PR-Gate | ADR-015, EVALUATION_STRATEGY, TEST_STRATEGY, benchmark.yml |
+| H1 | Quality Gates nur informativ statt Hard-Fail im PR-Gate | ADR-015, EVALUATION_STRATEGY, TEST_STRATEGY, benchmark-gate.yml |
 | ~~H2~~ | ~~manifest.json / Realität-Diskrepanz~~ → **BEHOBEN** (auf reale 2.073 korrigiert) | COVERAGE_GAP_AUDIT, manifest.json |
 | H3 | DatasetExpander ausführen um Coverage-Lücken zu schließen (edge-cases -52, negative-controls -20, repair-safety -30) | COVERAGE_GAP_AUDIT, TESTSET_DESIGN, feature-benchmark-coverage-expansion-1.md |
 
@@ -238,7 +238,7 @@ Diese Items aus den Dokumenten sind **implementiert** und benötigen keine weite
 - ✅ `TrendAnalyzer` + `TrendAnalyzerTests`
 - ✅ `BaselineRegressionGateTests` (Regression + M15 Gate)
 - ✅ `CoverageGateTests` (20+ Gates)
-- ✅ `.github/workflows/benchmark.yml` (PR-Gate + Nightly + Baseline-Publish)
+- ✅ `.github/workflows/benchmark-gate.yml` (PR-Gate + Nightly + Baseline-Publish)
 - ✅ `latest-baseline.json` + `v0.1.0-baseline.json`
 - ✅ `SchemaValidator` + CI-Integration
 - ✅ `CrossValidationSplitter`

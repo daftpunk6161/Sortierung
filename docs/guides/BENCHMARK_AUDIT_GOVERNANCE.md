@@ -44,9 +44,9 @@
 - Beim Jahresaudit werden Baselines >12 Monate in ein separates Archiv verschoben.
 
 ### CI-Integration
-- **PR-Gate** (`benchmark.yml` → `benchmark-gate` Job): Prüft CoverageGate + QualityGate auf jedem PR.
-- **Nightly** (`benchmark.yml` → `benchmark-full` Job): Vollständiger Benchmark-Lauf mit HTML-Dashboard.
-- **Baseline-Update** (`benchmark.yml` → `baseline-publish` Job): Nur manuell nach Review.
+- **PR-Gate** (`benchmark-gate.yml` → `benchmark-gate` Job): Prüft CoverageGate + QualityGate auf jedem PR.
+- **Nightly** (`benchmark-gate.yml` → `benchmark-full` Job): Vollständiger Benchmark-Lauf mit HTML-Dashboard.
+- **Baseline-Update** (`benchmark-gate.yml` → `baseline-publish` Job): Nur manuell nach Review.
 
 ## Verantwortlichkeiten
 

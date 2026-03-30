@@ -271,6 +271,10 @@ public static class OpenApiSpec
           "fileName": { "type": "string" },
           "consoleKey": { "type": "string" },
           "sortDecision": { "type": "string" },
+          "decisionClass": { "type": "string" },
+          "evidenceTier": { "type": "string" },
+          "primaryMatchKind": { "type": "string" },
+          "platformFamily": { "type": "string" },
           "matchLevel": { "type": "string" },
           "matchReasoning": { "type": "string" },
           "detectionConfidence": { "type": "integer" },
@@ -298,10 +302,12 @@ public static class OpenApiSpec
         "properties": {
           "level": { "type": "string", "enum": ["None", "Weak", "Probable", "Strong", "Exact", "Ambiguous"] },
           "reasoning": { "type": "string" },
-          "sourceKeys": { "type": "array", "items": { "type": "string" } },
+          "sources": { "type": "array", "items": { "type": "string" } },
           "hasHardEvidence": { "type": "boolean" },
           "hasConflict": { "type": "boolean" },
-          "hasDatEvidence": { "type": "boolean" }
+          "datVerified": { "type": "boolean" },
+          "tier": { "type": "string" },
+          "primaryMatchKind": { "type": "string" }
         }
       },
       "RomCandidate": {
@@ -320,10 +326,23 @@ public static class OpenApiSpec
           "extension": { "type": "string" },
           "consoleKey": { "type": "string" },
           "datMatch": { "type": "boolean" },
+          "hash": { "type": "string", "nullable": true },
+          "headerlessHash": { "type": "string", "nullable": true },
+          "datGameName": { "type": "string", "nullable": true },
+          "datAuditStatus": { "type": "string" },
           "category": { "type": "string" },
           "classificationReasonCode": { "type": "string" },
           "classificationConfidence": { "type": "integer" },
-          "matchEvidence": { "$ref": "#/components/schemas/MatchEvidence" }
+          "detectionConfidence": { "type": "integer" },
+          "detectionConflict": { "type": "boolean" },
+          "hasHardEvidence": { "type": "boolean" },
+          "isSoftOnly": { "type": "boolean" },
+          "sortDecision": { "type": "string" },
+          "decisionClass": { "type": "string" },
+          "matchEvidence": { "$ref": "#/components/schemas/MatchEvidence" },
+          "evidenceTier": { "type": "string" },
+          "primaryMatchKind": { "type": "string" },
+          "platformFamily": { "type": "string" }
         }
       }
     },

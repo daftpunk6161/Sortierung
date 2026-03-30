@@ -1,4 +1,4 @@
-name: benchmark
+name: benchmark-gate
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ on:
       - 'src/**'
       - 'benchmark/**'
       - 'data/**'
-      - '.github/workflows/benchmark.yml'
+      - '.github/workflows/benchmark-gate.yml'
   schedule:
     # Nightly at 02:00 UTC
     - cron: '0 2 * * *'

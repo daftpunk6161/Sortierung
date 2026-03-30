@@ -32,6 +32,7 @@ public static class CandidateFactory
         bool hasHardEvidence = false,
         bool isSoftOnly = true,
         SortDecision sortDecision = SortDecision.Blocked,
+        DecisionClass decisionClass = DecisionClass.Unknown,
         MatchEvidence? matchEvidence = null,
         EvidenceTier evidenceTier = EvidenceTier.Tier4_Unknown,
         MatchKind primaryMatchKind = MatchKind.None,
@@ -44,6 +45,9 @@ public static class CandidateFactory
         var effectiveGameKey = category == FileCategory.Bios
             ? $"__BIOS__{biosRegionKey}__{gameKey}"
             : gameKey;
+        var effectiveDecisionClass = decisionClass == DecisionClass.Unknown && sortDecision != SortDecision.Unknown
+            ? sortDecision.ToDecisionClass()
+            : decisionClass;
 
         return new RomCandidate
         {
@@ -70,6 +74,7 @@ public static class CandidateFactory
             HasHardEvidence = hasHardEvidence,
             IsSoftOnly = isSoftOnly,
             SortDecision = sortDecision,
+            DecisionClass = effectiveDecisionClass,
             MatchEvidence = matchEvidence ?? new MatchEvidence(),
             EvidenceTier = evidenceTier,
             PrimaryMatchKind = primaryMatchKind,

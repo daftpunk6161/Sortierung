@@ -398,6 +398,10 @@ public sealed class ApiReviewItem
     public string FileName { get; init; } = string.Empty;
     public string ConsoleKey { get; init; } = string.Empty;
     public string SortDecision { get; init; } = string.Empty;
+    public string DecisionClass { get; init; } = string.Empty;
+    public string EvidenceTier { get; init; } = string.Empty;
+    public string PrimaryMatchKind { get; init; } = string.Empty;
+    public string PlatformFamily { get; init; } = string.Empty;
     public string MatchLevel { get; init; } = string.Empty;
     public string MatchReasoning { get; init; } = string.Empty;
     public int DetectionConfidence { get; init; }
@@ -413,8 +417,13 @@ public sealed class ApiReviewQueue
 
 public sealed class ApiReviewApprovalRequest
 {
+    [JsonPropertyName("consoleKey")]
     public string? ConsoleKey { get; set; }
+
+    [JsonPropertyName("matchLevel")]
     public string? MatchLevel { get; set; }
+
+    [JsonPropertyName("paths")]
     public string[]? Paths { get; set; }
 }
 

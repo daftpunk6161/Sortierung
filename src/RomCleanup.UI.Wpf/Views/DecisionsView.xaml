@@ -85,11 +85,13 @@
                       VerticalAlignment="Center">
                 <TextBlock Foreground="{DynamicResource BrushTextMuted}" FontSize="11">
                   <TextBlock.Text>
-                    <MultiBinding StringFormat="[{0}]  R:{1}  F:{2}  V:{3}">
+                    <MultiBinding StringFormat="[{0}]  R:{1}  F:{2}  V:{3}  D:{4}  T:{5}">
                       <Binding Path="Winner.Region"/>
                       <Binding Path="Winner.RegionScore"/>
                       <Binding Path="Winner.FormatScore"/>
                       <Binding Path="Winner.VersionScore"/>
+                      <Binding Path="Winner.DecisionClass"/>
+                      <Binding Path="Winner.EvidenceTier"/>
                     </MultiBinding>
                   </TextBlock.Text>
                 </TextBlock>
@@ -114,11 +116,13 @@
                           VerticalAlignment="Center">
                     <TextBlock Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Opacity="0.7">
                       <TextBlock.Text>
-                        <MultiBinding StringFormat="[{0}]  R:{1}  F:{2}  V:{3}">
+                        <MultiBinding StringFormat="[{0}]  R:{1}  F:{2}  V:{3}  D:{4}  T:{5}">
                           <Binding Path="Region"/>
                           <Binding Path="RegionScore"/>
                           <Binding Path="FormatScore"/>
                           <Binding Path="VersionScore"/>
+                          <Binding Path="DecisionClass"/>
+                          <Binding Path="EvidenceTier"/>
                         </MultiBinding>
                       </TextBlock.Text>
                     </TextBlock>

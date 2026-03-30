@@ -52,7 +52,8 @@ public static class DeduplicationEngine
 
     /// <summary>
     /// Runs deduplication across all groups.
-    /// Each group is keyed by GameKey; returns the winner + losers for each group.
+    /// Each group is keyed by ConsoleKey+GameKey to avoid cross-platform collisions;
+    /// returns the winner + losers for each group.
     /// V2-H12: Uses dictionary-based grouping instead of LINQ GroupBy+OrderBy+ToList
     /// to reduce intermediate allocations for large candidate sets.
     /// </summary>
@@ -64,10 +65,12 @@ public static class DeduplicationEngine
         foreach (var c in candidates)
         {
             if (string.IsNullOrWhiteSpace(c.GameKey)) continue;
-            if (!groupDict.TryGetValue(c.GameKey, out var list))
+            var groupKey = BuildGroupKey(c);
+
+            if (!groupDict.TryGetValue(groupKey, out var list))
             {
                 list = new List<RomCandidate>(2); // most groups have 1-3 items
-                groupDict[c.GameKey] = list;
+                groupDict[groupKey] = list;
             }
             list.Add(c);
         }
@@ -91,7 +94,7 @@ public static class DeduplicationEngine
             {
                 Winner = winner,
                 Losers = losers,
-                GameKey = key
+                GameKey = winner.GameKey
             });
         }
 
@@ -113,5 +116,14 @@ public static class DeduplicationEngine
         }
 
         return results;
+    }
+
+    private static string BuildGroupKey(RomCandidate candidate)
+    {
+        var consoleKey = string.IsNullOrWhiteSpace(candidate.ConsoleKey)
+            ? "UNKNOWN"
+            : candidate.ConsoleKey.Trim();
+
+        return $"{consoleKey}||{candidate.GameKey}";
     }
 }

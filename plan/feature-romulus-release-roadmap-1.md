@@ -26,7 +26,7 @@ Die Sequenzierung folgt dem Prinzip **Korrektheit → Sicherheit → Qualität �
 | 3 | Detection Recall & Stub-Generatoren | P1 — Hoch | §24 | 11 | **11/11 ✅** |
 | 4 | Conversion Domain Completion | P1 — Hoch | §22, §23, Audit P1-06/E9 | 22 | **22/22 ✅** |
 | 5 | Core & Pipeline Architecture | P2 — Mittel | §12, §14, §15, §17, §18, Audit P1-02/P1-04/P1-05/E2-E9 | 39 | **26/39** |
-| 6 | Benchmark & Quality Assurance | P2 — Mittel | §3–§7, §19, §25, §26, Audit E9 | 29 | **28/29** |
+| 6 | Benchmark & Quality Assurance | P2 — Mittel | §3–§7, §19, §25, §26, Audit E9 | 29 | **29/29 ✅** |
 | 7 | GUI/UX Overhaul | P3 — Normal | §8, §9, §13, §23 (UX), Audit P1-07/UJ | 19 | **19/19 ✅** |
 | 8 | Polish, Accessibility & Epics | P3 — Normal | §1, §2, §10, §11 | 16 | **7/16** |
 
@@ -310,7 +310,7 @@ Die Sequenzierung folgt dem Prinzip **Korrektheit → Sicherheit → Qualität �
 - [x] **TASK-101**: **§6**: Fallklassen-Gates FC-01 bis FC-20. BIOS/Arcade/Redump/Computer-Matrizen verteilen. `S1_MinimumViableBenchmark_AllGatesMet()` grün.
 - [x] **TASK-102**: **§3 P3**: HTML Benchmark Report mit inline CSS + HTML-Escaping + XSS-Test. CSV-Export mit CSV-Injection-Schutz.
 - [x] **TASK-103**: **§3 P3**: TrendAnalyzer (N-Run-History, Improving/Stable/Degrading).
-- [ ] **TASK-104**: **§7**: GitHub Actions CI-Workflow `benchmark-gate.yml` (PR-Gate). Nightly-Schedule (Benchmark + HTML-Artifact).
+- [x] **TASK-104**: **§7**: GitHub Actions CI-Workflow `benchmark-gate.yml` (PR-Gate). Nightly-Schedule (Benchmark + HTML-Artifact).
 - [x] **TASK-105**: **§3 P4**: Anti-Gaming-Gates (M15 ≤2%, M16 ≤0.15). Per-Sample Baseline-Vergleich. Repair-Gate Feature-Flag (M13 ≥90%).
 - [x] **TASK-106**: **§19**: Holdout-Zone implementieren (~200 Entries, nicht im Repo, nur CI-zugänglich). Chaos-Quote ≥30 %. Overfitting-Detection (Eval-Verbesserung >3 % ∧ Holdout <0,5 % → Warning).
 - [x] **TASK-107**: **§19**: Stub-Realismus L2/L3 — `StubGeneratorDispatch` um `RealismLevel`-Parameter erweitern. L2 = Header + Padding + korrekte Größe. L3 = Adversarial.

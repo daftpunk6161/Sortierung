@@ -33,6 +33,10 @@ public static class RunReportWriter
                 VersionScore = (int)group.Winner.VersionScore,
                 Console = group.Winner.ConsoleKey ?? string.Empty,
                 DatMatch = group.Winner.DatMatch,
+                DecisionClass = group.Winner.DecisionClass.ToString(),
+                EvidenceTier = group.Winner.EvidenceTier.ToString(),
+                PrimaryMatchKind = group.Winner.PrimaryMatchKind.ToString(),
+                PlatformFamily = group.Winner.PlatformFamily.ToString(),
                 MatchLevel = group.Winner.MatchEvidence.Level.ToString(),
                 MatchReasoning = group.Winner.MatchEvidence.Reasoning
             });
@@ -55,6 +59,10 @@ public static class RunReportWriter
                     VersionScore = (int)loser.VersionScore,
                     Console = loser.ConsoleKey ?? string.Empty,
                     DatMatch = loser.DatMatch,
+                    DecisionClass = loser.DecisionClass.ToString(),
+                    EvidenceTier = loser.EvidenceTier.ToString(),
+                    PrimaryMatchKind = loser.PrimaryMatchKind.ToString(),
+                    PlatformFamily = loser.PlatformFamily.ToString(),
                     MatchLevel = loser.MatchEvidence.Level.ToString(),
                     MatchReasoning = loser.MatchEvidence.Reasoning
                 });
@@ -91,6 +99,10 @@ public static class RunReportWriter
                 VersionScore = (int)candidate.VersionScore,
                 Console = candidate.ConsoleKey ?? string.Empty,
                 DatMatch = candidate.DatMatch,
+                DecisionClass = candidate.DecisionClass.ToString(),
+                EvidenceTier = candidate.EvidenceTier.ToString(),
+                PrimaryMatchKind = candidate.PrimaryMatchKind.ToString(),
+                PlatformFamily = candidate.PlatformFamily.ToString(),
                 MatchLevel = candidate.MatchEvidence.Level.ToString(),
                 MatchReasoning = candidate.MatchEvidence.Reasoning
             });

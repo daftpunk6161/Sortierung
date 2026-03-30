@@ -155,7 +155,7 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
         Assert.Equal(1, result.FailCount);
         Assert.Equal(group.Losers.Count, result.MoveCount + result.SkipCount + result.FailCount);
 
-        Assert.Contains(audit.Rows, r => r.Action == "Move");
+        Assert.Contains(audit.Rows, r => r.Action == "MOVE");
         Assert.Contains(audit.Rows, r => r.Action == "SKIP");
     }
 

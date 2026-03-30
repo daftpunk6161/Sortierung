@@ -548,7 +548,7 @@ public sealed class SafetyIoSecurityPhase1Tests : IDisposable
         Assert.NotNull(pendingRow);
 
         // The definitive Move row should come after PENDING
-        var moveRow = rows.FirstOrDefault(r => r.Contains(",Move,"));
+        var moveRow = rows.FirstOrDefault(r => r.Contains(",MOVE,"));
         Assert.NotNull(moveRow);
 
         var pendingIdx = rows.IndexOf(pendingRow);

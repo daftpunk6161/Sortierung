@@ -42,6 +42,9 @@ public sealed record RomCandidate
     /// <summary>The computed sort gate decision from the detection pipeline.</summary>
     public SortDecision SortDecision { get; init; } = SortDecision.Blocked;
 
+    /// <summary>Decision class used by DAT-first recognition semantics.</summary>
+    public DecisionClass DecisionClass { get; init; } = DecisionClass.Unknown;
+
     /// <summary>Canonical evidence details for explainability and review batching.</summary>
     public MatchEvidence MatchEvidence { get; init; } = new();
 

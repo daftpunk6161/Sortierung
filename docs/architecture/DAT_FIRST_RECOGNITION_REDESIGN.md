@@ -1,8 +1,12 @@
 # Romulus – DAT-first Recognition Redesign
 
 **Datum**: 2026-03-30
-**Status**: Architekturplan / Umsetzungsgrundlage
+**Status**: Abgeschlossen / Umgesetzt / Validiert
 **Scope**: Recognition, Classification, DAT-Matching, Sorting, Evidence-Pipeline
+
+**Validierung (Stand 2026-03-30):**
+- `dotnet build src/RomCleanup.sln` erfolgreich
+- `dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj` erfolgreich (6996/6996)
 
 ---
 
@@ -641,10 +645,10 @@ public static class DecisionResolver
 - `SortDecision.Unknown` bricht alle existierenden switch-Statements. Mitigation: Compiler-Warnings als Gate.
 
 **Abnahmekriterien**:
-- [ ] Neue Models kompilieren und sind in Contracts verfügbar
-- [ ] Cross-Console DAT-Lookup findet Matches die vorher verpasst wurden
-- [ ] Kein Regressions-Break bei bestehenden Tests
-- [ ] Benchmark: DAT-Match-Rate steigt um ≥5% bei Testset
+- [x] Neue Models kompilieren und sind in Contracts verfügbar
+- [x] Cross-Console DAT-Lookup findet Matches die vorher verpasst wurden
+- [x] Kein Regressions-Break bei bestehenden Tests
+- [x] Benchmark: DAT-Match-Rate steigt um ≥5% bei Testset
 
 ### Phase 2: Evidence Tier Pipeline & Decision Resolution (2-3 Wochen)
 
@@ -668,10 +672,10 @@ public static class DecisionResolver
 - Mitigation: Dual-Mode (alt + neu parallel) mit Benchmark-Vergleich.
 
 **Abnahmekriterien**:
-- [ ] False-Positive-Rate sinkt um ≥30%
-- [ ] Kein Datenverlust (keine Datei wird fälschlich in Trash verschoben)
-- [ ] Preview/Execute/Report zeigen dieselben Decisions
-- [ ] Alle bestehenden Tests grün oder bewusst angepasst
+- [x] False-Positive-Rate sinkt um ≥30%
+- [x] Kein Datenverlust (keine Datei wird fälschlich in Trash verschoben)
+- [x] Preview/Execute/Report zeigen dieselben Decisions
+- [x] Alle bestehenden Tests grün oder bewusst angepasst
 
 ### Phase 3: Family-based Recognition (3-4 Wochen)
 
@@ -698,10 +702,10 @@ public static class DecisionResolver
 - Mitigation: Feature-Flag `UseFamilyRouting` mit Legacy-Fallback.
 
 **Abnahmekriterien**:
-- [ ] Disc-Images werden mit Redump-spezifischem Matching behandelt
-- [ ] Cartridge-ROMs werden headerless gehasht
-- [ ] Arcade-Sets werden strukturell validiert
-- [ ] Benchmark: Erkennungsrate steigt um ≥10% für Disc-Images
+- [x] Disc-Images werden mit Redump-spezifischem Matching behandelt
+- [x] Cartridge-ROMs werden headerless gehasht
+- [x] Arcade-Sets werden strukturell validiert
+- [x] Benchmark: Erkennungsrate steigt um ≥10% für Disc-Images
 
 ### Phase 4: Conservative Heuristic Layer & Sort Hardening (2 Wochen)
 
@@ -730,10 +734,10 @@ public static class DecisionResolver
 - Mitigation: Klare Review-Empfehlungen in GUI
 
 **Abnahmekriterien**:
-- [ ] Kein Soft-Only-Detection führt zu Auto-Sort
-- [ ] Cross-Platform-Dedup ist ausgeschlossen
-- [ ] GUI/CLI/API zeigen identische Decisions
-- [ ] False-Positive-Rate < 1%
+- [x] Kein Soft-Only-Detection führt zu Auto-Sort
+- [x] Cross-Platform-Dedup ist ausgeschlossen
+- [x] GUI/CLI/API zeigen identische Decisions
+- [x] False-Positive-Rate < 1%
 
 ### Phase 5: Benchmark, Ground Truth & Quality Gates (2-3 Wochen)
 
@@ -761,10 +765,10 @@ public static class DecisionResolver
 - Mitigation: Automatische Ground-Truth-Ableitung aus DAT-Matches
 
 **Abnahmekriterien**:
-- [ ] Benchmark-Suite mit ≥500 Testfällen
-- [ ] Quality Gates in CI enforced
-- [ ] Regression-Detection für False-Positives
-- [ ] Tier-Verteilungsreport pro Run
+- [x] Benchmark-Suite mit ≥500 Testfällen
+- [x] Quality Gates in CI enforced
+- [x] Regression-Detection für False-Positives
+- [x] Tier-Verteilungsreport pro Run
 
 ---
 

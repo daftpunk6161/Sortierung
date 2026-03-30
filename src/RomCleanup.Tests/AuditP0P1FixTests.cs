@@ -98,6 +98,7 @@ public sealed class AuditP0P1FixTests : IDisposable
         {
             Mode = "Move",
             Roots = [_tempDir],
+            ConflictPolicy = "Skip",
             AuditPath = Path.Combine(_tempDir, "audit.csv")
         };
 

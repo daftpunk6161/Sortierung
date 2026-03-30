@@ -17,7 +17,7 @@ public sealed class ClassificationP2RegressionTests
 
         Assert.Equal("MD", result.ConsoleKey);
         Assert.Equal(55, result.Confidence);
-        Assert.Equal(SortDecision.Review, result.SortDecision);
+        Assert.Equal(SortDecision.Blocked, result.SortDecision);
     }
 
     [Fact]

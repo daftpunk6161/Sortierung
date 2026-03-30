@@ -466,7 +466,7 @@ public sealed class HardRegressionInvariantTests : IDisposable
         // (oder JunkMoveResult null wenn keine Junk-Dateien → auch OK)
         // ABER: MoveResult darf keine JUNK_REMOVE-Einträge enthalten
         var junkAuditRows = audit.AuditRows.Where(r => r.action == "JUNK_REMOVE").ToList();
-        var dedupeAuditRows = audit.AuditRows.Where(r => r.action == "Move").ToList();
+        var dedupeAuditRows = audit.AuditRows.Where(r => r.action == "MOVE").ToList();
 
         // Audit-Aktionen für Junk und Dedupe müssen disjunkt sein
         if (junkAuditRows.Count > 0 || dedupeAuditRows.Count > 0)
@@ -596,7 +596,7 @@ public sealed class HardRegressionInvariantTests : IDisposable
         });
 
         // Invariante: Jeder tatsächliche Move hat eine Audit-Row
-        var moveAuditCount = audit.AuditRows.Count(r => r.action == "Move");
+        var moveAuditCount = audit.AuditRows.Count(r => r.action == "MOVE");
         var actualMoveCount = result.MoveResult?.MoveCount ?? 0;
         Assert.Equal(actualMoveCount, moveAuditCount);
     }
@@ -640,7 +640,7 @@ public sealed class HardRegressionInvariantTests : IDisposable
 
         // Sidecar MoveCount == tatsächliche Move-Audit-Zeilen
         var sidecarMoveCount = Convert.ToInt32(sidecar["MoveCount"]);
-        var auditMoveCount = audit.AuditRows.Count(r => r.action == "Move");
+        var auditMoveCount = audit.AuditRows.Count(r => r.action == "MOVE");
         Assert.Equal(auditMoveCount, sidecarMoveCount);
     }
 

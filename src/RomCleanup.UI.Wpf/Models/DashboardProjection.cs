@@ -169,6 +169,10 @@ public sealed record DashboardProjection(
                     RegionScore = grp.Winner.RegionScore,
                     FormatScore = grp.Winner.FormatScore,
                     VersionScore = grp.Winner.VersionScore,
+                    DecisionClass = grp.Winner.DecisionClass.ToString(),
+                    EvidenceTier = grp.Winner.EvidenceTier.ToString(),
+                    PrimaryMatchKind = grp.Winner.PrimaryMatchKind.ToString(),
+                    PlatformFamily = grp.Winner.PlatformFamily.ToString(),
                     IsWinner = true
                 },
                 Losers = grp.Losers.Select(l => new DedupeEntryItem
@@ -178,6 +182,10 @@ public sealed record DashboardProjection(
                     RegionScore = l.RegionScore,
                     FormatScore = l.FormatScore,
                     VersionScore = l.VersionScore,
+                    DecisionClass = l.DecisionClass.ToString(),
+                    EvidenceTier = l.EvidenceTier.ToString(),
+                    PrimaryMatchKind = l.PrimaryMatchKind.ToString(),
+                    PlatformFamily = l.PlatformFamily.ToString(),
                     IsWinner = false
                 }).ToList()
             })

@@ -35,12 +35,14 @@ public sealed record ConsoleDetectionResult(
     bool HasHardEvidence = false,
     bool IsSoftOnly = true,
     SortDecision SortDecision = SortDecision.Blocked,
+    DecisionClass DecisionClass = DecisionClass.Blocked,
     MatchEvidence? MatchEvidence = null)
 {
     /// <summary>Unknown result with 0 confidence.</summary>
     public static ConsoleDetectionResult Unknown { get; } = new(
         "UNKNOWN", 0, Array.Empty<DetectionHypothesis>(), false, null,
         HasHardEvidence: false, IsSoftOnly: true, SortDecision: SortDecision.Unknown,
+        DecisionClass: DecisionClass.Unknown,
         MatchEvidence: new MatchEvidence
         {
             Level = MatchLevel.None,
@@ -95,9 +97,26 @@ public static class DetectionSourceExtensions
     /// <summary>Whether this source qualifies as hard (structural) evidence.</summary>
     public static bool IsHardEvidence(this DetectionSource source) =>
         source is DetectionSource.DatHash
-            or DetectionSource.UniqueExtension
             or DetectionSource.DiscHeader
-            or DetectionSource.CartridgeHeader;
+            or DetectionSource.CartridgeHeader
+            or DetectionSource.SerialNumber;
+
+    /// <summary>
+    /// Maps a detection source to the DAT-first evidence tier.
+    /// </summary>
+    public static EvidenceTier ToEvidenceTier(this DetectionSource source) => source switch
+    {
+        DetectionSource.DatHash => EvidenceTier.Tier0_ExactDat,
+        DetectionSource.DiscHeader => EvidenceTier.Tier1_Structural,
+        DetectionSource.CartridgeHeader => EvidenceTier.Tier1_Structural,
+        DetectionSource.SerialNumber => EvidenceTier.Tier1_Structural,
+        DetectionSource.UniqueExtension => EvidenceTier.Tier2_StrongHeuristic,
+        DetectionSource.ArchiveContent => EvidenceTier.Tier2_StrongHeuristic,
+        DetectionSource.FolderName => EvidenceTier.Tier3_WeakHeuristic,
+        DetectionSource.FilenameKeyword => EvidenceTier.Tier3_WeakHeuristic,
+        DetectionSource.AmbiguousExtension => EvidenceTier.Tier3_WeakHeuristic,
+        _ => EvidenceTier.Tier4_Unknown
+    };
 
     /// <summary>
     /// Maximum confidence when only this single source type is present.

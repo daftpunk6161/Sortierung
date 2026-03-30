@@ -1094,7 +1094,7 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
             sourceCount: 4,
             hasDatEvidence: true);
 
-        Assert.Equal(SortDecision.DatVerified, a);
+        Assert.Equal(SortDecision.Review, a);
         Assert.Equal(SortDecision.DatVerified, b);
     }
 

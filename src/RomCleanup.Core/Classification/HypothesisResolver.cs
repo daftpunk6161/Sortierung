@@ -22,6 +22,42 @@ public static class HypothesisResolver
     internal const int MultiSourceAgreementBonus = 15;
 
     /// <summary>
+    /// Resolve into the new DAT-first recognition projection while keeping
+    /// ConsoleDetectionResult as compatibility output.
+    /// </summary>
+    public static RecognitionResult ResolveRecognition(IReadOnlyList<DetectionHypothesis> hypotheses)
+    {
+        var resolved = Resolve(hypotheses);
+        var evidence = resolved.MatchEvidence ?? new MatchEvidence();
+
+        var signals = resolved.Hypotheses
+            .Select(h =>
+            {
+                var kind = MapDetectionSourceToMatchKind(h.Source);
+                return new RecognitionSignal(
+                    h.ConsoleKey,
+                    kind.GetTier(),
+                    kind,
+                    h.Confidence,
+                    h.Evidence);
+            })
+            .ToArray();
+
+        return new RecognitionResult
+        {
+            ConsoleKey = resolved.ConsoleKey,
+            Tier = evidence.Tier,
+            PrimaryMatchKind = evidence.PrimaryMatchKind,
+            Decision = resolved.DecisionClass,
+            Confidence = resolved.Confidence,
+            DatVerified = resolved.SortDecision == SortDecision.DatVerified,
+            Signals = signals,
+            Reasoning = evidence.Reasoning,
+            HasConflict = resolved.HasConflict,
+        };
+    }
+
+    /// <summary>
     /// Resolve a set of hypotheses into a single console detection result.
     /// Rules:
     /// 1. Group by ConsoleKey, sum confidence per key.
@@ -39,14 +75,14 @@ public static class HypothesisResolver
             return ConsoleDetectionResult.Unknown;
 
         // Group by ConsoleKey and sum confidence
-        var groups = new Dictionary<string, (int TotalConfidence, int MaxSingleConfidence, List<DetectionHypothesis> Items)>(
+        var groups = new Dictionary<string, (int TotalConfidence, int MaxSingleConfidence, List<DetectionHypothesis> Items, int MaxSourcePriority)>(
             StringComparer.OrdinalIgnoreCase);
 
         foreach (var h in hypotheses)
         {
             if (!groups.TryGetValue(h.ConsoleKey, out var group))
             {
-                group = (0, 0, new List<DetectionHypothesis>());
+                group = (0, 0, new List<DetectionHypothesis>(), 0);
                 groups[h.ConsoleKey] = group;
             }
 
@@ -54,12 +90,17 @@ public static class HypothesisResolver
             group.TotalConfidence += h.Confidence;
             if (h.Confidence > group.MaxSingleConfidence)
                 group.MaxSingleConfidence = h.Confidence;
+
+            var sourcePriority = GetWinnerPriority(h.Source);
+            if (sourcePriority > group.MaxSourcePriority)
+                group.MaxSourcePriority = sourcePriority;
             groups[h.ConsoleKey] = group;
         }
 
-        // Sort by total confidence descending, then alphabetically for determinism
+        // Sort by winner source reliability first, then by confidence for deterministic tie-breaking.
         var sorted = groups
-            .OrderByDescending(g => g.Value.TotalConfidence)
+            .OrderByDescending(g => g.Value.MaxSourcePriority)
+            .ThenByDescending(g => g.Value.TotalConfidence)
             .ThenByDescending(g => g.Value.MaxSingleConfidence)
             .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -107,6 +148,7 @@ public static class HypothesisResolver
                             "AMBIGUOUS", 0, hypotheses, true, conflictDetail,
                             HasHardEvidence: false, IsSoftOnly: true,
                             SortDecision: SortDecision.Blocked,
+                            DecisionClass: DecisionClass.Blocked,
                             MatchEvidence: ambiguousEvidence);
                     }
                 }
@@ -117,6 +159,15 @@ public static class HypothesisResolver
             .Select(i => i.Source)
             .Distinct()
             .ToList();
+
+        var primarySource = winner.Value.Items
+            .OrderByDescending(h => h.Confidence)
+            .ThenByDescending(h => (int)h.Source)
+            .ThenBy(h => h.ConsoleKey, StringComparer.OrdinalIgnoreCase)
+            .Select(h => h.Source)
+            .First();
+        var primaryMatchKind = MapDetectionSourceToMatchKind(primarySource);
+        var primaryTier = primaryMatchKind.GetTier();
 
         var hasHardEvidence = winnerSources.Any(s => s.IsHardEvidence());
         var runnerHasHardEvidence = hasConflict && sorted[1].Value.Items.Any(h => h.Source.IsHardEvidence());
@@ -174,12 +225,8 @@ public static class HypothesisResolver
         }
 
         // Derive SortDecision
-        var sortDecision = DetermineSortDecision(
-            aggregateConfidence,
-            hasConflict,
-            hasHardEvidence,
-            winnerSources.Count,
-            winnerSources.Contains(DetectionSource.DatHash));
+        var decisionClass = DecisionResolver.Resolve(primaryTier, hasConflict, aggregateConfidence);
+        var sortDecision = decisionClass.ToSortDecision();
 
         var matchEvidence = BuildMatchEvidence(
             aggregateConfidence,
@@ -187,6 +234,7 @@ public static class HypothesisResolver
             hasHardEvidence,
             hasConflict,
             winnerSources,
+            primaryMatchKind,
             winner.Key,
             conflictDetail);
 
@@ -198,38 +246,34 @@ public static class HypothesisResolver
             conflictDetail,
             hasHardEvidence,
             isSoftOnly,
-                sortDecision,
-                matchEvidence);
+            sortDecision,
+            decisionClass,
+            matchEvidence);
     }
 
     /// <summary>
     /// Derives the sort gate decision from confidence, conflict, and evidence type.
     /// </summary>
+    internal static SortDecision DetermineSortDecision(EvidenceTier tier, int confidence, bool conflict)
+    {
+        return DecisionResolver.Resolve(tier, conflict, confidence).ToSortDecision();
+    }
+
+    /// <summary>
+    /// Backward-compatible matrix helper retained for existing tests.
+    /// Prefer the tier-aware overload in production logic.
+    /// </summary>
     internal static SortDecision DetermineSortDecision(int confidence, bool conflict, bool hardEvidence, int sourceCount, bool hasDatEvidence = false)
     {
-        // DAT-verified: only when DAT evidence exists.
-        if (confidence == 100 && hasDatEvidence)
-            return SortDecision.DatVerified;
+        var tier = hasDatEvidence
+            ? EvidenceTier.Tier0_ExactDat
+            : hardEvidence
+                ? EvidenceTier.Tier1_Structural
+                : confidence >= ReviewThreshold || sourceCount > 1
+                    ? EvidenceTier.Tier2_StrongHeuristic
+                    : EvidenceTier.Tier3_WeakHeuristic;
 
-        // High confidence + hard evidence → Sort.
-        // With conflict, require stronger confidence to avoid unsafe auto-sorting.
-        if (confidence >= SortThreshold && hardEvidence && !conflict)
-            return SortDecision.Sort;
-        if (confidence >= 90 && hardEvidence)
-            return SortDecision.Sort;
-        // Review corridor: explicitly allow non-conflicting detections,
-        // including soft evidence, to prevent over-blocking.
-        if (confidence >= ReviewThreshold && !conflict)
-            return SortDecision.Review;
-
-        // Additional explicit guardrail from phase-1 plan:
-        // two agreeing sources with useful confidence should be reviewed,
-        // even if future threshold tuning changes ReviewThreshold.
-        if (confidence >= 70 && sourceCount >= 2 && !conflict)
-            return SortDecision.Review;
-
-        // Everything else → Blocked
-        return SortDecision.Blocked;
+        return DetermineSortDecision(tier, confidence, conflict);
     }
 
     private static int ComputeSoftOnlyCap(IReadOnlyList<DetectionSource> winnerSources)
@@ -254,6 +298,7 @@ public static class HypothesisResolver
         bool hasHardEvidence,
         bool hasConflict,
         IReadOnlyList<DetectionSource> winnerSources,
+        MatchKind primaryMatchKind,
         string winnerKey,
         string? conflictDetail)
     {
@@ -277,11 +322,6 @@ public static class HypothesisResolver
         var reasoning = hasConflict && !string.IsNullOrWhiteSpace(conflictDetail)
             ? conflictDetail!
             : $"Console={winnerKey}, Confidence={confidence}, Sources={string.Join("+", sourceLabels)}";
-
-        // Derive PrimaryMatchKind from the strongest detection source
-        var primaryMatchKind = winnerSources.Count > 0
-            ? MapDetectionSourceToMatchKind(winnerSources.OrderByDescending(s => (int)s).First())
-            : MatchKind.None;
 
         return new MatchEvidence
         {
@@ -311,5 +351,19 @@ public static class HypothesisResolver
         DetectionSource.FilenameKeyword => MatchKind.FilenameKeywordMatch,
         DetectionSource.AmbiguousExtension => MatchKind.AmbiguousExtensionSingle,
         _ => MatchKind.None,
+    };
+
+    private static int GetWinnerPriority(DetectionSource source) => source switch
+    {
+        DetectionSource.DatHash => 5,
+        DetectionSource.DiscHeader => 4,
+        DetectionSource.CartridgeHeader => 4,
+        DetectionSource.UniqueExtension => 3,
+        DetectionSource.SerialNumber => 2,
+        DetectionSource.ArchiveContent => 2,
+        DetectionSource.FolderName => 1,
+        DetectionSource.FilenameKeyword => 1,
+        DetectionSource.AmbiguousExtension => 0,
+        _ => 0,
     };
 }

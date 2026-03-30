@@ -181,7 +181,7 @@ public sealed class RunLifecycleManager
 
         while (_runs.TryGetValue(runId, out var run))
         {
-            if (run.Status != ApiRunStatus.Running)
+            if (run.Status != ApiRunStatus.Running && run.CompletedUtc is not null)
                 return new RunWaitResult(RunWaitDisposition.Completed, run);
 
             if (timeout is not null && DateTime.UtcNow - start >= timeout.Value)

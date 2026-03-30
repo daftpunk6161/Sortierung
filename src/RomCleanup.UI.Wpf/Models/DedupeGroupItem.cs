@@ -16,5 +16,9 @@ public sealed class DedupeEntryItem
     public required int RegionScore { get; init; }
     public required int FormatScore { get; init; }
     public required long VersionScore { get; init; }
+    public required string DecisionClass { get; init; }
+    public required string EvidenceTier { get; init; }
+    public required string PrimaryMatchKind { get; init; }
+    public required string PlatformFamily { get; init; }
     public required bool IsWinner { get; init; }
 }

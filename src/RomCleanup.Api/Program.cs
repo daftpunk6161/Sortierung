@@ -549,6 +549,8 @@ app.MapPost("/runs/{runId}/reviews/approve", async (string runId, HttpContext ct
             (string.IsNullOrWhiteSpace(request.ConsoleKey) || string.Equals(item.ConsoleKey, request.ConsoleKey, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrWhiteSpace(request.MatchLevel) || string.Equals(item.MatchLevel, request.MatchLevel, StringComparison.OrdinalIgnoreCase)) &&
             (pathFilter is null || pathFilter.Contains(item.MainPath)))
+        .GroupBy(item => item.MainPath, StringComparer.OrdinalIgnoreCase)
+        .Select(group => group.First())
         .ToArray();
 
     foreach (var item in matched)
@@ -831,6 +833,10 @@ static ApiReviewQueue BuildReviewQueue(RunRecord run)
             FileName = Path.GetFileName(c.MainPath),
             ConsoleKey = c.ConsoleKey,
             SortDecision = c.SortDecision.ToString(),
+            DecisionClass = c.DecisionClass.ToString(),
+            EvidenceTier = c.EvidenceTier.ToString(),
+            PrimaryMatchKind = c.PrimaryMatchKind.ToString(),
+            PlatformFamily = c.PlatformFamily.ToString(),
             MatchLevel = c.MatchEvidence.Level.ToString(),
             MatchReasoning = c.MatchEvidence.Reasoning,
             DetectionConfidence = c.DetectionConfidence,

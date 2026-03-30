@@ -16,6 +16,9 @@
           "key",
           "displayName",
           "discBased",
+          "family",
+          "hashStrategy",
+          "datSources",
           "uniqueExts",
           "ambigExts",
           "folderAliases"
@@ -32,6 +35,29 @@
           "discBased": {
             "type": "boolean"
           },
+          "family": {
+            "type": "string",
+            "enum": [
+              "NoIntroCartridge",
+              "RedumpDisc",
+              "Arcade",
+              "ComputerTOSEC",
+              "FolderBased",
+              "Hybrid",
+              "Unknown"
+            ]
+          },
+          "hashStrategy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "datSources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
           "uniqueExts": {
             "type": "array",
             "items": {
@@ -45,6 +71,12 @@
             }
           },
           "folderAliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "keywords": {
             "type": "array",
             "items": {
               "type": "string"

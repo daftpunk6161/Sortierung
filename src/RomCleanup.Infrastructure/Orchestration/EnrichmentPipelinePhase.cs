@@ -84,15 +84,30 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         var classification = FileClassifier.Analyze(fileName, ext, sizeBytes, context.Options.AggressiveJunk);
         var category = classification.Category;
 
-        string consoleKey = "";
+        string consoleKey = "UNKNOWN";
         int detectionConfidence = 0;
         bool detectionConflict = false;
         bool hasHardEvidence = false;
         bool isSoftOnly = true;
-        var sortDecision = SortDecision.Blocked;
-        MatchEvidence matchEvidence = new();
+        var sortDecision = SortDecision.Unknown;
+        var decisionClass = DecisionClass.Unknown;
+        MatchEvidence matchEvidence = new()
+        {
+            Tier = EvidenceTier.Tier4_Unknown,
+            PrimaryMatchKind = MatchKind.None,
+        };
         ConsoleDetectionResult? detectionResult = null;
-        if (consoleDetector is not null)
+
+        var regionTag = Core.Regions.RegionDetector.GetRegionTag(fileName);
+        var regionScore = FormatScorer.GetRegionScore(regionTag, context.Options.PreferRegions);
+        var fmtScore = FormatScorer.GetFormatScore(ext);
+        var verScore = versionScorer.GetVersionScore(fileName);
+
+        // DAT-first lookup first, then fallback to detector-guided resolution only if needed.
+        var datResult = LookupDat(filePath, ext, sizeBytes, consoleKey, detectionConflict,
+            datIndex, hashService, archiveHashService, headerlessHasher, detectionResult: null, context);
+
+        if (!datResult.DatMatch && consoleDetector is not null)
         {
             detectionResult = consoleDetector.DetectWithConfidence(filePath, root);
             consoleKey = detectionResult.ConsoleKey;
@@ -101,17 +116,13 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             hasHardEvidence = detectionResult.HasHardEvidence;
             isSoftOnly = detectionResult.IsSoftOnly;
             sortDecision = detectionResult.SortDecision;
-            matchEvidence = detectionResult.MatchEvidence ?? new MatchEvidence();
+            decisionClass = detectionResult.DecisionClass;
+            matchEvidence = detectionResult.MatchEvidence ?? matchEvidence;
+
+            datResult = LookupDat(filePath, ext, sizeBytes, consoleKey, detectionConflict,
+                datIndex, hashService, archiveHashService, headerlessHasher, detectionResult, context);
         }
 
-        var regionTag = Core.Regions.RegionDetector.GetRegionTag(fileName);
-        var regionScore = FormatScorer.GetRegionScore(regionTag, context.Options.PreferRegions);
-        var fmtScore = FormatScorer.GetFormatScore(ext);
-        var verScore = versionScorer.GetVersionScore(fileName);
-
-        // DAT lookup (3-stage: archive hash → headerless hash → container hash)
-        var datResult = LookupDat(filePath, ext, sizeBytes, consoleKey, detectionConflict,
-            datIndex, hashService, archiveHashService, headerlessHasher, detectionResult, context);
         consoleKey = datResult.ConsoleKey;
         detectionConflict = datResult.DetectionConflict;
         var computedHash = datResult.ComputedHash;
@@ -122,44 +133,53 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             datResult.DatMatchedBios, knownBiosHashes, hashService, filePath,
             computedHeaderlessHash, context);
 
-        // DAT authority — set max confidence and SortDecision
+        // DAT authority — tier-based decision. DAT remains the highest authority.
         if (datResult.DatMatch && consoleKey is not "")
         {
-            if (datResult.DatNameOnlyMatch)
-            {
-                // Name-only match: probable but not hash-verified (CHD raw SHA1 ≠ per-track SHA1)
-                detectionConfidence = Math.Max(detectionConfidence, 85);
-                sortDecision = SortDecision.Review;
-                matchEvidence = new MatchEvidence
-                {
-                    Level = MatchLevel.Probable,
-                    Reasoning = "DAT game name match (no hash verification — disc image format).",
-                    Sources = ["DatName"],
-                    HasHardEvidence = false,
-                    HasConflict = detectionConflict,
-                    DatVerified = false,
-                    Tier = EvidenceTier.Tier2_StrongHeuristic,
-                    PrimaryMatchKind = MatchKind.DatNameOnlyMatch,
-                };
-            }
-            else
-            {
-                // Hash-verified DAT match restores canonical game classification unless
-                // BIOS detection has already marked this file as BIOS.
-                if (category is FileCategory.Junk or FileCategory.NonGame or FileCategory.Unknown)
-                    category = FileCategory.Game;
+            var datTier = datResult.DatMatchKind.GetTier();
+            var datConfidence = datResult.DatNameOnlyMatch ? 85 : 100;
+            var datDecision = DecisionResolver.Resolve(datTier, detectionConflict, datConfidence);
 
-                ApplyDatAuthority(ref detectionConfidence, ref hasHardEvidence, ref isSoftOnly,
-                    ref sortDecision, ref matchEvidence,
-                    detectionConflict, datResult.DatResolvedFromAmbiguousCandidates);
+            detectionConfidence = Math.Max(detectionConfidence, datConfidence);
+            decisionClass = datDecision;
+            sortDecision = datDecision.ToSortDecision();
+            hasHardEvidence = datTier <= EvidenceTier.Tier1_Structural;
+            isSoftOnly = !hasHardEvidence;
 
-                // Enrich MatchEvidence with DAT-specific tier information
-                matchEvidence = matchEvidence with
-                {
-                    Tier = datResult.DatMatchKind.GetTier(),
-                    PrimaryMatchKind = datResult.DatMatchKind,
-                };
-            }
+            // Hash-verified DAT match restores canonical game classification unless
+            // BIOS detection has already marked this file as BIOS.
+            if (!datResult.DatNameOnlyMatch && category is FileCategory.Junk or FileCategory.NonGame or FileCategory.Unknown)
+                category = FileCategory.Game;
+
+            matchEvidence = new MatchEvidence
+            {
+                Level = datResult.DatNameOnlyMatch
+                    ? MatchLevel.Probable
+                    : detectionConflict
+                        ? MatchLevel.Ambiguous
+                        : MatchLevel.Exact,
+                Reasoning = datResult.DatNameOnlyMatch
+                    ? "DAT game name match (no hash verification — disc image format)."
+                    : datResult.DatResolvedFromAmbiguousCandidates
+                        ? "DAT hash matched multiple consoles; resolved with detector hypotheses and routed to review."
+                        : "Exact DAT hash match.",
+                Sources = datResult.DatNameOnlyMatch
+                    ? ["DatName"]
+                    : datResult.DatResolvedFromAmbiguousCandidates
+                        ? ["DatHash", "DetectorHypotheses"]
+                        : ["DatHash"],
+                HasHardEvidence = hasHardEvidence,
+                HasConflict = detectionConflict,
+                DatVerified = datDecision == DecisionClass.DatVerified,
+                Tier = datTier,
+                PrimaryMatchKind = datResult.DatMatchKind,
+            };
+        }
+        else if (detectionResult is not null)
+        {
+            var fallbackTier = matchEvidence.PrimaryMatchKind.GetTier();
+            decisionClass = DecisionResolver.Resolve(fallbackTier, detectionConflict, detectionConfidence);
+            sortDecision = decisionClass.ToSortDecision();
         }
 
         var headerScore = FormatScorer.GetHeaderVariantScore(root, filePath);
@@ -173,6 +193,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             ? datResult.DatMatchKind
             : matchEvidence.PrimaryMatchKind;
         var finalEvidenceTier = finalMatchKind.GetTier();
+        var platformFamily = consoleDetector?.GetPlatformFamily(consoleKey) ?? PlatformFamily.Unknown;
 
         return CandidateFactory.Create(
             normalizedPath: filePath,
@@ -198,9 +219,11 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             hasHardEvidence: hasHardEvidence,
             isSoftOnly: isSoftOnly,
             sortDecision: sortDecision,
+            decisionClass: decisionClass,
             matchEvidence: matchEvidence,
             evidenceTier: finalEvidenceTier,
-            primaryMatchKind: finalMatchKind);
+                primaryMatchKind: finalMatchKind,
+                platformFamily: platformFamily);
     }
 
     private readonly record struct DatLookupResult(
@@ -494,46 +517,6 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                     DatVerified = matchEvidence.DatVerified
                 };
             }
-        }
-    }
-
-    private static void ApplyDatAuthority(
-        ref int detectionConfidence, ref bool hasHardEvidence, ref bool isSoftOnly,
-        ref SortDecision sortDecision, ref MatchEvidence matchEvidence,
-        bool detectionConflict, bool datResolvedFromAmbiguousCandidates)
-    {
-        detectionConfidence = detectionConflict
-            ? Math.Max(detectionConfidence, 95)
-            : 100;
-        hasHardEvidence = true;
-        isSoftOnly = false;
-        if (datResolvedFromAmbiguousCandidates)
-        {
-            sortDecision = SortDecision.Review;
-            matchEvidence = new MatchEvidence
-            {
-                Level = MatchLevel.Ambiguous,
-                Reasoning = "DAT hash matched multiple consoles; resolved using detector hypotheses and routed to review.",
-                Sources = new[] { "DatHash", "DetectorHypotheses" },
-                HasHardEvidence = true,
-                HasConflict = true,
-                DatVerified = false
-            };
-        }
-        else
-        {
-            sortDecision = detectionConflict
-                ? SortDecision.Review
-                : SortDecision.DatVerified;
-            matchEvidence = new MatchEvidence
-            {
-                Level = MatchLevel.Exact,
-                Reasoning = "Exact DAT hash match.",
-                Sources = new[] { "DatHash" },
-                HasHardEvidence = true,
-                HasConflict = detectionConflict,
-                DatVerified = !detectionConflict
-            };
         }
     }
 

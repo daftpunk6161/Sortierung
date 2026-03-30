@@ -81,7 +81,19 @@ internal static class CliOutputWriter
                 GameKey = r.GameKey,
                 Winner = r.Winner.MainPath,
                 WinnerDatMatch = r.Winner.DatMatch,
-                Losers = r.Losers.Select(l => l.MainPath).ToArray()
+                WinnerDecisionClass = r.Winner.DecisionClass.ToString(),
+                WinnerEvidenceTier = r.Winner.EvidenceTier.ToString(),
+                WinnerPrimaryMatchKind = r.Winner.PrimaryMatchKind.ToString(),
+                WinnerPlatformFamily = r.Winner.PlatformFamily.ToString(),
+                Losers = r.Losers.Select(l => l.MainPath).ToArray(),
+                LoserDetails = r.Losers.Select(l => new CliDedupeLoser
+                {
+                    Path = l.MainPath,
+                    DecisionClass = l.DecisionClass.ToString(),
+                    EvidenceTier = l.EvidenceTier.ToString(),
+                    PrimaryMatchKind = l.PrimaryMatchKind.ToString(),
+                    PlatformFamily = l.PlatformFamily.ToString(),
+                }).ToArray()
             }).ToArray(),
             ConversionPlans = BuildConversionPlans(conversionReport),
             ConversionBlocked = BuildConversionBlocked(conversionReport)
@@ -261,7 +273,21 @@ internal sealed class CliDedupeGroup
     public string GameKey { get; init; } = "";
     public string Winner { get; init; } = "";
     public bool WinnerDatMatch { get; init; }
+    public string WinnerDecisionClass { get; init; } = "Unknown";
+    public string WinnerEvidenceTier { get; init; } = "Tier4_Unknown";
+    public string WinnerPrimaryMatchKind { get; init; } = "None";
+    public string WinnerPlatformFamily { get; init; } = "Unknown";
     public string[] Losers { get; init; } = Array.Empty<string>();
+    public CliDedupeLoser[] LoserDetails { get; init; } = Array.Empty<CliDedupeLoser>();
+}
+
+internal sealed class CliDedupeLoser
+{
+    public string Path { get; init; } = "";
+    public string DecisionClass { get; init; } = "Unknown";
+    public string EvidenceTier { get; init; } = "Tier4_Unknown";
+    public string PrimaryMatchKind { get; init; } = "None";
+    public string PlatformFamily { get; init; } = "Unknown";
 }
 
 internal sealed class CliConversionPlan

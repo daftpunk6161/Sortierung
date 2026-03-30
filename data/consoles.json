@@ -9,6 +9,12 @@
       "key": "3DO",
       "displayName": "3DO Interactive Multiplayer",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -31,6 +37,13 @@
       "key": "3DS",
       "displayName": "Nintendo 3DS",
       "discBased": false,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".3ds",
         ".cia"
@@ -53,6 +66,11 @@
       "key": "32X",
       "displayName": "Sega 32X",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".32x"
       ],
@@ -74,6 +92,11 @@
       "key": "A26",
       "displayName": "Atari 2600",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".a26"
       ],
@@ -95,6 +118,11 @@
       "key": "A52",
       "displayName": "Atari 5200",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".a52"
       ],
@@ -115,6 +143,11 @@
       "key": "A78",
       "displayName": "Atari 7800",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".a78"
       ],
@@ -135,6 +168,11 @@
       "key": "A800",
       "displayName": "Atari 8-bit (800/XL/XE)",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [
         ".atr",
         ".xex",
@@ -164,6 +202,11 @@
       "key": "AMIGA",
       "displayName": "Commodore Amiga",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [
         ".adf"
       ],
@@ -183,6 +226,12 @@
       "key": "ARCADE",
       "displayName": "Arcade",
       "discBased": false,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -204,6 +253,11 @@
       "key": "ATARIST",
       "displayName": "Atari ST",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [
         ".st",
         ".stx"
@@ -224,6 +278,11 @@
       "key": "C64",
       "displayName": "Commodore 64",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [
         ".d64",
         ".t64"
@@ -247,6 +306,12 @@
       "key": "CD32",
       "displayName": "Amiga CD32",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -271,6 +336,12 @@
       "key": "CDI",
       "displayName": "Philips CD-i",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".cdi"
       ],
@@ -298,6 +369,11 @@
       "key": "CHANNELF",
       "displayName": "Fairchild Channel F",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -316,6 +392,11 @@
       "key": "COLECO",
       "displayName": "ColecoVision",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".col"
       ],
@@ -335,6 +416,11 @@
       "key": "CPC",
       "displayName": "Amstrad CPC",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -353,6 +439,12 @@
       "key": "DC",
       "displayName": "Sega Dreamcast",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".gdi"
       ],
@@ -379,6 +471,11 @@
       "key": "DOS",
       "displayName": "MS-DOS",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -400,6 +497,11 @@
       "key": "FMTOWNS",
       "displayName": "FM Towns / Marty",
       "discBased": true,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -426,6 +528,11 @@
       "key": "GB",
       "displayName": "Nintendo Game Boy",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".gb"
       ],
@@ -447,6 +554,11 @@
       "key": "GBA",
       "displayName": "Game Boy Advance",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".gba"
       ],
@@ -468,6 +580,11 @@
       "key": "GBC",
       "displayName": "Game Boy Color",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".gbc"
       ],
@@ -489,6 +606,12 @@
       "key": "GC",
       "displayName": "Nintendo GameCube",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".gcz",
@@ -521,6 +644,11 @@
       "key": "GG",
       "displayName": "Sega Game Gear",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".gg"
       ],
@@ -542,6 +670,11 @@
       "key": "INTV",
       "displayName": "Mattel Intellivision",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".int"
       ],
@@ -561,6 +694,11 @@
       "key": "JAG",
       "displayName": "Atari Jaguar",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".j64"
       ],
@@ -581,6 +719,12 @@
       "key": "JAGCD",
       "displayName": "Atari Jaguar CD",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -604,6 +748,11 @@
       "key": "LYNX",
       "displayName": "Atari Lynx",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".lnx"
       ],
@@ -623,6 +772,11 @@
       "key": "MD",
       "displayName": "Sega Mega Drive / Genesis",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".md",
         ".gen"
@@ -650,6 +804,11 @@
       "key": "MSX",
       "displayName": "MSX",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [
         ".mx1",
         ".mx2"
@@ -670,6 +829,11 @@
       "key": "N64",
       "displayName": "Nintendo 64",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".n64",
         ".z64",
@@ -693,6 +857,13 @@
       "key": "NDS",
       "displayName": "Nintendo DS",
       "discBased": false,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".nds"
       ],
@@ -714,6 +885,12 @@
       "key": "NEOCD",
       "displayName": "Neo Geo CD",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -741,6 +918,12 @@
       "key": "NEOGEO",
       "displayName": "Neo Geo AES/MVS",
       "discBased": false,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -761,6 +944,11 @@
       "key": "NES",
       "displayName": "Nintendo Entertainment System",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".nes"
       ],
@@ -783,6 +971,11 @@
       "key": "NGP",
       "displayName": "Neo Geo Pocket",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".ngp"
       ],
@@ -803,6 +996,11 @@
       "key": "NGPC",
       "displayName": "Neo Geo Pocket Color",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -821,6 +1019,11 @@
       "key": "ODYSSEY2",
       "displayName": "Magnavox Odyssey 2",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".o2"
       ],
@@ -841,6 +1044,11 @@
       "key": "PC98",
       "displayName": "NEC PC-98",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".d88"
@@ -861,6 +1069,11 @@
       "key": "PCE",
       "displayName": "PC Engine / TurboGrafx-16",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".pce"
       ],
@@ -886,6 +1099,12 @@
       "key": "PCECD",
       "displayName": "PC Engine CD",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -914,6 +1133,12 @@
       "key": "PCFX",
       "displayName": "NEC PC-FX",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".pcfx"
       ],
@@ -939,6 +1164,11 @@
       "key": "POKEMINI",
       "displayName": "Pokemon Mini",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".min"
       ],
@@ -958,6 +1188,12 @@
       "key": "PS1",
       "displayName": "PlayStation",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -985,6 +1221,12 @@
       "key": "PS2",
       "displayName": "PlayStation 2",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1010,6 +1252,11 @@
       "key": "PS3",
       "displayName": "PlayStation 3",
       "discBased": true,
+      "family": "FolderBased",
+      "hashStrategy": "folder-signature",
+      "datSources": [
+        "custom"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1035,6 +1282,13 @@
       "key": "PSP",
       "displayName": "PlayStation Portable",
       "discBased": true,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".cso",
@@ -1059,6 +1313,12 @@
       "key": "SAT",
       "displayName": "Sega Saturn",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1085,6 +1345,12 @@
       "key": "SCD",
       "displayName": "Sega CD / Mega-CD",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1114,6 +1380,11 @@
       "key": "SG1000",
       "displayName": "Sega SG-1000",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".sg",
         ".sc"
@@ -1134,6 +1405,11 @@
       "key": "SMS",
       "displayName": "Sega Master System",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".sms"
       ],
@@ -1156,6 +1432,11 @@
       "key": "SNES",
       "displayName": "Super Nintendo",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".sfc",
         ".smc"
@@ -1180,6 +1461,11 @@
       "key": "SUPERVISION",
       "displayName": "Watara Supervision",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -1197,6 +1483,13 @@
       "key": "SWITCH",
       "displayName": "Nintendo Switch",
       "discBased": false,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".nsp",
         ".xci"
@@ -1219,6 +1512,11 @@
       "key": "VB",
       "displayName": "Virtual Boy",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".vb"
       ],
@@ -1239,6 +1537,11 @@
       "key": "VECTREX",
       "displayName": "Vectrex",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".vec"
       ],
@@ -1257,6 +1560,13 @@
       "key": "VITA",
       "displayName": "PlayStation Vita",
       "discBased": false,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".vpk"
       ],
@@ -1279,6 +1589,12 @@
       "key": "WII",
       "displayName": "Nintendo Wii",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".wbfs",
         ".wad"
@@ -1311,6 +1627,13 @@
       "key": "WIIU",
       "displayName": "Nintendo Wii U",
       "discBased": true,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".wux",
         ".rpx"
@@ -1339,6 +1662,11 @@
       "key": "WS",
       "displayName": "WonderSwan",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".ws"
       ],
@@ -1360,6 +1688,11 @@
       "key": "WSC",
       "displayName": "WonderSwan Color",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".wsc"
       ],
@@ -1381,6 +1714,12 @@
       "key": "X360",
       "displayName": "Xbox 360",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1405,6 +1744,11 @@
       "key": "X68K",
       "displayName": "Sharp X68000",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -1424,6 +1768,12 @@
       "key": "XBOX",
       "displayName": "Xbox",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1446,6 +1796,11 @@
       "key": "ZX",
       "displayName": "ZX Spectrum",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [
         ".tzx"
       ],
@@ -1467,6 +1822,12 @@
       "key": "ACD",
       "displayName": "Acorn Archimedes CD",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1491,6 +1852,11 @@
       "key": "ARCADIA",
       "displayName": "Emerson Arcadia 2001",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -1510,6 +1876,12 @@
       "key": "AWAVE",
       "displayName": "Sammy Atomiswave",
       "discBased": false,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -1527,6 +1899,11 @@
       "key": "BSX",
       "displayName": "Nintendo Satellaview",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".bs"
       ],
@@ -1547,6 +1924,12 @@
       "key": "CDTV",
       "displayName": "Commodore Amiga CDTV",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1570,6 +1953,12 @@
       "key": "CHI",
       "displayName": "Sega Chihiro",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1590,6 +1979,11 @@
       "key": "CVISION",
       "displayName": "VTech CreatiVision",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -1607,6 +2001,12 @@
       "key": "DAPHNE",
       "displayName": "Daphne Laserdisc",
       "discBased": false,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -1621,6 +2021,11 @@
       "key": "FDS",
       "displayName": "Famicom Disk System",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".fds"
       ],
@@ -1641,6 +2046,11 @@
       "key": "GAMECOM",
       "displayName": "Tiger Game.com",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".tgc"
       ],
@@ -1662,6 +2072,11 @@
       "key": "GMASTER",
       "displayName": "Hartung Game Master",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -1678,6 +2093,11 @@
       "key": "GP32",
       "displayName": "GamePark GP32",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".gxb"
       ],
@@ -1696,6 +2116,12 @@
       "key": "GW",
       "displayName": "ZAPiT Game Wave",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1717,6 +2143,12 @@
       "key": "HS",
       "displayName": "Matsushita Video Now Color",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1738,6 +2170,12 @@
       "key": "ITE",
       "displayName": "Incredible Technologies Eagle",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1759,6 +2197,12 @@
       "key": "IXL",
       "displayName": "Mattel Fisher-Price iXL",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1779,6 +2223,12 @@
       "key": "KSITE",
       "displayName": "Konami e-Amusement",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1799,6 +2249,12 @@
       "key": "LIND",
       "displayName": "Sega Lindbergh",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1819,6 +2275,11 @@
       "key": "LOOPY",
       "displayName": "Casio Loopy",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -1834,6 +2295,11 @@
       "key": "MAC",
       "displayName": "Apple Macintosh",
       "discBased": true,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [
         ".dmg"
       ],
@@ -1858,6 +2324,12 @@
       "key": "MAME",
       "displayName": "MAME",
       "discBased": false,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -1875,6 +2347,11 @@
       "key": "N64DD",
       "displayName": "Nintendo 64DD",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".ndd"
       ],
@@ -1895,6 +2372,12 @@
       "key": "NAOMI",
       "displayName": "Sega Naomi",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1917,6 +2400,12 @@
       "key": "NAO2",
       "displayName": "Sega Naomi 2",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1940,6 +2429,13 @@
       "key": "NGAGE",
       "displayName": "Nokia N-Gage",
       "discBased": false,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".app"
       ],
@@ -1961,6 +2457,12 @@
       "key": "NUON",
       "displayName": "VM Labs NUON",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -1983,6 +2485,11 @@
       "key": "PALM",
       "displayName": "Palm OS",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [
         ".prc",
         ".pdb"
@@ -2001,6 +2508,11 @@
       "key": "PC88",
       "displayName": "NEC PC-88",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".d88"
@@ -2022,6 +2534,12 @@
       "key": "PCD",
       "displayName": "Photo CD",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2043,6 +2561,11 @@
       "key": "PCV2",
       "displayName": "Benesse Pocket Challenge V2",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -2058,6 +2581,11 @@
       "key": "PICO",
       "displayName": "Sega Pico",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -2075,6 +2603,12 @@
       "key": "PIPPIN",
       "displayName": "Apple Bandai Pippin",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2098,6 +2632,11 @@
       "key": "POCKET",
       "displayName": "Analogue Pocket",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -2113,6 +2652,11 @@
       "key": "PPC",
       "displayName": "Pocket PC",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -2128,6 +2672,13 @@
       "key": "PS4",
       "displayName": "PlayStation 4",
       "discBased": true,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".pkg"
       ],
@@ -2155,6 +2706,13 @@
       "key": "PS5",
       "displayName": "PlayStation 5",
       "discBased": true,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2177,6 +2735,12 @@
       "key": "QUIZ",
       "displayName": "TAB-Austria Quizard",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2197,6 +2761,12 @@
       "key": "RINGEDGE",
       "displayName": "Sega RingEdge",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2217,6 +2787,12 @@
       "key": "RINGEDGE2",
       "displayName": "Sega RingEdge 2",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2238,6 +2814,12 @@
       "key": "RINGWIDE",
       "displayName": "Sega RingWide",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2258,6 +2840,11 @@
       "key": "SCV",
       "displayName": "Epoch Super Cassette Vision",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -2273,6 +2860,11 @@
       "key": "SGX",
       "displayName": "NEC SuperGrafx",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".sgx"
       ],
@@ -2293,6 +2885,11 @@
       "key": "SUFAMI",
       "displayName": "Nintendo Sufami Turbo",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -2310,6 +2907,11 @@
       "key": "SUPERACAN",
       "displayName": "Funtech Super A'Can",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [],
       "folderAliases": [
@@ -2325,6 +2927,12 @@
       "key": "TRIFORCE",
       "displayName": "Nintendo/Sega/Namco Triforce",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2345,6 +2953,12 @@
       "key": "VFLASH",
       "displayName": "VTech V.Flash / V.Smile Pro",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2369,6 +2983,11 @@
       "key": "VIC20",
       "displayName": "Commodore VIC-20",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [
         ".p00"
       ],
@@ -2392,6 +3011,12 @@
       "key": "VIS",
       "displayName": "Memorex Visual Information System",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2412,6 +3037,11 @@
       "key": "AMIGACD",
       "displayName": "Commodore Amiga CD",
       "discBased": true,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2435,6 +3065,12 @@
       "key": "PLAYDIA",
       "displayName": "Bandai Playdia",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2457,6 +3093,12 @@
       "key": "FIREBEAT",
       "displayName": "Konami FireBeat",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2477,6 +3119,12 @@
       "key": "K573",
       "displayName": "Konami System 573",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2498,6 +3146,12 @@
       "key": "KGV",
       "displayName": "Konami System GV",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2519,6 +3173,12 @@
       "key": "N246",
       "displayName": "Namco System 246",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2540,6 +3200,12 @@
       "key": "PRO21",
       "displayName": "Sega Prologue 21",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2560,6 +3226,12 @@
       "key": "KISSSITE",
       "displayName": "Tomy Kiss-Site",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2581,6 +3253,12 @@
       "key": "PHOTOPLAY",
       "displayName": "funworld Photo Play",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2601,6 +3279,12 @@
       "key": "EAMUSE",
       "displayName": "Konami e-Amusement",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2622,6 +3306,12 @@
       "key": "GSUPD",
       "displayName": "PlayStation GameShark Updates",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -2642,6 +3332,11 @@
       "key": "MSX2",
       "displayName": "Microsoft MSX2",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".dsk",
@@ -2661,6 +3356,11 @@
       "key": "MEGADUCK",
       "displayName": "Welback Mega Duck",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2681,6 +3381,11 @@
       "key": "ASTROCADE",
       "displayName": "Bally Astrocade",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2699,6 +3404,11 @@
       "key": "VSMILE",
       "displayName": "VTech V.Smile",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2719,6 +3429,11 @@
       "key": "VC4000",
       "displayName": "Interton VC 4000",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2737,6 +3452,11 @@
       "key": "STUDIO2",
       "displayName": "RCA Studio II",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".st2"
       ],
@@ -2759,6 +3479,11 @@
       "key": "VIDEOPAC",
       "displayName": "Philips Videopac+",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2778,6 +3503,11 @@
       "key": "G7000",
       "displayName": "Philips Videopac G7000",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2798,6 +3528,11 @@
       "key": "PLUS4",
       "displayName": "Commodore Plus/4",
       "discBased": false,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".prg",
@@ -2821,6 +3556,11 @@
       "key": "GAMATE",
       "displayName": "Bit Corporation Gamate",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2839,6 +3579,11 @@
       "key": "GAMEPOCKET",
       "displayName": "Epoch Game Pocket Computer",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2856,6 +3601,11 @@
       "key": "AVISION",
       "displayName": "Entex Adventure Vision",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2873,6 +3623,11 @@
       "key": "MYVISION",
       "displayName": "Nichibutsu My Vision",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2890,6 +3645,11 @@
       "key": "PV1000",
       "displayName": "Casio PV-1000",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2907,6 +3667,11 @@
       "key": "BEENA",
       "displayName": "Sega Beena",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2923,6 +3688,11 @@
       "key": "RX78",
       "displayName": "Bandai Gundam RX-78",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2940,6 +3710,11 @@
       "key": "GIZMONDO",
       "displayName": "Tiger Gizmondo",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin",
@@ -2959,6 +3734,11 @@
       "key": "GP2X",
       "displayName": "GamePark GP2X",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [
         ".gpe"
       ],
@@ -2977,6 +3757,11 @@
       "key": "APF",
       "displayName": "APF MP-1000",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -2994,6 +3779,13 @@
       "key": "EVERCADE",
       "displayName": "Blaze Evercade",
       "discBased": false,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -3012,6 +3804,11 @@
       "key": "VISICOM",
       "displayName": "Toshiba Visicom",
       "discBased": false,
+      "family": "NoIntroCartridge",
+      "hashStrategy": "headerless-sha1",
+      "datSources": [
+        "nointro"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin"
@@ -3028,6 +3825,12 @@
       "key": "CPS3",
       "displayName": "Capcom Play System III",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3049,6 +3852,12 @@
       "key": "KM2",
       "displayName": "Konami M2",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3069,6 +3878,12 @@
       "key": "KPYTHON2",
       "displayName": "Konami Python 2",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3090,6 +3905,12 @@
       "key": "ALLS",
       "displayName": "Sega ALLS",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3111,6 +3932,12 @@
       "key": "NU",
       "displayName": "Sega Nu",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3132,6 +3959,12 @@
       "key": "POLYMEGA",
       "displayName": "Playmaji Polymega",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3152,6 +3985,12 @@
       "key": "EBOOK",
       "displayName": "Sony Electronic Book",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3173,6 +4012,12 @@
       "key": "AUDIOCD",
       "displayName": "Audio CD",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".bin",
@@ -3191,6 +4036,12 @@
       "key": "DVD",
       "displayName": "DVD-Video",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3209,6 +4060,12 @@
       "key": "BD",
       "displayName": "Blu-ray Video",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3227,6 +4084,12 @@
       "key": "ION",
       "displayName": "Hasbro iON Educational Gaming System",
       "discBased": true,
+      "family": "Arcade",
+      "hashStrategy": "set-archive-sha1",
+      "datSources": [
+        "mame",
+        "fbneo"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3247,6 +4110,11 @@
       "key": "ZAURUS",
       "displayName": "Sharp Zaurus",
       "discBased": true,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3267,6 +4135,11 @@
       "key": "PSION",
       "displayName": "Psion Series",
       "discBased": true,
+      "family": "ComputerTOSEC",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "tosec"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3287,6 +4160,12 @@
       "key": "MEGATOUCH",
       "displayName": "Merit Megatouch",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",
@@ -3307,6 +4186,13 @@
       "key": "NDSI",
       "displayName": "Nintendo DSi",
       "discBased": false,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [
         ".dsi"
       ],
@@ -3329,6 +4215,13 @@
       "key": "NEW3DS",
       "displayName": "New Nintendo 3DS",
       "discBased": false,
+      "family": "Hybrid",
+      "hashStrategy": "container-sha1",
+      "datSources": [
+        "nointro",
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".3ds",
@@ -3350,6 +4243,12 @@
       "key": "HYPERSCAN",
       "displayName": "Mattel HyperScan",
       "discBased": true,
+      "family": "RedumpDisc",
+      "hashStrategy": "track-sha1",
+      "datSources": [
+        "redump",
+        "non-redump"
+      ],
       "uniqueExts": [],
       "ambigExts": [
         ".iso",

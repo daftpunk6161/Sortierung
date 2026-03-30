@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using RomCleanup.Core.Caching;
+using RomCleanup.Contracts.Models;
 
 namespace RomCleanup.Core.Classification;
 
@@ -158,14 +159,33 @@ public sealed class ConsoleDetector
                     continue;
                 var displayName = item.TryGetProperty("displayName", out var dn) ? dn.GetString() ?? key : key;
                 var discBased = item.TryGetProperty("discBased", out var db) && db.GetBoolean();
+                var familyText = item.TryGetProperty("family", out var fam)
+                    ? fam.GetString()
+                    : null;
+                var family = ParsePlatformFamily(familyText, discBased);
+                var hashStrategy = item.TryGetProperty("hashStrategy", out var hs)
+                    ? hs.GetString()
+                    : null;
 
                 var uniqueExts = ReadStringArray(item, "uniqueExts");
                 var ambigExts = ReadStringArray(item, "ambigExts");
                 var aliases = ReadStringArray(item, "folderAliases");
                 var categoryOverride = item.TryGetProperty("categoryOverride", out var co) ? co.GetString() : null;
                 var keywords = ReadStringArray(item, "keywords");
+                var datSources = ReadStringArray(item, "datSources");
 
-                consoles.Add(new ConsoleInfo(key, displayName, discBased, uniqueExts, ambigExts, aliases, categoryOverride, keywords));
+                consoles.Add(new ConsoleInfo(
+                    key,
+                    displayName,
+                    discBased,
+                    uniqueExts,
+                    ambigExts,
+                    aliases,
+                    categoryOverride,
+                    keywords,
+                    family,
+                    hashStrategy,
+                    datSources));
             }
         }
 
@@ -524,6 +544,17 @@ public sealed class ConsoleDetector
         _consoles.TryGetValue(key, out var info) ? info : null;
 
     /// <summary>
+    /// Returns the configured platform family for a console key.
+    /// </summary>
+    public PlatformFamily GetPlatformFamily(string consoleKey)
+    {
+        if (_consoles.TryGetValue(consoleKey, out var info))
+            return info.Family;
+
+        return PlatformFamily.Unknown;
+    }
+
+    /// <summary>
     /// Get all registered console keys.
     /// </summary>
     public IReadOnlyCollection<string> AllConsoleKeys => _consoles.Keys;
@@ -571,6 +602,14 @@ public sealed class ConsoleDetector
             return path.Trim().ToUpperInvariant();
         }
     }
+
+    private static PlatformFamily ParsePlatformFamily(string? value, bool discBased)
+    {
+        if (!string.IsNullOrWhiteSpace(value) && Enum.TryParse<PlatformFamily>(value, ignoreCase: true, out var parsed))
+            return parsed;
+
+        return discBased ? PlatformFamily.RedumpDisc : PlatformFamily.Unknown;
+    }
 }
 
 /// <summary>
@@ -584,7 +623,11 @@ public sealed record ConsoleInfo(
     string[] AmbigExts,
     string[] FolderAliases,
     string? CategoryOverride = null,
-    string[] Keywords = null!)
+    string[] Keywords = null!,
+    PlatformFamily Family = PlatformFamily.Unknown,
+    string? HashStrategy = null,
+    string[] DatSources = null!)
 {
     public string[] Keywords { get; init; } = Keywords ?? Array.Empty<string>();
+    public string[] DatSources { get; init; } = DatSources ?? Array.Empty<string>();
 }

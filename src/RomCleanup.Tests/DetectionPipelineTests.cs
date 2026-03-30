@@ -752,8 +752,8 @@ public sealed class DetectionPipelineTests
 
         var result = HypothesisResolver.Resolve(hypotheses);
 
-        // MD total = 160, SNES total = 90 → MD wins
-        Assert.Equal("MD", result.ConsoleKey);
+        // SNES has structural header evidence, which should outrank softer aggregate heuristics.
+        Assert.Equal("SNES", result.ConsoleKey);
         Assert.True(result.HasConflict);
     }
 
@@ -913,10 +913,10 @@ public sealed class DetectionPipelineTests
 
     [Theory]
     [InlineData(DetectionSource.DatHash, true)]
-    [InlineData(DetectionSource.UniqueExtension, true)]
+    [InlineData(DetectionSource.UniqueExtension, false)]
     [InlineData(DetectionSource.DiscHeader, true)]
     [InlineData(DetectionSource.CartridgeHeader, true)]
-    [InlineData(DetectionSource.SerialNumber, false)]
+    [InlineData(DetectionSource.SerialNumber, true)]
     [InlineData(DetectionSource.FolderName, false)]
     [InlineData(DetectionSource.ArchiveContent, false)]
     [InlineData(DetectionSource.FilenameKeyword, false)]
@@ -953,7 +953,7 @@ public sealed class DetectionPipelineTests
         Assert.Equal(80, result.Confidence); // Capped from 85 to 80 (phase-1 folder single-source cap)
         Assert.True(result.IsSoftOnly);
         Assert.False(result.HasHardEvidence);
-        Assert.Equal(SortDecision.Review, result.SortDecision);
+        Assert.Equal(SortDecision.Blocked, result.SortDecision);
     }
 
     [Fact]
@@ -968,7 +968,7 @@ public sealed class DetectionPipelineTests
         Assert.Equal("MD", result.ConsoleKey);
         Assert.Equal(85, result.Confidence); // phase-1 soft-only cap with multi-source agreement
         Assert.True(result.IsSoftOnly);
-        Assert.Equal(SortDecision.Review, result.SortDecision);
+        Assert.Equal(SortDecision.Blocked, result.SortDecision);
     }
 
     [Fact]
@@ -983,22 +983,22 @@ public sealed class DetectionPipelineTests
         Assert.Equal("GBA", result.ConsoleKey);
         Assert.Equal(85, result.Confidence); // phase-1 soft-only cap with multi-source agreement
         Assert.True(result.IsSoftOnly);
-        Assert.Equal(SortDecision.Review, result.SortDecision);
+        Assert.Equal(SortDecision.Blocked, result.SortDecision);
     }
 
     [Fact]
-    public void Resolver_UniqueExtOnly_HardEvidence_Sort()
+    public void Resolver_UniqueExtOnly_StrongHeuristic_Review()
     {
-        // UniqueExtension alone = hard evidence → Sort
+        // UniqueExtension alone = strong heuristic → Review
         var result = HypothesisResolver.Resolve([
             new("GBA", 95, DetectionSource.UniqueExtension, "ext=.gba")
         ]);
 
         Assert.Equal("GBA", result.ConsoleKey);
         Assert.Equal(95, result.Confidence);
-        Assert.True(result.HasHardEvidence);
-        Assert.False(result.IsSoftOnly);
-        Assert.Equal(SortDecision.Sort, result.SortDecision);
+        Assert.False(result.HasHardEvidence);
+        Assert.True(result.IsSoftOnly);
+        Assert.Equal(SortDecision.Review, result.SortDecision);
     }
 
     [Fact]
@@ -1030,33 +1030,33 @@ public sealed class DetectionPipelineTests
     }
 
     [Fact]
-    public void Resolver_SerialOnly_SoftOnlyCap65_Blocked()
+    public void Resolver_SerialOnly_StructuralEvidence_Review()
     {
-        // Serial alone → soft-only cap (65) takes precedence over single-source cap (75)
+        // Serial alone is structural evidence, but single-source confidence cap keeps it in review.
         var result = HypothesisResolver.Resolve([
             new("PS1", 95, DetectionSource.SerialNumber, "serial SLUS-00123")
         ]);
 
         Assert.Equal("PS1", result.ConsoleKey);
         Assert.Equal(75, result.Confidence); // single-source cap for serial remains 75
-        Assert.False(result.HasHardEvidence); // SerialNumber is NOT hard evidence
-        Assert.True(result.IsSoftOnly);
+        Assert.True(result.HasHardEvidence);
+        Assert.False(result.IsSoftOnly);
         Assert.Equal(SortDecision.Review, result.SortDecision);
     }
 
     [Fact]
-    public void Resolver_SerialPlusFolder_SoftOnlyCap()
+    public void Resolver_SerialPlusFolder_HardEvidenceSort()
     {
-        // Serial + Folder = both soft → capped at 65
+        // Serial + Folder keeps structural evidence and can auto-sort when confidence is high.
         var result = HypothesisResolver.Resolve([
             new("PS1", 95, DetectionSource.SerialNumber, "serial SLUS-00123"),
             new("PS1", 85, DetectionSource.FolderName, "folder=PlayStation")
         ]);
 
         Assert.Equal("PS1", result.ConsoleKey);
-        Assert.Equal(85, result.Confidence); // phase-1 soft-only cap with multi-source agreement
-        Assert.True(result.IsSoftOnly);
-        Assert.Equal(SortDecision.Review, result.SortDecision);
+        Assert.Equal(100, result.Confidence);
+        Assert.False(result.IsSoftOnly);
+        Assert.Equal(SortDecision.Sort, result.SortDecision);
     }
 
     [Fact]
@@ -1102,7 +1102,7 @@ public sealed class DetectionPipelineTests
         Assert.True(result.HasHardEvidence);
         // Phase-1: reduced penalty when hard evidence dominates soft runner-up.
         Assert.Equal(90, result.Confidence);
-        Assert.Equal(SortDecision.Sort, result.SortDecision);
+        Assert.Equal(SortDecision.Review, result.SortDecision);
     }
 
     [Fact]
@@ -1166,8 +1166,8 @@ public sealed class DetectionPipelineTests
     [InlineData(65, false, true, SortDecision.Review)]
     [InlineData(64, false, true, SortDecision.Review)]
     [InlineData(85, false, false, SortDecision.Review)]
-    [InlineData(85, true, true, SortDecision.Blocked)]
-    [InlineData(85, true, false, SortDecision.Blocked)]
+    [InlineData(85, true, true, SortDecision.Review)]
+    [InlineData(85, true, false, SortDecision.Review)]
     [InlineData(50, false, false, SortDecision.Blocked)]
     public void DetermineSortDecision_Matrix(int confidence, bool conflict, bool hardEvidence, SortDecision expected)
     {
@@ -1334,7 +1334,6 @@ public sealed class DetectionPipelineTests
             DetectionSource.FolderName,
             DetectionSource.FilenameKeyword,
             DetectionSource.AmbiguousExtension,
-            DetectionSource.SerialNumber,
             DetectionSource.ArchiveContent,
         };
 
@@ -1358,7 +1357,6 @@ public sealed class DetectionPipelineTests
         // Core invariant: hard evidence alone CAN lead to auto-sort
         var hardSources = new[]
         {
-            (DetectionSource.UniqueExtension, 95),
             (DetectionSource.DiscHeader, 92),
             (DetectionSource.CartridgeHeader, 90),
         };
