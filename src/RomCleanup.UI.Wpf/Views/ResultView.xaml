@@ -155,8 +155,8 @@
             <Grid Margin="0,0,0,12"
                 Visibility="{Binding Run.HasRunData, Converter={StaticResource BoolToVis}}">
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="1.4*"/>
-              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="1.2*"/>
+              <ColumnDefinition Width="1.05*"/>
             </Grid.ColumnDefinitions>
 
             <!-- Bars (left) -->
@@ -199,10 +199,10 @@
             <!-- Pie Chart (right) -->
             <Border Grid.Column="1" Background="{DynamicResource BrushSurfaceAlt}" BorderBrush="{DynamicResource BrushBorder}"
                     BorderThickness="1" CornerRadius="8" Padding="16,12" Margin="6,0,0,0"
-                    MinWidth="280">
+                    MinWidth="420">
               <StackPanel>
                 <TextBlock Text="{Binding Loc[Result.ChartConsole]}" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomSM}"/>
-                <scott:WpfPlot x:Name="chartConsolePie" Height="360"
+                <scott:WpfPlot x:Name="chartConsolePie" Height="460"
                                AutomationProperties.Name="{Binding Loc[Result.ChartConsole]}"/>
               </StackPanel>
             </Border>

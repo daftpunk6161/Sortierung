@@ -7,7 +7,7 @@ namespace RomCleanup.UI.Wpf.Helpers;
 
 /// <summary>
 /// Shared drag-and-drop logic for root folder lists.
-/// Eliminates duplicate code-behind in SortView and ConfigOptionsView.
+/// Centralizes root-folder drag-and-drop for the active configuration views.
 /// </summary>
 internal static class RootsDragDropHelper
 {

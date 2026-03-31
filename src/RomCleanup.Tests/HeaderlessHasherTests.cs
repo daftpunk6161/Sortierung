@@ -122,11 +122,50 @@ public sealed class HeaderlessHasherTests : IDisposable
         Assert.Equal(contentOnlyHash, headerlessHash);
     }
 
+    // ── N64 (canonical byte-order normalization) ───────────────────────
+
+    [Fact]
+    public void ComputeHeaderlessHash_N64_BigEndian_ReturnsCanonicalSha1()
+    {
+        var canonical = BuildN64CanonicalRom();
+        var path = WriteFile("test.z64", canonical);
+
+        var normalizedHash = _hasher.ComputeHeaderlessHash(path, "N64", "SHA1");
+
+        Assert.NotNull(normalizedHash);
+        Assert.Equal(ComputeSha1(canonical), normalizedHash);
+    }
+
+    [Fact]
+    public void ComputeHeaderlessHash_N64_ByteSwapped_NormalizesToCanonicalSha1()
+    {
+        var canonical = BuildN64CanonicalRom();
+        var byteSwapped = SwapPairs(canonical);
+        var path = WriteFile("test.v64", byteSwapped);
+
+        var normalizedHash = _hasher.ComputeHeaderlessHash(path, "N64", "SHA1");
+
+        Assert.NotNull(normalizedHash);
+        Assert.Equal(ComputeSha1(canonical), normalizedHash);
+    }
+
+    [Fact]
+    public void ComputeHeaderlessHash_N64_LittleEndian_NormalizesToCanonicalSha1()
+    {
+        var canonical = BuildN64CanonicalRom();
+        var littleEndian = ReverseWords(canonical);
+        var path = WriteFile("test.n64", littleEndian);
+
+        var normalizedHash = _hasher.ComputeHeaderlessHash(path, "N64", "SHA1");
+
+        Assert.NotNull(normalizedHash);
+        Assert.Equal(ComputeSha1(canonical), normalizedHash);
+    }
+
     // ── Console without mapping → null ──────────────────────────────────
 
     [Theory]
     [InlineData("MD")]
-    [InlineData("N64")]
     [InlineData("GBA")]
     public void ComputeHeaderlessHash_ConsoleWithoutMapping_ReturnsNull_Issue9(string console)
     {
@@ -218,7 +257,7 @@ public sealed class HeaderlessHasherTests : IDisposable
         var rom = new byte[1024];
         var path = WriteFile("regression.bin", rom);
 
-        foreach (var console in new[] { "MD", "N64", "GBA", "GB", "GBC", "PSX", "DC", "UNKNOWN" })
+        foreach (var console in new[] { "MD", "GBA", "GB", "GBC", "PSX", "DC", "UNKNOWN" })
         {
             Assert.Null(_hasher.ComputeHeaderlessHash(path, console));
         }
@@ -251,6 +290,42 @@ public sealed class HeaderlessHasherTests : IDisposable
         header[2] = 0x4E; // N
         header[3] = 0x58; // X
         return header.Concat(content).ToArray();
+    }
+
+    private static byte[] BuildN64CanonicalRom()
+    {
+        return
+        [
+            0x80, 0x37, 0x12, 0x40,
+            0x11, 0x22, 0x33, 0x44,
+            0x55, 0x66, 0x77, 0x88,
+            0x99, 0xAA, 0xBB, 0xCC
+        ];
+    }
+
+    private static byte[] SwapPairs(byte[] data)
+    {
+        var copy = data.ToArray();
+        for (var i = 0; i + 1 < copy.Length; i += 2)
+            (copy[i], copy[i + 1]) = (copy[i + 1], copy[i]);
+
+        return copy;
+    }
+
+    private static byte[] ReverseWords(byte[] data)
+    {
+        var copy = data.ToArray();
+        for (var i = 0; i + 3 < copy.Length; i += 4)
+        {
+            var b0 = copy[i];
+            var b1 = copy[i + 1];
+            copy[i] = copy[i + 3];
+            copy[i + 1] = copy[i + 2];
+            copy[i + 2] = b1;
+            copy[i + 3] = b0;
+        }
+
+        return copy;
     }
 
     private string WriteFile(string name, byte[] data)

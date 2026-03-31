@@ -238,7 +238,7 @@ public partial class MainWindow : Window, IWindowHost
     }
 
     // ═══ DRAG & DROP ════════════════════════════════════════════════════
-    // Moved to Views/SortView.xaml.cs
+    // Root drag-and-drop lives in Helpers/RootsDragDropHelper.cs
 
     // ═══ RUN ORCHESTRATION ══════════════════════════════════════════════
 

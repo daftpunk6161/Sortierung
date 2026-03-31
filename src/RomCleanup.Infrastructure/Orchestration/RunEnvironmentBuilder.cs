@@ -209,7 +209,8 @@ public sealed class RunEnvironmentBuilder
         if (runOptions.EnableDat && !string.IsNullOrWhiteSpace(effectiveDatRoot) && Directory.Exists(effectiveDatRoot))
         {
             var datRepo = new DatRepositoryAdapter();
-            hashService = new FileHashService();
+            hashService = new FileHashService(
+                persistentCachePath: FileHashService.ResolveDefaultPersistentCachePath());
             var consoleMap = BuildConsoleMap(dataDir, effectiveDatRoot);
 
             // Diagnostic: show what BuildConsoleMap found.

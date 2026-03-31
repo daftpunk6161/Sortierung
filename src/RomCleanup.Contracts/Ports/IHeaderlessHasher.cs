@@ -1,14 +1,15 @@
 namespace RomCleanup.Contracts.Ports;
 
 /// <summary>
-/// Port for computing headerless ROM hashes.
-/// No-Intro DATs hash NES/SNES/Atari 7800/Atari Lynx ROMs without their headers.
+/// Port for computing DAT-compatible normalized ROM hashes.
+/// This covers classic headerless hashing and format normalization where
+/// DAT sets expect a canonical byte layout.
 /// </summary>
 public interface IHeaderlessHasher
 {
     /// <summary>
-    /// Computes a hash of the ROM content after skipping header bytes.
-    /// Returns null if the file cannot be read or the console has no header mapping.
+    /// Computes a DAT-compatible normalized hash for a ROM file.
+    /// Returns null if the file cannot be read or the console has no special normalization.
     /// </summary>
     string? ComputeHeaderlessHash(string filePath, string consoleKey, string hashType = "SHA1");
 }

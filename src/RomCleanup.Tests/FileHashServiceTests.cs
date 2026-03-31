@@ -143,6 +143,60 @@ public class FileHashServiceTests : IDisposable
         Assert.Equal(500, svc.MaxEntries);
     }
 
+    [Fact]
+    public void PersistentCache_ReloadsHashAcrossInstances_WhenFileUnchanged()
+    {
+        var cachePath = Path.Combine(_tempDir, "cache", "file-hashes.json");
+        var file = CreateTestFile("persist.bin", new byte[] { 9, 8, 7, 6 });
+
+        var first = new FileHashService(1000, cachePath);
+        var originalHash = first.GetHash(file, "SHA1");
+        first.FlushPersistentCache();
+
+        var second = new FileHashService(1000, cachePath);
+        var reloadedHash = second.GetHash(file, "SHA1");
+
+        Assert.Equal(originalHash, reloadedHash);
+        Assert.True(File.Exists(cachePath));
+    }
+
+    [Fact]
+    public void PersistentCache_InvalidatesEntry_WhenFileChanges()
+    {
+        var cachePath = Path.Combine(_tempDir, "cache", "file-hashes.json");
+        var file = CreateTestFile("changed.bin", new byte[] { 1, 2, 3, 4 });
+
+        var first = new FileHashService(1000, cachePath);
+        var originalHash = first.GetHash(file, "SHA1");
+        first.FlushPersistentCache();
+
+        File.WriteAllBytes(file, new byte[] { 4, 3, 2, 1, 0 });
+        File.SetLastWriteTimeUtc(file, DateTime.UtcNow.AddMinutes(1));
+
+        var second = new FileHashService(1000, cachePath);
+        var newHash = second.GetHash(file, "SHA1");
+
+        Assert.NotEqual(originalHash, newHash);
+    }
+
+    [Fact]
+    public void PersistentCache_ClearCache_RemovesPersistedEntriesOnNextFlush()
+    {
+        var cachePath = Path.Combine(_tempDir, "cache", "file-hashes.json");
+        var file = CreateTestFile("clear-persist.bin", new byte[] { 1, 1, 2, 3 });
+
+        var first = new FileHashService(1000, cachePath);
+        Assert.NotNull(first.GetHash(file, "SHA1"));
+        first.FlushPersistentCache();
+
+        var second = new FileHashService(1000, cachePath);
+        second.ClearCache();
+        second.FlushPersistentCache();
+
+        var json = File.ReadAllText(cachePath);
+        Assert.DoesNotContain("clear-persist.bin", json, StringComparison.OrdinalIgnoreCase);
+    }
+
     private string CreateTestFile(string name, byte[] data)
     {
         var path = Path.Combine(_tempDir, name);

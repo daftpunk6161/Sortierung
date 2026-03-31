@@ -1,27 +1,46 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
+using System.Text.Json;
+using RomCleanup.Contracts;
 using RomCleanup.Core.Caching;
 
 namespace RomCleanup.Infrastructure.Hashing;
 
 /// <summary>
 /// Cached file hashing service. Port of Get-FileHashCached from Dat.ps1.
-/// Uses LruCache for O(1) lookups, supports SHA1/SHA256/MD5/CRC32.
-/// Thread-safe — multiple callers can hash concurrently.
-/// Cache key is hashType|path (no timestamp) to avoid per-call stat syscalls.
-/// Create a new instance per run to ensure cache freshness.
+/// Uses an in-memory LRU cache for hot lookups and can optionally persist validated
+/// file hashes across runs using (hashType, path, lastWriteUtc, length) metadata.
 /// </summary>
 public sealed class FileHashService
 {
     private readonly LruCache<string, string> _cache;
+    private readonly string? _persistentCachePath;
+    private readonly Dictionary<string, PersistentCacheEntry> _persistentEntries = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _persistentGate = new();
+    private bool _persistentDirty;
 
-    public FileHashService(int maxEntries = 20_000)
+    private static readonly JsonSerializerOptions PersistentJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = false
+    };
+
+    public FileHashService(int maxEntries = 20_000, string? persistentCachePath = null)
     {
         _cache = new LruCache<string, string>(maxEntries, StringComparer.OrdinalIgnoreCase);
+        _persistentCachePath = string.IsNullOrWhiteSpace(persistentCachePath)
+            ? null
+            : Path.GetFullPath(persistentCachePath);
+
+        if (_persistentCachePath is not null)
+            LoadPersistentCache();
     }
 
     /// <summary>Current number of cached entries.</summary>
     public int CacheCount => _cache.Count;
+
+    /// <summary>Whether this instance persists hashes across runs.</summary>
+    public bool IsPersistent => _persistentCachePath is not null;
 
     /// <summary>
     /// Get or compute the hash for a file. Results are cached by (hashType|path).
@@ -30,16 +49,27 @@ public sealed class FileHashService
     public string? GetHash(string path, string hashType = "SHA1")
     {
         var fullPath = Path.GetFullPath(path);
-        var cacheKey = $"{NormalizeHashType(hashType)}|{fullPath}";
+        var normalizedHashType = NormalizeHashType(hashType);
+        var cacheKey = $"{normalizedHashType}|{fullPath}";
 
         if (_cache.TryGet(cacheKey, out var cached))
             return cached;
 
         try
         {
-            var hash = ComputeHash(fullPath, hashType);
+            if (TryGetFileFingerprint(fullPath, out var fingerprint)
+                && TryGetPersistedHash(cacheKey, fingerprint, out var persistedHash))
+            {
+                _cache.Set(cacheKey, persistedHash);
+                return persistedHash;
+            }
+
+            var hash = ComputeHash(fullPath, normalizedHashType);
             if (hash is not null)
+            {
                 _cache.Set(cacheKey, hash);
+                UpdatePersistentEntry(cacheKey, normalizedHashType, fullPath, fingerprint, hash);
+            }
             return hash;
         }
         catch (IOException)
@@ -52,14 +82,66 @@ public sealed class FileHashService
         }
     }
 
-    /// <summary>Clear the entire hash cache.</summary>
-    public void ClearCache() => _cache.Clear();
+    /// <summary>Clear the entire hash cache, including any pending persistent entries.</summary>
+    public void ClearCache()
+    {
+        _cache.Clear();
+
+        if (_persistentCachePath is null)
+            return;
+
+        lock (_persistentGate)
+        {
+            _persistentEntries.Clear();
+            _persistentDirty = true;
+        }
+    }
 
     /// <summary>Adjust maximum cache size at runtime (mirrors PS AppState config).</summary>
     public int MaxEntries
     {
         get => _cache.MaxEntries;
         set => _cache.MaxEntries = Math.Max(500, value);
+    }
+
+    /// <summary>Flush persistent cache entries to disk if persistence is enabled.</summary>
+    public void FlushPersistentCache()
+    {
+        if (_persistentCachePath is null)
+            return;
+
+        lock (_persistentGate)
+        {
+            if (!_persistentDirty)
+                return;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(_persistentCachePath)!);
+
+            TrimPersistentEntriesToMaxEntries();
+            var document = new PersistentCacheDocument
+            {
+                Entries = _persistentEntries.Values
+                    .OrderByDescending(entry => entry.RecordedUtcTicks)
+                    .ThenBy(entry => entry.Path, StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+            };
+
+            var tempPath = _persistentCachePath + "." + Environment.ProcessId + ".tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(document, PersistentJsonOptions));
+            File.Move(tempPath, _persistentCachePath, overwrite: true);
+            _persistentDirty = false;
+        }
+    }
+
+    public static string ResolveDefaultPersistentCachePath()
+    {
+        var baseDir = File.Exists(Path.Combine(AppContext.BaseDirectory, ".portable"))
+            ? Path.Combine(AppContext.BaseDirectory, ".romcleanup")
+            : Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                AppIdentity.AppFolderName);
+
+        return Path.Combine(baseDir, "cache", "file-hashes-v1.json");
     }
 
     private static string? ComputeHash(string path, string hashType)
@@ -170,5 +252,139 @@ public sealed class FileHashService
             "CRC" => "CRC32",
             _ => upper
         };
+    }
+
+    private void LoadPersistentCache()
+    {
+        try
+        {
+            if (_persistentCachePath is null || !File.Exists(_persistentCachePath))
+                return;
+
+            var json = File.ReadAllText(_persistentCachePath);
+            var document = JsonSerializer.Deserialize<PersistentCacheDocument>(json, PersistentJsonOptions);
+            if (document?.Entries is null)
+                return;
+
+            foreach (var entry in document.Entries)
+            {
+                if (string.IsNullOrWhiteSpace(entry.Path)
+                    || string.IsNullOrWhiteSpace(entry.Hash)
+                    || string.IsNullOrWhiteSpace(entry.HashType))
+                {
+                    continue;
+                }
+
+                _persistentEntries[BuildCacheKey(entry.HashType, entry.Path)] = entry with
+                {
+                    HashType = NormalizeHashType(entry.HashType),
+                    Path = Path.GetFullPath(entry.Path)
+                };
+            }
+
+            TrimPersistentEntriesToMaxEntries();
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+        catch (JsonException)
+        {
+        }
+    }
+
+    private bool TryGetPersistedHash(string cacheKey, FileFingerprint fingerprint, out string hash)
+    {
+        hash = string.Empty;
+        if (_persistentCachePath is null)
+            return false;
+
+        lock (_persistentGate)
+        {
+            if (!_persistentEntries.TryGetValue(cacheKey, out var entry))
+                return false;
+
+            if (entry.LastWriteUtcTicks != fingerprint.LastWriteUtcTicks || entry.Length != fingerprint.Length)
+                return false;
+
+            hash = entry.Hash;
+            return true;
+        }
+    }
+
+    private void UpdatePersistentEntry(
+        string cacheKey,
+        string normalizedHashType,
+        string fullPath,
+        FileFingerprint fingerprint,
+        string hash)
+    {
+        if (_persistentCachePath is null)
+            return;
+
+        lock (_persistentGate)
+        {
+            _persistentEntries[cacheKey] = new PersistentCacheEntry
+            {
+                HashType = normalizedHashType,
+                Path = fullPath,
+                LastWriteUtcTicks = fingerprint.LastWriteUtcTicks,
+                Length = fingerprint.Length,
+                Hash = hash,
+                RecordedUtcTicks = DateTime.UtcNow.Ticks
+            };
+            _persistentDirty = true;
+        }
+    }
+
+    private void TrimPersistentEntriesToMaxEntries()
+    {
+        var overflow = _persistentEntries.Count - MaxEntries;
+        if (overflow <= 0)
+            return;
+
+        var keysToRemove = _persistentEntries.Values
+            .OrderBy(entry => entry.RecordedUtcTicks)
+            .ThenBy(entry => entry.Path, StringComparer.OrdinalIgnoreCase)
+            .Take(overflow)
+            .Select(entry => BuildCacheKey(entry.HashType, entry.Path))
+            .ToList();
+
+        foreach (var key in keysToRemove)
+            _persistentEntries.Remove(key);
+    }
+
+    private static bool TryGetFileFingerprint(string path, out FileFingerprint fingerprint)
+    {
+        fingerprint = default;
+        if (!File.Exists(path))
+            return false;
+
+        var info = new FileInfo(path);
+        fingerprint = new FileFingerprint(info.LastWriteTimeUtc.Ticks, info.Length);
+        return true;
+    }
+
+    private static string BuildCacheKey(string hashType, string path)
+        => $"{NormalizeHashType(hashType)}|{Path.GetFullPath(path)}";
+
+    private readonly record struct FileFingerprint(long LastWriteUtcTicks, long Length);
+
+    private sealed record PersistentCacheDocument
+    {
+        public int Version { get; init; } = 1;
+        public List<PersistentCacheEntry> Entries { get; init; } = [];
+    }
+
+    private sealed record PersistentCacheEntry
+    {
+        public string HashType { get; init; } = "";
+        public string Path { get; init; } = "";
+        public long LastWriteUtcTicks { get; init; }
+        public long Length { get; init; }
+        public string Hash { get; init; } = "";
+        public long RecordedUtcTicks { get; init; }
     }
 }

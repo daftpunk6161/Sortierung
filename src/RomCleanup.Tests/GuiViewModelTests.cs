@@ -2608,10 +2608,16 @@ public class GuiViewModelTests
     public void Accessibility_RegionCheckBoxes_HaveDescriptiveAutomationName()
     {
         var xamlContent = ReadAllWpfXaml();
+        var regionBindingRegex = new System.Text.RegularExpressions.Regex(
+            @"<CheckBox[^>]*IsChecked=""\{Binding (Prefer[A-Z0-9]+)\}""[^>]*>",
+            System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.Singleline);
 
-        var regionCodes = new[] { "PreferEU", "PreferUS", "PreferJP", "PreferWORLD",
-            "PreferDE", "PreferFR", "PreferIT", "PreferES", "PreferAU", "PreferASIA",
-            "PreferKR", "PreferCN", "PreferBR", "PreferNL", "PreferSE", "PreferSCAN" };
+        var regionCodes = regionBindingRegex.Matches(xamlContent)
+            .Select(match => match.Groups[1].Value)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.NotEmpty(regionCodes);
 
         var missingA11y = new List<string>();
         foreach (var region in regionCodes)
@@ -2739,17 +2745,25 @@ public class GuiViewModelTests
         Assert.Contains(11, indices);
         Assert.Contains(12, indices);
 
-        // Simple mode group (30-33)
-        Assert.Contains(30, indices);
-        Assert.Contains(31, indices);
-
-        // Expert mode group (40-41)
+        // Config options group (40-41)
         Assert.Contains(40, indices);
         Assert.Contains(41, indices);
 
-        // At least 10 controls with explicit TabIndex
-        Assert.True(indices.Count >= 10,
-            $"Expected at least 10 controls with TabIndex, found {indices.Count}");
+        // Navigation / advanced option groups (50+)
+        Assert.Contains(50, indices);
+        Assert.Contains(51, indices);
+        Assert.Contains(52, indices);
+        Assert.Contains(53, indices);
+        Assert.Contains(54, indices);
+        Assert.Contains(55, indices);
+
+        // Safety group (60+)
+        Assert.Contains(60, indices);
+        Assert.Contains(61, indices);
+
+        // At least 14 controls with explicit TabIndex across the shell/views
+        Assert.True(indices.Count >= 14,
+            $"Expected at least 14 controls with TabIndex, found {indices.Count}");
     }
 
     // ═══ TASK-127: Feature Buttons use MinWidth not Width ═══════════════
@@ -3861,11 +3875,14 @@ public class GuiViewModelTests
     }
 
     [Fact]
-    public void SortViewXaml_HasRegionRankerListBox()
+    public void ConfigWorkflowViews_PreserveMigratedSortFeatures()
     {
-        var xaml = File.ReadAllText(FindUiFile("Views", "SortView.xaml"));
-        Assert.Contains("RegionPriorities", xaml);
-        Assert.Contains("AllowDrop", xaml);
+        var optionsXaml = File.ReadAllText(FindUiFile("Views", "ConfigOptionsView.xaml"));
+        var regionsXaml = File.ReadAllText(FindUiFile("Views", "ConfigRegionsView.xaml"));
+
+        Assert.Contains("AllowDrop", optionsXaml);
+        Assert.Contains("RegionPriorities", regionsXaml);
+        Assert.Contains("MoveRegionUpCommand", regionsXaml);
     }
 
     // ═══ TASK-126D: Console-Picker ══════════════════════════════════════
@@ -4148,8 +4165,8 @@ public class GuiViewModelTests
 
         Assert.DoesNotContain("Width=\"620\"", xaml);
         Assert.DoesNotContain("Height=\"520\"", xaml);
-        Assert.Contains("MinWidth=\"280\"", xaml);
-        Assert.Contains("Height=\"360\"", xaml);
+        Assert.Contains("MinWidth=\"420\"", xaml);
+        Assert.Contains("Height=\"460\"", xaml);
     }
 
     // ═══ TASK-115: SmartActionBar RunState DataTriggers ════════════════

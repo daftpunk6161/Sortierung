@@ -52,6 +52,7 @@ public partial class ResultView : UserControl
         {
             var slices = new List<PieSlice>();
             var palette = new ScottPlot.Palettes.Category10();
+            var hideSliceLabels = items.Count > 8;
             for (int i = 0; i < items.Count; i++)
             {
                 slices.Add(new PieSlice
@@ -66,13 +67,13 @@ public partial class ResultView : UserControl
             {
                 s.LabelFontSize = 15;
                 s.LabelFontColor = ScottPlot.Colors.White;
-                if (total > 0 && s.Value / total < 0.03)
+                if (hideSliceLabels || (total > 0 && s.Value / total < 0.05))
                     s.Label = string.Empty;
             }
 
             var pie = chartConsolePie.Plot.Add.Pie(slices);
             pie.DonutFraction = 0.4;
-            pie.SliceLabelDistance = 1.35;
+            pie.SliceLabelDistance = 1.5;
 
             var legend = chartConsolePie.Plot.ShowLegend();
             legend.FontSize = 13;

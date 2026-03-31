@@ -323,6 +323,17 @@ public sealed partial class RunOrchestrator
 
             return result.Build();
         }
+        finally
+        {
+            try
+            {
+                _hashService?.FlushPersistentCache();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+            {
+                _onProgress?.Invoke($"[HashCache] Persist failed: {ex.Message}");
+            }
+        }
     }
 
     private static void ApplyPartialPipelineState(PipelineState pipelineState, RunResultBuilder result)

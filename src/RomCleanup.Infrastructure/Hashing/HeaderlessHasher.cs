@@ -7,13 +7,18 @@ using RomCleanup.Core.Classification;
 namespace RomCleanup.Infrastructure.Hashing;
 
 /// <summary>
-/// Computes headerless hashes for ROM files with known header formats.
-/// Skips header bytes (iNES, SNES copier, Atari 7800/Lynx) so the hash matches No-Intro DAT entries.
+/// Computes DAT-compatible normalized hashes for ROM files with known normalization rules.
+/// This includes classic header skipping (iNES, SNES copier, Atari 7800/Lynx)
+/// and canonical byte-order normalization for N64 variants.
 /// Thread-safe, cached via LruCache.
 /// </summary>
 public sealed class HeaderlessHasher : IHeaderlessHasher
 {
     private readonly LruCache<string, string?> _cache;
+
+    private static ReadOnlySpan<byte> N64MagicBE => [0x80, 0x37, 0x12, 0x40];
+    private static ReadOnlySpan<byte> N64MagicBS => [0x37, 0x80, 0x40, 0x12];
+    private static ReadOnlySpan<byte> N64MagicLE => [0x40, 0x12, 0x37, 0x80];
 
     public HeaderlessHasher(int cacheSize = 8192)
     {
@@ -28,7 +33,7 @@ public sealed class HeaderlessHasher : IHeaderlessHasher
         if (string.IsNullOrWhiteSpace(filePath) || string.IsNullOrWhiteSpace(consoleKey))
             return null;
 
-        if (!HeaderSizeMap.HasMapping(consoleKey))
+        if (!HasNormalizationStrategy(consoleKey))
             return null;
 
         var fullPath = Path.GetFullPath(filePath);
@@ -49,6 +54,9 @@ public sealed class HeaderlessHasher : IHeaderlessHasher
 
     private static string? ComputeCore(string fullPath, string consoleKey, string hashType)
     {
+        if (consoleKey.Equals("N64", StringComparison.OrdinalIgnoreCase))
+            return ComputeN64CanonicalHash(fullPath, hashType);
+
         using var fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
         var fileSize = fs.Length;
 
@@ -69,6 +77,45 @@ public sealed class HeaderlessHasher : IHeaderlessHasher
         return Convert.ToHexStringLower(hashBytes);
     }
 
+    private static string? ComputeN64CanonicalHash(string fullPath, string hashType)
+    {
+        var bytes = File.ReadAllBytes(fullPath);
+        if (bytes.Length < 4)
+            return null;
+
+        var normalized = bytes.ToArray();
+        var header = normalized.AsSpan(0, 4);
+
+        if (header.SequenceEqual(N64MagicBS))
+            NormalizeN64ByteSwapped(normalized);
+        else if (header.SequenceEqual(N64MagicLE))
+            NormalizeN64LittleEndian(normalized);
+        else if (!header.SequenceEqual(N64MagicBE))
+            return null;
+
+        using var algo = CreateHashAlgorithm(hashType);
+        return Convert.ToHexStringLower(algo.ComputeHash(normalized));
+    }
+
+    private static void NormalizeN64ByteSwapped(byte[] data)
+    {
+        for (var i = 0; i + 1 < data.Length; i += 2)
+            (data[i], data[i + 1]) = (data[i + 1], data[i]);
+    }
+
+    private static void NormalizeN64LittleEndian(byte[] data)
+    {
+        for (var i = 0; i + 3 < data.Length; i += 4)
+        {
+            var b0 = data[i];
+            var b1 = data[i + 1];
+            data[i] = data[i + 3];
+            data[i + 1] = data[i + 2];
+            data[i + 2] = b1;
+            data[i + 3] = b0;
+        }
+    }
+
     private static HashAlgorithm CreateHashAlgorithm(string hashType)
     {
         return NormalizeHashType(hashType) switch
@@ -82,4 +129,8 @@ public sealed class HeaderlessHasher : IHeaderlessHasher
 
     private static string NormalizeHashType(string hashType)
         => hashType.ToUpperInvariant().Replace("-", "");
+
+    private static bool HasNormalizationStrategy(string consoleKey)
+        => HeaderSizeMap.HasMapping(consoleKey)
+           || consoleKey.Equals("N64", StringComparison.OrdinalIgnoreCase);
 }

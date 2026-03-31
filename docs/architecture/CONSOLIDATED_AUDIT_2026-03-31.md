@@ -34,9 +34,6 @@ Diese Zusammenfassung konsolidiert das externe Audit mit einer Code-Pruefung des
 
 ### P3
 
-- `Legacy-Simple-Mode-View weiterhin vorhanden`
-  Die aktive Shell respektiert `IsSimpleMode` jetzt, die alte `SortView` bleibt aber weiterhin als technisch vorhandener Alt-Pfad im Repo.
-
 - `Competitive Claims nicht repo-intern verifizierbar`
   Aussagen zu Marktposition, Konkurrenz und Alleinstellungsmerkmalen sind nicht aus dem Code beweisbar und muessen extern belegt werden.
 
@@ -162,13 +159,44 @@ Diese Zusammenfassung konsolidiert das externe Audit mit einer Code-Pruefung des
   - Security-Header auf `healthz`
   - OpenAPI-Deklaration fuer den oeffentlichen Liveness-Pfad
 
+### Batch 6: Legacy-Views aus dem aktiven Projekt entfernt
+
+- `Nicht mehr referenzierte Alt-Views geloescht`
+  `SortView`, `SettingsView` und `ConfigAdvancedView` wurden aus dem WPF-Projekt entfernt, weil sie in der aktiven Shell nicht mehr verwendet werden und nur noch tote Parallelpfade dargestellt haben.
+
+- `Testanker auf aktive Ersatz-Views umgezogen`
+  Der verbliebene XAML-Regressionscheck prueft jetzt die extrahierten aktiven Views `ConfigOptionsView` und `ConfigRegionsView` statt die geloeschte alte `SortView`.
+
+- `Aktive Code-Kommentare bereinigt`
+  Verbleibende Hinweise im produktiven Code verweisen nicht mehr auf entfernte Legacy-Views, sondern auf die aktuelle Hilfslogik.
+
+### Batch 7: Persistentes Hash-Caching vorbereitet
+
+- `FileHashService kann jetzt run-uebergreifend persistieren`
+  Der bestehende In-Memory-Hash-Cache unterstuetzt jetzt optional persistente Eintraege auf Basis von `hashType + path + lastWriteUtc + length`, damit unveraenderte Dateien in Folge-Runs nicht erneut gehasht werden muessen.
+
+- `Persistenz sauber im Run-Environment aktiviert`
+  Das produktive Run-Environment erzeugt den `FileHashService` jetzt mit einem deterministischen Cachepfad statt nur mit einem fluechtigen Run-Cache.
+
+- `Flush im Orchestrator abgesichert`
+  Der Orchestrator schreibt den Hash-Cache im `finally`-Pfad weg, damit erfolgreiche, abgebrochene und fehlgeschlagene Runs die validierten Eintraege gleichermassen hinterlassen koennen.
+
+- `Regressionstests ergaenzt`
+  Neue Tests decken ab:
+  - Reload ueber Service-Instanzen hinweg
+  - Invalidierung bei Dateiaenderung
+  - Persistenz-Leerung nach `ClearCache`
+
 ## Naechste sinnvolle Umsetzungsbloecke
 
 1. `Enrichment parallelisieren`
    Umgesetzt.
 
 2. `Legacy-Views bereinigen`
-   `SortView`, `SettingsView` und `ConfigAdvancedView` als Alt-Pfade pruefen und entweder entfernen oder explizit als Legacy kennzeichnen.
+   Umgesetzt.
 
 3. `Legacy-Views tatsaechlich abbauen`
-   Nach der expliziten Kennzeichnung koennen `SortView`, `SettingsView` und `ConfigAdvancedView` aus Build-/Testpfaden entfernt werden, falls ihre Restnutzung nicht mehr benoetigt ist.
+   Umgesetzt.
+
+4. `ConsoleSort-Rescan abbauen`
+   Nach dem Hash-Caching ist der naechste klare Performance-Hebel, den redundanten zweiten Dateisystem-Scan in `ConsoleSorter` durch die bereits angereicherten Kandidaten zu ersetzen.
