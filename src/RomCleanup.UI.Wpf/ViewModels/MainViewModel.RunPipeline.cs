@@ -1139,6 +1139,11 @@ public sealed partial class MainViewModel
         DashDatAmbiguous = dashboard.DatAmbiguousDisplay;
         DedupeRate = dashboard.DedupeRate;
 
+        // Raw int values for chart rendering (display strings contain suffixes like "(vorläufig) (Plan)")
+        Run.GamesRaw = projection.Games;
+        Run.DupesRaw = projection.Dupes;
+        Run.JunkRaw = projection.Junk;
+
         // GUI-021: Sync to MissionControl child VM
         MissionControl.UpdateLastRun(dashboard.Winners, dashboard.Dupes, dashboard.Junk, dashboard.Duration);
 

@@ -48,6 +48,10 @@ RomVault erreicht hohe Erkennungsquoten, weil es _ausschließlich_ DAT-driven ar
 
 ## 2. Analyse des Ist-Zustands
 
+> **Hinweis:** Dieser Abschnitt dokumentiert den **Ausgangszustand vor dem Redesign** (Stand vor 2026-03-30).
+> Er dient als historische Referenz, um die Motivation und den Kontext der Architekturänderungen nachvollziehbar zu halten.
+> Der aktuelle Stand ist in §3–§5 beschrieben und vollständig umgesetzt.
+
 ### 2.1 Aktuelle Pipeline-Reihenfolge
 
 ```
@@ -606,16 +610,29 @@ public static class DecisionResolver
 
 ### 4.7 Konsolidierung: Was entfernt/ersetzt wird
 
-| Aktuell | Ersetzt durch | Begründung |
-|---------|--------------|------------|
-| `DetectionSource.IsHardEvidence()` | `EvidenceTier <= Tier1` | Tier ist feinere Abstufung |
-| `DetectionSource.SingleSourceCap()` | `DecisionResolver` Tier-Gate | Caps werden durch Tier-Gates obsolet |
-| `HypothesisResolver.ComputeSoftOnlyCap()` | Entfällt bei Tier-basiertem Gating | Soft-Only-Cap war Workaround für fehlendes Tier-System |
-| `HypothesisResolver.MultiSourceAgreementBonus` | Confidence-Aggregation bleibt, aber Decision kommt aus Tier | Bonus darf nicht Tier-Gate überspringen |
-| `EnrichmentPipelinePhase.ApplyDatAuthority()` | In DAT-first Pipeline integriert | DAT ist nicht Nachkorrektur sondern Primärquelle |
-| `MatchLevel` enum | `EvidenceTier` + `MatchKind` | Präzisere Beschreibung |
+| Aktuell | Neuer Status | Begründung |
+|---------|-------------|------------|
+| `DetectionSource.IsHardEvidence()` | Compat-Layer (beibehalten) | Genutzt für abwärtskompatible Confidence-Berechnung. Tier-Gate ist autoritative Decision-Quelle. |
+| `DetectionSource.SingleSourceCap()` | Compat-Layer (beibehalten) | Confidence-Caps bleiben, Tier-Gate entscheidet. |
+| `HypothesisResolver.ComputeSoftOnlyCap()` | Compat-Layer (beibehalten) | Begrenzt Confidence, aber Decision kommt aus `DecisionResolver`. |
+| `HypothesisResolver.MultiSourceAgreementBonus` | Compat-Layer (beibehalten) | Confidence-Aggregation bleibt, Bonus darf nicht Tier-Gate überspringen. |
+| `EnrichmentPipelinePhase.ApplyDatAuthority()` | **Entfernt** ✅ | In DAT-first Pipeline integriert. DAT ist Primärquelle. |
+| `MatchLevel` enum | Compat-Layer (beibehalten) | Intern aus `EvidenceTier`/`MatchKind` abgeleitet. |
 
-**ACHTUNG**: `MatchLevel` und `MatchEvidence` bleiben vorerst als Kompatibilitätsschicht erhalten und werden intern aus `EvidenceTier`/`MatchKind` abgeleitet. Entfernung erst nach vollständiger Migration aller Consumer (GUI/CLI/API/Reports).
+**Kompatibilitätsschicht (bewusst beibehalten):**
+
+Folgende Legacy-Konstrukte bleiben als Kompatibilitätsschicht erhalten, bis alle Consumer vollständig auf das neue Tier-System migriert sind:
+
+| Legacy-Konstrukt | Status | Begründung |
+|-----------------|--------|------------|
+| `MatchLevel` enum + `MatchEvidence` | Beibehalten | Intern aus `EvidenceTier`/`MatchKind` abgeleitet. Consumer (Reports, API, GUI) nutzen beides parallel. |
+| `DetectionSource.IsHardEvidence()` | Beibehalten | Genutzt in Tests und HypothesisResolver für abwärtskompatible Confidence-Berechnung. |
+| `DetectionSource.SingleSourceCap()` | Beibehalten | Genutzt im HypothesisResolver für Confidence-Caps. Decision kommt aus Tier-Gate via `DecisionResolver`. |
+| `HypothesisResolver.ComputeSoftOnlyCap()` | Beibehalten | Begrenzt Confidence für Soft-only-Quellen. Tier-Gate via `DecisionResolver` ist die autoritative Decision-Quelle. |
+| `HypothesisResolver.MultiSourceAgreementBonus` | Beibehalten | Confidence-Aggregation bleibt, aber Decision kommt aus Tier, nicht aus Confidence allein. |
+| `EnrichmentPipelinePhase.ApplyDatAuthority()` | **Entfernt** | In DAT-first Pipeline integriert. DAT ist Primärquelle, nicht Nachkorrektur. |
+
+Die Entfernung der verbleibenden Legacy-Konstrukte erfolgt erst nach vollständiger Migration aller Consumer. Die autoritative Decision-Quelle ist immer `DecisionResolver.Resolve()` — die Legacy-Confidence-Berechnung dient nur noch der abwärtskompatiblen Confidence-Zahl.
 
 ---
 

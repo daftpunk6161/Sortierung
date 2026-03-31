@@ -229,6 +229,11 @@ public sealed class RunViewModel : ObservableObject
     private string _dedupeRate = "–";
     public string DedupeRate { get => _dedupeRate; set => SetProperty(ref _dedupeRate, value); }
 
+    // ═══ RAW CHART DATA (int values for ScottPlot, unaffected by display formatting) ═
+    public int GamesRaw { get; set; }
+    public int DupesRaw { get; set; }
+    public int JunkRaw { get; set; }
+
     // ═══ RUN SUMMARY ════════════════════════════════════════════════════
     private string _runSummaryText = "";
     public string RunSummaryText

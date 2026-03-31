@@ -11,9 +11,9 @@ Abgeschlossene und historische Dokumente liegen in [`archive/`](../archive/READM
 | Ordner | Inhalt | Beschreibung |
 |--------|--------|--------------|
 | [`architecture/`](architecture/) | Technische Specs & Systemarchitektur | Architektur-Map, API-Contracts, Teststrategien, OpenAPI-Spec, Benchmark-Design, Konvertierungs-Matrix |
-| [`adrs/`](adrs/) | Architecture Decision Records | Nummerierte ADRs (0001–0017) — historische und aktive Architekturentscheidungen |
-| [`guides/`](guides/) | Benutzer- & Entwicklerhandbücher | User Handbook, FAQ, Naming Guide, Review Checklist |
-| [`product/`](product/) | Produkt-Analyse & -Entscheidungen | Conversion Product Model, Category Prefilter Audit, Confidence Gate Redesign |
+| [`adrs/`](adrs/) | Architecture Decision Records | Nummerierte ADRs (0001–0019) — historische und aktive Architekturentscheidungen |
+| [`guides/`](guides/) | Benutzer- & Entwicklerhandbücher | User Handbook, FAQ, Review Checklist |
+| [`product/`](product/) | Produkt-Analyse & -Entscheidungen | Conversion Product Model |
 | [`ux/`](ux/) | UX/GUI-Design & Accessibility | GUI-Redesign-Specs, Redesign-Analyse, Narrator/A11y-Testplan |
 | [`screenshots/`](screenshots/) | UI-Screenshots | Referenz-Screenshots der Oberfläche |
 
@@ -25,7 +25,7 @@ Abgeschlossene und historische Dokumente liegen in [`archive/`](../archive/READM
 |----------|-------|
 | [ARCHITECTURE_MAP.md](architecture/ARCHITECTURE_MAP.md) | Systemarchitektur-Übersicht (Clean Architecture, Dependency Flow) |
 | [USER_HANDBOOK.md](guides/USER_HANDBOOK.md) | Benutzerhandbuch für GUI / CLI / API |
-| [TEST_STRATEGY.md](architecture/TEST_STRATEGY.md) | Teststrategie (5200+ xUnit Tests, Test-Pyramide) |
+| [TEST_STRATEGY.md](architecture/TEST_STRATEGY.md) | Teststrategie (6900+ xUnit Tests, Test-Pyramide) |
 | [openapi.yaml](architecture/openapi.yaml) | OpenAPI-Spezifikation der REST API |
 | [REVIEW_CHECKLIST.md](guides/REVIEW_CHECKLIST.md) | PR-Review-Checkliste |
 

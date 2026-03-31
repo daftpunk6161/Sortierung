@@ -12,9 +12,9 @@
         ┌──────────────────┐
         │   Integration    │  RunOrchestrator, API-RunManager, FileSystem-Ops
         ├──────────────────┤
-        │   Unit           │  136 Testdateien, 5200+ Tests
+        │   Unit           │  136 Testdateien, 6900+ Tests
         └──────────────────┘
-        Gesamt: 5200+ Tests (xUnit, alle grün)
+        Gesamt: 6900+ Tests (xUnit, alle grün)
 ```
 
 ---

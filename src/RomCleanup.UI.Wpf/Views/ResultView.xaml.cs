@@ -20,8 +20,8 @@ public partial class ResultView : UserControl
     {
         if (DataContext is not MainViewModel vm) return;
         vm.PropertyChanged += OnVmPropertyChanged;
-        if (vm.HasRunResult)
-            RefreshCharts(vm);
+        if (vm.HasRunResult || vm.Run.HasRunData)
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => RefreshCharts(vm));
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -32,8 +32,14 @@ public partial class ResultView : UserControl
 
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.HasRunResult) && sender is MainViewModel vm && vm.HasRunResult)
-            RefreshCharts(vm);
+        if (e.PropertyName == nameof(MainViewModel.HasRunResult)
+            && sender is MainViewModel vm
+            && (vm.HasRunResult || vm.Run.HasRunData))
+        {
+            // Defer: HasRunResult may fire before ConsoleDistribution is populated.
+            // Dispatcher.BeginInvoke ensures RefreshCharts runs after ApplyRunResult completes.
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => RefreshCharts(vm));
+        }
     }
 
     /// <summary>GUI-104/106: Populate ScottPlot charts with run result data.</summary>
@@ -79,10 +85,11 @@ public partial class ResultView : UserControl
 
         // ── Bar Chart: Before/After (Keep vs Move vs Junk) ──
         chartBeforeAfter.Plot.Clear();
-        if (int.TryParse(vm.Run.DashGames, out var totalGames) && totalGames > 0)
+        var totalGames = vm.Run.GamesRaw;
+        if (totalGames > 0)
         {
-            int.TryParse(vm.Run.DashDupes, out var dupes);
-            int.TryParse(vm.Run.DashJunk, out var junk);
+            var dupes = vm.Run.DupesRaw;
+            var junk = vm.Run.JunkRaw;
             int kept = totalGames - dupes - junk;
 
             double[] values = [kept, dupes, junk];

@@ -153,7 +153,7 @@
 
           <!-- GUI-071 + GUI-104: Console Distribution — Bars + Pie side by side -->
           <Grid Margin="0,0,0,12"
-                Visibility="{Binding HasRunResult, Converter={StaticResource BoolToVis}}">
+                Visibility="{Binding Run.HasRunData, Converter={StaticResource BoolToVis}}">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*"/>
               <ColumnDefinition Width="Auto"/>
@@ -211,7 +211,7 @@
           <!-- GUI-106: Before/After Summary -->
           <Border Background="{DynamicResource BrushSurfaceAlt}" BorderBrush="{DynamicResource BrushBorder}"
                   BorderThickness="1" CornerRadius="8" Padding="16,12" Margin="0,0,0,12"
-                  Visibility="{Binding HasRunResult, Converter={StaticResource BoolToVis}}">
+                  Visibility="{Binding Run.HasRunData, Converter={StaticResource BoolToVis}}">
             <StackPanel>
               <TextBlock Text="{Binding Loc[Result.BeforeAfter]}" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomSM}"/>
               <scott:WpfPlot x:Name="chartBeforeAfter" Height="220"
@@ -222,7 +222,7 @@
           <!-- GUI-072/073: Dedup Decision Browser -->
           <Border Background="{DynamicResource BrushSurfaceAlt}" BorderBrush="{DynamicResource BrushBorder}"
                   BorderThickness="1" CornerRadius="8" Padding="16,12" Margin="0,0,0,12"
-                  Visibility="{Binding HasRunResult, Converter={StaticResource BoolToVis}}">
+                  Visibility="{Binding Run.HasRunData, Converter={StaticResource BoolToVis}}">
             <StackPanel>
               <TextBlock Text="{Binding Loc[Result.DedupeDecisions]}" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomSM}"/>
               <TreeView ItemsSource="{Binding Run.DedupeGroupItems}" MaxHeight="400" BorderThickness="0"
