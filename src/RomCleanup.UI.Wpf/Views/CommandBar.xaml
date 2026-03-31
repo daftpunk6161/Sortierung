@@ -14,6 +14,19 @@
       <!-- ── RIGHT WING ──────────────────────────────────────────────── -->
       <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
 
+        <!-- UI Mode Toggle -->
+        <CheckBox IsChecked="{Binding IsSimpleMode, Mode=TwoWay}" Margin="0,0,4,0" Padding="0"
+                  ToolTip="UI-Modus wechseln. Aktiv = Einfach, inaktiv = Experte."
+                  AutomationProperties.Name="UI-Modus wechseln"
+                  AutomationProperties.HelpText="Aktiv = Einfachmodus, inaktiv = Expertenmodus"
+                  TabIndex="1">
+          <TextBlock Text="{Binding CurrentUiModeLabel}" FontSize="11"
+                     Foreground="{DynamicResource BrushTextMuted}"/>
+        </CheckBox>
+
+        <Rectangle Width="1" Height="20" Fill="{DynamicResource BrushBorder}"
+                   VerticalAlignment="Center" Margin="8,0"/>
+
         <!-- Theme Picker Button -->
         <Button Command="{Binding ThemeToggleCommand}" Padding="8,4" Margin="4,0,0,0"
                 ToolTip="{Binding ThemeToggleText}"
@@ -24,7 +37,8 @@
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE790;" FontSize="14"
                        Foreground="{DynamicResource BrushAccentPurple}" Margin="0,0,6,0"/>
             <TextBlock Text="{Binding CurrentThemeLabel}" FontSize="11"
-                       Foreground="{DynamicResource BrushTextMuted}"/>
+                       Foreground="{DynamicResource BrushTextMuted}"
+                       Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
           </StackPanel>
         </Button>
 
@@ -41,7 +55,8 @@
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A7;" FontSize="14"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,6,0"/>
             <TextBlock Text="{Binding Loc[Report.OpenReportLog]}" FontSize="11"
-                       Foreground="{DynamicResource BrushTextMuted}"/>
+                       Foreground="{DynamicResource BrushTextMuted}"
+                       Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
           </StackPanel>
         </Button>
 
@@ -49,7 +64,7 @@
                    VerticalAlignment="Center" Margin="8,0"/>
 
         <!-- Quick Profile Selector -->
-        <ComboBox Width="150" Margin="0,0,4,0"
+        <ComboBox Width="120" Margin="0,0,4,0"
                   ToolTip="{Binding Loc[Profile.QuickSwitch]}" IsEditable="False"
                   SelectedIndex="{Binding QuickProfileIndex, Mode=TwoWay}"
                   AutomationProperties.Name="{Binding Loc[Profile.QuickSwitch]}" TabIndex="2">
@@ -72,7 +87,8 @@
                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
           <TextBlock Text="{Binding Loc[App.Title]}" Style="{StaticResource TitleText}"
-                     VerticalAlignment="Center"/>
+                     VerticalAlignment="Center"
+                     Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
         </StackPanel>
 
         <Rectangle Width="1" Height="20" Fill="{DynamicResource BrushBorder}"
@@ -114,7 +130,8 @@
 
         <!-- Runtime -->
         <TextBlock Text="{Binding StatusRuntime}" Foreground="{DynamicResource BrushTextMuted}"
-                   VerticalAlignment="Center" FontSize="11"/>
+                   VerticalAlignment="Center" FontSize="11"
+                   Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
 
         <Rectangle Width="1" Height="20" Fill="{DynamicResource BrushBorder}"
                    VerticalAlignment="Center" Margin="10,0"/>
@@ -122,41 +139,47 @@
         <!-- Phase Indicator (5-step pipeline dots with labels) -->
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
           <TextBlock Text="Phase:" Foreground="{DynamicResource BrushTextMuted}"
-                     FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                     FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0"
+                     Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
           <StackPanel Margin="0,0,6,0">
             <Ellipse Width="8" Height="8" HorizontalAlignment="Center"
                      Fill="{Binding PipelinePhase, Converter={StaticResource PhaseBrush}, ConverterParameter=0}"
                      ToolTip="Configure"/>
-            <TextBlock Text="Config" FontSize="7" HorizontalAlignment="Center"
-                       Foreground="{DynamicResource BrushTextMuted}"/>
+            <TextBlock Text="Config" FontSize="9" HorizontalAlignment="Center"
+                       Foreground="{DynamicResource BrushTextMuted}"
+                       Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
           </StackPanel>
           <StackPanel Margin="0,0,6,0">
             <Ellipse Width="8" Height="8" HorizontalAlignment="Center"
                      Fill="{Binding PipelinePhase, Converter={StaticResource PhaseBrush}, ConverterParameter=1}"
                      ToolTip="Preview"/>
-            <TextBlock Text="Preview" FontSize="7" HorizontalAlignment="Center"
-                       Foreground="{DynamicResource BrushTextMuted}"/>
+            <TextBlock Text="Preview" FontSize="9" HorizontalAlignment="Center"
+                       Foreground="{DynamicResource BrushTextMuted}"
+                       Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
           </StackPanel>
           <StackPanel Margin="0,0,6,0">
             <Ellipse Width="8" Height="8" HorizontalAlignment="Center"
                      Fill="{Binding PipelinePhase, Converter={StaticResource PhaseBrush}, ConverterParameter=2}"
                      ToolTip="Review"/>
-            <TextBlock Text="Review" FontSize="7" HorizontalAlignment="Center"
-                       Foreground="{DynamicResource BrushTextMuted}"/>
+            <TextBlock Text="Review" FontSize="9" HorizontalAlignment="Center"
+                       Foreground="{DynamicResource BrushTextMuted}"
+                       Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
           </StackPanel>
           <StackPanel Margin="0,0,6,0">
             <Ellipse Width="8" Height="8" HorizontalAlignment="Center"
                      Fill="{Binding PipelinePhase, Converter={StaticResource PhaseBrush}, ConverterParameter=3}"
                      ToolTip="Execute"/>
-            <TextBlock Text="Execute" FontSize="7" HorizontalAlignment="Center"
-                       Foreground="{DynamicResource BrushTextMuted}"/>
+            <TextBlock Text="Execute" FontSize="9" HorizontalAlignment="Center"
+                       Foreground="{DynamicResource BrushTextMuted}"
+                       Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
           </StackPanel>
           <StackPanel>
             <Ellipse Width="8" Height="8" HorizontalAlignment="Center"
                      Fill="{Binding PipelinePhase, Converter={StaticResource PhaseBrush}, ConverterParameter=4}"
                      ToolTip="Report"/>
-            <TextBlock Text="Report" FontSize="7" HorizontalAlignment="Center"
-                       Foreground="{DynamicResource BrushTextMuted}"/>
+            <TextBlock Text="Report" FontSize="9" HorizontalAlignment="Center"
+                       Foreground="{DynamicResource BrushTextMuted}"
+                       Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
           </StackPanel>
         </StackPanel>
       </StackPanel>

@@ -44,4 +44,19 @@ public sealed class OpenApiSpecRegressionTests
         Assert.True(queueProps.TryGetProperty("returned", out _));
         Assert.True(queueProps.TryGetProperty("hasMore", out _));
     }
+
+    [Fact]
+    public void OpenApiSpec_DeclaresPublicHealthz_WithoutSecurityRequirement()
+    {
+        using var spec = JsonDocument.Parse(OpenApiSpec.Json);
+
+        var healthzGet = spec.RootElement
+            .GetProperty("paths")
+            .GetProperty("/healthz")
+            .GetProperty("get");
+
+        Assert.True(healthzGet.TryGetProperty("security", out var security));
+        Assert.Equal(JsonValueKind.Array, security.ValueKind);
+        Assert.Equal(0, security.GetArrayLength());
+    }
 }

@@ -107,6 +107,12 @@ app.Use(async (ctx, next) =>
 
 app.Use(async (ctx, next) =>
 {
+    if (IsAnonymousEndpoint(ctx.Request.Path))
+    {
+        await next();
+        return;
+    }
+
     // Rate limiting
     var clientIp = ApiClientIdentity.ResolveRateLimitClientId(ctx, trustForwardedFor);
     var rawClientId = ctx.Request.Headers["X-Client-Id"].FirstOrDefault();
@@ -154,6 +160,14 @@ app.Use(async (ctx, next) =>
 });
 
 // --- Endpoints ---
+
+app.MapGet("/healthz", () => Results.Ok(new
+{
+    status = "ok",
+    serverRunning = true,
+    utc = DateTime.UtcNow.ToString("o"),
+    version = ApiVersion
+}));
 
 app.MapGet("/health", (RunLifecycleManager mgr) =>
 {
@@ -1184,6 +1198,11 @@ static bool IsLoopbackAddress(string host)
     }
 
     return false;
+}
+
+static bool IsAnonymousEndpoint(PathString path)
+{
+    return path.Equals("/healthz", StringComparison.OrdinalIgnoreCase);
 }
 
 static string ResolveCorsOrigin(string mode, string customOrigin)

@@ -12,6 +12,12 @@ namespace RomCleanup.UI.Wpf.ViewModels;
 /// </summary>
 public sealed class ShellViewModel : ObservableObject
 {
+    private const string MissionControlTag = "MissionControl";
+    private const string LibraryTag = "Library";
+    private const string ConfigTag = "Config";
+    private const string ToolsTag = "Tools";
+    private const string SystemTag = "System";
+
     private readonly ILocalizationService _loc;
     private readonly Action? _commandRequery;
 
@@ -42,7 +48,8 @@ public sealed class ShellViewModel : ObservableObject
         get => _selectedNavIndex;
         set
         {
-            if (SetProperty(ref _selectedNavIndex, value))
+            var coercedIndex = CoerceNavIndex(value);
+            if (SetProperty(ref _selectedNavIndex, coercedIndex))
             {
                 OnPropertyChanged(nameof(SelectedNavTag));
                 OnPropertyChanged(nameof(CanNavBack));
@@ -56,26 +63,22 @@ public sealed class ShellViewModel : ObservableObject
     {
         get => _selectedNavIndex switch
         {
-            0 => "MissionControl",
-            1 => "Library",
-            2 => "Config",
-            3 => "Tools",
-            4 => "System",
-            _ => "MissionControl"
+            0 => MissionControlTag,
+            1 => LibraryTag,
+            2 => ConfigTag,
+            3 => ToolsTag,
+            4 => SystemTag,
+            _ => MissionControlTag
         };
         set
         {
-            int idx = value switch
+            int idx = NormalizeNavTag(value) switch
             {
-                "MissionControl" => 0,
-                "Library" => 1,
-                "Config" => 2,
-                "Tools" => 3,
-                "System" => 4,
-                "Start" => 0,
-                "Analyse" => 1,
-                "Setup" => 2,
-                "Log" => 4,
+                MissionControlTag => 0,
+                LibraryTag => 1,
+                ConfigTag => 2,
+                ToolsTag => 3,
+                SystemTag => 4,
                 _ => 0
             };
             SelectedNavIndex = idx;
@@ -87,20 +90,172 @@ public sealed class ShellViewModel : ObservableObject
     public string SelectedSubTab
     {
         get => _selectedSubTab;
-        set => SetProperty(ref _selectedSubTab, value);
+        set => SetProperty(ref _selectedSubTab, CoerceSubTab(SelectedNavTag, value));
     }
 
     private void ApplyDefaultSubTab()
     {
-        SelectedSubTab = _selectedNavIndex switch
+        SelectedSubTab = GetDefaultSubTab(SelectedNavTag);
+    }
+
+    // ═══ UI MODES ══════════════════════════════════════════════════════
+    private bool _isSimpleMode = true;
+    public bool IsSimpleMode
+    {
+        get => _isSimpleMode;
+        set
         {
-            0 => "Dashboard",
-            1 => "Results",
-            2 => "Regions",
-            3 => "ExternalTools",
-            4 => "ActivityLog",
-            _ => "Dashboard"
+            if (SetProperty(ref _isSimpleMode, value))
+            {
+                OnPropertyChanged(nameof(IsExpertMode));
+                NotifyNavigationVisibilityChanged();
+                CoerceNavigationForMode();
+            }
+        }
+    }
+
+    public bool IsExpertMode => !IsSimpleMode;
+
+    public bool ShowMissionControlNav => true;
+    public bool ShowLibraryNav => true;
+    public bool ShowConfigNav => true;
+    public bool ShowToolsNav => !IsSimpleMode;
+    public bool ShowSystemNav => true;
+
+    public bool ShowMissionDashboardTab => true;
+    public bool ShowMissionQuickStartTab => true;
+    public bool ShowMissionRecentRunsTab => true;
+
+    public bool ShowLibraryResultsTab => true;
+    public bool ShowLibraryDecisionsTab => !IsSimpleMode;
+    public bool ShowLibrarySafetyTab => true;
+    public bool ShowLibraryReportTab => true;
+    public bool ShowLibraryDatAuditTab => !IsSimpleMode;
+
+    public bool ShowConfigRegionsTab => true;
+    public bool ShowConfigFilteringTab => !IsSimpleMode;
+    public bool ShowConfigOptionsTab => true;
+    public bool ShowConfigProfilesTab => !IsSimpleMode;
+
+    public bool ShowToolsExternalToolsTab => !IsSimpleMode;
+    public bool ShowToolsFeaturesTab => !IsSimpleMode;
+    public bool ShowToolsDatManagementTab => !IsSimpleMode;
+    public bool ShowToolsConversionTab => !IsSimpleMode;
+    public bool ShowToolsGameKeyLabTab => !IsSimpleMode;
+
+    public bool ShowSystemActivityLogTab => !IsSimpleMode;
+    public bool ShowSystemAppearanceTab => true;
+    public bool ShowSystemAboutTab => true;
+
+    private static string NormalizeNavTag(string? tag) => tag switch
+    {
+        MissionControlTag or "Start" => MissionControlTag,
+        LibraryTag or "Analyse" => LibraryTag,
+        ConfigTag or "Setup" => ConfigTag,
+        ToolsTag => ToolsTag,
+        SystemTag or "Log" => SystemTag,
+        _ => MissionControlTag
+    };
+
+    private int CoerceNavIndex(int requestedIndex)
+    {
+        if (!IsSimpleMode)
+            return requestedIndex is >= 0 and <= 4 ? requestedIndex : 0;
+
+        return requestedIndex switch
+        {
+            3 => 0,
+            >= 0 and <= 4 => requestedIndex,
+            _ => 0
         };
+    }
+
+    private string GetDefaultSubTab(string navTag) => NormalizeNavTag(navTag) switch
+    {
+        MissionControlTag => "Dashboard",
+        LibraryTag => "Results",
+        ConfigTag => "Regions",
+        ToolsTag => "ExternalTools",
+        SystemTag => IsSimpleMode ? "Appearance" : "ActivityLog",
+        _ => "Dashboard"
+    };
+
+    private string CoerceSubTab(string navTag, string? subTab)
+    {
+        var normalizedNavTag = NormalizeNavTag(navTag);
+        var requestedSubTab = subTab ?? string.Empty;
+        if (IsSubTabAllowed(normalizedNavTag, requestedSubTab))
+            return requestedSubTab;
+
+        return GetDefaultSubTab(normalizedNavTag);
+    }
+
+    private bool IsSubTabAllowed(string navTag, string subTab)
+    {
+        if (!IsSimpleMode)
+            return true;
+
+        return NormalizeNavTag(navTag) switch
+        {
+            MissionControlTag => subTab is "Dashboard" or "QuickStart" or "RecentRuns",
+            LibraryTag => subTab is "Results" or "Safety" or "Report",
+            ConfigTag => subTab is "Regions" or "Options",
+            ToolsTag => false,
+            SystemTag => subTab is "Appearance" or "About",
+            _ => false
+        };
+    }
+
+    private void CoerceNavigationForMode()
+    {
+        var currentNavTag = NormalizeNavTag(SelectedNavTag);
+        var coercedNavTag = IsSimpleMode && currentNavTag == ToolsTag
+            ? MissionControlTag
+            : currentNavTag;
+
+        if (!string.Equals(coercedNavTag, currentNavTag, StringComparison.Ordinal))
+        {
+            SelectedNavTag = coercedNavTag;
+            return;
+        }
+
+        var coercedSubTab = CoerceSubTab(coercedNavTag, SelectedSubTab);
+        if (!string.Equals(coercedSubTab, SelectedSubTab, StringComparison.Ordinal))
+            SelectedSubTab = coercedSubTab;
+    }
+
+    private void NotifyNavigationVisibilityChanged()
+    {
+        OnPropertyChanged(nameof(ShowMissionControlNav));
+        OnPropertyChanged(nameof(ShowLibraryNav));
+        OnPropertyChanged(nameof(ShowConfigNav));
+        OnPropertyChanged(nameof(ShowToolsNav));
+        OnPropertyChanged(nameof(ShowSystemNav));
+
+        OnPropertyChanged(nameof(ShowMissionDashboardTab));
+        OnPropertyChanged(nameof(ShowMissionQuickStartTab));
+        OnPropertyChanged(nameof(ShowMissionRecentRunsTab));
+
+        OnPropertyChanged(nameof(ShowLibraryResultsTab));
+        OnPropertyChanged(nameof(ShowLibraryDecisionsTab));
+        OnPropertyChanged(nameof(ShowLibrarySafetyTab));
+        OnPropertyChanged(nameof(ShowLibraryReportTab));
+        OnPropertyChanged(nameof(ShowLibraryDatAuditTab));
+
+        OnPropertyChanged(nameof(ShowConfigRegionsTab));
+        OnPropertyChanged(nameof(ShowConfigFilteringTab));
+        OnPropertyChanged(nameof(ShowConfigOptionsTab));
+        OnPropertyChanged(nameof(ShowConfigProfilesTab));
+
+        OnPropertyChanged(nameof(ShowToolsExternalToolsTab));
+        OnPropertyChanged(nameof(ShowToolsFeaturesTab));
+        OnPropertyChanged(nameof(ShowToolsDatManagementTab));
+        OnPropertyChanged(nameof(ShowToolsConversionTab));
+        OnPropertyChanged(nameof(ShowToolsGameKeyLabTab));
+
+        OnPropertyChanged(nameof(ShowSystemActivityLogTab));
+        OnPropertyChanged(nameof(ShowSystemAppearanceTab));
+        OnPropertyChanged(nameof(ShowSystemAboutTab));
     }
 
     // ═══ CONTEXT WING (Inspector) ═══════════════════════════════════════
@@ -129,15 +284,17 @@ public sealed class ShellViewModel : ObservableObject
 
     public void NavigateTo(string tag)
     {
-        int newIndex = tag switch
+        int newIndex = NormalizeNavTag(tag) switch
         {
-            "MissionControl" or "Start" => 0,
-            "Library" or "Analyse" => 1,
-            "Config" or "Setup" => 2,
-            "Tools" => 3,
-            "System" or "Log" => 4,
+            MissionControlTag => 0,
+            LibraryTag => 1,
+            ConfigTag => 2,
+            ToolsTag => 3,
+            SystemTag => 4,
             _ => 0
         };
+
+        newIndex = CoerceNavIndex(newIndex);
 
         if (!_isNavigatingHistory && newIndex != _selectedNavIndex)
         {

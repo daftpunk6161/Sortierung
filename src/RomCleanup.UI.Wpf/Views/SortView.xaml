@@ -2,6 +2,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 >
+  <!-- LEGACY VIEW: retained for migration/tests.
+       The active shell is composed in MainWindow.xaml and does not navigate here. -->
   <UserControl.Resources>
     <DataTemplate x:Key="RootItemTemplate">
       <StackPanel Orientation="Horizontal">

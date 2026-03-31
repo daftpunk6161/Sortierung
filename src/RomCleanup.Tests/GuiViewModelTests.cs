@@ -4130,6 +4130,28 @@ public class GuiViewModelTests
         Assert.Contains("Report", xaml);
     }
 
+    [Fact]
+    public void CommandBarXaml_UsesCompactBindings_ForResponsiveHeader()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "CommandBar.xaml"));
+
+        Assert.Contains("Shell.IsCompactNav", xaml);
+        Assert.Contains("StatusRuntime", xaml);
+        Assert.Contains("CurrentThemeLabel", xaml);
+        Assert.Contains("OpenReportLog", xaml);
+    }
+
+    [Fact]
+    public void ResultViewXaml_DoesNotForceFixedPieWidthOrLegacyHeight()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "ResultView.xaml"));
+
+        Assert.DoesNotContain("Width=\"620\"", xaml);
+        Assert.DoesNotContain("Height=\"520\"", xaml);
+        Assert.Contains("MinWidth=\"280\"", xaml);
+        Assert.Contains("Height=\"360\"", xaml);
+    }
+
     // ═══ TASK-115: SmartActionBar RunState DataTriggers ════════════════
 
     [Theory]
@@ -4458,6 +4480,36 @@ public class GuiViewModelTests
         Assert.True(textBindings.Count == 0,
             "Theme button Text should bind to CurrentThemeLabel, not ThemeToggleText. " +
             "ThemeToggleText should only appear in ToolTip.");
+    }
+
+    [Fact]
+    public void CommandBar_ModeToggle_BindsToCurrentUiModeLabel()
+    {
+        var cmdBarPath = FindUiFile("Views", "CommandBar.xaml");
+        var content = File.ReadAllText(cmdBarPath);
+
+        Assert.Contains("IsSimpleMode", content);
+        Assert.Contains("CurrentUiModeLabel", content);
+    }
+
+    [Fact]
+    public void NavigationRail_ToolsVisibility_BindsToShellShowToolsNav()
+    {
+        var navPath = FindUiFile("Views", "NavigationRail.xaml");
+        var content = File.ReadAllText(navPath);
+
+        Assert.Contains("Shell.ShowToolsNav", content);
+    }
+
+    [Fact]
+    public void SubTabBar_ExpertTabs_BindToShellModeVisibility()
+    {
+        var subTabPath = FindUiFile("Views", "SubTabBar.xaml");
+        var content = File.ReadAllText(subTabPath);
+
+        Assert.Contains("Shell.ShowLibraryDecisionsTab", content);
+        Assert.Contains("Shell.ShowConfigFilteringTab", content);
+        Assert.Contains("Shell.ShowSystemActivityLogTab", content);
     }
 
     // ═══ BUG-FIX: EnableDatAudit missing from GUI layer ═════════════════

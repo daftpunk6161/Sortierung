@@ -221,6 +221,21 @@ public sealed class ApiSecurityTests : IDisposable
         Assert.Contains("DENY", frameOptions!);
     }
 
+    [Fact]
+    public async Task Healthz_PublicEndpoint_StillIncludesSecurityHeaders()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/healthz");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.TryGetValues("X-Content-Type-Options", out var contentTypeOptions));
+        Assert.Contains("nosniff", contentTypeOptions!);
+        Assert.True(response.Headers.TryGetValues("X-Frame-Options", out var frameOptions));
+        Assert.Contains("DENY", frameOptions!);
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     //  SEC-4: Information Disclosure — Error messages must not leak internals
     // ═══════════════════════════════════════════════════════════════════

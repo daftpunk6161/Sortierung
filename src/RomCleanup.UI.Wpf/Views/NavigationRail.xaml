@@ -61,6 +61,7 @@
         <RadioButton GroupName="Nav"
                      IsChecked="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Tools}"
                      Style="{StaticResource NavButton}"
+                     Visibility="{Binding Shell.ShowToolsNav, Converter={StaticResource BoolToVis}}"
                      ToolTip="{Binding Loc[Nav.Tools]}" TabIndex="53"
                      AutomationProperties.Name="{Binding Loc[Nav.Tools]}">
           <StackPanel HorizontalAlignment="Center">

@@ -467,9 +467,18 @@ public sealed partial class MainViewModel
     public bool IsSimpleMode
     {
         get => _isSimpleMode;
-        set { if (SetProperty(ref _isSimpleMode, value)) OnPropertyChanged(nameof(IsExpertMode)); }
+        set
+        {
+            if (SetProperty(ref _isSimpleMode, value))
+            {
+                Shell.IsSimpleMode = value;
+                OnPropertyChanged(nameof(IsExpertMode));
+                OnPropertyChanged(nameof(CurrentUiModeLabel));
+            }
+        }
     }
     public bool IsExpertMode => !_isSimpleMode;
+    public string CurrentUiModeLabel => IsSimpleMode ? "Einfach" : "Experte";
 
     // Simple-mode options (not persisted — derived from main options at run time)
     [ObservableProperty]

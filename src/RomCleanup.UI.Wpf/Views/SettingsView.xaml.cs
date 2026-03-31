@@ -5,6 +5,10 @@ using RomCleanup.UI.Wpf.Services;
 
 namespace RomCleanup.UI.Wpf.Views;
 
+/// <summary>
+/// Legacy monolithic settings view retained for migration/reference.
+/// The active shell is composed from dedicated Config/Tools/System views.
+/// </summary>
 public partial class SettingsView : UserControl
 {
     public SettingsView()

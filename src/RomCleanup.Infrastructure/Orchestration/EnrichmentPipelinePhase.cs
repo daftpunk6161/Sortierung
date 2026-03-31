@@ -13,21 +13,56 @@ namespace RomCleanup.Infrastructure.Orchestration;
 /// </summary>
 public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInput, List<RomCandidate>>
 {
+    private const int ParallelizationThreshold = 4;
+
     public string Name => "Enrichment";
 
     public List<RomCandidate> Execute(EnrichmentPhaseInput input, PipelineContext context, CancellationToken cancellationToken)
     {
-        var candidates = new List<RomCandidate>(input.Files.Count);
-        var folderConsoleCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var versionScorer = new VersionScorer();
-
-        foreach (var file in input.Files)
+        var onProgress = CreateSerializedProgressCallback(context.OnProgress);
+        var parallelism = GetParallelismHint(input.Files.Count);
+        if (input.Files.Count <= ParallelizationThreshold || parallelism <= 1)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            candidates.Add(MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex, input.HeaderlessHasher, input.KnownBiosHashes, context, folderConsoleCache, versionScorer));
+            var candidates = new List<RomCandidate>(input.Files.Count);
+            var versionScorer = new VersionScorer();
+
+            foreach (var file in input.Files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                candidates.Add(MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex, input.HeaderlessHasher, input.KnownBiosHashes, context, versionScorer, onProgress));
+            }
+
+            return candidates;
         }
 
-        return candidates;
+        var results = new RomCandidate[input.Files.Count];
+        using var versionScorers = new ThreadLocal<VersionScorer>(() => new VersionScorer());
+
+        Parallel.For(
+            0,
+            input.Files.Count,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = parallelism,
+                CancellationToken = cancellationToken
+            },
+            index =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                results[index] = MapToCandidate(
+                    input.Files[index],
+                    input.ConsoleDetector,
+                    input.HashService,
+                    input.ArchiveHashService,
+                    input.DatIndex,
+                    input.HeaderlessHasher,
+                    input.KnownBiosHashes,
+                    context,
+                    versionScorers.Value!,
+                    onProgress);
+            });
+
+        return results.ToList();
     }
 
     public async IAsyncEnumerable<RomCandidate> ExecuteStreamingAsync(
@@ -35,13 +70,56 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         PipelineContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var folderConsoleCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var versionScorer = new VersionScorer();
+        var onProgress = CreateSerializedProgressCallback(context.OnProgress);
+        var parallelism = GetParallelismHint();
+        if (parallelism <= 1)
+        {
+            var versionScorer = new VersionScorer();
+            await foreach (var file in input.Files.WithCancellation(cancellationToken))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex, input.HeaderlessHasher, input.KnownBiosHashes, context, versionScorer, onProgress);
+            }
+
+            yield break;
+        }
+
+        using var versionScorers = new ThreadLocal<VersionScorer>(() => new VersionScorer());
+        var pending = new Queue<Task<RomCandidate>>(parallelism);
+
+        Task<RomCandidate> StartCandidateTask(ScannedFileEntry file)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.Run(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return MapToCandidate(
+                    file,
+                    input.ConsoleDetector,
+                    input.HashService,
+                    input.ArchiveHashService,
+                    input.DatIndex,
+                    input.HeaderlessHasher,
+                    input.KnownBiosHashes,
+                    context,
+                    versionScorers.Value!,
+                    onProgress);
+            }, cancellationToken);
+        }
 
         await foreach (var file in input.Files.WithCancellation(cancellationToken))
         {
+            pending.Enqueue(StartCandidateTask(file));
+            if (pending.Count < parallelism)
+                continue;
+
+            yield return await pending.Dequeue().WaitAsync(cancellationToken);
+        }
+
+        while (pending.Count > 0)
+        {
             cancellationToken.ThrowIfCancellationRequested();
-            yield return MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex, input.HeaderlessHasher, input.KnownBiosHashes, context, folderConsoleCache, versionScorer);
+            yield return await pending.Dequeue().WaitAsync(cancellationToken);
         }
     }
 
@@ -54,8 +132,8 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         Contracts.Ports.IHeaderlessHasher? headerlessHasher,
         IReadOnlySet<string>? knownBiosHashes,
         PipelineContext context,
-        Dictionary<string, string> folderConsoleCache,
-        VersionScorer versionScorer)
+        VersionScorer versionScorer,
+        Action<string>? onProgress)
     {
         var filePath = file.Path;
         var root = file.Root;
@@ -75,7 +153,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             }
             catch (Exception ex)
             {
-                context.OnProgress?.Invoke($"WARNING: Could not read file size for {filePath}: {ex.Message}");
+                onProgress?.Invoke($"WARNING: Could not read file size for {filePath}: {ex.Message}");
             }
         }
 
@@ -103,7 +181,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
 
         // DAT-first lookup first, then fallback to detector-guided resolution only if needed.
         var datResult = LookupDat(filePath, ext, sizeBytes, consoleKey, detectionConflict,
-            datIndex, hashService, archiveHashService, headerlessHasher, detectionResult: null, context);
+            datIndex, hashService, archiveHashService, headerlessHasher, detectionResult: null, context, onProgress);
 
         if (!datResult.DatMatch && consoleDetector is not null)
         {
@@ -118,7 +196,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             matchEvidence = detectionResult.MatchEvidence ?? matchEvidence;
 
             datResult = LookupDat(filePath, ext, sizeBytes, consoleKey, detectionConflict,
-                datIndex, hashService, archiveHashService, headerlessHasher, detectionResult, context);
+                datIndex, hashService, archiveHashService, headerlessHasher, detectionResult, context, onProgress);
         }
 
         consoleKey = datResult.ConsoleKey;
@@ -128,14 +206,14 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
 
         if (!datResult.DatMatch && consoleKey is "UNKNOWN" or "" or "AMBIGUOUS")
         {
-            context.OnProgress?.Invoke(
+            onProgress?.Invoke(
                 $"[DAT] Kein Match fuer {consoleKey}-Konsole: {Path.GetFileName(filePath)}");
         }
 
         // BIOS classification (from DAT metadata and known BIOS hash catalog)
         ResolveBios(ref category, ref matchEvidence, ref computedHash,
             datResult.DatMatchedBios, knownBiosHashes, hashService, filePath,
-            computedHeaderlessHash, context);
+            computedHeaderlessHash, context, onProgress);
 
         // DAT authority — tier-based decision. DAT remains the highest authority.
         if (datResult.DatMatch && consoleKey is not "")
@@ -248,7 +326,8 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         ArchiveHashService? archiveHashService,
         Contracts.Ports.IHeaderlessHasher? headerlessHasher,
         ConsoleDetectionResult? detectionResult,
-        PipelineContext context)
+        PipelineContext context,
+        Action<string>? onProgress)
     {
         bool datMatch = false;
         bool datMatchedBios = false;
@@ -264,7 +343,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         if (sizeBytes > 50_000_000)
         {
             var sizeMb = sizeBytes / (1024.0 * 1024.0);
-            context.OnProgress?.Invoke($"[Scan] Hash: {Path.GetFileName(filePath)} ({sizeMb:F0} MB)…");
+            onProgress?.Invoke($"[Scan] Hash: {Path.GetFileName(filePath)} ({sizeMb:F0} MB)…");
         }
 
         var lowerExt = ext.ToLowerInvariant();
@@ -280,7 +359,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
 
                 // DAT-first: always try cross-console lookup first, even when consoleKey is known.
                 // This catches misdetections where Detection assigned the wrong console.
-                var crossConsoleResult = TryCrossConsoleDatLookup(datIndex, innerHash, consoleKey, detectionResult, context, filePath);
+                var crossConsoleResult = TryCrossConsoleDatLookup(datIndex, innerHash, consoleKey, detectionResult, filePath, onProgress);
                 if (crossConsoleResult.IsMatch)
                 {
                     datMatch = true;
@@ -313,7 +392,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                 else
                 {
                     // Cross-console fallback: headerless hash might match a different console's DAT
-                    var crossConsoleResult = TryCrossConsoleDatLookup(datIndex, computedHeaderlessHash, consoleKey, detectionResult, context, filePath);
+                    var crossConsoleResult = TryCrossConsoleDatLookup(datIndex, computedHeaderlessHash, consoleKey, detectionResult, filePath, onProgress);
                     if (crossConsoleResult.IsMatch)
                     {
                         datMatch = true;
@@ -338,7 +417,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             if (hash is not null)
             {
                 // DAT-first: always try cross-console lookup for container hash too
-                var crossConsoleResult = TryCrossConsoleDatLookup(datIndex, hash, consoleKey, detectionResult, context, filePath);
+                var crossConsoleResult = TryCrossConsoleDatLookup(datIndex, hash, consoleKey, detectionResult, filePath, onProgress);
                 if (crossConsoleResult.IsMatch)
                 {
                     datMatch = true;
@@ -356,7 +435,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                 else if (consoleKey is not "UNKNOWN" and not "" and not "AMBIGUOUS")
                 {
                     var hashHint = hash.Length >= 12 ? hash[..12] : hash;
-                    context.OnProgress?.Invoke(
+                    onProgress?.Invoke(
                         $"[DAT] Kein Match: {Path.GetFileName(filePath)} (hash={hashHint})");
                 }
             }
@@ -385,8 +464,8 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                         {
                             detectionConflict = true;
                         }
-                        context.OnProgress?.Invoke(
-                            $"[DAT] Konsole via DAT-Name erkannt: {Path.GetFileName(filePath)} → {consoleKey}");
+                            onProgress?.Invoke(
+                                $"[DAT] Konsole via DAT-Name erkannt: {Path.GetFileName(filePath)} → {consoleKey}");
                     }
                     else if (nameMatches.Count > 1 && detectionResult is not null)
                     {
@@ -406,7 +485,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                             {
                                 detectionConflict = true;
                             }
-                            context.OnProgress?.Invoke(
+                            onProgress?.Invoke(
                                 $"[DAT] Mehrdeutigen Name via Hypothesen aufgeloest: {Path.GetFileName(filePath)} → {consoleKey}");
                         }
                     }
@@ -420,7 +499,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                         datNameOnlyMatch = true;
                         datMatchKind = MatchKind.DatNameOnlyMatch;
                         datMatchedBios = byName.Value.IsBios;
-                        context.OnProgress?.Invoke(
+                        onProgress?.Invoke(
                             $"[DAT] Name-Match: {Path.GetFileName(filePath)} → {consoleKey}");
                     }
                 }
@@ -439,7 +518,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
     /// </summary>
     private static DatUnknownResolution TryCrossConsoleDatLookup(
         DatIndex datIndex, string hash, string consoleKey,
-        ConsoleDetectionResult? detectionResult, PipelineContext context, string filePath)
+        ConsoleDetectionResult? detectionResult, string filePath, Action<string>? onProgress)
     {
         // Fast path: if consoleKey is known, try that console first
         if (consoleKey is not "UNKNOWN" and not "" and not "AMBIGUOUS")
@@ -457,12 +536,12 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         {
             if (resolution.ResolvedFromAmbiguousCandidates)
             {
-                context.OnProgress?.Invoke(
+                onProgress?.Invoke(
                     $"[DAT] Mehrdeutigen Hash via Hypothesen aufgeloest: {Path.GetFileName(filePath)} → {resolution.ConsoleKey}");
             }
             else
             {
-                context.OnProgress?.Invoke(
+                onProgress?.Invoke(
                     $"[DAT] Konsole via DAT-Hash erkannt: {Path.GetFileName(filePath)} → {resolution.ConsoleKey}");
             }
         }
@@ -474,7 +553,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         ref FileCategory category, ref MatchEvidence matchEvidence, ref string? computedHash,
         bool datMatchedBios, IReadOnlySet<string>? knownBiosHashes,
         FileHashService? hashService, string filePath,
-        string? computedHeaderlessHash, PipelineContext context)
+        string? computedHeaderlessHash, PipelineContext context, Action<string>? onProgress)
     {
         if (datMatchedBios)
         {
@@ -621,6 +700,28 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             return DatUnknownResolution.NoMatch;
 
         return new DatUnknownResolution(true, selectedKey, matchMap[selectedKey].IsBios, true);
+    }
+
+    private static int GetParallelismHint(int itemCountHint = int.MaxValue)
+    {
+        var optimalThreads = ParallelHasher.GetOptimalThreadCount();
+        if (itemCountHint <= ParallelizationThreshold || optimalThreads <= 1)
+            return 1;
+
+        return optimalThreads;
+    }
+
+    private static Action<string>? CreateSerializedProgressCallback(Action<string>? onProgress)
+    {
+        if (onProgress is null)
+            return null;
+
+        var gate = new object();
+        return message =>
+        {
+            lock (gate)
+                onProgress(message);
+        };
     }
 
 }

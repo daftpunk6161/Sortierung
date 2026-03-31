@@ -2,6 +2,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 >
+  <!-- LEGACY VIEW: retained for migration/supporting tests.
+       The active shell uses Config*/Tools*/System* views instead of this monolith. -->
 
   <Grid IsEnabled="{Binding IsIdle}">
     <Grid.ColumnDefinitions>

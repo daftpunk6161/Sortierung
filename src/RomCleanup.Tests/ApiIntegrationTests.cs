@@ -33,6 +33,22 @@ public sealed class ApiIntegrationTests
     }
 
     [Fact]
+    public async Task Healthz_WithoutApiKey_ReturnsOk()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/healthz");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = doc.RootElement;
+        Assert.Equal("ok", root.GetProperty("status").GetString());
+        Assert.True(root.GetProperty("serverRunning").GetBoolean());
+        Assert.False(root.TryGetProperty("hasActiveRun", out _));
+    }
+
+    [Fact]
     public async Task Health_WithApiKey_ReturnsOk()
     {
         using var factory = CreateFactory();
@@ -1154,6 +1170,19 @@ public sealed class ApiIntegrationTests
         using var client = CreateClientWithApiKey(factory);
 
         var response = await client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.TryGetValues("X-Api-Version", out var versions));
+        Assert.Contains("1.0", versions);
+    }
+
+    [Fact]
+    public async Task Healthz_ResponseContainsVersionHeader()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/healthz");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(response.Headers.TryGetValues("X-Api-Version", out var versions));

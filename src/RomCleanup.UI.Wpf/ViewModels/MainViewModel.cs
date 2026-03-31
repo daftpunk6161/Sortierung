@@ -78,6 +78,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
 
         // ── Child ViewModels (GUI-021) ────────────────────────────────
         Shell = new ShellViewModel(_loc, DeferCommandRequery);
+        Shell.IsSimpleMode = _isSimpleMode;
         Setup = new SetupViewModel(_theme, _dialog, _settings, _loc);
         Tools = new ToolsViewModel(_loc);
         Run = new RunViewModel(_loc);

@@ -7,6 +7,10 @@ using RomCleanup.UI.Wpf.ViewModels;
 
 namespace RomCleanup.UI.Wpf.Views;
 
+/// <summary>
+/// Legacy migration view retained for tests and reference.
+/// The active application shell does not navigate here.
+/// </summary>
 public partial class SortView : UserControl
 {
     public SortView()

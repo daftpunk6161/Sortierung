@@ -2,6 +2,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 >
+  <!-- LEGACY VIEW: retained as a migration snapshot.
+       The active shell uses ConfigOptionsView and dedicated sub-views instead. -->
   <!-- Extracted from SettingsView "Sortieroptionen" + "Sicherheit" sections -->
   <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
     <StackPanel>

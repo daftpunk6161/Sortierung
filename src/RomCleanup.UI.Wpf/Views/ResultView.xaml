@@ -152,11 +152,11 @@
           </Expander>
 
           <!-- GUI-071 + GUI-104: Console Distribution — Bars + Pie side by side -->
-          <Grid Margin="0,0,0,12"
+            <Grid Margin="0,0,0,12"
                 Visibility="{Binding Run.HasRunData, Converter={StaticResource BoolToVis}}">
             <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="1.4*"/>
               <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <!-- Bars (left) -->
@@ -199,10 +199,10 @@
             <!-- Pie Chart (right) -->
             <Border Grid.Column="1" Background="{DynamicResource BrushSurfaceAlt}" BorderBrush="{DynamicResource BrushBorder}"
                     BorderThickness="1" CornerRadius="8" Padding="16,12" Margin="6,0,0,0"
-                    Width="620">
+                    MinWidth="280">
               <StackPanel>
                 <TextBlock Text="{Binding Loc[Result.ChartConsole]}" Style="{StaticResource SectionHeader}" Margin="{DynamicResource SpaceBottomSM}"/>
-                <scott:WpfPlot x:Name="chartConsolePie" Height="520"
+                <scott:WpfPlot x:Name="chartConsolePie" Height="360"
                                AutomationProperties.Name="{Binding Loc[Result.ChartConsole]}"/>
               </StackPanel>
             </Border>

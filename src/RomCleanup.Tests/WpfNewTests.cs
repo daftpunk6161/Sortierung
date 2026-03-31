@@ -678,6 +678,56 @@ public sealed class WpfNewTests : IDisposable
         Assert.False(vm.IsExpertMode);
     }
 
+    [Fact]
+    public void IsSimpleMode_Toggle_SynchronizesShellModeAndLabel()
+    {
+        var vm = new MainViewModel();
+
+        vm.IsSimpleMode = false;
+        Assert.False(vm.Shell.IsSimpleMode);
+        Assert.Equal("Experte", vm.CurrentUiModeLabel);
+
+        vm.IsSimpleMode = true;
+        Assert.True(vm.Shell.IsSimpleMode);
+        Assert.Equal("Einfach", vm.CurrentUiModeLabel);
+    }
+
+    [Fact]
+    public void ShellViewModel_EnableSimpleMode_CoercesExpertNavToMissionControl()
+    {
+        var shell = new ShellViewModel(new LocalizationService())
+        {
+            IsSimpleMode = false
+        };
+
+        shell.SelectedNavTag = "Tools";
+        shell.SelectedSubTab = "GameKeyLab";
+
+        shell.IsSimpleMode = true;
+
+        Assert.Equal("MissionControl", shell.SelectedNavTag);
+        Assert.Equal("Dashboard", shell.SelectedSubTab);
+        Assert.False(shell.ShowToolsNav);
+    }
+
+    [Fact]
+    public void ShellViewModel_EnableSimpleMode_CoercesHiddenLibrarySubTabToResults()
+    {
+        var shell = new ShellViewModel(new LocalizationService())
+        {
+            IsSimpleMode = false,
+            SelectedNavTag = "Library",
+            SelectedSubTab = "Decisions"
+        };
+
+        shell.IsSimpleMode = true;
+
+        Assert.Equal("Library", shell.SelectedNavTag);
+        Assert.Equal("Results", shell.SelectedSubTab);
+        Assert.False(shell.ShowLibraryDecisionsTab);
+        Assert.True(shell.ShowLibrarySafetyTab);
+    }
+
     // ═══ SettingsDto — Record Defaults ══════════════════════════════════
 
     [Fact]

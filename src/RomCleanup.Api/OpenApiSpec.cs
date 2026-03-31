@@ -15,9 +15,18 @@ public static class OpenApiSpec
   },
   "servers": [{ "url": "http://127.0.0.1:7878" }],
   "paths": {
+    "/healthz": {
+      "get": {
+        "summary": "Unauthenticated local liveness probe",
+        "security": [],
+        "responses": {
+          "200": { "description": "Minimal server liveness status" }
+        }
+      }
+    },
     "/health": {
       "get": {
-        "summary": "Health check",
+        "summary": "Authenticated health check",
         "responses": {
           "200": { "description": "Server status" }
         }
