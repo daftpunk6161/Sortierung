@@ -17,49 +17,27 @@ public sealed class ConvertOnlyPipelinePhase : IPipelinePhase<ConvertOnlyPhaseIn
         context.Metrics.StartPhase(Name);
         context.OnProgress?.Invoke($"[Convert] Nur-Konvertierung: {input.Candidates.Count} Dateien…");
 
-        var counters = new ConversionPhaseHelper.ConversionCounters();
-        var conversionResults = new List<ConversionResult>();
-        var totalCandidates = input.Candidates.Count;
-        var processedCandidates = 0;
+        var workItems = input.Candidates
+            .Select((candidate, index) => new ConversionPhaseHelper.ConversionWorkItem(
+                Index: index,
+                FilePath: candidate.MainPath,
+                ConsoleKey: candidate.ConsoleKey ?? string.Empty,
+                TrackSetMembers: true,
+                SkipBeforeConversion: !context.FileSystem.FileExists(candidate.MainPath)))
+            .ToArray();
 
-        foreach (var candidate in input.Candidates)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            processedCandidates++;
+        var batch = ConversionPhaseHelper.ExecuteBatch(
+            workItems,
+            input.Converter,
+            input.Options,
+            context,
+            progressUnitLabel: "Dateien",
+            cancellationToken);
 
-            var path = candidate.MainPath;
-            if (!File.Exists(path))
-            {
-                ReportProgress(context, processedCandidates, totalCandidates, counters);
-                continue;
-            }
+        context.OnProgress?.Invoke($"[Convert] Abgeschlossen: {batch.Converted} konvertiert, {batch.Skipped} übersprungen, {batch.Blocked} blockiert, {batch.Errors} Fehler");
+        context.Metrics.CompletePhase(batch.Converted);
 
-            var convResult = ConversionPhaseHelper.ConvertSingleFile(
-                path,
-                candidate.ConsoleKey ?? "",
-                input.Converter,
-                input.Options,
-                context,
-                counters,
-                trackSetMembers: true,
-                cancellationToken);
-
-            if (convResult is not null)
-                conversionResults.Add(convResult);
-
-            ReportProgress(context, processedCandidates, totalCandidates, counters);
-        }
-
-        context.OnProgress?.Invoke($"[Convert] Abgeschlossen: {counters.Converted} konvertiert, {counters.Skipped} übersprungen, {counters.Blocked} blockiert, {counters.Errors} Fehler");
-        context.Metrics.CompletePhase(counters.Converted);
-
-        return new ConvertOnlyPhaseOutput(counters.Converted, counters.Errors, counters.Skipped, counters.Blocked, conversionResults);
-    }
-
-    private static void ReportProgress(PipelineContext context, int processed, int total, ConversionPhaseHelper.ConversionCounters c)
-    {
-        if (processed % 25 == 0 || processed == total)
-            context.OnProgress?.Invoke($"[Convert] Fortschritt: {processed}/{total} Dateien (ok={c.Converted}, skip={c.Skipped}, blocked={c.Blocked}, err={c.Errors})");
+        return new ConvertOnlyPhaseOutput(batch.Converted, batch.Errors, batch.Skipped, batch.Blocked, batch.Results);
     }
 }
 

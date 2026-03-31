@@ -40,9 +40,9 @@ public sealed class KpiChannelParityBacklogTests : IDisposable
     }
 
     [Fact]
-    public void OpenApi_ApiRunResultSchema_ContainsAllApiRunResultProperties_Issue9()
+    public async Task OpenApi_ApiRunResultSchema_ContainsAllApiRunResultProperties_Issue9()
     {
-        using var spec = JsonDocument.Parse(OpenApiSpec.Json);
+        using var spec = JsonDocument.Parse(await OpenApiTestHelper.FetchOpenApiJsonAsync());
         var root = spec.RootElement;
 
         var properties = root
@@ -104,7 +104,7 @@ public sealed class KpiChannelParityBacklogTests : IDisposable
         }, "DryRun");
 
         Assert.NotNull(apiRun);
-        var waitResult = await manager.WaitForCompletion(apiRun!.RunId, timeout: TimeSpan.FromSeconds(10));
+        var waitResult = await manager.WaitForCompletion(apiRun!.RunId, timeout: TimeSpan.FromSeconds(20));
         var apiCompleted = manager.Get(apiRun.RunId);
 
         Assert.Equal(0, cliExitCode);

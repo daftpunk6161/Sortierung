@@ -152,6 +152,12 @@ public sealed class RunLifecycleManager
     public RunRecord? Get(string runId) =>
         _runs.TryGetValue(runId, out var run) ? run : null;
 
+    public IReadOnlyList<RunRecord> List() =>
+        _runs.Values
+            .OrderByDescending(run => run.StartedUtc)
+            .ThenBy(run => run.RunId, StringComparer.Ordinal)
+            .ToArray();
+
     public RunRecord? GetActive()
     {
         var id = _activeRunId;

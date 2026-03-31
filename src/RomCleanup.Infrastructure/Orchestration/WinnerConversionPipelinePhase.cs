@@ -18,49 +18,35 @@ public sealed class WinnerConversionPipelinePhase : IPipelinePhase<WinnerConvers
         context.Metrics.StartPhase(Name);
         context.OnProgress?.Invoke($"[Convert] Starte Formatkonvertierung für {input.GameGroups.Count} Gruppen…");
 
-        var counters = new ConversionPhaseHelper.ConversionCounters();
-        var conversionResults = new List<ConversionResult>();
-        var totalGroups = input.GameGroups.Count;
-        var processedGroups = 0;
-
-        foreach (var group in input.GameGroups)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            processedGroups++;
-
-            var winnerPath = group.Winner.MainPath;
-            if (input.JunkRemovedPaths.Contains(winnerPath) || !File.Exists(winnerPath))
+        var workItems = input.GameGroups
+            .Select((group, index) =>
             {
-                ReportProgress(context, processedGroups, totalGroups, counters);
-                continue;
-            }
+                var winnerPath = group.Winner.MainPath;
+                var skipBeforeConversion =
+                    input.JunkRemovedPaths.Contains(winnerPath)
+                    || !context.FileSystem.FileExists(winnerPath);
 
-            var convResult = ConversionPhaseHelper.ConvertSingleFile(
-                winnerPath,
-                group.Winner.ConsoleKey ?? "",
-                input.Converter,
-                input.Options,
-                context,
-                counters,
-                trackSetMembers: false,
-                cancellationToken);
+                return new ConversionPhaseHelper.ConversionWorkItem(
+                    Index: index,
+                    FilePath: winnerPath,
+                    ConsoleKey: group.Winner.ConsoleKey ?? string.Empty,
+                    TrackSetMembers: false,
+                    SkipBeforeConversion: skipBeforeConversion);
+            })
+            .ToArray();
 
-            if (convResult is not null)
-                conversionResults.Add(convResult);
+        var batch = ConversionPhaseHelper.ExecuteBatch(
+            workItems,
+            input.Converter,
+            input.Options,
+            context,
+            progressUnitLabel: "Gruppen",
+            cancellationToken);
 
-            ReportProgress(context, processedGroups, totalGroups, counters);
-        }
+        context.OnProgress?.Invoke($"[Convert] Abgeschlossen: {batch.Converted} konvertiert, {batch.Skipped} übersprungen, {batch.Blocked} blockiert, {batch.Errors} Fehler");
+        context.Metrics.CompletePhase(batch.Converted);
 
-        context.OnProgress?.Invoke($"[Convert] Abgeschlossen: {counters.Converted} konvertiert, {counters.Skipped} übersprungen, {counters.Blocked} blockiert, {counters.Errors} Fehler");
-        context.Metrics.CompletePhase(counters.Converted);
-
-        return new WinnerConversionPhaseOutput(counters.Converted, counters.Errors, counters.Skipped, counters.Blocked, conversionResults);
-    }
-
-    private static void ReportProgress(PipelineContext context, int processed, int total, ConversionPhaseHelper.ConversionCounters c)
-    {
-        if (processed % 25 == 0 || processed == total)
-            context.OnProgress?.Invoke($"[Convert] Fortschritt: {processed}/{total} Gruppen (ok={c.Converted}, skip={c.Skipped}, blocked={c.Blocked}, err={c.Errors})");
+        return new WinnerConversionPhaseOutput(batch.Converted, batch.Errors, batch.Skipped, batch.Blocked, batch.Results);
     }
 }
 

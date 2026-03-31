@@ -34,9 +34,9 @@ public sealed class DatAuditApiParityIssue9RedTests
     }
 
     [Fact]
-    public void OpenApi_ApiRunResultSchema_ShouldContainDatAuditCounters_Issue9()
+    public async Task OpenApi_ApiRunResultSchema_ShouldContainDatAuditCounters_Issue9()
     {
-        using var spec = JsonDocument.Parse(OpenApiSpec.Json);
+        using var spec = JsonDocument.Parse(await OpenApiTestHelper.FetchOpenApiJsonAsync());
 
         var props = spec.RootElement
             .GetProperty("components")

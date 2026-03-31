@@ -257,6 +257,150 @@ public sealed class ApiIntegrationTests
     }
 
     [Fact]
+    public async Task Runs_List_ReturnsVisibleRunsNewestFirst_WithPagination()
+    {
+        using var factory = CreateFactory();
+        using var ownerClient = CreateClientWithApiKey(factory);
+        using var otherClient = CreateClientWithApiKey(factory);
+        ownerClient.DefaultRequestHeaders.Add("X-Client-Id", "owner-history");
+        otherClient.DefaultRequestHeaders.Add("X-Client-Id", "other-history");
+
+        var firstRoot = CreateTempRoot();
+        var secondRoot = CreateTempRoot();
+        var foreignRoot = CreateTempRoot();
+
+        try
+        {
+            async Task<string> CreateRunAsync(HttpClient client, string root)
+            {
+                var payload = JsonSerializer.Serialize(new { roots = new[] { root }, mode = "DryRun" });
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                var response = await client.PostAsync("/runs?wait=true", content);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                return doc.RootElement.GetProperty("run").GetProperty("runId").GetString()!;
+            }
+
+            var firstRunId = await CreateRunAsync(ownerClient, firstRoot);
+            await Task.Delay(25);
+            _ = await CreateRunAsync(otherClient, foreignRoot);
+            await Task.Delay(25);
+            var secondRunId = await CreateRunAsync(ownerClient, secondRoot);
+
+            var listResponse = await ownerClient.GetAsync("/runs");
+            Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+            using var listDoc = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync());
+            var listRoot = listDoc.RootElement;
+            Assert.Equal(2, listRoot.GetProperty("total").GetInt32());
+            Assert.Equal(2, listRoot.GetProperty("returned").GetInt32());
+            Assert.True(listRoot.TryGetProperty("runs", out var runs));
+            Assert.Equal(secondRunId, runs[0].GetProperty("runId").GetString());
+            Assert.Equal(firstRunId, runs[1].GetProperty("runId").GetString());
+
+            var pagedResponse = await ownerClient.GetAsync("/runs?offset=1&limit=1");
+            Assert.Equal(HttpStatusCode.OK, pagedResponse.StatusCode);
+            using var pagedDoc = JsonDocument.Parse(await pagedResponse.Content.ReadAsStringAsync());
+            var pagedRoot = pagedDoc.RootElement;
+            Assert.Equal(2, pagedRoot.GetProperty("total").GetInt32());
+            Assert.Equal(1, pagedRoot.GetProperty("offset").GetInt32());
+            Assert.Equal(1, pagedRoot.GetProperty("limit").GetInt32());
+            Assert.Equal(1, pagedRoot.GetProperty("returned").GetInt32());
+            Assert.False(pagedRoot.GetProperty("hasMore").GetBoolean());
+            Assert.Equal(firstRunId, pagedRoot.GetProperty("runs")[0].GetProperty("runId").GetString());
+        }
+        finally
+        {
+            SafeDeleteDirectory(firstRoot);
+            SafeDeleteDirectory(secondRoot);
+            SafeDeleteDirectory(foreignRoot);
+        }
+    }
+
+    [Fact]
+    public async Task RunReportDownload_ReturnsHtmlArtifact_ForCompletedRun()
+    {
+        var root = CreateTempRoot();
+        var reportPath = Path.Combine(root, "artifacts", "report-test.html");
+        Directory.CreateDirectory(Path.GetDirectoryName(reportPath)!);
+
+        using var factory = CreateFactory(executor: (run, _, _, _) =>
+        {
+            File.WriteAllText(reportPath, "<html><body>report-ok</body></html>");
+            run.ReportPath = reportPath;
+            return new RunExecutionOutcome(ApiRunStatus.Completed, new ApiRunResult
+            {
+                OrchestratorStatus = "ok",
+                ExitCode = 0
+            });
+        });
+        using var client = CreateClientWithApiKey(factory);
+
+        try
+        {
+            var payload = JsonSerializer.Serialize(new { roots = new[] { root }, mode = "DryRun" });
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var createResponse = await client.PostAsync("/runs?wait=true", content);
+            Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+            using var createDoc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
+            var runId = createDoc.RootElement.GetProperty("run").GetProperty("runId").GetString()!;
+
+            var response = await client.GetAsync($"/runs/{runId}/report");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+            Assert.Contains("report-ok", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+            Assert.Equal("attachment", response.Content.Headers.ContentDisposition?.DispositionType);
+            Assert.Equal("report-test.html", response.Content.Headers.ContentDisposition?.FileName?.Trim('"'));
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task RunAuditDownload_ReturnsCsvArtifact_ForCompletedRun()
+    {
+        var root = CreateTempRoot();
+        var auditPath = Path.Combine(root, "artifacts", "audit-test.csv");
+        Directory.CreateDirectory(Path.GetDirectoryName(auditPath)!);
+
+        using var factory = CreateFactory(executor: (run, _, _, _) =>
+        {
+            File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action\nC:\\roms\\a,C:\\roms\\a,C:\\trash\\a,move\n");
+            run.AuditPath = auditPath;
+            return new RunExecutionOutcome(ApiRunStatus.Completed, new ApiRunResult
+            {
+                OrchestratorStatus = "ok",
+                ExitCode = 0
+            });
+        });
+        using var client = CreateClientWithApiKey(factory);
+
+        try
+        {
+            var payload = JsonSerializer.Serialize(new { roots = new[] { root }, mode = "Move" });
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var createResponse = await client.PostAsync("/runs?wait=true", content);
+            Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+            using var createDoc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
+            var runId = createDoc.RootElement.GetProperty("run").GetProperty("runId").GetString()!;
+
+            var response = await client.GetAsync($"/runs/{runId}/audit");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("text/csv", response.Content.Headers.ContentType?.MediaType);
+            Assert.Contains("RootPath,OldPath,NewPath,Action", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+            Assert.Equal("attachment", response.Content.Headers.ContentDisposition?.DispositionType);
+            Assert.Equal("audit-test.csv", response.Content.Headers.ContentDisposition?.FileName?.Trim('"'));
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task Runs_OversizedBody_ReturnsBadRequest()
     {
         using var factory = CreateFactory();
@@ -658,11 +802,18 @@ public sealed class ApiIntegrationTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
 
-        var json = await response.Content.ReadAsStringAsync();
-        Assert.Contains("\"securitySchemes\"", json, StringComparison.Ordinal);
-        Assert.Contains("\"ApiKey\"", json, StringComparison.Ordinal);
-        Assert.Contains("\"name\": \"X-Api-Key\"", json, StringComparison.Ordinal);
-        Assert.Contains("\"security\": [{ \"ApiKey\": [] }]", json, StringComparison.Ordinal);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var components = doc.RootElement.GetProperty("components");
+        var securitySchemes = components.GetProperty("securitySchemes");
+        var apiKeyScheme = securitySchemes.GetProperty("ApiKey");
+        var security = doc.RootElement.GetProperty("security");
+
+        Assert.Equal("apiKey", apiKeyScheme.GetProperty("type").GetString());
+        Assert.Equal("header", apiKeyScheme.GetProperty("in").GetString());
+        Assert.Equal("X-Api-Key", apiKeyScheme.GetProperty("name").GetString());
+        Assert.Equal(JsonValueKind.Array, security.ValueKind);
+        Assert.True(security.GetArrayLength() > 0);
+        Assert.True(security[0].TryGetProperty("ApiKey", out _));
     }
 
     private static WebApplicationFactory<Program> CreateFactory(

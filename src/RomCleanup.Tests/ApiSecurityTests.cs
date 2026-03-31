@@ -368,6 +368,44 @@ public sealed class ApiSecurityTests : IDisposable
     }
 
     [Fact]
+    public async Task RunArtifactEndpoints_Forbid_DifferentClientBinding()
+    {
+        var root = CreateTempRoot();
+        var reportPath = Path.Combine(root, "artifacts", "owner-report.html");
+        var auditPath = Path.Combine(root, "artifacts", "owner-audit.csv");
+        Directory.CreateDirectory(Path.GetDirectoryName(reportPath)!);
+
+        using var factory = CreateFactory(executor: (run, _, _, _) =>
+        {
+            File.WriteAllText(reportPath, "<html><body>owner-report</body></html>");
+            File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action\n");
+            run.ReportPath = reportPath;
+            run.AuditPath = auditPath;
+            return new RunExecutionOutcome(ApiRunStatus.Completed, new ApiRunResult
+            {
+                OrchestratorStatus = "ok",
+                ExitCode = 0
+            });
+        });
+        using var ownerClient = CreateAuthClient(factory, "owner-artifacts");
+        using var otherClient = CreateAuthClient(factory, "other-artifacts");
+
+        var payload = JsonSerializer.Serialize(new { roots = new[] { root }, mode = "Move" });
+        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        var createResponse = await ownerClient.PostAsync("/runs?wait=true", content);
+        Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+
+        using var doc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
+        var runId = doc.RootElement.GetProperty("run").GetProperty("runId").GetString()!;
+
+        var reportResponse = await otherClient.GetAsync($"/runs/{runId}/report");
+        Assert.Equal(HttpStatusCode.Forbidden, reportResponse.StatusCode);
+
+        var auditResponse = await otherClient.GetAsync($"/runs/{runId}/audit");
+        Assert.Equal(HttpStatusCode.Forbidden, auditResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task RunStatus_DoesNotExpose_SensitiveRunFields()
     {
         using var factory = CreateFactory();
@@ -426,6 +464,34 @@ public sealed class ApiSecurityTests : IDisposable
 
         Assert.False(result.TryGetProperty("auditPath", out _));
         Assert.False(result.TryGetProperty("reportPath", out _));
+    }
+
+    [Fact]
+    public async Task RunList_OnlyReturnsRunsVisibleToCurrentClient()
+    {
+        using var factory = CreateFactory();
+        using var ownerClient = CreateAuthClient(factory, "owner-list");
+        using var otherClient = CreateAuthClient(factory, "other-list");
+        var ownerRoot = CreateTempRoot();
+        var otherRoot = CreateTempRoot();
+
+        async Task CreateRunAsync(HttpClient client, string root)
+        {
+            var payload = JsonSerializer.Serialize(new { roots = new[] { root }, mode = "DryRun" });
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var response = await client.PostAsync("/runs?wait=true", content);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+
+        await CreateRunAsync(ownerClient, ownerRoot);
+        await CreateRunAsync(otherClient, otherRoot);
+
+        var response = await ownerClient.GetAsync("/runs");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var runs = doc.RootElement.GetProperty("runs");
+
+        Assert.Single(runs.EnumerateArray());
     }
 
     [Fact]

@@ -3,6 +3,7 @@ using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Metrics;
 using RomCleanup.Infrastructure.Orchestration;
+using System.Collections.Concurrent;
 using Xunit;
 
 namespace RomCleanup.Tests;
@@ -332,6 +333,146 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
     }
 
     [Fact]
+    public void ConvertOnlyPhase_PreservesResultOrder_ForIndependentCandidates()
+    {
+        var root = Path.Combine(_tempDir, "convert-parallel");
+        Directory.CreateDirectory(root);
+
+        var first = Path.Combine(root, "a.iso");
+        var second = Path.Combine(root, "b.iso");
+        var third = Path.Combine(root, "c.iso");
+        File.WriteAllText(first, "a");
+        File.WriteAllText(second, "b");
+        File.WriteAllText(third, "c");
+
+        var converter = new ParallelTrackingConverter(new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            [first] = 125,
+            [second] = 0,
+            [third] = 50
+        });
+
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".iso" },
+            ConvertOnly = true,
+            ConvertFormat = "chd",
+            Mode = RunConstants.ModeMove,
+            AuditPath = Path.Combine(_tempDir, "parallel-audit.csv")
+        };
+
+        var phase = new ConvertOnlyPipelinePhase();
+        var output = phase.Execute(
+            new ConvertOnlyPhaseInput(
+                new[]
+                {
+                    Candidate(first, "a", "US", 100, FileCategory.Game),
+                    Candidate(second, "b", "US", 100, FileCategory.Game),
+                    Candidate(third, "c", "US", 100, FileCategory.Game)
+                },
+                options,
+                converter),
+            CreateContext(options, new TestFileSystem(), new TrackingAuditStore()),
+            CancellationToken.None);
+
+        Assert.Equal(3, output.Converted);
+        Assert.Equal(
+            new[] { first, second, third },
+            output.ConversionResults.Select(r => r.SourcePath).ToArray());
+    }
+
+    [Fact]
+    public void ConvertOnlyPhase_SameBaseNameCandidates_AreSerializedToPreserveTargetExistsSemantics()
+    {
+        var root = Path.Combine(_tempDir, "convert-collision");
+        Directory.CreateDirectory(root);
+
+        var iso = Path.Combine(root, "game.iso");
+        var zip = Path.Combine(root, "game.zip");
+        File.WriteAllText(iso, "iso");
+        File.WriteAllText(zip, "zip");
+
+        var converter = new CollidingTargetConverter();
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".iso", ".zip" },
+            ConvertOnly = true,
+            ConvertFormat = "chd",
+            Mode = RunConstants.ModeMove,
+            AuditPath = Path.Combine(_tempDir, "collision-audit.csv")
+        };
+
+        var phase = new ConvertOnlyPipelinePhase();
+        var output = phase.Execute(
+            new ConvertOnlyPhaseInput(
+                new[]
+                {
+                    Candidate(iso, "game-iso", "US", 100, FileCategory.Game),
+                    Candidate(zip, "game-zip", "US", 100, FileCategory.Game)
+                },
+                options,
+                converter),
+            CreateContext(options, new TestFileSystem(), new TrackingAuditStore()),
+            CancellationToken.None);
+
+        Assert.Equal(1, output.Converted);
+        Assert.Equal(1, output.ConvertSkipped);
+        Assert.Equal(1, converter.MaxActiveObserved);
+    }
+
+    [Fact]
+    public void WinnerConversionPhase_PreservesResultOrder_ThroughSharedBatchExecution()
+    {
+        var root = Path.Combine(_tempDir, "winner-convert-parallel");
+        Directory.CreateDirectory(root);
+
+        var first = Path.Combine(root, "winner-a.iso");
+        var second = Path.Combine(root, "winner-b.iso");
+        File.WriteAllText(first, "a");
+        File.WriteAllText(second, "b");
+
+        var converter = new ParallelTrackingConverter();
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".iso" },
+            ConvertFormat = "chd",
+            Mode = RunConstants.ModeMove,
+            AuditPath = Path.Combine(_tempDir, "winner-parallel-audit.csv")
+        };
+
+        var output = new WinnerConversionPipelinePhase().Execute(
+            new WinnerConversionPhaseInput(
+                new[]
+                {
+                    new DedupeGroup
+                    {
+                        GameKey = "winner-a",
+                        Winner = Candidate(first, "winner-a", "US", 100, FileCategory.Game),
+                        Losers = Array.Empty<RomCandidate>()
+                    },
+                    new DedupeGroup
+                    {
+                        GameKey = "winner-b",
+                        Winner = Candidate(second, "winner-b", "US", 100, FileCategory.Game),
+                        Losers = Array.Empty<RomCandidate>()
+                    }
+                },
+                options,
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+                converter),
+            CreateContext(options, new TestFileSystem(), new TrackingAuditStore()),
+            CancellationToken.None);
+
+        Assert.Equal(2, output.Converted);
+        Assert.Equal(
+            new[] { first, second },
+            output.ConversionResults.Select(r => r.SourcePath).ToArray());
+    }
+
+    [Fact]
     public void DeduplicatePhase_RemainsStable_When_DatIndexUnavailable()
     {
         var options = new RunOptions { Roots = new[] { "C:/roms" }, Extensions = new[] { ".zip" } };
@@ -507,5 +648,121 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
 
         public bool Verify(string targetPath, ConversionTarget target)
             => _verifyResults.TryGetValue(targetPath, out var ok) && ok;
+    }
+
+    private sealed class ParallelTrackingConverter : IFormatConverter
+    {
+        private readonly IReadOnlyDictionary<string, int> _delayBySource;
+        private readonly ManualResetEventSlim _parallelGate = new(initialState: false);
+        private int _active;
+        private int _maxActiveObserved;
+
+        public ParallelTrackingConverter(IReadOnlyDictionary<string, int>? delayBySource = null)
+        {
+            _delayBySource = delayBySource
+                ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        public int MaxActiveObserved => Volatile.Read(ref _maxActiveObserved);
+
+        public ConversionTarget? GetTargetFormat(string consoleKey, string sourceExtension)
+            => new(".chd", "noop", "noop");
+
+        public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
+        {
+            var active = Interlocked.Increment(ref _active);
+            UpdateMax(active);
+
+            if (active >= 2)
+                _parallelGate.Set();
+            else
+                _parallelGate.Wait(TimeSpan.FromMilliseconds(500));
+
+            try
+            {
+                if (_delayBySource.TryGetValue(sourcePath, out var delayMs) && delayMs > 0)
+                    Thread.Sleep(delayMs);
+
+                var targetPath = Path.Combine(
+                    Path.GetDirectoryName(sourcePath)!,
+                    Path.GetFileNameWithoutExtension(sourcePath) + target.Extension);
+                File.WriteAllText(targetPath, "converted");
+                return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _active);
+            }
+        }
+
+        public bool Verify(string targetPath, ConversionTarget target) => true;
+
+        private void UpdateMax(int active)
+        {
+            while (true)
+            {
+                var observed = Volatile.Read(ref _maxActiveObserved);
+                if (active <= observed)
+                    return;
+
+                if (Interlocked.CompareExchange(ref _maxActiveObserved, active, observed) == observed)
+                    return;
+            }
+        }
+    }
+
+    private sealed class CollidingTargetConverter : IFormatConverter
+    {
+        private readonly ManualResetEventSlim _parallelGate = new(initialState: false);
+        private int _active;
+        private int _maxActiveObserved;
+
+        public int MaxActiveObserved => Volatile.Read(ref _maxActiveObserved);
+
+        public ConversionTarget? GetTargetFormat(string consoleKey, string sourceExtension)
+            => new(".chd", "noop", "noop");
+
+        public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
+        {
+            var active = Interlocked.Increment(ref _active);
+            UpdateMax(active);
+
+            if (active >= 2)
+                _parallelGate.Set();
+            else
+                _parallelGate.Wait(TimeSpan.FromMilliseconds(500));
+
+            try
+            {
+                var targetPath = Path.Combine(
+                    Path.GetDirectoryName(sourcePath)!,
+                    Path.GetFileNameWithoutExtension(sourcePath) + target.Extension);
+
+                if (File.Exists(targetPath))
+                    return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped, "target-exists");
+
+                File.WriteAllText(targetPath, "converted");
+                return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _active);
+            }
+        }
+
+        public bool Verify(string targetPath, ConversionTarget target) => true;
+
+        private void UpdateMax(int active)
+        {
+            while (true)
+            {
+                var observed = Volatile.Read(ref _maxActiveObserved);
+                if (active <= observed)
+                    return;
+
+                if (Interlocked.CompareExchange(ref _maxActiveObserved, active, observed) == observed)
+                    return;
+            }
+        }
     }
 }

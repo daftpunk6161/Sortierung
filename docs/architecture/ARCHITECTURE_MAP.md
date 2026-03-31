@@ -1,6 +1,6 @@
 # Romulus — Architektur-Map & Modul-Verantwortlichkeiten
 
-Stand: 2026-03-31
+Stand: 2026-04-01
 Plattform: C# .NET 10 (net10.0, LangVersion 14)
 Referenzen: ADR 0002 (Ports/Services), ADR 0004 (Clean Architecture)
 
@@ -90,7 +90,7 @@ src/
 ├── RomCleanup.CLI/            ← Headless Entry Point
 ├── RomCleanup.Api/            ← ASP.NET Core Minimal API
 ├── RomCleanup.UI.Wpf/         ← WPF GUI (MVVM, net10.0-windows)
-└── RomCleanup.Tests/          ← xUnit Tests (aktuell 6996 Tests, 200+ Testdateien)
+└── RomCleanup.Tests/          ← xUnit Tests (aktuell 7047 Tests, 200+ Testdateien)
 ```
 
 ---
@@ -165,7 +165,7 @@ src/
 | `RomCleanup.Api/Program.cs` | ASP.NET Core Minimal API (127.0.0.1, API-Key, CORS, Rate-Limiting) |
 | `RomCleanup.Api/RunManager.cs` | Run-Lifecycle (Create, Execute, Cancel, SSE-Stream) |
 | `RomCleanup.Api/RateLimiter.cs` | Sliding-Window Rate-Limiting (120 req/min) |
-| `RomCleanup.Api/OpenApiSpec.cs` | Eingebettete OpenAPI 3.0.3 Spec |
+| `RomCleanup.Api/OpenApiSpec.cs` | OpenAPI-Konfiguration und Transformer fuer die generierte Laufzeit-Spec |
 | `RomCleanup.UI.Wpf/MainWindow.xaml` | WPF-Hauptfenster (TabControl, Dashboard, Timeline) |
 | `RomCleanup.UI.Wpf/ViewModels/MainViewModel.cs` | MVVM-ViewModel (INotifyPropertyChanged, Commands) |
 | `RomCleanup.UI.Wpf/Services/ThemeService.cs` | Dark/Light-Theme-Verwaltung |
@@ -212,6 +212,6 @@ src/
 
 ## 6 — Tests
 
-Aktuell 6996 xUnit-Tests in 200+ Testdateien (`src/RomCleanup.Tests/`).
+Aktuell 7047 xUnit-Tests in 200+ Testdateien (`src/RomCleanup.Tests/`).
 
 Detaillierte Teststrategie: siehe `TEST_STRATEGY.md`.

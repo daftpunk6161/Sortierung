@@ -247,9 +247,9 @@ public sealed class ConversionReportParityTests
     }
 
     [Fact]
-    public void OpenApiSchema_ContainsConversionPlanAndBlockedSchemas()
+    public async Task OpenApiSchema_ContainsConversionPlanAndBlockedSchemas()
     {
-        using var spec = JsonDocument.Parse(OpenApiSpec.Json);
+        using var spec = JsonDocument.Parse(await OpenApiTestHelper.FetchOpenApiJsonAsync());
         var schemas = spec.RootElement
             .GetProperty("components")
             .GetProperty("schemas");

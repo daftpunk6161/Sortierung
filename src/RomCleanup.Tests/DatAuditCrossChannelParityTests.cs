@@ -122,9 +122,9 @@ public sealed class DatAuditCrossChannelParityTests
     }
 
     [Fact]
-    public void OpenApiSpec_DatAuditCounterTypes_AllInteger()
+    public async Task OpenApiSpec_DatAuditCounterTypes_AllInteger()
     {
-        using var spec = JsonDocument.Parse(OpenApiSpec.Json);
+        using var spec = JsonDocument.Parse(await OpenApiTestHelper.FetchOpenApiJsonAsync());
         var props = spec.RootElement
             .GetProperty("components")
             .GetProperty("schemas")
@@ -134,7 +134,18 @@ public sealed class DatAuditCrossChannelParityTests
         foreach (var field in new[] { "datHaveCount", "datHaveWrongNameCount", "datMissCount", "datUnknownCount", "datAmbiguousCount" })
         {
             Assert.True(props.TryGetProperty(field, out var prop), $"Missing property: {field}");
-            Assert.Equal("integer", prop.GetProperty("type").GetString());
+            var hasExplicitIntegerType =
+                prop.TryGetProperty("type", out var typeProp) &&
+                string.Equals(typeProp.GetString(), "integer", StringComparison.Ordinal);
+            var hasInt32Shape =
+                prop.TryGetProperty("format", out var formatProp) &&
+                string.Equals(formatProp.GetString(), "int32", StringComparison.Ordinal) &&
+                prop.TryGetProperty("pattern", out var patternProp) &&
+                !string.IsNullOrWhiteSpace(patternProp.GetString());
+
+            Assert.True(
+                hasExplicitIntegerType || hasInt32Shape,
+                $"Property '{field}' must expose integer semantics via type=integer or int32 format.");
         }
     }
 

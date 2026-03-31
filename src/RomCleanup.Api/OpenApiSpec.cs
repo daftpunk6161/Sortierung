@@ -1,598 +1,213 @@
+using Microsoft.AspNetCore.OpenApi;
+using Microsoft.OpenApi;
+
 namespace RomCleanup.Api;
 
-/// <summary>
-/// Embedded OpenAPI 3.0.3 specification for the Romulus API.
-/// </summary>
 public static class OpenApiSpec
 {
-    public const string Json = """
-{
-  "openapi": "3.0.3",
-  "info": {
-    "title": "Romulus API",
-    "version": "1.0.0",
-    "description": "Romulus REST API — Your Collection, Perfected. Region deduplication, junk removal, format conversion."
-  },
-  "servers": [{ "url": "http://127.0.0.1:7878" }],
-  "paths": {
-    "/healthz": {
-      "get": {
-        "summary": "Unauthenticated local liveness probe",
-        "security": [],
-        "responses": {
-          "200": { "description": "Minimal server liveness status" }
-        }
-      }
-    },
-    "/health": {
-      "get": {
-        "summary": "Authenticated health check",
-        "responses": {
-          "200": { "description": "Server status" }
-        }
-      }
-    },
-    "/runs": {
-      "post": {
-        "summary": "Create and execute a deduplication run",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/RunRequest" }
-            }
-          }
-        },
-        "parameters": [
-          { "name": "wait", "in": "query", "schema": { "type": "boolean" }, "description": "Wait for completion without cancelling the server-side run on client disconnect" },
-          { "name": "waitTimeoutMs", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 1800000 }, "description": "Maximum wait time before returning 202 with the current run state" },
-          { "name": "X-Idempotency-Key", "in": "header", "schema": { "type": "string" }, "description": "Reuse the same run for retries of the same request" },
-          { "name": "X-Client-Id", "in": "header", "schema": { "type": "string", "maxLength": 64 }, "description": "Optional logical client binding used for run ownership checks" }
-        ],
-        "responses": {
-          "202": { "description": "Run created (async)" },
-          "200": { "description": "Run completed or reused" },
-          "400": { "description": "Validation error" },
-          "403": { "description": "Run belongs to another client" },
-          "409": { "description": "Run conflict" }
-        }
-      }
-    },
-    "/runs/{runId}": {
-      "get": {
-        "summary": "Get run status",
-        "responses": {
-          "200": {
-            "description": "Run status",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/RunEnvelope" }
-              }
-            }
-          },
-          "403": { "description": "Run belongs to another client" },
-          "404": { "description": "Run not found" }
-        }
-      }
-    },
-    "/runs/{runId}/result": {
-      "get": {
-        "summary": "Get completed run result",
-        "responses": {
-          "200": {
-            "description": "Full result",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/RunResultEnvelope" }
-              }
-            }
-          },
-          "403": { "description": "Run belongs to another client" },
-          "404": { "description": "Run not found" },
-          "409": { "description": "Run still in progress" }
-        }
-      }
-    },
-    "/runs/{runId}/reviews": {
-      "get": {
-        "summary": "Get review queue for a run",
-        "parameters": [
-          { "name": "offset", "in": "query", "schema": { "type": "integer", "minimum": 0 }, "description": "Optional zero-based start offset for pagination" },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 1000 }, "description": "Optional page size for pagination" }
-        ],
-        "responses": {
-          "200": {
-            "description": "Review queue",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ApiReviewQueue" }
-              }
-            }
-          },
-          "403": { "description": "Run belongs to another client" },
-          "404": { "description": "Run not found" }
-        }
-      }
-    },
-    "/runs/{runId}/reviews/approve": {
-      "post": {
-        "summary": "Approve review items for a run",
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/ApiReviewApprovalRequest" }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Approval applied" },
-          "400": { "description": "Validation error" },
-          "403": { "description": "Run belongs to another client" },
-          "404": { "description": "Run not found" }
-        }
-      }
-    },
-    "/runs/{runId}/cancel": {
-      "post": {
-        "summary": "Cancel a run idempotently",
-        "responses": {
-          "200": {
-            "description": "Cancel accepted or no-op for an already terminal run",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/RunCancelEnvelope" }
-              }
-            }
-          },
-          "403": { "description": "Run belongs to another client" },
-          "404": { "description": "Run not found" }
-        }
-      }
-    },
-    "/runs/{runId}/rollback": {
-      "post": {
-        "summary": "Preview or execute audit-based rollback for a completed run",
-        "parameters": [
-          { "name": "dryRun", "in": "query", "schema": { "type": "boolean" }, "description": "Defaults to true. Pass false to execute the rollback." }
-        ],
-        "responses": {
-          "200": {
-            "description": "Rollback preview or execution result",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/RunRollbackEnvelope" }
-              }
-            }
-          },
-          "403": { "description": "Run belongs to another client" },
-          "404": { "description": "Run not found" },
-          "409": { "description": "Rollback not available or run still in progress" }
-        }
-      }
-    },
-    "/runs/{runId}/stream": {
-      "get": {
-        "summary": "SSE progress stream",
-        "responses": {
-          "200": { "description": "Server-Sent Events stream" },
-          "403": { "description": "Run belongs to another client" },
-          "404": { "description": "Run not found" }
-        }
-      }
-    },
-    "/dats/status": {
-      "get": {
-        "summary": "Get DAT collection status and statistics",
-        "responses": {
-          "200": { "description": "DAT status including file counts per console, age, and catalog info" }
-        }
-      }
-    },
-    "/dats/update": {
-      "post": {
-        "summary": "Trigger DAT file download/update from catalog sources",
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "force": { "type": "boolean", "description": "Re-download even if target file already exists" }
+    public const string DocumentName = "v1";
+    private const string ApiKeySchemeId = "ApiKey";
+
+    public static void Configure(OpenApiOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        options.OpenApiVersion = OpenApiSpecVersion.OpenApi3_0;
+
+        options.AddDocumentTransformer((document, _, _) =>
+        {
+            document.Info = new OpenApiInfo
+            {
+                Title = "Romulus API",
+                Version = Program.ApiVersion,
+                Description = "Romulus REST API — Your Collection, Perfected. Region deduplication, junk removal, format conversion."
+            };
+
+            document.Servers = new List<OpenApiServer>
+            {
+                new() { Url = "http://127.0.0.1:7878" }
+            };
+
+            document.Components ??= new OpenApiComponents();
+            document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>(StringComparer.Ordinal);
+            document.Components.SecuritySchemes[ApiKeySchemeId] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.ApiKey,
+                In = ParameterLocation.Header,
+                Name = "X-Api-Key",
+                Description = "API key required for authenticated endpoints."
+            };
+
+            var securitySchemeReference = new OpenApiSecuritySchemeReference(ApiKeySchemeId, document, externalResource: null);
+
+            document.Security = new List<OpenApiSecurityRequirement>
+            {
+                new()
+                {
+                    [securitySchemeReference] = new List<string>()
                 }
-              }
+            };
+
+            return Task.CompletedTask;
+        });
+
+        options.AddSchemaTransformer((schema, context, _) =>
+        {
+            ApplyPrimitiveOpenApiType(schema, context);
+            return Task.CompletedTask;
+        });
+
+        options.AddOperationTransformer(async (operation, context, cancellationToken) =>
+        {
+            var relativePath = NormalizeRelativePath(context.Description.RelativePath);
+            var httpMethod = context.Description.HttpMethod;
+
+            if (string.Equals(relativePath, "/healthz", StringComparison.OrdinalIgnoreCase))
+            {
+                operation.Security = new List<OpenApiSecurityRequirement>();
+                return;
             }
-          }
-        },
-        "responses": {
-          "200": { "description": "Update results with download/skip/fail counts" },
-          "400": { "description": "DatRoot not configured or catalog empty" },
-          "404": { "description": "dat-catalog.json not found" }
-        }
-      }
-    },
-    "/dats/import": {
-      "post": {
-        "summary": "Import a local DAT file into the DatRoot",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "path": { "type": "string", "description": "Absolute path to the DAT file to import" }
-                },
-                "required": ["path"]
-              }
+
+            if (!string.Equals(relativePath, "/openapi", StringComparison.OrdinalIgnoreCase))
+            {
+                AddHeaderParameterIfMissing(
+                    operation,
+                    "X-Client-Id",
+                    required: false,
+                    "Optional logical client binding used for run ownership checks.");
             }
-          }
-        },
-        "responses": {
-          "200": { "description": "Import successful" },
-          "400": { "description": "Validation error (path, format, security)" },
-          "404": { "description": "Source file not found" }
-        }
-      }
-    },
-    "/convert": {
-      "post": {
-        "summary": "Convert ROM files to optimal format (CHD/RVZ/ZIP)",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "input": { "type": "string", "description": "Absolute path to file or directory" },
-                  "consoleKey": { "type": "string", "nullable": true, "description": "Console key for format selection (auto-detected if omitted)" },
-                  "target": { "type": "string", "nullable": true, "description": "Target format: chd, rvz, zip, 7z (auto if omitted)" }
-                },
-                "required": ["input"]
-              }
+
+            if (string.Equals(relativePath, "/runs", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(httpMethod, "POST", StringComparison.OrdinalIgnoreCase))
+            {
+                operation.RequestBody = new OpenApiRequestBody
+                {
+                    Required = true,
+                    Content = new Dictionary<string, OpenApiMediaType>
+                    {
+                        ["application/json"] = new()
+                        {
+                            Schema = await context.GetOrCreateSchemaAsync(typeof(RunRequest), parameterDescription: null, cancellationToken)
+                        }
+                    }
+                };
+
+                AddHeaderParameterIfMissing(
+                    operation,
+                    "X-Idempotency-Key",
+                    required: false,
+                    "Reuse the same run for retries of the same request.");
             }
-          }
-        },
-        "responses": {
-          "200": { "description": "Conversion result with per-file outcomes" },
-          "400": { "description": "Validation error" },
-          "404": { "description": "Input not found" },
-          "500": { "description": "No converter available" }
-        }
-      }
-    },
-    "/runs/{runId}/completeness": {
-      "get": {
-        "summary": "Get collection completeness report per console",
-        "responses": {
-          "200": { "description": "Per-console completeness data comparing DAT entries to collection files" },
-          "400": { "description": "No roots or DAT not available" },
-          "403": { "description": "Run belongs to another client" },
-          "404": { "description": "Run not found" },
-          "409": { "description": "Run still in progress" }
-        }
-      }
+
+            if (string.Equals(relativePath, "/runs/{runId}/reviews/approve", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(httpMethod, "POST", StringComparison.OrdinalIgnoreCase))
+            {
+                operation.RequestBody = new OpenApiRequestBody
+                {
+                    Required = false,
+                    Content = new Dictionary<string, OpenApiMediaType>
+                    {
+                        ["application/json"] = new()
+                        {
+                            Schema = await context.GetOrCreateSchemaAsync(typeof(ApiReviewApprovalRequest), parameterDescription: null, cancellationToken)
+                        }
+                    }
+                };
+            }
+        });
     }
-  },
-  "components": {
-    "schemas": {
-      "OperationError": {
-        "type": "object",
-        "properties": {
-          "code": { "type": "string" },
-          "message": { "type": "string" },
-          "kind": { "type": "string", "enum": ["Transient", "Recoverable", "Critical"] },
-          "module": { "type": "string", "nullable": true }
+
+    private static void ApplyPrimitiveOpenApiType(OpenApiSchema schema, OpenApiSchemaTransformerContext context)
+    {
+        ArgumentNullException.ThrowIfNull(schema);
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (schema.Type is not null)
+            return;
+
+        var targetType = Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) ?? context.JsonTypeInfo.Type;
+        if (targetType.IsEnum)
+            return;
+
+        if (targetType == typeof(bool))
+        {
+            schema.Type = JsonSchemaType.Boolean;
+            return;
         }
-      },
-      "RunRequest": {
-        "type": "object",
-        "properties": {
-          "roots": { "type": "array", "items": { "type": "string" } },
-          "mode": { "type": "string", "enum": ["DryRun", "Move"] },
-          "preferRegions": { "type": "array", "items": { "type": "string" } },
-          "removeJunk": { "type": "boolean" },
-          "aggressiveJunk": { "type": "boolean" },
-          "sortConsole": { "type": "boolean" },
-          "enableDat": { "type": "boolean" },
-          "enableDatAudit": { "type": "boolean" },
-          "enableDatRename": { "type": "boolean" },
-          "datRoot": { "type": "string", "nullable": true },
-          "onlyGames": { "type": "boolean" },
-          "keepUnknownWhenOnlyGames": { "type": "boolean" },
-          "hashType": { "type": "string", "enum": ["SHA1", "SHA256", "MD5"] },
-          "convertFormat": { "type": "string", "enum": ["auto", "chd", "rvz", "zip", "7z"] },
-          "convertOnly": { "type": "boolean" },
-          "approveReviews": { "type": "boolean" },
-          "conflictPolicy": { "type": "string", "enum": ["Rename", "Skip", "Overwrite"] },
-          "trashRoot": { "type": "string", "nullable": true },
-          "extensions": { "type": "array", "items": { "type": "string" } }
-        },
-        "required": ["roots"]
-      },
-      "ApiRunResult": {
-        "type": "object",
-        "properties": {
-          "orchestratorStatus": { "type": "string" },
-          "exitCode": { "type": "integer" },
-          "totalFiles": { "type": "integer" },
-          "candidates": { "type": "integer" },
-          "groups": { "type": "integer" },
-          "winners": { "type": "integer" },
-          "losers": { "type": "integer" },
-          "games": { "type": "integer" },
-          "unknown": { "type": "integer" },
-          "junk": { "type": "integer" },
-          "bios": { "type": "integer" },
-          "datMatches": { "type": "integer" },
-          "healthScore": { "type": "integer" },
-          "convertedCount": { "type": "integer" },
-          "convertErrorCount": { "type": "integer" },
-          "convertSkippedCount": { "type": "integer" },
-          "convertBlockedCount": { "type": "integer" },
-          "convertReviewCount": { "type": "integer" },
-          "convertLossyWarningCount": { "type": "integer" },
-          "convertVerifyPassedCount": { "type": "integer" },
-          "convertVerifyFailedCount": { "type": "integer" },
-          "convertSavedBytes": { "type": "integer", "format": "int64" },
-          "datHaveCount": { "type": "integer" },
-          "datHaveWrongNameCount": { "type": "integer" },
-          "datMissCount": { "type": "integer" },
-          "datUnknownCount": { "type": "integer" },
-          "datAmbiguousCount": { "type": "integer" },
-          "datRenameProposedCount": { "type": "integer" },
-          "datRenameExecutedCount": { "type": "integer" },
-          "datRenameSkippedCount": { "type": "integer" },
-          "datRenameFailedCount": { "type": "integer" },
-          "junkRemovedCount": { "type": "integer" },
-          "filteredNonGameCount": { "type": "integer" },
-          "junkFailCount": { "type": "integer" },
-          "moveCount": { "type": "integer" },
-          "skipCount": { "type": "integer" },
-          "consoleSortMoved": { "type": "integer" },
-          "consoleSortFailed": { "type": "integer" },
-          "consoleSortReviewed": { "type": "integer" },
-          "consoleSortBlocked": { "type": "integer" },
-          "failCount": { "type": "integer" },
-          "savedBytes": { "type": "integer", "format": "int64" },
-          "durationMs": { "type": "integer", "format": "int64" },
-          "preflightWarnings": { "type": "array", "items": { "type": "string" }, "nullable": true },
-          "phaseMetrics": { "$ref": "#/components/schemas/ApiPhaseMetrics", "nullable": true },
-          "dedupeGroups": { "type": "array", "items": { "$ref": "#/components/schemas/ApiDedupeGroup" }, "nullable": true },
-          "conversionPlans": { "type": "array", "items": { "$ref": "#/components/schemas/ApiConversionPlan" }, "nullable": true },
-          "conversionBlocked": { "type": "array", "items": { "$ref": "#/components/schemas/ApiConversionBlocked" }, "nullable": true },
-          "error": { "$ref": "#/components/schemas/OperationError", "nullable": true }
+
+        if (targetType == typeof(byte) ||
+            targetType == typeof(short) ||
+            targetType == typeof(int) ||
+            targetType == typeof(long) ||
+            targetType == typeof(sbyte) ||
+            targetType == typeof(ushort) ||
+            targetType == typeof(uint) ||
+            targetType == typeof(ulong))
+        {
+            schema.Type = JsonSchemaType.Integer;
+            return;
         }
-      },
-      "ApiPhaseMetrics": {
-        "type": "object",
-        "properties": {
-          "runId": { "type": "string", "nullable": true },
-          "startedAt": { "type": "string", "format": "date-time", "nullable": true },
-          "totalDurationMs": { "type": "integer", "format": "int64" },
-          "phases": { "type": "array", "items": { "$ref": "#/components/schemas/ApiPhaseMetric" } }
+
+        if (targetType == typeof(float) ||
+            targetType == typeof(double) ||
+            targetType == typeof(decimal))
+        {
+            schema.Type = JsonSchemaType.Number;
+            return;
         }
-      },
-      "ApiPhaseMetric": {
-        "type": "object",
-        "properties": {
-          "phase": { "type": "string" },
-          "startedAt": { "type": "string", "format": "date-time" },
-          "durationMs": { "type": "integer", "format": "int64" },
-          "itemCount": { "type": "integer" },
-          "itemsPerSec": { "type": "number", "format": "double" },
-          "percentOfTotal": { "type": "number", "format": "double" },
-          "status": { "type": "string" }
+
+        if (targetType == typeof(char) ||
+            targetType == typeof(string) ||
+            targetType == typeof(Guid) ||
+            targetType == typeof(Uri) ||
+            targetType == typeof(DateOnly) ||
+            targetType == typeof(TimeOnly) ||
+            targetType == typeof(DateTime) ||
+            targetType == typeof(DateTimeOffset) ||
+            targetType == typeof(TimeSpan))
+        {
+            schema.Type = JsonSchemaType.String;
         }
-      },
-      "ApiDedupeGroup": {
-        "type": "object",
-        "properties": {
-          "gameKey": { "type": "string" },
-          "winner": { "$ref": "#/components/schemas/RomCandidate" },
-          "losers": { "type": "array", "items": { "$ref": "#/components/schemas/RomCandidate" } }
-        }
-      },
-      "ApiConversionPlan": {
-        "type": "object",
-        "properties": {
-          "sourcePath": { "type": "string" },
-          "targetExtension": { "type": "string", "nullable": true },
-          "safety": { "type": "string" },
-          "outcome": { "type": "string" },
-          "verification": { "type": "string" }
-        }
-      },
-      "ApiConversionBlocked": {
-        "type": "object",
-        "properties": {
-          "sourcePath": { "type": "string" },
-          "reason": { "type": "string" },
-          "safety": { "type": "string" }
-        }
-      },
-      "ApiReviewItem": {
-        "type": "object",
-        "properties": {
-          "mainPath": { "type": "string" },
-          "fileName": { "type": "string" },
-          "consoleKey": { "type": "string" },
-          "sortDecision": { "type": "string" },
-          "decisionClass": { "type": "string" },
-          "evidenceTier": { "type": "string" },
-          "primaryMatchKind": { "type": "string" },
-          "platformFamily": { "type": "string" },
-          "matchLevel": { "type": "string" },
-          "matchReasoning": { "type": "string" },
-          "detectionConfidence": { "type": "integer" },
-          "approved": { "type": "boolean" }
-        }
-      },
-      "ApiReviewQueue": {
-        "type": "object",
-        "properties": {
-          "runId": { "type": "string" },
-          "total": { "type": "integer" },
-          "offset": { "type": "integer" },
-          "limit": { "type": "integer" },
-          "returned": { "type": "integer" },
-          "hasMore": { "type": "boolean" },
-          "items": { "type": "array", "items": { "$ref": "#/components/schemas/ApiReviewItem" } }
-        }
-      },
-      "ApiReviewApprovalRequest": {
-        "type": "object",
-        "properties": {
-          "consoleKey": { "type": "string", "nullable": true },
-          "matchLevel": { "type": "string", "nullable": true },
-          "paths": { "type": "array", "items": { "type": "string" }, "nullable": true }
-        }
-      },
-      "RunEnvelope": {
-        "type": "object",
-        "properties": {
-          "run": { "$ref": "#/components/schemas/RunStatusDto" }
-        }
-      },
-      "RunResultEnvelope": {
-        "type": "object",
-        "properties": {
-          "run": { "$ref": "#/components/schemas/RunStatusDto" },
-          "result": { "$ref": "#/components/schemas/ApiRunResult", "nullable": true }
-        }
-      },
-      "RunCancelEnvelope": {
-        "type": "object",
-        "properties": {
-          "run": { "$ref": "#/components/schemas/RunStatusDto", "nullable": true },
-          "cancelAccepted": { "type": "boolean" },
-          "idempotent": { "type": "boolean" },
-          "cancelledAtUtc": { "type": "string", "format": "date-time", "nullable": true }
-        }
-      },
-      "RunRollbackEnvelope": {
-        "type": "object",
-        "properties": {
-          "run": { "$ref": "#/components/schemas/RunStatusDto" },
-          "dryRun": { "type": "boolean" },
-          "rollback": { "$ref": "#/components/schemas/AuditRollbackResult" }
-        }
-      },
-      "RunStatusDto": {
-        "type": "object",
-        "properties": {
-          "runId": { "type": "string" },
-          "status": { "type": "string" },
-          "mode": { "type": "string" },
-          "preferRegions": { "type": "array", "items": { "type": "string" } },
-          "removeJunk": { "type": "boolean" },
-          "aggressiveJunk": { "type": "boolean" },
-          "sortConsole": { "type": "boolean" },
-          "enableDat": { "type": "boolean" },
-          "enableDatAudit": { "type": "boolean" },
-          "enableDatRename": { "type": "boolean" },
-          "onlyGames": { "type": "boolean" },
-          "keepUnknownWhenOnlyGames": { "type": "boolean" },
-          "hashType": { "type": "string" },
-          "convertFormat": { "type": "string", "nullable": true },
-          "convertOnly": { "type": "boolean" },
-          "approveReviews": { "type": "boolean" },
-          "conflictPolicy": { "type": "string" },
-          "extensions": { "type": "array", "items": { "type": "string" } },
-          "startedUtc": { "type": "string", "format": "date-time" },
-          "completedUtc": { "type": "string", "format": "date-time", "nullable": true },
-          "elapsedMs": { "type": "integer", "format": "int64" },
-          "progressPercent": { "type": "integer" },
-          "progressMessage": { "type": "string", "nullable": true },
-          "cancelledAtUtc": { "type": "string", "format": "date-time", "nullable": true },
-          "recoveryModel": { "type": "string" },
-          "restartRecovery": { "type": "string" },
-          "resumeSupported": { "type": "boolean" },
-          "canRetry": { "type": "boolean" },
-          "canRollback": { "type": "boolean" },
-          "recoveryState": { "type": "string" },
-          "cancellationRequested": { "type": "boolean" }
-        }
-      },
-      "AuditRollbackResult": {
-        "type": "object",
-        "properties": {
-          "auditCsvPath": { "type": "string" },
-          "totalRows": { "type": "integer" },
-          "eligibleRows": { "type": "integer" },
-          "skippedUnsafe": { "type": "integer" },
-          "rolledBack": { "type": "integer" },
-          "dryRunPlanned": { "type": "integer" },
-          "skippedMissingDest": { "type": "integer" },
-          "skippedCollision": { "type": "integer" },
-          "failed": { "type": "integer" },
-          "dryRun": { "type": "boolean" },
-          "rollbackAuditPath": { "type": "string", "nullable": true },
-          "rollbackTrailPath": { "type": "string", "nullable": true },
-          "restoredPaths": { "type": "array", "items": { "type": "string" } },
-          "plannedPaths": { "type": "array", "items": { "type": "string" } }
-        }
-      },
-      "MatchEvidence": {
-        "type": "object",
-        "properties": {
-          "level": { "type": "string", "enum": ["None", "Weak", "Probable", "Strong", "Exact", "Ambiguous"] },
-          "reasoning": { "type": "string" },
-          "sources": { "type": "array", "items": { "type": "string" } },
-          "hasHardEvidence": { "type": "boolean" },
-          "hasConflict": { "type": "boolean" },
-          "datVerified": { "type": "boolean" },
-          "tier": { "type": "string" },
-          "primaryMatchKind": { "type": "string" }
-        }
-      },
-      "RomCandidate": {
-        "type": "object",
-        "properties": {
-          "mainPath": { "type": "string" },
-          "gameKey": { "type": "string" },
-          "region": { "type": "string" },
-          "regionScore": { "type": "integer" },
-          "formatScore": { "type": "integer" },
-          "versionScore": { "type": "integer", "format": "int64" },
-          "headerScore": { "type": "integer" },
-          "completenessScore": { "type": "integer" },
-          "sizeTieBreakScore": { "type": "integer", "format": "int64" },
-          "sizeBytes": { "type": "integer", "format": "int64" },
-          "extension": { "type": "string" },
-          "consoleKey": { "type": "string" },
-          "datMatch": { "type": "boolean" },
-          "hash": { "type": "string", "nullable": true },
-          "headerlessHash": { "type": "string", "nullable": true },
-          "datGameName": { "type": "string", "nullable": true },
-          "datAuditStatus": { "type": "string" },
-          "category": { "type": "string" },
-          "classificationReasonCode": { "type": "string" },
-          "classificationConfidence": { "type": "integer" },
-          "detectionConfidence": { "type": "integer" },
-          "detectionConflict": { "type": "boolean" },
-          "hasHardEvidence": { "type": "boolean" },
-          "isSoftOnly": { "type": "boolean" },
-          "sortDecision": { "type": "string" },
-          "decisionClass": { "type": "string" },
-          "matchEvidence": { "$ref": "#/components/schemas/MatchEvidence" },
-          "evidenceTier": { "type": "string" },
-          "primaryMatchKind": { "type": "string" },
-          "platformFamily": { "type": "string" }
-        }
-      }
-    },
-    "securitySchemes": {
-      "ApiKey": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-Api-Key"
-      }
     }
-  },
-  "security": [{ "ApiKey": [] }]
-}
-""";
+
+    private static string NormalizeRelativePath(string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+            return "/";
+
+        var trimmed = relativePath.TrimStart('/');
+        var querySeparatorIndex = trimmed.IndexOf('?', StringComparison.Ordinal);
+        if (querySeparatorIndex >= 0)
+            trimmed = trimmed[..querySeparatorIndex];
+
+        return "/" + trimmed;
+    }
+
+    private static void AddHeaderParameterIfMissing(
+        OpenApiOperation operation,
+        string name,
+        bool required,
+        string description)
+    {
+        if (operation.Parameters is null)
+            operation.Parameters = new List<IOpenApiParameter>();
+        if (operation.Parameters.Any(parameter =>
+                parameter.In == ParameterLocation.Header &&
+                string.Equals(parameter.Name, name, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        operation.Parameters.Add(new OpenApiParameter
+        {
+            Name = name,
+            In = ParameterLocation.Header,
+            Required = required,
+            Description = description,
+            Schema = new OpenApiSchema
+            {
+                Type = JsonSchemaType.String
+            }
+        });
+    }
 }

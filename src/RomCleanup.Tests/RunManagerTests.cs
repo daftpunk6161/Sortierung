@@ -80,6 +80,37 @@ public class RunManagerTests
     }
 
     [Fact]
+    public async Task List_ReturnsNewestRunsFirst()
+    {
+        var mgr = CreateManager();
+        var firstRoot = CreateTempDir();
+        var secondRoot = CreateTempDir();
+
+        try
+        {
+            var first = mgr.TryCreate(new RunRequest { Roots = new[] { firstRoot }, Mode = "DryRun" }, "DryRun");
+            Assert.NotNull(first);
+            await mgr.WaitForCompletion(first!.RunId, 50);
+
+            await Task.Delay(25);
+
+            var second = mgr.TryCreate(new RunRequest { Roots = new[] { secondRoot }, Mode = "DryRun" }, "DryRun");
+            Assert.NotNull(second);
+            await mgr.WaitForCompletion(second!.RunId, 50);
+
+            var listed = mgr.List();
+            Assert.True(listed.Count >= 2);
+            Assert.Equal(second.RunId, listed[0].RunId);
+            Assert.Equal(first.RunId, listed[1].RunId);
+        }
+        finally
+        {
+            CleanupDir(firstRoot);
+            CleanupDir(secondRoot);
+        }
+    }
+
+    [Fact]
     public async Task Cancel_RunningRun_SetsCancelled()
     {
         var mgr = CreateManager();

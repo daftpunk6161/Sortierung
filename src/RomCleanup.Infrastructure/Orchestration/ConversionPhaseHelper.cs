@@ -2,6 +2,7 @@ using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Conversion;
+using System.Collections.Concurrent;
 
 namespace RomCleanup.Infrastructure.Orchestration;
 
@@ -12,12 +13,148 @@ namespace RomCleanup.Infrastructure.Orchestration;
 /// </summary>
 internal static class ConversionPhaseHelper
 {
+    // Conservative by design: external conversion tools are I/O-heavy and may
+    // allocate large temporary artifacts. We parallelize enough for throughput,
+    // but cap concurrency to avoid destabilizing the box or creating excessive
+    // temp-space pressure.
+    internal const int MaxParallelConversions = 2;
+
     internal sealed class ConversionCounters
     {
         public int Converted;
         public int Errors;
         public int Skipped;
         public int Blocked;
+    }
+
+    internal sealed record ConversionWorkItem(
+        int Index,
+        string FilePath,
+        string ConsoleKey,
+        bool TrackSetMembers,
+        bool SkipBeforeConversion);
+
+    internal sealed record ConversionBatchResult(
+        int Converted,
+        int Errors,
+        int Skipped,
+        int Blocked,
+        IReadOnlyList<ConversionResult> Results);
+
+    internal static ConversionBatchResult ExecuteBatch(
+        IReadOnlyList<ConversionWorkItem> workItems,
+        IFormatConverter converter,
+        RunOptions options,
+        PipelineContext context,
+        string progressUnitLabel,
+        CancellationToken cancellationToken)
+    {
+        if (workItems.Count == 0)
+            return new ConversionBatchResult(0, 0, 0, 0, Array.Empty<ConversionResult>());
+
+        var orderedResults = new ConversionResult?[workItems.Count];
+        var serializationLocks = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        var progressLock = new object();
+        var converted = 0;
+        var errors = 0;
+        var skipped = 0;
+        var blocked = 0;
+        var completed = 0;
+
+        Action<string>? synchronizedProgress = null;
+        if (context.OnProgress is not null)
+        {
+            synchronizedProgress = message =>
+            {
+                lock (progressLock)
+                    context.OnProgress(message);
+            };
+        }
+
+        var workerContext = new PipelineContext
+        {
+            Options = context.Options,
+            FileSystem = context.FileSystem,
+            AuditStore = context.AuditStore,
+            Metrics = context.Metrics,
+            OnProgress = synchronizedProgress
+        };
+
+        void ProcessWorkItem(ConversionWorkItem item)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            ConversionResult? conversionResult = null;
+            var localCounters = new ConversionCounters();
+
+            if (!item.SkipBeforeConversion)
+            {
+                var serializationKey = BuildSerializationKey(item.FilePath);
+                var gate = serializationLocks.GetOrAdd(serializationKey, static _ => new object());
+                lock (gate)
+                {
+                    conversionResult = ConvertSingleFile(
+                        item.FilePath,
+                        item.ConsoleKey,
+                        converter,
+                        options,
+                        workerContext,
+                        localCounters,
+                        item.TrackSetMembers,
+                        cancellationToken);
+                }
+            }
+
+            orderedResults[item.Index] = conversionResult;
+
+            if (localCounters.Converted != 0)
+                Interlocked.Add(ref converted, localCounters.Converted);
+            if (localCounters.Errors != 0)
+                Interlocked.Add(ref errors, localCounters.Errors);
+            if (localCounters.Skipped != 0)
+                Interlocked.Add(ref skipped, localCounters.Skipped);
+            if (localCounters.Blocked != 0)
+                Interlocked.Add(ref blocked, localCounters.Blocked);
+
+            var done = Interlocked.Increment(ref completed);
+            if ((done % 25 == 0 || done == workItems.Count) && synchronizedProgress is not null)
+            {
+                synchronizedProgress(
+                    $"[Convert] Fortschritt: {done}/{workItems.Count} {progressUnitLabel} " +
+                    $"(ok={Volatile.Read(ref converted)}, skip={Volatile.Read(ref skipped)}, " +
+                    $"blocked={Volatile.Read(ref blocked)}, err={Volatile.Read(ref errors)})");
+            }
+        }
+
+        var maxDegreeOfParallelism = GetParallelism(workItems.Count);
+        if (maxDegreeOfParallelism <= 1)
+        {
+            foreach (var item in workItems)
+                ProcessWorkItem(item);
+        }
+        else
+        {
+            Parallel.ForEach(
+                workItems,
+                new ParallelOptions
+                {
+                    CancellationToken = cancellationToken,
+                    MaxDegreeOfParallelism = maxDegreeOfParallelism
+                },
+                ProcessWorkItem);
+        }
+
+        var results = orderedResults
+            .Where(static r => r is not null)
+            .Select(static r => r!)
+            .ToArray();
+
+        return new ConversionBatchResult(
+            Converted: converted,
+            Errors: errors,
+            Skipped: skipped,
+            Blocked: blocked,
+            Results: results);
     }
 
     /// <summary>
@@ -197,5 +334,27 @@ internal static class ConversionPhaseHelper
                 context.OnProgress?.Invoke($"WARNING: Could not move set member after conversion: {ex.Message}");
             }
         }
+    }
+
+    private static int GetParallelism(int workItemCount)
+    {
+        if (workItemCount <= 1)
+            return 1;
+
+        return Math.Max(1, Math.Min(MaxParallelConversions, Math.Min(Environment.ProcessorCount, workItemCount)));
+    }
+
+    private static string BuildSerializationKey(string filePath)
+    {
+        var fullPath = Path.GetFullPath(filePath);
+        var directory = Path.GetDirectoryName(fullPath) ?? string.Empty;
+        var baseName = Path.GetFileNameWithoutExtension(fullPath);
+
+        // Conservative collision domain:
+        // conversions typically materialize final artifacts as <dir>\<basename>.<targetExt>
+        // and later trash the original by file name. Serializing by directory+basename
+        // preserves sequential semantics for sources that would contend for the same
+        // derived outputs without globally disabling conversion parallelism.
+        return Path.Combine(directory, baseName);
     }
 }

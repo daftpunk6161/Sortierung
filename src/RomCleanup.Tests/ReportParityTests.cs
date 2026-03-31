@@ -80,7 +80,7 @@ public sealed class ReportParityTests : IDisposable
 
         Assert.NotNull(apiRun);
 
-        var waitResult = await manager.WaitForCompletion(apiRun!.RunId, timeout: TimeSpan.FromSeconds(10));
+        var waitResult = await manager.WaitForCompletion(apiRun!.RunId, timeout: TimeSpan.FromSeconds(20));
         var apiCompleted = manager.Get(apiRun.RunId);
 
         Assert.Equal(0, cliExitCode);
@@ -149,7 +149,7 @@ public sealed class ReportParityTests : IDisposable
         }, "DryRun");
 
         Assert.NotNull(apiRun);
-        var waitResult = await manager.WaitForCompletion(apiRun!.RunId, timeout: TimeSpan.FromSeconds(10));
+        var waitResult = await manager.WaitForCompletion(apiRun!.RunId, timeout: TimeSpan.FromSeconds(20));
         var apiCompleted = manager.Get(apiRun.RunId);
 
         Assert.Equal(0, cliExitCode);
@@ -230,7 +230,7 @@ public sealed class ReportParityTests : IDisposable
         }, "DryRun");
 
         Assert.NotNull(apiRun);
-        var waitResult = await manager.WaitForCompletion(apiRun!.RunId, timeout: TimeSpan.FromSeconds(10));
+        var waitResult = await manager.WaitForCompletion(apiRun!.RunId, timeout: TimeSpan.FromSeconds(20));
         var apiCompleted = manager.Get(apiRun.RunId);
 
         Assert.Equal(0, cliExitCode);

@@ -268,9 +268,9 @@ public sealed class AuditFindingsRegressionTests : IDisposable
     // =========================================================================
 
     [Fact]
-    public void FP3_02_OpenApiSpec_OptionalFieldsAreNullable()
+    public async Task FP3_02_OpenApiSpec_OptionalFieldsAreNullable()
     {
-        var spec = RomCleanup.Api.OpenApiSpec.Json;
+        var spec = await OpenApiTestHelper.FetchOpenApiJsonAsync();
         Assert.Contains("\"nullable\": true", spec);
         Assert.Contains("\"preflightWarnings\"", spec);
         Assert.Contains("\"error\"", spec);

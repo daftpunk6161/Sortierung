@@ -44,6 +44,8 @@ public sealed class RunManager
     public RunRecord? Get(string runId) =>
         _lifecycle.Get(runId);
 
+    public IReadOnlyList<RunRecord> List() => _lifecycle.List();
+
     public RunRecord? GetActive() => _lifecycle.GetActive();
 
     public RunCancelResult Cancel(string runId) => _lifecycle.Cancel(runId);
@@ -417,6 +419,58 @@ public sealed class ApiReviewQueue
     public int Returned { get; init; }
     public bool HasMore { get; init; }
     public ApiReviewItem[] Items { get; init; } = Array.Empty<ApiReviewItem>();
+}
+
+public sealed class ApiRunList
+{
+    public int Total { get; init; }
+    public int Offset { get; init; }
+    public int Limit { get; init; }
+    public int Returned { get; init; }
+    public bool HasMore { get; init; }
+    public RunStatusDto[] Runs { get; init; } = Array.Empty<RunStatusDto>();
+}
+
+public sealed class RunEnvelope
+{
+    public RunStatusDto? Run { get; init; }
+}
+
+public sealed class RunStartEnvelope
+{
+    public RunStatusDto? Run { get; init; }
+    public ApiRunResult? Result { get; init; }
+    public bool Reused { get; init; }
+    public bool WaitTimedOut { get; init; }
+}
+
+public sealed class RunResultEnvelope
+{
+    public RunStatusDto? Run { get; init; }
+    public ApiRunResult? Result { get; init; }
+}
+
+public sealed class RunCancelEnvelope
+{
+    public RunStatusDto? Run { get; init; }
+    public bool CancelAccepted { get; init; }
+    public bool Idempotent { get; init; }
+    public string? CancelledAtUtc { get; init; }
+}
+
+public sealed class RunRollbackEnvelope
+{
+    public RunStatusDto Run { get; init; } = new();
+    public bool DryRun { get; init; }
+    public AuditRollbackResult Rollback { get; init; } = new();
+}
+
+public sealed class RunReviewApprovalEnvelope
+{
+    public string RunId { get; init; } = string.Empty;
+    public int ApprovedCount { get; init; }
+    public int TotalApproved { get; init; }
+    public ApiReviewQueue Queue { get; init; } = new();
 }
 
 public sealed class ApiReviewApprovalRequest

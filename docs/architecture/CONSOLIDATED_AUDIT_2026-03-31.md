@@ -1,6 +1,6 @@
 # Consolidated Audit
 
-Stand: `2026-03-31`
+Stand: `2026-04-01`
 
 Diese Zusammenfassung konsolidiert das externe Audit mit einer Code-Pruefung des aktuellen Repos. Sie trennt bewusst zwischen:
 
@@ -232,13 +232,73 @@ Diese Zusammenfassung konsolidiert das externe Audit mit einer Code-Pruefung des
 - `Parity-Regressionstests auf expliziten Completion-Wait gezogen`
   API-Kanaltests validieren jetzt den Abschluss eines Runs bewusst ueber `RunWaitDisposition.Completed`, statt implizit von einem festen 5s-Zeitfenster auszugehen.
 
+### Batch 11: Conversion-Pipeline parallelisiert
+
+- `Winner- und ConvertOnly-Konvertierung teilen jetzt einen parallelen Batch-Pfad`
+  Die produktiven Konvertierungsphasen laufen nicht mehr strikt sequentiell, sondern ueber eine gemeinsame Batch-Ausfuehrung mit begrenzter Parallelitaet.
+
+- `Parallelitaet ist bewusst konservativ begrenzt`
+  Externe Conversion-Tools bleiben auf eine kleine, feste Parallelitaet begrenzt, um Temp-Space-, I/O- und Tool-Stabilitaetsrisiken kontrollierbar zu halten.
+
+- `Ergebnisreihenfolge bleibt deterministisch`
+  Trotz paralleler Ausfuehrung bleibt die Reihenfolge der `ConversionResult`-Liste an die Eingabereihenfolge gekoppelt.
+
+- `Kollidierende Zielartefakte werden konservativ serialisiert`
+  Dateien mit gleicher Ableitungsbasis im selben Verzeichnis werden nicht parallel konvertiert, damit `target-exists`-, Trash- und Folgeoperationen dieselbe Semantik behalten wie im sequentiellen Pfad.
+
+- `Regressionstests ergaenzt`
+  Neue Tests decken ab:
+  - echte Parallelitaet fuer unabhaengige Conversion-Jobs
+  - stabile Ergebnisreihenfolge trotz unterschiedlicher Abschlusszeiten
+  - Serialisierung bei kollidierenden Zielartefakten
+
+### Batch 12: API-History und Artefakt-Downloads
+
+- `GET /runs` liefert jetzt eine deterministische Run-History`
+  Die API listet sichtbare Runs in stabiler Reihenfolge `StartedUtc desc, RunId asc` und unterstuetzt paginierte Abfragen ueber `offset` und `limit`.
+
+- `Run-Listing respektiert Client-Isolation`
+  Die History zeigt nur Runs, die fuer die aktuelle Client-Bindung sichtbar sind. Fremde Run-Records werden nicht mitgeliefert.
+
+- `Report- und Audit-Artefakte sind jetzt direkt downloadbar`
+  `GET /runs/{runId}/report` und `GET /runs/{runId}/audit` liefern vorhandene HTML-/CSV-Artefakte als Attachment, ohne dass interne Dateisystempfade in Status-DTOs offengelegt werden.
+
+- `Artefakt-Endpunkte bleiben an dieselbe Run-Wahrheit gebunden`
+  Die Endpunkte verwenden ausschliesslich die im Run-Lifecycle verifizierten Artefaktpfade. Es wurde keine neue Pfadlogik oder GUI-/CLI-Schattenprojektion eingefuehrt.
+
+- `OpenAPI-Spec nachgezogen`
+  Der eingebettete Spec deklariert jetzt:
+  - `GET /runs`
+  - `GET /runs/{runId}/report`
+  - `GET /runs/{runId}/audit`
+  - `ApiRunList` als paginierte History-Antwort
+
+- `Regressionstests ergaenzt`
+  Neue Tests decken ab:
+  - deterministische und paginierte Run-History
+  - Client-Isolation fuer Run-Listen und Artefakt-Downloads
+  - HTML-/CSV-Downloadvertraege
+  - OpenAPI-Deklaration fuer History- und Artefakt-Endpunkte
+
+### Batch 13: OpenAPI-Generierung aus der laufenden API
+
+- `Manuell gepflegter Spec-Pfad entfernt`
+  `OpenApiSpec.cs` enthaelt keine eingebettete JSON-Spezifikation mehr, sondern konfiguriert die OpenAPI-Generierung direkt ueber `Microsoft.AspNetCore.OpenApi`.
+
+- `OpenAPI wird aus der echten Endpoint-Metadatenlage erzeugt`
+  Dokument-, Operation- und Schema-Details werden jetzt aus den real gemappten API-Endpunkten erzeugt und nur noch ueber gezielte Transformer ergaenzt, zum Beispiel fuer:
+  - API-Key-Security
+  - `healthz` ohne Security-Requirement
+  - `X-Client-Id`- und `X-Idempotency-Key`-Header
+  - Request-Body-Schemas fuer `POST /runs` und `POST /runs/{runId}/reviews/approve`
+
+- `Stabiler Alias fuer bestehende /openapi-Consumer`
+  `GET /openapi` bleibt als bestehender Einstieg erhalten und leitet kontrolliert auf den generierten Paket-Standard `GET /openapi/v1.json` weiter.
+
+- `Schema-Semantik abgesichert`
+  Die OpenAPI-Regressionen validieren jetzt die live generierte Spezifikation aus dem Testhost statt einen statischen String. Integer-Felder werden ueber die vom Generator gelieferte Integer-Semantik abgesichert.
+
 ## Naechste sinnvolle Umsetzungsbloecke
 
-1. `Conversion parallelisieren`
-   Die Winner-/ConvertOnly-Pfade arbeiten weiterhin sequentiell und bleiben bei grossen Disc-Sammlungen ein Laufzeithebel.
-
-2. `API-Artefakt- und History-Endpunkte ergaenzen`
-   Ein Run-Listing sowie Report-/Audit-Downloads fehlen weiterhin als Komfort- und Automationspfade.
-
-3. `OpenAPI-Generierung automatisieren`
-   Der Spec-Stand ist aktuell konsistent, bleibt aber manuell gepflegt und damit drift-anfaellig.
+1. `Build-time Export der generierten OpenAPI-Spec`
+   Die Laufzeit-Spezifikation ist jetzt die Quelle der Wahrheit. Falls ein versioniertes Artefakt fuer externe Consumer benoetigt wird, sollte dieses kuenftig aus derselben Generierung exportiert werden statt separat gepflegt zu werden.

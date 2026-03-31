@@ -1,7 +1,10 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.OpenApi;
+using Microsoft.AspNetCore.Mvc;
 using RomCleanup.Api;
 using RomCleanup.Contracts.Errors;
 using RomCleanup.Contracts.Models;
@@ -32,6 +35,7 @@ builder.Services.AddRomCleanupCore();
 builder.Services.AddSingleton<RunManager>();
 builder.Services.AddSingleton<RunLifecycleManager>(sp =>
     sp.GetRequiredService<RunManager>().Lifecycle);
+builder.Services.AddOpenApi(OpenApiSpec.DocumentName, OpenApiSpec.Configure);
 
 var app = builder.Build();
 
@@ -167,7 +171,8 @@ app.MapGet("/healthz", () => Results.Ok(new
     serverRunning = true,
     utc = DateTime.UtcNow.ToString("o"),
     version = ApiVersion
-}));
+}))
+    .WithSummary("Unauthenticated local liveness probe");
 
 app.MapGet("/health", (RunLifecycleManager mgr) =>
 {
@@ -180,13 +185,44 @@ app.MapGet("/health", (RunLifecycleManager mgr) =>
         utc = DateTime.UtcNow.ToString("o"),
         version = ApiVersion
     });
-});
+})
+    .WithSummary("Authenticated health check");
 
-app.MapGet("/openapi", () => Results.Content(
-    OpenApiSpec.Json.Replace("\"version\": \"1.0.0\"", $"\"version\": \"{Program.ApiVersion}\""),
-    "application/json"));
+app.MapGet("/openapi", () => Results.Redirect($"/openapi/{OpenApiSpec.DocumentName}.json", permanent: false))
+    .ExcludeFromDescription();
 
-app.MapPost("/runs", async (HttpContext ctx, RunLifecycleManager mgr) =>
+app.MapOpenApi()
+    .ExcludeFromDescription();
+
+app.MapGet("/runs", (HttpContext ctx, string? offset, string? limit, RunLifecycleManager mgr) =>
+{
+    var parsedOffset = 0;
+    if (!string.IsNullOrWhiteSpace(offset))
+    {
+        if (!int.TryParse(offset, out parsedOffset) || parsedOffset < 0)
+            return ApiError(400, "RUN-INVALID-OFFSET", "offset must be a non-negative integer.");
+    }
+
+    int? parsedLimit = null;
+    if (!string.IsNullOrWhiteSpace(limit))
+    {
+        if (!int.TryParse(limit, out var limitValue) || limitValue < 1 || limitValue > 1000)
+            return ApiError(400, "RUN-INVALID-LIMIT", "limit must be an integer between 1 and 1000.");
+        parsedLimit = limitValue;
+    }
+
+    var requesterClientId = GetClientBindingId(ctx, trustForwardedFor);
+    var visibleRuns = mgr.List()
+        .Where(run => CanAccessRun(run, requesterClientId))
+        .ToArray();
+
+    return Results.Ok(BuildRunList(visibleRuns, parsedOffset, parsedLimit));
+})
+    .WithSummary("List visible run history for the current client binding")
+    .Produces<ApiRunList>(StatusCodes.Status200OK)
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest);
+
+app.MapPost("/runs", async (HttpContext ctx, string? wait, [FromQuery(Name = "waitTimeoutMs")] string? waitTimeoutMsQuery, RunLifecycleManager mgr) =>
 {
     // Validate Content-Type
     var contentType = ctx.Request.ContentType;
@@ -355,15 +391,15 @@ app.MapPost("/runs", async (HttpContext ctx, RunLifecycleManager mgr) =>
     if (!request.OnlyGames && !request.KeepUnknownWhenOnlyGames)
         return ApiError(400, "RUN-INVALID-UNKNOWN-POLICY", "keepUnknownWhenOnlyGames can only be set when onlyGames is true.");
 
-    var waitSync = ctx.Request.Query.TryGetValue("wait", out var waitValue)
-        ? !string.Equals(waitValue.ToString(), "false", StringComparison.OrdinalIgnoreCase)
-        : false;
+    var waitSync = !string.IsNullOrWhiteSpace(wait) &&
+        !string.Equals(wait, "false", StringComparison.OrdinalIgnoreCase);
 
     var waitTimeoutMs = 600_000;
-    if (ctx.Request.Query.TryGetValue("waitTimeoutMs", out var waitTimeoutValue))
+    if (!string.IsNullOrWhiteSpace(waitTimeoutMsQuery))
     {
-        if (!int.TryParse(waitTimeoutValue, out waitTimeoutMs) || waitTimeoutMs < 1 || waitTimeoutMs > 1_800_000)
+        if (!int.TryParse(waitTimeoutMsQuery, out var parsedWaitTimeoutMs) || parsedWaitTimeoutMs < 1 || parsedWaitTimeoutMs > 1_800_000)
             return ApiError(400, "RUN-INVALID-WAIT-TIMEOUT", "waitTimeoutMs must be an integer between 1 and 1800000.");
+        waitTimeoutMs = parsedWaitTimeoutMs;
     }
 
     var ownerClientId = GetClientBindingId(ctx, trustForwardedFor);
@@ -421,7 +457,13 @@ app.MapPost("/runs", async (HttpContext ctx, RunLifecycleManager mgr) =>
         return Results.Ok(new { run = run.ToDto(), result = run.Result, reused = true });
 
     return Results.Accepted($"/runs/{run.RunId}", new { run = run.ToDto(), reused = create.Disposition == RunCreateDisposition.Reused });
-});
+})
+    .WithSummary("Create and execute a deduplication run")
+    .Produces<RunStartEnvelope>(StatusCodes.Status200OK)
+    .Produces<RunStartEnvelope>(StatusCodes.Status202Accepted)
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
+    .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
+    .Produces<OperationErrorResponse>(StatusCodes.Status409Conflict);
 
 app.MapGet("/runs/{runId}", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
 {
@@ -435,7 +477,12 @@ app.MapGet("/runs/{runId}", (string runId, HttpContext ctx, RunLifecycleManager 
         return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
     return Results.Ok(new { run = run.ToDto() });
-});
+})
+    .WithSummary("Get run status")
+    .Produces<RunEnvelope>(StatusCodes.Status200OK)
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
+    .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
+    .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound);
 
 app.MapGet("/runs/{runId}/result", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
 {
@@ -449,7 +496,69 @@ app.MapGet("/runs/{runId}/result", (string runId, HttpContext ctx, RunLifecycleM
     if (run.Status == "running")
         return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
     return Results.Ok(new { run = run.ToDto(), result = run.Result });
-});
+})
+    .WithSummary("Get completed run result")
+    .Produces<RunResultEnvelope>(StatusCodes.Status200OK)
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
+    .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
+    .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound)
+    .Produces<OperationErrorResponse>(StatusCodes.Status409Conflict);
+
+app.MapGet("/runs/{runId}/report", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
+{
+    if (!Guid.TryParse(runId, out _))
+        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+
+    var run = mgr.Get(runId);
+    if (run is null)
+        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+    if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
+        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+    if (run.Status == ApiRunStatus.Running)
+        return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
+
+    return CreateArtifactDownloadResult(
+        run.ReportPath,
+        "text/html; charset=utf-8",
+        $"report-{runId}.html",
+        "RUN-REPORT-NOT-AVAILABLE",
+        "No report artifact available for this run.",
+        runId);
+})
+    .WithSummary("Download the generated HTML report for a completed run")
+    .Produces(StatusCodes.Status200OK, contentType: "text/html")
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
+    .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
+    .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound)
+    .Produces<OperationErrorResponse>(StatusCodes.Status409Conflict);
+
+app.MapGet("/runs/{runId}/audit", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
+{
+    if (!Guid.TryParse(runId, out _))
+        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+
+    var run = mgr.Get(runId);
+    if (run is null)
+        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+    if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
+        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+    if (run.Status == ApiRunStatus.Running)
+        return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
+
+    return CreateArtifactDownloadResult(
+        run.AuditPath,
+        "text/csv; charset=utf-8",
+        $"audit-{runId}.csv",
+        "RUN-AUDIT-NOT-AVAILABLE",
+        "No audit artifact available for this run.",
+        runId);
+})
+    .WithSummary("Download the generated audit CSV for a completed run")
+    .Produces(StatusCodes.Status200OK, contentType: "text/csv")
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
+    .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
+    .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound)
+    .Produces<OperationErrorResponse>(StatusCodes.Status409Conflict);
 
 app.MapPost("/runs/{runId}/cancel", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
 {
@@ -472,9 +581,14 @@ app.MapPost("/runs/{runId}/cancel", (string runId, HttpContext ctx, RunLifecycle
         idempotent = cancel.Disposition != RunCancelDisposition.Accepted,
         cancelledAtUtc = updated?.CancelledAtUtc?.ToString("o")
     });
-});
+})
+    .WithSummary("Cancel a run idempotently")
+    .Produces<RunCancelEnvelope>(StatusCodes.Status200OK)
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
+    .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
+    .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound);
 
-app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
+app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, string? dryRun, RunLifecycleManager mgr) =>
 {
     if (!Guid.TryParse(runId, out _))
         return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
@@ -494,8 +608,7 @@ app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, RunLifecyc
 
     // SEC-ROLLBACK-01: Default to dry-run to prevent accidental data changes.
     // Safety sequence: DryRun → Summary → Bestätigung → Apply (Projektregeln §4)
-    var dryRunParam = ctx.Request.Query["dryRun"].FirstOrDefault();
-    bool isDryRun = !string.Equals(dryRunParam, "false", StringComparison.OrdinalIgnoreCase);
+    bool isDryRun = !string.Equals(dryRun, "false", StringComparison.OrdinalIgnoreCase);
 
     var restoreRoots = run.Roots ?? Array.Empty<string>();
     var currentRoots = string.IsNullOrWhiteSpace(run.TrashRoot)
@@ -511,9 +624,15 @@ app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, RunLifecyc
         dryRun = isDryRun,
         rollback
     });
-});
+})
+    .WithSummary("Preview or execute audit-based rollback for a completed run")
+    .Produces<RunRollbackEnvelope>(StatusCodes.Status200OK)
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
+    .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
+    .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound)
+    .Produces<OperationErrorResponse>(StatusCodes.Status409Conflict);
 
-app.MapGet("/runs/{runId}/reviews", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
+app.MapGet("/runs/{runId}/reviews", (string runId, HttpContext ctx, string? offset, string? limit, RunLifecycleManager mgr) =>
 {
     if (!Guid.TryParse(runId, out _))
         return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
@@ -525,24 +644,29 @@ app.MapGet("/runs/{runId}/reviews", (string runId, HttpContext ctx, RunLifecycle
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
         return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
-    var offset = 0;
-    if (ctx.Request.Query.TryGetValue("offset", out var offsetValue))
+    var parsedOffset = 0;
+    if (!string.IsNullOrWhiteSpace(offset))
     {
-        if (!int.TryParse(offsetValue, out offset) || offset < 0)
+        if (!int.TryParse(offset, out parsedOffset) || parsedOffset < 0)
             return ApiError(400, "RUN-INVALID-REVIEW-OFFSET", "offset must be a non-negative integer.");
     }
 
-    int? limit = null;
-    if (ctx.Request.Query.TryGetValue("limit", out var limitValue))
+    int? parsedLimit = null;
+    if (!string.IsNullOrWhiteSpace(limit))
     {
-        if (!int.TryParse(limitValue, out var parsedLimit) || parsedLimit < 1 || parsedLimit > 1000)
+        if (!int.TryParse(limit, out var limitValue) || limitValue < 1 || limitValue > 1000)
             return ApiError(400, "RUN-INVALID-REVIEW-LIMIT", "limit must be an integer between 1 and 1000.");
-        limit = parsedLimit;
+        parsedLimit = limitValue;
     }
 
-    var queue = BuildReviewQueue(run, offset, limit);
+    var queue = BuildReviewQueue(run, parsedOffset, parsedLimit);
     return Results.Ok(queue);
-});
+})
+    .WithSummary("Get review queue for a run")
+    .Produces<ApiReviewQueue>(StatusCodes.Status200OK)
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
+    .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
+    .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound);
 
 app.MapPost("/runs/{runId}/reviews/approve", async (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
 {
@@ -599,7 +723,13 @@ app.MapPost("/runs/{runId}/reviews/approve", async (string runId, HttpContext ct
         totalApproved = run.ApprovedReviewCount,
         queue = updated
     });
-});
+})
+    .WithSummary("Approve review items for a run")
+    .Accepts<ApiReviewApprovalRequest>("application/json")
+    .Produces<RunReviewApprovalEnvelope>(StatusCodes.Status200OK)
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
+    .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
+    .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound);
 
 app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
 {
@@ -1247,6 +1377,25 @@ static bool CanAccessRun(RunRecord run, string requesterClientId)
     return string.Equals(run.OwnerClientId, requesterClientId, StringComparison.Ordinal);
 }
 
+static ApiRunList BuildRunList(IReadOnlyList<RunRecord> runs, int offset = 0, int? limit = null)
+{
+    var safeOffset = Math.Min(offset, runs.Count);
+    var pageSize = limit ?? Math.Max(runs.Count - safeOffset, 0);
+    var pageRuns = limit is null
+        ? runs.Skip(safeOffset).ToArray()
+        : runs.Skip(safeOffset).Take(limit.Value).ToArray();
+
+    return new ApiRunList
+    {
+        Total = runs.Count,
+        Offset = offset,
+        Limit = pageSize,
+        Returned = pageRuns.Length,
+        HasMore = safeOffset + pageRuns.Length < runs.Count,
+        Runs = pageRuns.Select(run => run.ToDto()).ToArray()
+    };
+}
+
 static ApiReviewQueue BuildReviewQueue(RunRecord run, int offset = 0, int? limit = null)
 {
     var core = run.CoreRunResult;
@@ -1311,6 +1460,24 @@ static string SanitizeSseEventName(string eventName)
         if (ch is '\n' or '\r' or ':') return "error";
     }
     return eventName;
+}
+
+static IResult CreateArtifactDownloadResult(
+    string? artifactPath,
+    string contentType,
+    string fallbackFileName,
+    string unavailableCode,
+    string unavailableMessage,
+    string runId)
+{
+    if (string.IsNullOrWhiteSpace(artifactPath) || !File.Exists(artifactPath))
+        return ApiError(409, unavailableCode, unavailableMessage, runId: runId);
+
+    var downloadName = Path.GetFileName(artifactPath);
+    if (string.IsNullOrWhiteSpace(downloadName))
+        downloadName = fallbackFileName;
+
+    return Results.File(artifactPath, contentType, downloadName);
 }
 
 static IResult? ValidatePathSecurity(string path, string fieldName)

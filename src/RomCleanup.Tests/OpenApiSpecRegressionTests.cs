@@ -1,5 +1,4 @@
 using System.Text.Json;
-using RomCleanup.Api;
 using Xunit;
 
 namespace RomCleanup.Tests;
@@ -7,9 +6,9 @@ namespace RomCleanup.Tests;
 public sealed class OpenApiSpecRegressionTests
 {
     [Fact]
-    public void OpenApiSpec_DeclaresRollbackPath_And_RunStatusSchema()
+    public async Task OpenApiSpec_DeclaresRollbackPath_And_RunStatusSchema()
     {
-        using var spec = JsonDocument.Parse(OpenApiSpec.Json);
+        using var spec = JsonDocument.Parse(await OpenApiTestHelper.FetchOpenApiJsonAsync());
         var paths = spec.RootElement.GetProperty("paths");
         var schemas = spec.RootElement.GetProperty("components").GetProperty("schemas");
 
@@ -20,9 +19,9 @@ public sealed class OpenApiSpecRegressionTests
     }
 
     [Fact]
-    public void OpenApiSpec_DeclaresReviewPagination_Metadata()
+    public async Task OpenApiSpec_DeclaresReviewPagination_Metadata()
     {
-        using var spec = JsonDocument.Parse(OpenApiSpec.Json);
+        using var spec = JsonDocument.Parse(await OpenApiTestHelper.FetchOpenApiJsonAsync());
 
         var reviewsGet = spec.RootElement
             .GetProperty("paths")
@@ -46,9 +45,9 @@ public sealed class OpenApiSpecRegressionTests
     }
 
     [Fact]
-    public void OpenApiSpec_DeclaresPublicHealthz_WithoutSecurityRequirement()
+    public async Task OpenApiSpec_DeclaresPublicHealthz_WithoutSecurityRequirement()
     {
-        using var spec = JsonDocument.Parse(OpenApiSpec.Json);
+        using var spec = JsonDocument.Parse(await OpenApiTestHelper.FetchOpenApiJsonAsync());
 
         var healthzGet = spec.RootElement
             .GetProperty("paths")
@@ -58,5 +57,26 @@ public sealed class OpenApiSpecRegressionTests
         Assert.True(healthzGet.TryGetProperty("security", out var security));
         Assert.Equal(JsonValueKind.Array, security.ValueKind);
         Assert.Equal(0, security.GetArrayLength());
+    }
+
+    [Fact]
+    public async Task OpenApiSpec_DeclaresRunHistory_And_ArtifactDownloadPaths()
+    {
+        using var spec = JsonDocument.Parse(await OpenApiTestHelper.FetchOpenApiJsonAsync());
+        var paths = spec.RootElement.GetProperty("paths");
+        var schemas = spec.RootElement.GetProperty("components").GetProperty("schemas");
+
+        var runsGet = paths
+            .GetProperty("/runs")
+            .GetProperty("get");
+        var runsParameters = runsGet.GetProperty("parameters");
+
+        Assert.Contains(runsParameters.EnumerateArray(), parameter => parameter.GetProperty("name").GetString() == "offset");
+        Assert.Contains(runsParameters.EnumerateArray(), parameter => parameter.GetProperty("name").GetString() == "limit");
+        Assert.True(paths.TryGetProperty("/runs/{runId}/report", out var reportPath), "Missing report download path in embedded OpenAPI spec.");
+        Assert.True(reportPath.TryGetProperty("get", out _), "Report download path must declare GET.");
+        Assert.True(paths.TryGetProperty("/runs/{runId}/audit", out var auditPath), "Missing audit download path in embedded OpenAPI spec.");
+        Assert.True(auditPath.TryGetProperty("get", out _), "Audit download path must declare GET.");
+        Assert.True(schemas.TryGetProperty("ApiRunList", out _), "Missing ApiRunList schema in embedded OpenAPI spec.");
     }
 }
