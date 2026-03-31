@@ -200,6 +200,7 @@ public sealed class ConversionRegistryLoader : IConversionRegistry
                     "datSources",
                     "uniqueExts",
                     "ambigExts",
+                    "zipIdentifyingExts",
                     "folderAliases",
                     "aliases",
                     "hints",
