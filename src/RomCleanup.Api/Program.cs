@@ -6,8 +6,12 @@ using RomCleanup.Api;
 using RomCleanup.Contracts.Errors;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure;
+using RomCleanup.Infrastructure.Analysis;
 using RomCleanup.Infrastructure.Audit;
+using RomCleanup.Infrastructure.Conversion;
+using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.FileSystem;
+using RomCleanup.Infrastructure.Orchestration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -666,6 +670,396 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunLife
     {
         // Client disconnected via RequestAborted
     }
+});
+
+// --- DAT Management Endpoints (B2) ---
+
+app.MapGet("/dats/status", () =>
+{
+    var dataDir = RunEnvironmentBuilder.TryResolveDataDir()
+        ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
+    var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+    var datRoot = settings.Dat?.DatRoot;
+
+    if (string.IsNullOrWhiteSpace(datRoot) || !Directory.Exists(datRoot))
+    {
+        return Results.Ok(new
+        {
+            configured = false,
+            datRoot = datRoot ?? "",
+            message = "DatRoot is not configured or does not exist.",
+            totalFiles = 0,
+            consoles = Array.Empty<object>(),
+            oldFileCount = 0,
+            catalogEntries = 0
+        });
+    }
+
+    var datFiles = Directory.GetFiles(datRoot, "*.dat", SearchOption.AllDirectories)
+        .Concat(Directory.GetFiles(datRoot, "*.xml", SearchOption.AllDirectories))
+        .ToArray();
+
+    var consoleStats = datFiles
+        .GroupBy(f =>
+        {
+            var dir = Path.GetDirectoryName(f);
+            return dir is not null && !string.Equals(Path.GetFullPath(dir), Path.GetFullPath(datRoot), StringComparison.OrdinalIgnoreCase)
+                ? Path.GetFileName(dir) : "root";
+        }, StringComparer.OrdinalIgnoreCase)
+        .Select(g => new
+        {
+            console = g.Key,
+            fileCount = g.Count(),
+            newestFile = g.Max(f => File.GetLastWriteTimeUtc(f)).ToString("o"),
+            oldestFile = g.Min(f => File.GetLastWriteTimeUtc(f)).ToString("o")
+        })
+        .OrderBy(x => x.console, StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    var oldFiles = datFiles.Where(f => (DateTime.UtcNow - File.GetLastWriteTimeUtc(f)).TotalDays > 180).ToArray();
+
+    // Load catalog count
+    var catalogPath = Path.Combine(dataDir, "dat-catalog.json");
+    int catalogEntries = 0;
+    if (File.Exists(catalogPath))
+    {
+        try
+        {
+            var catalog = DatSourceService.LoadCatalog(catalogPath);
+            catalogEntries = catalog.Count;
+        }
+        catch { /* non-critical */ }
+    }
+
+    return Results.Ok(new
+    {
+        configured = true,
+        datRoot,
+        totalFiles = datFiles.Length,
+        consoles = consoleStats,
+        oldFileCount = oldFiles.Length,
+        catalogEntries,
+        staleWarning = oldFiles.Length > 0
+            ? $"{oldFiles.Length} DAT files are older than 6 months"
+            : (string?)null
+    });
+});
+
+app.MapPost("/dats/update", async (HttpContext ctx) =>
+{
+    var dataDir = RunEnvironmentBuilder.TryResolveDataDir()
+        ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
+    var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+    var datRoot = settings.Dat?.DatRoot;
+
+    if (string.IsNullOrWhiteSpace(datRoot))
+        return ApiError(400, "DAT-ROOT-NOT-CONFIGURED", "DatRoot is not configured in settings.");
+
+    if (!Directory.Exists(datRoot))
+    {
+        try { Directory.CreateDirectory(datRoot); }
+        catch (Exception ex)
+        {
+            return ApiError(500, "DAT-ROOT-CREATE-FAILED", $"Cannot create DatRoot: {ex.Message}");
+        }
+    }
+
+    // Parse optional body for force flag
+    bool force = false;
+    if (ctx.Request.ContentLength is > 0)
+    {
+        try
+        {
+            using var reader = new StreamReader(ctx.Request.Body, Encoding.UTF8);
+            var body = await reader.ReadToEndAsync();
+            if (!string.IsNullOrWhiteSpace(body))
+            {
+                using var doc = JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("force", out var forceProp))
+                    force = forceProp.GetBoolean();
+            }
+        }
+        catch (JsonException)
+        {
+            return ApiError(400, "DAT-INVALID-JSON", "Invalid JSON body.");
+        }
+    }
+
+    var catalogPath = Path.Combine(dataDir, "dat-catalog.json");
+    if (!File.Exists(catalogPath))
+        return ApiError(404, "DAT-CATALOG-NOT-FOUND", "dat-catalog.json not found.");
+
+    List<DatCatalogEntry> catalog;
+    try { catalog = DatSourceService.LoadCatalog(catalogPath); }
+    catch (Exception ex) { return ApiError(500, "DAT-CATALOG-LOAD-ERROR", $"Failed to load catalog: {ex.Message}"); }
+
+    if (catalog.Count == 0)
+        return ApiError(400, "DAT-CATALOG-EMPTY", "dat-catalog.json contains no entries.");
+
+    int downloaded = 0, skipped = 0, failed = 0;
+    var errors = new List<string>();
+
+    using var datService = new DatSourceService(datRoot);
+    foreach (var entry in catalog.Where(e => !string.IsNullOrWhiteSpace(e.Url) && !string.Equals(e.Format, "nointro-pack", StringComparison.OrdinalIgnoreCase)))
+    {
+        var fileName = entry.Id + ".dat";
+        var targetPath = Path.Combine(datRoot, fileName);
+
+        if (!force && File.Exists(targetPath))
+        {
+            skipped++;
+            continue;
+        }
+
+        try
+        {
+            var result = await datService.DownloadDatByFormatAsync(entry.Url, fileName, entry.Format, ct: ctx.RequestAborted);
+            if (result is not null)
+                downloaded++;
+            else
+            {
+                failed++;
+                errors.Add($"{entry.Id}: download returned null");
+            }
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or HttpRequestException or IOException)
+        {
+            failed++;
+            errors.Add($"{entry.Id}: {ex.Message}");
+        }
+    }
+
+    return Results.Ok(new
+    {
+        downloaded,
+        skipped,
+        failed,
+        totalCatalogEntries = catalog.Count,
+        force,
+        errors = errors.Count > 0 ? errors.ToArray() : null as string[]
+    });
+});
+
+app.MapPost("/dats/import", async (HttpContext ctx) =>
+{
+    var dataDir = RunEnvironmentBuilder.TryResolveDataDir()
+        ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
+    var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+    var datRoot = settings.Dat?.DatRoot;
+
+    if (string.IsNullOrWhiteSpace(datRoot))
+        return ApiError(400, "DAT-ROOT-NOT-CONFIGURED", "DatRoot is not configured in settings.");
+
+    if (!Directory.Exists(datRoot))
+        return ApiError(400, "DAT-ROOT-NOT-FOUND", $"DatRoot does not exist: {datRoot}");
+
+    // Read body
+    if (ctx.Request.ContentLength is > 1_048_576)
+        return ApiError(400, "DAT-BODY-TOO-LARGE", "Request body too large (max 1MB).");
+
+    string body;
+    try
+    {
+        using var reader = new StreamReader(ctx.Request.Body, Encoding.UTF8);
+        body = await reader.ReadToEndAsync();
+    }
+    catch (IOException)
+    {
+        return ApiError(400, "DAT-READ-ERROR", "Failed to read request body.");
+    }
+
+    string? sourcePath;
+    try
+    {
+        using var doc = JsonDocument.Parse(body);
+        sourcePath = doc.RootElement.TryGetProperty("path", out var pathProp)
+            ? pathProp.GetString() : null;
+    }
+    catch (JsonException)
+    {
+        return ApiError(400, "DAT-INVALID-JSON", "Invalid JSON body.");
+    }
+
+    if (string.IsNullOrWhiteSpace(sourcePath))
+        return ApiError(400, "DAT-PATH-REQUIRED", "\"path\" is required in the request body.");
+
+    // Security: validate source path
+    var pathError = ValidatePathSecurity(sourcePath.Trim(), "path");
+    if (pathError is not null) return pathError;
+
+    sourcePath = Path.GetFullPath(sourcePath.Trim());
+
+    if (!File.Exists(sourcePath))
+        return ApiError(404, "DAT-SOURCE-NOT-FOUND", $"Source file not found: {sourcePath}");
+
+    var ext = Path.GetExtension(sourcePath).ToLowerInvariant();
+    if (ext is not ".dat" and not ".xml")
+        return ApiError(400, "DAT-INVALID-FORMAT", "Only .dat and .xml files can be imported.");
+
+    try
+    {
+        var targetPath = DatAnalysisService.ImportDatFileToRoot(sourcePath, datRoot);
+        return Results.Ok(new
+        {
+            imported = true,
+            sourcePath,
+            targetPath,
+            fileName = Path.GetFileName(targetPath)
+        });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return ApiError(400, "DAT-IMPORT-BLOCKED", ex.Message, ErrorKind.Critical);
+    }
+    catch (IOException ex)
+    {
+        return ApiError(500, "DAT-IMPORT-IO-ERROR", $"Import failed: {ex.Message}");
+    }
+});
+
+// --- Standalone Conversion Endpoint (B3) ---
+
+app.MapPost("/convert", async (HttpContext ctx) =>
+{
+    if (ctx.Request.ContentLength is > 1_048_576)
+        return ApiError(400, "CONVERT-BODY-TOO-LARGE", "Request body too large (max 1MB).");
+
+    string body;
+    try
+    {
+        using var reader = new StreamReader(ctx.Request.Body, Encoding.UTF8);
+        body = await reader.ReadToEndAsync();
+    }
+    catch (IOException)
+    {
+        return ApiError(400, "CONVERT-READ-ERROR", "Failed to read request body.");
+    }
+
+    string? inputPath;
+    string? consoleKey = null;
+    string? targetFormat = null;
+    try
+    {
+        using var doc = JsonDocument.Parse(body);
+        inputPath = doc.RootElement.TryGetProperty("input", out var inp) ? inp.GetString() : null;
+        if (doc.RootElement.TryGetProperty("consoleKey", out var ck)) consoleKey = ck.GetString();
+        if (doc.RootElement.TryGetProperty("target", out var tf)) targetFormat = tf.GetString();
+    }
+    catch (JsonException)
+    {
+        return ApiError(400, "CONVERT-INVALID-JSON", "Invalid JSON body.");
+    }
+
+    if (string.IsNullOrWhiteSpace(inputPath))
+        return ApiError(400, "CONVERT-INPUT-REQUIRED", "\"input\" path is required.");
+
+    // Security: validate input path
+    var pathError = ValidatePathSecurity(inputPath.Trim(), "input");
+    if (pathError is not null) return pathError;
+
+    inputPath = Path.GetFullPath(inputPath.Trim());
+
+    if (!File.Exists(inputPath) && !Directory.Exists(inputPath))
+        return ApiError(404, "CONVERT-INPUT-NOT-FOUND", $"Input not found: {inputPath}");
+
+    var service = StandaloneConversionService.Create(inputPath);
+    if (service is null)
+        return ApiError(500, "CONVERT-NO-CONVERTER", "No converter available. Check tool installation.");
+
+    if (File.Exists(inputPath))
+    {
+        var result = service.ConvertFile(inputPath, consoleKey, targetFormat, ctx.RequestAborted);
+        return Results.Ok(new
+        {
+            input = inputPath,
+            outcome = result.Outcome.ToString(),
+            targetPath = result.TargetPath,
+            reason = result.Reason,
+            converted = result.Outcome == ConversionOutcome.Success ? 1 : 0,
+            skipped = result.Outcome == ConversionOutcome.Skipped ? 1 : 0,
+            errors = (result.Outcome != ConversionOutcome.Success && result.Outcome != ConversionOutcome.Skipped) ? 1 : 0
+        });
+    }
+    else
+    {
+        var report = service.ConvertDirectory(inputPath, consoleKey, targetFormat, cancellationToken: ctx.RequestAborted);
+        return Results.Ok(new
+        {
+            input = inputPath,
+            converted = report.Converted,
+            skipped = report.Skipped,
+            errors = report.Errors,
+            results = report.Results.Select(r => new
+            {
+                source = r.SourcePath,
+                target = r.TargetPath,
+                outcome = r.Outcome.ToString(),
+                reason = r.Reason
+            }).ToArray()
+        });
+    }
+});
+
+// --- Completeness Report Endpoint (B4) ---
+
+app.MapGet("/runs/{runId}/completeness", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
+{
+    if (!Guid.TryParse(runId, out _))
+        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+
+    var run = mgr.Get(runId);
+    if (run is null)
+        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+
+    if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
+        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+
+    if (run.Status == "running")
+        return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
+
+    // Try to build completeness from the run's DAT index and roots
+    var dataDir = RunEnvironmentBuilder.TryResolveDataDir()
+        ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
+    var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+
+    var runRoots = run.Roots ?? Array.Empty<string>();
+    if (runRoots.Length == 0)
+        return ApiError(400, "RUN-NO-ROOTS", "Run has no roots configured.", runId: runId);
+
+    // Build DAT index from settings
+    var runOptions = new RomCleanup.Contracts.Models.RunOptions
+    {
+        Roots = runRoots,
+        EnableDat = true,
+        DatRoot = run.DatRoot ?? settings.Dat?.DatRoot
+    };
+
+    var env = new RunEnvironmentFactory().Create(runOptions);
+    if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
+        return ApiError(400, "DAT-NOT-AVAILABLE", "No DAT index available. Configure DatRoot in settings.", runId: runId);
+
+    var report = CompletenessReportService.Build(env.DatIndex, runRoots);
+
+    return Results.Ok(new
+    {
+        runId,
+        entries = report.Entries.Select(e => new
+        {
+            e.ConsoleKey,
+            e.TotalInDat,
+            e.Verified,
+            e.MissingCount,
+            e.Percentage,
+            missingGames = e.MissingGames.Take(100).ToArray(),
+            truncated = e.MissingGames.Count > 100
+        }).ToArray(),
+        totalInDat = report.Entries.Sum(e => e.TotalInDat),
+        totalVerified = report.Entries.Sum(e => e.Verified),
+        totalMissing = report.Entries.Sum(e => e.MissingCount),
+        overallPercentage = report.Entries.Sum(e => e.TotalInDat) > 0
+            ? Math.Round(100.0 * report.Entries.Sum(e => e.Verified) / report.Entries.Sum(e => e.TotalInDat), 1)
+            : 0.0
+    });
 });
 
 // Graceful shutdown: cancel active runs before process exits

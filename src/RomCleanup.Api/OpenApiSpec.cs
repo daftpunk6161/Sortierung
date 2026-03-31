@@ -125,6 +125,100 @@ public static class OpenApiSpec
           "404": { "description": "Run not found" }
         }
       }
+    },
+    "/dats/status": {
+      "get": {
+        "summary": "Get DAT collection status and statistics",
+        "responses": {
+          "200": { "description": "DAT status including file counts per console, age, and catalog info" }
+        }
+      }
+    },
+    "/dats/update": {
+      "post": {
+        "summary": "Trigger DAT file download/update from catalog sources",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "force": { "type": "boolean", "description": "Re-download even if target file already exists" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Update results with download/skip/fail counts" },
+          "400": { "description": "DatRoot not configured or catalog empty" },
+          "404": { "description": "dat-catalog.json not found" }
+        }
+      }
+    },
+    "/dats/import": {
+      "post": {
+        "summary": "Import a local DAT file into the DatRoot",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "path": { "type": "string", "description": "Absolute path to the DAT file to import" }
+                },
+                "required": ["path"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Import successful" },
+          "400": { "description": "Validation error (path, format, security)" },
+          "404": { "description": "Source file not found" }
+        }
+      }
+    },
+    "/convert": {
+      "post": {
+        "summary": "Convert ROM files to optimal format (CHD/RVZ/ZIP)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "input": { "type": "string", "description": "Absolute path to file or directory" },
+                  "consoleKey": { "type": "string", "nullable": true, "description": "Console key for format selection (auto-detected if omitted)" },
+                  "target": { "type": "string", "nullable": true, "description": "Target format: chd, rvz, zip, 7z (auto if omitted)" }
+                },
+                "required": ["input"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Conversion result with per-file outcomes" },
+          "400": { "description": "Validation error" },
+          "404": { "description": "Input not found" },
+          "500": { "description": "No converter available" }
+        }
+      }
+    },
+    "/runs/{runId}/completeness": {
+      "get": {
+        "summary": "Get collection completeness report per console",
+        "responses": {
+          "200": { "description": "Per-console completeness data comparing DAT entries to collection files" },
+          "400": { "description": "No roots or DAT not available" },
+          "403": { "description": "Run belongs to another client" },
+          "404": { "description": "Run not found" },
+          "409": { "description": "Run still in progress" }
+        }
+      }
     }
   },
   "components": {

@@ -150,17 +150,9 @@ public static partial class FeatureService
 }
 
 
-// Record types moved to RomCleanup.Contracts.Models.AnalysisModels.
-// Type aliases for backward compatibility within WPF layer:
-using ConversionEstimateResult = RomCleanup.Contracts.Models.ConversionEstimateResult;
-using ConversionDetail = RomCleanup.Contracts.Models.ConversionDetail;
-using HeatmapEntry = RomCleanup.Contracts.Models.HeatmapEntry;
-using DuplicateSourceEntry = RomCleanup.Contracts.Models.DuplicateSourceEntry;
-using JunkReportEntry = RomCleanup.Contracts.Models.JunkReportEntry;
-using DryRunCompareResult = RomCleanup.Contracts.Models.DryRunCompareResult;
-using TrendSnapshot = RomCleanup.Contracts.Models.TrendSnapshot;
-using IntegrityEntry = RomCleanup.Contracts.Models.IntegrityEntry;
-using IntegrityBaseline = RomCleanup.Contracts.Models.IntegrityBaseline;
-using IntegrityCheckResult = RomCleanup.Contracts.Models.IntegrityCheckResult;
-using ConfigDiffEntry = RomCleanup.Contracts.Models.ConfigDiffEntry;
-using DatDiffResult = RomCleanup.Contracts.Models.DatDiffResult;
+// DryRunCompareResult stays in WPF layer because it depends on ReportEntry (Infrastructure).
+public sealed record DryRunCompareResult(
+    IReadOnlyList<RomCleanup.Infrastructure.Reporting.ReportEntry> OnlyInA,
+    IReadOnlyList<RomCleanup.Infrastructure.Reporting.ReportEntry> OnlyInB,
+    IReadOnlyList<(RomCleanup.Infrastructure.Reporting.ReportEntry left, RomCleanup.Infrastructure.Reporting.ReportEntry right)> Different,
+    int Identical);

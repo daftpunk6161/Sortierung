@@ -129,7 +129,18 @@ internal static class CliOutputWriter
 Usage:
   romulus -Roots ""D:\Roms"" [-Mode DryRun|Move] [-Prefer EU,US,JP]
 
-Options:
+Subcommands:
+  romulus analyze --roots <path>              Collection health score and heatmap
+  romulus export --roots <path> [--format csv|json|excel] [-o <file>]
+  romulus dat diff --old <path> --new <path>  Compare two Logiqx DAT files
+  romulus integrity baseline --roots <path>   Create integrity baseline
+  romulus integrity check                     Check files against baseline
+  romulus convert --input <file|dir> [--console PS1] [--target chd]
+  romulus header --input <file>               Analyze ROM header
+  romulus junk-report --roots <path> [--aggressive]
+  romulus completeness --roots <path> [--dat-root <path>] [-o <file>]
+
+Run Options:
   -Roots <paths>     Semicolon-separated root paths (required)
   -Mode <mode>       DryRun (default) or Move
   -Prefer <regions>  Comma-separated region priority (default: EU,US,WORLD,JP)
@@ -155,7 +166,7 @@ Options:
     -ConvertOnly       Convert all candidates only (skip dedupe/move)
     -ConflictPolicy    Move conflict handling: Rename|Skip|Overwrite (default: Rename)
     -Yes               Confirm destructive Move in non-interactive runs
-  -Report <path>     Output HTML or CSV report (.html or .csv)
+  -Report <path>     Output HTML, CSV, or JSON report (.html, .csv, or .json)
   -Audit <path>      Write audit CSV log for Move operations
   -Log <path>        Write structured JSONL log file
   -LogLevel <level>  Log level: Debug|Info|Warning|Error (default: Info)

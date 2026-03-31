@@ -19,11 +19,6 @@ public sealed record ConversionEstimateResult(
 public sealed record ConversionDetail(
     string FileName, string SourceFormat, string TargetFormat, long SourceBytes, long EstimatedBytes);
 
-/// <summary>Side-by-side DryRun comparison result.</summary>
-public sealed record DryRunCompareResult(
-    IReadOnlyList<ReportEntry> OnlyInA, IReadOnlyList<ReportEntry> OnlyInB,
-    IReadOnlyList<(ReportEntry left, ReportEntry right)> Different, int Identical);
-
 /// <summary>Point-in-time collection trend snapshot for historical tracking.</summary>
 public sealed record TrendSnapshot(
     DateTime Timestamp, int TotalFiles, long SizeBytes, int Verified, int Dupes, int Junk, int QualityScore);

@@ -29,6 +29,11 @@ internal static class CliArgsParser
         if (args.Length == 0)
             return CliParseResult.Help();
 
+        // Subcommand detection: first non-flag argument may be a subcommand
+        var subcommandResult = TryParseSubcommand(args);
+        if (subcommandResult is not null)
+            return subcommandResult;
+
         var opts = new CliRunOptions();
         var errors = new List<string>();
         var rootsSpecified = false;
@@ -359,6 +364,246 @@ internal static class CliArgsParser
     }
 
     /// <summary>
+    /// Detect and parse subcommands: analyze, export, dat, integrity, convert, header, junk-report.
+    /// Returns null if args[0] is not a known subcommand.
+    /// </summary>
+    private static CliParseResult? TryParseSubcommand(string[] args)
+    {
+        var first = args[0].ToLowerInvariant();
+        var rest = args.Skip(1).ToArray();
+
+        return first switch
+        {
+            "analyze" => ParseSubcommandWithRoots(CliCommand.Analyze, rest),
+            "export" => ParseExportSubcommand(rest),
+            "dat" => ParseDatSubcommand(rest),
+            "integrity" => ParseIntegritySubcommand(rest),
+            "convert" => ParseConvertSubcommand(rest),
+            "header" => ParseSingleInputSubcommand(CliCommand.Header, rest),
+            "junk-report" => ParseSubcommandWithRoots(CliCommand.JunkReport, rest),
+            "completeness" => ParseSubcommandWithRoots(CliCommand.Completeness, rest),
+            _ => null
+        };
+    }
+
+    private static CliParseResult ParseSubcommandWithRoots(CliCommand command, string[] args)
+    {
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+        for (int i = 0; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--roots" or "-roots":
+                    if (!TryConsumeValue(args, ref i, "--roots", errors, out var rootsRaw)) break;
+                    if (TryParseRootsArgument(rootsRaw, out var roots, out var rootsErr))
+                        opts.Roots = roots;
+                    else
+                        errors.Add($"[Error] {rootsErr}");
+                    break;
+                case "-o" or "--output":
+                    if (!TryConsumeValue(args, ref i, "--output", errors, out var outVal)) break;
+                    opts.OutputPath = outVal;
+                    break;
+                case "--aggressive":
+                    opts.AggressiveJunk = true;
+                    break;
+                default:
+                    if (!args[i].StartsWith("-"))
+                    {
+                        opts.Roots = new List<string>(opts.Roots) { args[i] }.ToArray();
+                    }
+                    else
+                    {
+                        errors.Add($"[Error] Unknown flag '{args[i]}' for {command}. Use --help for usage.");
+                    }
+                    break;
+            }
+        }
+        if (errors.Count > 0) return CliParseResult.ValidationError(errors);
+        if (opts.Roots.Length == 0) return CliParseResult.ValidationError([$"[Error] --roots is required for '{command}'."]);
+        return CliParseResult.Subcommand(command, opts);
+    }
+
+    private static CliParseResult ParseExportSubcommand(string[] args)
+    {
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+        for (int i = 0; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--roots" or "-roots":
+                    if (!TryConsumeValue(args, ref i, "--roots", errors, out var rootsRaw)) break;
+                    if (TryParseRootsArgument(rootsRaw, out var roots, out var rootsErr))
+                        opts.Roots = roots;
+                    else
+                        errors.Add($"[Error] {rootsErr}");
+                    break;
+                case "--format" or "-f":
+                    if (!TryConsumeValue(args, ref i, "--format", errors, out var fmt)) break;
+                    if (fmt is not ("csv" or "json" or "excel"))
+                    {
+                        errors.Add($"[Error] Invalid export format '{fmt}'. Must be csv, json, or excel.");
+                        break;
+                    }
+                    opts.ExportFormat = fmt;
+                    break;
+                case "-o" or "--output":
+                    if (!TryConsumeValue(args, ref i, "--output", errors, out var outVal)) break;
+                    opts.OutputPath = outVal;
+                    break;
+                default:
+                    if (!args[i].StartsWith("-"))
+                        opts.Roots = new List<string>(opts.Roots) { args[i] }.ToArray();
+                    else
+                        errors.Add($"[Error] Unknown flag '{args[i]}' for export. Use --help for usage.");
+                    break;
+            }
+        }
+        if (errors.Count > 0) return CliParseResult.ValidationError(errors);
+        if (opts.Roots.Length == 0) return CliParseResult.ValidationError(["[Error] --roots is required for 'export'."]);
+        return CliParseResult.Subcommand(CliCommand.Export, opts);
+    }
+
+    private static CliParseResult ParseDatSubcommand(string[] args)
+    {
+        if (args.Length == 0)
+            return CliParseResult.ValidationError(["[Error] 'dat' requires a sub-action: diff"]);
+
+        var action = args[0].ToLowerInvariant();
+        if (action != "diff")
+            return CliParseResult.ValidationError([$"[Error] Unknown dat action '{action}'. Available: diff"]);
+
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+        for (int i = 1; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--old":
+                    if (!TryConsumeValue(args, ref i, "--old", errors, out var oldVal)) break;
+                    opts.DatFileA = oldVal;
+                    break;
+                case "--new":
+                    if (!TryConsumeValue(args, ref i, "--new", errors, out var newVal)) break;
+                    opts.DatFileB = newVal;
+                    break;
+                default:
+                    errors.Add($"[Error] Unknown flag '{args[i]}' for dat diff.");
+                    break;
+            }
+        }
+        if (errors.Count > 0) return CliParseResult.ValidationError(errors);
+        if (string.IsNullOrWhiteSpace(opts.DatFileA) || string.IsNullOrWhiteSpace(opts.DatFileB))
+            return CliParseResult.ValidationError(["[Error] dat diff requires --old <path> --new <path>"]);
+        return CliParseResult.Subcommand(CliCommand.DatDiff, opts);
+    }
+
+    private static CliParseResult ParseIntegritySubcommand(string[] args)
+    {
+        if (args.Length == 0)
+            return CliParseResult.ValidationError(["[Error] 'integrity' requires a sub-action: check, baseline"]);
+
+        var action = args[0].ToLowerInvariant();
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+
+        switch (action)
+        {
+            case "check":
+                return CliParseResult.Subcommand(CliCommand.IntegrityCheck, opts);
+
+            case "baseline":
+                for (int i = 1; i < args.Length; i++)
+                {
+                    switch (args[i].ToLowerInvariant())
+                    {
+                        case "--roots" or "-roots":
+                            if (!TryConsumeValue(args, ref i, "--roots", errors, out var rootsRaw)) break;
+                            if (TryParseRootsArgument(rootsRaw, out var roots, out var rootsErr))
+                                opts.Roots = roots;
+                            else
+                                errors.Add($"[Error] {rootsErr}");
+                            break;
+                        default:
+                            if (!args[i].StartsWith("-"))
+                                opts.Roots = new List<string>(opts.Roots) { args[i] }.ToArray();
+                            else
+                                errors.Add($"[Error] Unknown flag '{args[i]}' for integrity baseline.");
+                            break;
+                    }
+                }
+                if (errors.Count > 0) return CliParseResult.ValidationError(errors);
+                if (opts.Roots.Length == 0) return CliParseResult.ValidationError(["[Error] --roots is required for integrity baseline."]);
+                return CliParseResult.Subcommand(CliCommand.IntegrityBaseline, opts);
+
+            default:
+                return CliParseResult.ValidationError([$"[Error] Unknown integrity action '{action}'. Available: check, baseline"]);
+        }
+    }
+
+    private static CliParseResult ParseConvertSubcommand(string[] args)
+    {
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+        for (int i = 0; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--input" or "-i":
+                    if (!TryConsumeValue(args, ref i, "--input", errors, out var inputVal)) break;
+                    opts.InputPath = inputVal;
+                    break;
+                case "--target" or "-t":
+                    if (!TryConsumeValue(args, ref i, "--target", errors, out var targetVal)) break;
+                    opts.TargetFormat = targetVal;
+                    break;
+                case "--console" or "-c":
+                    if (!TryConsumeValue(args, ref i, "--console", errors, out var consoleVal)) break;
+                    opts.ConsoleKey = consoleVal;
+                    break;
+                default:
+                    if (!args[i].StartsWith("-"))
+                        opts.InputPath ??= args[i];
+                    else
+                        errors.Add($"[Error] Unknown flag '{args[i]}' for convert.");
+                    break;
+            }
+        }
+        if (errors.Count > 0) return CliParseResult.ValidationError(errors);
+        if (string.IsNullOrWhiteSpace(opts.InputPath))
+            return CliParseResult.ValidationError(["[Error] convert requires --input <file|dir>"]);
+        return CliParseResult.Subcommand(CliCommand.Convert, opts);
+    }
+
+    private static CliParseResult ParseSingleInputSubcommand(CliCommand command, string[] args)
+    {
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+        for (int i = 0; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--input" or "-i":
+                    if (!TryConsumeValue(args, ref i, "--input", errors, out var inputVal)) break;
+                    opts.InputPath = inputVal;
+                    break;
+                default:
+                    if (!args[i].StartsWith("-"))
+                        opts.InputPath ??= args[i];
+                    else
+                        errors.Add($"[Error] Unknown flag '{args[i]}' for {command}.");
+                    break;
+            }
+        }
+        if (errors.Count > 0) return CliParseResult.ValidationError(errors);
+        if (string.IsNullOrWhiteSpace(opts.InputPath))
+            return CliParseResult.ValidationError([$"[Error] {command} requires --input <path>"]);
+        return CliParseResult.Subcommand(command, opts);
+    }
+
+    /// <summary>
     /// Consumes the next argument as a value, with strict validation.
     /// Returns false if: value missing (adds error) OR value looks like a flag (puts back, no error).
     /// ADR-008 §C-05.
@@ -471,7 +716,7 @@ internal sealed class CliParseResult
         new() { Command = CliCommand.Run, ExitCode = 0, Options = options };
 }
 
-internal enum CliCommand { Run, Help, Version, Rollback, UpdateDats, Analyze, Export, DatDiff, IntegrityCheck, IntegrityBaseline, Convert, Header, JunkReport }
+internal enum CliCommand { Run, Help, Version, Rollback, UpdateDats, Analyze, Export, DatDiff, IntegrityCheck, IntegrityBaseline, Convert, Header, JunkReport, Completeness }
 
 /// <summary>
 /// Raw parsed CLI options — before settings merge.

@@ -1,6 +1,10 @@
+using System.Text.Json;
 using RomCleanup.Contracts;
 using RomCleanup.Contracts.Errors;
+using RomCleanup.Contracts.Models;
+using RomCleanup.Infrastructure.Analysis;
 using RomCleanup.Infrastructure.Audit;
+using RomCleanup.Infrastructure.Conversion;
 using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.FileSystem;
 using RomCleanup.Infrastructure.Logging;
@@ -54,6 +58,34 @@ internal static class Program
 
                 case CliCommand.UpdateDats:
                     return UpdateDats(result.Options!);
+
+                // Subcommands
+                case CliCommand.Analyze:
+                    return SubcommandAnalyze(result.Options!);
+
+                case CliCommand.Export:
+                    return SubcommandExport(result.Options!);
+
+                case CliCommand.DatDiff:
+                    return SubcommandDatDiff(result.Options!);
+
+                case CliCommand.IntegrityCheck:
+                    return SubcommandIntegrityCheck();
+
+                case CliCommand.IntegrityBaseline:
+                    return SubcommandIntegrityBaseline(result.Options!);
+
+                case CliCommand.Convert:
+                    return SubcommandConvert(result.Options!);
+
+                case CliCommand.Header:
+                    return SubcommandHeader(result.Options!);
+
+                case CliCommand.JunkReport:
+                    return SubcommandJunkReport(result.Options!);
+
+                case CliCommand.Completeness:
+                    return SubcommandCompleteness(result.Options!);
 
                 default:
                     return result.ExitCode;
@@ -355,6 +387,315 @@ internal static class Program
             SafeErrorWriteLine($"[Rollback] Trail: {result.RollbackAuditPath}");
 
         return result.Failed > 0 ? 1 : 0;
+    }
+
+    // ═══ SUBCOMMAND HANDLERS ═══════════════════════════════════════════
+
+    private static int SubcommandAnalyze(CliRunOptions opts)
+    {
+        SafeErrorWriteLine($"[Analyze] Scanning {opts.Roots.Length} root(s)...");
+        var dataDir = RunEnvironmentBuilder.ResolveDataDir();
+        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+        var (runOptions, mapErrors) = CliOptionsMapper.Map(opts, settings);
+        if (runOptions is null)
+        {
+            CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
+            return 3;
+        }
+
+        var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+        var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
+            env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService,
+            knownBiosHashes: env.KnownBiosHashes);
+
+        var result = orchestrator.Execute(runOptions);
+        var projection = RunProjectionFactory.Create(result);
+
+        var healthScore = CollectionAnalysisService.CalculateHealthScore(
+            projection.TotalFiles, projection.Dupes, projection.Junk, projection.DatMatches);
+
+        var output = new
+        {
+            healthScore,
+            totalFiles = projection.TotalFiles,
+            candidates = projection.Candidates,
+            groups = projection.Groups,
+            winners = projection.Keep,
+            duplicates = projection.Dupes,
+            games = projection.Games,
+            unknown = projection.Unknown,
+            junk = projection.Junk,
+            bios = projection.Bios,
+            datMatches = projection.DatMatches
+        };
+        SafeStandardWriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
+
+        if (result.DedupeGroups.Count > 0)
+        {
+            var heatmap = CollectionAnalysisService.GetDuplicateHeatmap(result.DedupeGroups);
+            SafeErrorWriteLine("\n[Heatmap]");
+            foreach (var h in heatmap.Take(15))
+                SafeErrorWriteLine($"  {h.Console,-15} {h.Total,5} total, {h.Duplicates,5} dupes ({h.DuplicatePercent:F1}%)");
+        }
+
+        return 0;
+    }
+
+    private static int SubcommandExport(CliRunOptions opts)
+    {
+        SafeErrorWriteLine($"[Export] Scanning {opts.Roots.Length} root(s)...");
+        var dataDir = RunEnvironmentBuilder.ResolveDataDir();
+        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+        var (runOptions, mapErrors) = CliOptionsMapper.Map(opts, settings);
+        if (runOptions is null)
+        {
+            CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
+            return 3;
+        }
+
+        var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+        var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
+            env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService,
+            knownBiosHashes: env.KnownBiosHashes);
+
+        var result = orchestrator.Execute(runOptions);
+        var candidates = result.AllCandidates;
+
+        var format = opts.ExportFormat ?? "csv";
+        string content = format switch
+        {
+            "csv" => CollectionExportService.ExportCollectionCsv(candidates),
+            "excel" => CollectionExportService.ExportExcelXml(candidates),
+            "json" => JsonSerializer.Serialize(candidates.Select(c => new
+            {
+                c.MainPath, c.GameKey, c.Region, c.Extension,
+                sizeMb = c.SizeBytes / 1048576.0,
+                category = CollectionAnalysisService.ToCategoryLabel(c.Category),
+                c.DatMatch
+            }), new JsonSerializerOptions { WriteIndented = true }),
+            _ => CollectionExportService.ExportCollectionCsv(candidates)
+        };
+
+        if (!string.IsNullOrWhiteSpace(opts.OutputPath))
+        {
+            File.WriteAllText(opts.OutputPath, content);
+            SafeErrorWriteLine($"[Export] Written to {opts.OutputPath}");
+        }
+        else
+        {
+            SafeStandardWriteLine(content);
+        }
+
+        return 0;
+    }
+
+    private static int SubcommandDatDiff(CliRunOptions opts)
+    {
+        if (!File.Exists(opts.DatFileA))
+        {
+            SafeErrorWriteLine($"[Error] File not found: {opts.DatFileA}");
+            return 1;
+        }
+        if (!File.Exists(opts.DatFileB))
+        {
+            SafeErrorWriteLine($"[Error] File not found: {opts.DatFileB}");
+            return 1;
+        }
+
+        var diff = DatAnalysisService.CompareDatFiles(opts.DatFileA!, opts.DatFileB!);
+        var report = DatAnalysisService.FormatDatDiffReport(opts.DatFileA!, opts.DatFileB!, diff);
+        SafeStandardWriteLine(report);
+        return 0;
+    }
+
+    private static int SubcommandIntegrityCheck()
+    {
+        SafeErrorWriteLine("[Integrity] Checking against baseline...");
+        var resultTask = IntegrityService.CheckIntegrity(
+            new Progress<string>(SafeErrorWriteLine));
+        var result = resultTask.GetAwaiter().GetResult();
+
+        if (result.Message is not null)
+        {
+            SafeErrorWriteLine($"[Integrity] {result.Message}");
+            return result.BitRotRisk ? 1 : 0;
+        }
+
+        SafeStandardWriteLine($"Intact:   {result.Intact.Count}");
+        SafeStandardWriteLine($"Changed:  {result.Changed.Count}");
+        SafeStandardWriteLine($"Missing:  {result.Missing.Count}");
+        SafeStandardWriteLine($"Bit rot:  {(result.BitRotRisk ? "YES" : "No")}");
+
+        if (result.Changed.Count > 0)
+        {
+            SafeErrorWriteLine("\n[Changed files]");
+            foreach (var f in result.Changed.Take(20))
+                SafeErrorWriteLine($"  {f}");
+            if (result.Changed.Count > 20)
+                SafeErrorWriteLine($"  ... and {result.Changed.Count - 20} more");
+        }
+
+        return result.BitRotRisk ? 1 : 0;
+    }
+
+    private static int SubcommandIntegrityBaseline(CliRunOptions opts)
+    {
+        SafeErrorWriteLine($"[Integrity] Creating baseline from {opts.Roots.Length} root(s)...");
+        var files = new List<string>();
+        foreach (var root in opts.Roots)
+        {
+            if (!Directory.Exists(root))
+            {
+                SafeErrorWriteLine($"[Warning] Root not found: {root}");
+                continue;
+            }
+            files.AddRange(Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories));
+        }
+
+        if (files.Count == 0)
+        {
+            SafeErrorWriteLine("[Error] No files found in specified roots.");
+            return 1;
+        }
+
+        SafeErrorWriteLine($"[Integrity] Found {files.Count} files.");
+        var task = IntegrityService.CreateBaseline(files,
+            new Progress<string>(SafeErrorWriteLine));
+        var entries = task.GetAwaiter().GetResult();
+        SafeStandardWriteLine($"Baseline created: {entries.Count} entries");
+        return 0;
+    }
+
+    private static int SubcommandConvert(CliRunOptions opts)
+    {
+        var inputPath = opts.InputPath!;
+        if (!File.Exists(inputPath) && !Directory.Exists(inputPath))
+        {
+            SafeErrorWriteLine($"[Error] Input not found: {inputPath}");
+            return 1;
+        }
+
+        var service = StandaloneConversionService.Create(inputPath, SafeErrorWriteLine);
+        if (service is null)
+        {
+            SafeErrorWriteLine("[Error] No converter available.");
+            return 1;
+        }
+
+        if (File.Exists(inputPath))
+        {
+            var result = service.ConvertFile(inputPath, opts.ConsoleKey, opts.TargetFormat);
+            SafeErrorWriteLine($"[Convert] {Path.GetFileName(inputPath)} -> {result.Outcome}");
+            if (result.Outcome != ConversionOutcome.Success && result.Outcome != ConversionOutcome.Skipped)
+                SafeErrorWriteLine($"  [{result.Outcome}] {result.Reason}");
+
+            var c = result.Outcome == ConversionOutcome.Success ? 1 : 0;
+            var s = result.Outcome == ConversionOutcome.Skipped ? 1 : 0;
+            var e = (result.Outcome != ConversionOutcome.Success && result.Outcome != ConversionOutcome.Skipped) ? 1 : 0;
+            SafeStandardWriteLine($"Converted: {c}, Skipped: {s}, Errors: {e}");
+            return e > 0 ? 1 : 0;
+        }
+        else
+        {
+            var report = service.ConvertDirectory(inputPath, opts.ConsoleKey, opts.TargetFormat);
+            foreach (var r in report.Results.Where(r => r.Outcome != ConversionOutcome.Success && r.Outcome != ConversionOutcome.Skipped))
+                SafeErrorWriteLine($"  [{r.Outcome}] {Path.GetFileName(r.SourcePath)}: {r.Reason}");
+
+            SafeStandardWriteLine($"Converted: {report.Converted}, Skipped: {report.Skipped}, Errors: {report.Errors}");
+            return report.Errors > 0 ? 1 : 0;
+        }
+    }
+
+    private static int SubcommandHeader(CliRunOptions opts)
+    {
+        var inputPath = opts.InputPath!;
+        if (!File.Exists(inputPath))
+        {
+            SafeErrorWriteLine($"[Error] File not found: {inputPath}");
+            return 1;
+        }
+
+        var header = IntegrityService.AnalyzeHeader(inputPath);
+        if (header is null)
+        {
+            SafeStandardWriteLine("No header detected or unsupported format.");
+            return 0;
+        }
+
+        SafeStandardWriteLine($"Platform: {header.Platform}");
+        SafeStandardWriteLine($"Format:   {header.Format}");
+        SafeStandardWriteLine($"Details:  {header.Details}");
+        return 0;
+    }
+
+    private static int SubcommandJunkReport(CliRunOptions opts)
+    {
+        SafeErrorWriteLine($"[JunkReport] Scanning {opts.Roots.Length} root(s)...");
+        var dataDir = RunEnvironmentBuilder.ResolveDataDir();
+        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+        var (runOptions, mapErrors) = CliOptionsMapper.Map(opts, settings);
+        if (runOptions is null)
+        {
+            CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
+            return 3;
+        }
+
+        var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+        var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
+            env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService,
+            knownBiosHashes: env.KnownBiosHashes);
+
+        var result = orchestrator.Execute(runOptions);
+        var report = CollectionExportService.BuildJunkReport(result.AllCandidates, opts.AggressiveJunk);
+        SafeStandardWriteLine(report);
+        return 0;
+    }
+
+    private static int SubcommandCompleteness(CliRunOptions opts)
+    {
+        SafeErrorWriteLine($"[Completeness] Scanning {opts.Roots.Length} root(s)...");
+        var dataDir = RunEnvironmentBuilder.ResolveDataDir();
+        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+
+        // Force DAT on for completeness
+        opts.EnableDat = true;
+
+        var (runOptions, mapErrors) = CliOptionsMapper.Map(opts, settings);
+        if (runOptions is null)
+        {
+            CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
+            return 3;
+        }
+
+        var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+        if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
+        {
+            SafeErrorWriteLine("[Error] No DAT index available. Configure DatRoot in settings or use --dat-root.");
+            return 1;
+        }
+
+        var report = CompletenessReportService.Build(env.DatIndex, opts.Roots);
+        SafeStandardWriteLine(CompletenessReportService.FormatReport(report));
+
+        // Also output JSON summary for machine consumption
+        var json = System.Text.Json.JsonSerializer.Serialize(
+            report.Entries.Select(e => new
+            {
+                e.ConsoleKey,
+                e.TotalInDat,
+                e.Verified,
+                e.MissingCount,
+                e.Percentage
+            }).ToArray(),
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+
+        if (opts.OutputPath is not null)
+        {
+            File.WriteAllText(opts.OutputPath, json);
+            SafeErrorWriteLine($"[Completeness] JSON written to {opts.OutputPath}");
+        }
+
+        return 0;
     }
 
     /// <summary>
