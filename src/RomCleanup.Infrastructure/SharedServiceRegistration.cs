@@ -3,6 +3,7 @@ using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.FileSystem;
 using RomCleanup.Infrastructure.Hashing;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
 
 namespace RomCleanup.Infrastructure;
@@ -20,6 +21,8 @@ public static class SharedServiceRegistration
                 _ => { },
                 AuditSecurityPaths.GetDefaultSigningKeyPath()));
         services.AddSingleton<IHeaderRepairService, HeaderRepairService>();
+        services.AddSingleton<ICollectionIndex>(_ =>
+            new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath()));
 
         services.AddSingleton<IRunOptionsFactory, RunOptionsFactory>();
         services.AddSingleton<IRunEnvironmentFactory, RunEnvironmentFactory>();

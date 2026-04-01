@@ -58,6 +58,23 @@ public static class ArtifactPathResolver
             : normalized;
     }
 
+    public static string ComputeRootsFingerprint(IReadOnlyList<string> roots)
+    {
+        ArgumentNullException.ThrowIfNull(roots);
+
+        var normalizedRoots = roots
+            .Where(root => !string.IsNullOrWhiteSpace(root))
+            .Select(NormalizeRoot)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(root => root, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (normalizedRoots.Length == 0)
+            return "no-roots";
+
+        return ComputeFingerprint(normalizedRoots);
+    }
+
     public static string GetSiblingDirectory(string rootPath, string siblingName)
     {
         var parent = Path.GetDirectoryName(rootPath);

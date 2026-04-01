@@ -9,6 +9,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RomCleanup.Api;
 using RomCleanup.Contracts.Errors;
+using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.FileSystem;
 using Xunit;
@@ -314,6 +316,75 @@ public sealed class ApiIntegrationTests
             SafeDeleteDirectory(secondRoot);
             SafeDeleteDirectory(foreignRoot);
         }
+    }
+
+    [Fact]
+    public async Task Runs_History_ReturnsPersistedSnapshots_WithPagination()
+    {
+        var fakeIndex = new FakeCollectionIndex(
+        [
+            new CollectionRunSnapshot
+            {
+                RunId = "run-new",
+                StartedUtc = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
+                CompletedUtc = new DateTime(2026, 4, 1, 10, 1, 0, DateTimeKind.Utc),
+                Mode = "Move",
+                Status = "completed_with_errors",
+                Roots = [@"C:\Roms\SNES"],
+                RootFingerprint = "abc123",
+                DurationMs = 60000,
+                TotalFiles = 100,
+                Games = 80,
+                Dupes = 20,
+                Junk = 5,
+                DatMatches = 70,
+                ConvertedCount = 10,
+                FailCount = 2,
+                SavedBytes = 1234,
+                ConvertSavedBytes = 5678,
+                HealthScore = 90
+            },
+            new CollectionRunSnapshot
+            {
+                RunId = "run-old",
+                StartedUtc = new DateTime(2026, 3, 31, 10, 0, 0, DateTimeKind.Utc),
+                CompletedUtc = new DateTime(2026, 3, 31, 10, 1, 0, DateTimeKind.Utc),
+                Mode = "DryRun",
+                Status = "ok",
+                Roots = [@"D:\Roms\NES"],
+                RootFingerprint = "def456",
+                DurationMs = 30000,
+                TotalFiles = 50,
+                Games = 40,
+                Dupes = 10,
+                Junk = 0,
+                DatMatches = 35,
+                ConvertedCount = 0,
+                FailCount = 0,
+                SavedBytes = 0,
+                ConvertSavedBytes = 0,
+                HealthScore = 95
+            }
+        ]);
+
+        using var factory = CreateFactory(collectionIndex: fakeIndex);
+        using var client = CreateClientWithApiKey(factory);
+
+        var response = await client.GetAsync("/runs/history?offset=0&limit=1");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = doc.RootElement;
+        Assert.Equal(2, root.GetProperty("total").GetInt32());
+        Assert.Equal(1, root.GetProperty("returned").GetInt32());
+        Assert.True(root.GetProperty("hasMore").GetBoolean());
+
+        var run = root.GetProperty("runs")[0];
+        Assert.Equal("run-new", run.GetProperty("runId").GetString());
+        Assert.Equal("Move", run.GetProperty("mode").GetString());
+        Assert.Equal("completed_with_errors", run.GetProperty("status").GetString());
+        Assert.Equal(1, run.GetProperty("rootCount").GetInt32());
+        Assert.Equal(100, run.GetProperty("totalFiles").GetInt32());
     }
 
     [Fact]
@@ -818,7 +889,8 @@ public sealed class ApiIntegrationTests
 
     private static WebApplicationFactory<Program> CreateFactory(
         Dictionary<string, string?>? overrides = null,
-        Func<RunRecord, RomCleanup.Contracts.Ports.IFileSystem, RomCleanup.Contracts.Ports.IAuditStore, CancellationToken, RunExecutionOutcome>? executor = null)
+        Func<RunRecord, RomCleanup.Contracts.Ports.IFileSystem, RomCleanup.Contracts.Ports.IAuditStore, CancellationToken, RunExecutionOutcome>? executor = null,
+        ICollectionIndex? collectionIndex = null)
     {
         var settings = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {
@@ -848,6 +920,13 @@ public sealed class ApiIntegrationTests
                     builder.ConfigureServices(services =>
                     {
                         services.AddSingleton(new RunManager(new FileSystemAdapter(), new AuditCsvStore(), executor));
+                    });
+                }
+                if (collectionIndex is not null)
+                {
+                    builder.ConfigureServices(services =>
+                    {
+                        services.AddSingleton(collectionIndex);
                     });
                 }
             });
@@ -1351,5 +1430,51 @@ public sealed class ApiIntegrationTests
 
         if (expectedRunId is not null)
             Assert.Equal(expectedRunId, root.GetProperty("runId").GetString());
+    }
+
+    private sealed class FakeCollectionIndex : ICollectionIndex
+    {
+        private readonly IReadOnlyList<CollectionRunSnapshot> _snapshots;
+
+        public FakeCollectionIndex(IReadOnlyList<CollectionRunSnapshot> snapshots)
+        {
+            _snapshots = snapshots;
+        }
+
+        public ValueTask<CollectionIndexMetadata> GetMetadataAsync(CancellationToken ct = default)
+            => ValueTask.FromResult(new CollectionIndexMetadata { CreatedUtc = DateTime.UtcNow, UpdatedUtc = DateTime.UtcNow });
+
+        public ValueTask<int> CountEntriesAsync(CancellationToken ct = default)
+            => ValueTask.FromResult(0);
+
+        public ValueTask<CollectionIndexEntry?> TryGetByPathAsync(string path, CancellationToken ct = default)
+            => ValueTask.FromResult<CollectionIndexEntry?>(null);
+
+        public ValueTask<IReadOnlyList<CollectionIndexEntry>> GetByPathsAsync(IReadOnlyList<string> paths, CancellationToken ct = default)
+            => ValueTask.FromResult<IReadOnlyList<CollectionIndexEntry>>(Array.Empty<CollectionIndexEntry>());
+
+        public ValueTask<IReadOnlyList<CollectionIndexEntry>> ListByConsoleAsync(string consoleKey, CancellationToken ct = default)
+            => ValueTask.FromResult<IReadOnlyList<CollectionIndexEntry>>(Array.Empty<CollectionIndexEntry>());
+
+        public ValueTask UpsertEntriesAsync(IReadOnlyList<CollectionIndexEntry> entries, CancellationToken ct = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask RemovePathsAsync(IReadOnlyList<string> paths, CancellationToken ct = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask<CollectionHashCacheEntry?> TryGetHashAsync(string path, string algorithm, long sizeBytes, DateTime lastWriteUtc, CancellationToken ct = default)
+            => ValueTask.FromResult<CollectionHashCacheEntry?>(null);
+
+        public ValueTask SetHashAsync(CollectionHashCacheEntry entry, CancellationToken ct = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask AppendRunSnapshotAsync(CollectionRunSnapshot snapshot, CancellationToken ct = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask<int> CountRunSnapshotsAsync(CancellationToken ct = default)
+            => ValueTask.FromResult(_snapshots.Count);
+
+        public ValueTask<IReadOnlyList<CollectionRunSnapshot>> ListRunSnapshotsAsync(int limit = 50, CancellationToken ct = default)
+            => ValueTask.FromResult<IReadOnlyList<CollectionRunSnapshot>>(_snapshots.Take(limit).ToArray());
     }
 }

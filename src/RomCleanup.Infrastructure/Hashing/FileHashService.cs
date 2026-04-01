@@ -2,6 +2,8 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text.Json;
 using RomCleanup.Contracts;
+using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Caching;
 
 namespace RomCleanup.Infrastructure.Hashing;
@@ -11,13 +13,16 @@ namespace RomCleanup.Infrastructure.Hashing;
 /// Uses an in-memory LRU cache for hot lookups and can optionally persist validated
 /// file hashes across runs using (hashType, path, lastWriteUtc, length) metadata.
 /// </summary>
-public sealed class FileHashService
+public sealed class FileHashService : IDisposable
 {
     private readonly LruCache<string, string> _cache;
     private readonly string? _persistentCachePath;
+    private readonly ICollectionIndex? _collectionIndex;
+    private readonly IDisposable? _ownedCollectionIndex;
     private readonly Dictionary<string, PersistentCacheEntry> _persistentEntries = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _persistentGate = new();
     private bool _persistentDirty;
+    private bool _disposed;
 
     private static readonly JsonSerializerOptions PersistentJsonOptions = new()
     {
@@ -25,14 +30,20 @@ public sealed class FileHashService
         WriteIndented = false
     };
 
-    public FileHashService(int maxEntries = 20_000, string? persistentCachePath = null)
+    public FileHashService(
+        int maxEntries = 20_000,
+        string? persistentCachePath = null,
+        ICollectionIndex? collectionIndex = null,
+        bool ownsCollectionIndex = false)
     {
         _cache = new LruCache<string, string>(maxEntries, StringComparer.OrdinalIgnoreCase);
         _persistentCachePath = string.IsNullOrWhiteSpace(persistentCachePath)
             ? null
             : Path.GetFullPath(persistentCachePath);
+        _collectionIndex = collectionIndex;
+        _ownedCollectionIndex = ownsCollectionIndex ? collectionIndex as IDisposable : null;
 
-        if (_persistentCachePath is not null)
+        if (_collectionIndex is null && _persistentCachePath is not null)
             LoadPersistentCache();
     }
 
@@ -40,7 +51,7 @@ public sealed class FileHashService
     public int CacheCount => _cache.Count;
 
     /// <summary>Whether this instance persists hashes across runs.</summary>
-    public bool IsPersistent => _persistentCachePath is not null;
+    public bool IsPersistent => _collectionIndex is not null || _persistentCachePath is not null;
 
     /// <summary>
     /// Get or compute the hash for a file. Results are cached by (hashType|path).
@@ -48,6 +59,8 @@ public sealed class FileHashService
     /// </summary>
     public string? GetHash(string path, string hashType = "SHA1")
     {
+        ThrowIfDisposed();
+
         var fullPath = Path.GetFullPath(path);
         var normalizedHashType = NormalizeHashType(hashType);
         var cacheKey = $"{normalizedHashType}|{fullPath}";
@@ -58,7 +71,7 @@ public sealed class FileHashService
         try
         {
             if (TryGetFileFingerprint(fullPath, out var fingerprint)
-                && TryGetPersistedHash(cacheKey, fingerprint, out var persistedHash))
+                && TryGetPersistedHash(cacheKey, fullPath, normalizedHashType, fingerprint, out var persistedHash))
             {
                 _cache.Set(cacheKey, persistedHash);
                 return persistedHash;
@@ -68,7 +81,7 @@ public sealed class FileHashService
             if (hash is not null)
             {
                 _cache.Set(cacheKey, hash);
-                UpdatePersistentEntry(cacheKey, normalizedHashType, fullPath, fingerprint, hash);
+                PersistHashBestEffort(cacheKey, normalizedHashType, fullPath, fingerprint, hash);
             }
             return hash;
         }
@@ -85,7 +98,11 @@ public sealed class FileHashService
     /// <summary>Clear the entire hash cache, including any pending persistent entries.</summary>
     public void ClearCache()
     {
+        ThrowIfDisposed();
         _cache.Clear();
+
+        if (_collectionIndex is not null)
+            return;
 
         if (_persistentCachePath is null)
             return;
@@ -107,6 +124,11 @@ public sealed class FileHashService
     /// <summary>Flush persistent cache entries to disk if persistence is enabled.</summary>
     public void FlushPersistentCache()
     {
+        ThrowIfDisposed();
+
+        if (_collectionIndex is not null)
+            return;
+
         if (_persistentCachePath is null)
             return;
 
@@ -142,6 +164,27 @@ public sealed class FileHashService
                 AppIdentity.AppFolderName);
 
         return Path.Combine(baseDir, "cache", "file-hashes-v1.json");
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        if (_collectionIndex is null)
+        {
+            try
+            {
+                FlushPersistentCache();
+            }
+            catch (Exception) when (_persistentCachePath is not null)
+            {
+            }
+        }
+
+        _ownedCollectionIndex?.Dispose();
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 
     private static string? ComputeHash(string path, string hashType)
@@ -295,9 +338,17 @@ public sealed class FileHashService
         }
     }
 
-    private bool TryGetPersistedHash(string cacheKey, FileFingerprint fingerprint, out string hash)
+    private bool TryGetPersistedHash(
+        string cacheKey,
+        string fullPath,
+        string normalizedHashType,
+        FileFingerprint fingerprint,
+        out string hash)
     {
         hash = string.Empty;
+        if (_collectionIndex is not null)
+            return TryGetIndexedHash(fullPath, normalizedHashType, fingerprint, out hash);
+
         if (_persistentCachePath is null)
             return false;
 
@@ -314,13 +365,66 @@ public sealed class FileHashService
         }
     }
 
-    private void UpdatePersistentEntry(
+    private bool TryGetIndexedHash(
+        string fullPath,
+        string normalizedHashType,
+        FileFingerprint fingerprint,
+        out string hash)
+    {
+        hash = string.Empty;
+        if (_collectionIndex is null)
+            return false;
+
+        try
+        {
+            var entry = _collectionIndex.TryGetHashAsync(
+                    fullPath,
+                    normalizedHashType,
+                    fingerprint.Length,
+                    new DateTime(fingerprint.LastWriteUtcTicks, DateTimeKind.Utc))
+                .GetAwaiter()
+                .GetResult();
+
+            if (entry is null || string.IsNullOrWhiteSpace(entry.Hash))
+                return false;
+
+            hash = entry.Hash;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private void PersistHashBestEffort(
         string cacheKey,
         string normalizedHashType,
         string fullPath,
         FileFingerprint fingerprint,
         string hash)
     {
+        if (_collectionIndex is not null)
+        {
+            try
+            {
+                _collectionIndex.SetHashAsync(new CollectionHashCacheEntry
+                {
+                    Path = fullPath,
+                    Algorithm = normalizedHashType,
+                    SizeBytes = fingerprint.Length,
+                    LastWriteUtc = new DateTime(fingerprint.LastWriteUtcTicks, DateTimeKind.Utc),
+                    Hash = hash,
+                    RecordedUtc = DateTime.UtcNow
+                }).GetAwaiter().GetResult();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+            }
+
+            return;
+        }
+
         if (_persistentCachePath is null)
             return;
 
@@ -369,6 +473,11 @@ public sealed class FileHashService
 
     private static string BuildCacheKey(string hashType, string path)
         => $"{NormalizeHashType(hashType)}|{Path.GetFullPath(path)}";
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+    }
 
     private readonly record struct FileFingerprint(long LastWriteUtcTicks, long Length);
 

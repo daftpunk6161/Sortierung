@@ -14,6 +14,7 @@ using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.Conversion;
 using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.FileSystem;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -220,6 +221,35 @@ app.MapGet("/runs", (HttpContext ctx, string? offset, string? limit, RunLifecycl
 })
     .WithSummary("List visible run history for the current client binding")
     .Produces<ApiRunList>(StatusCodes.Status200OK)
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest);
+
+app.MapGet("/runs/history", async (string? offset, string? limit, RomCleanup.Contracts.Ports.ICollectionIndex collectionIndex, CancellationToken ct) =>
+{
+    var parsedOffset = 0;
+    if (!string.IsNullOrWhiteSpace(offset))
+    {
+        if (!int.TryParse(offset, out parsedOffset) || parsedOffset < 0)
+            return ApiError(400, "RUN-INVALID-OFFSET", "offset must be a non-negative integer.");
+    }
+
+    int? parsedLimit = null;
+    if (!string.IsNullOrWhiteSpace(limit))
+    {
+        if (!int.TryParse(limit, out var limitValue) || limitValue < 1 || limitValue > 1000)
+            return ApiError(400, "RUN-INVALID-LIMIT", "limit must be an integer between 1 and 1000.");
+        parsedLimit = limitValue;
+    }
+
+    var effectiveLimit = CollectionRunHistoryPageBuilder.NormalizeLimit(parsedLimit);
+    var fetchLimit = parsedOffset > int.MaxValue - effectiveLimit
+        ? int.MaxValue
+        : parsedOffset + effectiveLimit;
+    var total = await collectionIndex.CountRunSnapshotsAsync(ct);
+    var snapshots = await collectionIndex.ListRunSnapshotsAsync(fetchLimit, ct);
+    return Results.Ok(BuildRunHistoryList(CollectionRunHistoryPageBuilder.Build(snapshots, total, parsedOffset, effectiveLimit)));
+})
+    .WithSummary("List persisted run history snapshots from the collection index")
+    .Produces<ApiRunHistoryList>(StatusCodes.Status200OK)
     .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest);
 
 app.MapPost("/runs", async (HttpContext ctx, string? wait, [FromQuery(Name = "waitTimeoutMs")] string? waitTimeoutMsQuery, RunLifecycleManager mgr) =>
@@ -1196,6 +1226,7 @@ app.MapGet("/runs/{runId}/completeness", (string runId, HttpContext ctx, RunLife
     };
 
     var env = new RunEnvironmentFactory().Create(runOptions);
+    using var hashServiceLease = env.HashService;
     if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
         return ApiError(400, "DAT-NOT-AVAILABLE", "No DAT index available. Configure DatRoot in settings.", runId: runId);
 
@@ -1393,6 +1424,41 @@ static ApiRunList BuildRunList(IReadOnlyList<RunRecord> runs, int offset = 0, in
         Returned = pageRuns.Length,
         HasMore = safeOffset + pageRuns.Length < runs.Count,
         Runs = pageRuns.Select(run => run.ToDto()).ToArray()
+    };
+}
+
+static ApiRunHistoryList BuildRunHistoryList(CollectionRunHistoryPage page)
+{
+    return new ApiRunHistoryList
+    {
+        Total = page.Total,
+        Offset = page.Offset,
+        Limit = page.Limit,
+        Returned = page.Returned,
+        HasMore = page.HasMore,
+        Runs = page.Runs
+            .Select(snapshot => new ApiRunHistoryEntry
+        {
+            RunId = snapshot.RunId,
+            StartedUtc = snapshot.StartedUtc,
+            CompletedUtc = snapshot.CompletedUtc,
+            Mode = snapshot.Mode,
+            Status = snapshot.Status,
+            RootCount = snapshot.RootCount,
+            RootFingerprint = snapshot.RootFingerprint,
+            DurationMs = snapshot.DurationMs,
+            TotalFiles = snapshot.TotalFiles,
+            Games = snapshot.Games,
+            Dupes = snapshot.Dupes,
+            Junk = snapshot.Junk,
+            DatMatches = snapshot.DatMatches,
+            ConvertedCount = snapshot.ConvertedCount,
+            FailCount = snapshot.FailCount,
+            SavedBytes = snapshot.SavedBytes,
+            ConvertSavedBytes = snapshot.ConvertSavedBytes,
+            HealthScore = snapshot.HealthScore
+        })
+            .ToArray()
     };
 }
 

@@ -19,7 +19,7 @@ namespace RomCleanup.Infrastructure.Orchestration;
 /// Streaming seam: scan/enrichment use IAsyncEnumerable in orchestrator partial steps.
 /// Used by both CLI and API entry points.
 /// </summary>
-public sealed partial class RunOrchestrator
+public sealed partial class RunOrchestrator : IDisposable
 {
     private readonly IFileSystem _fs;
     private readonly IAuditStore _audit;
@@ -32,6 +32,7 @@ public sealed partial class RunOrchestrator
     private readonly IPhasePlanBuilder _phasePlanBuilder;
     private readonly Contracts.Ports.IHeaderlessHasher? _headerlessHasher;
     private readonly IReadOnlySet<string>? _knownBiosHashes;
+    private bool _disposed;
 
     public RunOrchestrator(
         IFileSystem fs,
@@ -334,6 +335,16 @@ public sealed partial class RunOrchestrator
                 _onProgress?.Invoke($"[HashCache] Persist failed: {ex.Message}");
             }
         }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        if (_hashService is IDisposable disposableHashService)
+            disposableHashService.Dispose();
     }
 
     private static void ApplyPartialPipelineState(PipelineState pipelineState, RunResultBuilder result)

@@ -2,11 +2,13 @@ using System.Text.Json;
 using RomCleanup.Contracts;
 using RomCleanup.Contracts.Errors;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Analysis;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.Conversion;
 using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.FileSystem;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Logging;
 using RomCleanup.Infrastructure.Orchestration;
 
@@ -74,6 +76,9 @@ internal static class Program
 
                 case CliCommand.IntegrityBaseline:
                     return SubcommandIntegrityBaseline(result.Options!);
+
+                case CliCommand.History:
+                    return SubcommandHistory(result.Options!);
 
                 case CliCommand.Convert:
                     return SubcommandConvert(result.Options!);
@@ -158,12 +163,30 @@ internal static class Program
 
         log?.Info("CLI", "start", $"Run started: Mode={cliOpts.Mode}, Roots={string.Join(";", cliOpts.Roots)}", "scan");
 
-        var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
+        using var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
             env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService,
             knownBiosHashes: env.KnownBiosHashes);
 
+        var runStartedUtc = DateTime.UtcNow;
         var result = orchestrator.Execute(runOptions, cts.Token);
+        var runCompletedUtc = DateTime.UtcNow;
         var projection = RunProjectionFactory.Create(result);
+
+        try
+        {
+            using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
+            CollectionRunSnapshotWriter.TryPersistAsync(
+                collectionIndex,
+                runOptions,
+                result,
+                runStartedUtc,
+                runCompletedUtc,
+                SafeErrorWriteLine).GetAwaiter().GetResult();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            SafeErrorWriteLine($"[CollectionIndex] Run snapshot persist skipped: {ex.Message}");
+        }
 
         log?.Info("CLI", "scan-complete", $"{result.TotalFilesScanned} files scanned", "scan");
         log?.Info("CLI", "dedupe-complete",
@@ -404,7 +427,7 @@ internal static class Program
         }
 
         var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
+        using var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
             env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService,
             knownBiosHashes: env.KnownBiosHashes);
 
@@ -454,7 +477,7 @@ internal static class Program
         }
 
         var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
+        using var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
             env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService,
             knownBiosHashes: env.KnownBiosHashes);
 
@@ -566,6 +589,40 @@ internal static class Program
         return 0;
     }
 
+    private static int SubcommandHistory(CliRunOptions opts)
+    {
+        using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
+        return WriteHistory(collectionIndex, opts);
+    }
+
+    internal static int HistoryForTests(CliRunOptions opts, ICollectionIndex collectionIndex)
+        => WriteHistory(collectionIndex, opts);
+
+    private static int WriteHistory(ICollectionIndex collectionIndex, CliRunOptions opts)
+    {
+        ArgumentNullException.ThrowIfNull(collectionIndex);
+        ArgumentNullException.ThrowIfNull(opts);
+
+        var effectiveLimit = CollectionRunHistoryPageBuilder.NormalizeLimit(opts.HistoryLimit);
+        var fetchLimit = opts.HistoryOffset > int.MaxValue - effectiveLimit
+            ? int.MaxValue
+            : opts.HistoryOffset + effectiveLimit;
+        var total = collectionIndex.CountRunSnapshotsAsync().GetAwaiter().GetResult();
+        var snapshots = collectionIndex.ListRunSnapshotsAsync(fetchLimit).GetAwaiter().GetResult();
+        var page = CollectionRunHistoryPageBuilder.Build(snapshots, total, opts.HistoryOffset, effectiveLimit);
+        var json = CliOutputWriter.FormatRunHistoryJson(page);
+
+        if (!string.IsNullOrWhiteSpace(opts.OutputPath))
+        {
+            File.WriteAllText(opts.OutputPath, json);
+            SafeErrorWriteLine($"[History] JSON written to {opts.OutputPath}");
+            return 0;
+        }
+
+        SafeStandardWriteLine(json);
+        return 0;
+    }
+
     private static int SubcommandConvert(CliRunOptions opts)
     {
         var inputPath = opts.InputPath!;
@@ -641,7 +698,7 @@ internal static class Program
         }
 
         var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
+        using var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
             env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService,
             knownBiosHashes: env.KnownBiosHashes);
 
@@ -668,6 +725,7 @@ internal static class Program
         }
 
         var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+        using var hashServiceLease = env.HashService;
         if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
         {
             SafeErrorWriteLine("[Error] No DAT index available. Configure DatRoot in settings or use --dat-root.");

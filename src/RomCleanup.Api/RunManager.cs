@@ -4,6 +4,7 @@ using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Audit;
+using RomCleanup.Infrastructure.Index;
 
 namespace RomCleanup.Api;
 
@@ -78,7 +79,7 @@ public sealed class RunManager
                 run.ProgressPercent = ProgressEstimator.EstimateFromMessage(msg);
             });
 
-        var orchestrator = new RunOrchestrator(fs, audit,
+        using var orchestrator = new RunOrchestrator(fs, audit,
             env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex,
             onProgress: msg =>
             {
@@ -88,7 +89,37 @@ public sealed class RunManager
             archiveHashService: env.ArchiveHashService,
             knownBiosHashes: env.KnownBiosHashes);
 
+        var runStartedUtc = DateTime.UtcNow;
         var result = orchestrator.Execute(options, ct);
+        var runCompletedUtc = DateTime.UtcNow;
+
+        try
+        {
+            using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(),
+                msg =>
+                {
+                    run.ProgressMessage = msg;
+                    run.ProgressPercent = ProgressEstimator.EstimateFromMessage(msg);
+                });
+
+            CollectionRunSnapshotWriter.TryPersistAsync(
+                collectionIndex,
+                options,
+                result,
+                runStartedUtc,
+                runCompletedUtc,
+                msg =>
+                {
+                    run.ProgressMessage = msg;
+                    run.ProgressPercent = ProgressEstimator.EstimateFromMessage(msg);
+                },
+                CancellationToken.None).GetAwaiter().GetResult();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            run.ProgressMessage = $"[CollectionIndex] Run snapshot persist skipped: {ex.Message}";
+        }
+
         run.CoreRunResult = result;
         var projection = RunProjectionFactory.Create(result);
         var status = RunOutcomeExtensions.ParseRunOutcome(result.Status) switch
@@ -429,6 +460,38 @@ public sealed class ApiRunList
     public int Returned { get; init; }
     public bool HasMore { get; init; }
     public RunStatusDto[] Runs { get; init; } = Array.Empty<RunStatusDto>();
+}
+
+public sealed class ApiRunHistoryList
+{
+    public int Total { get; init; }
+    public int Offset { get; init; }
+    public int Limit { get; init; }
+    public int Returned { get; init; }
+    public bool HasMore { get; init; }
+    public ApiRunHistoryEntry[] Runs { get; init; } = Array.Empty<ApiRunHistoryEntry>();
+}
+
+public sealed class ApiRunHistoryEntry
+{
+    public string RunId { get; init; } = "";
+    public DateTime StartedUtc { get; init; }
+    public DateTime CompletedUtc { get; init; }
+    public string Mode { get; init; } = "";
+    public string Status { get; init; } = "";
+    public int RootCount { get; init; }
+    public string RootFingerprint { get; init; } = "";
+    public long DurationMs { get; init; }
+    public int TotalFiles { get; init; }
+    public int Games { get; init; }
+    public int Dupes { get; init; }
+    public int Junk { get; init; }
+    public int DatMatches { get; init; }
+    public int ConvertedCount { get; init; }
+    public int FailCount { get; init; }
+    public long SavedBytes { get; init; }
+    public long ConvertSavedBytes { get; init; }
+    public int HealthScore { get; init; }
 }
 
 public sealed class RunEnvelope

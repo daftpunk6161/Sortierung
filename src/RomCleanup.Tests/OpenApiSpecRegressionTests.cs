@@ -78,5 +78,8 @@ public sealed class OpenApiSpecRegressionTests
         Assert.True(paths.TryGetProperty("/runs/{runId}/audit", out var auditPath), "Missing audit download path in embedded OpenAPI spec.");
         Assert.True(auditPath.TryGetProperty("get", out _), "Audit download path must declare GET.");
         Assert.True(schemas.TryGetProperty("ApiRunList", out _), "Missing ApiRunList schema in embedded OpenAPI spec.");
+        Assert.True(paths.TryGetProperty("/runs/history", out var historyPath), "Missing persisted run history path in embedded OpenAPI spec.");
+        Assert.True(historyPath.TryGetProperty("get", out _), "Persisted run history path must declare GET.");
+        Assert.True(schemas.TryGetProperty("ApiRunHistoryList", out _), "Missing ApiRunHistoryList schema in embedded OpenAPI spec.");
     }
 }

@@ -3,6 +3,7 @@ using System.Linq;
 using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Paths;
 using RomCleanup.Infrastructure.State;
@@ -108,22 +109,47 @@ public sealed class RunService : IRunService
     {
         _appState.SetValue("run.execute.startedUtc", DateTime.UtcNow);
         _appState.SetValue("run.execute.cancelRequested", ct.IsCancellationRequested);
+        var runStartedUtc = DateTime.UtcNow;
 
-        var result = orchestrator.Execute(options, ct);
-        var effectiveReportPath = ReportPathResolver.Resolve(result.ReportPath, reportPath);
-
-        _appState.SetValue("run.execute.completedUtc", DateTime.UtcNow);
-        _appState.SetValue("run.execute.status", result.Status);
-        _appState.SetValue("run.execute.exitCode", result.ExitCode);
-        _appState.SetValue("run.execute.durationMs", result.DurationMs);
-        _appState.SetValue("run.execute.reportPath", effectiveReportPath);
-
-        return new RunServiceResult
+        try
         {
-            Result = result,
-            AuditPath = auditPath,
-            ReportPath = effectiveReportPath
-        };
+            var result = orchestrator.Execute(options, ct);
+            var runCompletedUtc = DateTime.UtcNow;
+
+            try
+            {
+                using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath());
+                CollectionRunSnapshotWriter.TryPersistAsync(
+                    collectionIndex,
+                    options,
+                    result,
+                    runStartedUtc,
+                    runCompletedUtc).GetAwaiter().GetResult();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                _appState.SetValue("run.execute.indexPersistWarning", ex.Message);
+            }
+
+            var effectiveReportPath = ReportPathResolver.Resolve(result.ReportPath, reportPath);
+
+            _appState.SetValue("run.execute.completedUtc", DateTime.UtcNow);
+            _appState.SetValue("run.execute.status", result.Status);
+            _appState.SetValue("run.execute.exitCode", result.ExitCode);
+            _appState.SetValue("run.execute.durationMs", result.DurationMs);
+            _appState.SetValue("run.execute.reportPath", effectiveReportPath);
+
+            return new RunServiceResult
+            {
+                Result = result,
+                AuditPath = auditPath,
+                ReportPath = effectiveReportPath
+            };
+        }
+        finally
+        {
+            orchestrator.Dispose();
+        }
     }
 
     /// <summary>

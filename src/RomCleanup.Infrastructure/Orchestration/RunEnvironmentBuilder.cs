@@ -10,6 +10,7 @@ using RomCleanup.Infrastructure.Conversion.ToolInvokers;
 using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.FileSystem;
 using RomCleanup.Infrastructure.Hashing;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Logging;
 using RomCleanup.Infrastructure.Tools;
 
@@ -209,8 +210,18 @@ public sealed class RunEnvironmentBuilder
         if (runOptions.EnableDat && !string.IsNullOrWhiteSpace(effectiveDatRoot) && Directory.Exists(effectiveDatRoot))
         {
             var datRepo = new DatRepositoryAdapter();
-            hashService = new FileHashService(
-                persistentCachePath: FileHashService.ResolveDefaultPersistentCachePath());
+            try
+            {
+                hashService = new FileHashService(
+                    collectionIndex: new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), onWarning),
+                    ownsCollectionIndex: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                onWarning?.Invoke($"[CollectionIndex] Hash cache fallback to legacy JSON persistence: {ex.Message}");
+                hashService = new FileHashService(
+                    persistentCachePath: FileHashService.ResolveDefaultPersistentCachePath());
+            }
             var consoleMap = BuildConsoleMap(dataDir, effectiveDatRoot);
 
             // Diagnostic: show what BuildConsoleMap found.

@@ -5,6 +5,13 @@ Stand: 2026-04-01
 Dieses Dokument uebersetzt die Produktanalyse in eine trackbare Roadmap mit Releases, Epics und Exit-Kriterien.
 Die Reihenfolge folgt den Projektprioritaeten: Korrektheit, Determinismus, Sicherheit, Testbarkeit, Wartbarkeit.
 
+## Umsetzungsplaene
+
+- [ ] [Master Execution Plan](../../plan/product-roadmap-execution.md)
+- [ ] [R1 Foundation Execution](../../plan/r1-foundation-execution.md)
+- [ ] [R2 Productization Execution](../../plan/r2-productization-execution.md)
+- [ ] [R3 Reach Execution](../../plan/r3-reach-execution.md)
+
 ## Priorisierung
 
 - R1 Foundation
@@ -32,9 +39,11 @@ Ziel: Eine dauerhafte fachliche Wahrheit fuer Sammlung, Delta-Runs, Reviews und 
 
 ### Arbeitspakete
 
-- [ ] Index-Datenmodell, Persistenzpfad und Migrationsstrategie festziehen
+- [x] Index-Datenmodell, Persistenzpfad und Migrationsstrategie festziehen
+- [x] Persistenten Hash-Cache auf den Collection-Index umstellen
 - [ ] Scanner- und Orchestrierungsintegration gegen den persistenten Index anbinden
-- [ ] Run-Historie und Delta-Erkennung fuer Re-Runs verfuegbar machen
+- [x] Persistierte Run-Historie fuer API und CLI verfuegbar machen
+- [ ] Delta-Erkennung fuer Re-Runs verfuegbar machen
 - [ ] Bestehende heuristische Nebenpfade in Analyse und Completeness abbauen
 - [ ] Watch/Schedule aus WPF in gemeinsame Infrastructure ueberfuehren
 - [ ] API- und CLI-Steuerung fuer Watch/Schedule definieren

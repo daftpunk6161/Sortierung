@@ -1,7 +1,10 @@
+using System.Reflection;
+using System.Text.Json;
 using RomCleanup.CLI;
+using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
 using Xunit;
 using CliProgram = RomCleanup.CLI.Program;
-using System.Reflection;
 
 namespace RomCleanup.Tests;
 
@@ -137,6 +140,104 @@ public sealed class CliProgramTests : IDisposable
         Assert.Equal(CliCommand.Run, result.Command);
         Assert.Equal(3, result.ExitCode);
         Assert.Contains(result.Errors, e => e.Contains("Invalid DAT stale threshold", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CliArgsParser_History_ParsesLimitOffsetAndOutput()
+    {
+        var outputPath = Path.Combine(_tempDir, "history.json");
+
+        var result = CliArgsParser.Parse(new[]
+        {
+            "history",
+            "--offset", "5",
+            "--limit", "25",
+            "--output", outputPath
+        });
+
+        Assert.Equal(CliCommand.History, result.Command);
+        Assert.Equal(0, result.ExitCode);
+        Assert.NotNull(result.Options);
+        Assert.Equal(5, result.Options!.HistoryOffset);
+        Assert.Equal(25, result.Options.HistoryLimit);
+        Assert.Equal(outputPath, result.Options.OutputPath);
+    }
+
+    [Fact]
+    public void HistoryForTests_WritesPagedSnapshotJson_ToStdout()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var index = new FakeCollectionIndex(
+        [
+            new CollectionRunSnapshot
+            {
+                RunId = "run-new",
+                StartedUtc = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
+                CompletedUtc = new DateTime(2026, 4, 1, 10, 1, 0, DateTimeKind.Utc),
+                Mode = "Move",
+                Status = "completed_with_errors",
+                Roots = [@"C:\Roms\SNES"],
+                RootFingerprint = "abc123",
+                DurationMs = 60000,
+                TotalFiles = 100,
+                Games = 80,
+                Dupes = 20,
+                Junk = 5,
+                DatMatches = 70,
+                ConvertedCount = 10,
+                FailCount = 2,
+                SavedBytes = 1234,
+                ConvertSavedBytes = 5678,
+                HealthScore = 90
+            },
+            new CollectionRunSnapshot
+            {
+                RunId = "run-old",
+                StartedUtc = new DateTime(2026, 3, 31, 10, 0, 0, DateTimeKind.Utc),
+                CompletedUtc = new DateTime(2026, 3, 31, 10, 1, 0, DateTimeKind.Utc),
+                Mode = "DryRun",
+                Status = "ok",
+                Roots = [@"D:\Roms\NES"],
+                RootFingerprint = "def456",
+                DurationMs = 30000,
+                TotalFiles = 50,
+                Games = 40,
+                Dupes = 10,
+                Junk = 0,
+                DatMatches = 35,
+                ConvertedCount = 0,
+                FailCount = 0,
+                SavedBytes = 0,
+                ConvertSavedBytes = 0,
+                HealthScore = 95
+            }
+        ]);
+
+        try
+        {
+            CliProgram.SetConsoleOverrides(stdout, stderr);
+
+            var exitCode = CliProgram.HistoryForTests(new CliRunOptions
+            {
+                HistoryOffset = 0,
+                HistoryLimit = 1
+            }, index);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal(string.Empty, stderr.ToString());
+
+            using var doc = JsonDocument.Parse(stdout.ToString());
+            var root = doc.RootElement;
+            Assert.Equal(2, root.GetProperty("Total").GetInt32());
+            Assert.Equal(1, root.GetProperty("Returned").GetInt32());
+            Assert.True(root.GetProperty("HasMore").GetBoolean());
+            Assert.Equal("run-new", root.GetProperty("Runs")[0].GetProperty("RunId").GetString());
+        }
+        finally
+        {
+            CliProgram.SetConsoleOverrides(null, null);
+        }
     }
 
     [Fact]
@@ -765,5 +866,51 @@ public sealed class CliProgramTests : IDisposable
     {
         var result = CliProgram.ExtractFirstCsvField(line);
         Assert.Equal(expected, result);
+    }
+
+    private sealed class FakeCollectionIndex : ICollectionIndex
+    {
+        private readonly IReadOnlyList<CollectionRunSnapshot> _snapshots;
+
+        public FakeCollectionIndex(IReadOnlyList<CollectionRunSnapshot> snapshots)
+        {
+            _snapshots = snapshots;
+        }
+
+        public ValueTask<CollectionIndexMetadata> GetMetadataAsync(CancellationToken ct = default)
+            => ValueTask.FromResult(new CollectionIndexMetadata());
+
+        public ValueTask<int> CountEntriesAsync(CancellationToken ct = default)
+            => ValueTask.FromResult(0);
+
+        public ValueTask<CollectionIndexEntry?> TryGetByPathAsync(string path, CancellationToken ct = default)
+            => ValueTask.FromResult<CollectionIndexEntry?>(null);
+
+        public ValueTask<IReadOnlyList<CollectionIndexEntry>> GetByPathsAsync(IReadOnlyList<string> paths, CancellationToken ct = default)
+            => ValueTask.FromResult<IReadOnlyList<CollectionIndexEntry>>(Array.Empty<CollectionIndexEntry>());
+
+        public ValueTask<IReadOnlyList<CollectionIndexEntry>> ListByConsoleAsync(string consoleKey, CancellationToken ct = default)
+            => ValueTask.FromResult<IReadOnlyList<CollectionIndexEntry>>(Array.Empty<CollectionIndexEntry>());
+
+        public ValueTask UpsertEntriesAsync(IReadOnlyList<CollectionIndexEntry> entries, CancellationToken ct = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask RemovePathsAsync(IReadOnlyList<string> paths, CancellationToken ct = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask<CollectionHashCacheEntry?> TryGetHashAsync(string path, string algorithm, long sizeBytes, DateTime lastWriteUtc, CancellationToken ct = default)
+            => ValueTask.FromResult<CollectionHashCacheEntry?>(null);
+
+        public ValueTask SetHashAsync(CollectionHashCacheEntry entry, CancellationToken ct = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask AppendRunSnapshotAsync(CollectionRunSnapshot snapshot, CancellationToken ct = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask<int> CountRunSnapshotsAsync(CancellationToken ct = default)
+            => ValueTask.FromResult(_snapshots.Count);
+
+        public ValueTask<IReadOnlyList<CollectionRunSnapshot>> ListRunSnapshotsAsync(int limit = 50, CancellationToken ct = default)
+            => ValueTask.FromResult<IReadOnlyList<CollectionRunSnapshot>>(_snapshots.Take(limit).ToArray());
     }
 }

@@ -1,4 +1,5 @@
 using RomCleanup.Contracts.Models;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Paths;
 using RomCleanup.Infrastructure.Safety;
@@ -378,6 +379,7 @@ internal static class CliArgsParser
             "export" => ParseExportSubcommand(rest),
             "dat" => ParseDatSubcommand(rest),
             "integrity" => ParseIntegritySubcommand(rest),
+            "history" => ParseHistorySubcommand(rest),
             "convert" => ParseConvertSubcommand(rest),
             "header" => ParseSingleInputSubcommand(CliCommand.Header, rest),
             "junk-report" => ParseSubcommandWithRoots(CliCommand.JunkReport, rest),
@@ -577,6 +579,64 @@ internal static class CliArgsParser
         return CliParseResult.Subcommand(CliCommand.Convert, opts);
     }
 
+    private static CliParseResult ParseHistorySubcommand(string[] args)
+    {
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--limit":
+                    if (!TryConsumeValue(args, ref i, "--limit", errors, out var limitValue))
+                        break;
+
+                    if (!int.TryParse(limitValue, out var parsedLimit) || parsedLimit < 1 || parsedLimit > CollectionRunHistoryPageBuilder.MaxLimit)
+                    {
+                        errors.Add($"[Error] Invalid history limit '{limitValue}'. Must be an integer between 1 and {CollectionRunHistoryPageBuilder.MaxLimit}.");
+                        break;
+                    }
+
+                    opts.HistoryLimit = parsedLimit;
+                    break;
+
+                case "--offset":
+                    if (!TryConsumeValue(args, ref i, "--offset", errors, out var offsetValue))
+                        break;
+
+                    if (!int.TryParse(offsetValue, out var parsedOffset) || parsedOffset < 0)
+                    {
+                        errors.Add($"[Error] Invalid history offset '{offsetValue}'. Must be a non-negative integer.");
+                        break;
+                    }
+
+                    opts.HistoryOffset = parsedOffset;
+                    break;
+
+                case "-o" or "--output":
+                    if (!TryConsumeValue(args, ref i, "--output", errors, out var outputValue))
+                        break;
+
+                    opts.OutputPath = outputValue;
+                    break;
+
+                default:
+                    errors.Add($"[Error] Unknown flag '{args[i]}' for history. Use --help for usage.");
+                    break;
+            }
+        }
+
+        if (errors.Count > 0)
+            return CliParseResult.ValidationError(errors);
+
+        var outputPathError = ValidateOptionalPath(opts.OutputPath, "history output path", allowUnc: false);
+        if (outputPathError is not null)
+            return CliParseResult.ValidationError([$"[Error] {outputPathError}"]);
+
+        return CliParseResult.Subcommand(CliCommand.History, opts);
+    }
+
     private static CliParseResult ParseSingleInputSubcommand(CliCommand command, string[] args)
     {
         var opts = new CliRunOptions();
@@ -716,7 +776,7 @@ internal sealed class CliParseResult
         new() { Command = CliCommand.Run, ExitCode = 0, Options = options };
 }
 
-internal enum CliCommand { Run, Help, Version, Rollback, UpdateDats, Analyze, Export, DatDiff, IntegrityCheck, IntegrityBaseline, Convert, Header, JunkReport, Completeness }
+internal enum CliCommand { Run, Help, Version, Rollback, UpdateDats, Analyze, Export, DatDiff, IntegrityCheck, IntegrityBaseline, History, Convert, Header, JunkReport, Completeness }
 
 /// <summary>
 /// Raw parsed CLI options — before settings merge.
@@ -764,4 +824,6 @@ internal sealed class CliRunOptions
     public string? TargetFormat { get; set; }
     public string? DatFileA { get; set; }
     public string? DatFileB { get; set; }
+    public int? HistoryLimit { get; set; }
+    public int HistoryOffset { get; set; }
 }

@@ -30,6 +30,7 @@ public sealed class StandaloneConversionService
         var env = new RunEnvironmentFactory().Create(
             new RunOptions { Roots = [rootDir] },
             onWarning);
+        using var hashServiceLease = env.HashService;
 
         return env.Converter is not null
             ? new StandaloneConversionService(env.Converter)

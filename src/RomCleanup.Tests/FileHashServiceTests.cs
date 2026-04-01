@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using RomCleanup.Infrastructure.Hashing;
+using RomCleanup.Infrastructure.Index;
 using Xunit;
 
 namespace RomCleanup.Tests;
@@ -195,6 +196,58 @@ public class FileHashServiceTests : IDisposable
 
         var json = File.ReadAllText(cachePath);
         Assert.DoesNotContain("clear-persist.bin", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void CollectionIndexPersistence_ReloadsHashAcrossInstances_WhenFileUnchanged()
+    {
+        var dbPath = Path.Combine(_tempDir, "collection.db");
+        var file = CreateTestFile("persist-index.bin", new byte[] { 7, 8, 9, 10 });
+
+        string? originalHash;
+        using (var first = new FileHashService(
+                   1000,
+                   collectionIndex: new LiteDbCollectionIndex(dbPath),
+                   ownsCollectionIndex: true))
+        {
+            originalHash = first.GetHash(file, "SHA1");
+        }
+
+        using var second = new FileHashService(
+            1000,
+            collectionIndex: new LiteDbCollectionIndex(dbPath),
+            ownsCollectionIndex: true);
+        var reloadedHash = second.GetHash(file, "SHA1");
+
+        Assert.Equal(originalHash, reloadedHash);
+        Assert.True(File.Exists(dbPath));
+    }
+
+    [Fact]
+    public void CollectionIndexPersistence_InvalidatesEntry_WhenFileChanges()
+    {
+        var dbPath = Path.Combine(_tempDir, "collection-invalidated.db");
+        var file = CreateTestFile("changed-index.bin", new byte[] { 1, 2, 3, 4 });
+
+        string? originalHash;
+        using (var first = new FileHashService(
+                   1000,
+                   collectionIndex: new LiteDbCollectionIndex(dbPath),
+                   ownsCollectionIndex: true))
+        {
+            originalHash = first.GetHash(file, "SHA1");
+        }
+
+        File.WriteAllBytes(file, new byte[] { 4, 3, 2, 1, 0 });
+        File.SetLastWriteTimeUtc(file, DateTime.UtcNow.AddMinutes(1));
+
+        using var second = new FileHashService(
+            1000,
+            collectionIndex: new LiteDbCollectionIndex(dbPath),
+            ownsCollectionIndex: true);
+        var newHash = second.GetHash(file, "SHA1");
+
+        Assert.NotEqual(originalHash, newHash);
     }
 
     private string CreateTestFile(string name, byte[] data)

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
 
 namespace RomCleanup.CLI;
@@ -135,6 +136,7 @@ Subcommands:
   romulus dat diff --old <path> --new <path>  Compare two Logiqx DAT files
   romulus integrity baseline --roots <path>   Create integrity baseline
   romulus integrity check                     Check files against baseline
+  romulus history [--offset <n>] [--limit <n>] [-o <file>]
   romulus convert --input <file|dir> [--console PS1] [--target chd]
   romulus header --input <file>               Analyze ROM header
   romulus junk-report --roots <path> [--aggressive]
@@ -185,6 +187,9 @@ Exit codes:
         foreach (var error in errors)
             stderr.WriteLine(error);
     }
+
+    internal static string FormatRunHistoryJson(CollectionRunHistoryPage page)
+        => JsonSerializer.Serialize(page, JsonOptions);
 
     private static CliConversionPlan[] BuildConversionPlans(ConversionReport? report)
     {

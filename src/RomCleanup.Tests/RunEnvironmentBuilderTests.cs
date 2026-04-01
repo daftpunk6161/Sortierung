@@ -261,6 +261,31 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
     }
 
     [Fact]
+    public void Build_WhenDatEnabled_CreatesPersistentHashService()
+    {
+        var warnings = new List<string>();
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            EnableDat = true,
+            DatRoot = _datRoot
+        };
+        var settings = new RomCleanupSettings();
+
+        var env = RunEnvironmentBuilder.Build(options, settings, _dataDir, warnings.Add);
+        try
+        {
+            Assert.NotNull(env.HashService);
+            Assert.True(env.HashService!.IsPersistent);
+        }
+        finally
+        {
+            env.HashService?.Dispose();
+        }
+    }
+
+    [Fact]
     public void Build_WhenConvertFormatConfigured_CreatesConverter()
     {
         var options = new RunOptions
