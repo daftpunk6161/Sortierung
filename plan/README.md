@@ -9,6 +9,8 @@ Die strategische Produkt-Roadmap liegt in [`docs/product/PRODUCT_ROADMAP_TRACKER
 - [r1-foundation-execution.md](r1-foundation-execution.md) - Umsetzungsplan fuer persistente Datenbasis, Review und Automation
 - [r2-productization-execution.md](r2-productization-execution.md) - Umsetzungsplan fuer Guided Workflows, Exporter, Profile und Trends
 - [r3-reach-execution.md](r3-reach-execution.md) - Umsetzungsplan fuer Web-Dashboard, Headless-Betrieb und kontrollierte Conversion-Erweiterung
+- [r4-stabilization-execution.md](r4-stabilization-execution.md) - Stabilisierung vor dem naechsten groesseren Produktblock
+- [r5-collection-diff-merge-execution.md](r5-collection-diff-merge-execution.md) - Umsetzungsplan fuer Collection Compare, Merge, Audit und Rollback
 
 ## Historische Detailplaene
 

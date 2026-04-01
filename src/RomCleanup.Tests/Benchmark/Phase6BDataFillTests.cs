@@ -113,39 +113,17 @@ public sealed class Phase6BDataFillTests
     {
         var allEntries = GroundTruthLoader.LoadAll();
         var holdoutEntries = HoldoutEvaluator.LoadHoldoutEntries();
+        var manifest = ManifestCalculator.Calculate();
+        ManifestCalculator.WriteManifest(manifest, BenchmarkPaths.ManifestJsonPath);
 
-        var bySets = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (var file in BenchmarkPaths.AllJsonlFiles)
-        {
-            var setName = Path.GetFileNameWithoutExtension(file);
-            var entries = GroundTruthLoader.LoadFile(file);
-            bySets[setName] = entries.Count;
-        }
+        _output.WriteLine($"Manifest updated: {manifest.TotalEntries} entries, {manifest.HoldoutEntries} holdout");
+        _output.WriteLine($"Systems covered: {manifest.SystemsCovered}");
+        _output.WriteLine($"Checksums tracked: {manifest.FileChecksums.Count}");
 
-        var manifest = new
-        {
-            _meta = new
-            {
-                description = "Benchmark dataset manifest",
-                version = "3.1.0",
-                groundTruthVersion = "2.0.0",
-                lastModified = DateTime.UtcNow.ToString("yyyy-MM-dd")
-            },
-            totalEntries = allEntries.Count,
-            holdoutEntries = holdoutEntries.Count,
-            bySet = bySets
-        };
-
-        var json = JsonSerializer.Serialize(manifest, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-
-        File.WriteAllText(BenchmarkPaths.ManifestJsonPath, json);
-        _output.WriteLine($"Manifest updated: {allEntries.Count} entries, {holdoutEntries.Count} holdout");
-        _output.WriteLine(json);
-
+        Assert.Equal(allEntries.Count, manifest.TotalEntries);
+        Assert.Equal(holdoutEntries.Count, manifest.HoldoutEntries);
+        Assert.Equal(BenchmarkPaths.AllJsonlFiles.Length, manifest.FileChecksums.Count);
+        Assert.Equal(manifest.TotalEntries, manifest.BySet.Values.Sum());
         Assert.True(allEntries.Count >= 2000, $"Total entries {allEntries.Count} must be ≥ 2000");
     }
 }

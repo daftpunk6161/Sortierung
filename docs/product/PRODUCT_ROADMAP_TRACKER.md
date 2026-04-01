@@ -11,12 +11,16 @@ Die Reihenfolge folgt den Projektprioritaeten: Korrektheit, Determinismus, Siche
 - [x] [R1 Foundation Execution](../../plan/r1-foundation-execution.md)
 - [x] [R2 Productization Execution](../../plan/r2-productization-execution.md)
 - [x] [R3 Reach Execution](../../plan/r3-reach-execution.md)
+- [x] [R4 Stabilization Execution](../../plan/r4-stabilization-execution.md)
+- [ ] [R5 Collection Diff & Merge Execution](../../plan/r5-collection-diff-merge-execution.md)
 
 ## Priorisierung
 
 - R1 Foundation
 - R2 Productization
 - R3 Reach
+- R4 Stabilization
+- R5 Collection Diff & Merge
 
 ## R1 Foundation
 
@@ -120,6 +124,67 @@ Status: abgeschlossen am `2026-04-01`
 - [x] ECM/NKit nur mit expliziter Verifikation, Fehler-Cleanup und Review-Flow integrieren
 - [x] Tooling, Timeout-, Hash- und Exit-Code-Absicherung fuer neue Converter erweitern
 - [x] Integrations- und Negativtests fuer Headless-Betrieb und Conversion-Fehlfaelle ergaenzen
+
+## R4 Stabilization
+
+Ziel: Die bestehende Produktbreite aus R1-R3 vor dem naechsten groesseren Feature-Block real belastbar machen.
+Status: abgeschlossen am `2026-04-01`
+
+### Release-Track
+
+- [x] Release-Smoke-Matrix fuer GUI, CLI, API und Dashboard
+- [x] Headless-/NAS-Betriebspruefung mit echten Pfad- und Tool-Szenarien
+- [x] Conversion- und Tooling-Haertung entlang aktiver Auditpunkte
+- [x] Benchmark-/Dataset-Audit und Baseline-Hygiene
+- [x] Strukturelle UX-/A11y-Smokes plus dokumentierter Operator-Spot-Check fuer kritische GUI-Flows
+
+### Exit-Kriterien
+
+- [x] Kritische Kanal-Smokes sind dokumentiert und erfolgreich durchlaufen
+- [x] Headless-/NAS-Betrieb ist praktisch verifiziert
+- [x] Conversion-/Tooling-Risiken sind fuer den Release-Stand triagiert
+- [x] Benchmark-/Dataset-Basis ist fuer den naechsten Produktblock aktuell genug
+- [x] GUI-Bedien- und A11y-Basics sind fuer Hauptfluesse geprueft
+
+### Arbeitspakete
+
+- [x] Kleine Release-Smoke-Matrix definieren und verankern
+- [x] Reale Headless-/Proxy-/AllowedRoots-Smokes fahren
+- [x] Aktive Conversion-Auditkanten abbauen oder bewusst dokumentieren
+- [x] Datensatz-/Benchmark-Audit refreshen
+- [x] Kritische GUI-/A11y-Basics ueber Struktur-Smokes und Operator-Spot-Check absichern
+- [x] Ergebnis sauber in Plan, Tracker und Changelog ueberfuehren
+
+## R5 Collection Diff & Merge
+
+Ziel: Einen sicheren, auditierbaren Produktpfad fuer den Vergleich und das Zusammenfuehren mehrerer Sammlungen schaffen.
+Status: geplant, nach R4
+
+### Release-Track
+
+- [ ] C8 Collection Diff & Merge auf Basis von [`C8-collection-diff-merge.md`](../epics/C8-collection-diff-merge.md)
+- [ ] Compare- und Merge-Modelle ueber denselben Collection-Index und Candidate-Resolver anbinden
+- [ ] Merge ueber bestehende Safety-, Audit- und Rollback-Infrastruktur fuehren
+- [ ] GUI-, CLI- und API-Paritaet fuer Compare und Merge sicherstellen
+
+### Exit-Kriterien
+
+- [ ] Compare und Merge nutzen dieselbe Sammlungswahrheit wie Analyse und Export
+- [ ] Kein Merge schreibt ausserhalb erlaubter Roots oder ueberschreibt still
+- [ ] Konflikt- und Risiko-Faelle bleiben review-pflichtig
+- [ ] Preview, Execute und Report bleiben fuer Merge konsistent
+- [ ] Diff & Merge ist gegen reale Multi-Collection-Negativfaelle abgesichert
+
+### Arbeitspakete
+
+- [ ] Compare-Vertrag, Diff-Zustaende und Merge-Plan-Modell definieren
+- [ ] Source-Scope-Materialisierung index-first verdrahten
+- [ ] Diff-Engine auf bestehende Winner-Selection setzen
+- [ ] Merge-Planer mit Safety- und Conflict-Regeln anbinden
+- [ ] Merge-Execute, Audit und Rollback ueber bestehende Infrastruktur verdrahten
+- [ ] GUI-, CLI- und API-Oberflaechen ohne Schattenlogik anbinden
+- [ ] Performance- und Scope-Haertung fuer grosse Sammlungen ergaenzen
+- [ ] Invarianten-, Negativ- und Paritaetstests vervollstaendigen
 
 ## Parked / Bewusst spaeter
 

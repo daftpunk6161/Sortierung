@@ -116,6 +116,27 @@ curl `
 
 Rufe `https://romulus.example.com/dashboard/` im Browser auf und hinterlege dort den API-Key.
 
+## Reproduzierbarer Headless Smoke
+
+Fuer den dokumentierten Betriebsmodus liegt ein echter Smoke unter [deploy/smoke/Invoke-HeadlessSmoke.ps1](../../deploy/smoke/Invoke-HeadlessSmoke.ps1).
+
+Lokaler Durchlauf:
+
+```powershell
+pwsh -NoProfile -File deploy/smoke/Invoke-HeadlessSmoke.ps1 -Configuration Release
+```
+
+Der Smoke startet die gebaute API mit isoliertem `APPDATA`/`LOCALAPPDATA` und prueft:
+
+- `healthz`
+- anonymes Dashboard-Bootstrap
+- Dashboard-Shell
+- authentifizierte Dashboard-Zusammenfassung
+- `AllowedRoots`-Block fuer `/runs`
+- `AllowedRoots`-Block fuer `/convert`
+
+Damit bleibt der Headless-Pfad nicht nur dokumentiert, sondern vor Release praktisch verifizierbar.
+
 ## Was bewusst nicht getan werden sollte
 
 - Kein Direkt-Expose der API ohne HTTPS.

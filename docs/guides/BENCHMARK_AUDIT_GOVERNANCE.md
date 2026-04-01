@@ -1,57 +1,89 @@
 # Benchmark Audit & Ground Truth Governance
 
-## Jährlicher Audit-Prozess
+Stand: 2026-04-01
 
-### Geplante Audits
-- **Jahresaudit (Q1)**: Vollständige GT-Überprüfung, Baseline-Archivierung, Gate-Threshold-Review.
-- **Halbjahres-Review (Q3)**: Delta-Check neuer Einträge seit Q1. Holdout-Stichprobe prüfen.
+Dieses Dokument beschreibt den produktionsnahen Governance-Rahmen fuer Benchmark-, Manifest- und Ground-Truth-Aenderungen.
 
-### Ereignisgesteuerte Trigger
+## 1. Aktueller Baseline-Stand
+
+Snapshot aus `benchmark/manifest.json`:
+
+| Kennzahl | Wert |
+|---|---:|
+| `totalEntries` | 7639 |
+| `holdoutEntries` | 200 |
+| `performance-scale` | 5000 |
+| `lastModified` | 2026-04-01 |
+
+Die Manifest-Basis ist nur gueltig, wenn die Checksummen der JSONL-Dateien und die `bySet`-Summen konsistent bleiben.
+
+## 2. Verbindliche Release-Gates
+
+Vor Release oder vor einem bewusst akzeptierten Baseline-Update muessen mindestens diese Schritte grün sein:
+
+```powershell
+pwsh -NoProfile -File benchmark/tools/Test-ManifestIntegrity.ps1
+pwsh -NoProfile -File benchmark/tools/Invoke-CoverageGate.ps1 -NoBuild
+```
+
+Optional fuer menschlich lesbare Auswertung:
+
+```powershell
+pwsh -NoProfile -File benchmark/tools/New-CoverageGapReport.ps1 -Format markdown
+```
+
+## 3. Aenderungsregeln fuer Ground Truth
+
+1. Ground-Truth-Aenderungen nur per Pull Request.
+2. Jeder GT-PR braucht mindestens ein Review.
+3. Die Quelle fuer die Aenderung muss im PR nachvollziehbar benannt werden.
+4. Manifest und Checksummen muessen nach Dataset-Aenderungen aktualisiert werden.
+5. Holdout-Daten bleiben read-only fuer regulare Tuning-Arbeit.
+
+## 4. Baseline- und Manifest-Hygiene
+
+Pflicht bei Dataset-Aenderungen:
+
+1. JSONL-Dateien aendern oder ergaenzen
+2. Manifest regenerieren
+3. Manifest-Integrity pruefen
+4. Coverage-Gate pruefen
+5. Aenderung mit Begruendung reviewen lassen
+
+Die Manifest-Datei ist stale, wenn:
+
+- `fileChecksums` nicht mehr zu den echten JSONL-Dateien passen
+- `totalEntries` nicht mehr zur Summe der Datensaetze passt
+- `bySet` oder `systemsCovered` nicht mehr konsistent sind
+
+## 5. Audit-Kadenz
+
+### Regulare Zyklen
+
+- Q1: grosser Ground-Truth-/Coverage-Audit
+- Q3: Delta-Review mit Fokus auf Holdout und neue Systeme
+
+### Ereignisgetriebene Trigger
+
 | Trigger | Aktion |
-|---------|--------|
-| Neue Konsole in `consoles.json` | GT-Expansion für die Konsole + Gate-Schwellenwert setzen |
-| Recognition-Algorithmus-Änderung (GameKey, Region, Scoring) | Baseline-Snapshot + Holdout-Vergleich |
-| M4/M6/M7/M9a-Schwellenwert-Verletzung | Sofortiger Root-Cause-Review |
-| Holdout-Divergenz >3% bei Eval-Verbesserung <0.5% | Overfitting-Warning → GT-Bias-Audit |
-| Neue DAT-Quelle (TOSEC, Redump Update) | dat-coverage Re-Evaluation |
+|---|---|
+| neue Konsole in `consoles.json` | gezielte Benchmark-Erweiterung und Gate-Review |
+| Recognition-/Scoring-Aenderung | Manifest-Integrity + Coverage-Gate + Holdout-Check |
+| Regression in `CoverageGate`/`QualityGate` | Root-Cause-Review vor weiterem Feature-Bau |
+| groessere Dataset-Erweiterung | Manifest regenerieren und Audit-Report aktualisieren |
 
-## Ground-Truth-Änderungsrichtlinie
-
-### Verpflichtende Regeln
-1. **Alle GT-Änderungen nur per Pull Request** — kein Direct Push auf `main`.
-2. **Jeder GT-PR braucht mindestens 1 Review** durch einen Zweit-Maintainer.
-3. **GT-Änderungen brauchen eine Begründung** im PR-Body (z.B. "Redump 2026-03 Update bestätigt SHA1").
-4. **`addedInVersion` und `lastVerified`** Felder im GT-Entry pflegen.
-5. **Keine rückwirkenden Verdikt-Änderungen** ohne dokumentierten Grund.
-
-### PR-Template für GT-Änderungen
-```
-## Ground Truth Änderung
-
-**Art:** [ ] Neuer Eintrag [ ] Korrektur [ ] Entfernung
-**Konsole:** ___
-**Begründung:** ___
-**Quelle:** [ ] Redump [ ] No-Intro [ ] TOSEC [ ] Manuelle Prüfung
-**Holdout betroffen:** [ ] Ja [ ] Nein
-```
-
-## Baseline-Archivierung
-
-### Archivierungs-Strategie
-- Jeder Baseline-Snapshot wird unter `benchmark/baselines/` mit Datums-Suffix gespeichert.
-- `baseline-latest.json` ist immer ein Symlink/Kopie der aktuellen Baseline.
-- Alte Baselines werden archiviert (nicht gelöscht) unter `benchmark/baselines/archive/`.
-- Beim Jahresaudit werden Baselines >12 Monate in ein separates Archiv verschoben.
-
-### CI-Integration
-- **PR-Gate** (`benchmark-gate.yml` → `benchmark-gate` Job): Prüft CoverageGate + QualityGate auf jedem PR.
-- **Nightly** (`benchmark-gate.yml` → `benchmark-full` Job): Vollständiger Benchmark-Lauf mit HTML-Dashboard.
-- **Baseline-Update** (`benchmark-gate.yml` → `baseline-publish` Job): Nur manuell nach Review.
-
-## Verantwortlichkeiten
+## 6. Verantwortlichkeiten
 
 | Rolle | Aufgabe |
-|-------|---------|
-| Maintainer | GT-PRs reviewen, Jahresaudit durchführen |
-| CI Bot | Nightly Benchmarks, Overfitting-Detection |
-| Contributor | GT-Ergänzungen nur per PR mit Template |
+|---|---|
+| Maintainer | Ground-Truth-PRs reviewen, Audit-Freigaben geben |
+| Contributor | Reproduktionsfaelle und neue Entries mit Quelle einreichen |
+| CI | Manifest-Integrity, Coverage-Gate und Baseline-Drift pruefen |
+
+## 7. Bezug zu R4 Stabilization
+
+Der Stabilization-Schnitt verankert Benchmark-Governance bewusst im Release-Pfad:
+
+- Manifest-Integrity wird als reproduzierbarer Schritt gefahren
+- Coverage-Gate ist Teil der Release-Smoke-Matrix
+- Dataset-/Manifest-Hygiene ist nicht mehr nur Prozesswissen, sondern release-relevanter Gate

@@ -679,7 +679,7 @@ Die Features mit dem hoechsten Community-Impact sind: Smart Patch Pipeline (taeg
 | FEAT-023 | RetroAchievements Integration | Integration | RA-Kompatibilitaet unbekannt | RA-Community | Hoch | Mittel | Niedrig | P2 | Proposed | RA API evaluieren + Rate-Limits |
 | FEAT-024 | ZSTD Zip Support | Core | Nur deflate-ZIPs unterstuetzt | Cross-Tool-User | Mittel | Mittel | Niedrig | P2 | Proposed | ZstdNet NuGet evaluieren |
 | FEAT-020 | Config Export/Share | Community | Config nicht portierfaehig | Community | Mittel | Klein | Niedrig | P2 | Proposed | Export-Schema definieren |
-| FEAT-004 | Collection Diff & Merge | Core | Multi-Source-Merge manuell | Sammler | Hoch | Mittel | Niedrig | P2 | Proposed | Diff-Algorithmus auf Basis Hash-Index |
+| FEAT-004 | Collection Diff & Merge | Core | Multi-Source-Merge manuell | Sammler | Hoch | Mittel | Niedrig | P2 | Selected for R5 | `docs/epics/C8-collection-diff-merge.md` + `plan/r5-collection-diff-merge-execution.md` |
 | FEAT-006 | Metadata Enrichment | Integration | Sammlung "leblos" — nur Dateien | Einsteiger | Hoch | Gross | Mittel | P2 | Proposed | IGDB API Key + Schema evaluieren |
 | FEAT-001 | Collection Health Monitor | Innovation | Keine proaktive Ueberwachung | Power-User | Sehr hoch | Gross | Mittel | P2 | Proposed | FileSystemWatcher-PoC |
 | FEAT-011 | Collection Snapshot / Time Travel | Innovation | Manuelle Aenderungen unsichtbar | Archivare | Mittel | Mittel | Niedrig | P3 | Proposed | Snapshot-Format spezifizieren |

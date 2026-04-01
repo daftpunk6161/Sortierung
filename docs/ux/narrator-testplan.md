@@ -1,62 +1,80 @@
-# Narrator DryRun-Testplan (TASK-133)
+# Keyboard- und Narrator-Spot-Check
 
-Dieser Testplan definiert die manuelle Verifikation der Screen-Reader-Kompatibilität
-mit Windows Narrator für einen vollständigen DryRun-Durchlauf in Romulus.
+Stand: 2026-04-01
 
-## Voraussetzungen
+Dieses Dokument ist der **operatorische Spot-Check** fuer die kritischen GUI-Flows.
+Der reproduzierbare, automatisierte Teil der Accessibility-Pruefung laeuft ueber die Release-Smoke-Matrix.
 
-- Windows 10/11 mit aktiviertem Narrator (Win+Ctrl+Enter)
-- Romulus GUI gestartet
-- Mindestens ein Root konfiguriert
+## 1. Automatisierter Struktur-Gate
 
-## Testschritte
+Vor einem manuellen Spot-Check muss der strukturelle Accessibility-Gate grün sein:
 
-### 1. Anwendungsstart
-- [ ] Narrator liest Fenstertitel "Romulus" vor
-- [ ] Fokus liegt auf CommandBar (TabIndex 1)
-- [ ] Navbar-Items sind als Buttons mit Name erkennbar
+```powershell
+dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj `
+  --configuration Release `
+  --no-build `
+  --filter "FullyQualifiedName~Phase8ThemeAccessibilityTests|FullyQualifiedName~WpfProductizationTests"
+```
 
-### 2. Navigation
-- [ ] Tab-Reihenfolge folgt: CommandBar → SubTabBar → ContextPanel → NavigationRail → SmartActionBar
-- [ ] Jede Navbar-Sektion wird mit korrektem Namen vorgelesen
-- [ ] Fokus-Indikator (Neon-Border) ist sichtbar
+Dieser Gate deckt im Repo reproduzierbar ab:
 
-### 3. Wizard / Setup
-- [ ] Wizard-Schritte (Ellipsen) werden als "Schritt 1/2/3" vorgelesen
-- [ ] Add-Root-Button hat Namen "Ordner hinzufügen"
-- [ ] Region-Checkboxen lesen ihren Zustand vor (aktiviert/deaktiviert)
+- Theme- und Kontrast-Invarianten
+- `AutomationProperties.Name`
+- Live-Region-Markup
+- produktisierte Wizard-/Workflow-Bindings
 
-### 4. Einstellungen
-- [ ] Theme-Dropdown liest "Theme umschalten" vor
-- [ ] Alle 6 Theme-Items werden einzeln vorgelesen
-- [ ] Lokale-ComboBox liest "Sprache" vor
-- [ ] Trash-Pfad-Textfeld liest seinen Label/Name vor
+## 2. Voraussetzungen fuer den Operator-Spot-Check
 
-### 5. DryRun starten
-- [ ] Run-Button (F5) wird als "Vorschau starten" vorgelesen
-- [ ] Kein Focus-Trap während des Runs
-- [ ] Fortschrittsanzeige wird als LiveRegion aktualisiert (Assertive)
-- [ ] Phasen-Status (Scanning, Deduplicating) wird angekündigt
+- Windows 10/11
+- GUI startet lokal
+- mindestens ein konfigurierter Root
+- Narrator aktivierbar mit `Win+Ctrl+Enter`
 
-### 6. Ergebnis
-- [ ] Abschluss-Status wird vorgelesen (Completed / Preview complete)
-- [ ] Report-Button (Ctrl+R) hat zugänglichen Namen
-- [ ] Rollback-Button (Ctrl+Z) hat zugänglichen Namen
+## 3. Kritische Flows
 
-### 7. Fehlerfall
-- [ ] Fehlermeldungen werden als Assertive-LiveRegion angekündigt
-- [ ] Cancel-Button wird korrekt vorgelesen
-- [ ] Danger-Dialoge werden als modale Warnung erkannt
+### Anwendungsstart
 
-### 8. Themes
-- [ ] Alle 6 Themes beibehalten Narrator-Kompatibilität
-- [ ] HighContrast-Theme: 3px Fokusring sichtbar
-- [ ] Kein visueller Informationsverlust bei Theme-Wechsel
+- [ ] Fenstertitel wird sinnvoll vorgelesen
+- [ ] Fokus landet kontrolliert auf der ersten primären Interaktionszone
+- [ ] CommandBar und Navigation sind als benannte Controls erkennbar
 
-## Bestanden-Kriterien
+### Navigation
 
-- Kein Focus-Trap in der gesamten Anwendung
-- Alle interaktiven Controls haben AutomationProperties.Name
-- LiveRegions melden Status-Updates korrekt
-- Keyboard-Navigation funktioniert vollständig (kein Maus-Zwang)
-- WCAG AA Kontrast in allen Themes (AAA in HighContrast)
+- [ ] Tab-Reihenfolge bleibt konsistent
+- [ ] Fokus-Indikator bleibt in allen Hauptbereichen sichtbar
+- [ ] Es gibt keinen Focus-Trap
+
+### Wizard / Guided Flows
+
+- [ ] Wizard-Schritte werden mit sinnvollen Namen vorgelesen
+- [ ] Add-Root und Regionsauswahl sind per Tastatur und Screen Reader nutzbar
+- [ ] Wechsel zwischen Simple/Expert fuehrt nicht zu verlorenem Fokus
+
+### Run / Status / Ergebnis
+
+- [ ] `F5` / Preview ist keyboard-first erreichbar
+- [ ] Statusaenderungen werden als Live-Region verstaendlich angesagt
+- [ ] Report-/Rollback-Controls haben zugaengliche Namen
+
+### Fehler- und Danger-Faelle
+
+- [ ] Fehlermeldungen werden wahrnehmbar angekuendigt
+- [ ] Cancel bleibt keyboard-first erreichbar
+- [ ] Danger-Dialoge wirken modal und klar
+
+## 4. Bestanden-Kriterien
+
+- Kein Focus-Trap im Hauptfluss
+- Alle kritischen Controls haben einen zugaenglichen Namen
+- Status- und Fehleraenderungen sind screen-reader-seitig wahrnehmbar
+- Keyboard-Navigation deckt die Hauptpfade ohne Maus ab
+
+## 5. Beziehung zu R4 Stabilization
+
+R4 markiert die GUI-/A11y-Basics nicht ueber eine fingierte Vollautomatik als erledigt.
+Stattdessen gilt bewusst:
+
+- strukturelle Accessibility-Smokes sind reproduzierbar automatisiert
+- der echte Narrator-/Keyboard-Spot-Check bleibt als operatorische Freigabe dokumentiert
+
+Damit bleibt der Release-Pfad ehrlich und trotzdem reproduzierbar.

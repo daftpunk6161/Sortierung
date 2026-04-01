@@ -12,9 +12,9 @@
         ┌──────────────────┐
         │   Integration    │  RunOrchestrator, API-RunManager, FileSystem-Ops
         ├──────────────────┤
-        │   Unit           │  200+ Testdateien, aktuell 7145 Tests
+        │   Unit           │  200+ Testdateien, aktuell 7149 Tests
         └──────────────────┘
-        Gesamt: aktuell 7145 Tests (xUnit, Stand 2026-04-01 grün)
+        Gesamt: aktuell 7149 Tests (xUnit, Stand 2026-04-01 grün)
 ```
 
 ---
@@ -309,4 +309,11 @@ dotnet test src/RomCleanup.sln --filter "FullyQualifiedName~GameKey"
 
 # Mit Coverage
 dotnet test src/RomCleanup.sln --collect:"XPlat Code Coverage"
+```
+
+### Release-Smokes
+
+```powershell
+pwsh -NoProfile -File deploy/smoke/Invoke-ReleaseSmoke.ps1 -Configuration Release
+pwsh -NoProfile -File deploy/smoke/Invoke-HeadlessSmoke.ps1 -Configuration Release -SkipBuild
 ```

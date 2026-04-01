@@ -10,6 +10,8 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
 - [x] R1 Foundation
 - [x] R2 Productization
 - [x] R3 Reach
+- [x] R4 Stabilization
+- [ ] R5 Collection Diff & Merge
 
 ## Abhaengigkeiten
 
@@ -17,12 +19,16 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
 - [x] R1 ist Grundlage fuer R3
 - [x] R2 kann nur teilweise parallel zu R3 laufen
 - [x] Conversion-Erweiterungen laufen erst nach gesichertem Review-, Verify- und Rollback-Pfad
+- [x] R4 stabilisiert R1-R3 vor neuer Produktbreite
+- [ ] R5 startet erst nach abgeschlossenem R4
 
 ## Release-Plaene
 
 - [x] [R1 Foundation Execution](r1-foundation-execution.md)
 - [x] [R2 Productization Execution](r2-productization-execution.md)
 - [x] [R3 Reach Execution](r3-reach-execution.md)
+- [x] [R4 Stabilization Execution](r4-stabilization-execution.md)
+- [ ] [R5 Collection Diff & Merge Execution](r5-collection-diff-merge-execution.md)
 
 ## Aktuelle Prioritaet
 
@@ -80,6 +86,34 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
   Review-pflichtige Multi-Step-Conversion ist in Planner/Executor/Orchestrator integriert.
 - [x] R3-T09 Integrations- und Negativtests fuer Headless und Conversion-Erweiterung vervollstaendigen
   Vollsuite grün: `7145/7145` Tests auf Stand `2026-04-01`.
+- [x] R4-T01 Release-Smoke-Matrix fuer GUI, CLI, API und Dashboard festziehen
+  Reproduzierbare Release-Smokes liegen jetzt unter `deploy/smoke/` und im Guide `docs/guides/RELEASE_SMOKE_MATRIX.md`.
+- [x] R4-T02 Headless-/NAS-Betriebspruefung mit echten Pfad- und Tool-Szenarien absichern
+  Ein realer Headless-Smoke prueft die gebaute API gegen Health, Dashboard und `AllowedRoots`.
+- [x] R4-T03 Conversion- und Tooling-Haertung entlang aktiver Auditpunkte abschliessen
+  Conversion-Policies, NKit-Pinning und die fail-closed-ECM-Grenze sind dokumentiert und testseitig fixiert.
+- [x] R4-T04 Benchmark-/Dataset-Audit und Baseline-Hygiene aktualisieren
+  Manifest, Integrity-Gate, Governance und Dataset-Audit laufen jetzt auf demselben angereicherten Manifestformat.
+- [x] R4-T05 Strukturelle UX-/A11y-Smokes und operatorischen Spot-Check fuer kritische GUI-Flows absichern
+  Reproduzierbare Accessibility-Smokes sind automatisiert; der echte Narrator-Spot-Check bleibt dokumentierter Operator-Schritt.
+- [x] R4-T06 Release-Check, Changelog-Hygiene und offene Produktkanten sauber schneiden
+  R4 ist repo-seitig geschlossen; naechster aktive Block ist `R5 Collection Diff & Merge`.
+- [ ] R5-T01 Compare-Vertrag, Diff-Zustaende und Merge-Plan-Modell festziehen
+  Collection Diff & Merge startet mit einem kanalneutralen Fachvertrag statt mit UI- oder CLI-Sonderwegen.
+- [ ] R5-T02 Source-Scope-Materialisierung auf Collection Index und Candidate-Resolver setzen
+  Compare und Merge lesen dieselbe Sammlungswahrheit wie Analyse, Export und Completeness.
+- [ ] R5-T03 Diff-Engine auf Basis vorhandener Hash-, Candidate- und Winner-Regeln bauen
+  Unterschiede und Gewinner werden ueber dieselben Kernregeln entschieden wie in der Deduplizierung.
+- [ ] R5-T04 Merge-Planer mit Safety-, Conflict- und Review-Regeln integrieren
+  Aus dem Diff wird ein kontrollierter, review-faehiger Merge-Plan.
+- [ ] R5-T05 Merge-Execute, Audit und Rollback ueber bestehende mutierende Infrastruktur anbinden
+  Merge wird kein Sonderweg, sondern ein geschuetzter Produktpfad mit Undo-Faehigkeit.
+- [ ] R5-T06 GUI-, CLI- und API-Projektionen fuer Compare und Merge ohne Schattenlogik verdrahten
+  Alle Kanaele bilden denselben Diff-/Merge-Zustand ab.
+- [ ] R5-T07 Performance- und Scope-Haertung fuer grosse Sammlungen ergaenzen
+  Multi-Collection-Vergleiche bleiben paginierbar und index-first.
+- [ ] R5-T08 Invarianten-, Negativ- und Paritaetstests vervollstaendigen
+  Diff & Merge wird release-faehig abgesichert.
 
 ## Parked
 

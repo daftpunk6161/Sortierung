@@ -157,6 +157,115 @@ public sealed class ConversionRegistrySchemaTests
         Assert.Equal(keys.Length, keys.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
+    [Fact]
+    public void Consoles_ConversionPolicyDistribution_MatchesReleaseBaseline()
+    {
+        using var consoles = OpenJson("consoles.json");
+
+        var entries = consoles.RootElement.GetProperty("consoles").EnumerateArray().ToArray();
+        Assert.Equal(162, entries.Length);
+
+        var policyCounts = entries
+            .GroupBy(
+                console => console.TryGetProperty("conversionPolicy", out var policy)
+                    ? policy.GetString() ?? "None"
+                    : "None",
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+
+        Assert.Equal(20, GetPolicyCount(policyCounts, "Auto"));
+        Assert.Equal(52, GetPolicyCount(policyCounts, "ArchiveOnly"));
+        Assert.Equal(6, GetPolicyCount(policyCounts, "ManualOnly"));
+        Assert.Equal(84, GetPolicyCount(policyCounts, "None"));
+    }
+
+    [Fact]
+    public void AutoAndArchiveOnlyConsoles_HavePreferredConversionTarget()
+    {
+        using var consoles = OpenJson("consoles.json");
+
+        var missing = consoles.RootElement.GetProperty("consoles")
+            .EnumerateArray()
+            .Where(console =>
+            {
+                var policy = console.TryGetProperty("conversionPolicy", out var conversionPolicy)
+                    ? conversionPolicy.GetString() ?? "None"
+                    : "None";
+
+                if (!string.Equals(policy, "Auto", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(policy, "ArchiveOnly", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                var preferred = console.TryGetProperty("preferredConversionTarget", out var target)
+                    ? target.GetString()
+                    : null;
+
+                return string.IsNullOrWhiteSpace(preferred);
+            })
+            .Select(console => console.GetProperty("key").GetString())
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .ToArray();
+
+        Assert.Empty(missing);
+    }
+
+    [Fact]
+    public void NkitCapabilities_ArePinnedToExpectedToolHash()
+    {
+        using var registry = OpenJson("conversion-registry.json");
+        using var toolHashes = OpenJson("tool-hashes.json");
+
+        var expectedHash = toolHashes.RootElement
+            .GetProperty("Tools")
+            .GetProperty("nkitprocessingapp.exe")
+            .GetString();
+
+        Assert.False(string.IsNullOrWhiteSpace(expectedHash));
+
+        var nkitCapabilities = registry.RootElement.GetProperty("capabilities")
+            .EnumerateArray()
+            .Where(capability =>
+            {
+                var source = capability.GetProperty("sourceExtension").GetString();
+                return string.Equals(source, ".nkit.iso", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(source, ".nkit.gcz", StringComparison.OrdinalIgnoreCase);
+            })
+            .ToArray();
+
+        Assert.Equal(2, nkitCapabilities.Length);
+
+        foreach (var capability in nkitCapabilities)
+        {
+            var tool = capability.GetProperty("tool");
+            Assert.Equal("nkit", tool.GetProperty("toolName").GetString());
+            Assert.Equal(expectedHash, tool.GetProperty("expectedHash").GetString());
+        }
+    }
+
+    [Fact]
+    public void EcmCapability_RemainsFailClosedUntilToolHashIsPinned()
+    {
+        using var registry = OpenJson("conversion-registry.json");
+        using var toolHashes = OpenJson("tool-hashes.json");
+
+        var ecmCapability = registry.RootElement.GetProperty("capabilities")
+            .EnumerateArray()
+            .Single(capability => string.Equals(
+                capability.GetProperty("sourceExtension").GetString(),
+                ".ecm",
+                StringComparison.OrdinalIgnoreCase));
+
+        var tool = ecmCapability.GetProperty("tool");
+        Assert.Equal("unecm", tool.GetProperty("toolName").GetString());
+        Assert.False(tool.TryGetProperty("expectedHash", out _));
+        Assert.False(toolHashes.RootElement.GetProperty("Tools").TryGetProperty("unecm.exe", out _));
+    }
+
+    private static int GetPolicyCount(IReadOnlyDictionary<string, int> policyCounts, string key)
+        => policyCounts.TryGetValue(key, out var count) ? count : 0;
+
     private static JsonDocument OpenJson(params string[] pathParts)
     {
         var dataDir = RunEnvironmentBuilder.ResolveDataDir();

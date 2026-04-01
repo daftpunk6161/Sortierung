@@ -1,125 +1,106 @@
-# Datensatz-Audit-Prozess (Phase D2)
+# Datensatz-Audit-Prozess
 
-> **Version:** 1.0.0  
-> **Status:** Verbindlich  
-> **Erstellt:** 2026-03-23  
-> **Bezug:** ADR-017, RECOGNITION_QUALITY_BENCHMARK.md, historischer Audit-Snapshot [COVERAGE_GAP_AUDIT.md](../../archive/audits/COVERAGE_GAP_AUDIT.md)
+Stand: 2026-04-01
 
----
+Status: verbindlich
+
+Bezug:
+
+- [BENCHMARK_AUDIT_GOVERNANCE.md](../guides/BENCHMARK_AUDIT_GOVERNANCE.md)
+- [RELEASE_SMOKE_MATRIX.md](../guides/RELEASE_SMOKE_MATRIX.md)
+- historische Audit-Snapshots unter [`archive/audits/`](../../archive/audits/)
 
 ## 1. Zweck
 
-Formalisierter Review-Zyklus für den Benchmark-Datensatz, um:
+Der Datensatz-Audit-Prozess soll sicherstellen, dass Benchmark- und Ground-Truth-Daten:
 
-- Ground-Truth-Drift zu erkennen und zu korrigieren
-- Erkennungslücken systematisch zu schließen
-- Qualität und Repräsentativität des Testsets langfristig zu sichern
-- Overfitting an stabile Testdaten zu verhindern
+- fachlich plausibel bleiben
+- nach Aenderungen reproduzierbar validiert werden
+- nicht still von Manifest, Gates oder Coverage-Schwellen entkoppeln
 
----
+## 2. Pflichtschritte bei Dataset-Aenderungen
 
-## 2. Frequenz und Auslöser
+Wenn JSONL-Daten, Holdout, Gates oder systembezogene Benchmark-Faelle geaendert werden, ist die Minimalfolge:
 
-### Regulärer Audit (jährlich)
+1. Datensatz aendern
+2. Manifest aktualisieren
+3. Manifest-Integrity pruefen
+4. Coverage-Gate pruefen
+5. offene Gaps dokumentieren oder bewusst begruenden
 
-| # | Schritt | Verantwortlich | Output |
-|---|---------|----------------|--------|
-| A1 | Coverage-Gap-Analyse gegen `gates.json` | Reviewer | Aktualisierter Audit-Snapshot `archive/audits/COVERAGE_GAP_AUDIT.md` |
-| A2 | Confusion-Matrix-Review (Top-10 Paare) | Reviewer | Issue pro Paar mit > 2% Rate |
-| A3 | Fallklassen-Vollständigkeitsprüfung | Reviewer | Fehlende Klassen → Dataset-Erweiterung |
-| A4 | Holdout-Drift-Prüfung (via HoldoutEvaluator) | CI/Reviewer | Drift-Report |
-| A5 | Baseline-Archiv-Prüfung | Reviewer | Bestätigung: Archiv vollständig |
-| A6 | Schema-Versions-Prüfung | Reviewer | Schema vs. tatsächliche Entries |
-| A7 | Zusammenfassung → `archive/audits/COVERAGE_GAP_AUDIT.md` | Reviewer | Commit + PR |
+Pflichtbefehle:
 
-### Ereignisgesteuerte Audits
-
-| Auslöser | Pflichtaktion |
-|----------|--------------|
-| Neues System in `consoles.json` | ≥ 3 Ground-Truth-Entries erstellen |
-| Neue Detection-Methode | ≥ 10 Entries pro betroffener Methode |
-| M4 oder M7 Regression im CI | Root-Cause-Analyse + Edge-Case-Entry |
-| Bug-Report mit Fehlsortierung | Reproduktionsfall → `edge-cases.jsonl` |
-| Großes Refactoring (Score/Key/Region) | Holdout-Drift-Prüfung vor und nach Merge |
-| Schema-Migration (neue Pflichtfelder) | Alle bestehenden Entries aktualisieren |
-
----
-
-## 3. Checkliste für den jährlichen Audit
-
-```markdown
-### Jährlicher Datensatz-Audit – Checkliste
-
-- [ ] **Datum:** ___________
-- [ ] **Reviewer:** ___________
-- [ ] **Dataset-Version:** ___________
-
-#### Coverage
-- [ ] `gates.json` Schwellen: Alle Pass?
-- [ ] Systeme: 69/69 abgedeckt?
-- [ ] Fallklassen: 20/20 besetzt?
-- [ ] Chaos-Quote: ≥ 30%?
-- [ ] Tier-1-Tiefe: ≥ 20 pro System?
-- [ ] BIOS-Systeme: ≥ 15?
-
-#### Qualität
-- [ ] Confusion-Matrix: Kein Paar > 2%?
-- [ ] M4 (Wrong Match Rate): Trend stabil oder sinkend?
-- [ ] M7 (Unsafe Sort Rate): Trend stabil oder sinkend?
-- [ ] M9a (Game-as-Junk): ≤ 0.1%?
-- [ ] M14 (Repair-Safe Rate): Trend steigend?
-- [ ] M16 (ECE): ≤ 10%?
-
-#### Anti-Overfitting
-- [ ] Holdout-Drift: Keine signifikante Abweichung?
-- [ ] Neue Entries seit letztem Audit: ≥ 50?
-- [ ] Mindestens 10% der neuen Entries sind adversarial/chaos?
-
-#### Infrastruktur
-- [ ] Schema aktuell und konsistent?
-- [ ] Baselines archiviert und vollständig?
-- [ ] CI-Pipeline: Quality Gates aktiv?
-- [ ] HTML-Dashboard generiert und lesbar?
-
-#### Ergebnis
-- [ ] `archive/audits/COVERAGE_GAP_AUDIT.md` aktualisiert
-- [ ] Issues für offene Lücken erstellt
-- [ ] PR mit Audit-Zusammenfassung eingereicht
+```powershell
+pwsh -NoProfile -File benchmark/tools/Test-ManifestIntegrity.ps1
+pwsh -NoProfile -File benchmark/tools/Invoke-CoverageGate.ps1 -NoBuild
 ```
 
----
+Optional fuer Auswertung:
 
-## 4. Audit-Ergebnis-Format
-
-Jeder abgeschlossene Audit wird in `archive/audits/COVERAGE_GAP_AUDIT.md` dokumentiert:
-
-```markdown
-### Audit 2026-XX-XX
-
-**Reviewer:** Name
-**Dataset-Version:** X.Y.Z (N Entries)
-**Ergebnis:** PASS / CONDITIONAL / FAIL
-
-#### Metriken
-| Metrik | Wert | Ziel | Status |
-|--------|------|------|--------|
-| M4 Wrong Match Rate | X.XX% | ≤ 0.5% | ✅/❌ |
-| ...    | ...  | ...  | ...    |
-
-#### Offene Lücken
-1. Beschreibung → Issue #NNN
-2. ...
-
-#### Nächste Schritte
-- ...
+```powershell
+pwsh -NoProfile -File benchmark/tools/New-CoverageGapReport.ps1 -Format markdown
 ```
 
----
+## 3. Aktuelle Baseline
 
-## 5. Governance-Regeln
+Aktueller Manifest-Stand aus `benchmark/manifest.json`:
 
-1. **Ground-Truth-Änderungen erfordern PR + Review** — keine direkten Commits auf main.
-2. **Jeder neue Entry braucht:** korrektes Schema, Fallklassen-Tags, Review-Status.
-3. **Baselines werden nie überschrieben** — immer archivieren, dann neue erstellen.
-4. **Holdout-Zone ist read-only** für Detection-Tuning — nur Audit darf prüfen.
-5. **Audit-Ergebnisse sind verbindlich** — offene Lücken müssen als Issues getrackt werden.
+- `totalEntries`: `7639`
+- `holdoutEntries`: `200`
+- `performance-scale`: `5000`
+- `lastModified`: `2026-04-01`
+
+Diese Zahlen sind nicht dekorativ, sondern Referenz fuer den naechsten Audit- und Release-Vergleich.
+
+## 4. Audit-Zyklen
+
+### Regulare Audits
+
+| Zyklus | Fokus | Output |
+|---|---|---|
+| Q1 | grosser Coverage-/Ground-Truth-Audit | aktualisierter Audit-Snapshot im Archiv |
+| Q3 | Delta-Review seit Q1 | Review-Notiz oder neuer Audit-Snapshot |
+
+### Ereignisgetriebene Audits
+
+| Trigger | Pflichtaktion |
+|---|---|
+| neue Konsole in `consoles.json` | betroffene Benchmark-Faelle und Gates pruefen |
+| Recognition-/Scoring-Aenderung | Manifest-Integrity und Coverage-Gate erneut fahren |
+| Regression in Qualitätsmetriken | Reproduktionsfall + Gap-Analyse dokumentieren |
+| groessere Dataset-Erweiterung | Manifest und Audit-Notiz aktualisieren |
+
+## 5. Audit-Checkliste
+
+```markdown
+### Datensatz-Audit
+
+- [ ] Datum / Reviewer dokumentiert
+- [ ] Manifest aktualisiert
+- [ ] `Test-ManifestIntegrity.ps1` grün
+- [ ] `Invoke-CoverageGate.ps1 -NoBuild` grün
+- [ ] Coverage-Gap-Report bei Bedarf erzeugt
+- [ ] neue oder offene Luecken dokumentiert
+- [ ] Audit-Snapshot archiviert, wenn der Stand historisch festgehalten werden soll
+```
+
+## 6. Ergebnisformat
+
+Ein Audit-Snapshot soll mindestens enthalten:
+
+- Datum
+- Reviewer
+- Manifest-Stand
+- Ergebnis `PASS` / `CONDITIONAL` / `FAIL`
+- offene Luecken oder bewusste Entscheidungen
+- naechste Schritte
+
+Historische Snapshots bleiben unter `archive/audits/`.
+
+## 7. Release-Bezug
+
+Fuer den Stabilization-Schnitt ist wichtig:
+
+- Dataset-Hygiene ist Teil des Release-Smoke-Pfads
+- Manifest-Integrity und Coverage-Gate duerfen nicht erst nach einem Release auffallen
+- offene Benchmark-Gaps muessen vor dem naechsten grossen Feature-Block sichtbar sein
