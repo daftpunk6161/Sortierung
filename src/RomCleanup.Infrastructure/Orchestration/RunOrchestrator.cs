@@ -8,6 +8,7 @@ using RomCleanup.Infrastructure.Deduplication;
 using RomCleanup.Infrastructure.Linking;
 using RomCleanup.Infrastructure.Metrics;
 using RomCleanup.Infrastructure.Quarantine;
+using RomCleanup.Infrastructure.Review;
 using RomCleanup.Infrastructure.Reporting;
 using RomCleanup.Infrastructure.Sorting;
 
@@ -35,6 +36,7 @@ public sealed partial class RunOrchestrator : IDisposable
     private readonly Contracts.Ports.IHeaderlessHasher? _headerlessHasher;
     private readonly IReadOnlySet<string>? _knownBiosHashes;
     private readonly string? _enrichmentFingerprint;
+    private readonly PersistedReviewDecisionService? _reviewDecisionService;
     private bool _disposed;
 
     public RunOrchestrator(
@@ -50,7 +52,8 @@ public sealed partial class RunOrchestrator : IDisposable
         Contracts.Ports.IHeaderlessHasher? headerlessHasher = null,
         IReadOnlySet<string>? knownBiosHashes = null,
         Contracts.Ports.ICollectionIndex? collectionIndex = null,
-        string? enrichmentFingerprint = null)
+        string? enrichmentFingerprint = null,
+        PersistedReviewDecisionService? reviewDecisionService = null)
     {
         _fs = fs;
         _audit = audit;
@@ -65,6 +68,7 @@ public sealed partial class RunOrchestrator : IDisposable
         _headerlessHasher = headerlessHasher;
         _knownBiosHashes = knownBiosHashes;
         _enrichmentFingerprint = string.IsNullOrWhiteSpace(enrichmentFingerprint) ? null : enrichmentFingerprint;
+        _reviewDecisionService = reviewDecisionService;
     }
 
     /// <summary>
@@ -354,6 +358,7 @@ public sealed partial class RunOrchestrator : IDisposable
             disposableHashService.Dispose();
         if (_collectionIndex is IDisposable disposableCollectionIndex)
             disposableCollectionIndex.Dispose();
+        _reviewDecisionService?.Dispose();
     }
 
     private static void ApplyPartialPipelineState(PipelineState pipelineState, RunResultBuilder result)

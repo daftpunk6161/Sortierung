@@ -32,6 +32,7 @@ public sealed partial class RunOrchestrator
             .EnumerateFilesAsync(options.Roots, options.Extensions, cancellationToken);
 
         var candidates = await MaterializeEnrichedCandidatesAsync(scannedFiles, scanContext, cancellationToken);
+        candidates = await ApplyPersistedReviewApprovalsAsync(candidates, options, cancellationToken);
 
         var unknownReasonCounts = candidates
             .Where(c => c.Category == FileCategory.Unknown)

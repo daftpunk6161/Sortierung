@@ -334,6 +334,7 @@ public sealed class ApiIntegrationTests
                 RootFingerprint = "abc123",
                 DurationMs = 60000,
                 TotalFiles = 100,
+                CollectionSizeBytes = 333000000,
                 Games = 80,
                 Dupes = 20,
                 Junk = 5,
@@ -355,6 +356,7 @@ public sealed class ApiIntegrationTests
                 RootFingerprint = "def456",
                 DurationMs = 30000,
                 TotalFiles = 50,
+                CollectionSizeBytes = 111000000,
                 Games = 40,
                 Dupes = 10,
                 Junk = 0,
@@ -385,6 +387,89 @@ public sealed class ApiIntegrationTests
         Assert.Equal("completed_with_errors", run.GetProperty("status").GetString());
         Assert.Equal(1, run.GetProperty("rootCount").GetInt32());
         Assert.Equal(100, run.GetProperty("totalFiles").GetInt32());
+        Assert.Equal(333000000L, run.GetProperty("collectionSizeBytes").GetInt64());
+    }
+
+    [Fact]
+    public async Task Watch_StartStatusStop_RoundTrips_ForOwnerClient()
+    {
+        using var factory = CreateFactory();
+        using var client = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        try
+        {
+            client.DefaultRequestHeaders.Add("X-Client-Id", "watch-owner");
+            var payload = JsonSerializer.Serialize(new
+            {
+                roots = new[] { root },
+                mode = "DryRun"
+            });
+
+            using var startContent = new StringContent(payload, Encoding.UTF8, "application/json");
+            var startResponse = await client.PostAsync("/watch/start?intervalMinutes=15&debounceSeconds=4", startContent);
+            Assert.Equal(HttpStatusCode.OK, startResponse.StatusCode);
+
+            using var startDoc = JsonDocument.Parse(await startResponse.Content.ReadAsStringAsync());
+            Assert.True(startDoc.RootElement.GetProperty("active").GetBoolean());
+            Assert.Equal(4, startDoc.RootElement.GetProperty("debounceSeconds").GetInt32());
+            Assert.Equal(15, startDoc.RootElement.GetProperty("intervalMinutes").GetInt32());
+            Assert.Equal(1, startDoc.RootElement.GetProperty("watchedRootCount").GetInt32());
+
+            var statusResponse = await client.GetAsync("/watch/status");
+            Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
+            using var statusDoc = JsonDocument.Parse(await statusResponse.Content.ReadAsStringAsync());
+            Assert.True(statusDoc.RootElement.GetProperty("active").GetBoolean());
+            Assert.Equal("DryRun", statusDoc.RootElement.GetProperty("mode").GetString());
+            Assert.Equal(root, statusDoc.RootElement.GetProperty("roots")[0].GetString());
+
+            var stopResponse = await client.PostAsync("/watch/stop", null);
+            Assert.Equal(HttpStatusCode.OK, stopResponse.StatusCode);
+            using var stopDoc = JsonDocument.Parse(await stopResponse.Content.ReadAsStringAsync());
+            Assert.False(stopDoc.RootElement.GetProperty("active").GetBoolean());
+            Assert.Empty(stopDoc.RootElement.GetProperty("roots").EnumerateArray());
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Watch_Status_IsForbidden_ForForeignClientWhileActive()
+    {
+        using var factory = CreateFactory();
+        using var ownerClient = CreateClientWithApiKey(factory);
+        using var foreignClient = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        try
+        {
+            ownerClient.DefaultRequestHeaders.Add("X-Client-Id", "watch-owner");
+            foreignClient.DefaultRequestHeaders.Add("X-Client-Id", "watch-foreign");
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                roots = new[] { root },
+                mode = "DryRun"
+            });
+
+            using var startContent = new StringContent(payload, Encoding.UTF8, "application/json");
+            var startResponse = await ownerClient.PostAsync("/watch/start?intervalMinutes=5", startContent);
+            Assert.Equal(HttpStatusCode.OK, startResponse.StatusCode);
+
+            var statusResponse = await foreignClient.GetAsync("/watch/status");
+            Assert.Equal(HttpStatusCode.Forbidden, statusResponse.StatusCode);
+
+            using var errorDoc = JsonDocument.Parse(await statusResponse.Content.ReadAsStringAsync());
+            AssertError(errorDoc.RootElement, "AUTH-FORBIDDEN", ErrorKind.Critical, "different client");
+
+            _ = await ownerClient.PostAsync("/watch/stop", null);
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+        }
     }
 
     [Fact]
@@ -907,29 +992,7 @@ public sealed class ApiIntegrationTests
                 settings[key] = value;
         }
 
-        return new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Development");
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    config.AddInMemoryCollection(settings);
-                });
-                if (executor is not null)
-                {
-                    builder.ConfigureServices(services =>
-                    {
-                        services.AddSingleton(new RunManager(new FileSystemAdapter(), new AuditCsvStore(), executor));
-                    });
-                }
-                if (collectionIndex is not null)
-                {
-                    builder.ConfigureServices(services =>
-                    {
-                        services.AddSingleton(collectionIndex);
-                    });
-                }
-            });
+        return ApiTestFactory.Create(settings, executor, collectionIndex);
     }
 
     private static HttpClient CreateClientWithApiKey(WebApplicationFactory<Program> factory)

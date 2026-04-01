@@ -16,6 +16,8 @@ namespace RomCleanup.Infrastructure.Analysis;
 /// </summary>
 public static class CollectionExportService
 {
+    public static CollectionTabularExportLabels EnglishLabels { get; } = new();
+
     private static readonly (string pattern, string tag, string reason)[] JunkPatterns =
     [
         (@"\(Beta[^)]*\)", "Beta", "Beta version"),
@@ -97,10 +99,14 @@ public static class CollectionExportService
         return sb.ToString();
     }
 
-    public static string ExportCollectionCsv(IReadOnlyList<RomCandidate> candidates, char delimiter = ';')
+    public static string ExportCollectionCsv(
+        IReadOnlyList<RomCandidate> candidates,
+        char delimiter = ';',
+        CollectionTabularExportLabels? labels = null)
     {
+        labels ??= EnglishLabels;
         var sb = new StringBuilder();
-        sb.AppendLine($"FileName{delimiter}Console{delimiter}Region{delimiter}Format{delimiter}Size_MB{delimiter}Category{delimiter}DAT_Status{delimiter}Path");
+        sb.AppendLine($"{labels.FileName}{delimiter}{labels.Console}{delimiter}{labels.Region}{delimiter}{labels.Format}{delimiter}{labels.SizeMb}{delimiter}{labels.Category}{delimiter}{labels.DatStatus}{delimiter}{labels.Path}");
         foreach (var c in candidates)
         {
             sb.Append(AuditCsvParser.SanitizeCsvField(Path.GetFileName(c.MainPath)));
@@ -122,8 +128,11 @@ public static class CollectionExportService
         return sb.ToString();
     }
 
-    public static string ExportExcelXml(IReadOnlyList<RomCandidate> candidates)
+    public static string ExportExcelXml(
+        IReadOnlyList<RomCandidate> candidates,
+        CollectionTabularExportLabels? labels = null)
     {
+        labels ??= EnglishLabels;
         var sb = new StringBuilder();
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
         sb.AppendLine("<?mso-application progid=\"Excel.Sheet\"?>");
@@ -132,7 +141,7 @@ public static class CollectionExportService
         sb.AppendLine("<Worksheet ss:Name=\"ROMs\"><Table>");
 
         sb.AppendLine("<Row>");
-        foreach (var h in new[] { "FileName", "Console", "Region", "Format", "Size_MB", "Category", "DAT", "Path" })
+        foreach (var h in new[] { labels.FileName, labels.Console, labels.Region, labels.Format, labels.SizeMb, labels.Category, labels.DatStatusShort, labels.Path })
             sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(h)}</Data></Cell>");
         sb.AppendLine("</Row>");
 
@@ -191,4 +200,30 @@ public static class CollectionExportService
         }).ToList();
         return (summary, entries);
     }
+}
+
+public sealed record CollectionTabularExportLabels
+{
+    public string FileName { get; init; } = "FileName";
+    public string Console { get; init; } = "Console";
+    public string Region { get; init; } = "Region";
+    public string Format { get; init; } = "Format";
+    public string SizeMb { get; init; } = "Size_MB";
+    public string Category { get; init; } = "Category";
+    public string DatStatus { get; init; } = "DAT_Status";
+    public string DatStatusShort { get; init; } = "DAT";
+    public string Path { get; init; } = "Path";
+
+    public static CollectionTabularExportLabels German { get; } = new()
+    {
+        FileName = "Dateiname",
+        Console = "Konsole",
+        Region = "Region",
+        Format = "Format",
+        SizeMb = "Groesse_MB",
+        Category = "Kategorie",
+        DatStatus = "DAT_Status",
+        DatStatusShort = "DAT",
+        Path = "Pfad"
+    };
 }

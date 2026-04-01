@@ -27,6 +27,7 @@ public sealed class CollectionRunHistoryItem
     public string RootFingerprint { get; init; } = "";
     public long DurationMs { get; init; }
     public int TotalFiles { get; init; }
+    public long CollectionSizeBytes { get; init; }
     public int Games { get; init; }
     public int Dupes { get; init; }
     public int Junk { get; init; }
@@ -67,6 +68,7 @@ public static class CollectionRunHistoryPageBuilder
                 RootFingerprint = snapshot.RootFingerprint,
                 DurationMs = snapshot.DurationMs,
                 TotalFiles = snapshot.TotalFiles,
+                CollectionSizeBytes = snapshot.CollectionSizeBytes,
                 Games = snapshot.Games,
                 Dupes = snapshot.Dupes,
                 Junk = snapshot.Junk,

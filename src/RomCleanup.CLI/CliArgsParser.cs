@@ -1,3 +1,4 @@
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
@@ -380,6 +381,7 @@ internal static class CliArgsParser
             "dat" => ParseDatSubcommand(rest),
             "integrity" => ParseIntegritySubcommand(rest),
             "history" => ParseHistorySubcommand(rest),
+            "watch" => ParseWatchSubcommand(rest),
             "convert" => ParseConvertSubcommand(rest),
             "header" => ParseSingleInputSubcommand(CliCommand.Header, rest),
             "junk-report" => ParseSubcommandWithRoots(CliCommand.JunkReport, rest),
@@ -637,6 +639,146 @@ internal static class CliArgsParser
         return CliParseResult.Subcommand(CliCommand.History, opts);
     }
 
+    private static CliParseResult ParseWatchSubcommand(string[] args)
+    {
+        var opts = new CliRunOptions
+        {
+            Mode = RunConstants.ModeDryRun
+        };
+        var errors = new List<string>();
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--roots" or "-roots":
+                    if (!TryConsumeValue(args, ref i, "--roots", errors, out var rootsRaw))
+                        break;
+                    if (TryParseRootsArgument(rootsRaw, out var roots, out var rootsErr))
+                        opts.Roots = roots;
+                    else
+                        errors.Add($"[Error] {rootsErr}");
+                    break;
+
+                case "--mode":
+                    if (!TryConsumeValue(args, ref i, "--mode", errors, out var modeRaw))
+                        break;
+                    if (!string.Equals(modeRaw, RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(modeRaw, RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase))
+                    {
+                        errors.Add($"[Error] Invalid mode '{modeRaw}'. Must be DryRun or Move.");
+                        break;
+                    }
+
+                    opts.Mode = string.Equals(modeRaw, RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase)
+                        ? RunConstants.ModeMove
+                        : RunConstants.ModeDryRun;
+                    break;
+
+                case "--debounce":
+                    if (!TryConsumeValue(args, ref i, "--debounce", errors, out var debounceRaw))
+                        break;
+                    if (!int.TryParse(debounceRaw, out var debounceSeconds) || debounceSeconds < 1 || debounceSeconds > 300)
+                    {
+                        errors.Add("[Error] debounce must be an integer between 1 and 300.");
+                        break;
+                    }
+
+                    opts.WatchDebounceSeconds = debounceSeconds;
+                    break;
+
+                case "--interval":
+                    if (!TryConsumeValue(args, ref i, "--interval", errors, out var intervalRaw))
+                        break;
+                    if (!int.TryParse(intervalRaw, out var intervalMinutes) || intervalMinutes < 1 || intervalMinutes > 10080)
+                    {
+                        errors.Add("[Error] interval must be an integer between 1 and 10080.");
+                        break;
+                    }
+
+                    opts.WatchIntervalMinutes = intervalMinutes;
+                    break;
+
+                case "--cron":
+                    if (!TryConsumeValue(args, ref i, "--cron", errors, out var cronRaw))
+                        break;
+                    var cronFields = cronRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (cronFields.Length != 5)
+                    {
+                        errors.Add("[Error] cron must contain exactly five fields.");
+                        break;
+                    }
+
+                    opts.WatchCronExpression = cronRaw;
+                    break;
+
+                case "--approve-reviews":
+                    opts.ApproveReviews = true;
+                    break;
+
+                case "--sortconsole":
+                    opts.SortConsole = true;
+                    break;
+
+                case "--enabledat":
+                    opts.EnableDat = true;
+                    break;
+
+                case "--dat-audit" or "-dataudit" or "--dataudit":
+                    opts.EnableDatAudit = true;
+                    break;
+
+                case "--datrename":
+                    opts.EnableDatRename = true;
+                    break;
+
+                case "--datroot":
+                    if (!TryConsumeValue(args, ref i, "--datroot", errors, out var datRootRaw))
+                        break;
+                    opts.DatRoot = datRootRaw;
+                    break;
+
+                case "--hashtype":
+                    if (!TryConsumeValue(args, ref i, "--hashtype", errors, out var hashTypeRaw))
+                        break;
+                    if (!AllowedHashTypes.Contains(hashTypeRaw))
+                    {
+                        errors.Add($"[Error] Invalid hash type '{hashTypeRaw}'. Must be SHA1, SHA256, or MD5.");
+                        break;
+                    }
+
+                    opts.HashType = hashTypeRaw;
+                    break;
+
+                case "--yes" or "-y":
+                    opts.Yes = true;
+                    break;
+
+                default:
+                    if (!args[i].StartsWith("-"))
+                    {
+                        opts.Roots = new List<string>(opts.Roots) { args[i] }.ToArray();
+                    }
+                    else
+                    {
+                        errors.Add($"[Error] Unknown flag '{args[i]}' for watch. Use --help for usage.");
+                    }
+                    break;
+            }
+        }
+
+        if (errors.Count > 0)
+            return CliParseResult.ValidationError(errors);
+
+        if (opts.Roots.Length == 0)
+            return CliParseResult.ValidationError(["[Error] --roots is required for 'watch'."]);
+
+        if (opts.WatchIntervalMinutes is null && string.IsNullOrWhiteSpace(opts.WatchCronExpression))
+            return CliParseResult.ValidationError(["[Error] watch requires --interval <minutes> or --cron <expr>."]);
+
+        return CliParseResult.Subcommand(CliCommand.Watch, opts);
+    }
+
     private static CliParseResult ParseSingleInputSubcommand(CliCommand command, string[] args)
     {
         var opts = new CliRunOptions();
@@ -776,7 +918,7 @@ internal sealed class CliParseResult
         new() { Command = CliCommand.Run, ExitCode = 0, Options = options };
 }
 
-internal enum CliCommand { Run, Help, Version, Rollback, UpdateDats, Analyze, Export, DatDiff, IntegrityCheck, IntegrityBaseline, History, Convert, Header, JunkReport, Completeness }
+internal enum CliCommand { Run, Help, Version, Rollback, UpdateDats, Analyze, Export, DatDiff, IntegrityCheck, IntegrityBaseline, History, Watch, Convert, Header, JunkReport, Completeness }
 
 /// <summary>
 /// Raw parsed CLI options — before settings merge.
@@ -826,4 +968,7 @@ internal sealed class CliRunOptions
     public string? DatFileB { get; set; }
     public int? HistoryLimit { get; set; }
     public int HistoryOffset { get; set; }
+    public int WatchDebounceSeconds { get; set; } = 5;
+    public int? WatchIntervalMinutes { get; set; }
+    public string? WatchCronExpression { get; set; }
 }

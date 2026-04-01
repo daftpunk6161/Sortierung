@@ -21,13 +21,8 @@ namespace RomCleanup.UI.Wpf.Services;
 /// </summary>
 public static partial class FeatureService
 {
-    internal static string ToCategoryLabel(FileCategory category) => category switch
-    {
-        FileCategory.Game => "GAME",
-        FileCategory.Bios => "BIOS",
-        FileCategory.Junk => "JUNK",
-        _ => "UNKNOWN"
-    };
+    internal static string ToCategoryLabel(FileCategory category)
+        => CollectionAnalysisService.ToCategoryLabel(category);
 
     internal static FileCategory ParseCategory(string? value)
     {
@@ -55,11 +50,7 @@ public static partial class FeatureService
 
 
     internal static string DetectConsoleFromPath(string path)
-    {
-        var parts = path.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-        // Typically: root/ConsoleName/game.ext → take second-to-last dir
-        return parts.Length >= 2 ? parts[^2] : "Unknown";
-    }
+        => CollectionAnalysisService.DetectConsoleFromPath(path);
 
     internal static string ResolveConsoleLabel(RomCandidate candidate)
         => CollectionAnalysisService.ResolveConsoleLabel(candidate);

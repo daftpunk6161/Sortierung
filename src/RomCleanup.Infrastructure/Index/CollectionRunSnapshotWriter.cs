@@ -67,6 +67,7 @@ public static class CollectionRunSnapshotWriter
             RootFingerprint = rootFingerprint,
             DurationMs = result.DurationMs,
             TotalFiles = projection.TotalFiles,
+            CollectionSizeBytes = result.AllCandidates.Sum(static candidate => candidate.SizeBytes),
             Games = projection.Games,
             Dupes = projection.Dupes,
             Junk = projection.Junk,

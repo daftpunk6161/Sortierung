@@ -7,7 +7,7 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
 
 ## Release-Reihenfolge
 
-- [ ] R1 Foundation
+- [x] R1 Foundation
 - [ ] R2 Productization
 - [ ] R3 Reach
 
@@ -20,7 +20,7 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
 
 ## Release-Plaene
 
-- [ ] [R1 Foundation Execution](r1-foundation-execution.md)
+- [x] [R1 Foundation Execution](r1-foundation-execution.md)
 - [ ] [R2 Productization Execution](r2-productization-execution.md)
 - [ ] [R3 Reach Execution](r3-reach-execution.md)
 
@@ -30,10 +30,18 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
 - [x] R1-T02 Index-Adapter, Migration und Recovery umsetzen
 - [x] R1-T03 Delta-Scan-Integration in Scanner und Orchestrierung anbinden
   Persistenter Hash-Cache, scannerseitige Dateimetadaten, Delta-Rehydration, Candidate-Persistenz und Stale-Entry-Cleanup laufen jetzt ueber denselben Collection-Index.
-- [ ] R1-T04 Run-Snapshot-Queries und Verlaufsabfragen abschliessen
-  API-Endpoint `/runs/history` und CLI-Subcommand `history` sind geliefert; weitere Reports/Trend-Konsumenten sind noch offen.
-- [ ] R1-T05 Analyse, Completeness und Export auf zentrale Datenbasis umstellen
-  Completeness nutzt jetzt `RunCandidates -> CollectionIndex -> Filesystem-Fallback`; Analyse- und Export-Ausgaben nutzen den zentralen `ConsoleKey`, der CLI-Export verwendet einen index-first Read-Pfad mit explizitem Fallback, und `convert` bevorzugt den persistierten Console-Zustand vor der Pfadheuristik. Restliche Export-Vereinheitlichung bleibt offen.
+- [x] R1-T04 Run-Snapshot-Queries und Verlaufsabfragen abschliessen
+  API, CLI und Trend-/Report-Konsumenten lesen jetzt dieselbe persistierte Snapshot-Historie.
+- [x] R1-T05 Analyse, Completeness und Export auf zentrale Datenbasis umstellen
+  Completeness, Export, WPF-Analyse und Standalone-Conversion nutzen jetzt gemeinsame Candidate-/Index-Resolver mit explizitem Fallback.
+- [x] R1-T06 Gemeinsamen Review-Decision-Store einfuehren
+  Persistierte Review-Approvals werden in GUI, CLI und API ueber dieselbe Infrastructure gelesen und geschrieben.
+- [x] R1-T07 Watch- und Schedule-Services in gemeinsame Infrastructure ueberfuehren
+  Debounce, Pending-Flush und Busy-Schutz liegen jetzt in gemeinsamen Infrastructure-Diensten.
+- [x] R1-T08 Kanalintegration fuer Watch, Review und Run-Status abschliessen
+  API, CLI und GUI sind auf dieselben Watch-, Review- und Statusmodelle verdrahtet.
+- [x] R1-T09 Invarianten- und Regressionstest-Matrix fuer Foundation vervollstaendigen
+  Vollsuite grün: `7101/7101` Tests auf Stand `2026-04-01`.
 
 ## Parked
 

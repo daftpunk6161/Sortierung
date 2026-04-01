@@ -137,6 +137,7 @@ Subcommands:
   romulus integrity baseline --roots <path>   Create integrity baseline
   romulus integrity check                     Check files against baseline
   romulus history [--offset <n>] [--limit <n>] [-o <file>]
+  romulus watch --roots <path> [--interval <min>|--cron <expr>]
   romulus convert --input <file|dir> [--console PS1] [--target chd]
   romulus header --input <file>               Analyze ROM header
   romulus junk-report --roots <path> [--aggressive]

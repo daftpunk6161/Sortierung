@@ -8,6 +8,14 @@ namespace RomCleanup.Infrastructure.Index;
 /// </summary>
 public static class CollectionIndexPaths
 {
+    public static string ResolveDatabasePath(string? overridePath)
+    {
+        if (!string.IsNullOrWhiteSpace(overridePath))
+            return Path.GetFullPath(overridePath);
+
+        return ResolveDefaultDatabasePath();
+    }
+
     /// <summary>
     /// Resolve the default index database path.
     /// Uses portable mode when a `.portable` marker exists next to the executable.

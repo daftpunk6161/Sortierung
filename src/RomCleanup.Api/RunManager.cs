@@ -2,9 +2,10 @@ using System.Text.Json.Serialization;
 using RomCleanup.Contracts.Errors;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
-using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.Index;
+using RomCleanup.Infrastructure.Orchestration;
+using RomCleanup.Infrastructure.Review;
 
 namespace RomCleanup.Api;
 
@@ -17,16 +18,22 @@ public sealed class RunManager
     private readonly RunLifecycleManager _lifecycle;
     private readonly IRunOptionsFactory _runOptionsFactory;
     private readonly IRunEnvironmentFactory _runEnvironmentFactory;
+    private readonly PersistedReviewDecisionService? _reviewDecisionService;
+    private readonly string? _collectionDatabasePath;
 
     public RunManager(
         IFileSystem fs,
         IAuditStore audit,
         Func<RunRecord, IFileSystem, IAuditStore, CancellationToken, RunExecutionOutcome>? executor = null,
         IRunOptionsFactory? runOptionsFactory = null,
-        IRunEnvironmentFactory? runEnvironmentFactory = null)
+        IRunEnvironmentFactory? runEnvironmentFactory = null,
+        PersistedReviewDecisionService? reviewDecisionService = null,
+        CollectionIndexPathOptions? collectionIndexPathOptions = null)
     {
         _runOptionsFactory = runOptionsFactory ?? new RunOptionsFactory();
         _runEnvironmentFactory = runEnvironmentFactory ?? new RunEnvironmentFactory();
+        _reviewDecisionService = reviewDecisionService;
+        _collectionDatabasePath = collectionIndexPathOptions?.DatabasePath;
         _lifecycle = new RunLifecycleManager(fs, audit, executor ?? ExecuteWithOrchestrator);
     }
 
@@ -89,7 +96,8 @@ public sealed class RunManager
             archiveHashService: env.ArchiveHashService,
             knownBiosHashes: env.KnownBiosHashes,
             collectionIndex: env.CollectionIndex,
-            enrichmentFingerprint: env.EnrichmentFingerprint);
+            enrichmentFingerprint: env.EnrichmentFingerprint,
+            reviewDecisionService: _reviewDecisionService);
 
         var runStartedUtc = DateTime.UtcNow;
         var result = orchestrator.Execute(options, ct);
@@ -97,7 +105,7 @@ public sealed class RunManager
 
         try
         {
-            using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(),
+            using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDatabasePath(_collectionDatabasePath),
                 msg =>
                 {
                     run.ProgressMessage = msg;
@@ -485,6 +493,7 @@ public sealed class ApiRunHistoryEntry
     public string RootFingerprint { get; init; } = "";
     public long DurationMs { get; init; }
     public int TotalFiles { get; init; }
+    public long CollectionSizeBytes { get; init; }
     public int Games { get; init; }
     public int Dupes { get; init; }
     public int Junk { get; init; }

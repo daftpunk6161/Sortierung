@@ -130,7 +130,8 @@ public sealed class RunEnvironmentBuilder
     /// Build complete environment for a run.
     /// </summary>
     public static RunEnvironment Build(RunOptions runOptions, RomCleanupSettings settings,
-        string dataDir, Action<string>? onWarning = null)
+        string dataDir, Action<string>? onWarning = null,
+        string? collectionDatabasePath = null)
     {
         var fs = new FileSystemAdapter();
         var audit = new AuditCsvStore(fs, onWarning ?? (_ => { }),
@@ -213,7 +214,9 @@ public sealed class RunEnvironmentBuilder
 
         try
         {
-            collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), onWarning);
+            collectionIndex = new LiteDbCollectionIndex(
+                CollectionIndexPaths.ResolveDatabasePath(collectionDatabasePath),
+                onWarning);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
@@ -494,13 +497,21 @@ public sealed class RunEnvironmentBuilder
 
         if (runOptions.EnableDat)
         {
-            lines.Add($"DatRoot={Path.GetFullPath(datRoot ?? string.Empty)}");
+            lines.Add(string.IsNullOrWhiteSpace(datRoot)
+                ? "DatRoot=<unset>"
+                : $"DatRoot={Path.GetFullPath(datRoot)}");
 
             foreach (var datPath in (datConsoleMap ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
                          .OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase)
                          .Select(static pair => pair.Value)
                          .Distinct(StringComparer.OrdinalIgnoreCase))
             {
+                if (string.IsNullOrWhiteSpace(datPath))
+                {
+                    lines.Add("DatFile=<empty>");
+                    continue;
+                }
+
                 AppendFileStamp(lines, datPath);
             }
         }

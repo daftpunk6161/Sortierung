@@ -25,18 +25,10 @@ internal static class OpenApiTestHelper
 
     private static WebApplicationFactory<Program> CreateFactory()
     {
-        return new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Development");
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["ApiKey"] = ApiKey
-                    });
-                });
-            });
+        return ApiTestFactory.Create(new Dictionary<string, string?>
+        {
+            ["ApiKey"] = ApiKey
+        });
     }
 
     private static HttpClient CreateClientWithApiKey(WebApplicationFactory<Program> factory)

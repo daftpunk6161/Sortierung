@@ -82,4 +82,20 @@ public sealed class OpenApiSpecRegressionTests
         Assert.True(historyPath.TryGetProperty("get", out _), "Persisted run history path must declare GET.");
         Assert.True(schemas.TryGetProperty("ApiRunHistoryList", out _), "Missing ApiRunHistoryList schema in embedded OpenAPI spec.");
     }
+
+    [Fact]
+    public async Task OpenApiSpec_DeclaresWatchAutomationPaths_And_StatusSchema()
+    {
+        using var spec = JsonDocument.Parse(await OpenApiTestHelper.FetchOpenApiJsonAsync());
+        var paths = spec.RootElement.GetProperty("paths");
+        var schemas = spec.RootElement.GetProperty("components").GetProperty("schemas");
+
+        Assert.True(paths.TryGetProperty("/watch/start", out var watchStartPath), "Missing watch start path in embedded OpenAPI spec.");
+        Assert.True(watchStartPath.TryGetProperty("post", out _), "Watch start path must declare POST.");
+        Assert.True(paths.TryGetProperty("/watch/stop", out var watchStopPath), "Missing watch stop path in embedded OpenAPI spec.");
+        Assert.True(watchStopPath.TryGetProperty("post", out _), "Watch stop path must declare POST.");
+        Assert.True(paths.TryGetProperty("/watch/status", out var watchStatusPath), "Missing watch status path in embedded OpenAPI spec.");
+        Assert.True(watchStatusPath.TryGetProperty("get", out _), "Watch status path must declare GET.");
+        Assert.True(schemas.TryGetProperty("ApiWatchStatus", out _), "Missing ApiWatchStatus schema in embedded OpenAPI spec.");
+    }
 }

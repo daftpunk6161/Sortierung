@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Watch;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Paths;
 using RomCleanup.UI.Wpf.Models;
@@ -35,6 +36,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     private readonly ILocalizationService _loc;
     private readonly SynchronizationContext? _syncContext;
     private readonly WatchService _watchService = new();
+    private readonly ScheduleService _scheduleService = new();
     private CancellationTokenSource? _cts;
     // V2-THR-H02: Lock for consistent CTS access between OnCancel and CreateRunCancellation
     private readonly object _ctsLock = new();
@@ -195,6 +197,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         // Wire watch-mode auto-run trigger
         _watchService.RunTriggered += OnWatchRunTriggered;
         _watchService.WatcherError += OnWatcherError;
+        _scheduleService.Triggered += OnScheduledRunTriggered;
     }
 
     /// <summary>GUI-115: Named handler for proper unsubscription in CleanupWatchers.</summary>

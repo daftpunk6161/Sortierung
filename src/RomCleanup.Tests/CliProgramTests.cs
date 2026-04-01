@@ -164,6 +164,44 @@ public sealed class CliProgramTests : IDisposable
     }
 
     [Fact]
+    public void CliArgsParser_Watch_ParsesIntervalDebounceAndMode()
+    {
+        var result = CliArgsParser.Parse(new[]
+        {
+            "watch",
+            "--roots", _tempDir,
+            "--interval", "15",
+            "--debounce", "7",
+            "--mode", "Move",
+            "--yes",
+            "--approve-reviews"
+        });
+
+        Assert.Equal(CliCommand.Watch, result.Command);
+        Assert.Equal(0, result.ExitCode);
+        Assert.NotNull(result.Options);
+        Assert.Equal(15, result.Options!.WatchIntervalMinutes);
+        Assert.Equal(7, result.Options.WatchDebounceSeconds);
+        Assert.Equal("Move", result.Options.Mode);
+        Assert.True(result.Options.Yes);
+        Assert.True(result.Options.ApproveReviews);
+    }
+
+    [Fact]
+    public void CliArgsParser_Watch_RequiresSchedule()
+    {
+        var result = CliArgsParser.Parse(new[]
+        {
+            "watch",
+            "--roots", _tempDir
+        });
+
+        Assert.Equal(CliCommand.Run, result.Command);
+        Assert.Equal(3, result.ExitCode);
+        Assert.Contains(result.Errors, error => error.Contains("--interval <minutes> or --cron", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void HistoryForTests_WritesPagedSnapshotJson_ToStdout()
     {
         using var stdout = new StringWriter();
@@ -181,6 +219,7 @@ public sealed class CliProgramTests : IDisposable
                 RootFingerprint = "abc123",
                 DurationMs = 60000,
                 TotalFiles = 100,
+                CollectionSizeBytes = 333000000,
                 Games = 80,
                 Dupes = 20,
                 Junk = 5,
@@ -202,6 +241,7 @@ public sealed class CliProgramTests : IDisposable
                 RootFingerprint = "def456",
                 DurationMs = 30000,
                 TotalFiles = 50,
+                CollectionSizeBytes = 111000000,
                 Games = 40,
                 Dupes = 10,
                 Junk = 0,
@@ -233,6 +273,7 @@ public sealed class CliProgramTests : IDisposable
             Assert.Equal(1, root.GetProperty("Returned").GetInt32());
             Assert.True(root.GetProperty("HasMore").GetBoolean());
             Assert.Equal("run-new", root.GetProperty("Runs")[0].GetProperty("RunId").GetString());
+            Assert.Equal(333000000L, root.GetProperty("Runs")[0].GetProperty("CollectionSizeBytes").GetInt64());
         }
         finally
         {

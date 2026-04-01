@@ -74,7 +74,7 @@ Akzeptanz:
 Abhaengigkeiten:
 - R1-T02
 
-### [ ] R1-T04 Run-Historie und Snapshot-Abfragen bereitstellen
+### [x] R1-T04 Run-Historie und Snapshot-Abfragen bereitstellen
 
 Ziel: Historische Runs, Kennzahlen und spaetere Trendanalysen auf eine dauerhafte Datenbasis stellen.
 
@@ -82,7 +82,7 @@ Status:
 - [x] Snapshot-Schreibpfad fuer GUI, CLI und API ist zentral verdrahtet
 - [x] API-Lesepfad fuer persistierte Historie ist mit Pagination verdrahtet
 - [x] CLI-Subcommand `history` liest dieselben persistierten Snapshots headless
-- [ ] Weitere Report-/Trend-Konsumenten fuer Snapshot-Historie sind noch offen
+- [x] Trend-/Report-Konsumenten lesen dieselbe Snapshot-Historie statt separater Nebenfiles
 
 Betroffene Bereiche:
 - `src/RomCleanup.Contracts/Models`
@@ -92,12 +92,12 @@ Betroffene Bereiche:
 Akzeptanz:
 - [x] Run-Historie wird pro Run geschrieben
 - [x] Historische Kennzahlen lassen sich ohne erneuten Full-Scan lesen
-- [ ] API, CLI und spaetere Reports koennen dieselben Snapshot-Daten konsumieren
+- [x] API, CLI und spaetere Reports koennen dieselben Snapshot-Daten konsumieren
 
 Abhaengigkeiten:
 - R1-T02
 
-### [ ] R1-T05 Analyse, Completeness und Export auf zentrale Datenbasis umstellen
+### [x] R1-T05 Analyse, Completeness und Export auf zentrale Datenbasis umstellen
 
 Ziel: Heuristische Nebenwahrheiten in Analyse- und Exportpfaden abbauen.
 
@@ -106,8 +106,8 @@ Status:
 - [x] Analyse- und erste Export-Ausgaben nutzen fuer `Console` den zentralen `RomCandidate.ConsoleKey` mit kontrolliertem `UNKNOWN/AMBIGUOUS`-Fallback
 - [x] CLI-Export nutzt einen zentralen index-first Candidate-Read-Path mit Scope-/Fingerprint-Pruefung und explizitem Fallback auf den Run-Pfad
 - [x] Standalone-Konvertierung bevorzugt bei fehlender expliziter Konsole den persistierten Collection-Index vor der Pfadheuristik
-- [ ] Analyse-Pfade nutzen noch nicht durchgaengig dieselbe zentrale Collection-/Run-Wahrheit
-- [ ] Export-Pfade leiten ihren Zustand noch nicht vollstaendig aus Run oder Collection-Index ab
+- [x] WPF-Analyse-, Export- und Trendpfade delegieren auf dieselben zentralen Collection-/Run-Resolver statt lokale Schattenlogik
+- [x] Export- und Konvertierungspfade leiten ihren Zustand jetzt kontrolliert aus Run oder Collection-Index mit explizitem Fallback ab
 
 Betroffene Bereiche:
 - `src/RomCleanup.Infrastructure/Analysis`
@@ -116,17 +116,22 @@ Betroffene Bereiche:
 - `src/RomCleanup.Infrastructure/Orchestration`
 
 Akzeptanz:
-- Analyse und Completeness leiten ihre Daten aus Run-Ergebnissen oder Index ab, nicht aus Pfadheuristiken
-- Export nutzt denselben fachlichen Zustand wie Run und Reports
-- KPI-Divergenzen zwischen Hauptpipeline und Nebenpfaden sind eliminiert
+- [x] Analyse und Completeness leiten ihre Daten aus Run-Ergebnissen oder Index ab, nicht aus Pfadheuristiken
+- [x] Export nutzt denselben fachlichen Zustand wie Run und Reports
+- [x] KPI-Divergenzen zwischen Hauptpipeline und Nebenpfaden sind eliminiert
 
 Abhaengigkeiten:
 - R1-T03
 - R1-T04
 
-### [ ] R1-T06 Gemeinsamen Review-Decision-Store einfuehren
+### [x] R1-T06 Gemeinsamen Review-Decision-Store einfuehren
 
 Ziel: Recognition-, Sorting- und Conversion-Entscheidungen kanaluebergreifend speichern und wiederverwenden.
+
+Status:
+- [x] Persistenter Review-Decision-Store ist als gemeinsame Infrastructure ueber dieselbe `collection.db` verfuegbar
+- [x] Run-Orchestrierung kann persistierte Approvals erneut anwenden und neue Approvals idempotent schreiben
+- [x] API-Review-Endpoints, CLI-Runs und WPF-Runs verwenden denselben persistierten Review-Zustand
 
 Betroffene Bereiche:
 - `src/RomCleanup.Contracts`
@@ -135,16 +140,21 @@ Betroffene Bereiche:
 - `src/RomCleanup.UI.Wpf`
 
 Akzeptanz:
-- Review-Entscheidungen sind persistiert und idempotent erneut anwendbar
-- GUI, CLI und API lesen denselben Review-Zustand
-- Review-Status ist in Preview, Execute und Report konsistent
+- [x] Review-Entscheidungen sind persistiert und idempotent erneut anwendbar
+- [x] GUI, CLI und API lesen denselben Review-Zustand
+- [x] Review-Status ist in Preview, Execute und Report konsistent
 
 Abhaengigkeiten:
 - R1-T02
 
-### [ ] R1-T07 Watch- und Schedule-Services in gemeinsame Infrastructure ueberfuehren
+### [x] R1-T07 Watch- und Schedule-Services in gemeinsame Infrastructure ueberfuehren
 
 Ziel: Watch und Schedule aus dem GUI-lokalen Zustand loesen und als gemeinsame Dienste verfuegbar machen.
+
+Status:
+- [x] Gemeinsame `WatchFolderService`- und `ScheduleService`-Implementierungen tragen Debounce, Busy-Schutz und Pending-Flush zentral
+- [x] WPF-Watch-Service ist auf die gemeinsame Infrastructure umgestellt
+- [x] API- und CLI-Automation nutzen dieselben Watch-/Schedule-Dienste statt separater Lokallogik
 
 Betroffene Bereiche:
 - `src/RomCleanup.Infrastructure/Watch`
@@ -153,16 +163,21 @@ Betroffene Bereiche:
 - `src/RomCleanup.CLI`
 
 Akzeptanz:
-- Watch-Folder und Schedule sind nicht mehr nur an WPF gebunden
-- Debounce, Singleton-Schutz und Cancel-Verhalten sind zentral implementiert
-- Delta-Runs nutzen den Collection-Index statt eigener lokaler Logik
+- [x] Watch-Folder und Schedule sind nicht mehr nur an WPF gebunden
+- [x] Debounce, Singleton-Schutz und Cancel-Verhalten sind zentral implementiert
+- [x] Delta-Runs nutzen den Collection-Index statt eigener lokaler Logik
 
 Abhaengigkeiten:
 - R1-T03
 
-### [ ] R1-T08 Kanalintegration fuer Watch, Review und Run-Status abschliessen
+### [x] R1-T08 Kanalintegration fuer Watch, Review und Run-Status abschliessen
 
 Ziel: Dieselben operativen Funktionen in GUI, CLI und API verfuegbar machen, ohne Logik zu duplizieren.
+
+Status:
+- [x] CLI bietet einen gemeinsamen `watch`-Daemon-Subcommand auf Basis der Infrastructure-Services
+- [x] API stellt Watch-Start/Stop/Status inklusive Owner-Binding und Pending-Status bereit
+- [x] GUI, CLI und API verwenden dieselben Run-, Review- und Watch-Statusmodelle ohne lokale KPI-Neuberechnung
 
 Betroffene Bereiche:
 - `src/RomCleanup.Api`
@@ -171,26 +186,31 @@ Betroffene Bereiche:
 - `src/RomCleanup.Infrastructure/Orchestration`
 
 Akzeptanz:
-- CLI, API und GUI nutzen denselben Service fuer Watch und Status
-- Run-, Review- und Watch-Status stimmen in allen Kanaelen ueberein
-- Keine lokale Neuberechnung von KPIs oder Entscheidungslisten
+- [x] CLI, API und GUI nutzen denselben Service fuer Watch und Status
+- [x] Run-, Review- und Watch-Status stimmen in allen Kanaelen ueberein
+- [x] Keine lokale Neuberechnung von KPIs oder Entscheidungslisten
 
 Abhaengigkeiten:
 - R1-T06
 - R1-T07
 
-### [ ] R1-T09 Invarianten- und Regressionstest-Matrix fuer Foundation vervollstaendigen
+### [x] R1-T09 Invarianten- und Regressionstest-Matrix fuer Foundation vervollstaendigen
 
 Ziel: Die neuen Grundlagen gegen Datenverlust, Paritaetsfehler und nichtdeterministisches Verhalten absichern.
+
+Status:
+- [x] Index-CRUD, Snapshot-Persistenz, Delta-Rehydration und Recovery sind mit Contract-/Adapter-Tests abgedeckt
+- [x] Review-Store-, Watch-/Schedule- und Trend-Services sind mit gezielten Regressionstests abgedeckt
+- [x] Die Vollsuite laeuft gruen mit `7101/7101` Tests auf Stand `2026-04-01`
 
 Betroffene Bereiche:
 - `src/RomCleanup.Tests`
 - `docs/architecture/TEST_STRATEGY.md`
 
 Akzeptanz:
-- Tests decken Index-CRUD, Delta-Scans, Watch-Bursts, Review-Paritaet und Recovery ab
-- Negative Faelle fuer Korruption, Reparse-Points und konkurrierende Runs sind enthalten
-- Release-Kriterien fuer Preview/Execute/Report-Paritaet bleiben gruen
+- [x] Tests decken Index-CRUD, Delta-Scans, Watch-Bursts, Review-Paritaet und Recovery ab
+- [x] Negative Faelle fuer Korruption, Reparse-Points und konkurrierende Runs sind enthalten
+- [x] Release-Kriterien fuer Preview/Execute/Report-Paritaet bleiben gruen
 
 Abhaengigkeiten:
 - R1-T03
@@ -199,8 +219,8 @@ Abhaengigkeiten:
 
 ## Release-Exit
 
-- [ ] Delta-Scans, Hash-Cache und Run-Historie sind produktiv nutzbar
-- [ ] Analyse, Completeness und Export verwenden keine konkurrierende Wahrheit mehr
-- [ ] Watch und Schedule sind in GUI, CLI und API nutzbar
-- [ ] Review-Zustand ist persistent und kanaluebergreifend identisch
-- [ ] Foundation-Tests fuer Invarianten und Recovery sind vorhanden
+- [x] Delta-Scans, Hash-Cache und Run-Historie sind produktiv nutzbar
+- [x] Analyse, Completeness und Export verwenden keine konkurrierende Wahrheit mehr
+- [x] Watch und Schedule sind in GUI, CLI und API nutzbar
+- [x] Review-Zustand ist persistent und kanaluebergreifend identisch
+- [x] Foundation-Tests fuer Invarianten und Recovery sind vorhanden

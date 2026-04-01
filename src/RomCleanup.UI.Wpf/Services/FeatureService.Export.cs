@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Infrastructure.Analysis;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Tools;
 using RomCleanup.Infrastructure.Reporting;
@@ -52,24 +53,7 @@ public static partial class FeatureService
     private static readonly TimeSpan JunkRxTimeout = TimeSpan.FromMilliseconds(500);
 
     public static JunkReportEntry? GetJunkReason(string baseName, bool aggressive)
-    {
-        foreach (var (pattern, tag, reason) in JunkPatterns)
-        {
-            if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase, JunkRxTimeout))
-                return new JunkReportEntry(tag, reason, "standard");
-        }
-
-        if (aggressive)
-        {
-            foreach (var (pattern, tag, reason) in AggressivePatterns)
-            {
-                if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase, JunkRxTimeout))
-                    return new JunkReportEntry(tag, reason, "aggressive");
-            }
-        }
-
-        return null;
-    }
+        => CollectionExportService.GetJunkReason(baseName, aggressive);
 
 
     public static string BuildJunkReport(IReadOnlyList<RomCandidate> candidates, bool aggressive)
@@ -108,67 +92,14 @@ public static partial class FeatureService
     // Port of CollectionCsvExport.ps1
 
     public static string ExportCollectionCsv(IReadOnlyList<RomCandidate> candidates, char delimiter = ';')
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"Dateiname{delimiter}Konsole{delimiter}Region{delimiter}Format{delimiter}Groesse_MB{delimiter}Kategorie{delimiter}DAT_Status{delimiter}Pfad");
-        foreach (var c in candidates)
-        {
-            sb.Append(SanitizeCsvField(Path.GetFileName(c.MainPath)));
-            sb.Append(delimiter);
-            sb.Append(SanitizeCsvField(ResolveConsoleLabel(c)));
-            sb.Append(delimiter);
-            sb.Append(SanitizeCsvField(c.Region));
-            sb.Append(delimiter);
-            sb.Append(SanitizeCsvField(c.Extension));
-            sb.Append(delimiter);
-            sb.Append((c.SizeBytes / 1048576.0).ToString("F2", CultureInfo.InvariantCulture));
-            sb.Append(delimiter);
-            sb.Append(SanitizeCsvField(ToCategoryLabel(c.Category)));
-            sb.Append(delimiter);
-            sb.Append(c.DatMatch ? "Verified" : "Unverified");
-            sb.Append(delimiter);
-            sb.AppendLine(SanitizeCsvField(c.MainPath));
-        }
-        return sb.ToString();
-    }
+        => CollectionExportService.ExportCollectionCsv(candidates, delimiter, CollectionTabularExportLabels.German);
 
 
     // ═══ EXCEL XML EXPORT ═══════════════════════════════════════════════
     // Port of WpfSlice.ReportPreview.ps1 - Export-WpfSummaryData -Format ExcelXml
 
     public static string ExportExcelXml(IReadOnlyList<RomCandidate> candidates)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        sb.AppendLine("<?mso-application progid=\"Excel.Sheet\"?>");
-        sb.AppendLine("<Workbook xmlns=\"urn:schemas-microsoft-com:office:spreadsheet\"");
-        sb.AppendLine(" xmlns:ss=\"urn:schemas-microsoft-com:office:spreadsheet\">");
-        sb.AppendLine("<Worksheet ss:Name=\"ROMs\"><Table>");
-
-        // Header
-        sb.AppendLine("<Row>");
-        foreach (var h in new[] { "Dateiname", "Konsole", "Region", "Format", "Groesse_MB", "Kategorie", "DAT", "Pfad" })
-            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(h)}</Data></Cell>");
-        sb.AppendLine("</Row>");
-
-        // Data
-        foreach (var c in candidates)
-        {
-            sb.AppendLine("<Row>");
-            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(Path.GetFileName(c.MainPath))}</Data></Cell>");
-            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(ResolveConsoleLabel(c))}</Data></Cell>");
-            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(c.Region)}</Data></Cell>");
-            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(c.Extension)}</Data></Cell>");
-            sb.AppendLine($"<Cell><Data ss:Type=\"Number\">{(c.SizeBytes / 1048576.0).ToString("F2", CultureInfo.InvariantCulture)}</Data></Cell>");
-            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(ToCategoryLabel(c.Category))}</Data></Cell>");
-            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{(c.DatMatch ? "Verified" : "Unverified")}</Data></Cell>");
-            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(c.MainPath)}</Data></Cell>");
-            sb.AppendLine("</Row>");
-        }
-
-        sb.AppendLine("</Table></Worksheet></Workbook>");
-        return sb.ToString();
-    }
+        => CollectionExportService.ExportExcelXml(candidates, CollectionTabularExportLabels.German);
 
 
     // ═══ FORMAT RULES FROM JSON ════════════════════════════════════════
@@ -317,33 +248,6 @@ public static partial class FeatureService
     public static (ReportSummary Summary, List<ReportEntry> Entries) BuildHtmlReportData(
         IReadOnlyList<RomCandidate> candidates, IReadOnlyList<DedupeGroup> groups,
         RunResult? runResult, bool dryRun)
-    {
-        var summary = new ReportSummary
-        {
-            Mode = dryRun ? "DryRun" : "Move",
-            TotalFiles = candidates.Count,
-            KeepCount = groups.Count,
-            MoveCount = groups.Sum(g => g.Losers.Count),
-            JunkCount = candidates.Count(c => c.Category == FileCategory.Junk),
-            GroupCount = groups.Count,
-            Duration = TimeSpan.FromMilliseconds(runResult?.DurationMs ?? 0)
-        };
-        // Build winner/loser lookup from groups so Action reflects actual dedupe decisions
-        var loserPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var g in groups)
-            foreach (var l in g.Losers)
-                loserPaths.Add(l.MainPath);
-
-        var entries = candidates.Select(c => new ReportEntry
-        {
-            GameKey = c.GameKey,
-            Action = c.Category == FileCategory.Junk ? "JUNK" : loserPaths.Contains(c.MainPath) ? "MOVE" : "KEEP",
-            Category = ToCategoryLabel(c.Category), Region = c.Region, FilePath = c.MainPath,
-            FileName = Path.GetFileName(c.MainPath), Extension = c.Extension,
-            SizeBytes = c.SizeBytes, RegionScore = c.RegionScore, FormatScore = c.FormatScore,
-            VersionScore = (int)c.VersionScore, DatMatch = c.DatMatch
-        }).ToList();
-        return (summary, entries);
-    }
+        => CollectionExportService.BuildReportData(candidates, groups, runResult, dryRun);
 
 }

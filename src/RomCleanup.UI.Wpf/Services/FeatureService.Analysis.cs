@@ -125,29 +125,7 @@ public static partial class FeatureService
 
 
     public static string ExportRetroArchPlaylist(IReadOnlyList<RomCandidate> winners, string playlistName)
-    {
-        var entries = new List<object>();
-        foreach (var w in winners)
-        {
-            var console = ResolveConsoleLabel(w).ToLowerInvariant();
-            var core = CoreMapping.GetValueOrDefault(console, "");
-            entries.Add(new
-            {
-                path = w.MainPath.Replace('\\', '/'),
-                label = Path.GetFileNameWithoutExtension(w.MainPath),
-                core_path = core,
-                core_name = core.Replace("_libretro", ""),
-                db_name = playlistName + ".lpl"
-            });
-        }
-        return JsonSerializer.Serialize(new
-        {
-            version = "1.5",
-            default_core_path = "",
-            default_core_name = "",
-            items = entries
-        }, new JsonSerializerOptions { WriteIndented = true });
-    }
+        => CollectionAnalysisService.ExportRetroArchPlaylist(winners, playlistName, CoreMapping);
 
 
     /// <summary>Build command palette results report.</summary>

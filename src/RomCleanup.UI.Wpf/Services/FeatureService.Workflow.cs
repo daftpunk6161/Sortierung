@@ -10,6 +10,7 @@ using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Tools;
 using RomCleanup.Infrastructure.Reporting;
+using RomCleanup.Infrastructure.Watch;
 
 namespace RomCleanup.UI.Wpf.Services;
 
@@ -38,57 +39,11 @@ public static partial class FeatureService
     // Port of CronTester (formerly SchedulerAdvanced.ps1)
 
     public static bool TestCronMatch(string cronExpression, DateTime dt)
-    {
-        var fields = cronExpression.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (fields.Length != 5) return false;
-
-        return CronFieldMatch(fields[0], dt.Minute) &&
-               CronFieldMatch(fields[1], dt.Hour) &&
-               CronFieldMatch(fields[2], dt.Day) &&
-               CronFieldMatch(fields[3], dt.Month) &&
-               CronFieldMatch(fields[4], (int)dt.DayOfWeek);
-    }
+        => CronScheduleEvaluator.TestCronMatch(cronExpression, dt);
 
 
     internal static bool CronFieldMatch(string field, int value)
-    {
-        if (field == "*") return true;
-        foreach (var part in field.Split(','))
-        {
-            if (part.Contains('/'))
-            {
-                var segments = part.Split('/');
-                if (segments.Length == 2 && int.TryParse(segments[1], out var step) && step > 0)
-                {
-                    // Support range/step syntax like "10-30/5"
-                    int lo = 0;
-                    if (segments[0].Contains('-'))
-                    {
-                        var range = segments[0].Split('-');
-                        if (int.TryParse(range[0], out var rLo) && int.TryParse(range[1], out var rHi))
-                        {
-                            if (value >= rLo && value <= rHi && (value - rLo) % step == 0)
-                                return true;
-                        }
-                    }
-                    else if (segments[0] == "*" || int.TryParse(segments[0], out lo))
-                    {
-                        if ((value - lo) % step == 0 && value >= lo)
-                            return true;
-                    }
-                }
-            }
-            else if (part.Contains('-'))
-            {
-                var range = part.Split('-');
-                if (int.TryParse(range[0], out var lo) && int.TryParse(range[1], out var hi) && value >= lo && value <= hi)
-                    return true;
-            }
-            else if (int.TryParse(part, out var exact) && exact == value)
-                return true;
-        }
-        return false;
-    }
+        => CronScheduleEvaluator.CronFieldMatch(field, value);
 
 
     // ═══ CSV FIELD EXTRACTION ══════════════════════════════════════════

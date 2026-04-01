@@ -11,6 +11,8 @@ using RomCleanup.Infrastructure.FileSystem;
 using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Logging;
 using RomCleanup.Infrastructure.Orchestration;
+using RomCleanup.Infrastructure.Review;
+using RomCleanup.Infrastructure.Watch;
 
 namespace RomCleanup.CLI;
 
@@ -80,6 +82,9 @@ internal static class Program
                 case CliCommand.History:
                     return SubcommandHistory(result.Options!);
 
+                case CliCommand.Watch:
+                    return SubcommandWatch(result.Options!);
+
                 case CliCommand.Convert:
                     return SubcommandConvert(result.Options!);
 
@@ -110,6 +115,15 @@ internal static class Program
     }
 
     private static int Run(CliRunOptions cliOpts)
+        => ExecuteRunCore(cliOpts, CancellationToken.None, wireConsoleCancel: true);
+
+    private static PersistedReviewDecisionService? CreateReviewDecisionService(Action<string>? onWarning)
+        => ReviewDecisionServiceFactory.TryCreate(onWarning);
+
+    private static int ExecuteRunCore(
+        CliRunOptions cliOpts,
+        CancellationToken externalCancellationToken,
+        bool wireConsoleCancel)
     {
         if (string.Equals(cliOpts.Mode, RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase)
             && IsNonInteractiveExecution()
@@ -119,130 +133,142 @@ internal static class Program
             return 3;
         }
 
-        using var cts = new CancellationTokenSource();
-        int cancelCount = 0;
-        Console.CancelKeyPress += (_, e) =>
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(externalCancellationToken);
+        ConsoleCancelEventHandler? cancelHandler = null;
+        var cancelCount = 0;
+        if (wireConsoleCancel)
         {
-            cancelCount++;
-            if (cancelCount >= 2)
+            cancelHandler = (_, e) =>
             {
+                cancelCount++;
+                if (cancelCount >= 2)
+                {
+                    e.Cancel = true;
+                    cts.Cancel();
+                    SafeErrorWriteLine("Force-cancel requested.");
+                    return;
+                }
+
                 e.Cancel = true;
                 cts.Cancel();
-                SafeErrorWriteLine("Force-cancel requested.");
-                return;
-            }
-            e.Cancel = true;
-            cts.Cancel();
-            SafeErrorWriteLine("Cancelling… press Ctrl+C again to force exit.");
-        };
+                SafeErrorWriteLine("Cancelling… press Ctrl+C again to force exit.");
+            };
 
-        // JSONL logging
-        JsonlLogWriter? log = null;
-        if (!string.IsNullOrEmpty(cliOpts.LogPath))
-        {
-            var logLevel = Enum.Parse<LogLevel>(cliOpts.LogLevel, ignoreCase: true);
-            log = new JsonlLogWriter(cliOpts.LogPath, logLevel);
+            Console.CancelKeyPress += cancelHandler;
         }
-
-        // Load settings + map to RunOptions
-        var dataDir = RunEnvironmentBuilder.ResolveDataDir();
-        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
-        var (runOptions, mapErrors) = CliOptionsMapper.Map(cliOpts, settings);
-
-        if (runOptions is null)
-        {
-            CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
-            return 3;
-        }
-
-        if (cliOpts.ConvertFormat)
-            log?.Info("CLI", "convert-init", "Format conversion enabled", "init");
-
-        // Build environment (DAT, ConsoleDetector, Converter, etc.)
-        using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-
-        log?.Info("CLI", "start", $"Run started: Mode={cliOpts.Mode}, Roots={string.Join(";", cliOpts.Roots)}", "scan");
-
-        using var orchestrator = new RunOrchestrator(
-            env.FileSystem,
-            env.AuditStore,
-            env.ConsoleDetector,
-            env.HashService,
-            env.Converter,
-            env.DatIndex,
-            onProgress: SafeErrorWriteLine,
-            archiveHashService: env.ArchiveHashService,
-            knownBiosHashes: env.KnownBiosHashes,
-            collectionIndex: env.CollectionIndex,
-            enrichmentFingerprint: env.EnrichmentFingerprint);
-
-        var runStartedUtc = DateTime.UtcNow;
-        var result = orchestrator.Execute(runOptions, cts.Token);
-        var runCompletedUtc = DateTime.UtcNow;
-        var projection = RunProjectionFactory.Create(result);
 
         try
         {
-            using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
-            CollectionRunSnapshotWriter.TryPersistAsync(
-                collectionIndex,
-                runOptions,
-                result,
-                runStartedUtc,
-                runCompletedUtc,
-                SafeErrorWriteLine).GetAwaiter().GetResult();
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
-        {
-            SafeErrorWriteLine($"[CollectionIndex] Run snapshot persist skipped: {ex.Message}");
-        }
-
-        log?.Info("CLI", "scan-complete", $"{result.TotalFilesScanned} files scanned", "scan");
-        log?.Info("CLI", "dedupe-complete",
-            $"{result.GroupCount} groups: Keep={result.WinnerCount}, Move={result.LoserCount}", "dedupe");
-
-        // Output
-        if (cliOpts.Mode == RunConstants.ModeDryRun)
-        {
-            SafeStandardWriteLine(CliOutputWriter.FormatDryRunJson(
-                projection,
-                result.DedupeGroups,
-                result.ConversionReport,
-                result.Preflight?.Warnings));
-        }
-        else if (cliOpts.Mode == RunConstants.ModeMove)
-        {
-            CliOutputWriter.WriteMoveSummary(GetStderr(), projection,
-                runOptions.AuditPath, result.ReportPath, result.ConvertedCount);
-        }
-
-        if (!string.IsNullOrEmpty(cliOpts.ReportPath) && !string.IsNullOrEmpty(result.ReportPath))
-        {
-            SafeErrorWriteLine($"[Report] {result.ReportPath}");
-            log?.Info("CLI", "report", $"Report written: {result.ReportPath}", "report");
-        }
-        else if (!string.IsNullOrEmpty(cliOpts.ReportPath))
-        {
-            SafeErrorWriteLine("[Warning] Report requested but not written");
-            log?.Warning("CLI", "Report requested but not written", "report");
-        }
-
-        if (log != null)
-        {
-            log.Info("CLI", "done", $"Run completed in {result.DurationMs}ms", "done");
-            log.Dispose();
+            JsonlLogWriter? log = null;
             if (!string.IsNullOrEmpty(cliOpts.LogPath))
-                JsonlLogRotation.Rotate(cliOpts.LogPath);
-        }
+            {
+                var logLevel = Enum.Parse<LogLevel>(cliOpts.LogLevel, ignoreCase: true);
+                log = new JsonlLogWriter(cliOpts.LogPath, logLevel);
+            }
 
-        // SEC-CLI-01: Normalize exit code to documented range [0-3]
-        return result.ExitCode switch
+            var dataDir = RunEnvironmentBuilder.ResolveDataDir();
+            var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+            var (runOptions, mapErrors) = CliOptionsMapper.Map(cliOpts, settings);
+
+            if (runOptions is null)
+            {
+                CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
+                return 3;
+            }
+
+            if (cliOpts.ConvertFormat)
+                log?.Info("CLI", "convert-init", "Format conversion enabled", "init");
+
+            using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+            using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
+
+            log?.Info("CLI", "start", $"Run started: Mode={cliOpts.Mode}, Roots={string.Join(";", cliOpts.Roots)}", "scan");
+
+            using var orchestrator = new RunOrchestrator(
+                env.FileSystem,
+                env.AuditStore,
+                env.ConsoleDetector,
+                env.HashService,
+                env.Converter,
+                env.DatIndex,
+                onProgress: SafeErrorWriteLine,
+                archiveHashService: env.ArchiveHashService,
+                knownBiosHashes: env.KnownBiosHashes,
+                collectionIndex: env.CollectionIndex,
+                enrichmentFingerprint: env.EnrichmentFingerprint,
+                reviewDecisionService: reviewDecisionService);
+
+            var runStartedUtc = DateTime.UtcNow;
+            var result = orchestrator.Execute(runOptions, cts.Token);
+            var runCompletedUtc = DateTime.UtcNow;
+            var projection = RunProjectionFactory.Create(result);
+
+            try
+            {
+                using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
+                CollectionRunSnapshotWriter.TryPersistAsync(
+                    collectionIndex,
+                    runOptions,
+                    result,
+                    runStartedUtc,
+                    runCompletedUtc,
+                    SafeErrorWriteLine).GetAwaiter().GetResult();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                SafeErrorWriteLine($"[CollectionIndex] Run snapshot persist skipped: {ex.Message}");
+            }
+
+            log?.Info("CLI", "scan-complete", $"{result.TotalFilesScanned} files scanned", "scan");
+            log?.Info("CLI", "dedupe-complete",
+                $"{result.GroupCount} groups: Keep={result.WinnerCount}, Move={result.LoserCount}", "dedupe");
+
+            if (cliOpts.Mode == RunConstants.ModeDryRun)
+            {
+                SafeStandardWriteLine(CliOutputWriter.FormatDryRunJson(
+                    projection,
+                    result.DedupeGroups,
+                    result.ConversionReport,
+                    result.Preflight?.Warnings));
+            }
+            else if (cliOpts.Mode == RunConstants.ModeMove)
+            {
+                CliOutputWriter.WriteMoveSummary(GetStderr(), projection,
+                    runOptions.AuditPath, result.ReportPath, result.ConvertedCount);
+            }
+
+            if (!string.IsNullOrEmpty(cliOpts.ReportPath) && !string.IsNullOrEmpty(result.ReportPath))
+            {
+                SafeErrorWriteLine($"[Report] {result.ReportPath}");
+                log?.Info("CLI", "report", $"Report written: {result.ReportPath}", "report");
+            }
+            else if (!string.IsNullOrEmpty(cliOpts.ReportPath))
+            {
+                SafeErrorWriteLine("[Warning] Report requested but not written");
+                log?.Warning("CLI", "Report requested but not written", "report");
+            }
+
+            if (log != null)
+            {
+                log.Info("CLI", "done", $"Run completed in {result.DurationMs}ms", "done");
+                log.Dispose();
+                if (!string.IsNullOrEmpty(cliOpts.LogPath))
+                    JsonlLogRotation.Rotate(cliOpts.LogPath);
+            }
+
+            return result.ExitCode switch
+            {
+                0 => 0,
+                2 => 2,
+                3 => 3,
+                _ => 1
+            };
+        }
+        finally
         {
-            0 => 0,
-            2 => 2,
-            3 => 3,
-            _ => 1
-        };
+            if (cancelHandler is not null)
+                Console.CancelKeyPress -= cancelHandler;
+        }
     }
 
     // --- Backward-compatible delegates for tests ---
@@ -436,6 +462,7 @@ internal static class Program
         }
 
         using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+        using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
         using var orchestrator = new RunOrchestrator(
             env.FileSystem,
             env.AuditStore,
@@ -447,7 +474,8 @@ internal static class Program
             archiveHashService: env.ArchiveHashService,
             knownBiosHashes: env.KnownBiosHashes,
             collectionIndex: env.CollectionIndex,
-            enrichmentFingerprint: env.EnrichmentFingerprint);
+            enrichmentFingerprint: env.EnrichmentFingerprint,
+            reviewDecisionService: reviewDecisionService);
 
         var result = orchestrator.Execute(runOptions);
         var projection = RunProjectionFactory.Create(result);
@@ -514,6 +542,7 @@ internal static class Program
         {
             SafeErrorWriteLine($"[Export] Collection index not eligible ({scopedLoad.Reason}); falling back to run scan.");
 
+            using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
             using var orchestrator = new RunOrchestrator(
                 env.FileSystem,
                 env.AuditStore,
@@ -525,7 +554,8 @@ internal static class Program
                 archiveHashService: env.ArchiveHashService,
                 knownBiosHashes: env.KnownBiosHashes,
                 collectionIndex: env.CollectionIndex,
-                enrichmentFingerprint: env.EnrichmentFingerprint);
+                enrichmentFingerprint: env.EnrichmentFingerprint,
+                reviewDecisionService: reviewDecisionService);
 
             var result = orchestrator.Execute(runOptions);
             candidates = result.AllCandidates;
@@ -670,6 +700,125 @@ internal static class Program
         return 0;
     }
 
+    private static int SubcommandWatch(CliRunOptions opts)
+    {
+        if (string.Equals(opts.Mode, RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase) && !opts.Yes)
+        {
+            SafeErrorWriteLine("[Error] Automated watch mode in Move requires --yes confirmation.");
+            return 3;
+        }
+
+        using var daemonCts = new CancellationTokenSource();
+        using var watchService = new WatchFolderService();
+        using var scheduleService = new ScheduleService();
+        using var stopSignal = new ManualResetEventSlim(false);
+
+        var busyFlag = 0;
+        var cancellationRequested = 0;
+        var lastExitCode = 0;
+        Exception? backgroundError = null;
+        Task? activeRunTask = null;
+
+        bool IsBusy() => Volatile.Read(ref busyFlag) == 1;
+
+        void TryTrigger(string source)
+        {
+            if (Interlocked.CompareExchange(ref busyFlag, 1, 0) != 0)
+            {
+                if (string.Equals(source, "watch", StringComparison.OrdinalIgnoreCase))
+                    watchService.MarkPendingWhileBusy();
+                else
+                    scheduleService.MarkPendingWhileBusy();
+                return;
+            }
+
+            activeRunTask = Task.Run(() =>
+            {
+                try
+                {
+                    SafeErrorWriteLine($"[Watch] Triggered {source} run.");
+                    lastExitCode = ExecuteRunCore(opts, daemonCts.Token, wireConsoleCancel: false);
+                    if (lastExitCode is not 0 and not 2)
+                        SafeErrorWriteLine($"[Watch] Triggered run finished with exit code {lastExitCode}.");
+                }
+                catch (Exception ex)
+                {
+                    backgroundError = ex;
+                    SafeErrorWriteLine($"[Watch] Trigger failed: {ex.Message}");
+                    daemonCts.Cancel();
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref busyFlag, 0);
+                    watchService.FlushPendingIfNeeded();
+                    scheduleService.FlushPendingIfNeeded();
+                    if (daemonCts.IsCancellationRequested)
+                        stopSignal.Set();
+                }
+            }, daemonCts.Token);
+        }
+
+        watchService.IsBusyCheck = IsBusy;
+        scheduleService.IsBusyCheck = IsBusy;
+        watchService.RunTriggered += () => TryTrigger("watch");
+        watchService.WatcherError += message => SafeErrorWriteLine($"[Watch] {message}");
+        scheduleService.Triggered += () => TryTrigger("schedule");
+
+        ConsoleCancelEventHandler cancelHandler = (_, e) =>
+        {
+            e.Cancel = true;
+            if (Interlocked.Exchange(ref cancellationRequested, 1) == 0)
+            {
+                SafeErrorWriteLine("[Watch] Stopping automation...");
+                watchService.Stop();
+                scheduleService.Stop();
+                daemonCts.Cancel();
+                if (!IsBusy())
+                    stopSignal.Set();
+                return;
+            }
+
+            SafeErrorWriteLine("[Watch] Cancellation already requested.");
+        };
+
+        Console.CancelKeyPress += cancelHandler;
+        try
+        {
+            var watchedRootCount = watchService.Start(opts.Roots, opts.WatchDebounceSeconds);
+            var scheduleActive = scheduleService.Start(opts.WatchIntervalMinutes, opts.WatchCronExpression);
+            if (watchedRootCount == 0 && !scheduleActive)
+            {
+                SafeErrorWriteLine("[Error] Watch automation could not start.");
+                return 3;
+            }
+
+            SafeErrorWriteLine($"[Watch] Active. Roots={watchedRootCount}, Interval={opts.WatchIntervalMinutes?.ToString() ?? "-"}, Cron={opts.WatchCronExpression ?? "-"}");
+
+            try
+            {
+                stopSignal.Wait(daemonCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // daemon shutdown requested
+            }
+
+            if (activeRunTask is not null)
+                activeRunTask.GetAwaiter().GetResult();
+
+            if (backgroundError is not null)
+                throw backgroundError;
+
+            return 2;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelHandler;
+            watchService.Stop();
+            scheduleService.Stop();
+        }
+    }
+
     private static int SubcommandConvert(CliRunOptions opts)
     {
         var inputPath = opts.InputPath!;
@@ -745,6 +894,7 @@ internal static class Program
         }
 
         using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+        using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
         using var orchestrator = new RunOrchestrator(
             env.FileSystem,
             env.AuditStore,
@@ -756,7 +906,8 @@ internal static class Program
             archiveHashService: env.ArchiveHashService,
             knownBiosHashes: env.KnownBiosHashes,
             collectionIndex: env.CollectionIndex,
-            enrichmentFingerprint: env.EnrichmentFingerprint);
+            enrichmentFingerprint: env.EnrichmentFingerprint,
+            reviewDecisionService: reviewDecisionService);
 
         var result = orchestrator.Execute(runOptions);
         var report = CollectionExportService.BuildJunkReport(result.AllCandidates, opts.AggressiveJunk);

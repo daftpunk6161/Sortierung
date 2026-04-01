@@ -724,6 +724,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             RootFingerprint = snapshot.RootFingerprint ?? "",
             DurationMs = snapshot.DurationMs,
             TotalFiles = snapshot.TotalFiles,
+            CollectionSizeBytes = snapshot.CollectionSizeBytes,
             Games = snapshot.Games,
             Dupes = snapshot.Dupes,
             Junk = snapshot.Junk,
@@ -747,6 +748,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             RootFingerprint = document.RootFingerprint,
             DurationMs = document.DurationMs,
             TotalFiles = document.TotalFiles,
+            CollectionSizeBytes = document.CollectionSizeBytes,
             Games = document.Games,
             Dupes = document.Dupes,
             Junk = document.Junk,
@@ -836,6 +838,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
         public string RootFingerprint { get; set; } = "";
         public long DurationMs { get; set; }
         public int TotalFiles { get; set; }
+        public long CollectionSizeBytes { get; set; }
         public int Games { get; set; }
         public int Dupes { get; set; }
         public int Junk { get; set; }

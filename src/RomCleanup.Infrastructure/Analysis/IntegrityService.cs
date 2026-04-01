@@ -5,6 +5,7 @@ using System.Text.Json;
 using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Core.Classification;
+using RomCleanup.Infrastructure.Index;
 
 namespace RomCleanup.Infrastructure.Analysis;
 
@@ -47,7 +48,7 @@ public static class IntegrityService
 
     public static void SaveTrendSnapshot(int totalFiles, long sizeBytes, int verified, int dupes, int junk)
     {
-        var history = LoadTrendHistory();
+        var history = LoadLegacyTrendHistory();
         history.Add(new TrendSnapshot(DateTime.Now, totalFiles, sizeBytes, verified, dupes, junk,
             CollectionAnalysisService.CalculateHealthScore(totalFiles, dupes, junk, verified)));
         if (history.Count > 365) history.RemoveRange(0, history.Count - 365);
@@ -57,37 +58,32 @@ public static class IntegrityService
 
     public static List<TrendSnapshot> LoadTrendHistory()
     {
-        if (!File.Exists(TrendFile)) return [];
-        try { return JsonSerializer.Deserialize<List<TrendSnapshot>>(File.ReadAllText(TrendFile)) ?? []; }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        try
         {
-            return [];
+            using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath());
+            var history = RunHistoryTrendService.LoadTrendHistoryAsync(collectionIndex).GetAwaiter().GetResult();
+            if (history.Count > 0)
+                return history.ToList();
         }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            // fall back to legacy trend sidecar
+        }
+
+        return LoadLegacyTrendHistory();
     }
 
     public static string FormatTrendReport(List<TrendSnapshot> history)
-    {
-        if (history.Count == 0) return "No trend data available.";
-        var sb = new StringBuilder();
-        sb.AppendLine("Trend Analysis");
-        sb.AppendLine(new string('=', 50));
-        var latest = history[^1];
-        sb.AppendLine($"Current: {latest.TotalFiles} files, {Formatting.FormatSize(latest.SizeBytes)}, Quality={latest.QualityScore}%");
-
-        if (history.Count >= 2)
-        {
-            var prev = history[^2];
-            var fileDelta = latest.TotalFiles - prev.TotalFiles;
-            var dupeDelta = latest.Dupes - prev.Dupes;
-            sb.AppendLine($"Delta files: {fileDelta:+#;-#;0}, Delta duplicates: {dupeDelta:+#;-#;0}");
-        }
-
-        sb.AppendLine();
-        sb.AppendLine("History (last 10):");
-        foreach (var s in history.TakeLast(10))
-            sb.AppendLine($"  {s.Timestamp:yyyy-MM-dd HH:mm} | {s.TotalFiles} files | Q={s.QualityScore}%");
-        return sb.ToString();
-    }
+        => RunHistoryTrendService.FormatTrendReport(
+            history,
+            title: "Trend Analysis",
+            emptyMessage: "No trend data available.",
+            currentLabel: "Current",
+            deltaFilesLabel: "Delta files",
+            deltaDuplicatesLabel: "Delta duplicates",
+            historyLabel: "History (last 10):",
+            filesLabel: "files",
+            qualityLabel: "Quality");
 
     // --- Integrity Baseline ---
 
@@ -232,7 +228,7 @@ public static class IntegrityService
         return Convert.ToHexString(sha.ComputeHash(fs));
     }
 
-    internal static string? FindCommonRoot(IReadOnlyList<string> paths)
+    public static string? FindCommonRoot(IReadOnlyList<string> paths)
     {
         if (paths.Count == 0) return null;
         var dirs = paths.Select(p => Path.GetDirectoryName(Path.GetFullPath(p)) ?? "").ToList();
@@ -248,5 +244,20 @@ public static class IntegrityService
             }
         }
         return common;
+    }
+
+    private static List<TrendSnapshot> LoadLegacyTrendHistory()
+    {
+        if (!File.Exists(TrendFile))
+            return [];
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<TrendSnapshot>>(File.ReadAllText(TrendFile)) ?? [];
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
     }
 }

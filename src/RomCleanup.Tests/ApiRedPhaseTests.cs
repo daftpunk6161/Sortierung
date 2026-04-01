@@ -742,25 +742,7 @@ public sealed class ApiRedPhaseTests : IDisposable
                 settings[key] = value;
         }
 
-        return new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Development");
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    config.AddInMemoryCollection(settings);
-                });
-                if (executor is not null)
-                {
-                    builder.ConfigureServices(services =>
-                    {
-                        services.AddSingleton(new RunManager(
-                            new FileSystemAdapter(),
-                            new AuditCsvStore(),
-                            executor));
-                    });
-                }
-            });
+        return ApiTestFactory.Create(settings, executor);
     }
 
     private static HttpClient CreateAuthClient(WebApplicationFactory<Program> factory)

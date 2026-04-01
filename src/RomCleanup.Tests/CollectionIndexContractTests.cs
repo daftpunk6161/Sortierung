@@ -88,6 +88,7 @@ public sealed class CollectionIndexContractTests
         Assert.Equal("", snapshot.RootFingerprint);
         Assert.Equal(0, snapshot.DurationMs);
         Assert.Equal(0, snapshot.TotalFiles);
+        Assert.Equal(0, snapshot.CollectionSizeBytes);
         Assert.Equal(0, snapshot.Games);
         Assert.Equal(0, snapshot.Dupes);
         Assert.Equal(0, snapshot.Junk);
@@ -178,6 +179,7 @@ public sealed class CollectionIndexContractTests
             RootFingerprint = "ABCDEF",
             DurationMs = 120000,
             TotalFiles = 200,
+            CollectionSizeBytes = 123456789,
             Games = 150,
             Dupes = 25,
             Junk = 10,
@@ -264,6 +266,7 @@ public sealed class CollectionIndexContractTests
         Assert.Equal(snapshot.RootFingerprint, roundTrip.Snapshot.RootFingerprint);
         Assert.Equal(snapshot.DurationMs, roundTrip.Snapshot.DurationMs);
         Assert.Equal(snapshot.TotalFiles, roundTrip.Snapshot.TotalFiles);
+        Assert.Equal(snapshot.CollectionSizeBytes, roundTrip.Snapshot.CollectionSizeBytes);
         Assert.Equal(snapshot.Games, roundTrip.Snapshot.Games);
         Assert.Equal(snapshot.Dupes, roundTrip.Snapshot.Dupes);
         Assert.Equal(snapshot.Junk, roundTrip.Snapshot.Junk);

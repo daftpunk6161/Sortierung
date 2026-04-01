@@ -37,7 +37,12 @@ public sealed class CollectionRunSnapshotWriterTests : IDisposable
             Status = RunConstants.StatusOk,
             ExitCode = 0,
             TotalFilesScanned = 5,
-            DurationMs = 250
+            DurationMs = 250,
+            AllCandidates =
+            [
+                new RomCandidate { MainPath = Path.Combine(_tempDir, "roms", "Game A.zip"), SizeBytes = 1024 },
+                new RomCandidate { MainPath = Path.Combine(_tempDir, "roms", "Game B.zip"), SizeBytes = 2048 }
+            ]
         };
 
         var projection = RunProjectionFactory.Create(result);
@@ -53,6 +58,7 @@ public sealed class CollectionRunSnapshotWriterTests : IDisposable
         Assert.Equal(RunConstants.ModeMove, snapshot.Mode);
         Assert.Equal(RunConstants.StatusOk, snapshot.Status);
         Assert.Single(snapshot.Roots);
+        Assert.Equal(3072, snapshot.CollectionSizeBytes);
     }
 
     [Fact]
@@ -78,8 +84,8 @@ public sealed class CollectionRunSnapshotWriterTests : IDisposable
             DurationMs = 987,
             AllCandidates =
             [
-                new RomCandidate { MainPath = Path.Combine(_tempDir, "roms", "Game (USA).zip"), Category = FileCategory.Game },
-                new RomCandidate { MainPath = Path.Combine(_tempDir, "roms", "Bad (Beta).zip"), Category = FileCategory.Junk }
+                new RomCandidate { MainPath = Path.Combine(_tempDir, "roms", "Game (USA).zip"), Category = FileCategory.Game, SizeBytes = 4096 },
+                new RomCandidate { MainPath = Path.Combine(_tempDir, "roms", "Bad (Beta).zip"), Category = FileCategory.Junk, SizeBytes = 2048 }
             ]
         };
 
@@ -97,5 +103,6 @@ public sealed class CollectionRunSnapshotWriterTests : IDisposable
         Assert.Equal(RunConstants.StatusCompletedWithErrors, snapshots[0].Status);
         Assert.Equal(12, snapshots[0].TotalFiles);
         Assert.Equal(987, snapshots[0].DurationMs);
+        Assert.Equal(6144, snapshots[0].CollectionSizeBytes);
     }
 }

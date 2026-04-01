@@ -21,21 +21,22 @@ Die Reihenfolge folgt den Projektprioritaeten: Korrektheit, Determinismus, Siche
 ## R1 Foundation
 
 Ziel: Eine dauerhafte fachliche Wahrheit fuer Sammlung, Delta-Runs, Reviews und Automation herstellen.
+Status: abgeschlossen am `2026-04-01`
 
 ### Release-Track
 
-- [ ] C1 Persistenter Collection Index auf Basis von [`C1-persistent-collection-index.md`](../epics/C1-persistent-collection-index.md)
-- [ ] Analyse-, Completeness- und Export-Pfade auf dieselbe Datenbasis ziehen
-- [ ] C2 Watch Folder / Scheduled Runs auf Basis von [`C2-watch-folder-scheduled-runs.md`](../epics/C2-watch-folder-scheduled-runs.md)
-- [ ] Gemeinsames Review Center fuer Recognition, Sorting und Conversion
+- [x] C1 Persistenter Collection Index auf Basis von [`C1-persistent-collection-index.md`](../epics/C1-persistent-collection-index.md)
+- [x] Analyse-, Completeness- und Export-Pfade auf dieselbe Datenbasis ziehen
+- [x] C2 Watch Folder / Scheduled Runs auf Basis von [`C2-watch-folder-scheduled-runs.md`](../epics/C2-watch-folder-scheduled-runs.md)
+- [x] Gemeinsames Review Center fuer Recognition, Sorting und Conversion
 
 ### Exit-Kriterien
 
-- [ ] Delta-Scans und Hash-Cache sind produktiv nutzbar
-- [ ] Analyse, Completeness und Export erzeugen keine konkurrierenden Wahrheiten mehr
-- [ ] Watch und Schedule sind nicht mehr GUI-lokal, sondern ueber gemeinsame Services nutzbar
-- [ ] GUI, CLI und API bilden denselben Review- und Run-Status ab
-- [ ] Preview, Execute und Report bleiben konsistent
+- [x] Delta-Scans und Hash-Cache sind produktiv nutzbar
+- [x] Analyse, Completeness und Export erzeugen keine konkurrierenden Wahrheiten mehr
+- [x] Watch und Schedule sind nicht mehr GUI-lokal, sondern ueber gemeinsame Services nutzbar
+- [x] GUI, CLI und API bilden denselben Review- und Run-Status ab
+- [x] Preview, Execute und Report bleiben konsistent
 
 ### Arbeitspakete
 
@@ -49,11 +50,11 @@ Ziel: Eine dauerhafte fachliche Wahrheit fuer Sammlung, Delta-Runs, Reviews und 
 - [x] Console-Aufloesung in Analyse- und ersten Export-Ausgaben auf den zentralen Candidate-Zustand umstellen
 - [x] CLI-Export auf einen zentralen index-first Candidate-Read-Path mit hartem Scope-/Fingerprint-Fallback umstellen
 - [x] Standalone-Konvertierung bei fehlender expliziter Konsole auf Collection-Index-first umstellen
-- [ ] Analyse- und Exportpfade weiter von heuristischen Nebenwahrheiten loesen
-- [ ] Watch/Schedule aus WPF in gemeinsame Infrastructure ueberfuehren
-- [ ] API- und CLI-Steuerung fuer Watch/Schedule definieren
-- [ ] Review-Entscheidungen kanaluebergreifend speichern und wiederverwenden
-- [ ] Invarianten- und Regressionstests fuer Index, Delta, Review und Paritaet ergaenzen
+- [x] Analyse- und Exportpfade weiter von heuristischen Nebenwahrheiten loesen
+- [x] Watch/Schedule aus WPF in gemeinsame Infrastructure ueberfuehren
+- [x] API- und CLI-Steuerung fuer Watch/Schedule definieren
+- [x] Review-Entscheidungen kanaluebergreifend speichern und wiederverwenden
+- [x] Invarianten- und Regressionstests fuer Index, Delta, Review und Paritaet ergaenzen
 
 ## R2 Productization
 

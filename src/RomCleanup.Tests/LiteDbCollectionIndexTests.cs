@@ -196,6 +196,7 @@ public sealed class LiteDbCollectionIndexTests : IDisposable
             Roots = [Path.Combine(_tempDir, "roms-a")],
             RootFingerprint = "A",
             TotalFiles = 10,
+            CollectionSizeBytes = 2048,
             Games = 8
         });
 
@@ -207,6 +208,7 @@ public sealed class LiteDbCollectionIndexTests : IDisposable
             Roots = [Path.Combine(_tempDir, "roms-b")],
             RootFingerprint = "B",
             TotalFiles = 20,
+            CollectionSizeBytes = 4096,
             Games = 15
         });
 
@@ -216,7 +218,9 @@ public sealed class LiteDbCollectionIndexTests : IDisposable
         Assert.Equal(2, snapshotCount);
         Assert.Equal(2, snapshots.Count);
         Assert.Equal("run-2", snapshots[0].RunId);
+        Assert.Equal(4096, snapshots[0].CollectionSizeBytes);
         Assert.Equal("run-1", snapshots[1].RunId);
+        Assert.Equal(2048, snapshots[1].CollectionSizeBytes);
     }
 
     [Fact]

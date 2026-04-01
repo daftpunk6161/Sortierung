@@ -199,6 +199,9 @@ public sealed record CollectionRunSnapshot
     /// <summary>Total scanned file count.</summary>
     public int TotalFiles { get; init; }
 
+    /// <summary>Total bytes represented by the scanned collection candidates for this run.</summary>
+    public long CollectionSizeBytes { get; init; }
+
     /// <summary>Total kept game count after grouping.</summary>
     public int Games { get; init; }
 

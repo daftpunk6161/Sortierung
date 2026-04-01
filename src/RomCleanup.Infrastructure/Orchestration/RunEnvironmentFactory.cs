@@ -1,6 +1,7 @@
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Hashing;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Core.Classification;
 using DatIndex = RomCleanup.Contracts.Models.DatIndex;
 
@@ -27,6 +28,13 @@ public interface IRunEnvironmentFactory
 
 public sealed class RunEnvironmentFactory : IRunEnvironmentFactory
 {
+    private readonly string? _collectionDatabasePath;
+
+    public RunEnvironmentFactory(CollectionIndexPathOptions? collectionIndexPathOptions = null)
+    {
+        _collectionDatabasePath = collectionIndexPathOptions?.DatabasePath;
+    }
+
     public IRunEnvironment Create(RunOptions options, Action<string>? onWarning = null)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -38,6 +46,11 @@ public sealed class RunEnvironmentFactory : IRunEnvironmentFactory
         if (!string.IsNullOrWhiteSpace(options.DatRoot))
             settings.Dat.DatRoot = options.DatRoot;
 
-        return RunEnvironmentBuilder.Build(options, settings, dataDir, onWarning);
+        return RunEnvironmentBuilder.Build(
+            options,
+            settings,
+            dataDir,
+            onWarning,
+            _collectionDatabasePath);
     }
 }

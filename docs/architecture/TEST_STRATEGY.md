@@ -1,6 +1,6 @@
 # Romulus – Test-Strategie
 
-**Stand:** 2026-03-31  
+**Stand:** 2026-04-01  
 **Framework:** xUnit (.NET 10, `src/RomCleanup.Tests/`)  
 **Grundsatz:** Kein Alibi-Test. Jeder Test hat eine **Failure-First-Anforderung** – er muss ohne den zu testenden Code rot werden.
 
@@ -12,9 +12,9 @@
         ┌──────────────────┐
         │   Integration    │  RunOrchestrator, API-RunManager, FileSystem-Ops
         ├──────────────────┤
-        │   Unit           │  200+ Testdateien, aktuell 6996 Tests
+        │   Unit           │  200+ Testdateien, aktuell 7101 Tests
         └──────────────────┘
-        Gesamt: aktuell 6996 Tests (xUnit, Stand 2026-03-31 grün)
+        Gesamt: aktuell 7101 Tests (xUnit, Stand 2026-04-01 grün)
 ```
 
 ---
@@ -23,6 +23,18 @@
 
 Alle Tests liegen in `src/RomCleanup.Tests/` (xUnit, 200+ Testdateien, inkl. Unterordner `Benchmark/` und `Conversion/`).
 Die folgende Übersicht ist thematisch gruppiert; Datei- und Fallzahlen ändern sich regelmäßig.
+
+### 2.0 Foundation-Matrix 2026-04-01
+
+Die Foundation-Erweiterungen fuer Collection-Index, Run-Snapshots, Review-Persistenz und Automation werden zusaetzlich gezielt ueber folgende Schwerpunktdateien abgesichert:
+
+| Datei | Zweck |
+|---|---|
+| `CollectionIndexContractTests.cs` | Persistenter Index-Vertrag, Scope-Reads, Stale-Cleanup, deterministische CRUD-Semantik |
+| `LiteDbCollectionIndexTests.cs` | LiteDB-Adapter, Recovery, Migration, Snapshot-Lesen/Schreiben |
+| `CollectionRunSnapshotWriterTests.cs` | Persistierte Run-Snapshots inkl. `CollectionSizeBytes` und KPI-Projektion |
+| `PersistedReviewDecisionServiceTests.cs` | Persistierte Review-Approvals, Reapply, idempotentes Schreiben |
+| `AutomationAndTrendServiceTests.cs` | Watch-/Schedule-Services, Trend-Berechnung aus Snapshot-Historie |
 
 ### 2.1 Core-/Engine-Tests (17 Dateien)
 
@@ -238,6 +250,9 @@ Jeder Test muss einen echten Fehler finden können. Typische Invarianten:
 - **Kein Move außerhalb der Root** — Path-Traversal-Versuche müssen scheitern
 - **Keine leeren Keys** — GameKey-Normalisierung darf keine leeren Strings liefern
 - **CSV-Injection-Schutz** — führende `=`, `+`, `-`, `@` werden escaped
+- **Run-Snapshots sind wiederverwendbar** — Historie und Trends duerfen keinen neuen Full-Scan benoetigen
+- **Review-Zustand ist kanaluebergreifend identisch** — GUI, CLI und API duerfen keine abweichenden Approval-Ergebnisse liefern
+- **Watch-/Schedule-Bursts bleiben deterministisch** — Debounce, Busy-Schutz und Pending-Flush duerfen keine Doppel-Runs erzeugen
 
 ### 3.5 Verboten
 

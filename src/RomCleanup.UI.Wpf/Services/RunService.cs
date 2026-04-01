@@ -6,6 +6,7 @@ using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Paths;
+using RomCleanup.Infrastructure.Review;
 using RomCleanup.Infrastructure.State;
 using RomCleanup.UI.Wpf.ViewModels;
 
@@ -84,12 +85,15 @@ public sealed class RunService : IRunService
 
         var env = _runEnvironmentFactory.Create(runOptions, onProgress);
 
+        var reviewDecisionService = ReviewDecisionServiceFactory.TryCreate(onProgress);
+
         var orchestrator = new RunOrchestrator(
             env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex, onProgress,
             archiveHashService: env.ArchiveHashService,
             knownBiosHashes: env.KnownBiosHashes,
             collectionIndex: env.CollectionIndex,
-            enrichmentFingerprint: env.EnrichmentFingerprint);
+            enrichmentFingerprint: env.EnrichmentFingerprint,
+            reviewDecisionService: reviewDecisionService);
 
         _appState.SetValue("run.build.completedUtc", DateTime.UtcNow);
         _appState.SetValue("run.auditPath", auditPath);

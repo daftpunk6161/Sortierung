@@ -6,6 +6,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Mvc;
 using RomCleanup.Api;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Errors;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure;
@@ -16,6 +17,7 @@ using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.FileSystem;
 using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
+using RomCleanup.Infrastructure.Review;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +38,7 @@ builder.Services.AddRomCleanupCore();
 builder.Services.AddSingleton<RunManager>();
 builder.Services.AddSingleton<RunLifecycleManager>(sp =>
     sp.GetRequiredService<RunManager>().Lifecycle);
+builder.Services.AddSingleton<ApiAutomationService>();
 builder.Services.AddOpenApi(OpenApiSpec.DocumentName, OpenApiSpec.Configure);
 
 var app = builder.Build();
@@ -662,7 +665,7 @@ app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, string? dr
     .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound)
     .Produces<OperationErrorResponse>(StatusCodes.Status409Conflict);
 
-app.MapGet("/runs/{runId}/reviews", (string runId, HttpContext ctx, string? offset, string? limit, RunLifecycleManager mgr) =>
+app.MapGet("/runs/{runId}/reviews", async (string runId, HttpContext ctx, string? offset, string? limit, RunLifecycleManager mgr, PersistedReviewDecisionService reviewDecisionService, CancellationToken ct) =>
 {
     if (!Guid.TryParse(runId, out _))
         return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
@@ -689,7 +692,7 @@ app.MapGet("/runs/{runId}/reviews", (string runId, HttpContext ctx, string? offs
         parsedLimit = limitValue;
     }
 
-    var queue = BuildReviewQueue(run, parsedOffset, parsedLimit);
+    var queue = await BuildReviewQueueAsync(run, reviewDecisionService, parsedOffset, parsedLimit, ct);
     return Results.Ok(queue);
 })
     .WithSummary("Get review queue for a run")
@@ -698,7 +701,7 @@ app.MapGet("/runs/{runId}/reviews", (string runId, HttpContext ctx, string? offs
     .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
     .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound);
 
-app.MapPost("/runs/{runId}/reviews/approve", async (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
+app.MapPost("/runs/{runId}/reviews/approve", async (string runId, HttpContext ctx, RunLifecycleManager mgr, PersistedReviewDecisionService reviewDecisionService, CancellationToken ct) =>
 {
     if (!Guid.TryParse(runId, out _))
         return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
@@ -733,7 +736,7 @@ app.MapPost("/runs/{runId}/reviews/approve", async (string runId, HttpContext ct
         ? new HashSet<string>(request.Paths, StringComparer.OrdinalIgnoreCase)
         : null;
 
-    var queue = BuildReviewQueue(run);
+    var queue = await BuildReviewQueueAsync(run, reviewDecisionService, ct: ct);
     var matched = queue.Items.Where(item =>
             (string.IsNullOrWhiteSpace(request.ConsoleKey) || string.Equals(item.ConsoleKey, request.ConsoleKey, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrWhiteSpace(request.MatchLevel) || string.Equals(item.MatchLevel, request.MatchLevel, StringComparison.OrdinalIgnoreCase)) &&
@@ -745,7 +748,22 @@ app.MapPost("/runs/{runId}/reviews/approve", async (string runId, HttpContext ct
     foreach (var item in matched)
         run.TryApproveReviewPath(item.MainPath);
 
-    var updated = BuildReviewQueue(run);
+    var coreRunResult = run.CoreRunResult;
+    if (coreRunResult is not null && coreRunResult.AllCandidates.Count > 0)
+    {
+        var approvedPaths = matched
+            .Select(static item => item.MainPath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var approvedCandidates = coreRunResult.AllCandidates
+            .Where(candidate => approvedPaths.Contains(candidate.MainPath))
+            .ToArray();
+
+        if (approvedCandidates.Length > 0)
+            await reviewDecisionService.PersistApprovalsAsync(approvedCandidates, "api", ct);
+    }
+
+    var updated = await BuildReviewQueueAsync(run, reviewDecisionService, ct: ct);
     return Results.Ok(new
     {
         runId,
@@ -760,6 +778,112 @@ app.MapPost("/runs/{runId}/reviews/approve", async (string runId, HttpContext ct
     .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
     .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
     .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound);
+
+app.MapPost("/watch/start", async (HttpContext ctx, string? debounceSeconds, string? intervalMinutes, string? cron, ApiAutomationService automation) =>
+{
+    var requesterClientId = GetClientBindingId(ctx, trustForwardedFor);
+    if (!automation.CanAccess(requesterClientId))
+        return ApiError(403, "AUTH-FORBIDDEN", "Automation belongs to a different client.", ErrorKind.Critical);
+
+    RunRequest? request;
+    try
+    {
+        request = await ctx.Request.ReadFromJsonAsync<RunRequest>();
+    }
+    catch (JsonException)
+    {
+        return ApiError(400, "WATCH-INVALID-JSON", "Invalid JSON.");
+    }
+
+    if (request?.Roots is null || request.Roots.Length == 0)
+        return ApiError(400, "WATCH-ROOTS-REQUIRED", "roots[] is required.");
+
+    var parsedDebounceSeconds = 5;
+    if (!string.IsNullOrWhiteSpace(debounceSeconds)
+        && (!int.TryParse(debounceSeconds, out parsedDebounceSeconds) || parsedDebounceSeconds < 1 || parsedDebounceSeconds > 300))
+    {
+        return ApiError(400, "WATCH-INVALID-DEBOUNCE", "debounceSeconds must be an integer between 1 and 300.");
+    }
+
+    int? parsedIntervalMinutes = null;
+    if (!string.IsNullOrWhiteSpace(intervalMinutes))
+    {
+        if (!int.TryParse(intervalMinutes, out var intervalValue) || intervalValue < 1 || intervalValue > 10080)
+            return ApiError(400, "WATCH-INVALID-INTERVAL", "intervalMinutes must be an integer between 1 and 10080.");
+
+        parsedIntervalMinutes = intervalValue;
+    }
+
+    if (parsedIntervalMinutes is null && string.IsNullOrWhiteSpace(cron))
+        return ApiError(400, "WATCH-SCHEDULE-REQUIRED", "Specify either intervalMinutes or cron.");
+
+    if (!string.IsNullOrWhiteSpace(cron) && !RomCleanup.Infrastructure.Watch.CronScheduleEvaluator.TestCronMatch(cron.Trim(), DateTime.Now.AddMinutes(1)))
+    {
+        // best-effort sanity gate: reject obviously invalid cron syntax without introducing parser shadow logic
+        var cronFields = cron.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (cronFields.Length != 5)
+            return ApiError(400, "WATCH-INVALID-CRON", "cron must contain exactly five fields.");
+    }
+
+    foreach (var root in request.Roots)
+    {
+        if (string.IsNullOrWhiteSpace(root))
+            return ApiError(400, "WATCH-ROOT-EMPTY", "Empty root path.");
+
+        var pathError = ValidatePathSecurity(root, "roots");
+        if (pathError is not null)
+            return pathError;
+
+        if (!Directory.Exists(root))
+            return ApiError(400, "IO-ROOT-NOT-FOUND", $"Root not found: {root}");
+    }
+
+    var mode = request.Mode ?? RunConstants.ModeDryRun;
+    if (!mode.Equals(RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase)
+        && !mode.Equals(RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase))
+    {
+        return ApiError(400, "WATCH-INVALID-MODE", "mode must be DryRun or Move.");
+    }
+
+    mode = mode.Equals(RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase)
+        ? RunConstants.ModeMove
+        : RunConstants.ModeDryRun;
+
+    var status = automation.Start(
+        request,
+        mode,
+        requesterClientId,
+        parsedDebounceSeconds,
+        parsedIntervalMinutes,
+        cron);
+
+    return Results.Ok(status);
+})
+    .WithSummary("Start shared watch/schedule automation")
+    .Produces<ApiWatchStatus>(StatusCodes.Status200OK)
+    .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest);
+
+app.MapPost("/watch/stop", (HttpContext ctx, ApiAutomationService automation) =>
+{
+    if (!automation.CanAccess(GetClientBindingId(ctx, trustForwardedFor)))
+        return ApiError(403, "AUTH-FORBIDDEN", "Automation belongs to a different client.", ErrorKind.Critical);
+
+    return Results.Ok(automation.Stop());
+})
+    .WithSummary("Stop shared watch/schedule automation")
+    .Produces<ApiWatchStatus>(StatusCodes.Status200OK)
+    .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden);
+
+app.MapGet("/watch/status", (HttpContext ctx, ApiAutomationService automation) =>
+{
+    if (!automation.CanAccess(GetClientBindingId(ctx, trustForwardedFor)))
+        return ApiError(403, "AUTH-FORBIDDEN", "Automation belongs to a different client.", ErrorKind.Critical);
+
+    return Results.Ok(automation.GetStatus());
+})
+    .WithSummary("Get shared watch/schedule automation status")
+    .Produces<ApiWatchStatus>(StatusCodes.Status200OK)
+    .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden);
 
 app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
 {
@@ -1456,6 +1580,7 @@ static ApiRunHistoryList BuildRunHistoryList(CollectionRunHistoryPage page)
             RootFingerprint = snapshot.RootFingerprint,
             DurationMs = snapshot.DurationMs,
             TotalFiles = snapshot.TotalFiles,
+            CollectionSizeBytes = snapshot.CollectionSizeBytes,
             Games = snapshot.Games,
             Dupes = snapshot.Dupes,
             Junk = snapshot.Junk,
@@ -1470,7 +1595,12 @@ static ApiRunHistoryList BuildRunHistoryList(CollectionRunHistoryPage page)
     };
 }
 
-static ApiReviewQueue BuildReviewQueue(RunRecord run, int offset = 0, int? limit = null)
+static async Task<ApiReviewQueue> BuildReviewQueueAsync(
+    RunRecord run,
+    PersistedReviewDecisionService? reviewDecisionService,
+    int offset = 0,
+    int? limit = null,
+    CancellationToken ct = default)
 {
     var core = run.CoreRunResult;
     if (core is null)
@@ -1486,6 +1616,12 @@ static ApiReviewQueue BuildReviewQueue(RunRecord run, int offset = 0, int? limit
             Items = Array.Empty<ApiReviewItem>()
         };
     }
+
+    var approvedPaths = reviewDecisionService is null
+        ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        : await reviewDecisionService.GetApprovedPathSetAsync(
+            core.AllCandidates.Select(static candidate => candidate.MainPath).ToArray(),
+            ct);
 
     var items = core.AllCandidates
         .Where(c => c.SortDecision is SortDecision.Review or SortDecision.Blocked or SortDecision.Unknown)
@@ -1504,7 +1640,7 @@ static ApiReviewQueue BuildReviewQueue(RunRecord run, int offset = 0, int? limit
             MatchLevel = c.MatchEvidence.Level.ToString(),
             MatchReasoning = c.MatchEvidence.Reasoning,
             DetectionConfidence = c.DetectionConfidence,
-            Approved = run.IsReviewPathApproved(c.MainPath)
+            Approved = run.IsReviewPathApproved(c.MainPath) || approvedPaths.Contains(c.MainPath)
         })
         .ToArray();
 

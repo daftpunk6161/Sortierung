@@ -1003,36 +1003,23 @@ public sealed partial class MainViewModel
         finally
         {
             _watchService.FlushPendingIfNeeded();
+            _scheduleService.FlushPendingIfNeeded();
         }
     }
 
     // ═══ WATCH-MODE ════════════════════════════════════════════════════
 
-    private System.Threading.Timer? _schedulerTimer;
-
     /// <summary>GUI-109: Start/stop periodic scheduled runs.</summary>
     public void ApplyScheduler()
     {
-        _schedulerTimer?.Dispose();
-        _schedulerTimer = null;
+        _scheduleService.Stop();
+        _scheduleService.IsBusyCheck = () => IsBusy;
 
-        if (SchedulerIntervalMinutes <= 0 || Roots.Count == 0) return;
+        if (SchedulerIntervalMinutes <= 0 || Roots.Count == 0)
+            return;
 
-        var interval = TimeSpan.FromMinutes(SchedulerIntervalMinutes);
-        _schedulerTimer = new System.Threading.Timer(_ =>
-        {
-            _syncContext?.Post(_ =>
-            {
-                if (!IsBusy && Roots.Count > 0)
-                {
-                    AddLog(_loc["Log.ScheduledRunStarted"], "INFO");
-                    DryRun = true;
-                    RunCommand.Execute(null);
-                }
-            }, null);
-        }, null, interval, interval);
-
-        AddLog(_loc.Format("Log.SchedulerActive", SchedulerIntervalDisplay), "INFO");
+        if (_scheduleService.Start(SchedulerIntervalMinutes))
+            AddLog(_loc.Format("Log.SchedulerActive", SchedulerIntervalDisplay), "INFO");
     }
 
     private void ToggleWatchMode()
@@ -1074,14 +1061,27 @@ public sealed partial class MainViewModel
         }
     }
 
+    private void OnScheduledRunTriggered()
+    {
+        _syncContext?.Post(_ =>
+        {
+            if (!IsBusy && Roots.Count > 0)
+            {
+                AddLog(_loc["Log.ScheduledRunStarted"], "INFO");
+                DryRun = true;
+                RunCommand.Execute(null);
+            }
+        }, null);
+    }
+
     /// <summary>GUI-115: Dispose watch-mode and scheduler resources — unsubscribe all events.</summary>
     public void CleanupWatchers()
     {
         _watchService.RunTriggered -= OnWatchRunTriggered;
         _watchService.WatcherError -= OnWatcherError;
         _watchService.Dispose();
-        _schedulerTimer?.Dispose();
-        _schedulerTimer = null;
+        _scheduleService.Triggered -= OnScheduledRunTriggered;
+        _scheduleService.Dispose();
     }
 
     // ═══ EVENTS ═════════════════════════════════════════════════════════
