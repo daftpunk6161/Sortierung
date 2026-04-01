@@ -28,10 +28,12 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
 
 - [x] R1-T01 Index-Vertrag und Datenmodell festziehen
 - [x] R1-T02 Index-Adapter, Migration und Recovery umsetzen
-- [ ] R1-T03 Delta-Scan-Integration in Scanner und Orchestrierung anbinden
-  Persistenter Hash-Cache wurde auf den Collection-Index umgestellt; Delta-Erkennung im Scanner ist noch offen.
+- [x] R1-T03 Delta-Scan-Integration in Scanner und Orchestrierung anbinden
+  Persistenter Hash-Cache, scannerseitige Dateimetadaten, Delta-Rehydration, Candidate-Persistenz und Stale-Entry-Cleanup laufen jetzt ueber denselben Collection-Index.
 - [ ] R1-T04 Run-Snapshot-Queries und Verlaufsabfragen abschliessen
   API-Endpoint `/runs/history` und CLI-Subcommand `history` sind geliefert; weitere Reports/Trend-Konsumenten sind noch offen.
+- [ ] R1-T05 Analyse, Completeness und Export auf zentrale Datenbasis umstellen
+  Completeness nutzt jetzt `RunCandidates -> CollectionIndex -> Filesystem-Fallback`; Analyse- und Export-Ausgaben nutzen den zentralen `ConsoleKey`, der CLI-Export verwendet einen index-first Read-Pfad mit explizitem Fallback, und `convert` bevorzugt den persistierten Console-Zustand vor der Pfadheuristik. Restliche Export-Vereinheitlichung bleibt offen.
 
 ## Parked
 

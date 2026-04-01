@@ -9,13 +9,20 @@ namespace RomCleanup.Infrastructure.Conversion;
 /// Standalone conversion service for converting individual files or directories
 /// outside of the full run pipeline. Used by CLI convert subcommand and API.
 /// </summary>
-public sealed class StandaloneConversionService
+public sealed class StandaloneConversionService : IDisposable
 {
     private readonly IFormatConverter _converter;
+    private readonly ICollectionIndex? _collectionIndex;
+    private readonly IDisposable? _lifetime;
 
-    public StandaloneConversionService(IFormatConverter converter)
+    public StandaloneConversionService(
+        IFormatConverter converter,
+        ICollectionIndex? collectionIndex = null,
+        IDisposable? lifetime = null)
     {
         _converter = converter ?? throw new ArgumentNullException(nameof(converter));
+        _collectionIndex = collectionIndex;
+        _lifetime = lifetime;
     }
 
     /// <summary>
@@ -30,11 +37,14 @@ public sealed class StandaloneConversionService
         var env = new RunEnvironmentFactory().Create(
             new RunOptions { Roots = [rootDir] },
             onWarning);
-        using var hashServiceLease = env.HashService;
 
-        return env.Converter is not null
-            ? new StandaloneConversionService(env.Converter)
-            : null;
+        if (env.Converter is null)
+        {
+            env.Dispose();
+            return null;
+        }
+
+        return new StandaloneConversionService(env.Converter, env.CollectionIndex, env);
     }
 
     /// <summary>
@@ -50,7 +60,7 @@ public sealed class StandaloneConversionService
             return new ConversionResult(filePath, null, ConversionOutcome.Error, "Source file not found.");
 
         var ext = Path.GetExtension(filePath);
-        var resolvedConsole = consoleKey ?? CollectionAnalysisService.DetectConsoleFromPath(filePath);
+        var resolvedConsole = ResolveConsoleKey(filePath, consoleKey);
 
         var target = _converter.GetTargetFormat(resolvedConsole, ext);
         if (target is null)
@@ -109,6 +119,26 @@ public sealed class StandaloneConversionService
         }
 
         return new StandaloneConversionReport(results, converted, skipped, errors);
+    }
+
+    public void Dispose()
+    {
+        _lifetime?.Dispose();
+    }
+
+    private string ResolveConsoleKey(string filePath, string? consoleKey)
+    {
+        if (!string.IsNullOrWhiteSpace(consoleKey))
+            return consoleKey;
+
+        if (_collectionIndex is not null)
+        {
+            var entry = _collectionIndex.TryGetByPathAsync(Path.GetFullPath(filePath)).GetAwaiter().GetResult();
+            if (entry is not null)
+                return CollectionAnalysisService.ResolveConsoleLabel(entry.ConsoleKey, filePath);
+        }
+
+        return CollectionAnalysisService.DetectConsoleFromPath(filePath);
     }
 }
 

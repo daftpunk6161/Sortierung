@@ -3,6 +3,7 @@ using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Classification;
 using RomCleanup.Core.Deduplication;
 using RomCleanup.Infrastructure.Hashing;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Deduplication;
 using RomCleanup.Infrastructure.Linking;
 using RomCleanup.Infrastructure.Metrics;
@@ -25,6 +26,7 @@ public sealed partial class RunOrchestrator : IDisposable
     private readonly IAuditStore _audit;
     private readonly ConsoleDetector? _consoleDetector;
     private readonly FileHashService? _hashService;
+    private readonly Contracts.Ports.ICollectionIndex? _collectionIndex;
     private readonly ArchiveHashService? _archiveHashService;
     private readonly IFormatConverter? _converter;
     private readonly DatIndex? _datIndex;
@@ -32,6 +34,7 @@ public sealed partial class RunOrchestrator : IDisposable
     private readonly IPhasePlanBuilder _phasePlanBuilder;
     private readonly Contracts.Ports.IHeaderlessHasher? _headerlessHasher;
     private readonly IReadOnlySet<string>? _knownBiosHashes;
+    private readonly string? _enrichmentFingerprint;
     private bool _disposed;
 
     public RunOrchestrator(
@@ -45,12 +48,15 @@ public sealed partial class RunOrchestrator : IDisposable
         IPhasePlanBuilder? phasePlanBuilder = null,
         ArchiveHashService? archiveHashService = null,
         Contracts.Ports.IHeaderlessHasher? headerlessHasher = null,
-        IReadOnlySet<string>? knownBiosHashes = null)
+        IReadOnlySet<string>? knownBiosHashes = null,
+        Contracts.Ports.ICollectionIndex? collectionIndex = null,
+        string? enrichmentFingerprint = null)
     {
         _fs = fs;
         _audit = audit;
         _consoleDetector = consoleDetector;
         _hashService = hashService;
+        _collectionIndex = collectionIndex ?? hashService?.CollectionIndex;
         _archiveHashService = archiveHashService;
         _converter = converter;
         _datIndex = datIndex;
@@ -58,6 +64,7 @@ public sealed partial class RunOrchestrator : IDisposable
         _phasePlanBuilder = phasePlanBuilder ?? new PhasePlanBuilder();
         _headerlessHasher = headerlessHasher;
         _knownBiosHashes = knownBiosHashes;
+        _enrichmentFingerprint = string.IsNullOrWhiteSpace(enrichmentFingerprint) ? null : enrichmentFingerprint;
     }
 
     /// <summary>
@@ -345,6 +352,8 @@ public sealed partial class RunOrchestrator : IDisposable
         _disposed = true;
         if (_hashService is IDisposable disposableHashService)
             disposableHashService.Dispose();
+        if (_collectionIndex is IDisposable disposableCollectionIndex)
+            disposableCollectionIndex.Dispose();
     }
 
     private static void ApplyPartialPipelineState(PipelineState pipelineState, RunResultBuilder result)

@@ -159,13 +159,22 @@ internal static class Program
             log?.Info("CLI", "convert-init", "Format conversion enabled", "init");
 
         // Build environment (DAT, ConsoleDetector, Converter, etc.)
-        var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+        using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
 
         log?.Info("CLI", "start", $"Run started: Mode={cliOpts.Mode}, Roots={string.Join(";", cliOpts.Roots)}", "scan");
 
-        using var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
-            env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService,
-            knownBiosHashes: env.KnownBiosHashes);
+        using var orchestrator = new RunOrchestrator(
+            env.FileSystem,
+            env.AuditStore,
+            env.ConsoleDetector,
+            env.HashService,
+            env.Converter,
+            env.DatIndex,
+            onProgress: SafeErrorWriteLine,
+            archiveHashService: env.ArchiveHashService,
+            knownBiosHashes: env.KnownBiosHashes,
+            collectionIndex: env.CollectionIndex,
+            enrichmentFingerprint: env.EnrichmentFingerprint);
 
         var runStartedUtc = DateTime.UtcNow;
         var result = orchestrator.Execute(runOptions, cts.Token);
@@ -426,10 +435,19 @@ internal static class Program
             return 3;
         }
 
-        var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        using var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
-            env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService,
-            knownBiosHashes: env.KnownBiosHashes);
+        using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+        using var orchestrator = new RunOrchestrator(
+            env.FileSystem,
+            env.AuditStore,
+            env.ConsoleDetector,
+            env.HashService,
+            env.Converter,
+            env.DatIndex,
+            onProgress: SafeErrorWriteLine,
+            archiveHashService: env.ArchiveHashService,
+            knownBiosHashes: env.KnownBiosHashes,
+            collectionIndex: env.CollectionIndex,
+            enrichmentFingerprint: env.EnrichmentFingerprint);
 
         var result = orchestrator.Execute(runOptions);
         var projection = RunProjectionFactory.Create(result);
@@ -466,7 +484,7 @@ internal static class Program
 
     private static int SubcommandExport(CliRunOptions opts)
     {
-        SafeErrorWriteLine($"[Export] Scanning {opts.Roots.Length} root(s)...");
+        SafeErrorWriteLine($"[Export] Preparing {opts.Roots.Length} root(s)...");
         var dataDir = RunEnvironmentBuilder.ResolveDataDir();
         var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
         var (runOptions, mapErrors) = CliOptionsMapper.Map(opts, settings);
@@ -476,13 +494,42 @@ internal static class Program
             return 3;
         }
 
-        var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        using var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
-            env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService,
-            knownBiosHashes: env.KnownBiosHashes);
+        using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+        var scopedLoad = CollectionAnalysisService.TryLoadScopedCandidatesFromCollectionIndexAsync(
+            env.CollectionIndex,
+            env.FileSystem,
+            runOptions.Roots,
+            runOptions.Extensions,
+            env.EnrichmentFingerprint).GetAwaiter().GetResult();
 
-        var result = orchestrator.Execute(runOptions);
-        var candidates = result.AllCandidates;
+        IReadOnlyList<RomCandidate> candidates;
+        if (scopedLoad.CanUse)
+        {
+            candidates = scopedLoad.Candidates;
+            SafeErrorWriteLine(scopedLoad.Source == ScopedCandidateSources.EmptyScope
+                ? "[Export] Scope is empty; exporting empty result."
+                : $"[Export] Using collection index candidates ({candidates.Count} item(s)).");
+        }
+        else
+        {
+            SafeErrorWriteLine($"[Export] Collection index not eligible ({scopedLoad.Reason}); falling back to run scan.");
+
+            using var orchestrator = new RunOrchestrator(
+                env.FileSystem,
+                env.AuditStore,
+                env.ConsoleDetector,
+                env.HashService,
+                env.Converter,
+                env.DatIndex,
+                onProgress: SafeErrorWriteLine,
+                archiveHashService: env.ArchiveHashService,
+                knownBiosHashes: env.KnownBiosHashes,
+                collectionIndex: env.CollectionIndex,
+                enrichmentFingerprint: env.EnrichmentFingerprint);
+
+            var result = orchestrator.Execute(runOptions);
+            candidates = result.AllCandidates;
+        }
 
         var format = opts.ExportFormat ?? "csv";
         string content = format switch
@@ -632,7 +679,7 @@ internal static class Program
             return 1;
         }
 
-        var service = StandaloneConversionService.Create(inputPath, SafeErrorWriteLine);
+        using var service = StandaloneConversionService.Create(inputPath, SafeErrorWriteLine);
         if (service is null)
         {
             SafeErrorWriteLine("[Error] No converter available.");
@@ -697,10 +744,19 @@ internal static class Program
             return 3;
         }
 
-        var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        using var orchestrator = new RunOrchestrator(env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService,
-            env.Converter, env.DatIndex, onProgress: SafeErrorWriteLine, archiveHashService: env.ArchiveHashService,
-            knownBiosHashes: env.KnownBiosHashes);
+        using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
+        using var orchestrator = new RunOrchestrator(
+            env.FileSystem,
+            env.AuditStore,
+            env.ConsoleDetector,
+            env.HashService,
+            env.Converter,
+            env.DatIndex,
+            onProgress: SafeErrorWriteLine,
+            archiveHashService: env.ArchiveHashService,
+            knownBiosHashes: env.KnownBiosHashes,
+            collectionIndex: env.CollectionIndex,
+            enrichmentFingerprint: env.EnrichmentFingerprint);
 
         var result = orchestrator.Execute(runOptions);
         var report = CollectionExportService.BuildJunkReport(result.AllCandidates, opts.AggressiveJunk);
@@ -724,15 +780,18 @@ internal static class Program
             return 3;
         }
 
-        var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        using var hashServiceLease = env.HashService;
+        using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
         if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
         {
             SafeErrorWriteLine("[Error] No DAT index available. Configure DatRoot in settings or use --dat-root.");
             return 1;
         }
 
-        var report = CompletenessReportService.Build(env.DatIndex, opts.Roots);
+        var report = CompletenessReportService.BuildAsync(
+            env.DatIndex,
+            runOptions.Roots,
+            env.CollectionIndex,
+            runOptions.Extensions).GetAwaiter().GetResult();
         SafeStandardWriteLine(CompletenessReportService.FormatReport(report));
 
         // Also output JSON summary for machine consumption

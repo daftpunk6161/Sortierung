@@ -87,7 +87,9 @@ public sealed class RunService : IRunService
         var orchestrator = new RunOrchestrator(
             env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex, onProgress,
             archiveHashService: env.ArchiveHashService,
-            knownBiosHashes: env.KnownBiosHashes);
+            knownBiosHashes: env.KnownBiosHashes,
+            collectionIndex: env.CollectionIndex,
+            enrichmentFingerprint: env.EnrichmentFingerprint);
 
         _appState.SetValue("run.build.completedUtc", DateTime.UtcNow);
         _appState.SetValue("run.auditPath", auditPath);

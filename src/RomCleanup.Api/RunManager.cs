@@ -72,7 +72,7 @@ public sealed class RunManager
         var (auditPath, reportPath) = RunLifecycleManager.GetArtifactPaths(run.RunId, run.Roots);
 
         var options = _runOptionsFactory.Create(new RunRecordOptionsSource(run), auditPath, reportPath);
-        var env = _runEnvironmentFactory.Create(options,
+        using var env = _runEnvironmentFactory.Create(options,
             onWarning: msg =>
             {
                 run.ProgressMessage = msg;
@@ -87,7 +87,9 @@ public sealed class RunManager
                 run.ProgressPercent = ProgressEstimator.EstimateFromMessage(msg);
             },
             archiveHashService: env.ArchiveHashService,
-            knownBiosHashes: env.KnownBiosHashes);
+            knownBiosHashes: env.KnownBiosHashes,
+            collectionIndex: env.CollectionIndex,
+            enrichmentFingerprint: env.EnrichmentFingerprint);
 
         var runStartedUtc = DateTime.UtcNow;
         var result = orchestrator.Execute(options, ct);

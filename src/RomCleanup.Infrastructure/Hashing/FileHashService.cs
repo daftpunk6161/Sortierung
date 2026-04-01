@@ -50,6 +50,9 @@ public sealed class FileHashService : IDisposable
     /// <summary>Current number of cached entries.</summary>
     public int CacheCount => _cache.Count;
 
+    /// <summary>Shared collection index used for persistent hash and candidate reuse when available.</summary>
+    public ICollectionIndex? CollectionIndex => _collectionIndex;
+
     /// <summary>Whether this instance persists hashes across runs.</summary>
     public bool IsPersistent => _collectionIndex is not null || _persistentCachePath is not null;
 

@@ -105,7 +105,7 @@ public static class CollectionExportService
         {
             sb.Append(AuditCsvParser.SanitizeCsvField(Path.GetFileName(c.MainPath)));
             sb.Append(delimiter);
-            sb.Append(AuditCsvParser.SanitizeCsvField(CollectionAnalysisService.DetectConsoleFromPath(c.MainPath)));
+            sb.Append(AuditCsvParser.SanitizeCsvField(CollectionAnalysisService.ResolveConsoleLabel(c)));
             sb.Append(delimiter);
             sb.Append(AuditCsvParser.SanitizeCsvField(c.Region));
             sb.Append(delimiter);
@@ -140,7 +140,7 @@ public static class CollectionExportService
         {
             sb.AppendLine("<Row>");
             sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(Path.GetFileName(c.MainPath))}</Data></Cell>");
-            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(CollectionAnalysisService.DetectConsoleFromPath(c.MainPath))}</Data></Cell>");
+            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(CollectionAnalysisService.ResolveConsoleLabel(c))}</Data></Cell>");
             sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(c.Region)}</Data></Cell>");
             sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(c.Extension)}</Data></Cell>");
             sb.AppendLine($"<Cell><Data ss:Type=\"Number\">{(c.SizeBytes / 1048576.0).ToString("F2", CultureInfo.InvariantCulture)}</Data></Cell>");

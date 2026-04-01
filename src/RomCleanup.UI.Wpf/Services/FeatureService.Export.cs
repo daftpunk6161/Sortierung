@@ -115,7 +115,7 @@ public static partial class FeatureService
         {
             sb.Append(SanitizeCsvField(Path.GetFileName(c.MainPath)));
             sb.Append(delimiter);
-            sb.Append(SanitizeCsvField(DetectConsoleFromPath(c.MainPath)));
+            sb.Append(SanitizeCsvField(ResolveConsoleLabel(c)));
             sb.Append(delimiter);
             sb.Append(SanitizeCsvField(c.Region));
             sb.Append(delimiter);
@@ -156,7 +156,7 @@ public static partial class FeatureService
         {
             sb.AppendLine("<Row>");
             sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(Path.GetFileName(c.MainPath))}</Data></Cell>");
-            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(DetectConsoleFromPath(c.MainPath))}</Data></Cell>");
+            sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(ResolveConsoleLabel(c))}</Data></Cell>");
             sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(c.Region)}</Data></Cell>");
             sb.AppendLine($"<Cell><Data ss:Type=\"String\">{SecurityElement.Escape(c.Extension)}</Data></Cell>");
             sb.AppendLine($"<Cell><Data ss:Type=\"Number\">{(c.SizeBytes / 1048576.0).ToString("F2", CultureInfo.InvariantCulture)}</Data></Cell>");

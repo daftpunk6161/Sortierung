@@ -1,8 +1,10 @@
 using System.Text;
 using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Scoring;
 using RomCleanup.Infrastructure.Audit;
+using RomCleanup.Infrastructure.Index;
 
 namespace RomCleanup.Infrastructure.Analysis;
 
@@ -20,7 +22,7 @@ public static class CollectionAnalysisService
         var consoleMap = new Dictionary<string, (int total, int dupes)>(StringComparer.OrdinalIgnoreCase);
         foreach (var g in groups)
         {
-            var console = DetectConsoleFromPath(g.Winner.MainPath);
+            var console = ResolveConsoleLabel(g.Winner);
             if (!consoleMap.TryGetValue(console, out var val))
                 val = (0, 0);
             val.total += 1 + g.Losers.Count;
@@ -194,7 +196,7 @@ public static class CollectionAnalysisService
         sb.AppendLine("Virtuelle Ordner-Vorschau");
         sb.AppendLine(new string('=', 50));
 
-        var byConsole = candidates.GroupBy(c => DetectConsoleFromPath(c.MainPath))
+        var byConsole = candidates.GroupBy(ResolveConsoleLabel)
             .OrderBy(g => g.Key);
 
         foreach (var group in byConsole)
@@ -208,6 +210,66 @@ public static class CollectionAnalysisService
         return sb.ToString();
     }
 
+    public static async ValueTask<ScopedCandidateLoadResult> TryLoadScopedCandidatesFromCollectionIndexAsync(
+        ICollectionIndex? collectionIndex,
+        IFileSystem fileSystem,
+        IReadOnlyList<string> roots,
+        IReadOnlyCollection<string> extensions,
+        string? enrichmentFingerprint,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(fileSystem);
+        ArgumentNullException.ThrowIfNull(roots);
+        ArgumentNullException.ThrowIfNull(extensions);
+
+        if (collectionIndex is null)
+            return ScopedCandidateLoadResult.Unavailable("collection index unavailable");
+
+        if (string.IsNullOrWhiteSpace(enrichmentFingerprint))
+            return ScopedCandidateLoadResult.Unavailable("missing enrichment fingerprint");
+
+        var normalizedExtensions = extensions
+            .Where(static extension => !string.IsNullOrWhiteSpace(extension))
+            .Select(static extension =>
+            {
+                var trimmed = extension.Trim();
+                return trimmed.StartsWith('.')
+                    ? trimmed
+                    : "." + trimmed;
+            })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var scopedEntries = await collectionIndex.ListEntriesInScopeAsync(roots, normalizedExtensions, ct).ConfigureAwait(false);
+        var scopedPaths = EnumerateScopedPaths(fileSystem, roots, normalizedExtensions);
+
+        if (scopedEntries.Count == 0 && scopedPaths.Count == 0)
+            return ScopedCandidateLoadResult.Success([], ScopedCandidateSources.EmptyScope);
+
+        if (scopedEntries.Count == 0)
+            return ScopedCandidateLoadResult.Unavailable("collection index has no entries for current scope");
+
+        if (scopedEntries.Any(entry => !string.Equals(entry.EnrichmentFingerprint, enrichmentFingerprint, StringComparison.Ordinal)))
+            return ScopedCandidateLoadResult.Unavailable("collection index fingerprint mismatch");
+
+        if (scopedEntries.Count != scopedPaths.Count)
+            return ScopedCandidateLoadResult.Unavailable("collection index scope does not match filesystem");
+
+        var entryPathSet = scopedEntries
+            .Select(static entry => Path.GetFullPath(entry.Path))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (!scopedPaths.SetEquals(entryPathSet))
+            return ScopedCandidateLoadResult.Unavailable("collection index scope does not match filesystem");
+
+        var candidates = scopedEntries
+            .OrderBy(static entry => entry.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(CollectionIndexCandidateMapper.ToCandidate)
+            .ToArray();
+
+        return ScopedCandidateLoadResult.Success(candidates, ScopedCandidateSources.CollectionIndex);
+    }
+
     public static string ExportRetroArchPlaylist(IReadOnlyList<RomCandidate> winners, string playlistName,
         IReadOnlyDictionary<string, string>? coreMapping = null)
     {
@@ -215,7 +277,7 @@ public static class CollectionAnalysisService
         var entries = new List<object>();
         foreach (var w in winners)
         {
-            var console = DetectConsoleFromPath(w.MainPath).ToLowerInvariant();
+            var console = ResolveConsoleLabel(w).ToLowerInvariant();
             var core = coreMapping.GetValueOrDefault(console, "");
             entries.Add(new
             {
@@ -256,9 +318,67 @@ public static class CollectionAnalysisService
         _ => "UNKNOWN"
     };
 
+    public static string ResolveConsoleLabel(RomCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        return ResolveConsoleLabel(candidate.ConsoleKey, candidate.MainPath);
+    }
+
+    public static string ResolveConsoleLabel(string? consoleKey, string path)
+    {
+        var detectedFromPath = DetectConsoleFromPath(path);
+        if (!HasResolvedConsoleKey(consoleKey))
+            return detectedFromPath;
+
+        var normalizedConsoleKey = consoleKey!.Trim();
+        return string.Equals(detectedFromPath, normalizedConsoleKey, StringComparison.OrdinalIgnoreCase)
+            ? detectedFromPath
+            : normalizedConsoleKey;
+    }
+
     public static string DetectConsoleFromPath(string path)
     {
         var parts = path.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
         return parts.Length >= 2 ? parts[^2] : "Unknown";
     }
+
+    private static bool HasResolvedConsoleKey(string? consoleKey)
+        => !string.IsNullOrWhiteSpace(consoleKey)
+           && !string.Equals(consoleKey, "UNKNOWN", StringComparison.OrdinalIgnoreCase)
+           && !string.Equals(consoleKey, "AMBIGUOUS", StringComparison.OrdinalIgnoreCase);
+
+    private static HashSet<string> EnumerateScopedPaths(
+        IFileSystem fileSystem,
+        IReadOnlyList<string> roots,
+        IReadOnlyCollection<string> extensions)
+    {
+        var scopedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var root in roots)
+        {
+            foreach (var path in fileSystem.GetFilesSafe(root, extensions))
+                scopedPaths.Add(Path.GetFullPath(path));
+        }
+
+        return scopedPaths;
+    }
+}
+
+public sealed record ScopedCandidateLoadResult(
+    bool CanUse,
+    IReadOnlyList<RomCandidate> Candidates,
+    string Source,
+    string? Reason = null)
+{
+    public static ScopedCandidateLoadResult Success(IReadOnlyList<RomCandidate> candidates, string source)
+        => new(true, candidates, source);
+
+    public static ScopedCandidateLoadResult Unavailable(string reason)
+        => new(false, Array.Empty<RomCandidate>(), ScopedCandidateSources.FallbackRun, reason);
+}
+
+public static class ScopedCandidateSources
+{
+    public const string CollectionIndex = "collection-index";
+    public const string EmptyScope = "empty-scope";
+    public const string FallbackRun = "fallback-run";
 }

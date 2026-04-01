@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
@@ -202,27 +204,29 @@ public sealed class RunEnvironmentBuilder
         // DAT
         DatIndex? datIndex = null;
         FileHashService? hashService = null;
+        ICollectionIndex? collectionIndex = null;
         var knownBiosHashes = LoadKnownBiosHashes(dataDir, onWarning);
         var effectiveDatRoot = !string.IsNullOrWhiteSpace(runOptions.DatRoot)
             ? runOptions.DatRoot
             : settings.Dat.DatRoot;
+        Dictionary<string, string>? datConsoleMap = null;
+
+        try
+        {
+            collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), onWarning);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            onWarning?.Invoke($"[CollectionIndex] Disabled for this run: {ex.Message}");
+        }
 
         if (runOptions.EnableDat && !string.IsNullOrWhiteSpace(effectiveDatRoot) && Directory.Exists(effectiveDatRoot))
         {
             var datRepo = new DatRepositoryAdapter();
-            try
-            {
-                hashService = new FileHashService(
-                    collectionIndex: new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), onWarning),
-                    ownsCollectionIndex: true);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
-            {
-                onWarning?.Invoke($"[CollectionIndex] Hash cache fallback to legacy JSON persistence: {ex.Message}");
-                hashService = new FileHashService(
-                    persistentCachePath: FileHashService.ResolveDefaultPersistentCachePath());
-            }
-            var consoleMap = BuildConsoleMap(dataDir, effectiveDatRoot);
+            hashService = collectionIndex is not null
+                ? new FileHashService(collectionIndex: collectionIndex)
+                : new FileHashService(persistentCachePath: FileHashService.ResolveDefaultPersistentCachePath());
+            datConsoleMap = BuildConsoleMap(dataDir, effectiveDatRoot);
 
             // Diagnostic: show what BuildConsoleMap found.
             var datFileCount = Directory.Exists(effectiveDatRoot)
@@ -230,11 +234,11 @@ public sealed class RunEnvironmentBuilder
                     .Count(f => f.EndsWith(".dat", StringComparison.OrdinalIgnoreCase)
                              || f.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
                 : 0;
-            onWarning?.Invoke($"[DAT] DatRoot '{effectiveDatRoot}': {datFileCount} DAT/XML-Dateien gefunden, {consoleMap.Count} Konsolen gemappt");
+            onWarning?.Invoke($"[DAT] DatRoot '{effectiveDatRoot}': {datFileCount} DAT/XML-Dateien gefunden, {datConsoleMap.Count} Konsolen gemappt");
 
-            if (consoleMap.Count > 0)
+            if (datConsoleMap.Count > 0)
             {
-                datIndex = datRepo.GetDatIndex(effectiveDatRoot, consoleMap,
+                datIndex = datRepo.GetDatIndex(effectiveDatRoot, datConsoleMap,
                     runOptions.HashType ?? settings.Dat.HashType);
                 onWarning?.Invoke($"[DAT] Loaded {datIndex.TotalEntries} hashes for {datIndex.ConsoleCount} consoles");
             }
@@ -248,7 +252,24 @@ public sealed class RunEnvironmentBuilder
             onWarning?.Invoke("[Warning] DAT enabled but DatRoot not set or not found");
         }
 
-        return new RunEnvironment(fs, audit, consoleDetector, hashService, converter, datIndex, archiveHashService, knownBiosHashes);
+        var enrichmentFingerprint = ComputeEnrichmentFingerprint(
+            runOptions,
+            dataDir,
+            effectiveDatRoot,
+            datConsoleMap,
+            knownBiosHashes);
+
+        return new RunEnvironment(
+            fs,
+            audit,
+            consoleDetector,
+            hashService,
+            converter,
+            datIndex,
+            archiveHashService,
+            knownBiosHashes,
+            collectionIndex,
+            enrichmentFingerprint);
     }
 
     private static IReadOnlySet<string>? LoadKnownBiosHashes(string dataDir, Action<string>? onWarning)
@@ -450,6 +471,61 @@ public sealed class RunEnvironmentBuilder
         return string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static string ComputeEnrichmentFingerprint(
+        RunOptions runOptions,
+        string dataDir,
+        string? datRoot,
+        IReadOnlyDictionary<string, string>? datConsoleMap,
+        IReadOnlySet<string>? knownBiosHashes)
+    {
+        ArgumentNullException.ThrowIfNull(runOptions);
+        ArgumentNullException.ThrowIfNull(dataDir);
+
+        var lines = new List<string>
+        {
+            $"AggressiveJunk={runOptions.AggressiveJunk}",
+            $"EnableDat={runOptions.EnableDat}",
+            $"HashType={CollectionIndexCandidateMapper.NormalizeHashType(runOptions.HashType)}",
+            $"PreferRegions={string.Join(",", runOptions.PreferRegions.OrderBy(static value => value, StringComparer.OrdinalIgnoreCase))}"
+        };
+
+        AppendFileStamp(lines, Path.Combine(dataDir, "consoles.json"));
+        AppendFileStamp(lines, Path.Combine(dataDir, "bios-hashes.json"));
+
+        if (runOptions.EnableDat)
+        {
+            lines.Add($"DatRoot={Path.GetFullPath(datRoot ?? string.Empty)}");
+
+            foreach (var datPath in (datConsoleMap ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
+                         .OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+                         .Select(static pair => pair.Value)
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                AppendFileStamp(lines, datPath);
+            }
+        }
+
+        if (knownBiosHashes is not null)
+            lines.Add($"KnownBiosCount={knownBiosHashes.Count}");
+
+        using var sha256 = SHA256.Create();
+        var payload = string.Join('\n', lines);
+        return Convert.ToHexString(sha256.ComputeHash(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+    }
+
+    private static void AppendFileStamp(List<string> lines, string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        if (!File.Exists(fullPath))
+        {
+            lines.Add($"Missing={fullPath}");
+            return;
+        }
+
+        var info = new FileInfo(fullPath);
+        lines.Add($"File={fullPath}|{info.Length}|{info.LastWriteTimeUtc.Ticks}");
+    }
+
     public sealed class DatCatalogEntry
     {
         public string Group { get; set; } = "";
@@ -475,12 +551,16 @@ public sealed class RunEnvironment
     public IFormatConverter? Converter { get; }
     public DatIndex? DatIndex { get; }
     public IReadOnlySet<string>? KnownBiosHashes { get; }
+    public ICollectionIndex? CollectionIndex { get; }
+    public string? EnrichmentFingerprint { get; }
 
     public RunEnvironment(FileSystemAdapter fileSystem, AuditCsvStore audit,
         ConsoleDetector? consoleDetector, FileHashService? hashService,
         FormatConverterAdapter? converter, DatIndex? datIndex,
         ArchiveHashService? archiveHashService = null,
-        IReadOnlySet<string>? knownBiosHashes = null)
+        IReadOnlySet<string>? knownBiosHashes = null,
+        ICollectionIndex? collectionIndex = null,
+        string? enrichmentFingerprint = null)
     {
         FileSystem = fileSystem;
         AuditStore = audit;
@@ -490,5 +570,14 @@ public sealed class RunEnvironment
         Converter = converter;
         DatIndex = datIndex;
         KnownBiosHashes = knownBiosHashes;
+        CollectionIndex = collectionIndex;
+        EnrichmentFingerprint = enrichmentFingerprint;
+    }
+
+    public void Dispose()
+    {
+        HashService?.Dispose();
+        if (CollectionIndex is IDisposable disposableCollectionIndex)
+            disposableCollectionIndex.Dispose();
     }
 }

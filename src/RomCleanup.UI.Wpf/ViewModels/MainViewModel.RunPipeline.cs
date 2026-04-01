@@ -509,8 +509,7 @@ public sealed partial class MainViewModel
     {
         var dataDir = FeatureService.ResolveDataDirectory() ?? RunEnvironmentBuilder.ResolveDataDir();
         var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
-        var env = RunEnvironmentBuilder.Build(runOptions, settings, dataDir);
-        using var hashServiceLease = env.HashService;
+        using var env = RunEnvironmentBuilder.Build(runOptions, settings, dataDir);
 
         if (env.Converter is not FormatConverterAdapter converter)
             return Array.Empty<ConversionReviewEntry>();

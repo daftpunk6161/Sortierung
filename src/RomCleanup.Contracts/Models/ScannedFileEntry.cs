@@ -6,4 +6,6 @@ namespace RomCleanup.Contracts.Models;
 public sealed record ScannedFileEntry(
     string Root,
     string Path,
-    string Extension);
+    string Extension,
+    long? SizeBytes = null,
+    DateTime? LastWriteUtc = null);

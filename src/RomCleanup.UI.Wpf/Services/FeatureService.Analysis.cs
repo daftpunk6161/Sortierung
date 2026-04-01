@@ -129,7 +129,7 @@ public static partial class FeatureService
         var entries = new List<object>();
         foreach (var w in winners)
         {
-            var console = DetectConsoleFromPath(w.MainPath).ToLowerInvariant();
+            var console = ResolveConsoleLabel(w).ToLowerInvariant();
             var core = CoreMapping.GetValueOrDefault(console, "");
             entries.Add(new
             {

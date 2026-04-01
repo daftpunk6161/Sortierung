@@ -31,6 +31,7 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
         {
             cancellationToken.ThrowIfCancellationRequested();
             _context.OnProgress?.Invoke($"[Scan] {root}: Dateien sammeln…");
+            var normalizedRoot = Path.GetFullPath(root);
 
             var files = _context.FileSystem.GetFilesSafe(root, extensions);
             _context.OnProgress?.Invoke($"[Scan] {root}: {files.Count} Dateien gefunden");
@@ -62,7 +63,12 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
                 foreach (var member in setMembers)
                     setMemberPaths.Add(Path.GetFullPath(member));
 
-                candidates.Add(new ScannedFileEntry(root, normalizedPath, ext));
+                candidates.Add(new ScannedFileEntry(
+                    normalizedRoot,
+                    normalizedPath,
+                    ext,
+                    TryGetSizeBytes(normalizedPath),
+                    TryGetLastWriteUtc(normalizedPath)));
             }
         }
 
@@ -74,6 +80,30 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
 
             yield return candidate;
             await Task.Yield();
+        }
+    }
+
+    private static long? TryGetSizeBytes(string path)
+    {
+        try
+        {
+            return File.Exists(path) ? new FileInfo(path).Length : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static DateTime? TryGetLastWriteUtc(string path)
+    {
+        try
+        {
+            return File.Exists(path) ? new FileInfo(path).LastWriteTimeUtc : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
         }
     }
 }

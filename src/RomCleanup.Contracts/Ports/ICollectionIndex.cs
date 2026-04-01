@@ -42,6 +42,15 @@ public interface ICollectionIndex
         CancellationToken ct = default);
 
     /// <summary>
+    /// Lists persisted entries within the current scan scope.
+    /// Implementations must treat roots as absolute directory scopes and apply extension filters deterministically.
+    /// </summary>
+    ValueTask<IReadOnlyList<CollectionIndexEntry>> ListEntriesInScopeAsync(
+        IReadOnlyList<string> roots,
+        IReadOnlyCollection<string> extensions,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Upserts one or more collection entries.
     /// The caller is responsible for passing normalized paths, UTC timestamps, and canonical hash casing.
     /// </summary>

@@ -4,6 +4,7 @@ using RomCleanup.Core.Classification;
 using RomCleanup.Core.Deduplication;
 using RomCleanup.Infrastructure.Deduplication;
 using RomCleanup.Infrastructure.Hashing;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Linking;
 using RomCleanup.Infrastructure.Metrics;
 using RomCleanup.Infrastructure.Quarantine;
@@ -254,6 +255,65 @@ public sealed partial class RunOrchestrator
         PipelineContext context,
         CancellationToken cancellationToken)
     {
+        if (_collectionIndex is null || string.IsNullOrWhiteSpace(_enrichmentFingerprint))
+            return await MaterializeEnrichedCandidatesWithoutIndexAsync(scannedFiles, context, cancellationToken);
+
+        const int deltaBatchSize = 64;
+        var candidates = new List<RomCandidate>();
+        var scannedFilesByPath = new Dictionary<string, ScannedFileEntry>(StringComparer.OrdinalIgnoreCase);
+        var changedBatch = new List<ScannedFileEntry>(deltaBatchSize);
+        var currentHashType = CollectionIndexCandidateMapper.NormalizeHashType(context.Options.HashType);
+        var scanCompleted = true;
+        var indexLookupsEnabled = true;
+
+        try
+        {
+            await foreach (var scannedFile in scannedFiles.WithCancellation(cancellationToken))
+            {
+                scannedFilesByPath[scannedFile.Path] = scannedFile;
+
+                CollectionIndexEntry? persistedEntry = null;
+                if (indexLookupsEnabled)
+                {
+                    var lookup = await TryGetReusableCollectionIndexEntryAsync(scannedFile, currentHashType, cancellationToken);
+                    persistedEntry = lookup.Entry;
+                    indexLookupsEnabled = !lookup.DisableLookups;
+                }
+
+                if (persistedEntry is not null)
+                {
+                    FlushChangedBatch(changedBatch, candidates, context, cancellationToken);
+                    candidates.Add(CollectionIndexCandidateMapper.ToCandidate(persistedEntry));
+                    continue;
+                }
+
+                changedBatch.Add(scannedFile);
+                if (changedBatch.Count >= deltaBatchSize)
+                    FlushChangedBatch(changedBatch, candidates, context, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            scanCompleted = false;
+        }
+
+        if (changedBatch.Count > 0)
+        {
+            var flushToken = scanCompleted ? cancellationToken : CancellationToken.None;
+            FlushChangedBatch(changedBatch, candidates, context, flushToken);
+        }
+
+        if (scanCompleted && !cancellationToken.IsCancellationRequested)
+            await PersistCandidatesToCollectionIndexAsync(candidates, scannedFilesByPath, context.Options, currentHashType, cancellationToken);
+
+        return candidates;
+    }
+
+    private async Task<List<RomCandidate>> MaterializeEnrichedCandidatesWithoutIndexAsync(
+        IAsyncEnumerable<ScannedFileEntry> scannedFiles,
+        PipelineContext context,
+        CancellationToken cancellationToken)
+    {
         var enrichmentPhase = new EnrichmentPipelinePhase();
         var enrichedStream = enrichmentPhase.ExecuteStreamingAsync(
             new EnrichmentPhaseStreamingInput(scannedFiles, _consoleDetector, _hashService, _archiveHashService, _datIndex, _headerlessHasher, _knownBiosHashes),
@@ -273,6 +333,135 @@ public sealed partial class RunOrchestrator
         }
 
         return candidates;
+    }
+
+    private (CollectionIndexEntry? Entry, bool DisableLookups) TryGetReusableCollectionIndexEntry(
+        ScannedFileEntry scannedFile,
+        string hashType,
+        CancellationToken cancellationToken)
+    {
+        if (_collectionIndex is null || string.IsNullOrWhiteSpace(_enrichmentFingerprint))
+            return (null, false);
+
+        try
+        {
+            var entry = _collectionIndex.TryGetByPathAsync(scannedFile.Path, cancellationToken)
+                .GetAwaiter()
+                .GetResult();
+            if (entry is null)
+                return (null, false);
+
+            return CollectionIndexCandidateMapper.CanReuseCandidate(entry, scannedFile, hashType, _enrichmentFingerprint)
+                ? (entry, false)
+                : (null, false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            _onProgress?.Invoke($"[CollectionIndex] Delta lookups disabled for this run: {ex.Message}");
+            return (null, true);
+        }
+    }
+
+    private Task<(CollectionIndexEntry? Entry, bool DisableLookups)> TryGetReusableCollectionIndexEntryAsync(
+        ScannedFileEntry scannedFile,
+        string hashType,
+        CancellationToken cancellationToken)
+        => Task.FromResult(TryGetReusableCollectionIndexEntry(scannedFile, hashType, cancellationToken));
+
+    private void FlushChangedBatch(
+        List<ScannedFileEntry> changedBatch,
+        List<RomCandidate> candidates,
+        PipelineContext context,
+        CancellationToken cancellationToken)
+    {
+        if (changedBatch.Count == 0)
+            return;
+
+        candidates.AddRange(EnrichBatch(changedBatch, context, cancellationToken));
+        changedBatch.Clear();
+    }
+
+    private IReadOnlyList<RomCandidate> EnrichBatch(
+        IReadOnlyList<ScannedFileEntry> files,
+        PipelineContext context,
+        CancellationToken cancellationToken)
+    {
+        var enrichmentPhase = new EnrichmentPipelinePhase();
+        var input = new EnrichmentPhaseInput(files, _consoleDetector, _hashService, _archiveHashService, _datIndex, _headerlessHasher, _knownBiosHashes);
+
+        try
+        {
+            return enrichmentPhase.Execute(input, context, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return enrichmentPhase.Execute(input, context, CancellationToken.None);
+        }
+    }
+
+    private async Task PersistCandidatesToCollectionIndexAsync(
+        IReadOnlyList<RomCandidate> candidates,
+        IReadOnlyDictionary<string, ScannedFileEntry> scannedFilesByPath,
+        RunOptions options,
+        string hashType,
+        CancellationToken cancellationToken)
+    {
+        if (_collectionIndex is null || string.IsNullOrWhiteSpace(_enrichmentFingerprint))
+            return;
+
+        try
+        {
+            var lastScannedUtc = DateTime.UtcNow;
+            var entries = new List<CollectionIndexEntry>(candidates.Count);
+            foreach (var candidate in candidates)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!scannedFilesByPath.TryGetValue(candidate.MainPath, out var scannedFile))
+                    continue;
+
+                entries.Add(CollectionIndexCandidateMapper.ToEntry(
+                    candidate,
+                    scannedFile,
+                    hashType,
+                    _enrichmentFingerprint,
+                    lastScannedUtc));
+            }
+
+            if (entries.Count > 0)
+                await _collectionIndex.UpsertEntriesAsync(entries, cancellationToken);
+
+            await RemoveStaleCollectionIndexEntriesAsync(scannedFilesByPath, options, cancellationToken);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            _onProgress?.Invoke($"[CollectionIndex] Candidate persist skipped: {ex.Message}");
+        }
+    }
+
+    private async Task RemoveStaleCollectionIndexEntriesAsync(
+        IReadOnlyDictionary<string, ScannedFileEntry> scannedFilesByPath,
+        RunOptions options,
+        CancellationToken cancellationToken)
+    {
+        if (_collectionIndex is null || options.Roots.Count == 0 || options.Extensions.Count == 0)
+            return;
+
+        var scopedEntries = await _collectionIndex.ListEntriesInScopeAsync(options.Roots, options.Extensions, cancellationToken);
+        if (scopedEntries.Count == 0)
+            return;
+
+        var livePaths = scannedFilesByPath.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var stalePaths = scopedEntries
+            .Where(entry => !livePaths.Contains(entry.Path))
+            .Select(entry => entry.Path)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (stalePaths.Length == 0)
+            return;
+
+        await _collectionIndex.RemovePathsAsync(stalePaths, cancellationToken);
+        _onProgress?.Invoke($"[CollectionIndex] {stalePaths.Length} veraltete Eintraege entfernt");
     }
 
     private DedupePhaseResult ExecuteDedupePhase(

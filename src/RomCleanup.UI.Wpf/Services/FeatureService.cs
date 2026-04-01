@@ -8,6 +8,7 @@ using System.Xml;
 using System.Xml.Linq;
 using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Infrastructure.Analysis;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Tools;
 using RomCleanup.Infrastructure.Reporting;
@@ -59,6 +60,9 @@ public static partial class FeatureService
         // Typically: root/ConsoleName/game.ext → take second-to-last dir
         return parts.Length >= 2 ? parts[^2] : "Unknown";
     }
+
+    internal static string ResolveConsoleLabel(RomCandidate candidate)
+        => CollectionAnalysisService.ResolveConsoleLabel(candidate);
 
 
     internal static string SanitizeCsvField(string value)

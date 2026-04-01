@@ -11,7 +11,7 @@ namespace RomCleanup.Infrastructure.Index;
 /// </summary>
 public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
 {
-    private const int CurrentSchemaVersion = 1;
+    private const int CurrentSchemaVersion = 2;
     private static readonly byte[] LiteDbSignature = "** This is a LiteDB file **"u8.ToArray();
     private const string MetadataCollectionName = "metadata";
     private const string EntriesCollectionName = "entries";
@@ -131,6 +131,52 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
 
             return _database.GetCollection<CollectionIndexEntryDocument>(EntriesCollectionName)
                 .Find(document => document.ConsoleKey == consoleKey.Trim())
+                .OrderBy(document => document.Path, StringComparer.OrdinalIgnoreCase)
+                .Select(ToContract)
+                .ToArray();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async ValueTask<IReadOnlyList<CollectionIndexEntry>> ListEntriesInScopeAsync(
+        IReadOnlyList<string> roots,
+        IReadOnlyCollection<string> extensions,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(roots);
+        ArgumentNullException.ThrowIfNull(extensions);
+
+        if (roots.Count == 0 || extensions.Count == 0)
+            return Array.Empty<CollectionIndexEntry>();
+
+        var normalizedRoots = roots
+            .Where(static root => !string.IsNullOrWhiteSpace(root))
+            .Select(NormalizeRootPrefix)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var normalizedExtensions = extensions
+            .Where(static extension => !string.IsNullOrWhiteSpace(extension))
+            .Select(static extension => extension.Trim().StartsWith('.')
+                ? extension.Trim().ToLowerInvariant()
+                : "." + extension.Trim().ToLowerInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (normalizedRoots.Length == 0 || normalizedExtensions.Count == 0)
+            return Array.Empty<CollectionIndexEntry>();
+
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            ThrowIfDisposed();
+            ct.ThrowIfCancellationRequested();
+
+            return _database.GetCollection<CollectionIndexEntryDocument>(EntriesCollectionName)
+                .FindAll()
+                .Where(document => IsDocumentInScope(document, normalizedRoots, normalizedExtensions))
                 .OrderBy(document => document.Path, StringComparer.OrdinalIgnoreCase)
                 .Select(ToContract)
                 .ToArray();
@@ -392,17 +438,17 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
     private void EnsureIndexes()
     {
         var entries = _database.GetCollection<CollectionIndexEntryDocument>(EntriesCollectionName);
-        entries.EnsureIndex(document => document.ConsoleKey);
-        entries.EnsureIndex(document => document.GameKey);
-        entries.EnsureIndex(document => document.PrimaryHash);
+        entries.EnsureIndex(nameof(CollectionIndexEntryDocument.ConsoleKey));
+        entries.EnsureIndex(nameof(CollectionIndexEntryDocument.GameKey));
+        entries.EnsureIndex(nameof(CollectionIndexEntryDocument.PrimaryHash));
 
         var hashes = _database.GetCollection<CollectionHashCacheDocument>(HashesCollectionName);
-        hashes.EnsureIndex(document => document.Path);
-        hashes.EnsureIndex(document => document.Algorithm);
+        hashes.EnsureIndex(nameof(CollectionHashCacheDocument.Path));
+        hashes.EnsureIndex(nameof(CollectionHashCacheDocument.Algorithm));
 
         var snapshots = _database.GetCollection<CollectionRunSnapshotDocument>(SnapshotsCollectionName);
-        snapshots.EnsureIndex(document => document.CompletedUtcTicks);
-        snapshots.EnsureIndex(document => document.RootFingerprint);
+        snapshots.EnsureIndex(nameof(CollectionRunSnapshotDocument.CompletedUtcTicks));
+        snapshots.EnsureIndex(nameof(CollectionRunSnapshotDocument.RootFingerprint));
     }
 
     private CollectionIndexMetadata ReadMetadata()
@@ -468,6 +514,31 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
         return Path.GetFullPath(path);
     }
 
+    private static string NormalizeRootPrefix(string root)
+    {
+        var normalizedRoot = NormalizePath(root);
+        return normalizedRoot.EndsWith(Path.DirectorySeparatorChar)
+            ? normalizedRoot
+            : normalizedRoot + Path.DirectorySeparatorChar;
+    }
+
+    private static bool IsDocumentInScope(
+        CollectionIndexEntryDocument document,
+        IReadOnlyList<string> normalizedRoots,
+        IReadOnlySet<string> normalizedExtensions)
+    {
+        if (!normalizedExtensions.Contains(document.Extension))
+            return false;
+
+        for (var i = 0; i < normalizedRoots.Count; i++)
+        {
+            if (document.Path.StartsWith(normalizedRoots[i], StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
     private static bool IsRecognizableLiteDbFile(string path)
     {
         try
@@ -527,11 +598,19 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             SizeBytes = entry.SizeBytes,
             LastWriteUtcTicks = NormalizeUtc(entry.LastWriteUtc).Ticks,
             LastScannedUtcTicks = NormalizeUtc(entry.LastScannedUtc).Ticks,
+            EnrichmentFingerprint = entry.EnrichmentFingerprint ?? "",
             PrimaryHashType = NormalizeAlgorithm(entry.PrimaryHashType),
             PrimaryHash = string.IsNullOrWhiteSpace(entry.PrimaryHash) ? null : NormalizeHash(entry.PrimaryHash),
+            HeaderlessHash = string.IsNullOrWhiteSpace(entry.HeaderlessHash) ? null : NormalizeHash(entry.HeaderlessHash),
             ConsoleKey = entry.ConsoleKey ?? "UNKNOWN",
             GameKey = entry.GameKey ?? "",
             Region = entry.Region ?? "UNKNOWN",
+            RegionScore = entry.RegionScore,
+            FormatScore = entry.FormatScore,
+            VersionScore = entry.VersionScore,
+            HeaderScore = entry.HeaderScore,
+            CompletenessScore = entry.CompletenessScore,
+            SizeTieBreakScore = entry.SizeTieBreakScore,
             Category = entry.Category,
             DatMatch = entry.DatMatch,
             DatGameName = entry.DatGameName,
@@ -542,6 +621,17 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             PrimaryMatchKind = entry.PrimaryMatchKind,
             DetectionConfidence = entry.DetectionConfidence,
             DetectionConflict = entry.DetectionConflict,
+            HasHardEvidence = entry.HasHardEvidence,
+            IsSoftOnly = entry.IsSoftOnly,
+            MatchLevel = entry.MatchEvidence.Level,
+            MatchReasoning = entry.MatchEvidence.Reasoning ?? string.Empty,
+            MatchSources = entry.MatchEvidence.Sources?.ToList() ?? [],
+            MatchHasHardEvidence = entry.MatchEvidence.HasHardEvidence,
+            MatchHasConflict = entry.MatchEvidence.HasConflict,
+            MatchDatVerified = entry.MatchEvidence.DatVerified,
+            MatchTier = entry.MatchEvidence.Tier,
+            MatchPrimaryMatchKind = entry.MatchEvidence.PrimaryMatchKind,
+            PlatformFamily = entry.PlatformFamily,
             ClassificationReasonCode = entry.ClassificationReasonCode ?? "game-default",
             ClassificationConfidence = entry.ClassificationConfidence
         };
@@ -556,11 +646,19 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             SizeBytes = document.SizeBytes,
             LastWriteUtc = new DateTime(document.LastWriteUtcTicks, DateTimeKind.Utc),
             LastScannedUtc = new DateTime(document.LastScannedUtcTicks, DateTimeKind.Utc),
+            EnrichmentFingerprint = document.EnrichmentFingerprint,
             PrimaryHashType = document.PrimaryHashType,
             PrimaryHash = document.PrimaryHash,
+            HeaderlessHash = document.HeaderlessHash,
             ConsoleKey = document.ConsoleKey,
             GameKey = document.GameKey,
             Region = document.Region,
+            RegionScore = document.RegionScore,
+            FormatScore = document.FormatScore,
+            VersionScore = document.VersionScore,
+            HeaderScore = document.HeaderScore,
+            CompletenessScore = document.CompletenessScore,
+            SizeTieBreakScore = document.SizeTieBreakScore,
             Category = document.Category,
             DatMatch = document.DatMatch,
             DatGameName = document.DatGameName,
@@ -571,6 +669,20 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             PrimaryMatchKind = document.PrimaryMatchKind,
             DetectionConfidence = document.DetectionConfidence,
             DetectionConflict = document.DetectionConflict,
+            HasHardEvidence = document.HasHardEvidence,
+            IsSoftOnly = document.IsSoftOnly,
+            MatchEvidence = new MatchEvidence
+            {
+                Level = document.MatchLevel,
+                Reasoning = document.MatchReasoning,
+                Sources = document.MatchSources.ToArray(),
+                HasHardEvidence = document.MatchHasHardEvidence,
+                HasConflict = document.MatchHasConflict,
+                DatVerified = document.MatchDatVerified,
+                Tier = document.MatchTier,
+                PrimaryMatchKind = document.MatchPrimaryMatchKind
+            },
+            PlatformFamily = document.PlatformFamily,
             ClassificationReasonCode = document.ClassificationReasonCode,
             ClassificationConfidence = document.ClassificationConfidence
         };
@@ -664,11 +776,19 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
         public long SizeBytes { get; set; }
         public long LastWriteUtcTicks { get; set; }
         public long LastScannedUtcTicks { get; set; }
+        public string EnrichmentFingerprint { get; set; } = "";
         public string PrimaryHashType { get; set; } = "SHA1";
         public string? PrimaryHash { get; set; }
+        public string? HeaderlessHash { get; set; }
         public string ConsoleKey { get; set; } = "UNKNOWN";
         public string GameKey { get; set; } = "";
         public string Region { get; set; } = "UNKNOWN";
+        public int RegionScore { get; set; }
+        public int FormatScore { get; set; }
+        public long VersionScore { get; set; }
+        public int HeaderScore { get; set; }
+        public int CompletenessScore { get; set; }
+        public long SizeTieBreakScore { get; set; }
         public FileCategory Category { get; set; } = FileCategory.Game;
         public bool DatMatch { get; set; }
         public string? DatGameName { get; set; }
@@ -679,6 +799,17 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
         public MatchKind PrimaryMatchKind { get; set; } = MatchKind.None;
         public int DetectionConfidence { get; set; }
         public bool DetectionConflict { get; set; }
+        public bool HasHardEvidence { get; set; }
+        public bool IsSoftOnly { get; set; } = true;
+        public MatchLevel MatchLevel { get; set; } = MatchLevel.None;
+        public string MatchReasoning { get; set; } = string.Empty;
+        public List<string> MatchSources { get; set; } = [];
+        public bool MatchHasHardEvidence { get; set; }
+        public bool MatchHasConflict { get; set; }
+        public bool MatchDatVerified { get; set; }
+        public EvidenceTier MatchTier { get; set; } = EvidenceTier.Tier4_Unknown;
+        public MatchKind MatchPrimaryMatchKind { get; set; } = MatchKind.None;
+        public PlatformFamily PlatformFamily { get; set; } = PlatformFamily.Unknown;
         public string ClassificationReasonCode { get; set; } = "game-default";
         public int ClassificationConfidence { get; set; } = 100;
     }

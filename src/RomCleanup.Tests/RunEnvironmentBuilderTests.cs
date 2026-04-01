@@ -253,7 +253,7 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
         };
         var settings = new RomCleanupSettings();
 
-        var env = RunEnvironmentBuilder.Build(options, settings, _dataDir, warnings.Add);
+        using var env = RunEnvironmentBuilder.Build(options, settings, _dataDir, warnings.Add);
 
         Assert.NotNull(env.FileSystem);
         Assert.NotNull(env.Audit);
@@ -273,16 +273,12 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
         };
         var settings = new RomCleanupSettings();
 
-        var env = RunEnvironmentBuilder.Build(options, settings, _dataDir, warnings.Add);
-        try
-        {
-            Assert.NotNull(env.HashService);
-            Assert.True(env.HashService!.IsPersistent);
-        }
-        finally
-        {
-            env.HashService?.Dispose();
-        }
+        using var env = RunEnvironmentBuilder.Build(options, settings, _dataDir, warnings.Add);
+
+        Assert.NotNull(env.HashService);
+        Assert.True(env.HashService!.IsPersistent);
+        Assert.NotNull(env.CollectionIndex);
+        Assert.False(string.IsNullOrWhiteSpace(env.EnrichmentFingerprint));
     }
 
     [Fact]
@@ -296,7 +292,7 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
         };
         var settings = new RomCleanupSettings();
 
-        var env = RunEnvironmentBuilder.Build(options, settings, _dataDir);
+        using var env = RunEnvironmentBuilder.Build(options, settings, _dataDir);
 
         Assert.NotNull(env.Converter);
     }
@@ -312,7 +308,7 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
             SortConsole = true
         };
 
-        var env = RunEnvironmentBuilder.Build(options, new RomCleanupSettings(), _dataDir, warnings.Add);
+        using var env = RunEnvironmentBuilder.Build(options, new RomCleanupSettings(), _dataDir, warnings.Add);
 
         Assert.Null(env.ConsoleDetector);
         Assert.Contains(warnings, w => w.Contains("consoles.json", StringComparison.OrdinalIgnoreCase));

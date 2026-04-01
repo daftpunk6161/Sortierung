@@ -19,7 +19,7 @@ public sealed partial class FeatureCommandService
     {
         if (_vm.LastCandidates.Count == 0)
         { _vm.AddLog("Erst einen Lauf starten.", "WARN"); return; }
-        var byConsole = _vm.LastCandidates.GroupBy(c => FeatureService.DetectConsoleFromPath(c.MainPath))
+        var byConsole = _vm.LastCandidates.GroupBy(FeatureService.ResolveConsoleLabel)
             .OrderByDescending(g => g.Count()).ToList();
         var sb = new StringBuilder();
         sb.AppendLine("Smart Collection Manager\n");

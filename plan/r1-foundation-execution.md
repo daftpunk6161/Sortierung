@@ -49,24 +49,27 @@ Akzeptanz:
 Abhaengigkeiten:
 - R1-T01
 
-### [ ] R1-T03 Delta-Scan und Hash-Cache in Scanner und Orchestrierung integrieren
+### [x] R1-T03 Delta-Scan und Hash-Cache in Scanner und Orchestrierung integrieren
 
 Ziel: Vollstaendige Re-Scans nur noch dort ausfuehren, wo Dateien neu oder geaendert sind.
 
 Status:
 - [x] Persistenter Hash-Cache laeuft ueber den Collection-Index statt ueber eine separate JSON-Nebenwahrheit
-- [ ] Delta-Erkennung im Scan-Pfad ist noch offen
-- [ ] Persistente Collection-Entries fuer Re-Run-Deltas sind noch nicht an den Scanner angebunden
+- [x] Delta-Erkennung im Scan-Pfad nutzt Pfad, Groesse, `LastWriteUtc` und Enrichment-Fingerprint
+- [x] Persistente Collection-Entries werden nach vollstaendigen Scans zentral aus denselben `RomCandidate`-Daten geschrieben
+- [x] Stale-Entry-Cleanup fuer nicht mehr vorhandene Dateien wird nach vollstaendigen Scans gescopet nach Roots und Extensions ausgefuehrt
 
 Betroffene Bereiche:
 - `src/RomCleanup.Infrastructure/Hashing`
 - `src/RomCleanup.Infrastructure/Orchestration`
 - `src/RomCleanup.Infrastructure/FileSystem`
+- `src/RomCleanup.Infrastructure/Index`
+- `src/RomCleanup.Contracts/Models`
 
 Akzeptanz:
-- Delta-Erkennung nutzt Pfad, Groesse und `LastModifiedUtc` deterministisch
+- [x] Delta-Erkennung nutzt Pfad, Groesse und `LastModifiedUtc` deterministisch
 - [x] Hash-Cache wird nur bei gueltigem Treffer wiederverwendet
-- Preview und Execute erzeugen weiterhin dieselbe fachliche Wahrheit
+- [x] Preview und Execute erzeugen weiterhin dieselbe fachliche Wahrheit
 
 Abhaengigkeiten:
 - R1-T02
@@ -98,9 +101,18 @@ Abhaengigkeiten:
 
 Ziel: Heuristische Nebenwahrheiten in Analyse- und Exportpfaden abbauen.
 
+Status:
+- [x] Completeness bevorzugt jetzt `RunCandidates -> CollectionIndex -> Filesystem-Fallback` statt blindem Full-Scan
+- [x] Analyse- und erste Export-Ausgaben nutzen fuer `Console` den zentralen `RomCandidate.ConsoleKey` mit kontrolliertem `UNKNOWN/AMBIGUOUS`-Fallback
+- [x] CLI-Export nutzt einen zentralen index-first Candidate-Read-Path mit Scope-/Fingerprint-Pruefung und explizitem Fallback auf den Run-Pfad
+- [x] Standalone-Konvertierung bevorzugt bei fehlender expliziter Konsole den persistierten Collection-Index vor der Pfadheuristik
+- [ ] Analyse-Pfade nutzen noch nicht durchgaengig dieselbe zentrale Collection-/Run-Wahrheit
+- [ ] Export-Pfade leiten ihren Zustand noch nicht vollstaendig aus Run oder Collection-Index ab
+
 Betroffene Bereiche:
 - `src/RomCleanup.Infrastructure/Analysis`
-- `src/RomCleanup.Infrastructure/Export`
+- `src/RomCleanup.CLI`
+- `src/RomCleanup.Api`
 - `src/RomCleanup.Infrastructure/Orchestration`
 
 Akzeptanz:

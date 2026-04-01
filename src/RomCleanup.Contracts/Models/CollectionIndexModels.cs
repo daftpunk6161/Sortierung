@@ -10,7 +10,7 @@ public sealed record CollectionIndexMetadata
     /// Contract/schema version of the persisted collection index representation.
     /// Adapters may use this value for migrations.
     /// </summary>
-    public int SchemaVersion { get; init; } = 1;
+    public int SchemaVersion { get; init; } = 2;
 
     /// <summary>
     /// UTC timestamp when the index store was first created.
@@ -50,11 +50,20 @@ public sealed record CollectionIndexEntry
     /// <summary>UTC timestamp when this file state was last scanned and persisted.</summary>
     public DateTime LastScannedUtc { get; init; }
 
+    /// <summary>
+    /// Fingerprint of the enrichment-relevant runtime semantics (options plus influencing data files).
+    /// Delta rehydration is only valid when this fingerprint matches the current run.
+    /// </summary>
+    public string EnrichmentFingerprint { get; init; } = "";
+
     /// <summary>Canonical uppercase hash algorithm name such as SHA1 or SHA256.</summary>
     public string PrimaryHashType { get; init; } = "SHA1";
 
     /// <summary>Lowercase hex hash for <see cref="PrimaryHashType"/>, when available.</summary>
     public string? PrimaryHash { get; init; }
+
+    /// <summary>Lowercase headerless hash when the platform uses headerless DAT matching.</summary>
+    public string? HeaderlessHash { get; init; }
 
     /// <summary>Detected console key or UNKNOWN when unresolved.</summary>
     public string ConsoleKey { get; init; } = "UNKNOWN";
@@ -64,6 +73,24 @@ public sealed record CollectionIndexEntry
 
     /// <summary>Detected preferred region token or UNKNOWN when unresolved.</summary>
     public string Region { get; init; } = "UNKNOWN";
+
+    /// <summary>Resolved region preference score used by winner selection.</summary>
+    public int RegionScore { get; init; }
+
+    /// <summary>Resolved format score used by winner selection.</summary>
+    public int FormatScore { get; init; }
+
+    /// <summary>Resolved version score used by winner selection.</summary>
+    public long VersionScore { get; init; }
+
+    /// <summary>Resolved header score used by winner selection.</summary>
+    public int HeaderScore { get; init; }
+
+    /// <summary>Resolved completeness score used by winner selection.</summary>
+    public int CompletenessScore { get; init; }
+
+    /// <summary>Resolved size tie-break score used by winner selection.</summary>
+    public long SizeTieBreakScore { get; init; }
 
     /// <summary>Classified content category.</summary>
     public FileCategory Category { get; init; } = FileCategory.Game;
@@ -94,6 +121,18 @@ public sealed record CollectionIndexEntry
 
     /// <summary>Whether the detection process saw conflicting console hypotheses.</summary>
     public bool DetectionConflict { get; init; }
+
+    /// <summary>Whether at least one hard evidence source contributed to recognition.</summary>
+    public bool HasHardEvidence { get; init; }
+
+    /// <summary>Whether recognition relied only on soft evidence.</summary>
+    public bool IsSoftOnly { get; init; } = true;
+
+    /// <summary>Canonical evidence object for review, explainability, and parity.</summary>
+    public MatchEvidence MatchEvidence { get; init; } = new();
+
+    /// <summary>Resolved platform family for recognition and DAT strategy.</summary>
+    public PlatformFamily PlatformFamily { get; init; } = PlatformFamily.Unknown;
 
     /// <summary>Stable reasoning code used by reports, review, and diagnostics.</summary>
     public string ClassificationReasonCode { get; init; } = "game-default";

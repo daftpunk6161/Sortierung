@@ -33,7 +33,7 @@ public static partial class FeatureService
 
     internal static string ResolveField(RomCandidate c, string field) => field.ToLowerInvariant() switch
     {
-        "console" => DetectConsoleFromPath(c.MainPath),
+        "console" => ResolveConsoleLabel(c),
         "region" => c.Region,
         "format" => c.Extension,
         "category" => ToCategoryLabel(c.Category),

@@ -6,7 +6,7 @@ using DatIndex = RomCleanup.Contracts.Models.DatIndex;
 
 namespace RomCleanup.Infrastructure.Orchestration;
 
-public interface IRunEnvironment
+public interface IRunEnvironment : IDisposable
 {
     IFileSystem FileSystem { get; }
     IAuditStore AuditStore { get; }
@@ -16,6 +16,8 @@ public interface IRunEnvironment
     IFormatConverter? Converter { get; }
     DatIndex? DatIndex { get; }
     IReadOnlySet<string>? KnownBiosHashes { get; }
+    ICollectionIndex? CollectionIndex { get; }
+    string? EnrichmentFingerprint { get; }
 }
 
 public interface IRunEnvironmentFactory

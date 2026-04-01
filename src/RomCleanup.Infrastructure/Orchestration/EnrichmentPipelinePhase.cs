@@ -144,8 +144,8 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                 GameKeyNormalizationProfile.TagPatterns ?? [],
                 GameKeyNormalizationProfile.AlwaysAliasMap);
 
-        long sizeBytes = 0;
-        if (File.Exists(filePath))
+        long sizeBytes = file.SizeBytes ?? 0;
+        if (sizeBytes == 0 && File.Exists(filePath))
         {
             try
             {

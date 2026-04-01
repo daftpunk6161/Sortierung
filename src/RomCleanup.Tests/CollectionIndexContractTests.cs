@@ -9,11 +9,11 @@ namespace RomCleanup.Tests;
 public sealed class CollectionIndexContractTests
 {
     [Fact]
-    public void CollectionIndexMetadata_DefaultSchemaVersion_IsOne()
+    public void CollectionIndexMetadata_DefaultSchemaVersion_IsTwo()
     {
         var metadata = new CollectionIndexMetadata();
 
-        Assert.Equal(1, metadata.SchemaVersion);
+        Assert.Equal(2, metadata.SchemaVersion);
         Assert.Equal(default, metadata.CreatedUtc);
         Assert.Equal(default, metadata.UpdatedUtc);
     }
@@ -30,11 +30,19 @@ public sealed class CollectionIndexContractTests
         Assert.Equal(0, entry.SizeBytes);
         Assert.Equal(default, entry.LastWriteUtc);
         Assert.Equal(default, entry.LastScannedUtc);
+        Assert.Equal("", entry.EnrichmentFingerprint);
         Assert.Equal("SHA1", entry.PrimaryHashType);
         Assert.Null(entry.PrimaryHash);
+        Assert.Null(entry.HeaderlessHash);
         Assert.Equal("UNKNOWN", entry.ConsoleKey);
         Assert.Equal("", entry.GameKey);
         Assert.Equal("UNKNOWN", entry.Region);
+        Assert.Equal(0, entry.RegionScore);
+        Assert.Equal(0, entry.FormatScore);
+        Assert.Equal(0, entry.VersionScore);
+        Assert.Equal(0, entry.HeaderScore);
+        Assert.Equal(0, entry.CompletenessScore);
+        Assert.Equal(0, entry.SizeTieBreakScore);
         Assert.Equal(FileCategory.Game, entry.Category);
         Assert.False(entry.DatMatch);
         Assert.Null(entry.DatGameName);
@@ -45,6 +53,10 @@ public sealed class CollectionIndexContractTests
         Assert.Equal(MatchKind.None, entry.PrimaryMatchKind);
         Assert.Equal(0, entry.DetectionConfidence);
         Assert.False(entry.DetectionConflict);
+        Assert.False(entry.HasHardEvidence);
+        Assert.True(entry.IsSoftOnly);
+        Assert.Equal(MatchLevel.None, entry.MatchEvidence.Level);
+        Assert.Equal(PlatformFamily.Unknown, entry.PlatformFamily);
         Assert.Equal("game-default", entry.ClassificationReasonCode);
         Assert.Equal(100, entry.ClassificationConfidence);
     }
@@ -105,11 +117,19 @@ public sealed class CollectionIndexContractTests
             SizeBytes = 1024,
             LastWriteUtc = new DateTime(2026, 4, 1, 8, 0, 0, DateTimeKind.Utc),
             LastScannedUtc = new DateTime(2026, 4, 1, 9, 0, 0, DateTimeKind.Utc),
+            EnrichmentFingerprint = "fingerprint-a",
             PrimaryHashType = "SHA1",
             PrimaryHash = "abcdef0123456789",
+            HeaderlessHash = "00112233",
             ConsoleKey = "SNES",
             GameKey = "super-mario-world",
             Region = "EU",
+            RegionScore = 100,
+            FormatScore = 50,
+            VersionScore = 7,
+            HeaderScore = 10,
+            CompletenessScore = 4,
+            SizeTieBreakScore = 1024,
             Category = FileCategory.Game,
             DatMatch = true,
             DatGameName = "Super Mario World (Europe)",
@@ -120,6 +140,19 @@ public sealed class CollectionIndexContractTests
             PrimaryMatchKind = MatchKind.ExactDatHash,
             DetectionConfidence = 100,
             DetectionConflict = false,
+            HasHardEvidence = true,
+            IsSoftOnly = false,
+            MatchEvidence = new MatchEvidence
+            {
+                Level = MatchLevel.Exact,
+                Reasoning = "Exact DAT hash match.",
+                Sources = ["DatHash"],
+                HasHardEvidence = true,
+                DatVerified = true,
+                Tier = EvidenceTier.Tier0_ExactDat,
+                PrimaryMatchKind = MatchKind.ExactDatHash
+            },
+            PlatformFamily = PlatformFamily.NoIntroCartridge,
             ClassificationReasonCode = "dat-hash",
             ClassificationConfidence = 100
         };
@@ -184,11 +217,19 @@ public sealed class CollectionIndexContractTests
         Assert.Equal(entry.SizeBytes, roundTrip.Entry.SizeBytes);
         Assert.Equal(entry.LastWriteUtc, roundTrip.Entry.LastWriteUtc);
         Assert.Equal(entry.LastScannedUtc, roundTrip.Entry.LastScannedUtc);
+        Assert.Equal(entry.EnrichmentFingerprint, roundTrip.Entry.EnrichmentFingerprint);
         Assert.Equal(entry.PrimaryHashType, roundTrip.Entry.PrimaryHashType);
         Assert.Equal(entry.PrimaryHash, roundTrip.Entry.PrimaryHash);
+        Assert.Equal(entry.HeaderlessHash, roundTrip.Entry.HeaderlessHash);
         Assert.Equal(entry.ConsoleKey, roundTrip.Entry.ConsoleKey);
         Assert.Equal(entry.GameKey, roundTrip.Entry.GameKey);
         Assert.Equal(entry.Region, roundTrip.Entry.Region);
+        Assert.Equal(entry.RegionScore, roundTrip.Entry.RegionScore);
+        Assert.Equal(entry.FormatScore, roundTrip.Entry.FormatScore);
+        Assert.Equal(entry.VersionScore, roundTrip.Entry.VersionScore);
+        Assert.Equal(entry.HeaderScore, roundTrip.Entry.HeaderScore);
+        Assert.Equal(entry.CompletenessScore, roundTrip.Entry.CompletenessScore);
+        Assert.Equal(entry.SizeTieBreakScore, roundTrip.Entry.SizeTieBreakScore);
         Assert.Equal(entry.Category, roundTrip.Entry.Category);
         Assert.Equal(entry.DatMatch, roundTrip.Entry.DatMatch);
         Assert.Equal(entry.DatGameName, roundTrip.Entry.DatGameName);
@@ -199,6 +240,12 @@ public sealed class CollectionIndexContractTests
         Assert.Equal(entry.PrimaryMatchKind, roundTrip.Entry.PrimaryMatchKind);
         Assert.Equal(entry.DetectionConfidence, roundTrip.Entry.DetectionConfidence);
         Assert.Equal(entry.DetectionConflict, roundTrip.Entry.DetectionConflict);
+        Assert.Equal(entry.HasHardEvidence, roundTrip.Entry.HasHardEvidence);
+        Assert.Equal(entry.IsSoftOnly, roundTrip.Entry.IsSoftOnly);
+        Assert.Equal(entry.MatchEvidence.Level, roundTrip.Entry.MatchEvidence.Level);
+        Assert.Equal(entry.MatchEvidence.Reasoning, roundTrip.Entry.MatchEvidence.Reasoning);
+        Assert.Equal(entry.MatchEvidence.Sources, roundTrip.Entry.MatchEvidence.Sources);
+        Assert.Equal(entry.PlatformFamily, roundTrip.Entry.PlatformFamily);
         Assert.Equal(entry.ClassificationReasonCode, roundTrip.Entry.ClassificationReasonCode);
         Assert.Equal(entry.ClassificationConfidence, roundTrip.Entry.ClassificationConfidence);
 
@@ -245,6 +292,7 @@ public sealed class CollectionIndexContractTests
             "GetByPathsAsync",
             "GetMetadataAsync",
             "ListByConsoleAsync",
+            "ListEntriesInScopeAsync",
             "ListRunSnapshotsAsync",
             "RemovePathsAsync",
             "SetHashAsync",

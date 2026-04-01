@@ -1,5 +1,7 @@
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Core.Classification;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
 using System.Text.RegularExpressions;
 using Xunit;
@@ -517,6 +519,185 @@ public class RunOrchestratorTests : IDisposable
         Assert.Equal("validgame", result.DedupeGroups[0].GameKey);
     }
 
+    [Fact]
+    public void Execute_ReusesPersistedCandidates_WhenFingerprintMatchesAndFileIsUnchanged()
+    {
+        var romPath = CreateFile("Game.nes", 64);
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".nes" },
+            Mode = "DryRun"
+        };
+        var dbPath = Path.Combine(_tempDir, "collection.db");
+
+        using (var firstIndex = new LiteDbCollectionIndex(dbPath))
+        using (var firstOrchestrator = new RunOrchestrator(
+                   fs,
+                   new FakeAuditStore(),
+                   consoleDetector: BuildConsoleDetector("NES", ".nes"),
+                   collectionIndex: firstIndex,
+                   enrichmentFingerprint: "fp-a"))
+        {
+            var firstResult = firstOrchestrator.Execute(options);
+            Assert.Equal("NES", firstResult.AllCandidates.Single().ConsoleKey);
+        }
+
+        using var secondIndex = new LiteDbCollectionIndex(dbPath);
+        using var secondOrchestrator = new RunOrchestrator(
+            fs,
+            new FakeAuditStore(),
+            collectionIndex: secondIndex,
+            enrichmentFingerprint: "fp-a");
+
+        var secondResult = secondOrchestrator.Execute(options);
+
+        Assert.Equal("NES", secondResult.AllCandidates.Single().ConsoleKey);
+
+        var persisted = secondIndex.TryGetByPathAsync(romPath).GetAwaiter().GetResult();
+        Assert.NotNull(persisted);
+        Assert.Equal("fp-a", persisted!.EnrichmentFingerprint);
+        Assert.Equal("NES", persisted.ConsoleKey);
+    }
+
+    [Fact]
+    public void Execute_DoesNotReusePersistedCandidates_WhenFingerprintOrFileStateChanged()
+    {
+        var romPath = CreateFile("Game.nes", 64);
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".nes" },
+            Mode = "DryRun"
+        };
+        var dbPath = Path.Combine(_tempDir, "collection.db");
+
+        using (var firstIndex = new LiteDbCollectionIndex(dbPath))
+        using (var firstOrchestrator = new RunOrchestrator(
+                   fs,
+                   new FakeAuditStore(),
+                   consoleDetector: BuildConsoleDetector("NES", ".nes"),
+                   collectionIndex: firstIndex,
+                   enrichmentFingerprint: "fp-a"))
+        {
+            var firstResult = firstOrchestrator.Execute(options);
+            Assert.Equal("NES", firstResult.AllCandidates.Single().ConsoleKey);
+        }
+
+        File.AppendAllText(romPath, "changed");
+        File.SetLastWriteTimeUtc(romPath, DateTime.UtcNow.AddMinutes(1));
+
+        using var secondIndex = new LiteDbCollectionIndex(dbPath);
+        using var secondOrchestrator = new RunOrchestrator(
+            fs,
+            new FakeAuditStore(),
+            collectionIndex: secondIndex,
+            enrichmentFingerprint: "fp-b");
+
+        var secondResult = secondOrchestrator.Execute(options);
+        var candidate = secondResult.AllCandidates.Single();
+        var persisted = secondIndex.TryGetByPathAsync(romPath).GetAwaiter().GetResult();
+
+        Assert.Equal("UNKNOWN", candidate.ConsoleKey);
+        Assert.NotNull(persisted);
+        Assert.Equal("fp-b", persisted!.EnrichmentFingerprint);
+        Assert.Equal("UNKNOWN", persisted.ConsoleKey);
+        Assert.Equal(new FileInfo(romPath).Length, persisted.SizeBytes);
+    }
+
+    [Fact]
+    public async Task Execute_RemovesStaleCollectionIndexEntries_OnlyWithinCurrentScanScope()
+    {
+        var currentPath = CreateFile("Game.nes", 64);
+        var otherRoot = Path.Combine(Path.GetTempPath(), "RunOrchOther_" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(otherRoot);
+        var staleInScopePath = Path.Combine(_tempDir, "Old.nes");
+        var staleOtherExtensionPath = Path.Combine(_tempDir, "Keep.zip");
+        var staleOtherRootPath = Path.Combine(otherRoot, "Other.nes");
+        var dbPath = Path.Combine(_tempDir, "collection.db");
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".nes" },
+            Mode = "DryRun"
+        };
+
+        try
+        {
+            using (var index = new LiteDbCollectionIndex(dbPath))
+            {
+                await index.UpsertEntriesAsync(
+                [
+                    new CollectionIndexEntry { Path = staleInScopePath, Root = _tempDir, FileName = "Old.nes", Extension = ".nes" },
+                    new CollectionIndexEntry { Path = staleOtherExtensionPath, Root = _tempDir, FileName = "Keep.zip", Extension = ".zip" },
+                    new CollectionIndexEntry { Path = staleOtherRootPath, Root = otherRoot, FileName = "Other.nes", Extension = ".nes" }
+                ]);
+            }
+
+            using var cleanupIndex = new LiteDbCollectionIndex(dbPath);
+            using var orchestrator = new RunOrchestrator(
+                fs,
+                new FakeAuditStore(),
+                consoleDetector: BuildConsoleDetector("NES", ".nes"),
+                collectionIndex: cleanupIndex,
+                enrichmentFingerprint: "fp-a");
+
+            var result = orchestrator.Execute(options);
+
+            Assert.Equal("ok", result.Status);
+            Assert.NotNull(await cleanupIndex.TryGetByPathAsync(currentPath));
+            Assert.Null(await cleanupIndex.TryGetByPathAsync(staleInScopePath));
+            Assert.NotNull(await cleanupIndex.TryGetByPathAsync(staleOtherExtensionPath));
+            Assert.NotNull(await cleanupIndex.TryGetByPathAsync(staleOtherRootPath));
+        }
+        finally
+        {
+            if (Directory.Exists(otherRoot))
+                Directory.Delete(otherRoot, true);
+        }
+    }
+
+    [Fact]
+    public async Task Execute_CancelledRun_DoesNotRemoveStaleCollectionIndexEntries()
+    {
+        var dbPath = Path.Combine(_tempDir, "collection.db");
+        var stalePath = Path.Combine(_tempDir, "Old.nes");
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".nes" },
+            Mode = "DryRun"
+        };
+
+        using (var seedIndex = new LiteDbCollectionIndex(dbPath))
+        {
+            await seedIndex.UpsertEntriesAsync(
+            [
+                new CollectionIndexEntry { Path = stalePath, Root = _tempDir, FileName = "Old.nes", Extension = ".nes" }
+            ]);
+        }
+
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        using var index = new LiteDbCollectionIndex(dbPath);
+        using var orchestrator = new RunOrchestrator(
+            fs,
+            new FakeAuditStore(),
+            consoleDetector: BuildConsoleDetector("NES", ".nes"),
+            collectionIndex: index,
+            enrichmentFingerprint: "fp-a");
+
+        var result = orchestrator.Execute(options, cts.Token);
+
+        Assert.Equal("cancelled", result.Status);
+        Assert.NotNull(await index.TryGetByPathAsync(stalePath));
+    }
+
     // ── Helpers ───────────────────────────────────────────────────
 
     private string CreateFile(string name, int sizeBytes)
@@ -534,6 +715,17 @@ public class RunOrchestratorTests : IDisposable
         fs.ExistingPaths.Add(_tempDir);
         return new RunOrchestrator(fs, new FakeAuditStore());
     }
+
+    private static ConsoleDetector BuildConsoleDetector(string consoleKey, params string[] extensions)
+        => new([
+            new ConsoleInfo(
+                consoleKey,
+                consoleKey,
+                false,
+                extensions,
+                Array.Empty<string>(),
+                [consoleKey])
+        ]);
 
     // ── Fakes ─────────────────────────────────────────────────────
 

@@ -41,10 +41,15 @@ Ziel: Eine dauerhafte fachliche Wahrheit fuer Sammlung, Delta-Runs, Reviews und 
 
 - [x] Index-Datenmodell, Persistenzpfad und Migrationsstrategie festziehen
 - [x] Persistenten Hash-Cache auf den Collection-Index umstellen
-- [ ] Scanner- und Orchestrierungsintegration gegen den persistenten Index anbinden
+- [x] Scanner- und Orchestrierungsintegration gegen den persistenten Index anbinden
 - [x] Persistierte Run-Historie fuer API und CLI verfuegbar machen
-- [ ] Delta-Erkennung fuer Re-Runs verfuegbar machen
-- [ ] Bestehende heuristische Nebenpfade in Analyse und Completeness abbauen
+- [x] Delta-Erkennung fuer Re-Runs verfuegbar machen
+- [x] Stale-Entry-Cleanup fuer nicht mehr vorhandene Collection-Index-Pfade ergaenzen
+- [x] Completeness auf `RunCandidates -> CollectionIndex -> Filesystem-Fallback` umstellen
+- [x] Console-Aufloesung in Analyse- und ersten Export-Ausgaben auf den zentralen Candidate-Zustand umstellen
+- [x] CLI-Export auf einen zentralen index-first Candidate-Read-Path mit hartem Scope-/Fingerprint-Fallback umstellen
+- [x] Standalone-Konvertierung bei fehlender expliziter Konsole auf Collection-Index-first umstellen
+- [ ] Analyse- und Exportpfade weiter von heuristischen Nebenwahrheiten loesen
 - [ ] Watch/Schedule aus WPF in gemeinsame Infrastructure ueberfuehren
 - [ ] API- und CLI-Steuerung fuer Watch/Schedule definieren
 - [ ] Review-Entscheidungen kanaluebergreifend speichern und wiederverwenden

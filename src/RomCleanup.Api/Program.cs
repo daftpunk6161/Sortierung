@@ -1153,7 +1153,7 @@ app.MapPost("/convert", async (HttpContext ctx) =>
     if (!File.Exists(inputPath) && !Directory.Exists(inputPath))
         return ApiError(404, "CONVERT-INPUT-NOT-FOUND", $"Input not found: {inputPath}");
 
-    var service = StandaloneConversionService.Create(inputPath);
+    using var service = StandaloneConversionService.Create(inputPath);
     if (service is null)
         return ApiError(500, "CONVERT-NO-CONVERTER", "No converter available. Check tool installation.");
 
@@ -1193,7 +1193,7 @@ app.MapPost("/convert", async (HttpContext ctx) =>
 
 // --- Completeness Report Endpoint (B4) ---
 
-app.MapGet("/runs/{runId}/completeness", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
+app.MapGet("/runs/{runId}/completeness", async (string runId, HttpContext ctx, RunLifecycleManager mgr, CancellationToken ct) =>
 {
     if (!Guid.TryParse(runId, out _))
         return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
@@ -1222,19 +1222,27 @@ app.MapGet("/runs/{runId}/completeness", (string runId, HttpContext ctx, RunLife
     {
         Roots = runRoots,
         EnableDat = true,
-        DatRoot = run.DatRoot ?? settings.Dat?.DatRoot
+        DatRoot = run.DatRoot ?? settings.Dat?.DatRoot,
+        Extensions = run.Extensions
     };
 
-    var env = new RunEnvironmentFactory().Create(runOptions);
-    using var hashServiceLease = env.HashService;
+    using var env = new RunEnvironmentFactory().Create(runOptions);
     if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
         return ApiError(400, "DAT-NOT-AVAILABLE", "No DAT index available. Configure DatRoot in settings.", runId: runId);
 
-    var report = CompletenessReportService.Build(env.DatIndex, runRoots);
+    var report = await CompletenessReportService.BuildAsync(
+        env.DatIndex,
+        runOptions.Roots,
+        env.CollectionIndex,
+        runOptions.Extensions,
+        run.CoreRunResult?.AllCandidates,
+        ct);
 
     return Results.Ok(new
     {
         runId,
+        source = report.Source,
+        sourceItemCount = report.SourceItemCount,
         entries = report.Entries.Select(e => new
         {
             e.ConsoleKey,

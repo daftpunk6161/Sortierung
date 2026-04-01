@@ -28,7 +28,7 @@ public sealed class LiteDbCollectionIndexTests : IDisposable
 
         var metadata = await index.GetMetadataAsync();
 
-        Assert.Equal(1, metadata.SchemaVersion);
+        Assert.Equal(2, metadata.SchemaVersion);
         Assert.Equal(DateTimeKind.Utc, metadata.CreatedUtc.Kind);
         Assert.Equal(DateTimeKind.Utc, metadata.UpdatedUtc.Kind);
         Assert.True(metadata.UpdatedUtc >= metadata.CreatedUtc);
@@ -52,11 +52,19 @@ public sealed class LiteDbCollectionIndexTests : IDisposable
                 SizeBytes = 1234,
                 LastWriteUtc = new DateTime(2026, 4, 1, 9, 0, 0, DateTimeKind.Utc),
                 LastScannedUtc = new DateTime(2026, 4, 1, 9, 1, 0, DateTimeKind.Utc),
+                EnrichmentFingerprint = "fp-a",
                 PrimaryHashType = "sha1",
                 PrimaryHash = "ABCDEF",
+                HeaderlessHash = "00112233",
                 ConsoleKey = "SNES",
                 GameKey = "super-mario-world",
                 Region = "EU",
+                RegionScore = 100,
+                FormatScore = 50,
+                VersionScore = 7,
+                HeaderScore = 10,
+                CompletenessScore = 4,
+                SizeTieBreakScore = 1234,
                 DatMatch = true,
                 DatGameName = "Super Mario World (Europe)",
                 DatAuditStatus = DatAuditStatus.Have,
@@ -65,6 +73,19 @@ public sealed class LiteDbCollectionIndexTests : IDisposable
                 EvidenceTier = EvidenceTier.Tier0_ExactDat,
                 PrimaryMatchKind = MatchKind.ExactDatHash,
                 DetectionConfidence = 100,
+                HasHardEvidence = true,
+                IsSoftOnly = false,
+                MatchEvidence = new MatchEvidence
+                {
+                    Level = MatchLevel.Exact,
+                    Reasoning = "Exact DAT hash match.",
+                    Sources = ["DatHash"],
+                    HasHardEvidence = true,
+                    DatVerified = true,
+                    Tier = EvidenceTier.Tier0_ExactDat,
+                    PrimaryMatchKind = MatchKind.ExactDatHash
+                },
+                PlatformFamily = PlatformFamily.NoIntroCartridge,
                 ClassificationReasonCode = "dat-hash",
                 ClassificationConfidence = 100
             }
@@ -75,10 +96,20 @@ public sealed class LiteDbCollectionIndexTests : IDisposable
         Assert.NotNull(entry);
         Assert.Equal(Path.GetFullPath(path), entry.Path);
         Assert.Equal(Path.GetFullPath(root), entry.Root);
+        Assert.Equal("fp-a", entry.EnrichmentFingerprint);
         Assert.Equal("SHA1", entry.PrimaryHashType);
         Assert.Equal("abcdef", entry.PrimaryHash);
+        Assert.Equal("00112233", entry.HeaderlessHash);
         Assert.Equal("SNES", entry.ConsoleKey);
         Assert.Equal("super-mario-world", entry.GameKey);
+        Assert.Equal(100, entry.RegionScore);
+        Assert.Equal(50, entry.FormatScore);
+        Assert.Equal(7, entry.VersionScore);
+        Assert.True(entry.HasHardEvidence);
+        Assert.False(entry.IsSoftOnly);
+        Assert.Equal(MatchLevel.Exact, entry.MatchEvidence.Level);
+        Assert.Equal("Exact DAT hash match.", entry.MatchEvidence.Reasoning);
+        Assert.Equal(PlatformFamily.NoIntroCartridge, entry.PlatformFamily);
         Assert.Equal(SortDecision.DatVerified, entry.SortDecision);
     }
 
@@ -101,6 +132,29 @@ public sealed class LiteDbCollectionIndexTests : IDisposable
         Assert.Equal(2, entries.Count);
         Assert.Equal(Path.GetFullPath(secondPath), entries[0].Path);
         Assert.Equal(Path.GetFullPath(firstPath), entries[1].Path);
+    }
+
+    [Fact]
+    public async Task ListEntriesInScopeAsync_FiltersByRootsAndExtensions_Deterministically()
+    {
+        using var index = CreateIndex();
+        var rootA = Path.Combine(_tempDir, "roms-a");
+        var rootB = Path.Combine(_tempDir, "roms-b");
+        var pathA1 = Path.Combine(rootA, "B.nes");
+        var pathA2 = Path.Combine(rootA, "A.zip");
+        var pathB1 = Path.Combine(rootB, "C.nes");
+
+        await index.UpsertEntriesAsync(
+        [
+            new CollectionIndexEntry { Path = pathA1, Root = rootA, FileName = "B.nes", Extension = ".nes" },
+            new CollectionIndexEntry { Path = pathA2, Root = rootA, FileName = "A.zip", Extension = ".zip" },
+            new CollectionIndexEntry { Path = pathB1, Root = rootB, FileName = "C.nes", Extension = ".nes" }
+        ]);
+
+        var scoped = await index.ListEntriesInScopeAsync([rootA], [".nes"]);
+
+        Assert.Single(scoped);
+        Assert.Equal(Path.GetFullPath(pathA1), scoped[0].Path);
     }
 
     [Fact]
@@ -175,7 +229,7 @@ public sealed class LiteDbCollectionIndexTests : IDisposable
         var metadata = await index.GetMetadataAsync();
         var backups = Directory.GetFiles(_tempDir, "collection.db.open-failure.*.bak");
 
-        Assert.Equal(1, metadata.SchemaVersion);
+        Assert.Equal(2, metadata.SchemaVersion);
         Assert.NotEmpty(backups);
         Assert.True(File.Exists(dbPath));
     }
@@ -200,7 +254,7 @@ public sealed class LiteDbCollectionIndexTests : IDisposable
         var metadataResult = await index.GetMetadataAsync();
         var backups = Directory.GetFiles(_tempDir, "collection.db.schema-mismatch.*.bak");
 
-        Assert.Equal(1, metadataResult.SchemaVersion);
+        Assert.Equal(2, metadataResult.SchemaVersion);
         Assert.NotEmpty(backups);
         Assert.True(File.Exists(dbPath));
     }
