@@ -188,4 +188,30 @@ public class SettingsLoaderTests : IDisposable
         Assert.True(settings.General.AggressiveJunk);
         Assert.True(settings.General.AliasEditionKeying);
     }
+
+    [Fact]
+    public async Task LoadFrom_TemporarilyLockedFile_RetriesAndParses()
+    {
+        var json = @"{
+            ""general"": {
+                ""logLevel"": ""Debug"",
+                ""preferredRegions"": [""US"", ""JP""]
+            }
+        }";
+        var path = Path.Combine(_tempDir, "locked-settings.json");
+        File.WriteAllText(path, json);
+
+        var lockedStream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var releaseTask = Task.Run(() =>
+        {
+            Thread.Sleep(90);
+            lockedStream.Dispose();
+        });
+
+        var settings = SettingsLoader.LoadFrom(path);
+        await releaseTask;
+
+        Assert.Equal("Debug", settings.General.LogLevel);
+        Assert.Equal(new[] { "US", "JP" }, settings.General.PreferredRegions);
+    }
 }

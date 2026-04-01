@@ -7,8 +7,19 @@
        Overlay pattern: semi-transparent backdrop + centered panel. ═══════ -->
   <Grid>
     <!-- Backdrop (click to dismiss) -->
-    <Border Background="{DynamicResource BrushScrimOverlay}" IsHitTestVisible="True"
-            MouseDown="OnBackdropClick"/>
+    <Button Command="{Binding CommandPalette.CloseCommand}"
+            Background="{DynamicResource BrushScrimOverlay}"
+            BorderThickness="0"
+            Padding="0"
+            Focusable="False"
+            IsHitTestVisible="True"
+            AutomationProperties.Name="Command Palette schließen">
+      <Button.Template>
+        <ControlTemplate TargetType="Button">
+          <Border Background="Transparent"/>
+        </ControlTemplate>
+      </Button.Template>
+    </Button>
 
     <!-- Palette panel -->
     <Border Background="{DynamicResource BrushSurface}"
@@ -34,8 +45,14 @@
                      Background="Transparent" BorderThickness="0" FontSize="15"
                      Foreground="{DynamicResource BrushTextPrimary}"
                      CaretBrush="{DynamicResource BrushAccentCyan}"
-                     AutomationProperties.Name="Befehl suchen"
-                     PreviewKeyDown="OnSearchKeyDown"/>
+                     AutomationProperties.Name="Befehl suchen">
+              <TextBox.InputBindings>
+                <KeyBinding Key="Down" Command="{Binding CommandPalette.MoveDownCommand}"/>
+                <KeyBinding Key="Up" Command="{Binding CommandPalette.MoveUpCommand}"/>
+                <KeyBinding Key="Enter" Command="{Binding CommandPalette.ExecuteCommand}"/>
+                <KeyBinding Key="Escape" Command="{Binding CommandPalette.CloseCommand}"/>
+              </TextBox.InputBindings>
+            </TextBox>
           </Grid>
         </Border>
 
@@ -45,8 +62,10 @@
                  MaxHeight="340" BorderThickness="0"
                  Background="Transparent"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                 AutomationProperties.Name="Suchergebnisse"
-                 MouseDoubleClick="OnResultDoubleClick">
+                 AutomationProperties.Name="Suchergebnisse">
+          <ListBox.InputBindings>
+            <MouseBinding Gesture="LeftDoubleClick" Command="{Binding CommandPalette.ExecuteCommand}"/>
+          </ListBox.InputBindings>
           <ListBox.ItemContainerStyle>
             <Style TargetType="ListBoxItem">
               <Setter Property="Padding" Value="16,8"/>

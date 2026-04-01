@@ -4,6 +4,7 @@
   <Border Background="{DynamicResource BrushSurfaceAlt}"
           BorderBrush="{DynamicResource BrushBorder}"
           BorderThickness="1,0,0,0"
+          Width="{DynamicResource ContextWingWidth}"
           Padding="14,14,14,12">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <StackPanel>

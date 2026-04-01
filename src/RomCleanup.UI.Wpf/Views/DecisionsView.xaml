@@ -57,13 +57,13 @@
       <Border DockPanel.Dock="Top" Margin="0,0,0,8">
         <TextBox x:Name="txtSearch"
                  Tag="Suche nach GameKey oder Dateiname..."
-                 TextChanged="OnSearchTextChanged"
+                 Text="{Binding Run.DecisionSearchText, UpdateSourceTrigger=PropertyChanged}"
                  AutomationProperties.Name="Decisions Suche"/>
       </Border>
 
       <!-- ── DECISION TREE ────────────────────────────────────────── -->
       <TreeView x:Name="treeDecisions"
-                ItemsSource="{Binding Run.DedupeGroupItems}"
+                ItemsSource="{Binding Run.DedupeGroupItemsView}"
                 BorderThickness="0"
                 Background="Transparent"
                 AutomationProperties.Name="Dedupe Decisions TreeView"

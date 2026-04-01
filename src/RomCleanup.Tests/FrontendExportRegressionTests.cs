@@ -150,4 +150,65 @@ public sealed class FrontendExportRegressionTests : IDisposable
         Assert.StartsWith("\"=2+3.zip\";", dataLine, StringComparison.Ordinal);
         Assert.EndsWith(";\"=2+3.zip\"", dataLine, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void CollectionExportService_Csv_QuotesSemicolonFields_WhenDelimiterIsSemicolon()
+    {
+        var csv = RomCleanup.Infrastructure.Analysis.CollectionExportService.ExportCollectionCsv(
+        [
+            new RomCandidate
+            {
+                MainPath = @"C:\roms\A;B\Game;One.zip",
+                GameKey = "game-one",
+                ConsoleKey = "SNES",
+                Region = "EU",
+                Extension = ".zip",
+                SizeBytes = 2048,
+                Category = FileCategory.Game
+            }
+        ]);
+
+        var dataLine = csv.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)[1];
+        Assert.Contains("\"Game;One.zip\"", dataLine, StringComparison.Ordinal);
+        Assert.EndsWith(";\"C:\\roms\\A;B\\Game;One.zip\"", dataLine, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FrontendExportService_Csv_FileMode_BlocksProtectedSystemPath()
+    {
+        var windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (string.IsNullOrWhiteSpace(windowsDir))
+            return;
+
+        var outputPath = Path.Combine(windowsDir, "romulus-export.csv");
+        var candidates = new[]
+        {
+            new RomCandidate
+            {
+                MainPath = @"C:\roms\safe\Game.zip",
+                GameKey = "safe-game",
+                ConsoleKey = "SNES",
+                Region = "US",
+                Extension = ".zip",
+                SizeBytes = 1024,
+                DatMatch = true,
+                Category = FileCategory.Game
+            }
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            FrontendExportService.ExportAsync(
+                new FrontendExportRequest(
+                    FrontendExportTargets.Csv,
+                    outputPath,
+                    "Collection",
+                    [@"C:\roms"],
+                    [".zip"]),
+                new FileSystemAdapter(),
+                collectionIndex: null,
+                enrichmentFingerprint: null,
+                runCandidates: candidates));
+
+        Assert.Contains("protected system path", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
 }

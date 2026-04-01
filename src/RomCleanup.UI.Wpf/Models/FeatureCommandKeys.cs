@@ -31,7 +31,6 @@ public static class FeatureCommandKeys
     public const string CollectionManager = "CollectionManager";
     public const string CloneListViewer = "CloneListViewer";
     public const string VirtualFolderPreview = "VirtualFolderPreview";
-    public const string CollectionDiff = "CollectionDiff";
     public const string CollectionMerge = "CollectionMerge";
 
     // ── Sicherheit & Integrität ──

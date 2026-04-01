@@ -193,6 +193,29 @@ public sealed class SafetyValidatorTests
     public void IsDriveRoot_NonRoots_ReturnsFalse(string path)
         => Assert.False(SafetyValidator.IsDriveRoot(path));
 
+    [Fact]
+    public void EnsureSafeOutputPath_ValidPath_ReturnsNormalizedPath()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "romulus-safe-output", "report.html");
+
+        var normalized = SafetyValidator.EnsureSafeOutputPath(path);
+
+        Assert.Equal(Path.GetFullPath(path), normalized);
+    }
+
+    [Fact]
+    public void EnsureSafeOutputPath_ProtectedSystemPath_Throws()
+    {
+        var windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (string.IsNullOrWhiteSpace(windowsDir))
+            return;
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            SafetyValidator.EnsureSafeOutputPath(Path.Combine(windowsDir, "report.html")));
+
+        Assert.Contains("protected system path", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     // =========================================================================
     //  TestTools Tests
     // =========================================================================
@@ -215,6 +238,18 @@ public sealed class SafetyValidatorTests
         Assert.Contains(result.Results, r => r.Status == "healthy");
     }
 
+    [Fact]
+    public void TestTools_ForwardsTimeoutSeconds_ToToolRunner()
+    {
+        var runner = new TimeoutCapturingToolRunner();
+        var validator = new SafetyValidator(runner, new StubFs());
+
+        _ = validator.TestTools(timeoutSeconds: 13);
+
+        Assert.NotEmpty(runner.Timeouts);
+        Assert.All(runner.Timeouts, timeout => Assert.Equal(TimeSpan.FromSeconds(13), timeout));
+    }
+
     // Fakes
     private sealed class StubToolRunner : IToolRunner
     {
@@ -232,6 +267,30 @@ public sealed class SafetyValidatorTests
             => new(1, "", false);
         public ToolResult Invoke7z(string sevenZipPath, string[] arguments)
             => new(1, "", false);
+    }
+
+    private sealed class TimeoutCapturingToolRunner : IToolRunner
+    {
+        public List<TimeSpan?> Timeouts { get; } = new();
+
+        public string? FindTool(string toolName) => $@"C:\tools\{toolName}.exe";
+
+        public ToolResult InvokeProcess(string filePath, string[] arguments, string? errorLabel = null)
+            => new(0, "v1.0.0", true);
+
+        public ToolResult InvokeProcess(
+            string filePath,
+            string[] arguments,
+            string? errorLabel,
+            TimeSpan? timeout,
+            CancellationToken cancellationToken)
+        {
+            Timeouts.Add(timeout);
+            return new ToolResult(0, "v1.0.0", true);
+        }
+
+        public ToolResult Invoke7z(string sevenZipPath, string[] arguments)
+            => new(0, "7-Zip 21.07", true);
     }
 
     private sealed class StubFs : IFileSystem

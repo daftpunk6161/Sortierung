@@ -157,6 +157,42 @@ public sealed class WpfProductizationTests : IDisposable
         Assert.Contains("CanAdvanceWizard", wizardXaml);
     }
 
+    [Fact]
+    public void ToolsViewModel_ContainsCollectionMergeEntry()
+    {
+        var vm = new ToolsViewModel(new LocalizationService());
+
+        Assert.Contains(vm.ToolItems, item => item.Key == FeatureCommandKeys.CollectionMerge);
+    }
+
+    [Fact]
+    public void MainViewModel_DashboardPrimaryAction_SwitchesToConvertOnly_ForConvertPreset()
+    {
+        var vm = CreateViewModel();
+        vm.Roots.Add(_tempRoot);
+
+        vm.PresetConvertCommand.Execute(null);
+
+        Assert.Same(vm.ConvertOnlyCommand, vm.DashboardPrimaryCommand);
+        Assert.Equal(vm.Loc["Start.ConvertOnlyButton"], vm.DashboardPrimaryActionText);
+        Assert.Equal("\uE8AB", vm.DashboardPrimaryActionIcon);
+        Assert.Equal(vm.Loc["Start.ConvertOnlyTip"], vm.DashboardPrimaryActionHintText);
+    }
+
+    [Fact]
+    public void StartView_BindsDashboardPrimaryAction_AndSubTabsUseUnderlineChrome()
+    {
+        var startViewXaml = File.ReadAllText(FindUiFile("Views", "StartView.xaml"));
+        var controlTemplatesXaml = File.ReadAllText(FindUiFile("Themes", "_ControlTemplates.xaml"));
+
+        Assert.Contains("Command=\"{Binding DashboardPrimaryCommand}\"", startViewXaml);
+        Assert.Contains("Text=\"{Binding DashboardPrimaryActionText}\"", startViewXaml);
+        Assert.Contains("Text=\"{Binding DashboardPrimaryActionHintText}\"", startViewXaml);
+        Assert.Contains("x:Key=\"SubTabPill\"", controlTemplatesXaml);
+        Assert.Contains("BorderThickness\" Value=\"0,0,0,2\"", controlTemplatesXaml);
+        Assert.DoesNotContain("Style x:Key=\"SubTabPill\" TargetType=\"RadioButton\" BasedOn=\"{StaticResource SidebarNavItem}\"", controlTemplatesXaml, StringComparison.Ordinal);
+    }
+
     private static MainViewModel CreateViewModel(RecordingDialogService? dialog = null)
     {
         dialog ??= new RecordingDialogService();
@@ -234,6 +270,7 @@ public sealed class WpfProductizationTests : IDisposable
             => _inputQueue.Count > 0 ? _inputQueue.Dequeue() : defaultValue;
         public void ShowText(string title, string content) { }
         public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
+        public bool ConfirmConversionReview(string title, string summary, IReadOnlyList<RomCleanup.Contracts.Models.ConversionReviewEntry> entries) => true;
         public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => true;
     }
 

@@ -766,11 +766,26 @@ public class ConsoleDetectorTests
 
     // ── DetectByKeywordDynamic from consoles.json ─────────────────────
 
-    private static ConsoleDetector CreateDetectorFromJson()
+    private static ConsoleDetector CreateDetectorFromJson([System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
     {
-        var json = File.ReadAllText(
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "data", "consoles.json"));
+        var repoRoot = FindRepoRoot(callerPath);
+        var json = File.ReadAllText(Path.Combine(repoRoot, "data", "consoles.json"));
         return ConsoleDetector.LoadFromJson(json);
+    }
+
+    private static string FindRepoRoot(string? callerPath)
+    {
+        var dir = Path.GetDirectoryName(callerPath);
+        while (dir is not null)
+        {
+            if (File.Exists(Path.Combine(dir, "src", "RomCleanup.sln")) ||
+                File.Exists(Path.Combine(dir, "data", "consoles.json")))
+                return dir;
+
+            dir = Path.GetDirectoryName(dir);
+        }
+
+        return Directory.GetCurrentDirectory();
     }
 
     [Theory]

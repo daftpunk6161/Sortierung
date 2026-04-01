@@ -520,7 +520,7 @@ public class RunOrchestratorTests : IDisposable
     }
 
     [Fact]
-    public void Execute_ReusesPersistedCandidates_WhenFingerprintMatchesAndFileIsUnchanged()
+    public async Task Execute_ReusesPersistedCandidates_WhenFingerprintMatchesAndFileIsUnchanged()
     {
         var romPath = CreateFile("Game.nes", 64);
         var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
@@ -555,14 +555,14 @@ public class RunOrchestratorTests : IDisposable
 
         Assert.Equal("NES", secondResult.AllCandidates.Single().ConsoleKey);
 
-        var persisted = secondIndex.TryGetByPathAsync(romPath).GetAwaiter().GetResult();
+        var persisted = await secondIndex.TryGetByPathAsync(romPath);
         Assert.NotNull(persisted);
         Assert.Equal("fp-a", persisted!.EnrichmentFingerprint);
         Assert.Equal("NES", persisted.ConsoleKey);
     }
 
     [Fact]
-    public void Execute_DoesNotReusePersistedCandidates_WhenFingerprintOrFileStateChanged()
+    public async Task Execute_DoesNotReusePersistedCandidates_WhenFingerprintOrFileStateChanged()
     {
         var romPath = CreateFile("Game.nes", 64);
         var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
@@ -598,7 +598,7 @@ public class RunOrchestratorTests : IDisposable
 
         var secondResult = secondOrchestrator.Execute(options);
         var candidate = secondResult.AllCandidates.Single();
-        var persisted = secondIndex.TryGetByPathAsync(romPath).GetAwaiter().GetResult();
+        var persisted = await secondIndex.TryGetByPathAsync(romPath);
 
         Assert.Equal("UNKNOWN", candidate.ConsoleKey);
         Assert.NotNull(persisted);
@@ -802,7 +802,9 @@ public class RunOrchestratorTests : IDisposable
         public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
         {
             ConvertedPaths.Add(sourcePath);
-            return new ConversionResult(sourcePath, sourcePath + ".chd", ConversionOutcome.Success);
+            var targetPath = sourcePath + ".chd";
+            File.WriteAllText(targetPath, "converted");
+            return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success);
         }
 
         public bool Verify(string targetPath, ConversionTarget target) => true;
@@ -823,6 +825,7 @@ public class RunOrchestratorTests : IDisposable
         public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
         {
             var targetPath = sourcePath + target.Extension;
+            File.WriteAllText(targetPath, _verificationOk ? "verified" : "verify-failed");
             return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success)
             {
                 VerificationResult = _verificationOk ? VerificationStatus.Verified : VerificationStatus.VerifyFailed,

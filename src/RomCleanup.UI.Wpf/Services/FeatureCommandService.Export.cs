@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using RomCleanup.Contracts;
 using System.Windows.Input;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
@@ -21,34 +22,29 @@ public sealed partial class FeatureCommandService
         if (_vm.LastCandidates.Count == 0)
         { _vm.AddLog("Erst einen Lauf starten.", "WARN"); return; }
         var path = _dialog.SaveFile("HTML-Report speichern", "HTML (*.html)|*.html", "report.html");
-        if (path is null) return;
-        var summary = new ReportSummary
-        {
-            Mode = _vm.DryRun ? "DryRun" : "Move",
-            TotalFiles = _vm.LastCandidates.Count,
-            KeepCount = _vm.LastDedupeGroups.Count,
-            MoveCount = _vm.LastDedupeGroups.Sum(g => g.Losers.Count),
-            JunkCount = _vm.LastCandidates.Count(c => c.Category == FileCategory.Junk),
-            GroupCount = _vm.LastDedupeGroups.Count,
-            Duration = TimeSpan.FromMilliseconds(_vm.LastRunResult?.DurationMs ?? 0)
-        };
-        var loserPaths = new HashSet<string>(
-            _vm.LastDedupeGroups.SelectMany(g => g.Losers.Select(l => l.MainPath)),
-            StringComparer.OrdinalIgnoreCase);
-        var entries = _vm.LastCandidates.Select(c => new ReportEntry
-        {
-            GameKey = c.GameKey,
-            Action = c.Category == FileCategory.Junk ? "JUNK" : loserPaths.Contains(c.MainPath) ? "MOVE" : "KEEP",
-            Category = FeatureService.ToCategoryLabel(c.Category), Region = c.Region, FilePath = c.MainPath,
-            FileName = Path.GetFileName(c.MainPath), Extension = c.Extension,
-            SizeBytes = c.SizeBytes, RegionScore = c.RegionScore, FormatScore = c.FormatScore,
-            VersionScore = (int)c.VersionScore, DatMatch = c.DatMatch
-        }).ToList();
+        if (!TryResolveSafeOutputPath(path, "HTML-Report", out var safePath)) return;
+
+        var mode = _vm.CurrentRunState == RomCleanup.UI.Wpf.Models.RunState.CompletedDryRun
+            ? RunConstants.ModeDryRun
+            : RunConstants.ModeMove;
         try
         {
-            ReportGenerator.WriteHtmlToFile(path, Path.GetDirectoryName(path) ?? ".", summary, entries);
-            _vm.AddLog($"Report erstellt: {path} (Im Browser drucken → PDF)", "INFO");
-            TryOpenWithShell(path, "Report");
+            if (_vm.LastRunResult is not null)
+            {
+                RunReportWriter.WriteReport(safePath, _vm.LastRunResult, mode);
+            }
+            else
+            {
+                var (summary, entries) = FeatureService.BuildHtmlReportData(
+                    _vm.LastCandidates.ToArray(),
+                    _vm.LastDedupeGroups.ToArray(),
+                    runResult: null,
+                    dryRun: string.Equals(mode, RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase));
+                ReportGenerator.WriteHtmlToFile(safePath, Path.GetDirectoryName(safePath) ?? ".", summary, entries);
+            }
+
+            _vm.AddLog($"Report erstellt: {safePath} (Im Browser drucken → PDF)", "INFO");
+            TryOpenWithShell(safePath, "Report");
         }
         catch (Exception ex) { LogError("GUI-REPORT", $"Report-Fehler: {ex.Message}"); }
     }
@@ -84,9 +80,12 @@ public sealed partial class FeatureCommandService
             var targetPath = Path.GetFullPath(Path.Combine(_vm.DatRoot, safeName));
             if (!targetPath.StartsWith(Path.GetFullPath(_vm.DatRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             { _vm.AddLog("DAT-Import blockiert: Pfad außerhalb des DatRoot.", "ERROR"); return; }
-            File.Copy(path, targetPath, overwrite: true);
-            _vm.AddLog($"DAT importiert nach: {targetPath}", "INFO");
-            _dialog.Info($"DAT erfolgreich importiert:\n\n  Quelle: {path}\n  Ziel: {targetPath}", "DAT-Import");
+            if (!TryResolveSafeOutputPath(targetPath, "DAT-Import", out var safeTargetPath))
+                return;
+
+            File.Copy(path, safeTargetPath, overwrite: true);
+            _vm.AddLog($"DAT importiert nach: {safeTargetPath}", "INFO");
+            _dialog.Info($"DAT erfolgreich importiert:\n\n  Quelle: {path}\n  Ziel: {safeTargetPath}", "DAT-Import");
         }
         catch (Exception ex) { LogError("DAT-IMPORT", $"DAT-Import fehlgeschlagen: {ex.Message}"); }
     }
@@ -158,13 +157,13 @@ public sealed partial class FeatureCommandService
         }
 
         var path = _dialog.SaveFile(_vm.Loc["Cmd.DupeExportTitle"], _vm.Loc["Cmd.FilterCsv"], "duplikate.csv");
-        if (path is null)
+        if (!TryResolveSafeOutputPath(path, "Duplikat-CSV-Export", out var safePath))
             return;
 
         var losers = _vm.LastDedupeGroups.SelectMany(static group => group.Losers).ToList();
         var dupeCsv = FeatureService.ExportCollectionCsv(losers);
-        File.WriteAllText(path, dupeCsv, Encoding.UTF8);
-        _vm.AddLog(_vm.Loc.Format("Cmd.DupeExported", path, losers.Count), "INFO");
+        File.WriteAllText(safePath, dupeCsv, Encoding.UTF8);
+        _vm.AddLog(_vm.Loc.Format("Cmd.DupeExported", safePath, losers.Count), "INFO");
     }
 
 }

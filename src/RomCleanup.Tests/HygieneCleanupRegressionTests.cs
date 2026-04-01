@@ -39,6 +39,20 @@ public sealed class HygieneCleanupRegressionTests
         Assert.Null(type);
     }
 
+    [Theory]
+    [InlineData("MissionControlViewModel")]
+    [InlineData("LibraryViewModel")]
+    [InlineData("ConfigViewModel")]
+    [InlineData("InspectorViewModel")]
+    [InlineData("SystemViewModel")]
+    public void RemovedAdditiveAreaViewModel_MustNotExistInWpfAssembly(string typeName)
+    {
+        var type = WpfAssembly.GetTypes()
+            .FirstOrDefault(t => t.Name == typeName);
+
+        Assert.Null(type);
+    }
+
     // ═══ ArtifactPathResolver.FindContainingRoot (centralized) ════════
 
     [Fact]
@@ -295,6 +309,118 @@ public sealed class HygieneCleanupRegressionTests
     }
 
     [Fact]
+    public void MainWindow_MustNotUseStaticDialogServiceForCloseConfirmation()
+    {
+        var codePath = FindMainWindowCodePath();
+        var code = File.ReadAllText(codePath);
+        Assert.DoesNotContain("DialogService.Confirm(", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DatAuditViewModel_MustNotUseStaticDialogService()
+    {
+        var codePath = FindWpfViewModelPath("DatAuditViewModel.cs");
+        var code = File.ReadAllText(codePath);
+        Assert.DoesNotContain("DialogService.SaveFile(", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MainViewModelRunPipeline_MustNotUseStaticDialogServiceForConversionReview()
+    {
+        var codePath = FindWpfViewModelPath("MainViewModel.RunPipeline.cs");
+        var code = File.ReadAllText(codePath);
+        Assert.DoesNotContain("DialogService.ConfirmConversionReview(", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ToolsDatView_MustNotUseBrowseClickHandler()
+    {
+        var xamlPath = FindWpfViewPath("ToolsDatView.xaml");
+        var codeBehindPath = FindWpfViewPath("ToolsDatView.xaml.cs");
+        var xaml = File.ReadAllText(xamlPath);
+        var codeBehind = File.ReadAllText(codeBehindPath);
+
+        Assert.DoesNotContain("OnBrowseDatFile_Click", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("DialogService.BrowseFile(", codeBehind, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DecisionsView_MustNotUseTextChangedFilterCodeBehind()
+    {
+        var xamlPath = FindWpfViewPath("DecisionsView.xaml");
+        var codeBehindPath = FindWpfViewPath("DecisionsView.xaml.cs");
+        var xaml = File.ReadAllText(xamlPath);
+        var codeBehind = File.ReadAllText(codeBehindPath);
+
+        Assert.DoesNotContain("TextChanged=\"OnSearchTextChanged\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnSearchTextChanged", codeBehind, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StartView_MustUseRootsDragDropBehavior_InsteadOfViewHandlers()
+    {
+        var xamlPath = FindWpfViewPath("StartView.xaml");
+        var codeBehindPath = FindWpfViewPath("StartView.xaml.cs");
+        var xaml = File.ReadAllText(xamlPath);
+        var codeBehind = File.ReadAllText(codeBehindPath);
+
+        Assert.Contains("helpers:RootsDragDropHelper.Enabled=\"True\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Drop=\"OnHeroDrop\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("DragEnter=\"OnHeroDragEnter\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("DragLeave=\"OnHeroDragLeave\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnHeroDrop", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnHeroDragEnter", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnHeroDragLeave", codeBehind, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ConfigOptionsView_MustUseRootsDragDropBehavior_InsteadOfCodeBehindHookup()
+    {
+        var xamlPath = FindWpfViewPath("ConfigOptionsView.xaml");
+        var codeBehindPath = FindWpfViewPath("ConfigOptionsView.xaml.cs");
+        var xaml = File.ReadAllText(xamlPath);
+        var codeBehind = File.ReadAllText(codeBehindPath);
+
+        Assert.Contains("helpers:RootsDragDropHelper.Enabled=\"True\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("RootsDragDropHelper.OnDragEnter", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("RootsDragDropHelper.OnDrop", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("DragEnter +=", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("Drop +=", codeBehind, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CommandPaletteView_MustUseBoundCommands_InsteadOfInteractiveCodeBehindHandlers()
+    {
+        var xamlPath = FindWpfViewPath("CommandPaletteView.xaml");
+        var codeBehindPath = FindWpfViewPath("CommandPaletteView.xaml.cs");
+        var xaml = File.ReadAllText(xamlPath);
+        var codeBehind = File.ReadAllText(codeBehindPath);
+
+        Assert.Contains("CommandPalette.CloseCommand", xaml, StringComparison.Ordinal);
+        Assert.Contains("KeyBinding Key=\"Down\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MouseBinding Gesture=\"LeftDoubleClick\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("MouseDown=\"OnBackdropClick\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("PreviewKeyDown=\"OnSearchKeyDown\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("MouseDoubleClick=\"OnResultDoubleClick\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnBackdropClick", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnSearchKeyDown", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnResultDoubleClick", codeBehind, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MainWindow_MustNotUseShortcutOverlayClickHandler()
+    {
+        var xamlPath = FindMainWindowCodePath().Replace("MainWindow.xaml.cs", "MainWindow.xaml", StringComparison.Ordinal);
+        var codePath = FindMainWindowCodePath();
+        var xaml = File.ReadAllText(xamlPath);
+        var code = File.ReadAllText(codePath);
+
+        Assert.DoesNotContain("MouseDown=\"OnShortcutOverlayClick\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnShortcutOverlayClick", code, StringComparison.Ordinal);
+        Assert.Contains("Shell.ToggleShortcutSheetCommand", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AppXaml_MustSetExplicitShutdownMode()
     {
         var xamlPath = FindMainWindowCodePath().Replace("MainWindow.xaml.cs", "App.xaml");
@@ -449,6 +575,40 @@ public sealed class HygieneCleanupRegressionTests
             dir = Path.GetDirectoryName(dir);
         }
         return Path.Combine("src", "RomCleanup.UI.Wpf", "MainWindow.xaml.cs");
+    }
+
+    private static string FindWpfViewModelPath(string fileName, [System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
+    {
+        var dir = Path.GetDirectoryName(callerPath);
+        while (dir is not null)
+        {
+            if (File.Exists(Path.Combine(dir, "RomCleanup.sln")) ||
+                Directory.Exists(Path.Combine(dir, "src")))
+            {
+                var candidate = Path.Combine(dir, "src", "RomCleanup.UI.Wpf", "ViewModels", fileName);
+                if (File.Exists(candidate)) return candidate;
+            }
+            dir = Path.GetDirectoryName(dir);
+        }
+
+        return Path.Combine("src", "RomCleanup.UI.Wpf", "ViewModels", fileName);
+    }
+
+    private static string FindWpfViewPath(string fileName, [System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
+    {
+        var dir = Path.GetDirectoryName(callerPath);
+        while (dir is not null)
+        {
+            if (File.Exists(Path.Combine(dir, "RomCleanup.sln")) ||
+                Directory.Exists(Path.Combine(dir, "src")))
+            {
+                var candidate = Path.Combine(dir, "src", "RomCleanup.UI.Wpf", "Views", fileName);
+                if (File.Exists(candidate)) return candidate;
+            }
+            dir = Path.GetDirectoryName(dir);
+        }
+
+        return Path.Combine("src", "RomCleanup.UI.Wpf", "Views", fileName);
     }
 
     // ═══ Round 4: Orphaned services must stay removed ═════════════════

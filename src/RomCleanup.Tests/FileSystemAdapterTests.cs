@@ -186,6 +186,36 @@ public class FileSystemAdapterTests : IDisposable
         Assert.Null(result);
     }
 
+    [Fact]
+    public void CopyFile_BlocksAdsDestination()
+    {
+        var src = Path.Combine(_tempDir, "source.rom");
+        File.WriteAllText(src, "data");
+        var dst = Path.Combine(_tempDir, "copy.rom:ads");
+
+        Assert.Throws<InvalidOperationException>(() => _fs.CopyFile(src, dst));
+    }
+
+    [Fact]
+    public void CopyFile_BlocksReservedDeviceNameDestination()
+    {
+        var src = Path.Combine(_tempDir, "source.rom");
+        File.WriteAllText(src, "data");
+        var dst = Path.Combine(_tempDir, "CON.txt");
+
+        Assert.Throws<InvalidOperationException>(() => _fs.CopyFile(src, dst));
+    }
+
+    [Fact]
+    public void CopyFile_BlocksTrailingDotOrSpaceDestinationSegment()
+    {
+        var src = Path.Combine(_tempDir, "source.rom");
+        File.WriteAllText(src, "data");
+        var dst = Path.Combine(_tempDir, "unsafe. ");
+
+        Assert.Throws<InvalidOperationException>(() => _fs.CopyFile(src, dst));
+    }
+
     // --- ResolveChildPathWithinRoot ---
 
     [Fact]

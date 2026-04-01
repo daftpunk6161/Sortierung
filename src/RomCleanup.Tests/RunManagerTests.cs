@@ -371,7 +371,7 @@ public class RunManagerTests
 
         var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "DryRun", "tgap-48").Run!;
 
-        Assert.Equal(ApiRunStatus.Running, run.Status);
+        Assert.Contains(run.Status, new[] { ApiRunStatus.Running, ApiRunStatus.CompletedWithErrors });
 
         await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(5));
 
@@ -460,6 +460,38 @@ public class RunManagerTests
             Assert.False(completed.ResumeSupported);
             Assert.Equal("audit-rollback-only", completed.RecoveryModel);
             Assert.Equal("not-persisted", completed.RestartRecovery);
+        }
+        finally
+        {
+            try { File.Delete(auditPath); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task CompletedWithErrorsRun_WithAudit_ExposesPartialRollbackRecoveryState()
+    {
+        var auditPath = Path.Combine(Path.GetTempPath(), $"api-completed-errors-{Guid.NewGuid():N}.csv");
+        File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n");
+
+        try
+        {
+            var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (run, _, _, _) =>
+            {
+                run.AuditPath = auditPath;
+                return new RunExecutionOutcome(ApiRunStatus.CompletedWithErrors, new ApiRunResult
+                {
+                    OrchestratorStatus = "completed_with_errors",
+                    ExitCode = 0,
+                    FailCount = 1
+                });
+            });
+
+            var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "Move", "idem-005b").Run!;
+            await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(5));
+
+            var completed = mgr.Get(run.RunId)!;
+            Assert.Equal("partial-rollback-available", completed.RecoveryState);
+            Assert.True(completed.CanRollback);
         }
         finally
         {

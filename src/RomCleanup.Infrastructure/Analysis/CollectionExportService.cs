@@ -109,21 +109,21 @@ public static class CollectionExportService
         sb.AppendLine($"{labels.FileName}{delimiter}{labels.Console}{delimiter}{labels.Region}{delimiter}{labels.Format}{delimiter}{labels.SizeMb}{delimiter}{labels.Category}{delimiter}{labels.DatStatus}{delimiter}{labels.Path}");
         foreach (var c in candidates)
         {
-            sb.Append(AuditCsvParser.SanitizeCsvField(Path.GetFileName(c.MainPath)));
+            sb.Append(AuditCsvParser.SanitizeCsvField(Path.GetFileName(c.MainPath), delimiter));
             sb.Append(delimiter);
-            sb.Append(AuditCsvParser.SanitizeCsvField(CollectionAnalysisService.ResolveConsoleLabel(c)));
+            sb.Append(AuditCsvParser.SanitizeCsvField(CollectionAnalysisService.ResolveConsoleLabel(c), delimiter));
             sb.Append(delimiter);
-            sb.Append(AuditCsvParser.SanitizeCsvField(c.Region));
+            sb.Append(AuditCsvParser.SanitizeCsvField(c.Region, delimiter));
             sb.Append(delimiter);
-            sb.Append(AuditCsvParser.SanitizeCsvField(c.Extension));
+            sb.Append(AuditCsvParser.SanitizeCsvField(c.Extension, delimiter));
             sb.Append(delimiter);
             sb.Append((c.SizeBytes / 1048576.0).ToString("F2", CultureInfo.InvariantCulture));
             sb.Append(delimiter);
-            sb.Append(AuditCsvParser.SanitizeCsvField(CollectionAnalysisService.ToCategoryLabel(c.Category)));
+            sb.Append(AuditCsvParser.SanitizeCsvField(CollectionAnalysisService.ToCategoryLabel(c.Category), delimiter));
             sb.Append(delimiter);
             sb.Append(c.DatMatch ? "Verified" : "Unverified");
             sb.Append(delimiter);
-            sb.AppendLine(AuditCsvParser.SanitizeCsvField(c.MainPath));
+            sb.AppendLine(AuditCsvParser.SanitizeCsvField(c.MainPath, delimiter));
         }
         return sb.ToString();
     }
@@ -167,38 +167,72 @@ public static class CollectionExportService
         IReadOnlyList<RomCandidate> candidates, IReadOnlyList<DedupeGroup> groups,
         RunResult? runResult, bool dryRun)
     {
-        var summary = new ReportSummary
-        {
-            Mode = dryRun ? "DryRun" : "Move",
-            TotalFiles = candidates.Count,
-            KeepCount = groups.Count,
-            MoveCount = groups.Sum(g => g.Losers.Count),
-            JunkCount = candidates.Count(c => c.Category == FileCategory.Junk),
-            GroupCount = groups.Count,
-            Duration = TimeSpan.FromMilliseconds(runResult?.DurationMs ?? 0)
-        };
-
-        var loserPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var g in groups)
-            foreach (var l in g.Losers)
-                loserPaths.Add(l.MainPath);
-
-        var entries = candidates.Select(c => new ReportEntry
-        {
-            GameKey = c.GameKey,
-            Action = c.Category == FileCategory.Junk ? "JUNK" : loserPaths.Contains(c.MainPath) ? "MOVE" : "KEEP",
-            Category = CollectionAnalysisService.ToCategoryLabel(c.Category),
-            Region = c.Region,
-            FilePath = c.MainPath,
-            FileName = Path.GetFileName(c.MainPath),
-            Extension = c.Extension,
-            SizeBytes = c.SizeBytes,
-            RegionScore = c.RegionScore,
-            FormatScore = c.FormatScore,
-            VersionScore = (int)c.VersionScore,
-            DatMatch = c.DatMatch
-        }).ToList();
+        var mode = dryRun ? RunConstants.ModeDryRun : RunConstants.ModeMove;
+        var projectionSource = BuildReportProjectionSource(candidates, groups, runResult);
+        var summary = RunReportWriter.BuildSummary(projectionSource, mode);
+        var entries = RunReportWriter.BuildEntries(projectionSource, mode).ToList();
         return (summary, entries);
+    }
+
+    private static RunResult BuildReportProjectionSource(
+        IReadOnlyList<RomCandidate> candidates,
+        IReadOnlyList<DedupeGroup> groups,
+        RunResult? runResult)
+    {
+        if (runResult is null)
+        {
+            return new RunResult
+            {
+                Status = RunConstants.StatusOk,
+                TotalFilesScanned = candidates.Count,
+                GroupCount = groups.Count,
+                AllCandidates = candidates.ToArray(),
+                DedupeGroups = groups.ToArray()
+            };
+        }
+
+        return new RunResult
+        {
+            Status = runResult.Status,
+            ExitCode = runResult.ExitCode,
+            Preflight = runResult.Preflight,
+            TotalFilesScanned = runResult.TotalFilesScanned > 0 ? runResult.TotalFilesScanned : candidates.Count,
+            GroupCount = runResult.GroupCount > 0 ? runResult.GroupCount : groups.Count,
+            WinnerCount = runResult.WinnerCount,
+            LoserCount = runResult.LoserCount,
+            MoveResult = runResult.MoveResult,
+            JunkMoveResult = runResult.JunkMoveResult,
+            ConsoleSortResult = runResult.ConsoleSortResult,
+            JunkRemovedCount = runResult.JunkRemovedCount,
+            FilteredNonGameCount = runResult.FilteredNonGameCount,
+            UnknownCount = runResult.UnknownCount,
+            UnknownReasonCounts = runResult.UnknownReasonCounts,
+            ConvertedCount = runResult.ConvertedCount,
+            ConvertErrorCount = runResult.ConvertErrorCount,
+            ConvertSkippedCount = runResult.ConvertSkippedCount,
+            ConvertBlockedCount = runResult.ConvertBlockedCount,
+            ConvertReviewCount = runResult.ConvertReviewCount,
+            ConvertLossyWarningCount = runResult.ConvertLossyWarningCount,
+            ConvertVerifyPassedCount = runResult.ConvertVerifyPassedCount,
+            ConvertVerifyFailedCount = runResult.ConvertVerifyFailedCount,
+            ConvertSavedBytes = runResult.ConvertSavedBytes,
+            ConversionReport = runResult.ConversionReport,
+            DatAuditResult = runResult.DatAuditResult,
+            DatHaveCount = runResult.DatHaveCount,
+            DatHaveWrongNameCount = runResult.DatHaveWrongNameCount,
+            DatMissCount = runResult.DatMissCount,
+            DatUnknownCount = runResult.DatUnknownCount,
+            DatAmbiguousCount = runResult.DatAmbiguousCount,
+            DatRenameProposedCount = runResult.DatRenameProposedCount,
+            DatRenameExecutedCount = runResult.DatRenameExecutedCount,
+            DatRenameSkippedCount = runResult.DatRenameSkippedCount,
+            DatRenameFailedCount = runResult.DatRenameFailedCount,
+            DurationMs = runResult.DurationMs,
+            ReportPath = runResult.ReportPath,
+            AllCandidates = runResult.AllCandidates.Count > 0 ? runResult.AllCandidates : candidates.ToArray(),
+            DedupeGroups = runResult.DedupeGroups.Count > 0 ? runResult.DedupeGroups : groups.ToArray(),
+            PhaseMetrics = runResult.PhaseMetrics
+        };
     }
 }
 

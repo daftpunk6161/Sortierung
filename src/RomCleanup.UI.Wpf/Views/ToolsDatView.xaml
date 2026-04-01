@@ -80,7 +80,9 @@
               <DataTemplate>
                 <DockPanel>
                   <Button DockPanel.Dock="Right" Content="&#xE838;" FontFamily="Segoe MDL2 Assets" Width="30" Padding="2"
-                          Click="OnBrowseDatFile_Click" AutomationProperties.Name="DAT-Datei durchsuchen"/>
+                          Command="{Binding DataContext.BrowseDatMappingFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                          CommandParameter="{Binding}"
+                          AutomationProperties.Name="DAT-Datei durchsuchen"/>
                   <TextBlock Text="{Binding DatFile}" VerticalAlignment="Center" Margin="4,0"
                              TextTrimming="CharacterEllipsis" ToolTip="{Binding DatFile}"/>
                 </DockPanel>
@@ -90,7 +92,9 @@
               <DataTemplate>
                 <DockPanel>
                   <Button DockPanel.Dock="Right" Content="&#xE838;" FontFamily="Segoe MDL2 Assets" Width="30" Padding="2"
-                          Click="OnBrowseDatFile_Click" AutomationProperties.Name="DAT-Datei durchsuchen"/>
+                          Command="{Binding DataContext.BrowseDatMappingFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                          CommandParameter="{Binding}"
+                          AutomationProperties.Name="DAT-Datei durchsuchen"/>
                   <TextBox Text="{Binding DatFile, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
                 </DockPanel>
               </DataTemplate>

@@ -95,22 +95,34 @@ public sealed class RunProjectionDebtTests
     }
 
     // =========================================================================
-    //  DEBT-03: Games should equal GroupCount (not re-derived from DedupeGroups)
+    //  DEBT-03: Games should follow kept game truth, not raw GroupCount metadata
     // =========================================================================
 
     [Fact]
-    public void Games_UsesGroupCount_NotDedupeGroupsReDerivation()
+    public void Games_UsesKeptGameTruth_NotRawGroupCountMetadata()
     {
-        // GroupCount = 15, but no DedupeGroups provided
-        // If projection re-derives from dedupeGroups.Count, it would get 0
         var result = new RunResult
         {
-            GroupCount = 15
+            GroupCount = 15,
+            AllCandidates =
+            [
+                new RomCandidate { MainPath = @"C:\roms\winner.zip", GameKey = "winner", Category = FileCategory.Game },
+                new RomCandidate { MainPath = @"C:\roms\loser.zip", GameKey = "winner", Category = FileCategory.Game }
+            ],
+            DedupeGroups =
+            [
+                new DedupeGroup
+                {
+                    GameKey = "winner",
+                    Winner = new RomCandidate { MainPath = @"C:\roms\winner.zip", GameKey = "winner", Category = FileCategory.Game },
+                    Losers = [new RomCandidate { MainPath = @"C:\roms\loser.zip", GameKey = "winner", Category = FileCategory.Game }]
+                }
+            ]
         };
 
         var projection = RunProjectionFactory.Create(result);
 
-        Assert.Equal(15, projection.Games);
+        Assert.Equal(1, projection.Games);
     }
 
     // =========================================================================

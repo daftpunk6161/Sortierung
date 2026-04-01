@@ -500,6 +500,8 @@ public static class CollectionMergeService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or FileNotFoundException)
         {
             TryRevertFailedMutation(fileSystem, source.Path, targetPath, entry.Decision);
+            if (collectionIndex is not null)
+                await TryRevertIndexMutationAsync(collectionIndex, source, targetPath, entry.Decision, ct).ConfigureAwait(false);
             return ToApplyResult(entry, CollectionMergeApplyOutcome.Failed, $"{entry.ReasonCode}:apply-failed");
         }
     }
@@ -527,6 +529,28 @@ public static class CollectionMergeService
         await collectionIndex.UpsertEntriesAsync([targetEntry], ct).ConfigureAwait(false);
         if (decision == CollectionMergeDecision.MoveToTarget)
             await collectionIndex.RemovePathsAsync([source.Path], ct).ConfigureAwait(false);
+    }
+
+    private static async ValueTask TryRevertIndexMutationAsync(
+        ICollectionIndex? collectionIndex,
+        CollectionIndexEntry source,
+        string targetPath,
+        CollectionMergeDecision decision,
+        CancellationToken ct)
+    {
+        if (collectionIndex is null)
+            return;
+
+        try
+        {
+            await collectionIndex.RemovePathsAsync([targetPath], ct).ConfigureAwait(false);
+            if (decision == CollectionMergeDecision.MoveToTarget)
+                await collectionIndex.UpsertEntriesAsync([source], ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best effort only. The failed apply result already signals that operator review is required.
+        }
     }
 
     private static void TryRevertFailedMutation(

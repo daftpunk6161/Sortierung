@@ -116,8 +116,8 @@ public sealed partial class FeatureCommandService
             if (!File.Exists(rulesPath))
             { _dialog.Info("Keine rules.json zum Exportieren gefunden.\n\nErstelle zuerst Regeln in data/rules.json.", "Export"); return; }
             var savePath = _dialog.SaveFile("Regeln exportieren", "JSON (*.json)|*.json", "rules-export.json");
-            if (savePath is null) return;
-            try { File.Copy(rulesPath, savePath, overwrite: true); _vm.AddLog($"Regeln exportiert: {savePath}", "INFO"); }
+            if (!TryResolveSafeOutputPath(savePath, "Regel-Export", out var safeSavePath)) return;
+            try { File.Copy(rulesPath, safeSavePath, overwrite: true); _vm.AddLog($"Regeln exportiert: {safeSavePath}", "INFO"); }
             catch (Exception ex) { LogError("IO-EXPORT", $"Export fehlgeschlagen: {ex.Message}"); }
         }
         else
@@ -129,8 +129,11 @@ public sealed partial class FeatureCommandService
                 var json = File.ReadAllText(importPath);
                 JsonDocument.Parse(json).Dispose();
                 Directory.CreateDirectory(dataDir);
-                File.Copy(importPath, rulesPath, overwrite: true);
-                _vm.AddLog($"Regeln importiert: {Path.GetFileName(importPath)} nach {rulesPath}", "INFO");
+                if (!TryResolveSafeOutputPath(rulesPath, "Regel-Import", out var safeRulesPath))
+                    return;
+
+                File.Copy(importPath, safeRulesPath, overwrite: true);
+                _vm.AddLog($"Regeln importiert: {Path.GetFileName(importPath)} nach {safeRulesPath}", "INFO");
             }
             catch (JsonException) { LogError("GUI-IMPORT", "Import fehlgeschlagen: Ungültiges JSON-Format.", "JSON-Datei prüfen"); }
             catch (Exception ex) { LogError("GUI-IMPORT", $"Import fehlgeschlagen: {ex.Message}"); }

@@ -530,7 +530,18 @@ public sealed partial class MainViewModel
     public string? ActivePreset
     {
         get => _activePreset;
-        set => SetProperty(ref _activePreset, value);
+        set
+        {
+            if (!SetProperty(ref _activePreset, value))
+                return;
+
+            OnPropertyChanged(nameof(IsConvertPresetActive));
+            OnPropertyChanged(nameof(DashboardPrimaryCommand));
+            OnPropertyChanged(nameof(DashboardPrimaryActionText));
+            OnPropertyChanged(nameof(DashboardPrimaryActionIcon));
+            OnPropertyChanged(nameof(DashboardPrimaryActionHintText));
+            OnPropertyChanged(nameof(DashboardPrimaryActionAcceleratorKey));
+        }
     }
 
     // ═══ CONFLICT POLICY (UX-007: was YesNoCancel hack, now VM property) ═
@@ -634,6 +645,22 @@ public sealed partial class MainViewModel
             case "Audit": AuditRoot = path; break;
             case "Ps3": Ps3DupesRoot = path; break;
         }
+        SaveSettings();
+    }
+
+    private void OnBrowseDatMappingFile(DatMapRow? row)
+    {
+        if (row is null)
+            return;
+
+        var path = _dialog.BrowseFile(
+            "DAT-Datei auswählen",
+            "DAT-Dateien (*.dat;*.xml)|*.dat;*.xml|Alle Dateien|*.*");
+
+        if (path is null)
+            return;
+
+        row.DatFile = path;
         SaveSettings();
     }
 

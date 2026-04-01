@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using RomCleanup.Contracts;
 using RomCleanup.Infrastructure.Audit;
+using RomCleanup.Infrastructure.Safety;
 
 namespace RomCleanup.Infrastructure.Reporting;
 
@@ -187,8 +188,8 @@ public static class ReportGenerator
     /// </summary>
     public static void WriteJsonToFile(string jsonPath, string workingDir, ReportSummary summary, IReadOnlyList<ReportEntry> entries)
     {
-        var fullPath = Path.GetFullPath(jsonPath);
-        var fullDir = Path.GetFullPath(workingDir).TrimEnd(Path.DirectorySeparatorChar)
+        var fullPath = SafetyValidator.EnsureSafeOutputPath(jsonPath);
+        var fullDir = SafetyValidator.EnsureSafeOutputPath(workingDir).TrimEnd(Path.DirectorySeparatorChar)
                       + Path.DirectorySeparatorChar;
         if (!fullPath.StartsWith(fullDir, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException($"Report path '{jsonPath}' is outside working directory.");
@@ -206,8 +207,8 @@ public static class ReportGenerator
     /// </summary>
     public static void WriteHtmlToFile(string htmlPath, string workingDir, ReportSummary summary, IReadOnlyList<ReportEntry> entries)
     {
-        var fullPath = Path.GetFullPath(htmlPath);
-        var fullDir = Path.GetFullPath(workingDir).TrimEnd(Path.DirectorySeparatorChar)
+        var fullPath = SafetyValidator.EnsureSafeOutputPath(htmlPath);
+        var fullDir = SafetyValidator.EnsureSafeOutputPath(workingDir).TrimEnd(Path.DirectorySeparatorChar)
                       + Path.DirectorySeparatorChar;
         if (!fullPath.StartsWith(fullDir, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException($"Report path '{htmlPath}' is outside working directory.");

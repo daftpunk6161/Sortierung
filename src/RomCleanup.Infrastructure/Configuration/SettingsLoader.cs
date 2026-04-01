@@ -134,7 +134,9 @@ public sealed class SettingsLoader
 
         try
         {
-            var json = File.ReadAllText(path);
+            var json = SettingsFileAccess.TryReadAllText(path);
+            if (string.IsNullOrWhiteSpace(json))
+                return new SettingsLoadResult(new RomCleanupSettings());
 
             // FEAT-05: Validate JSON structure before deserializing
             ValidateSettingsStructure(json);
@@ -253,7 +255,10 @@ public sealed class SettingsLoader
     {
         try
         {
-            var json = File.ReadAllText(path);
+            var json = SettingsFileAccess.TryReadAllText(path);
+            if (string.IsNullOrWhiteSpace(json))
+                return;
+
             using var doc = JsonDocument.Parse(json, new JsonDocumentOptions
             {
                 CommentHandling = JsonCommentHandling.Skip,
@@ -303,7 +308,10 @@ public sealed class SettingsLoader
     {
         try
         {
-            var json = File.ReadAllText(path);
+            var json = SettingsFileAccess.TryReadAllText(path);
+            if (string.IsNullOrWhiteSpace(json))
+                return;
+
             // P1-BUG-033: Deserialize into nullable model so missing keys stay null
             // instead of defaulting to false and overwriting the actual defaults.
             var user = JsonSerializer.Deserialize<NullableUserSettings>(json, JsonOptions);

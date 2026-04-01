@@ -63,6 +63,13 @@ public static class AuditCsvParser
     /// Dangerous formula-like prefixes are always emitted as RFC-4180 quoted fields.
     /// </summary>
     public static string SanitizeCsvField(string value)
+        => SanitizeCsvField(value, ',');
+
+    /// <summary>
+    /// Sanitize a delimited text field to prevent CSV injection (OWASP).
+    /// Dangerous formula-like prefixes are always emitted as RFC-4180 quoted fields.
+    /// </summary>
+    public static string SanitizeCsvField(string value, char delimiter)
     {
         if (string.IsNullOrEmpty(value)) return value;
 
@@ -78,7 +85,7 @@ public static class AuditCsvParser
         if (hasDangerousFormulaPrefix)
             return "\"" + value.Replace("\"", "\"\"") + "\"";
 
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
+        if (value.Contains(delimiter) || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
             return "\"" + value.Replace("\"", "\"\"") + "\"";
 
         return value;

@@ -1289,6 +1289,76 @@ public class GuiViewModelTests
     }
 
     [Fact]
+    public void ApplyRunResult_BlockedOnlyConversionRun_IsTreatedAsConvertOnly()
+    {
+        var vm = new MainViewModel();
+
+        var result = new RunResult
+        {
+            Status = "completed_with_errors",
+            TotalFilesScanned = 1,
+            ConvertBlockedCount = 1,
+            AllCandidates =
+            [
+                new RomCandidate
+                {
+                    MainPath = @"C:\Roms\Blocked.iso",
+                    GameKey = "blocked",
+                    Region = "US",
+                    Category = FileCategory.Game,
+                    SizeBytes = 1024,
+                    Extension = ".iso",
+                    ConsoleKey = "PSX"
+                }
+            ],
+            DedupeGroups = Array.Empty<DedupeGroup>()
+        };
+
+        vm.ApplyRunResult(result);
+
+        Assert.Equal("Nur Konvertierung aktiv. Keine Dateien werden verschoben.", vm.MoveConsequenceText);
+        Assert.Equal("–", vm.DashWinners);
+    }
+
+    [Fact]
+    public void ApproveReviews_ChangesInvalidateCompletedDryRunFingerprint()
+    {
+        var vm = new MainViewModel();
+        var tempRoot = Path.Combine(Path.GetTempPath(), "RomCleanup_PreviewGate_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            vm.Roots.Add(tempRoot);
+            TransitionTo(vm, RunState.CompletedDryRun);
+
+            var fingerprintMethod = typeof(MainViewModel).GetMethod(
+                "BuildPreviewConfigurationFingerprint",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var fingerprintField = typeof(MainViewModel).GetField(
+                "_lastSuccessfulPreviewFingerprint",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            Assert.NotNull(fingerprintMethod);
+            Assert.NotNull(fingerprintField);
+
+            var fingerprint = (string)fingerprintMethod!.Invoke(vm, Array.Empty<object>())!;
+            fingerprintField!.SetValue(vm, fingerprint);
+
+            Assert.True(vm.CanStartMoveWithCurrentPreview);
+
+            vm.ApproveReviews = true;
+
+            Assert.False(vm.CanStartMoveWithCurrentPreview);
+            Assert.True(vm.ShowConfigChangedBanner);
+        }
+        finally
+        {
+            try { Directory.Delete(tempRoot, true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task ExecuteRunAsync_CancelledRun_ShowsPartialResultsInDashboard()
     {
         var winner = new RomCandidate
@@ -2123,6 +2193,36 @@ public class GuiViewModelTests
         Assert.Equal(2, entries.Count);
     }
 
+    [Fact]
+    public void FeatureService_BuildHtmlReportData_UngroupedGameCandidate_CountsKeep()
+    {
+        var candidates = new List<RomCandidate>
+        {
+            new() { MainPath = @"C:\grouped-winner.rom", GameKey = "grouped", Category = FileCategory.Game, Extension = ".rom", Region = "EU", SizeBytes = 100 },
+            new() { MainPath = @"C:\grouped-loser.rom", GameKey = "grouped", Category = FileCategory.Game, Extension = ".rom", Region = "US", SizeBytes = 100 },
+            new() { MainPath = @"C:\standalone.rom", GameKey = "standalone", Category = FileCategory.Game, Extension = ".rom", Region = "JP", SizeBytes = 100 }
+        };
+        var groups = new List<DedupeGroup>
+        {
+            new() { GameKey = "grouped", Winner = candidates[0], Losers = [candidates[1]] }
+        };
+        var result = new RunResult
+        {
+            Status = "ok",
+            TotalFilesScanned = 3,
+            DedupeGroups = groups,
+            AllCandidates = candidates
+        };
+
+        var (summary, entries) = FeatureService.BuildHtmlReportData(candidates, groups, result, true);
+
+        Assert.Equal("DryRun", summary.Mode);
+        Assert.Equal(2, summary.KeepCount);
+        Assert.Equal(1, summary.MoveCount);
+        Assert.Equal(3, entries.Count);
+        Assert.Equal(2, entries.Count(entry => entry.Action == "KEEP"));
+    }
+
     [Theory]
     [InlineData("ABCDEF01", 8, true)]
     [InlineData("abcdef01", 8, true)]
@@ -2385,6 +2485,8 @@ public class GuiViewModelTests
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => defaultValue;
         public void ShowText(string title, string content) { }
         public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => DangerConfirmResult;
+        public bool ConfirmConversionReview(string title, string summary, IReadOnlyList<RomCleanup.Contracts.Models.ConversionReviewEntry> entries)
+            => ConfirmReturnValue;
         public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals)
         {
             ConfirmCallCount++;

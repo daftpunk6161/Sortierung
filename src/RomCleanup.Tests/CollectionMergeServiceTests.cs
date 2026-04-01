@@ -75,7 +75,7 @@ public sealed class CollectionMergeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildPlanAsync_LeftPreferredIntoExistingRightTarget_RequiresReview()
+    public async Task BuildPlanAsync_PreferredEntryAlreadyInTarget_KeepsExistingTarget()
     {
         var leftRoot = CreateRoot("left");
         var rightRoot = CreateRoot("right");
@@ -93,8 +93,64 @@ public sealed class CollectionMergeServiceTests : IDisposable
 
         Assert.True(build.CanUse);
         var entry = Assert.Single(build.Plan!.Entries);
+        Assert.Equal(CollectionMergeDecision.KeepExistingTarget, entry.Decision);
+        Assert.Equal("merge-source-already-in-target", entry.ReasonCode);
+    }
+
+    [Fact]
+    public async Task BuildPlanAsync_LeftOnlyIntoIndexedTargetConflict_RequiresReview()
+    {
+        var leftRoot = CreateRoot("left");
+        var rightRoot = CreateRoot("right");
+        var targetRoot = CreateRoot("target");
+        var leftPath = CreateFile(leftRoot, "SNES", "Game.sfc", "left");
+        var targetPath = CreateFile(targetRoot, "SNES", "Game.sfc", "target");
+
+        var build = await CollectionMergeService.BuildPlanAsync(
+            new MutableCollectionIndex(
+            [
+                CreateEntry(leftPath, leftRoot, "SNES", "game", "hash-left", "fp-1"),
+                CreateEntry(targetPath, targetRoot, "SNES", "game", "hash-target", "fp-1")
+            ]),
+            _fileSystem,
+            CreateMergeRequest(leftRoot, rightRoot, targetRoot, allowMoves: false));
+
+        Assert.True(build.CanUse);
+        var entry = Assert.Single(build.Plan!.Entries);
         Assert.Equal(CollectionMergeDecision.ReviewRequired, entry.Decision);
         Assert.Equal("merge-target-conflict-existing", entry.ReasonCode);
+    }
+
+    [Fact]
+    public async Task BuildPlanAsync_AppliesOffsetAndLimit_WithoutChangingFullSummary()
+    {
+        var leftRoot = CreateRoot("left");
+        var rightRoot = CreateRoot("right");
+        var targetRoot = CreateRoot("target");
+        var alphaPath = CreateFile(leftRoot, "", "Alpha.sfc", "alpha");
+        var betaPath = CreateFile(leftRoot, "", "Beta.sfc", "beta");
+
+        var build = await CollectionMergeService.BuildPlanAsync(
+            new MutableCollectionIndex(
+            [
+                CreateEntry(alphaPath, leftRoot, "SNES", "alpha", "hash-alpha", "fp-1"),
+                CreateEntry(betaPath, leftRoot, "SNES", "beta", "hash-beta", "fp-1")
+            ]),
+            _fileSystem,
+            CreateMergeRequest(leftRoot, rightRoot, targetRoot, allowMoves: false) with
+            {
+                CompareRequest = CreateMergeRequest(leftRoot, rightRoot, targetRoot, allowMoves: false).CompareRequest with
+                {
+                    Offset = 1,
+                    Limit = 1
+                }
+            });
+
+        Assert.True(build.CanUse);
+        Assert.Equal(2, build.Plan!.Summary.TotalEntries);
+        var entry = Assert.Single(build.Plan.Entries);
+        Assert.Equal("game|SNES|beta", entry.DiffKey);
+        Assert.Equal(CollectionMergeDecision.CopyToTarget, entry.Decision);
     }
 
     [Fact]
@@ -197,6 +253,63 @@ public sealed class CollectionMergeServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ApplyAsync_MoveIndexRemoveFailure_RevertsFilesystemAndIndex()
+    {
+        var leftRoot = CreateRoot("left");
+        var rightRoot = CreateRoot("right");
+        var targetRoot = CreateRoot("target");
+        var leftPath = CreateFile(leftRoot, "SNES", "Mario.sfc", "left");
+        var index = new MutableCollectionIndex(
+            [CreateEntry(leftPath, leftRoot, "SNES", "mario", "hash-left", "fp-1")],
+            throwOnRemove: true);
+
+        var result = await CollectionMergeService.ApplyAsync(
+            index,
+            _fileSystem,
+            new TrackingAuditStore(),
+            new CollectionMergeApplyRequest
+            {
+                MergeRequest = CreateMergeRequest(leftRoot, rightRoot, targetRoot, allowMoves: true),
+                AuditPath = Path.Combine(_tempDir, "failed-move-audit.csv")
+            });
+
+        var targetPath = Path.Combine(targetRoot, "SNES", "Mario.sfc");
+        Assert.Equal(1, result.Summary.Failed);
+        Assert.True(File.Exists(leftPath));
+        Assert.False(File.Exists(targetPath));
+        Assert.NotNull(index.FindByPath(leftPath));
+        Assert.Null(index.FindByPath(targetPath));
+    }
+
+    [Fact]
+    public async Task ApplyAsync_FinalAuditWriteFailure_RevertsFilesystemAndIndex()
+    {
+        var leftRoot = CreateRoot("left");
+        var rightRoot = CreateRoot("right");
+        var targetRoot = CreateRoot("target");
+        var leftPath = CreateFile(leftRoot, "SNES", "Mario.sfc", "left");
+        var index = new MutableCollectionIndex(
+            [CreateEntry(leftPath, leftRoot, "SNES", "mario", "hash-left", "fp-1")]);
+
+        var result = await CollectionMergeService.ApplyAsync(
+            index,
+            _fileSystem,
+            new ThrowOnFinalAuditStore(),
+            new CollectionMergeApplyRequest
+            {
+                MergeRequest = CreateMergeRequest(leftRoot, rightRoot, targetRoot, allowMoves: true),
+                AuditPath = Path.Combine(_tempDir, "audit-append-failure.csv")
+            });
+
+        var targetPath = Path.Combine(targetRoot, "SNES", "Mario.sfc");
+        Assert.Equal(1, result.Summary.Failed);
+        Assert.True(File.Exists(leftPath));
+        Assert.False(File.Exists(targetPath));
+        Assert.NotNull(index.FindByPath(leftPath));
+        Assert.Null(index.FindByPath(targetPath));
+    }
+
+    [Fact]
     public void AuditSigningService_Rollback_CopyAction_RemovesCopiedTarget()
     {
         var leftRoot = CreateRoot("left");
@@ -207,8 +320,10 @@ public sealed class CollectionMergeServiceTests : IDisposable
         File.Copy(sourcePath, targetPath);
 
         var auditPath = Path.Combine(_tempDir, "rollback-copy.csv");
-        var auditStore = new AuditCsvStore(_fileSystem);
+        var keyFilePath = AuditSecurityPaths.GetDefaultSigningKeyPath();
+        var auditStore = new AuditCsvStore(_fileSystem, keyFilePath: keyFilePath);
         auditStore.AppendAuditRow(auditPath, targetRoot, sourcePath, targetPath, RunConstants.AuditActions.Copy, "GAME", "hash-left", "merge-copy-to-target");
+        auditStore.Flush(auditPath);
         auditStore.WriteMetadataSidecar(auditPath, new Dictionary<string, object>
         {
             ["Mode"] = "CollectionMerge",
@@ -216,7 +331,7 @@ public sealed class CollectionMergeServiceTests : IDisposable
             ["AllowedCurrentRoots"] = new[] { leftRoot, targetRoot }
         });
 
-        var signing = new AuditSigningService(_fileSystem, keyFilePath: AuditSecurityPaths.GetDefaultSigningKeyPath());
+        var signing = new AuditSigningService(_fileSystem, keyFilePath: keyFilePath);
         var rollback = signing.Rollback(auditPath, [leftRoot, targetRoot], [leftRoot, targetRoot], dryRun: false);
 
         Assert.Equal(1, rollback.RolledBack);
@@ -306,11 +421,17 @@ public sealed class CollectionMergeServiceTests : IDisposable
     {
         private readonly List<CollectionIndexEntry> _entries;
         private readonly bool _throwOnUpsert;
+        private readonly bool _throwOnRemove;
+        private bool _removeFaultTriggered;
 
-        public MutableCollectionIndex(IReadOnlyList<CollectionIndexEntry>? entries = null, bool throwOnUpsert = false)
+        public MutableCollectionIndex(
+            IReadOnlyList<CollectionIndexEntry>? entries = null,
+            bool throwOnUpsert = false,
+            bool throwOnRemove = false)
         {
             _entries = entries?.ToList() ?? [];
             _throwOnUpsert = throwOnUpsert;
+            _throwOnRemove = throwOnRemove;
         }
 
         public CollectionIndexEntry? FindByPath(string path)
@@ -378,6 +499,12 @@ public sealed class CollectionMergeServiceTests : IDisposable
 
         public ValueTask RemovePathsAsync(IReadOnlyList<string> paths, CancellationToken ct = default)
         {
+            if (_throwOnRemove && !_removeFaultTriggered)
+            {
+                _removeFaultTriggered = true;
+                throw new IOException("Simulated index remove failure.");
+            }
+
             foreach (var path in paths)
                 _entries.RemoveAll(existing => string.Equals(existing.Path, path, StringComparison.OrdinalIgnoreCase));
             return ValueTask.CompletedTask;
@@ -397,5 +524,30 @@ public sealed class CollectionMergeServiceTests : IDisposable
 
         public ValueTask<IReadOnlyList<CollectionRunSnapshot>> ListRunSnapshotsAsync(int limit = 50, CancellationToken ct = default)
             => ValueTask.FromResult<IReadOnlyList<CollectionRunSnapshot>>(Array.Empty<CollectionRunSnapshot>());
+    }
+
+    private sealed class ThrowOnFinalAuditStore : IAuditStore
+    {
+        private int _appendCount;
+
+        public void WriteMetadataSidecar(string auditCsvPath, IDictionary<string, object> metadata)
+        {
+        }
+
+        public bool TestMetadataSidecar(string auditCsvPath) => true;
+
+        public void Flush(string auditCsvPath)
+        {
+        }
+
+        public IReadOnlyList<string> Rollback(string auditCsvPath, string[] allowedRestoreRoots, string[] allowedCurrentRoots, bool dryRun = false)
+            => Array.Empty<string>();
+
+        public void AppendAuditRow(string auditCsvPath, string rootPath, string oldPath, string newPath, string action, string category = "", string hash = "", string reason = "")
+        {
+            _appendCount++;
+            if (_appendCount >= 2)
+                throw new IOException("Simulated final audit append failure.");
+        }
     }
 }

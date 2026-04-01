@@ -11,7 +11,7 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
 - [x] R2 Productization
 - [x] R3 Reach
 - [x] R4 Stabilization
-- [ ] R5 Collection Diff & Merge
+- [x] R5 Collection Diff & Merge
 
 ## Abhaengigkeiten
 
@@ -20,7 +20,7 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
 - [x] R2 kann nur teilweise parallel zu R3 laufen
 - [x] Conversion-Erweiterungen laufen erst nach gesichertem Review-, Verify- und Rollback-Pfad
 - [x] R4 stabilisiert R1-R3 vor neuer Produktbreite
-- [ ] R5 startet erst nach abgeschlossenem R4
+- [x] R5 startet erst nach abgeschlossenem R4
 
 ## Release-Plaene
 
@@ -28,7 +28,7 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
 - [x] [R2 Productization Execution](r2-productization-execution.md)
 - [x] [R3 Reach Execution](r3-reach-execution.md)
 - [x] [R4 Stabilization Execution](r4-stabilization-execution.md)
-- [ ] [R5 Collection Diff & Merge Execution](r5-collection-diff-merge-execution.md)
+- [x] [R5 Collection Diff & Merge Execution](r5-collection-diff-merge-execution.md)
 
 ## Aktuelle Prioritaet
 
@@ -104,16 +104,16 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
   `CollectionCompareService` materialisiert explizite Quellen index-first mit Root-/Fingerprint-Guards und haengt den bestehenden Analysis-/Export-Pfad daran.
 - [x] R5-T03 Diff-Engine auf Basis vorhandener Hash-, Candidate- und Winner-Regeln bauen
   Compare nutzt `CollectionIndexCandidateMapper` plus `DeduplicationEngine.SelectWinner`, deckt `only-in-*`, `identical`, `different`, `preferred` und `review-required` ab und bleibt deterministisch paginierbar.
-- [ ] R5-T04 Merge-Planer mit Safety-, Conflict- und Review-Regeln integrieren
-  Aus dem Diff wird ein kontrollierter, review-faehiger Merge-Plan.
-- [ ] R5-T05 Merge-Execute, Audit und Rollback ueber bestehende mutierende Infrastruktur anbinden
-  Merge wird kein Sonderweg, sondern ein geschuetzter Produktpfad mit Undo-Faehigkeit.
-- [ ] R5-T06 GUI-, CLI- und API-Projektionen fuer Compare und Merge ohne Schattenlogik verdrahten
-  Alle Kanaele bilden denselben Diff-/Merge-Zustand ab.
-- [ ] R5-T07 Performance- und Scope-Haertung fuer grosse Sammlungen ergaenzen
-  Multi-Collection-Vergleiche bleiben paginierbar und index-first.
-- [ ] R5-T08 Invarianten-, Negativ- und Paritaetstests vervollstaendigen
-  Diff & Merge wird release-faehig abgesichert.
+- [x] R5-T04 Merge-Planer mit Safety-, Conflict- und Review-Regeln integrieren
+  `CollectionMergeService` plant `copy/move/keep/skip/review/blocked` deterministisch, ohne stilles Ueberschreiben und mit Root-/Target-Containment vor jeder Operation.
+- [x] R5-T05 Merge-Execute, Audit und Rollback ueber bestehende mutierende Infrastruktur anbinden
+  Merge-Apply schreibt Audit-Trails, erstellt signierte Sidecars, nutzt bestehenden Rollback und haertet partielle Fehler mit FS-/Index-Revert ab.
+- [x] R5-T06 GUI-, CLI- und API-Projektionen fuer Compare und Merge ohne Schattenlogik verdrahten
+  WPF-Commands, `romulus diff`/`merge` sowie `/collections/compare|merge|merge/apply|merge/rollback` nutzen dieselben Compare-/Merge-Contracts.
+- [x] R5-T07 Performance- und Scope-Haertung fuer grosse Sammlungen ergaenzen
+  Compare und Merge bleiben paginierbar; Vollmaterialisierung wird nur intern fuer die autoritative Plan-/Apply-Semantik genutzt, waehrend Scope-/Fingerprint-Guards fachlich falsche Vergleiche blockieren.
+- [x] R5-T08 Invarianten-, Negativ- und Paritaetstests vervollstaendigen
+  Vollsuite grün: `7197/7197` Tests inkl. Merge-Conflict-, Rollback-, CLI-/API-/OpenAPI-/WPF-Paritaet und Allowlist-Negativfaellen.
 
 ## Parked
 

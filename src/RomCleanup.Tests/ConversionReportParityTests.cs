@@ -89,6 +89,65 @@ public sealed class ConversionReportParityTests
         };
     }
 
+    private static RunResult BuildResultWithWinnerConversion()
+    {
+        var winner = new RomCandidate
+        {
+            MainPath = @"C:\roms\game1.zip",
+            GameKey = "game1",
+            Region = "US",
+            RegionScore = 100,
+            FormatScore = 500,
+            VersionScore = 100,
+            Extension = ".zip",
+            ConsoleKey = "PSX",
+            Category = FileCategory.Game,
+            ClassificationReasonCode = "test",
+            ClassificationConfidence = 100
+        };
+
+        var loser = winner with
+        {
+            MainPath = @"C:\roms\game1_eu.zip",
+            Region = "EU",
+            GameKey = "game1-eu"
+        };
+
+        return new RunResult
+        {
+            Status = "ok",
+            ExitCode = 0,
+            TotalFilesScanned = 2,
+            WinnerCount = 1,
+            LoserCount = 1,
+            ConvertedCount = 1,
+            ConversionReport = new ConversionReport
+            {
+                TotalPlanned = 1,
+                Converted = 1,
+                Skipped = 0,
+                Errors = 0,
+                Blocked = 0,
+                RequiresReview = 0,
+                TotalSavedBytes = 0,
+                Results =
+                [
+                    new ConversionResult(winner.MainPath, @"C:\roms\game1.chd", ConversionOutcome.Success)
+                ]
+            },
+            AllCandidates = [winner, loser],
+            DedupeGroups =
+            [
+                new DedupeGroup
+                {
+                    GameKey = "game1",
+                    Winner = winner,
+                    Losers = [loser]
+                }
+            ]
+        };
+    }
+
     [Fact]
     public void RunProjection_CarriesConversionMetrics()
     {
@@ -171,6 +230,30 @@ public sealed class ConversionReportParityTests
         Assert.Equal("1", dashboard.ConvertBlockedDisplay);
         Assert.Equal("1", dashboard.ConvertReviewDisplay);
         Assert.NotEqual("–", dashboard.ConvertSavedBytesDisplay);
+    }
+
+    [Fact]
+    public void ApiRunResult_ProjectsConvertedWinnerPath_InDedupeGroups()
+    {
+        var result = BuildResultWithWinnerConversion();
+        var projection = RunProjectionFactory.Create(result);
+
+        var apiResult = ApiRunResultMapper.Map(result, projection);
+
+        Assert.Single(apiResult.DedupeGroups);
+        Assert.Equal(@"C:\roms\game1.chd", apiResult.DedupeGroups[0].Winner.MainPath);
+    }
+
+    [Fact]
+    public void DashboardProjection_UsesProjectedConvertedWinnerFileName()
+    {
+        var result = BuildResultWithWinnerConversion();
+        var projection = RunProjectionFactory.Create(result);
+
+        var dashboard = DashboardProjection.From(projection, result, isConvertOnlyRun: false);
+
+        Assert.Single(dashboard.DedupeGroups);
+        Assert.Equal("game1.chd", dashboard.DedupeGroups[0].Winner.FileName);
     }
 
     [Fact]

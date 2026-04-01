@@ -43,7 +43,14 @@ public sealed class SettingsService : ISettingsService
 
         try
         {
-            var json = File.ReadAllText(SettingsPath);
+            var json = SettingsFileAccess.TryReadAllText(SettingsPath);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                LastAuditPath = dto.LastAuditPath;
+                LastTheme = dto.Theme;
+                return dto;
+            }
+
             var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 

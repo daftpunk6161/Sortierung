@@ -58,25 +58,17 @@ public static class RunProjectionFactory
         var candidates = result.AllCandidates ?? Array.Empty<Contracts.Models.RomCandidate>();
         var total = result.TotalFilesScanned;
         var dedupeGroups = result.DedupeGroups ?? Array.Empty<DedupeGroup>();
-        var gameCandidateCount = candidates.Count(c => c.Category == FileCategory.Game);
-        var isPartialCancelledOrFailed =
-            (string.Equals(result.Status, "cancelled", StringComparison.OrdinalIgnoreCase)
-             || string.Equals(result.Status, "failed", StringComparison.OrdinalIgnoreCase))
-            && dedupeGroups.Count == 0
-            && candidates.Count > 0;
+        var winnerCount = CountKeptGames(candidates, dedupeGroups);
+        if (winnerCount == 0 && candidates.Count == 0 && result.WinnerCount > 0)
+            winnerCount = result.WinnerCount;
 
-        var winnerCount = result.WinnerCount > 0
-            ? result.WinnerCount
-            : isPartialCancelledOrFailed
-                ? gameCandidateCount
-                : dedupeGroups.Count;
         var loserCount = result.LoserCount > 0
             ? result.LoserCount
             : dedupeGroups.Sum(static g => g.Losers?.Count ?? 0);
         var groupCount = result.GroupCount > 0 ? result.GroupCount : dedupeGroups.Count;
         var junk = candidates.Count(c => c.Category == FileCategory.Junk);
         var bios = candidates.Count(c => c.Category == FileCategory.Bios);
-        var games = groupCount > 0 ? groupCount : (isPartialCancelledOrFailed ? gameCandidateCount : 0);
+        var games = winnerCount;
         var unknown = result.UnknownCount;
         var datMatches = candidates.Count(c => c.DatMatch);
         var filteredNonGameCount = result.FilteredNonGameCount;
@@ -142,5 +134,24 @@ public static class RunProjectionFactory
             SavedBytes: savedBytes,
             DurationMs: result.DurationMs,
             HealthScore: health);
+    }
+
+    private static int CountKeptGames(
+        IReadOnlyList<RomCandidate> candidates,
+        IReadOnlyList<DedupeGroup> dedupeGroups)
+    {
+        if (candidates.Count == 0)
+            return 0;
+
+        if (dedupeGroups.Count == 0)
+            return candidates.Count(static candidate => candidate.Category == FileCategory.Game);
+
+        var loserPaths = new HashSet<string>(
+            dedupeGroups.SelectMany(static group => group.Losers.Select(static loser => loser.MainPath)),
+            StringComparer.OrdinalIgnoreCase);
+
+        return candidates.Count(candidate =>
+            candidate.Category == FileCategory.Game
+            && !loserPaths.Contains(candidate.MainPath));
     }
 }

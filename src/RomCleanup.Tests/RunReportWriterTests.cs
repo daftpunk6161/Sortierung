@@ -8,6 +8,26 @@ namespace RomCleanup.Tests;
 public class RunReportWriterTests
 {
     [Fact]
+    public void WriteReport_ProtectedSystemPath_Throws()
+    {
+        var windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (string.IsNullOrWhiteSpace(windowsDir))
+            return;
+
+        var result = new RunResult
+        {
+            Status = "ok",
+            TotalFilesScanned = 1,
+            AllCandidates = [new RomCandidate { MainPath = @"C:\roms\Game.zip", Category = FileCategory.Game, GameKey = "game" }]
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            RunReportWriter.WriteReport(Path.Combine(windowsDir, "romulus-report.html"), result, "DryRun"));
+
+        Assert.Contains("protected system path", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void BuildSummary_PopulatesProjectionFields()
     {
         var winner = new RomCandidate { MainPath = @"C:\roms\Game (EU).chd", Category = FileCategory.Game, DatMatch = true };
@@ -234,5 +254,42 @@ public class RunReportWriterTests
         Assert.Single(entries, e => e.Action == "KEEP" && e.FilePath == winner.MainPath);
         Assert.Single(entries, e => e.Action == "MOVE" && e.FilePath == loser.MainPath);
         Assert.Single(entries, e => e.Action == "KEEP" && e.FilePath == extra.MainPath);
+    }
+
+    [Fact]
+    public void BuildEntries_UsesProjectedConvertedWinnerPath()
+    {
+        var winner = new RomCandidate { MainPath = @"C:\roms\Game (EU).zip", Category = FileCategory.Game, GameKey = "game", Extension = ".zip" };
+        var loser = new RomCandidate { MainPath = @"C:\roms\Game (US).zip", Category = FileCategory.Game, GameKey = "game", Extension = ".zip" };
+
+        var result = new RunResult
+        {
+            TotalFilesScanned = 2,
+            DedupeGroups =
+            [
+                new DedupeGroup { GameKey = "game", Winner = winner, Losers = [loser] }
+            ],
+            AllCandidates = [winner, loser],
+            ConvertedCount = 1,
+            ConversionReport = new ConversionReport
+            {
+                TotalPlanned = 1,
+                Converted = 1,
+                Skipped = 0,
+                Errors = 0,
+                Blocked = 0,
+                RequiresReview = 0,
+                TotalSavedBytes = 0,
+                Results =
+                [
+                    new ConversionResult(winner.MainPath, @"C:\roms\Game (EU).chd", ConversionOutcome.Success)
+                ]
+            }
+        };
+
+        var entries = RunReportWriter.BuildEntries(result);
+
+        Assert.Contains(entries, entry => entry.Action == "KEEP" && entry.FilePath == @"C:\roms\Game (EU).chd");
+        Assert.DoesNotContain(entries, entry => entry.Action == "KEEP" && entry.FilePath == winner.MainPath);
     }
 }

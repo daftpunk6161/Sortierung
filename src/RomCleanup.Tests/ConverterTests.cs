@@ -337,8 +337,8 @@ public sealed class ConverterTests
     [Theory]
     [InlineData(RunState.Preflight, "1")]
     [InlineData(RunState.Deduplicating, "3")]
-    [InlineData(RunState.Sorting, "4")]
-    [InlineData(RunState.Moving, "5")]
+    [InlineData(RunState.Moving, "4")]
+    [InlineData(RunState.Sorting, "5")]
     [InlineData(RunState.Converting, "6")]
     [InlineData(RunState.Completed, "7")]
     [InlineData(RunState.CompletedDryRun, "7")]
@@ -465,7 +465,7 @@ public sealed class ConverterTests
     {
         var c = new PhaseDetailConverter();
         var result = (string)c.Convert(RunState.Scanning, typeof(string), "5", Culture);
-        Assert.Contains("Move", result);
+        Assert.Contains("Sort", result);
         Assert.Contains("Ausstehend", result);
     }
 

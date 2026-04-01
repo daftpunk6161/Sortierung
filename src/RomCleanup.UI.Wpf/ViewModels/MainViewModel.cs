@@ -51,16 +51,6 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     public ToolsViewModel Tools { get; }
     /// <summary>Run pipeline state, progress, dashboard, rollback.</summary>
     public RunViewModel Run { get; }
-    /// <summary>MissionControl dashboard: Sources, Intent, Health, LastRun.</summary>
-    public MissionControlViewModel MissionControl { get; }
-    /// <summary>Library area: Analysis state, sub-tabs, search/filter.</summary>
-    public LibraryViewModel Library { get; }
-    /// <summary>Config area: Profile state, validation summary, sub-tabs.</summary>
-    public ConfigViewModel Config { get; }
-    /// <summary>Context-dependent Inspector for the Context Wing.</summary>
-    public InspectorViewModel Inspector { get; }
-    /// <summary>System area: Activity Log, Appearance, About/Health.</summary>
-    public SystemViewModel SystemArea { get; }
     /// <summary>Command Palette overlay (Ctrl+K): fuzzy search + execute.</summary>
     public CommandPaletteViewModel CommandPalette { get; }
     /// <summary>DatAudit results: read-only audit table with filter/sort.</summary>
@@ -93,13 +83,8 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         Setup = new SetupViewModel(_theme, _dialog, _settings, _loc);
         Tools = new ToolsViewModel(_loc);
         Run = new RunViewModel(_loc);
-        Inspector = new InspectorViewModel(_loc);
-        MissionControl = new MissionControlViewModel(_loc);
-        Library = new LibraryViewModel(_loc);
-        Config = new ConfigViewModel(_loc);
-        SystemArea = new SystemViewModel(_loc);
         CommandPalette = new CommandPaletteViewModel(_loc);
-        DatAudit = new DatAuditViewModel(_loc);
+        DatAudit = new DatAuditViewModel(_loc, _dialog);
         ConversionPreview = new ConversionPreviewViewModel(_loc);
         InitializeRunConfigurationServices(runProfileService, runConfigurationMaterializer);
 
@@ -133,6 +118,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         // Browse commands (parameter = property name to set)
         BrowseToolPathCommand = new RelayCommand<string>(OnBrowseToolPath);
         BrowseFolderPathCommand = new RelayCommand<string>(OnBrowseFolderPath);
+        BrowseDatMappingFileCommand = new RelayCommand<DatMapRow>(OnBrowseDatMappingFile);
 
         // Settings commands
         SaveSettingsCommand = new RelayCommand(OnSaveSettings);
@@ -574,6 +560,42 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     /// <summary>XAML-bindable localization: {Binding Loc[Key]}.</summary>
     public ILocalizationService Loc => _loc;
 
+    private bool _isRootDropTargetActive;
+    public bool IsRootDropTargetActive
+    {
+        get => _isRootDropTargetActive;
+        private set => SetProperty(ref _isRootDropTargetActive, value);
+    }
+
+    private string _rootDropAnnouncementText = string.Empty;
+    public string RootDropAnnouncementText
+    {
+        get => _rootDropAnnouncementText;
+        private set
+        {
+            if (SetProperty(ref _rootDropAnnouncementText, value))
+                OnPropertyChanged(nameof(HasRootDropAnnouncement));
+        }
+    }
+
+    public bool HasRootDropAnnouncement => !string.IsNullOrWhiteSpace(RootDropAnnouncementText);
+
+    public bool IsConvertPresetActive => string.Equals(ActivePreset, "Convert", StringComparison.Ordinal);
+
+    public IRelayCommand DashboardPrimaryCommand => IsConvertPresetActive ? ConvertOnlyCommand : RunCommand;
+
+    public string DashboardPrimaryActionText => IsConvertPresetActive
+        ? _loc["Start.ConvertOnlyButton"]
+        : _loc["Start.CtaPreview"];
+
+    public string DashboardPrimaryActionIcon => IsConvertPresetActive ? "\uE8AB" : "\uE768";
+
+    public string DashboardPrimaryActionHintText => IsConvertPresetActive
+        ? _loc["Start.ConvertOnlyTip"]
+        : _loc["Start.CtaPreviewHint"];
+
+    public string DashboardPrimaryActionAcceleratorKey => IsConvertPresetActive ? string.Empty : "F5";
+
     /// <summary>Add dropped folder paths (from drag-drop). Duplicates are skipped.</summary>
     public int AddDroppedFolders(IEnumerable<string> paths)
     {
@@ -587,6 +609,20 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
             }
         }
         return added;
+    }
+
+    internal int HandleDroppedFolders(IEnumerable<string> paths)
+    {
+        var added = AddDroppedFolders(paths);
+        if (added > 0)
+            RootDropAnnouncementText = _loc.Format("Start.DropAdded", added);
+
+        return added;
+    }
+
+    internal void SetRootDropTargetActive(bool isActive)
+    {
+        IsRootDropTargetActive = isActive;
     }
 
     // ═══ COMMANDS ═══════════════════════════════════════════════════════
@@ -604,6 +640,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     public IRelayCommand PresetConvertCommand { get; }
     public IRelayCommand BrowseToolPathCommand { get; }
     public IRelayCommand BrowseFolderPathCommand { get; }
+    public IRelayCommand BrowseDatMappingFileCommand { get; }
     public IRelayCommand QuickPreviewCommand { get; }
     public IRelayCommand ConvertOnlyCommand { get; }
     public IRelayCommand RequestStartMoveCommand { get; }
@@ -697,7 +734,6 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         OnPropertyChanged(nameof(HasNoRoots));
         OnPropertyChanged(nameof(HasRootsConfigured));
         OnPropertyChanged(nameof(CanAdvanceWizard));
-        MissionControl.UpdateSourceCount(Roots.Count);
         DeferCommandRequery();
     }
 

@@ -388,10 +388,7 @@ public class Phase5CEntryPointParityTests
     [Fact]
     public void TGAP38_ConsoleFilter_LabelClearlyIndicatesDisplayOnly()
     {
-        var xaml = File.ReadAllText(Path.Combine(
-            AppContext.BaseDirectory,
-            "..", "..", "..", "..",
-            "RomCleanup.UI.Wpf", "Views", "ConfigFiltersView.xaml"));
+        var xaml = File.ReadAllText(FindUiFile("Views", "ConfigFiltersView.xaml"));
 
         Assert.Contains("kein Einfluss auf die Pipeline", xaml, StringComparison.OrdinalIgnoreCase);
     }
@@ -403,4 +400,25 @@ public class Phase5CEntryPointParityTests
 
     private static string GetTestRoot() =>
         Path.GetTempPath();
+
+    private static string FindUiFile(string folder, string fileName, [System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
+    {
+        var repoRoot = FindRepoRoot(callerPath);
+        return Path.Combine(repoRoot, "src", "RomCleanup.UI.Wpf", folder, fileName);
+    }
+
+    private static string FindRepoRoot(string? callerPath)
+    {
+        var dir = Path.GetDirectoryName(callerPath);
+        while (dir is not null)
+        {
+            if (File.Exists(Path.Combine(dir, "src", "RomCleanup.sln")) ||
+                File.Exists(Path.Combine(dir, "src", "RomCleanup.UI.Wpf", "RomCleanup.UI.Wpf.csproj")))
+                return dir;
+
+            dir = Path.GetDirectoryName(dir);
+        }
+
+        return Directory.GetCurrentDirectory();
+    }
 }

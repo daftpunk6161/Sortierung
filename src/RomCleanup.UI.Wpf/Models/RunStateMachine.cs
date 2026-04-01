@@ -14,7 +14,9 @@ public static class RunStateMachine
             (RunState.Preflight, RunState.Scanning) => true,
             (RunState.Scanning, RunState.Deduplicating) => true,
             (RunState.Deduplicating, RunState.Sorting) => true,
+            (RunState.Deduplicating, RunState.Moving) => true,
             (RunState.Sorting, RunState.Moving) => true,
+            (RunState.Moving, RunState.Sorting) => true,
             (RunState.Moving, RunState.Converting) => true,
             (RunState.Preflight or RunState.Scanning or RunState.Deduplicating or
              RunState.Sorting or RunState.Moving or RunState.Converting,

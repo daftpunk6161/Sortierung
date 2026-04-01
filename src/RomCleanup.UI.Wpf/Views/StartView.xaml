@@ -1,12 +1,15 @@
 <UserControl x:Class="RomCleanup.UI.Wpf.Views.StartView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="clr-namespace:RomCleanup.UI.Wpf.Helpers">
   <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="24,24,24,28">
-      <TextBlock x:Name="dropAnnouncement" Visibility="Collapsed"
+      <TextBlock Text="{Binding RootDropAnnouncementText}"
+                 Visibility="{Binding HasRootDropAnnouncement, Converter={StaticResource BoolToVis}}"
                  AutomationProperties.LiveSetting="Assertive"/>
 
       <Border x:Name="heroDropZone" AllowDrop="True"
+              helpers:RootsDragDropHelper.Enabled="True"
               MinHeight="180"
               CornerRadius="{DynamicResource RadiusXL}"
               Margin="{DynamicResource SpaceBottomLG}"
@@ -14,13 +17,18 @@
               BorderBrush="{DynamicResource BrushBorder}"
               BorderThickness="2"
               Cursor="Hand"
-              Drop="OnHeroDrop" DragEnter="OnHeroDragEnter" DragLeave="OnHeroDragLeave"
               AutomationProperties.Name="{Binding Loc[Start.DropZoneLabel]}">
         <Border.Style>
           <Style TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
+            <Setter Property="BorderThickness" Value="2"/>
             <Style.Triggers>
               <DataTrigger Binding="{Binding Shell.SelectedSubTab}" Value="RecentRuns">
                 <Setter Property="Visibility" Value="Collapsed"/>
+              </DataTrigger>
+              <DataTrigger Binding="{Binding IsRootDropTargetActive}" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentCyan}"/>
+                <Setter Property="BorderThickness" Value="3"/>
               </DataTrigger>
             </Style.Triggers>
           </Style>
@@ -67,7 +75,7 @@
 
               <ListBox ItemsSource="{Binding Roots}" SelectedItem="{Binding SelectedRoot}"
                        MaxHeight="160" AllowDrop="True"
-                       Drop="OnHeroDrop" DragEnter="OnHeroDragEnter" DragLeave="OnHeroDragLeave"
+                       helpers:RootsDragDropHelper.Enabled="True"
                        VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
                        AutomationProperties.Name="{Binding Loc[Sort.RootsListName]}">
                 <ListBox.ItemTemplate>
@@ -182,21 +190,21 @@
                 </RadioButton>
               </WrapPanel>
 
-              <Button Command="{Binding RunCommand}"
+              <Button Command="{Binding DashboardPrimaryCommand}"
                       Height="56"
                       HorizontalAlignment="Stretch"
                       Margin="{DynamicResource SpaceBottomSM}"
                       Style="{StaticResource PrimaryButton}"
-                      AutomationProperties.Name="{Binding Loc[Start.CtaPreview]}"
-                      AutomationProperties.AcceleratorKey="F5">
+                      AutomationProperties.Name="{Binding DashboardPrimaryActionText}"
+                      AutomationProperties.AcceleratorKey="{Binding DashboardPrimaryActionAcceleratorKey}">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                  <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE768;" FontSize="22" VerticalAlignment="Center"
+                  <TextBlock FontFamily="Segoe MDL2 Assets" Text="{Binding DashboardPrimaryActionIcon}" FontSize="22" VerticalAlignment="Center"
                              Margin="{DynamicResource SpaceRightSM}"/>
-                  <TextBlock Text="{Binding Loc[Start.CtaPreview]}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                  <TextBlock Text="{Binding DashboardPrimaryActionText}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
                 </StackPanel>
               </Button>
 
-              <TextBlock Text="Die Mission-Control fokussiert jetzt auf einen klaren Hauptweg: Quelle prüfen, Preview starten, Ergebnis bewerten."
+              <TextBlock Text="{Binding DashboardPrimaryActionHintText}"
                          Style="{StaticResource CaptionText}" TextWrapping="Wrap"/>
             </StackPanel>
           </Border>

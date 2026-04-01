@@ -33,6 +33,7 @@ public sealed record DashboardProjection(
     public static DashboardProjection From(RunProjection projection, RunResult result, bool isConvertOnlyRun, bool isDryRun = false)
     {
         var isPartialCancelledOrFailed = IsPartialCancelledOrFailed(result);
+        var projectedArtifacts = RunArtifactProjection.Project(result);
 
         var winners = isConvertOnlyRun ? "–" : MarkPlan(MarkProvisional(projection.Keep.ToString(), isPartialCancelledOrFailed), isDryRun);
         var dupes = isConvertOnlyRun ? "–" : MarkPlan(MarkProvisional(projection.Dupes.ToString(), isPartialCancelledOrFailed), isDryRun);
@@ -58,8 +59,8 @@ public sealed record DashboardProjection(
             ? "–"
             : MarkPlan(MarkProvisional($"{100.0 * projection.Dupes / dedupeDenominator:F0}%", isPartialCancelledOrFailed), isDryRun);
 
-        var consoleDistribution = BuildConsoleDistribution(result.AllCandidates);
-        var dedupeGroups = BuildDedupeGroupItems(result.DedupeGroups);
+        var consoleDistribution = BuildConsoleDistribution(projectedArtifacts.AllCandidates);
+        var dedupeGroups = BuildDedupeGroupItems(projectedArtifacts.DedupeGroups);
 
         var totalMove = projection.MoveCount + projection.JunkRemovedCount;
         var moveConsequenceText = isConvertOnlyRun
@@ -132,7 +133,7 @@ public sealed record DashboardProjection(
             >= 1024 => $"{abs / 1024.0:F1} KB",
             _ => $"{abs} B"
         };
-        return bytes < 0 ? $"+{formatted}" : $"-{formatted}";
+        return bytes < 0 ? $"-{formatted}" : $"+{formatted}";
     }
 
     private static IReadOnlyList<ConsoleDistributionItem> BuildConsoleDistribution(IReadOnlyList<RomCleanup.Contracts.Models.RomCandidate> candidates)

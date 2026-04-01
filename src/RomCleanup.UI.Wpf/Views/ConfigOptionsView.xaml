@@ -1,6 +1,7 @@
 <UserControl x:Class="RomCleanup.UI.Wpf.Views.ConfigOptionsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="clr-namespace:RomCleanup.UI.Wpf.Helpers"
 >
   <!-- E3/E4: Consolidated Options — migrated from SortView (Workflow tab) -->
   <UserControl.Resources>
@@ -29,6 +30,7 @@
                      ItemsSource="{Binding Roots}"
                      SelectedItem="{Binding SelectedRoot}"
                      AllowDrop="True"
+                     helpers:RootsDragDropHelper.Enabled="True"
                      ItemTemplate="{StaticResource RootItemTemplate}"
                      VirtualizingPanel.IsVirtualizing="True"
                      VirtualizingPanel.VirtualizationMode="Recycling"

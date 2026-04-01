@@ -1890,19 +1890,6 @@ static string? SanitizeClientBindingId(string? raw)
     return raw;
 }
 
-static bool IsLoopbackAddress(string host)
-{
-    if (string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(host, "[::1]", StringComparison.OrdinalIgnoreCase))
-    {
-        return true;
-    }
-
-    return false;
-}
-
 static bool IsAnonymousEndpoint(PathString path)
 {
     return path.Equals("/healthz", StringComparison.OrdinalIgnoreCase)

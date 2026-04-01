@@ -11,7 +11,9 @@ Ziel: Einen kontrollierten Produktpfad fuer den Vergleich und das sichere Zusamm
 - Diff- und Merge-Summaries sind zentral ableitbar, damit GUI/CLI/API spaeter nicht jeweils eigene Zaehlwege bauen.
 - `R5-T02` ist abgeschlossen: `CollectionCompareService` materialisiert explizite Quellen index-first mit Root-/Fingerprint-Guards und speist damit bestehende Analysis-/Export-Pfade.
 - `R5-T03` ist abgeschlossen: Compare klassifiziert `only-in-*`, `identical`, `different`, `preferred` und `review-required` deterministisch auf Basis von `CollectionIndexEntry`, `CollectionIndexCandidateMapper` und `DeduplicationEngine.SelectWinner`.
-- Neue Regressionen decken Materialisierung, Compare-Status, unresolved-alias-review, Fingerprint-Guards sowie den weiterverwendeten Export-/Analysis-Pfad ab.
+- `R5-T04` bis `R5-T08` sind abgeschlossen: Merge-Planung, Apply, Audit, Rollback sowie GUI-/CLI-/API-Projektionen laufen jetzt ueber denselben `CollectionIndex`-, Compare-, Audit- und Rollback-Vertrag.
+- Neue Regressionen decken Materialisierung, Compare-Paging, Merge-Conflict-Regeln, Apply-/Rollback-Fehlerpfade, CLI-/API-/OpenAPI-/WPF-Paritaet sowie Root-/Allowlist-Negativfaelle ab.
+- Vollsuite grün: `7197/7197` Tests erfolgreich auf Stand `2026-04-01`.
 
 ## Nicht-Scope
 
@@ -73,7 +75,7 @@ Akzeptanz:
 Abhaengigkeiten:
 - R5-T02
 
-### [ ] R5-T04 Merge-Planer mit Safety-, Conflict- und Review-Regeln integrieren
+### [x] R5-T04 Merge-Planer mit Safety-, Conflict- und Review-Regeln integrieren
 
 Ziel: Aus dem Diff einen sicheren, nachvollziehbaren Merge-Plan ableiten.
 
@@ -90,7 +92,7 @@ Akzeptanz:
 Abhaengigkeiten:
 - R5-T03
 
-### [ ] R5-T05 Merge-Execute, Audit und Rollback ueber bestehende mutierende Infrastruktur anbinden
+### [x] R5-T05 Merge-Execute, Audit und Rollback ueber bestehende mutierende Infrastruktur anbinden
 
 Ziel: Den Merge nicht als Sonderweg, sondern ueber denselben Schutzvertrag wie andere mutierende Flows ausfuehren.
 
@@ -107,7 +109,7 @@ Akzeptanz:
 Abhaengigkeiten:
 - R5-T04
 
-### [ ] R5-T06 GUI-, CLI- und API-Projektionen fuer Compare und Merge ohne Schattenlogik verdrahten
+### [x] R5-T06 GUI-, CLI- und API-Projektionen fuer Compare und Merge ohne Schattenlogik verdrahten
 
 Ziel: Die neue Funktion in allen Kanaelen ueber dieselben Modelle sichtbar machen.
 
@@ -125,7 +127,7 @@ Abhaengigkeiten:
 - R5-T03
 - R5-T05
 
-### [ ] R5-T07 Performance- und Scope-Haertung fuer grosse Sammlungen ergaenzen
+### [x] R5-T07 Performance- und Scope-Haertung fuer grosse Sammlungen ergaenzen
 
 Ziel: Diff & Merge fuer reale NAS-/Backup-Sammlungen belastbar machen.
 
@@ -142,7 +144,7 @@ Akzeptanz:
 Abhaengigkeiten:
 - R5-T06
 
-### [ ] R5-T08 Invarianten-, Negativ- und Paritaetstests vervollstaendigen
+### [x] R5-T08 Invarianten-, Negativ- und Paritaetstests vervollstaendigen
 
 Ziel: Den neuen Produktpfad release-faehig absichern.
 
@@ -162,8 +164,8 @@ Abhaengigkeiten:
 
 ## Release-Exit
 
-- [ ] Compare und Merge laufen auf derselben Sammlungswahrheit wie Analyse und Export
-- [ ] Merge nutzt bestehende Safety-, Audit- und Rollback-Infrastruktur
-- [ ] GUI, CLI und API bilden denselben Diff-/Merge-Zustand ab
-- [ ] Konflikt- und Risk-Faelle bleiben review-pflichtig statt heuristisch automatisiert
-- [ ] Invarianten und Negativfaelle sind fuer reale Multi-Collection-Szenarien abgesichert
+- [x] Compare und Merge laufen auf derselben Sammlungswahrheit wie Analyse und Export
+- [x] Merge nutzt bestehende Safety-, Audit- und Rollback-Infrastruktur
+- [x] GUI, CLI und API bilden denselben Diff-/Merge-Zustand ab
+- [x] Konflikt- und Risk-Faelle bleiben review-pflichtig statt heuristisch automatisiert
+- [x] Invarianten und Negativfaelle sind fuer reale Multi-Collection-Szenarien abgesichert

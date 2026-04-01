@@ -133,6 +133,26 @@ public sealed class UiProjectionTests
     }
 
     [Fact]
+    public void DashboardProjection_PositiveConvertSavedBytes_UsesPositiveSign()
+    {
+        var result = new RunResult
+        {
+            TotalFilesScanned = 1,
+            ConvertedCount = 1,
+            ConvertSavedBytes = 1024,
+            AllCandidates =
+            [
+                new RomCandidate { MainPath = "a.zip", Category = FileCategory.Game, DatMatch = false }
+            ]
+        };
+
+        var projection = RunProjectionFactory.Create(result);
+        var dashboard = DashboardProjection.From(projection, result, isConvertOnlyRun: false);
+
+        Assert.Equal("+1.0 KB", dashboard.ConvertSavedBytesDisplay);
+    }
+
+    [Fact]
     public void DashboardProjection_CancelledPartialRun_MarksTopStatsAsProvisional()
     {
         var result = new RunResult

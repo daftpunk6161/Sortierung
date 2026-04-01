@@ -287,7 +287,7 @@ public static class FrontendExportService
 
     private static void SaveXml(string outputPath, XDocument doc)
     {
-        var fullOutputPath = Path.GetFullPath(outputPath);
+        var fullOutputPath = ValidateOutputPath(outputPath);
         var directory = Path.GetDirectoryName(fullOutputPath);
         if (!string.IsNullOrWhiteSpace(directory))
             Directory.CreateDirectory(directory);
@@ -298,7 +298,7 @@ public static class FrontendExportService
 
     private static IReadOnlyList<FrontendExportArtifact> WriteSingleArtifact(string outputPath, string label, string content)
     {
-        var fullOutputPath = Path.GetFullPath(outputPath);
+        var fullOutputPath = ValidateOutputPath(outputPath);
         var directory = Path.GetDirectoryName(fullOutputPath);
         if (!string.IsNullOrWhiteSpace(directory))
             Directory.CreateDirectory(directory);
@@ -309,8 +309,7 @@ public static class FrontendExportService
 
     private static string EnsureTargetRoot(string outputPath, string? requiredSubDirectory)
     {
-        var fullOutputPath = Path.GetFullPath(outputPath);
-        ValidateOutputPath(fullOutputPath);
+        var fullOutputPath = ValidateOutputPath(outputPath);
 
         var root = string.IsNullOrWhiteSpace(requiredSubDirectory)
             ? fullOutputPath
@@ -325,28 +324,11 @@ public static class FrontendExportService
         if (!combined.StartsWith(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Export path resolved outside the allowed output root.");
 
-        return combined;
+        return ValidateOutputPath(combined);
     }
 
-    private static void ValidateOutputPath(string fullOutputPath)
-    {
-        if (SafetyValidator.IsProtectedSystemPath(fullOutputPath))
-            throw new InvalidOperationException("Export output path points to a protected system path.");
-
-        if (SafetyValidator.IsDriveRoot(fullOutputPath))
-            throw new InvalidOperationException("Export output path must not be a drive root.");
-
-        var existingDirectory = Directory.Exists(fullOutputPath)
-            ? fullOutputPath
-            : Path.GetDirectoryName(fullOutputPath);
-
-        if (!string.IsNullOrWhiteSpace(existingDirectory) && Directory.Exists(existingDirectory))
-        {
-            var info = new DirectoryInfo(existingDirectory);
-            if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
-                throw new InvalidOperationException("Export output path must not target a reparse-point directory.");
-        }
-    }
+    private static string ValidateOutputPath(string outputPath)
+        => SafetyValidator.EnsureSafeOutputPath(outputPath);
 
     private static bool HasFileExtension(string path)
         => !string.IsNullOrWhiteSpace(Path.GetExtension(path));

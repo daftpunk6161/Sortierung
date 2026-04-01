@@ -25,6 +25,7 @@ public sealed partial class MainViewModel
         nameof(AggressiveJunk),
         nameof(UseDat),
         nameof(EnableDatRename),
+        nameof(ApproveReviews),
         nameof(DatRoot),
         nameof(DatHashType),
         nameof(ConvertEnabled),
@@ -495,7 +496,7 @@ public sealed partial class MainViewModel
 
         var summary = _loc["Dialog.ConfirmConversion.Summary"];
 
-        var confirmed = DialogService.ConfirmConversionReview(
+        var confirmed = _dialog.ConfirmConversionReview(
             _loc["Dialog.ConfirmConversion.Title"],
             summary,
             reviewEntries);
@@ -1145,15 +1146,16 @@ public sealed partial class MainViewModel
         }
 
         LastRunResult = result;
-        LastCandidates = new ObservableCollection<RomCandidate>(result.AllCandidates);
-        LastDedupeGroups = new ObservableCollection<DedupeGroup>(result.DedupeGroups);
+        var projectedArtifacts = RunArtifactProjection.Project(result);
+        LastCandidates = new ObservableCollection<RomCandidate>(projectedArtifacts.AllCandidates);
+        LastDedupeGroups = new ObservableCollection<DedupeGroup>(projectedArtifacts.DedupeGroups);
         RefreshToolLockState();
         var projection = RunProjectionFactory.Create(result);
 
         Progress = 100;
         var isConvertOnlyRun = ConvertOnly ||
                                (result.MoveResult is null && result.JunkMoveResult is null &&
-                                (result.ConvertedCount > 0 || result.ConvertErrorCount > 0 || result.ConvertSkippedCount > 0));
+                                (result.ConvertedCount > 0 || result.ConvertErrorCount > 0 || result.ConvertSkippedCount > 0 || result.ConvertBlockedCount > 0));
         var isDryRun = DryRun;
         var dashboard = DashboardProjection.From(projection, result, isConvertOnlyRun, isDryRun);
 
@@ -1175,9 +1177,6 @@ public sealed partial class MainViewModel
         Run.GamesRaw = projection.Games;
         Run.DupesRaw = projection.Dupes;
         Run.JunkRaw = projection.Junk;
-
-        // GUI-021: Sync to MissionControl child VM
-        MissionControl.UpdateLastRun(dashboard.Winners, dashboard.Dupes, dashboard.Junk, dashboard.Duration);
 
         // A-21: Load DatAudit results into DatAuditViewModel
         DatAudit.LoadResult(result.DatAuditResult);
@@ -1282,6 +1281,7 @@ public sealed partial class MainViewModel
         builder.Append("aggressiveJunk=").Append(AggressiveJunk).Append('|');
         builder.Append("useDat=").Append(UseDat).Append('|');
         builder.Append("enableDatRename=").Append(EnableDatRename).Append('|');
+        builder.Append("approveReviews=").Append(ApproveReviews).Append('|');
         builder.Append("datRoot=").Append(DatRoot).Append('|');
         builder.Append("datHashType=").Append(DatHashType).Append('|');
         builder.Append("convertEnabled=").Append(ConvertEnabled).Append('|');

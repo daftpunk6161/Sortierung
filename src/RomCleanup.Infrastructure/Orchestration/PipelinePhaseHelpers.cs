@@ -39,6 +39,32 @@ internal static class PipelinePhaseHelpers
             context.AuditStore.AppendAuditRow(options.AuditPath, root, sourcePath, targetPath, RunConstants.AuditActions.Convert, "GAME", "", $"format-convert:{toolName}");
     }
 
+    internal static void AppendConversionSourceAudit(
+        PipelineContext context,
+        RunOptions options,
+        string sourcePath,
+        string? trashPath,
+        string category,
+        string reason)
+    {
+        if (string.IsNullOrEmpty(options.AuditPath) || string.IsNullOrEmpty(trashPath))
+            return;
+
+        var root = FindRootForPath(sourcePath, options.Roots);
+        if (root is not null)
+        {
+            context.AuditStore.AppendAuditRow(
+                options.AuditPath,
+                root,
+                sourcePath,
+                trashPath,
+                RunConstants.AuditActions.ConvertSource,
+                category,
+                "",
+                reason);
+        }
+    }
+
     internal static void AppendConversionFailedAudit(PipelineContext context, RunOptions options, string sourcePath, string? targetPath, string toolName)
     {
         if (string.IsNullOrEmpty(options.AuditPath) || string.IsNullOrEmpty(targetPath))
@@ -59,10 +85,10 @@ internal static class PipelinePhaseHelpers
             context.AuditStore.AppendAuditRow(options.AuditPath, root, sourcePath, "", "CONVERT_ERROR", "GAME", "", $"convert-error:{reason}");
     }
 
-    internal static void MoveConvertedSourceToTrash(PipelineContext context, RunOptions options, string sourcePath, string? convertedPath)
+    internal static string? MoveConvertedSourceToTrash(PipelineContext context, RunOptions options, string sourcePath, string? convertedPath)
     {
         if (string.IsNullOrEmpty(convertedPath) || !File.Exists(convertedPath))
-            return;
+            return null;
 
         // SEC-CONV-08: Verify converted output is a real file, not a reparse point/junction
         try
@@ -71,35 +97,89 @@ internal static class PipelinePhaseHelpers
             if ((attrs & FileAttributes.ReparsePoint) != 0)
             {
                 context.OnProgress?.Invoke($"WARNING: Converted output is a reparse point, source not trashed: {convertedPath}");
-                return;
+                return null;
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             context.OnProgress?.Invoke($"WARNING: Cannot verify converted output, source not trashed: {convertedPath}");
-            return;
+            return null;
         }
+
+        if (!TryMovePathToConvertedTrash(context, options, sourcePath, out var trashDest, out var failureReason))
+        {
+            if (!string.IsNullOrWhiteSpace(failureReason))
+                context.OnProgress?.Invoke($"WARNING: Could not move source after conversion: {failureReason}");
+            return null;
+        }
+
+        return trashDest;
+    }
+
+    internal static bool TryMovePathToConvertedTrash(
+        PipelineContext context,
+        RunOptions options,
+        string sourcePath,
+        out string? trashDestinationPath,
+        out string? failureReason)
+    {
+        trashDestinationPath = null;
+        failureReason = null;
 
         var root = FindRootForPath(sourcePath, options.Roots);
         if (root is null)
-            return;
+        {
+            failureReason = $"path-not-within-allowed-roots:{sourcePath}";
+            return false;
+        }
 
         var trashBase = string.IsNullOrEmpty(options.TrashRoot) ? root : options.TrashRoot;
         var trashDir = Path.Combine(trashBase, RunConstants.WellKnownFolders.TrashConverted);
         context.FileSystem.EnsureDirectory(trashDir);
+
         var fileName = Path.GetFileName(sourcePath);
-        var trashDest = context.FileSystem.ResolveChildPathWithinRoot(trashBase, Path.Combine(RunConstants.WellKnownFolders.TrashConverted, fileName));
-        if (trashDest is null)
-            return;
+        var requestedTrashDest = context.FileSystem.ResolveChildPathWithinRoot(
+            trashBase,
+            Path.Combine(RunConstants.WellKnownFolders.TrashConverted, fileName));
+        if (requestedTrashDest is null)
+        {
+            failureReason = $"trash-destination-invalid:{sourcePath}";
+            return false;
+        }
 
         try
         {
-            context.FileSystem.MoveItemSafely(sourcePath, trashDest);
+            trashDestinationPath = context.FileSystem.MoveItemSafely(sourcePath, requestedTrashDest);
+            if (string.IsNullOrWhiteSpace(trashDestinationPath))
+            {
+                failureReason = $"move-to-trash-failed:{sourcePath}";
+                return false;
+            }
+
+            return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            context.OnProgress?.Invoke($"WARNING: Could not move source after conversion: {ex.Message}");
+            failureReason = ex.Message;
+            return false;
         }
+    }
+
+    internal static IReadOnlyList<string> GetConversionOutputPaths(ConversionResult conversionResult)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var paths = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(conversionResult.TargetPath) && seen.Add(conversionResult.TargetPath))
+            paths.Add(conversionResult.TargetPath);
+
+        foreach (var additionalPath in conversionResult.AdditionalTargetPaths)
+        {
+            if (!string.IsNullOrWhiteSpace(additionalPath) && seen.Add(additionalPath))
+                paths.Add(additionalPath);
+        }
+
+        return paths;
     }
 
     /// <summary>

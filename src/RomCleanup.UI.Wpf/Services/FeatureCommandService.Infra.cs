@@ -23,30 +23,49 @@ public sealed partial class FeatureCommandService
 
         using (collectionIndex)
         {
-            var insights = RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, 30).GetAwaiter().GetResult();
-            var trends = RunHistoryTrendService.LoadTrendHistoryAsync(collectionIndex, 30).GetAwaiter().GetResult();
-
-            var sb = new StringBuilder();
-            sb.AppendLine(RunHistoryInsightsService.FormatStorageInsightReport(insights));
-            sb.AppendLine();
-            sb.AppendLine(RunHistoryTrendService.FormatTrendReport(
-                trends,
-                "Run Trends",
-                "Keine Run-Historie verfuegbar.",
-                "Aktuell",
-                "Delta Dateien",
-                "Delta Duplikate",
-                "Historie",
-                "Dateien",
-                "Qualitaet"));
-
-            if (_vm.LastCandidates.Count > 0)
+            try
             {
-                sb.AppendLine();
-                sb.AppendLine(FeatureService.AnalyzeStorageTiers(_vm.LastCandidates));
-            }
+                var insights = RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, 30).GetAwaiter().GetResult();
+                var trends = RunHistoryTrendService.LoadTrendHistoryAsync(collectionIndex, 30).GetAwaiter().GetResult();
 
-            _dialog.ShowText("Storage-Tiering", sb.ToString());
+                var sb = new StringBuilder();
+                sb.AppendLine(RunHistoryInsightsService.FormatStorageInsightReport(insights));
+                sb.AppendLine();
+                sb.AppendLine(RunHistoryTrendService.FormatTrendReport(
+                    trends,
+                    "Run Trends",
+                    "Keine Run-Historie verfuegbar.",
+                    "Aktuell",
+                    "Delta Dateien",
+                    "Delta Duplikate",
+                    "Historie",
+                    "Dateien",
+                    "Qualitaet"));
+
+                if (_vm.LastCandidates.Count > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine(FeatureService.AnalyzeStorageTiers(_vm.LastCandidates));
+                }
+
+                _dialog.ShowText("Storage-Tiering", sb.ToString());
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                LogWarning("GUI-HISTORY", $"Run-Historie nicht verfuegbar: {ex.Message}");
+                var sb = new StringBuilder();
+                sb.AppendLine("Storage-Tiering");
+                sb.AppendLine();
+                sb.AppendLine("Run-Historie nicht verfuegbar.");
+
+                if (_vm.LastCandidates.Count > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine(FeatureService.AnalyzeStorageTiers(_vm.LastCandidates));
+                }
+
+                _dialog.ShowText("Storage-Tiering", sb.ToString());
+            }
         }
     }
 

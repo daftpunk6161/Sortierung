@@ -62,6 +62,24 @@ public sealed class IdempotencyFingerprintTests
         Assert.NotEqual(a, b);
     }
 
+    [Fact]
+    public void DifferentPreferRegionsOrder_ProducesDifferentFingerprint()
+    {
+        var a = BuildFingerprint(req => req.PreferRegions = ["EUR", "USA", "JPN"]);
+        var b = BuildFingerprint(req => req.PreferRegions = ["USA", "EUR", "JPN"]);
+
+        Assert.NotEqual(a, b);
+    }
+
+    [Fact]
+    public void DifferentConvertFormat_ProducesDifferentFingerprint()
+    {
+        var a = BuildFingerprint(req => req.ConvertFormat = "chd");
+        var b = BuildFingerprint(req => req.ConvertFormat = "rvz");
+
+        Assert.NotEqual(a, b);
+    }
+
     private static string BuildFingerprint(Action<RunRequest> configure)
     {
         var request = new RunRequest

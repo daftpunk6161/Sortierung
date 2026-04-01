@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
+using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Orchestration;
@@ -16,6 +18,7 @@ namespace RomCleanup.UI.Wpf.ViewModels;
 public sealed class RunViewModel : ObservableObject
 {
     private readonly ILocalizationService _loc;
+    private readonly object _collectionLock = new();
 
     /// <summary>Raised when command CanExecute should be re-evaluated.</summary>
     public event Action? CommandRequeryRequested;
@@ -23,6 +26,10 @@ public sealed class RunViewModel : ObservableObject
     public RunViewModel(ILocalizationService? loc = null)
     {
         _loc = loc ?? new LocalizationService();
+        BindingOperations.EnableCollectionSynchronization(ConsoleDistribution, _collectionLock);
+        BindingOperations.EnableCollectionSynchronization(DedupeGroupItems, _collectionLock);
+        DedupeGroupItemsView = CollectionViewSource.GetDefaultView(DedupeGroupItems);
+        DedupeGroupItemsView.Filter = FilterDedupeGroupItem;
     }
 
     // ═══ RUN RESULT STATE ═══════════════════════════════════════════════
@@ -272,6 +279,18 @@ public sealed class RunViewModel : ObservableObject
     // ═══ ANALYSE DATA ═══════════════════════════════════════════════════
     public ObservableCollection<ConsoleDistributionItem> ConsoleDistribution { get; } = [];
     public ObservableCollection<DedupeGroupItem> DedupeGroupItems { get; } = [];
+    public ICollectionView DedupeGroupItemsView { get; }
+
+    private string _decisionSearchText = "";
+    public string DecisionSearchText
+    {
+        get => _decisionSearchText;
+        set
+        {
+            if (SetProperty(ref _decisionSearchText, value))
+                DedupeGroupItemsView.Refresh();
+        }
+    }
 
     private string _moveConsequenceText = "";
     public string MoveConsequenceText { get => _moveConsequenceText; set => SetProperty(ref _moveConsequenceText, value); }
@@ -291,10 +310,10 @@ public sealed class RunViewModel : ObservableObject
         3 => HasRunResult && LastRunResult is { } r3
             ? _loc.Format("Run.DedupeDone", r3.WinnerCount, r3.LoserCount)
             : _loc["Run.DedupeDesc"],
-        4 => _loc["Run.SortDesc"],
-        5 => HasRunResult && LastRunResult?.MoveResult is { } mv
+        4 => HasRunResult && LastRunResult?.MoveResult is { } mv
             ? _loc.Format("Run.MoveDone", mv.MoveCount, mv.FailCount)
             : _loc["Run.MoveDesc"],
+        5 => _loc["Run.SortDesc"],
         6 => HasRunResult && LastRunResult is { } r6 && r6.ConvertedCount > 0
             ? _loc.Format("Run.ConvertDone", r6.ConvertedCount)
             : _loc["Run.ConvertDesc"],
@@ -352,6 +371,20 @@ public sealed class RunViewModel : ObservableObject
         {
             CurrentRunState = RunState.Failed;
         }
+    }
+
+    private bool FilterDedupeGroupItem(object obj)
+    {
+        if (obj is not DedupeGroupItem group)
+            return false;
+
+        var term = _decisionSearchText.Trim();
+        if (string.IsNullOrEmpty(term))
+            return true;
+
+        return group.GameKey.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || group.Winner.FileName.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || group.Losers.Any(l => l.FileName.Contains(term, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Refresh all status dot indicators based on current configuration.</summary>

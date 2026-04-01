@@ -2,6 +2,7 @@ using System.Text;
 using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Orchestration;
+using RomCleanup.Infrastructure.Safety;
 
 namespace RomCleanup.Infrastructure.Reporting;
 
@@ -13,10 +14,11 @@ public static class RunReportWriter
     public static IReadOnlyList<ReportEntry> BuildEntries(RunResult result, string mode = RunConstants.ModeMove)
     {
         var isDryRun = string.Equals(mode, RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase);
+        var projectedArtifacts = RunArtifactProjection.Project(result);
         var entries = new List<ReportEntry>();
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var group in result.DedupeGroups)
+        foreach (var group in projectedArtifacts.DedupeGroups)
         {
             entries.Add(new ReportEntry
             {
@@ -72,7 +74,7 @@ public static class RunReportWriter
 
         // Add remaining candidates not yet covered by dedupe groups.
         // When no dedupe ran (ConvertOnly, empty processingCandidates), this captures all files.
-        foreach (var candidate in result.AllCandidates)
+        foreach (var candidate in projectedArtifacts.AllCandidates)
         {
             if (!seenPaths.Add(candidate.MainPath))
                 continue;
@@ -184,7 +186,7 @@ public static class RunReportWriter
 
     public static string WriteReport(string reportPath, RunResult result, string mode)
     {
-        var fullPath = Path.GetFullPath(reportPath);
+        var fullPath = SafetyValidator.EnsureSafeOutputPath(reportPath);
         var entries = BuildEntries(result, mode);
         var summary = BuildSummary(result, mode);
         var reportDir = Path.GetDirectoryName(fullPath)

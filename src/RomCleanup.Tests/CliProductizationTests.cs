@@ -1,5 +1,6 @@
 using System.IO;
 using RomCleanup.CLI;
+using RomCleanup.Contracts;
 using Xunit;
 
 namespace RomCleanup.Tests;
@@ -43,6 +44,20 @@ public sealed class CliProductizationTests : IDisposable
         Assert.Contains("--profile <id>", text, StringComparison.Ordinal);
         Assert.Contains("--profile-file <file>", text, StringComparison.Ordinal);
         Assert.Contains("launchbox|emulationstation|playnite", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WriteUsage_UsesRunConstantsDefaultPreferRegions()
+    {
+        using var stdout = new StringWriter();
+
+        CliOutputWriter.WriteUsage(stdout);
+
+        var text = stdout.ToString();
+        Assert.Contains(
+            $"default: {string.Join(",", RunConstants.DefaultPreferRegions)}",
+            text,
+            StringComparison.Ordinal);
     }
 
     [Fact]

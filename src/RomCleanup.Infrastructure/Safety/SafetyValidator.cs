@@ -274,7 +274,12 @@ public sealed class SafetyValidator
                     _ => new[] { "--version" }
                 };
 
-                var probeResult = _tools.InvokeProcess(toolPath, versionArgs, $"{toolName} probe");
+                var probeResult = _tools.InvokeProcess(
+                    toolPath,
+                    versionArgs,
+                    $"{toolName} probe",
+                    TimeSpan.FromSeconds(timeoutSeconds),
+                    CancellationToken.None);
 
                 if (probeResult.Success || probeResult.ExitCode == 0)
                 {
@@ -367,6 +372,33 @@ public sealed class SafetyValidator
         return trimmed.Length == 2 && char.IsLetter(trimmed[0]) && trimmed[1] == ':';
     }
 
+    /// <summary>
+    /// Single source of truth for writable export/report output paths.
+    /// Blocks invalid paths, protected system locations, drive roots, and reparse-point targets.
+    /// Returns the normalized absolute path when the destination is safe to create or overwrite.
+    /// </summary>
+    public static string EnsureSafeOutputPath(string path, bool allowUnc = true)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            throw new InvalidOperationException("Output path must not be empty.");
+
+        var trimmed = path.Trim();
+        if (!allowUnc && trimmed.StartsWith(@"\\", StringComparison.Ordinal))
+            throw new InvalidOperationException("Output path must not be a UNC path.");
+
+        var normalized = NormalizePath(trimmed)
+            ?? throw new InvalidOperationException("Output path is invalid.");
+
+        if (IsProtectedSystemPath(normalized))
+            throw new InvalidOperationException("Output path points to a protected system path.");
+
+        if (IsDriveRoot(normalized))
+            throw new InvalidOperationException("Output path must not be a drive root.");
+
+        EnsureNoReparsePointInExistingAncestry(normalized);
+        return normalized;
+    }
+
     private static List<string> ParseProtectedPaths(string? text, bool strict)
     {
         if (!string.IsNullOrWhiteSpace(text))
@@ -381,5 +413,56 @@ public sealed class SafetyValidator
         // Default: use profile-based protection
         var profile = strict ? GetProfile("Conservative") : GetProfile("Balanced");
         return profile.ProtectedPaths.ToList();
+    }
+
+    private static void EnsureNoReparsePointInExistingAncestry(string normalizedPath)
+    {
+        try
+        {
+            if (File.Exists(normalizedPath))
+            {
+                var attrs = File.GetAttributes(normalizedPath);
+                if ((attrs & FileAttributes.ReparsePoint) != 0)
+                    throw new InvalidOperationException("Output path must not target a reparse-point file.");
+            }
+
+            var current = Directory.Exists(normalizedPath)
+                ? Path.GetFullPath(normalizedPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                : Path.GetDirectoryName(Path.GetFullPath(normalizedPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+            while (!string.IsNullOrWhiteSpace(current))
+            {
+                if (Directory.Exists(current))
+                {
+                    var info = new DirectoryInfo(current);
+                    if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
+                        throw new InvalidOperationException("Output path must not target a reparse-point directory.");
+                }
+
+                var root = Path.GetPathRoot(current);
+                if (!string.IsNullOrWhiteSpace(root)
+                    && string.Equals(
+                        current.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                        root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+
+                var parent = Path.GetDirectoryName(current.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                if (string.IsNullOrWhiteSpace(parent) || string.Equals(parent, current, StringComparison.OrdinalIgnoreCase))
+                    break;
+
+                current = parent;
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            throw new InvalidOperationException("Output path attributes could not be verified.", ex);
+        }
     }
 }

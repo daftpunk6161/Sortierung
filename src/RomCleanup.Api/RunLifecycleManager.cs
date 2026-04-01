@@ -350,6 +350,8 @@ public sealed class RunLifecycleManager
             ApiRunStatus.Running => "in-progress",
             ApiRunStatus.Completed when hasAudit => "rollback-available",
             ApiRunStatus.Completed => "not-required",
+            ApiRunStatus.CompletedWithErrors when hasAudit => "partial-rollback-available",
+            ApiRunStatus.CompletedWithErrors => "manual-cleanup-may-be-required",
             ApiRunStatus.Cancelled when hasAudit => "partial-rollback-available",
             ApiRunStatus.Failed when hasAudit => "partial-rollback-available",
             ApiRunStatus.Cancelled or ApiRunStatus.Failed => "manual-cleanup-may-be-required",
@@ -387,9 +389,16 @@ public sealed class RunLifecycleManager
             .Select(ArtifactPathResolver.NormalizeRootForIdentity)
             .OrderBy(root => root, StringComparer.OrdinalIgnoreCase);
 
-        var regions = (request.PreferRegions ?? Array.Empty<string>())
+        var requestedRegions = (request.PreferRegions is { Length: > 0 }
+                ? request.PreferRegions
+                : RunConstants.DefaultPreferRegions)
             .Select(region => region.Trim().ToUpperInvariant())
-            .OrderBy(region => region, StringComparer.Ordinal);
+            .Where(region => !string.IsNullOrWhiteSpace(region))
+            .ToArray();
+
+        var regions = requestedRegions.Length == 0
+            ? RunConstants.DefaultPreferRegions
+            : requestedRegions;
 
         var payload = string.Join("\n", new[]
         {
@@ -408,7 +417,7 @@ public sealed class RunLifecycleManager
             request.KeepUnknownWhenOnlyGames ? "1" : "0",
             string.IsNullOrWhiteSpace(request.DatRoot) ? "" : ArtifactPathResolver.NormalizeRootForIdentity(request.DatRoot),
             string.IsNullOrWhiteSpace(request.HashType) ? "SHA1" : request.HashType.Trim().ToUpperInvariant(),
-            string.IsNullOrWhiteSpace(request.ConvertFormat) ? "" : "AUTO",
+            string.IsNullOrWhiteSpace(request.ConvertFormat) ? "" : request.ConvertFormat.Trim().ToLowerInvariant(),
             string.IsNullOrWhiteSpace(request.ConflictPolicy) ? "RENAME" : request.ConflictPolicy.Trim().ToUpperInvariant(),
             request.ConvertOnly ? "1" : "0",
             request.ApproveReviews ? "1" : "0",

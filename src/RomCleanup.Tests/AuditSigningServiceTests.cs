@@ -231,6 +231,44 @@ public sealed class AuditSigningServiceTests : IDisposable
     }
 
     [Fact]
+    public void Rollback_ConvertAction_DeletesTarget_AndRestoresSourceFromTrash()
+    {
+        var root = Path.Combine(_tempDir, "convert-root");
+        var trashDir = Path.Combine(root, "_TRASH_CONVERTED");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(trashDir);
+
+        var originalSourcePath = Path.Combine(root, "game.zip");
+        var trashedSourcePath = Path.Combine(trashDir, "game.zip");
+        var convertedTargetPath = Path.Combine(root, "game.chd");
+        File.WriteAllText(trashedSourcePath, "source-bytes");
+        File.WriteAllText(convertedTargetPath, "converted-bytes");
+
+        var csvPath = Path.Combine(_tempDir, "audit_convert_rollback.csv");
+        File.WriteAllText(
+            csvPath,
+            "RootPath,OldPath,NewPath,Action\n" +
+            $"{root},{originalSourcePath},{convertedTargetPath},CONVERT\n" +
+            $"{root},{originalSourcePath},{trashedSourcePath},CONVERT_SOURCE\n",
+            Encoding.UTF8);
+
+        var service = new AuditSigningService(new MinimalFs());
+        service.WriteMetadataSidecar(csvPath, 2);
+
+        var result = service.Rollback(
+            csvPath,
+            allowedRestoreRoots: [root],
+            allowedCurrentRoots: [root],
+            dryRun: false);
+
+        Assert.Equal(2, result.EligibleRows);
+        Assert.Equal(2, result.RolledBack);
+        Assert.True(File.Exists(originalSourcePath));
+        Assert.False(File.Exists(trashedSourcePath));
+        Assert.False(File.Exists(convertedTargetPath));
+    }
+
+    [Fact]
     public void Rollback_NonExistentCsv_ReturnsEmpty()
     {
         var fs = new MinimalFs();
@@ -426,7 +464,11 @@ public sealed class AuditSigningServiceTests : IDisposable
         public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
             => Path.Combine(rootPath, relativePath);
         public bool IsReparsePoint(string path) => false;
-        public void DeleteFile(string path) { }
+        public void DeleteFile(string path)
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
         public void CopyFile(string sourcePath, string destinationPath, bool overwrite = false) { }
     }
 

@@ -10,6 +10,7 @@ using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Paths;
 using RomCleanup.Infrastructure.Reporting;
+using RomCleanup.Infrastructure.Safety;
 using RomCleanup.Infrastructure.Tools;
 using RomCleanup.UI.Wpf.Models;
 using RomCleanup.UI.Wpf.ViewModels;
@@ -54,6 +55,25 @@ public sealed partial class FeatureCommandService
     {
         _vm.AddLog(message, "WARN");
         _vm.ErrorSummaryItems.Add(new UiError(code, message, UiErrorSeverity.Warning, fixHint));
+    }
+
+    private bool TryResolveSafeOutputPath(string? selectedPath, string purpose, out string safePath)
+    {
+        safePath = string.Empty;
+        if (string.IsNullOrWhiteSpace(selectedPath))
+            return false;
+
+        try
+        {
+            safePath = SafetyValidator.EnsureSafeOutputPath(selectedPath);
+            return true;
+        }
+        catch (InvalidOperationException ex)
+        {
+            LogWarning("GUI-OUTPUT", $"{purpose} blockiert: {ex.Message}");
+            _dialog.Error($"{purpose} blockiert:\n\n{ex.Message}", purpose);
+            return false;
+        }
     }
 
     private void TryOpenWithShell(string path, string purpose, bool allowDirectory = false)
@@ -196,7 +216,6 @@ public sealed partial class FeatureCommandService
         cmds[FeatureCommandKeys.CollectionManager] = new RelayCommand(CollectionManager);
         cmds[FeatureCommandKeys.CloneListViewer] = new RelayCommand(CloneListViewer);
         cmds[FeatureCommandKeys.VirtualFolderPreview] = new RelayCommand(VirtualFolderPreview);
-        cmds[FeatureCommandKeys.CollectionDiff] = new RelayCommand(CollectionDiff);
         cmds[FeatureCommandKeys.CollectionMerge] = new RelayCommand(CollectionMerge);
 
         // ── Sicherheit & Integrität ─────────────────────────────────────
@@ -241,12 +260,12 @@ public sealed partial class FeatureCommandService
     private void ExportLog()
     {
         var path = _dialog.SaveFile(_vm.Loc["Cmd.ExportLog"], _vm.Loc["Cmd.FilterTxt"], "log-export.txt");
-        if (path is null) return;
+        if (!TryResolveSafeOutputPath(path, "Log-Export", out var safePath)) return;
         try
         {
             var lines = _vm.LogEntries.Select(entry => $"[{entry.Level}] {entry.Text}");
-            File.WriteAllLines(path, lines);
-            _vm.AddLog(_vm.Loc.Format("Cmd.LogExported", path), "INFO");
+            File.WriteAllLines(safePath, lines);
+            _vm.AddLog(_vm.Loc.Format("Cmd.LogExported", safePath), "INFO");
         }
         catch (Exception ex)
         { LogError("IO-EXPORT", _vm.Loc.Format("Cmd.ExportFailed", ex.Message)); }
@@ -414,11 +433,11 @@ public sealed partial class FeatureCommandService
     private void ExportUnified()
     {
         var path = _dialog.SaveFile("Konfiguration exportieren", "JSON (*.json)|*.json", "romcleanup-config.json");
-        if (path is null) return;
+        if (!TryResolveSafeOutputPath(path, "Konfigurations-Export", out var safePath)) return;
         try
         {
-            ProfileService.Export(path, _vm.GetCurrentConfigMap());
-            _vm.AddLog($"Konfiguration exportiert: {path} — Hinweis: Enthält lokale Pfade (Roots, ToolPaths). Vor dem Teilen prüfen.", "INFO");
+            ProfileService.Export(safePath, _vm.GetCurrentConfigMap());
+            _vm.AddLog($"Konfiguration exportiert: {safePath} — Hinweis: Enthält lokale Pfade (Roots, ToolPaths). Vor dem Teilen prüfen.", "INFO");
         }
         catch (Exception ex) { LogError("IO-EXPORT", _vm.Loc.Format("Cmd.ExportFailed", ex.Message)); }
     }

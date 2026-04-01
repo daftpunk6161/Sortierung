@@ -303,16 +303,22 @@ public sealed partial class FeatureCommandService
             try
             {
                 var customDatPath = Path.Combine(_vm.DatRoot, "custom.dat");
-                if (File.Exists(customDatPath))
+                if (!TryResolveSafeOutputPath(customDatPath, "Custom-DAT", out var safeCustomDatPath))
+                    return;
+
+                if (File.Exists(safeCustomDatPath))
                 {
-                    var content = File.ReadAllText(customDatPath);
+                    var content = File.ReadAllText(safeCustomDatPath);
                     var closeTag = "</datafile>";
                     var idx = content.LastIndexOf(closeTag, StringComparison.OrdinalIgnoreCase);
                     if (idx >= 0) content = content[..idx] + xmlEntry + "\n" + closeTag;
                     else content += "\n" + xmlEntry;
-                    var tempPath = customDatPath + ".tmp";
-                    File.WriteAllText(tempPath, content);
-                    File.Move(tempPath, customDatPath, overwrite: true);
+                    var tempPath = safeCustomDatPath + ".tmp";
+                    if (!TryResolveSafeOutputPath(tempPath, "Custom-DAT", out var safeTempPath))
+                        return;
+
+                    File.WriteAllText(safeTempPath, content);
+                    File.Move(safeTempPath, safeCustomDatPath, overwrite: true);
                 }
                 else
                 {
@@ -321,9 +327,9 @@ public sealed partial class FeatureCommandService
                                   "<datafile>\n  <header>\n    <name>Custom DAT</name>\n" +
                                   "    <description>Benutzerdefinierte DAT-Einträge</description>\n  </header>\n" +
                                   xmlEntry + "\n</datafile>";
-                    File.WriteAllText(customDatPath, fullXml);
+                    File.WriteAllText(safeCustomDatPath, fullXml);
                 }
-                _vm.AddLog($"Custom-DAT-Eintrag gespeichert: {customDatPath}", "INFO");
+                _vm.AddLog($"Custom-DAT-Eintrag gespeichert: {safeCustomDatPath}", "INFO");
             }
             catch (Exception ex) { LogError("DAT-CUSTOM", $"Custom-DAT Fehler: {ex.Message}"); }
         }
@@ -337,10 +343,10 @@ public sealed partial class FeatureCommandService
         if (_vm.LastCandidates.Count == 0)
         { _vm.AddLog("Keine Daten für Hash-Export.", "WARN"); return; }
         var path = _dialog.SaveFile("Hash-Datenbank exportieren", "JSON (*.json)|*.json", "hash-database.json");
-        if (path is null) return;
+        if (!TryResolveSafeOutputPath(path, "Hash-Datenbank-Export", out var safePath)) return;
         var entries = _vm.LastCandidates.Select(c => new { c.MainPath, c.GameKey, c.Extension, c.Region, c.DatMatch, c.SizeBytes }).ToList();
-        File.WriteAllText(path, JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true }));
-        _vm.AddLog($"Hash-Datenbank exportiert: {path} ({entries.Count} Einträge)", "INFO");
+        File.WriteAllText(safePath, JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true }));
+        _vm.AddLog($"Hash-Datenbank exportiert: {safePath} ({entries.Count} Einträge)", "INFO");
     }
 
 }

@@ -12,7 +12,7 @@ Die Reihenfolge folgt den Projektprioritaeten: Korrektheit, Determinismus, Siche
 - [x] [R2 Productization Execution](../../plan/r2-productization-execution.md)
 - [x] [R3 Reach Execution](../../plan/r3-reach-execution.md)
 - [x] [R4 Stabilization Execution](../../plan/r4-stabilization-execution.md)
-- [ ] [R5 Collection Diff & Merge Execution](../../plan/r5-collection-diff-merge-execution.md)
+- [x] [R5 Collection Diff & Merge Execution](../../plan/r5-collection-diff-merge-execution.md)
 
 ## Priorisierung
 
@@ -158,40 +158,41 @@ Status: abgeschlossen am `2026-04-01`
 ## R5 Collection Diff & Merge
 
 Ziel: Einen sicheren, auditierbaren Produktpfad fuer den Vergleich und das Zusammenfuehren mehrerer Sammlungen schaffen.
-Status: in Arbeit seit `2026-04-01`
+Status: abgeschlossen am `2026-04-01`
 
 ### Letztes Update (2026-04-01)
 
 - Compare-/Merge-Contracts liegen zentral in `RomCleanup.Contracts`.
-- `CollectionCompareService` materialisiert linke/rechte Quellen index-first mit Root-/Fingerprint-Guards statt neuer Scanner-Schattenlogik.
-- Die Diff-Klassifikation ist produktiv auf `CollectionIndexEntry`, `CollectionIndexCandidateMapper` und `DeduplicationEngine.SelectWinner` aufgebaut.
-- Bestehende Analysis-/Export-Pfade nutzen denselben Materializer weiter; Compare-/Scope-Regressionen sind ergaenzt.
+- `CollectionCompareService` und `CollectionMergeService` materialisieren linke/rechte/Target-Sichten index-first mit Root-/Fingerprint-Guards statt neuer Scanner-Schattenlogik.
+- Merge-Plan, Apply, Audit und Rollback laufen jetzt ueber denselben Safety-, Audit- und Rollback-Vertrag wie andere mutierende Produktpfade.
+- GUI, CLI und API sind auf dieselben Compare-/Merge-Modelle verdrahtet; OpenAPI und WPF-/CLI-/API-Regressionen sind ergaenzt.
+- Vollsuite grün: `7197/7197` Tests erfolgreich auf Stand `2026-04-01`.
 
 ### Release-Track
 
-- [ ] C8 Collection Diff & Merge auf Basis von [`C8-collection-diff-merge.md`](../epics/C8-collection-diff-merge.md)
-- [ ] Compare- und Merge-Modelle ueber denselben Collection-Index und Candidate-Resolver anbinden
-- [ ] Merge ueber bestehende Safety-, Audit- und Rollback-Infrastruktur fuehren
-- [ ] GUI-, CLI- und API-Paritaet fuer Compare und Merge sicherstellen
+- [x] C8 Collection Diff & Merge auf Basis von [`C8-collection-diff-merge.md`](../epics/C8-collection-diff-merge.md)
+- [x] Compare- und Merge-Modelle ueber denselben Collection-Index und Candidate-Resolver anbinden
+- [x] Merge ueber bestehende Safety-, Audit- und Rollback-Infrastruktur fuehren
+- [x] GUI-, CLI- und API-Paritaet fuer Compare und Merge sicherstellen
 
 ### Exit-Kriterien
 
-- [ ] Compare und Merge nutzen dieselbe Sammlungswahrheit wie Analyse und Export
-- [ ] Kein Merge schreibt ausserhalb erlaubter Roots oder ueberschreibt still
-- [ ] Konflikt- und Risiko-Faelle bleiben review-pflichtig
-- [ ] Preview, Execute und Report bleiben fuer Merge konsistent
-- [ ] Diff & Merge ist gegen reale Multi-Collection-Negativfaelle abgesichert
+- [x] Compare und Merge nutzen dieselbe Sammlungswahrheit wie Analyse und Export
+- [x] Kein Merge schreibt ausserhalb erlaubter Roots oder ueberschreibt still
+- [x] Konflikt- und Risiko-Faelle bleiben review-pflichtig
+- [x] Preview, Execute und Report bleiben fuer Merge konsistent
+- [x] Diff & Merge ist gegen reale Multi-Collection-Negativfaelle abgesichert
 
 ### Arbeitspakete
 
 - [x] Compare-Vertrag, Diff-Zustaende und Merge-Plan-Modell definieren
 - [x] Source-Scope-Materialisierung index-first verdrahten
 - [x] Diff-Engine auf bestehende Winner-Selection setzen
-- [ ] Merge-Planer mit Safety- und Conflict-Regeln anbinden
-- [ ] Merge-Execute, Audit und Rollback ueber bestehende Infrastruktur verdrahten
-- [ ] GUI-, CLI- und API-Oberflaechen ohne Schattenlogik anbinden
-- [ ] Performance- und Scope-Haertung fuer grosse Sammlungen ergaenzen
-- [ ] Invarianten-, Negativ- und Paritaetstests vervollstaendigen
+- [x] Merge-Planer mit Safety- und Conflict-Regeln anbinden
+- [x] Merge-Execute, Audit und Rollback ueber bestehende Infrastruktur verdrahten
+- [x] GUI-, CLI- und API-Oberflaechen ohne Schattenlogik anbinden
+- [x] Performance- und Scope-Haertung fuer grosse Sammlungen ergaenzen
+- [x] Invarianten-, Negativ- und Paritaetstests vervollstaendigen
 
 ## Parked / Bewusst spaeter
 

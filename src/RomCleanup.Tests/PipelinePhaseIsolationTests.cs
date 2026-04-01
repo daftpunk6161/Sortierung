@@ -361,6 +361,10 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
             Mode = RunConstants.ModeMove,
             AuditPath = Path.Combine(_tempDir, "parallel-audit.csv")
         };
+        var fileSystem = new TestFileSystem();
+        fileSystem.MoveResults[first] = Path.Combine(root, "_TRASH_CONVERTED", "a.iso");
+        fileSystem.MoveResults[second] = Path.Combine(root, "_TRASH_CONVERTED", "b.iso");
+        fileSystem.MoveResults[third] = Path.Combine(root, "_TRASH_CONVERTED", "c.iso");
 
         var phase = new ConvertOnlyPipelinePhase();
         var output = phase.Execute(
@@ -373,13 +377,57 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
                 },
                 options,
                 converter),
-            CreateContext(options, new TestFileSystem(), new TrackingAuditStore()),
+            CreateContext(options, fileSystem, new TrackingAuditStore()),
             CancellationToken.None);
 
         Assert.Equal(3, output.Converted);
         Assert.Equal(
             new[] { first, second, third },
             output.ConversionResults.Select(r => r.SourcePath).ToArray());
+    }
+
+    [Fact]
+    public void ConvertOnlyPhase_EmitsIncrementalProgress_ForSmallBatches()
+    {
+        var root = Path.Combine(_tempDir, "convert-progress");
+        Directory.CreateDirectory(root);
+
+        var first = Path.Combine(root, "a.iso");
+        var second = Path.Combine(root, "b.iso");
+        var third = Path.Combine(root, "c.iso");
+        File.WriteAllText(first, "a");
+        File.WriteAllText(second, "b");
+        File.WriteAllText(third, "c");
+
+        var progressMessages = new List<string>();
+        var converter = new ParallelTrackingConverter();
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".iso" },
+            ConvertOnly = true,
+            ConvertFormat = "chd",
+            Mode = RunConstants.ModeMove,
+            AuditPath = Path.Combine(_tempDir, "progress-audit.csv")
+        };
+
+        var phase = new ConvertOnlyPipelinePhase();
+        _ = phase.Execute(
+            new ConvertOnlyPhaseInput(
+                new[]
+                {
+                    Candidate(first, "a", "US", 100, FileCategory.Game),
+                    Candidate(second, "b", "US", 100, FileCategory.Game),
+                    Candidate(third, "c", "US", 100, FileCategory.Game)
+                },
+                options,
+                converter),
+            CreateContext(options, new TestFileSystem(), new TrackingAuditStore(), progressMessages.Add),
+            CancellationToken.None);
+
+        Assert.Contains(progressMessages, message => message.Contains("[Convert] Fortschritt: 1/3", StringComparison.Ordinal));
+        Assert.Contains(progressMessages, message => message.Contains("[Convert] Fortschritt: 2/3", StringComparison.Ordinal));
+        Assert.Contains(progressMessages, message => message.Contains("[Convert] Fortschritt: 3/3", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -403,6 +451,9 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
             Mode = RunConstants.ModeMove,
             AuditPath = Path.Combine(_tempDir, "collision-audit.csv")
         };
+        var fileSystem = new TestFileSystem();
+        fileSystem.MoveResults[iso] = Path.Combine(root, "_TRASH_CONVERTED", "game.iso");
+        fileSystem.MoveResults[zip] = Path.Combine(root, "_TRASH_CONVERTED", "game.zip");
 
         var phase = new ConvertOnlyPipelinePhase();
         var output = phase.Execute(
@@ -414,7 +465,7 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
                 },
                 options,
                 converter),
-            CreateContext(options, new TestFileSystem(), new TrackingAuditStore()),
+            CreateContext(options, fileSystem, new TrackingAuditStore()),
             CancellationToken.None);
 
         Assert.Equal(1, output.Converted);
@@ -442,6 +493,9 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
             Mode = RunConstants.ModeMove,
             AuditPath = Path.Combine(_tempDir, "winner-parallel-audit.csv")
         };
+        var fileSystem = new TestFileSystem();
+        fileSystem.MoveResults[first] = Path.Combine(root, "_TRASH_CONVERTED", "winner-a.iso");
+        fileSystem.MoveResults[second] = Path.Combine(root, "_TRASH_CONVERTED", "winner-b.iso");
 
         var output = new WinnerConversionPipelinePhase().Execute(
             new WinnerConversionPhaseInput(
@@ -463,7 +517,7 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
                 options,
                 new HashSet<string>(StringComparer.OrdinalIgnoreCase),
                 converter),
-            CreateContext(options, new TestFileSystem(), new TrackingAuditStore()),
+            CreateContext(options, fileSystem, new TrackingAuditStore()),
             CancellationToken.None);
 
         Assert.Equal(2, output.Converted);
@@ -489,7 +543,11 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
         Assert.Single(result.GameGroups);
     }
 
-    private static PipelineContext CreateContext(RunOptions options, IFileSystem fileSystem, IAuditStore? auditStore = null)
+    private static PipelineContext CreateContext(
+        RunOptions options,
+        IFileSystem fileSystem,
+        IAuditStore? auditStore = null,
+        Action<string>? onProgress = null)
     {
         var metrics = new PhaseMetricsCollector();
         metrics.Initialize();
@@ -499,7 +557,7 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
             FileSystem = fileSystem,
             AuditStore = auditStore ?? new TrackingAuditStore(),
             Metrics = metrics,
-            OnProgress = _ => { }
+            OnProgress = onProgress ?? (_ => { })
         };
     }
 

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Safety;
 
 namespace RomCleanup.Infrastructure.FileSystem;
 
@@ -591,8 +592,17 @@ public sealed class FileSystemAdapter : IFileSystem
         if (string.IsNullOrWhiteSpace(destinationPath))
             throw new ArgumentException("Destination path must not be empty.", nameof(destinationPath));
 
-        var fullSource = Path.GetFullPath(sourcePath);
-        var fullDest = Path.GetFullPath(destinationPath);
+        var validatedSource = SafetyValidator.NormalizePath(sourcePath)
+            ?? throw new InvalidOperationException("Blocked: Source path failed safety validation.");
+        var validatedDest = SafetyValidator.NormalizePath(destinationPath)
+            ?? throw new InvalidOperationException("Blocked: Destination path failed safety validation.");
+
+        var fullSource = NormalizePathNfc(validatedSource);
+        var fullDest = NormalizePathNfc(validatedDest);
+
+        var destFileName = Path.GetFileName(fullDest);
+        if (IsWindowsReservedDeviceName(destFileName))
+            throw new InvalidOperationException("Blocked: Destination filename uses a reserved Windows device name.");
 
         if (!File.Exists(fullSource))
             throw new FileNotFoundException("Source file not found.", fullSource);
@@ -606,16 +616,11 @@ public sealed class FileSystemAdapter : IFileSystem
         var destDir = Path.GetDirectoryName(fullDest);
         if (!string.IsNullOrEmpty(destDir))
         {
-            if (Directory.Exists(destDir))
-            {
-                var destDirInfo = new DirectoryInfo(destDir);
-                if ((destDirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
-                    throw new InvalidOperationException("Blocked: Destination parent is a reparse point.");
-            }
-            else
-            {
-                Directory.CreateDirectory(destDir);
-            }
+            var root = Path.GetPathRoot(fullDest) ?? destDir;
+            if (HasReparsePointInAncestry(fullDest, root))
+                throw new InvalidOperationException("Blocked: Destination path targets a reparse-point directory.");
+
+            Directory.CreateDirectory(destDir);
         }
 
         File.Copy(fullSource, fullDest, overwrite);

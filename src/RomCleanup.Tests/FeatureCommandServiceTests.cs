@@ -88,6 +88,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
     [InlineData("CollectionManager")]
     [InlineData("CloneListViewer")]
     [InlineData("VirtualFolderPreview")]
+    [InlineData("CollectionMerge")]
     [InlineData("IntegrityMonitor")]
     [InlineData("BackupManager")]
     [InlineData("Quarantine")]
@@ -755,7 +756,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
         var removedKeys = new[]
         {
             "FtpSource", "CloudSync", "PluginMarketplaceFeature", "PluginManager",
-            "GpuHashing", "ParallelHashing", "QuickPreview", "CollectionDiff",
+            "GpuHashing", "ParallelHashing", "QuickPreview",
             "ConvertQueue", "ConversionEstimate", "TosecDat", "SplitPanelPreview",
             "PlaytimeTracker", "GenreClassification", "EmulatorCompat",
             "CoverScraper", "CollectionSharing", "TrendAnalysis",
@@ -844,6 +845,17 @@ public sealed class FeatureCommandServiceTests : IDisposable
             Assert.False(string.IsNullOrWhiteSpace(item.Description),
                 $"ToolItem '{item.Key}' has empty Description (missing i18n key 'Tool.{item.Key}.Desc')");
         }
+    }
+
+    [Fact]
+    public void CollectionMerge_ToolKey_IsPresentInCatalogAndCommands()
+    {
+        var vm = new ToolsViewModel(new LocalizationService());
+
+        Assert.Contains(vm.ToolItems, item => item.Key == FeatureCommandKeys.CollectionMerge && !string.IsNullOrWhiteSpace(item.DisplayName));
+
+        _sut.RegisterCommands();
+        Assert.True(_vm.FeatureCommands.ContainsKey(FeatureCommandKeys.CollectionMerge));
     }
 
     [Fact]
@@ -998,6 +1010,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => ShowInputBoxResult;
         public void ShowText(string title, string content) => ShowTextCalls.Add((title, content));
         public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
+        public bool ConfirmConversionReview(string title, string summary, IReadOnlyList<RomCleanup.Contracts.Models.ConversionReviewEntry> entries) => ConfirmResult;
         public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => true;
     }
 

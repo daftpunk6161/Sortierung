@@ -19,6 +19,7 @@ public partial class MainWindow : Window, IWindowHost
 
     private readonly MainViewModel _vm;
     private readonly ISettingsService _settings;
+    private readonly IDialogService _dialog;
     private readonly System.Threading.Timer _settingsTimer;
     private Task? _activeRunTask;
     // System tray service
@@ -35,6 +36,7 @@ public partial class MainWindow : Window, IWindowHost
     {
         _vm = vm;
         _settings = settings;
+        _dialog = dialog;
         DataContext = _vm;
 
         InitializeComponent();
@@ -157,7 +159,7 @@ public partial class MainWindow : Window, IWindowHost
         // P0-VULN-B1: Prevent window close if operation is running
         if (_vm.IsBusy)
         {
-            var confirmed = DialogService.Confirm(
+            var confirmed = _dialog.Confirm(
                 _vm.Loc["App.RunActiveConfirm"],
                 _vm.Loc["App.RunActiveTitle"]);
 
@@ -218,13 +220,6 @@ public partial class MainWindow : Window, IWindowHost
 
         // Force application exit so no zombie .NET Host processes remain
         Application.Current?.Shutdown();
-    }
-
-    // ═══ GUI-101: Shortcut overlay dismiss on background click ══════════
-    private void OnShortcutOverlayClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (e.OriginalSource == sender)
-            _vm.Shell.ShowShortcutSheet = false;
     }
 
     private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

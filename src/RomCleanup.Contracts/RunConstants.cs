@@ -72,6 +72,7 @@ public static class RunConstants
         public const string JunkRemove = "JUNK_REMOVE";
         public const string ConsoleSort = "CONSOLE_SORT";
         public const string Convert = "CONVERT";
+        public const string ConvertSource = "CONVERT_SOURCE";
         public const string DatRename = "DAT_RENAME";
     }
 

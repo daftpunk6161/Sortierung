@@ -318,13 +318,14 @@ public sealed class AuditSigningService
             var newPath = fields.Length > 2 ? fields[2] : "";
             var action = fields.Length > 3 ? fields[3] : "";
 
-            // Rollback MOVE, COPY, JUNK_REMOVE, CONSOLE_SORT, CONVERT, and DAT_RENAME actions
+            // Rollback MOVE, COPY, JUNK_REMOVE, CONSOLE_SORT, CONVERT, CONVERT_SOURCE, and DAT_RENAME actions
             if (!string.Equals(action, RunConstants.AuditActions.Move, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(action, RunConstants.AuditActions.Moved, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(action, RunConstants.AuditActions.Copy, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(action, RunConstants.AuditActions.JunkRemove, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(action, RunConstants.AuditActions.ConsoleSort, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(action, RunConstants.AuditActions.Convert, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, RunConstants.AuditActions.ConvertSource, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(action, RunConstants.AuditActions.DatRename, StringComparison.OrdinalIgnoreCase))
                 continue;
 
@@ -338,13 +339,15 @@ public sealed class AuditSigningService
             var inAllowedRestore = normalizedRestoreRoots.Any(nr =>
                 fullOldPath.StartsWith(nr, StringComparison.OrdinalIgnoreCase));
 
-            if (!inAllowedCurrent || !inAllowedRestore)
+            var isConvertCreateAction = string.Equals(action, RunConstants.AuditActions.Convert, StringComparison.OrdinalIgnoreCase);
+            var isCopyAction = string.Equals(action, RunConstants.AuditActions.Copy, StringComparison.OrdinalIgnoreCase);
+            var requiresRestoreTarget = !isConvertCreateAction;
+
+            if (!inAllowedCurrent || (requiresRestoreTarget && !inAllowedRestore))
             {
                 skippedUnsafe++;
                 continue;
             }
-
-            var isCopyAction = string.Equals(action, RunConstants.AuditActions.Copy, StringComparison.OrdinalIgnoreCase);
 
             // Check current file/dir exists at newPath
             // Missing dest = recovery failure (user can't roll back this entry)
@@ -356,7 +359,7 @@ public sealed class AuditSigningService
                 continue;
             }
 
-            if (!isCopyAction)
+            if (requiresRestoreTarget && !isCopyAction)
             {
                 // Check no collision at oldPath
                 if (File.Exists(oldPath) || Directory.Exists(oldPath))
@@ -365,7 +368,7 @@ public sealed class AuditSigningService
                     continue;
                 }
             }
-            else if (!File.Exists(oldPath) && !Directory.Exists(oldPath))
+            else if (isCopyAction && !File.Exists(oldPath) && !Directory.Exists(oldPath))
             {
                 failed++;
                 skippedMissingDest++;
@@ -385,7 +388,7 @@ public sealed class AuditSigningService
                 }
 
                 // SEC-ROLLBACK-04b: In dry run, also check restore target parent for reparse points (Preview/Execute parity)
-                var dryRunParent = Path.GetDirectoryName(oldPath);
+                var dryRunParent = requiresRestoreTarget ? Path.GetDirectoryName(oldPath) : null;
                 if (dryRunParent is not null && Directory.Exists(dryRunParent) && _fs.IsReparsePoint(dryRunParent))
                 {
                     skippedUnsafe++;
@@ -394,8 +397,10 @@ public sealed class AuditSigningService
                 }
 
                 dryRunPlanned++;
-                plannedPaths.Add(isCopyAction ? newPath : oldPath);
-                _log?.Invoke(isCopyAction
+                plannedPaths.Add(isCopyAction || isConvertCreateAction ? newPath : oldPath);
+                _log?.Invoke(isConvertCreateAction
+                    ? $"DRYRUN rollback convert-delete: {newPath}"
+                    : isCopyAction
                     ? $"DRYRUN rollback copy-delete: {newPath}"
                     : $"DRYRUN rollback: {newPath} -> {oldPath}");
             }
@@ -411,13 +416,20 @@ public sealed class AuditSigningService
 
                 try
                 {
-                    if (isCopyAction)
+                    if (isCopyAction || isConvertCreateAction)
                     {
                         _fs.DeleteFile(newPath);
                         rolledBack++;
                         restoredPaths.Add(newPath);
-                        _log?.Invoke($"Rolled back copy: removed {newPath}");
-                        AppendRollbackRow(rollbackAuditPath!, "ROLLBACK_COPY", newPath, oldPath, "OK");
+                        _log?.Invoke(isConvertCreateAction
+                            ? $"Rolled back conversion target: removed {newPath}"
+                            : $"Rolled back copy: removed {newPath}");
+                        AppendRollbackRow(
+                            rollbackAuditPath!,
+                            isConvertCreateAction ? "ROLLBACK_CONVERT" : "ROLLBACK_COPY",
+                            newPath,
+                            oldPath,
+                            "OK");
                         AppendRollbackTrailRow(rollbackTrailPath!, newPath, oldPath, action);
                     }
                     else

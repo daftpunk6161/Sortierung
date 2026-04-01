@@ -33,5 +33,7 @@ internal sealed class StubDialogService : IDialogService
     public void ShowText(string title, string content) => TextMessages.Add(content);
     public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen")
         => DangerConfirmResult;
+    public bool ConfirmConversionReview(string title, string summary, IReadOnlyList<ConversionReviewEntry> entries)
+        => ConfirmResult;
     public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => ConfirmDatRenameResult;
 }

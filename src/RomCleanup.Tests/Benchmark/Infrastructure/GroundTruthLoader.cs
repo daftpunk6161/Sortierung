@@ -9,6 +9,8 @@ namespace RomCleanup.Tests.Benchmark.Infrastructure;
 /// </summary>
 internal sealed class GroundTruthLoader
 {
+    private const int MaxReadAttempts = 5;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = false,
@@ -37,27 +39,34 @@ internal sealed class GroundTruthLoader
     /// </summary>
     public static List<GroundTruthEntry> LoadFile(string path)
     {
-        var entries = new List<GroundTruthEntry>();
-        var seenIds = new HashSet<string>(StringComparer.Ordinal);
-
-        // Use FileShare.ReadWrite + retry to tolerate concurrent writes from parallel tests
-        // (e.g. Phase6BDataFillTests writing performance-scale.jsonl)
-        string[] lines;
-        const int maxRetries = 3;
-        for (int attempt = 0; ; attempt++)
+        for (int attempt = 0; attempt < MaxReadAttempts; attempt++)
         {
             try
             {
-                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                using var reader = new StreamReader(fs);
-                lines = reader.ReadToEnd().Split('\n');
-                break;
+                return LoadFileSnapshot(path);
             }
-            catch (IOException) when (attempt < maxRetries - 1)
+            catch (IOException) when (attempt < MaxReadAttempts - 1)
             {
-                Thread.Sleep(100 * (attempt + 1));
+                Thread.Sleep(GetRetryDelayMs(attempt));
+            }
+            catch (InvalidOperationException ex) when (attempt < MaxReadAttempts - 1 && IsTransientJsonlReadFailure(ex))
+            {
+                Thread.Sleep(GetRetryDelayMs(attempt));
             }
         }
+
+        return LoadFileSnapshot(path);
+    }
+
+    private static List<GroundTruthEntry> LoadFileSnapshot(string path)
+    {
+        var entries = new List<GroundTruthEntry>();
+        var seenIds = new HashSet<string>(StringComparer.Ordinal);
+
+        // Use FileShare.ReadWrite to tolerate concurrent writes from dataset-generation tests.
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var reader = new StreamReader(fs);
+        var lines = reader.ReadToEnd().Split('\n');
 
         for (int lineNum = 0; lineNum < lines.Length; lineNum++)
         {
@@ -88,6 +97,11 @@ internal sealed class GroundTruthLoader
 
         return entries;
     }
+
+    private static bool IsTransientJsonlReadFailure(InvalidOperationException ex) =>
+        ex.Message.StartsWith("Failed to parse JSONL line ", StringComparison.Ordinal);
+
+    private static int GetRetryDelayMs(int attempt) => 100 * (attempt + 1);
 
     /// <summary>
     /// Loads entries from a specific ground-truth dataset by file name (without directory).

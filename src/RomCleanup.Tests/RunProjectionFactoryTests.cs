@@ -151,4 +151,39 @@ public class RunProjectionFactoryTests
         Assert.Equal(0, projection.Dupes);
         Assert.Equal(1, projection.Junk);
     }
+
+    [Fact]
+    public void Create_WithUngroupedGameCandidate_CountsKeepAndGamesFromNonLosers()
+    {
+        var winner = new RomCandidate { MainPath = @"C:\roms\Game (EU).zip", Category = FileCategory.Game, GameKey = "game" };
+        var loser = new RomCandidate { MainPath = @"C:\roms\Game (US).zip", Category = FileCategory.Game, GameKey = "game" };
+        var extra = new RomCandidate { MainPath = @"C:\roms\Standalone.zip", Category = FileCategory.Game, GameKey = "standalone" };
+        var junk = new RomCandidate { MainPath = @"C:\roms\Trash.zip", Category = FileCategory.Junk, GameKey = "trash" };
+
+        var run = new RunResult
+        {
+            Status = "ok",
+            TotalFilesScanned = 4,
+            GroupCount = 1,
+            WinnerCount = 1,
+            LoserCount = 1,
+            DedupeGroups =
+            [
+                new DedupeGroup
+                {
+                    GameKey = "game",
+                    Winner = winner,
+                    Losers = [loser]
+                }
+            ],
+            AllCandidates = [winner, loser, extra, junk]
+        };
+
+        var projection = RunProjectionFactory.Create(run);
+
+        Assert.Equal(2, projection.Keep);
+        Assert.Equal(2, projection.Games);
+        Assert.Equal(1, projection.Dupes);
+        Assert.Equal(1, projection.Junk);
+    }
 }

@@ -5,6 +5,8 @@ using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Safety;
 using RomCleanup.UI.Wpf.Services;
 
 namespace RomCleanup.UI.Wpf.ViewModels;
@@ -16,11 +18,13 @@ namespace RomCleanup.UI.Wpf.ViewModels;
 public sealed partial class DatAuditViewModel : ObservableObject
 {
     private readonly ILocalizationService _loc;
+    private readonly IDialogService _dialog;
     private readonly object _entriesLock = new();
 
-    public DatAuditViewModel(ILocalizationService? loc = null)
+    public DatAuditViewModel(ILocalizationService? loc = null, IDialogService? dialog = null)
     {
         _loc = loc ?? new LocalizationService();
+        _dialog = dialog ?? new WpfDialogService();
         BindingOperations.EnableCollectionSynchronization(Entries, _entriesLock);
         BindingOperations.EnableCollectionSynchronization(ConsoleFilterOptions, _entriesLock);
         EntriesView = CollectionViewSource.GetDefaultView(Entries);
@@ -146,7 +150,7 @@ public sealed partial class DatAuditViewModel : ObservableObject
     [RelayCommand]
     private void ExportCsv()
     {
-        var path = DialogService.SaveFile(
+        var path = _dialog.SaveFile(
             "DatAudit CSV exportieren",
             "CSV-Dateien (*.csv)|*.csv|Alle Dateien|*.*",
             "dat-audit.csv");
@@ -154,19 +158,31 @@ public sealed partial class DatAuditViewModel : ObservableObject
         if (string.IsNullOrEmpty(path))
             return;
 
-        using var writer = new StreamWriter(path, false, System.Text.Encoding.UTF8);
-        writer.WriteLine("FilePath,Hash,Status,DatGameName,DatRomFileName,ConsoleKey,Confidence");
-
-        foreach (var entry in EntriesView.Cast<DatAuditEntry>())
+        try
         {
-            writer.WriteLine(string.Join(",",
-                CsvEscape(entry.FilePath),
-                CsvEscape(entry.Hash),
-                entry.Status,
-                CsvEscape(entry.DatGameName ?? ""),
-                CsvEscape(entry.DatRomFileName ?? ""),
-                CsvEscape(entry.ConsoleKey),
-                entry.Confidence));
+            var safePath = SafetyValidator.EnsureSafeOutputPath(path);
+            using var writer = new StreamWriter(safePath, false, System.Text.Encoding.UTF8);
+            writer.WriteLine("FilePath,Hash,Status,DatGameName,DatRomFileName,ConsoleKey,Confidence");
+
+            foreach (var entry in EntriesView.Cast<DatAuditEntry>())
+            {
+                writer.WriteLine(string.Join(",",
+                    CsvEscape(entry.FilePath),
+                    CsvEscape(entry.Hash),
+                    entry.Status,
+                    CsvEscape(entry.DatGameName ?? ""),
+                    CsvEscape(entry.DatRomFileName ?? ""),
+                    CsvEscape(entry.ConsoleKey),
+                    entry.Confidence));
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            _dialog.Error($"CSV-Export blockiert:\n\n{ex.Message}", "DatAudit CSV exportieren");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _dialog.Error($"CSV-Export fehlgeschlagen:\n\n{ex.Message}", "DatAudit CSV exportieren");
         }
     }
 

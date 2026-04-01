@@ -173,6 +173,34 @@ public sealed class CollectionCompareServiceTests : IDisposable
         Assert.Equal("review-unresolved-console", entry.ReasonCode);
     }
 
+    [Fact]
+    public async Task CompareAsync_AppliesOffsetAndLimit_WithoutChangingFullSummary()
+    {
+        var leftRoot = CreateRoot("paged-left");
+        var rightRoot = CreateRoot("paged-right");
+        var firstLeftPath = CreateFile(leftRoot, "Alpha.sfc", "alpha");
+        var secondLeftPath = CreateFile(leftRoot, "Beta.sfc", "beta");
+
+        var compare = await CollectionCompareService.CompareAsync(
+            new FakeCollectionIndex(
+            [
+                CreateEntry(firstLeftPath, leftRoot, "SNES", "alpha", "hash-a", "fp-1"),
+                CreateEntry(secondLeftPath, leftRoot, "SNES", "beta", "hash-b", "fp-1")
+            ]),
+            _fileSystem,
+            CreateRequest(leftRoot, rightRoot) with
+            {
+                Offset = 1,
+                Limit = 1
+            });
+
+        Assert.True(compare.CanUse);
+        Assert.Equal(2, compare.Result!.Summary.TotalEntries);
+        var entry = Assert.Single(compare.Result.Entries);
+        Assert.Equal("game|SNES|beta", entry.DiffKey);
+        Assert.Equal(CollectionDiffState.OnlyInLeft, entry.State);
+    }
+
     private CollectionCompareRequest CreateRequest(string leftRoot, string rightRoot)
     {
         return new CollectionCompareRequest

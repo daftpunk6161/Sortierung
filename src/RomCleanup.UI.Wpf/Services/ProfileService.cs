@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using RomCleanup.Infrastructure.Safety;
 
 namespace RomCleanup.UI.Wpf.Services;
 
@@ -73,7 +74,8 @@ public sealed class ProfileService
     /// <summary>Export current config map to a JSON file.</summary>
     public static void Export(string targetPath, Dictionary<string, string> configMap)
     {
-        File.WriteAllText(targetPath, JsonSerializer.Serialize(configMap, new JsonSerializerOptions { WriteIndented = true }));
+        var safeTargetPath = SafetyValidator.EnsureSafeOutputPath(targetPath);
+        File.WriteAllText(safeTargetPath, JsonSerializer.Serialize(configMap, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     /// <summary>Get the saved config as a flattened key-value dictionary. Returns null if not found.</summary>

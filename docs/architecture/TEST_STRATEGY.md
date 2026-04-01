@@ -12,9 +12,9 @@
         ┌──────────────────┐
         │   Integration    │  RunOrchestrator, API-RunManager, FileSystem-Ops
         ├──────────────────┤
-        │   Unit           │  200+ Testdateien, aktuell 7149 Tests
+        │   Unit           │  200+ Testdateien, aktuell 7197 Tests
         └──────────────────┘
-        Gesamt: aktuell 7149 Tests (xUnit, Stand 2026-04-01 grün)
+        Gesamt: aktuell 7197 Tests (xUnit, Stand 2026-04-01 grün)
 ```
 
 ---
@@ -24,9 +24,9 @@
 Alle Tests liegen in `src/RomCleanup.Tests/` (xUnit, 200+ Testdateien, inkl. Unterordner `Benchmark/` und `Conversion/`).
 Die folgende Übersicht ist thematisch gruppiert; Datei- und Fallzahlen ändern sich regelmäßig.
 
-### 2.0 Foundation-, Productization- und Reach-Matrix 2026-04-01
+### 2.0 Foundation-, Productization-, Reach- und Diff/Merge-Matrix 2026-04-01
 
-Die Foundation-, Productization- und Reach-Erweiterungen fuer Collection-Index, Guided Workflows, Frontend-Export, Profile, Trend-/Diff-Pfade, Headless-Betrieb und Reach-Conversion werden zusaetzlich gezielt ueber folgende Schwerpunktdateien abgesichert:
+Die Foundation-, Productization-, Reach- und Diff/Merge-Erweiterungen fuer Collection-Index, Guided Workflows, Frontend-Export, Profile, Trend-/Diff-Pfade, Headless-Betrieb, Reach-Conversion und Multi-Collection-Merge werden zusaetzlich gezielt ueber folgende Schwerpunktdateien abgesichert:
 
 | Datei | Zweck |
 |---|---|
@@ -45,6 +45,10 @@ Die Foundation-, Productization- und Reach-Erweiterungen fuer Collection-Index, 
 | `OpenApiReachTests.cs` | OpenAPI-Vertrag fuer Dashboard-/Reach-Endpunkte |
 | `ReachConversionTests.cs` | Compound-NKit-Planung und Review-Gating in der Conversion-Pipeline |
 | `ReachInvokerTests.cs` | `EcmInvoker`/`NkitInvoker` Tool-Aufrufe und Output-Verifikation |
+| `CollectionCompareServiceTests.cs` | Index-first Scope-Materialisierung, Fingerprint-Guards, Diff-Klassifikation und Compare-Paging |
+| `CollectionMergeServiceTests.cs` | Merge-Plan-Regeln, Konflikt-/Duplicate-Faelle, Apply-/Rollback-Fehlerpfade, FS-/Index-Revert |
+| `CliCollectionDiffMergeTests.cs` | `romulus diff`/`merge` Parser, Preview-/Apply-JSON und Audit-Ausgabe |
+| `ApiCollectionDiffMergeTests.cs` | `/collections/compare|merge|merge/apply|merge/rollback`, Allowlist-Negativfaelle, API-Rollback |
 
 ### 2.1 Core-/Engine-Tests (17 Dateien)
 
@@ -263,6 +267,8 @@ Jeder Test muss einen echten Fehler finden können. Typische Invarianten:
 - **Run-Snapshots sind wiederverwendbar** — Historie und Trends duerfen keinen neuen Full-Scan benoetigen
 - **Review-Zustand ist kanaluebergreifend identisch** — GUI, CLI und API duerfen keine abweichenden Approval-Ergebnisse liefern
 - **Watch-/Schedule-Bursts bleiben deterministisch** — Debounce, Busy-Schutz und Pending-Flush duerfen keine Doppel-Runs erzeugen
+- **Compare-/Merge-Pfade bleiben kanalgleich** — GUI, CLI, API und OpenAPI duerfen keine abweichenden Diff-/Merge-Entscheidungen erzeugen
+- **Merge-Rollback bleibt verifizierbar** — signierte Audits, Root-Metadaten und COPY/MOVE-Rollback muessen denselben Schutzvertrag einhalten
 
 ### 3.5 Verboten
 

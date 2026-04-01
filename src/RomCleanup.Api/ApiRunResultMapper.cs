@@ -8,6 +8,8 @@ internal static class ApiRunResultMapper
 {
     public static ApiRunResult Map(RunResult result, RunProjection projection)
     {
+        var projectedArtifacts = RunArtifactProjection.Project(result);
+
         return new ApiRunResult
         {
             OrchestratorStatus = projection.Status,
@@ -55,7 +57,7 @@ internal static class ApiRunResultMapper
             DurationMs = projection.DurationMs,
             PreflightWarnings = result.Preflight?.Warnings?.ToArray() ?? Array.Empty<string>(),
             PhaseMetrics = BuildPhaseMetricsPayload(result.PhaseMetrics),
-            DedupeGroups = BuildDedupeGroupsPayload(result.DedupeGroups),
+            DedupeGroups = BuildDedupeGroupsPayload(projectedArtifacts.DedupeGroups),
             ConversionPlans = BuildConversionPlansPayload(result.ConversionReport),
             ConversionBlocked = BuildConversionBlockedPayload(result.ConversionReport)
         };

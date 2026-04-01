@@ -1,6 +1,6 @@
 # C8: Collection Diff & Merge
 
-Status: naechster aktiver Release-Block (`R5`) nach abgeschlossenem `R4 Stabilization`
+Status: abgeschlossen am `2026-04-01` im Release-Block `R5`
 
 ## Problem
 
@@ -112,12 +112,13 @@ Ohne bestaetigten Plan darf kein mutierender Merge stattfinden.
 - Merge-Planer mit Nutzung der bestehenden Dedup-Scoring-Logik
 - Merge-Executor mit Safety-, Audit- und Rollback-Vertrag
 - aktueller Compare-Read-Pfad ueber `CollectionCompareService` mit index-first Scope-Materialisierung und deterministischer Diff-Klassifikation
+- aktueller Merge-Read-/Plan-/Apply-Pfad ueber `CollectionMergeService` mit konfliktbewusstem Target-Index, signiertem Audit, Rollback-Metadaten und FS-/Index-Revert bei Fehlern
 
 ### Entry Points
 
-- GUI: Compare-Ansicht + Merge-Review
+- GUI: Compare-Ansicht + Merge-Review ueber WPF-Feature-Commands
 - CLI: `romulus diff` und `romulus merge --plan/--apply`
-- API: `/collections/compare` und `/collections/merge`
+- API: `/collections/compare`, `/collections/merge`, `/collections/merge/apply`, `/collections/merge/rollback`
 
 ## Abhaengigkeiten
 
@@ -139,3 +140,10 @@ Ohne bestaetigten Plan darf kein mutierender Merge stattfinden.
 - Integration: Index-/Run-basierte Materialisierung, API-/CLI-/GUI-Paritaet
 - Regression: Preview/Execute/Report und Winner-Selection bleiben konsistent
 - Negative: Root-Verstoss, Konflikte, gleichnamige Nicht-Gleichheit, partielle Outputs
+
+## Ergebnis
+
+- Compare und Merge sind produktiv ueber denselben Collection-Index-, Candidate- und Dedup-Pfad verdrahtet wie Analyse und Export.
+- Merge bleibt konfliktbewusst: keine stillen Overwrites, keine automatische Konfliktloesung ausserhalb klarer Keep-/Skip-/Review-Faelle.
+- Audit, signierte Sidecars, Rollback und Root-Metadaten sind fuer mutierende Merge-Schritte integriert.
+- GUI, CLI, API und OpenAPI nutzen dieselben Contracts; Vollsuite grün: `7197/7197` Tests auf Stand `2026-04-01`.

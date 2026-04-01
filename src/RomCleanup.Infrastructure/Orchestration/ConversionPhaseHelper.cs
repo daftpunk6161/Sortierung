@@ -41,6 +41,8 @@ internal static class ConversionPhaseHelper
         int Blocked,
         IReadOnlyList<ConversionResult> Results);
 
+    private sealed record MovedArtifact(string SourcePath, string TrashPath, string Category, string Reason);
+
     internal static ConversionBatchResult ExecuteBatch(
         IReadOnlyList<ConversionWorkItem> workItems,
         IFormatConverter converter,
@@ -60,6 +62,7 @@ internal static class ConversionPhaseHelper
         var skipped = 0;
         var blocked = 0;
         var completed = 0;
+        var progressUpdateInterval = GetProgressUpdateInterval(workItems.Count);
 
         Action<string>? synchronizedProgress = null;
         if (context.OnProgress is not null)
@@ -117,7 +120,7 @@ internal static class ConversionPhaseHelper
                 Interlocked.Add(ref blocked, localCounters.Blocked);
 
             var done = Interlocked.Increment(ref completed);
-            if ((done % 25 == 0 || done == workItems.Count) && synchronizedProgress is not null)
+            if ((done % progressUpdateInterval == 0 || done == workItems.Count) && synchronizedProgress is not null)
             {
                 synchronizedProgress(
                     $"[Convert] Fortschritt: {done}/{workItems.Count} {progressUnitLabel} " +
@@ -219,23 +222,58 @@ internal static class ConversionPhaseHelper
                 if (convertedPath is null)
                 {
                     counters.Errors++;
-                    return convResult;
+                    return convResult with { Outcome = ConversionOutcome.Error, Reason = "missing-target-path" };
                 }
 
-                counters.Converted++;
-                PipelinePhaseHelpers.AppendConversionAudit(
-                    context,
-                    options,
-                    sourcePath,
-                    convertedPath,
-                    ConversionVerificationHelpers.ResolveToolName(convResult, target));
+                var movedArtifacts = new List<MovedArtifact>();
 
                 // Move set members (BIN/TRACK files) to trash BEFORE moving the descriptor,
                 // because set parsers need the descriptor to resolve members.
                 if (trackSetMembers)
-                    MoveSetMembersToTrash(context, options, sourcePath, sourceExt);
+                {
+                    if (!TryMoveSetMembersToTrash(context, options, sourcePath, sourceExt, movedArtifacts, out var memberMoveFailureReason))
+                    {
+                        CleanupConversionOutputs(context, convResult);
+                        counters.Errors++;
+                        TryAppendConversionErrorAudit(context, options, sourcePath, memberMoveFailureReason ?? "set-member-trash-failed");
+                        return convResult with
+                        {
+                            Outcome = ConversionOutcome.Error,
+                            Reason = memberMoveFailureReason ?? "set-member-trash-failed"
+                        };
+                    }
+                }
 
-                PipelinePhaseHelpers.MoveConvertedSourceToTrash(context, options, sourcePath, convertedPath);
+                var sourceTrashPath = PipelinePhaseHelpers.MoveConvertedSourceToTrash(context, options, sourcePath, convertedPath);
+                if (string.IsNullOrWhiteSpace(sourceTrashPath))
+                {
+                    RollbackMovedArtifacts(context, movedArtifacts);
+                    CleanupConversionOutputs(context, convResult);
+                    counters.Errors++;
+                    TryAppendConversionErrorAudit(context, options, sourcePath, "source-trash-failed");
+                    return convResult with
+                    {
+                        Outcome = ConversionOutcome.Error,
+                        Reason = "source-trash-failed"
+                    };
+                }
+
+                movedArtifacts.Add(new MovedArtifact(sourcePath, sourceTrashPath, "GAME", "source-convert-trash"));
+
+                if (!TryAppendSuccessfulConversionAudits(context, options, sourcePath, convResult, target, movedArtifacts, out var auditFailureReason))
+                {
+                    RollbackMovedArtifacts(context, movedArtifacts);
+                    CleanupConversionOutputs(context, convResult);
+                    counters.Errors++;
+                    TryAppendConversionErrorAudit(context, options, sourcePath, auditFailureReason ?? "conversion-audit-failed");
+                    return convResult with
+                    {
+                        Outcome = ConversionOutcome.Error,
+                        Reason = auditFailureReason ?? "conversion-audit-failed"
+                    };
+                }
+
+                counters.Converted++;
             }
             else
             {
@@ -250,9 +288,7 @@ internal static class ConversionPhaseHelper
                         sourcePath,
                         convResult.TargetPath,
                         ConversionVerificationHelpers.ResolveToolName(convResult, target));
-                    // SEC-CONV-04: Clean up failed output to prevent orphaned corrupt files
-                    try { if (File.Exists(convResult.TargetPath)) File.Delete(convResult.TargetPath); }
-                    catch (IOException) { /* best-effort cleanup — file may be locked */ }
+                    CleanupConversionOutputs(context, convResult);
                 }
             }
         }
@@ -269,12 +305,7 @@ internal static class ConversionPhaseHelper
             counters.Errors++;
             context.OnProgress?.Invoke($"WARNING: Conversion failed for {sourcePath}: {convResult.Reason}");
             PipelinePhaseHelpers.AppendConversionErrorAudit(context, options, sourcePath, convResult.Reason);
-            // SEC-CONV-05: Clean up any partial output left by a failed conversion tool
-            if (convResult.TargetPath is not null)
-            {
-                try { if (File.Exists(convResult.TargetPath)) File.Delete(convResult.TargetPath); }
-                catch (IOException) { /* best-effort cleanup — file may be locked */ }
-            }
+            CleanupConversionOutputs(context, convResult);
         }
 
         return convResult;
@@ -285,25 +316,23 @@ internal static class ConversionPhaseHelper
     /// Must be called BEFORE the descriptor file is moved — set parsers read the descriptor
     /// to resolve member paths.
     /// </summary>
-    private static void MoveSetMembersToTrash(
+    private static bool TryMoveSetMembersToTrash(
         PipelineContext context,
         RunOptions options,
         string descriptorPath,
-        string ext)
+        string ext,
+        ICollection<MovedArtifact> movedArtifacts,
+        out string? failureReason)
     {
+        failureReason = null;
         var members = PipelinePhaseHelpers.GetSetMembers(descriptorPath, ext);
-        if (members.Count == 0) return;
-
-        var root = PipelinePhaseHelpers.FindRootForPath(descriptorPath, options.Roots);
-        if (root is null) return;
-
-        var trashBase = string.IsNullOrEmpty(options.TrashRoot) ? root : options.TrashRoot;
-        var trashDir = Path.Combine(trashBase, RunConstants.WellKnownFolders.TrashConverted);
-        context.FileSystem.EnsureDirectory(trashDir);
+        if (members.Count == 0)
+            return true;
 
         foreach (var member in members)
         {
-            if (!File.Exists(member)) continue;
+            if (!File.Exists(member))
+                continue;
 
             // SEC-MOVE-06: Validate set member path is within an allowed root.
             // CUE/GDI/CCD parsers return paths resolved from the descriptor content;
@@ -311,27 +340,110 @@ internal static class ConversionPhaseHelper
             var memberRoot = PipelinePhaseHelpers.FindRootForPath(member, options.Roots);
             if (memberRoot is null)
             {
-                context.OnProgress?.Invoke($"WARNING: Set member outside allowed roots, skipped: {member}");
-                continue;
+                RollbackMovedArtifacts(context, movedArtifacts.ToArray());
+                failureReason = $"set-member-outside-allowed-roots:{member}";
+                return false;
             }
 
-            var memberName = Path.GetFileName(member);
-            var trashDest = context.FileSystem.ResolveChildPathWithinRoot(trashBase, Path.Combine(RunConstants.WellKnownFolders.TrashConverted, memberName));
-            if (trashDest is null) continue;
+            if (!PipelinePhaseHelpers.TryMovePathToConvertedTrash(context, options, member, out var trashPath, out var moveFailureReason)
+                || string.IsNullOrWhiteSpace(trashPath))
+            {
+                RollbackMovedArtifacts(context, movedArtifacts.ToArray());
+                failureReason = moveFailureReason ?? $"set-member-trash-failed:{member}";
+                return false;
+            }
 
+            movedArtifacts.Add(new MovedArtifact(member, trashPath, "SET_MEMBER", $"set-member-co-move:{ext}"));
+        }
+
+        return true;
+    }
+
+    private static bool TryAppendSuccessfulConversionAudits(
+        PipelineContext context,
+        RunOptions options,
+        string sourcePath,
+        ConversionResult convResult,
+        ConversionTarget? target,
+        IReadOnlyList<MovedArtifact> movedArtifacts,
+        out string? failureReason)
+    {
+        failureReason = null;
+
+        try
+        {
+            PipelinePhaseHelpers.AppendConversionAudit(
+                context,
+                options,
+                sourcePath,
+                convResult.TargetPath,
+                ConversionVerificationHelpers.ResolveToolName(convResult, target));
+
+            foreach (var movedArtifact in movedArtifacts)
+            {
+                PipelinePhaseHelpers.AppendConversionSourceAudit(
+                    context,
+                    options,
+                    movedArtifact.SourcePath,
+                    movedArtifact.TrashPath,
+                    movedArtifact.Category,
+                    movedArtifact.Reason);
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            failureReason = ex.Message;
+            return false;
+        }
+    }
+
+    private static void TryAppendConversionErrorAudit(
+        PipelineContext context,
+        RunOptions options,
+        string sourcePath,
+        string? reason)
+    {
+        try
+        {
+            PipelinePhaseHelpers.AppendConversionErrorAudit(context, options, sourcePath, reason);
+        }
+        catch (Exception)
+        {
+            // best effort only
+        }
+    }
+
+    private static void RollbackMovedArtifacts(PipelineContext context, IReadOnlyList<MovedArtifact> movedArtifacts)
+    {
+        for (var i = movedArtifacts.Count - 1; i >= 0; i--)
+        {
+            var movedArtifact = movedArtifacts[i];
             try
             {
-                context.FileSystem.MoveItemSafely(member, trashDest);
-                if (!string.IsNullOrEmpty(options.AuditPath))
-                {
-                    context.AuditStore.AppendAuditRow(
-                        options.AuditPath, root, member, trashDest,
-                        "CONVERT", "SET_MEMBER", "", $"set-member-co-move:{ext}");
-                }
+                context.FileSystem.MoveItemSafely(movedArtifact.TrashPath, movedArtifact.SourcePath);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
-                context.OnProgress?.Invoke($"WARNING: Could not move set member after conversion: {ex.Message}");
+                context.OnProgress?.Invoke(
+                    $"WARNING: Could not restore moved conversion source: {movedArtifact.TrashPath} -> {movedArtifact.SourcePath} ({ex.Message})");
+            }
+        }
+    }
+
+    private static void CleanupConversionOutputs(PipelineContext context, ConversionResult convResult)
+    {
+        foreach (var outputPath in PipelinePhaseHelpers.GetConversionOutputPaths(convResult))
+        {
+            try
+            {
+                if (File.Exists(outputPath))
+                    context.FileSystem.DeleteFile(outputPath);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                context.OnProgress?.Invoke($"WARNING: Could not clean conversion output: {outputPath} ({ex.Message})");
             }
         }
     }
@@ -342,6 +454,17 @@ internal static class ConversionPhaseHelper
             return 1;
 
         return Math.Max(1, Math.Min(MaxParallelConversions, Math.Min(Environment.ProcessorCount, workItemCount)));
+    }
+
+    private static int GetProgressUpdateInterval(int workItemCount)
+    {
+        if (workItemCount <= 50)
+            return 1;
+
+        if (workItemCount <= 250)
+            return 5;
+
+        return 25;
     }
 
     private static string BuildSerializationKey(string filePath)

@@ -98,4 +98,32 @@ public sealed class OpenApiSpecRegressionTests
         Assert.True(watchStatusPath.TryGetProperty("get", out _), "Watch status path must declare GET.");
         Assert.True(schemas.TryGetProperty("ApiWatchStatus", out _), "Missing ApiWatchStatus schema in embedded OpenAPI spec.");
     }
+
+    [Fact]
+    public async Task OpenApiSpec_DeclaresCollectionDiffAndMergePaths_AndSchemas()
+    {
+        using var spec = JsonDocument.Parse(await OpenApiTestHelper.FetchOpenApiJsonAsync());
+        var paths = spec.RootElement.GetProperty("paths");
+        var schemas = spec.RootElement.GetProperty("components").GetProperty("schemas");
+
+        Assert.True(paths.TryGetProperty("/collections/compare", out var comparePath), "Missing collection compare path in embedded OpenAPI spec.");
+        Assert.True(comparePath.TryGetProperty("post", out _), "Collection compare path must declare POST.");
+
+        Assert.True(paths.TryGetProperty("/collections/merge", out var mergePath), "Missing collection merge plan path in embedded OpenAPI spec.");
+        Assert.True(mergePath.TryGetProperty("post", out _), "Collection merge path must declare POST.");
+
+        Assert.True(paths.TryGetProperty("/collections/merge/apply", out var mergeApplyPath), "Missing collection merge apply path in embedded OpenAPI spec.");
+        Assert.True(mergeApplyPath.TryGetProperty("post", out _), "Collection merge apply path must declare POST.");
+
+        Assert.True(paths.TryGetProperty("/collections/merge/rollback", out var mergeRollbackPath), "Missing collection merge rollback path in embedded OpenAPI spec.");
+        Assert.True(mergeRollbackPath.TryGetProperty("post", out _), "Collection merge rollback path must declare POST.");
+
+        Assert.True(schemas.TryGetProperty("CollectionCompareRequest", out _), "Missing CollectionCompareRequest schema in embedded OpenAPI spec.");
+        Assert.True(schemas.TryGetProperty("CollectionCompareResult", out _), "Missing CollectionCompareResult schema in embedded OpenAPI spec.");
+        Assert.True(schemas.TryGetProperty("CollectionMergeRequest", out _), "Missing CollectionMergeRequest schema in embedded OpenAPI spec.");
+        Assert.True(schemas.TryGetProperty("CollectionMergePlan", out _), "Missing CollectionMergePlan schema in embedded OpenAPI spec.");
+        Assert.True(schemas.TryGetProperty("CollectionMergeApplyRequest", out _), "Missing CollectionMergeApplyRequest schema in embedded OpenAPI spec.");
+        Assert.True(schemas.TryGetProperty("CollectionMergeApplyResult", out _), "Missing CollectionMergeApplyResult schema in embedded OpenAPI spec.");
+        Assert.True(schemas.TryGetProperty("CollectionMergeRollbackRequest", out _), "Missing CollectionMergeRollbackRequest schema in embedded OpenAPI spec.");
+    }
 }

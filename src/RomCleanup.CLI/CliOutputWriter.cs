@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
@@ -125,7 +126,9 @@ internal static class CliOutputWriter
     /// <summary>Help: Outputs usage text to stdout.</summary>
     internal static void WriteUsage(TextWriter stdout)
     {
-        stdout.WriteLine(@"Romulus — Your Collection, Perfected.
+        var defaultPreferRegions = string.Join(",", RunConstants.DefaultPreferRegions);
+
+        stdout.WriteLine($@"Romulus — Your Collection, Perfected.
 
 Usage:
   romulus --roots ""D:\Roms"" [--mode DryRun|Move] [--prefer EU,US,JP]
@@ -159,7 +162,7 @@ Run Options:
   --workflow <id>        Apply guided workflow defaults
   --profile <id>         Apply a built-in or saved run profile
   --profile-file <file>  Import and apply an external profile document
-  --prefer <regions>     Comma-separated region priority (default: EU,US,WORLD,JP)
+  --prefer <regions>     Comma-separated region priority (default: {defaultPreferRegions})
   --extensions <exts>    Comma-separated extensions filter
   --trashroot <path>     Custom trash folder for duplicates
   --removejunk           Move junk files (demos, betas, hacks) to trash

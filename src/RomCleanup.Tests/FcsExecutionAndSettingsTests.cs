@@ -822,6 +822,7 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
 
         public void ShowText(string title, string content) => ShowTextCalls.Add((title, content));
         public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
+        public bool ConfirmConversionReview(string title, string summary, IReadOnlyList<RomCleanup.Contracts.Models.ConversionReviewEntry> entries) => NextConfirm;
         public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => true;
     }
 

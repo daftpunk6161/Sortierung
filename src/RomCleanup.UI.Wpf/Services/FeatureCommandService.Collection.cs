@@ -47,32 +47,6 @@ public sealed partial class FeatureCommandService
         _dialog.ShowText("Virtuelle Ordner", FeatureService.BuildVirtualFolderPreview(_vm.LastCandidates));
     }
 
-    private void CollectionDiff()
-    {
-        var leftRoot = _dialog.BrowseFolder("Linke Sammlung waehlen");
-        if (string.IsNullOrWhiteSpace(leftRoot))
-            return;
-
-        var rightRoot = _dialog.BrowseFolder("Rechte Sammlung waehlen");
-        if (string.IsNullOrWhiteSpace(rightRoot))
-            return;
-
-        using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), msg => _vm.AddLog(msg, "INFO"));
-        var fileSystem = new FileSystemAdapter();
-        var build = CollectionCompareService.CompareAsync(
-            collectionIndex,
-            fileSystem,
-            BuildCollectionCompareRequest(leftRoot, rightRoot)).GetAwaiter().GetResult();
-        if (!build.CanUse || build.Result is null)
-        {
-            _vm.AddLog($"[CollectionDiff] Nicht verfuegbar: {build.Reason}", "WARN");
-            _dialog.Info(build.Reason ?? "Collection Diff nicht verfuegbar.", "Collection Diff");
-            return;
-        }
-
-        _dialog.ShowText("Collection Diff", FormatCollectionCompare(build.Result));
-    }
-
     private void CollectionMerge()
     {
         var leftRoot = _dialog.BrowseFolder("Linke Sammlung waehlen");
@@ -167,32 +141,6 @@ public sealed partial class FeatureCommandService
             },
             Limit = 500
         };
-    }
-
-    private static string FormatCollectionCompare(CollectionCompareResult result)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("Collection Diff");
-        sb.AppendLine();
-        sb.AppendLine($"Left:  {string.Join("; ", result.Request.Left.Roots)}");
-        sb.AppendLine($"Right: {string.Join("; ", result.Request.Right.Roots)}");
-        sb.AppendLine();
-        sb.AppendLine($"Total: {result.Summary.TotalEntries}");
-        sb.AppendLine($"Only left: {result.Summary.OnlyInLeft}");
-        sb.AppendLine($"Only right: {result.Summary.OnlyInRight}");
-        sb.AppendLine($"Identical: {result.Summary.PresentInBothIdentical}");
-        sb.AppendLine($"Different: {result.Summary.PresentInBothDifferent}");
-        sb.AppendLine($"Left preferred: {result.Summary.LeftPreferred}");
-        sb.AppendLine($"Right preferred: {result.Summary.RightPreferred}");
-        sb.AppendLine($"Review required: {result.Summary.ReviewRequired}");
-        sb.AppendLine();
-        foreach (var entry in result.Entries.Take(25))
-            sb.AppendLine($"[{entry.State}] {entry.DiffKey} ({entry.ReasonCode})");
-
-        if (result.Entries.Count > 25)
-            sb.AppendLine($"... und {result.Entries.Count - 25} weitere Eintraege");
-
-        return sb.ToString();
     }
 
     private static string FormatCollectionMergePlan(CollectionMergePlan plan)

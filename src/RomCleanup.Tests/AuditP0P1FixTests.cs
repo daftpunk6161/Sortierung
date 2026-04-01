@@ -192,6 +192,7 @@ public sealed class AuditP0P1FixTests : IDisposable
         public string ShowInputBox(string prompt, string title = "", string defaultValue = "") => "";
         public void ShowText(string title, string content) { }
         public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "") => true;
+        public bool ConfirmConversionReview(string title, string summary, IReadOnlyList<RomCleanup.Contracts.Models.ConversionReviewEntry> entries) => true;
         public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => true;
     }
 

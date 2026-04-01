@@ -391,19 +391,22 @@ public static class CollectionCompareService
             };
         }
 
-        if (EntriesAreIdentical(left, right!))
+        var leftEntry = left ?? throw new InvalidOperationException("Collection diff entry requires a left-side value after null guards.");
+        var rightEntry = right ?? throw new InvalidOperationException("Collection diff entry requires a right-side value after null guards.");
+
+        if (EntriesAreIdentical(leftEntry, rightEntry))
         {
             return new CollectionDiffEntry
             {
                 DiffKey = diffKey,
                 State = CollectionDiffState.PresentInBothIdentical,
-                ReasonCode = ResolveIdenticalReasonCode(left, right),
-                Left = left,
-                Right = right
+                ReasonCode = ResolveIdenticalReasonCode(leftEntry, rightEntry),
+                Left = leftEntry,
+                Right = rightEntry
             };
         }
 
-        var reviewReason = ResolveReviewReason(left, right);
+        var reviewReason = ResolveReviewReason(leftEntry, rightEntry);
         if (reviewReason is not null)
         {
             return new CollectionDiffEntry
@@ -412,27 +415,27 @@ public static class CollectionCompareService
                 State = CollectionDiffState.ReviewRequired,
                 ReviewRequired = true,
                 ReasonCode = reviewReason,
-                Left = left,
-                Right = right
+                Left = leftEntry,
+                Right = rightEntry
             };
         }
 
-        if (HaveEqualWinnerRank(left, right))
+        if (HaveEqualWinnerRank(leftEntry, rightEntry))
         {
             return new CollectionDiffEntry
             {
                 DiffKey = diffKey,
                 State = CollectionDiffState.PresentInBothDifferent,
                 ReasonCode = "different-no-meaningful-preference",
-                Left = left,
-                Right = right
+                Left = leftEntry,
+                Right = rightEntry
             };
         }
 
         var winner = DeduplicationEngine.SelectWinner(
         [
-            CollectionIndexCandidateMapper.ToCandidate(left),
-            CollectionIndexCandidateMapper.ToCandidate(right)
+            CollectionIndexCandidateMapper.ToCandidate(leftEntry),
+            CollectionIndexCandidateMapper.ToCandidate(rightEntry)
         ]);
         if (winner is null)
         {
@@ -442,12 +445,12 @@ public static class CollectionCompareService
                 State = CollectionDiffState.ReviewRequired,
                 ReviewRequired = true,
                 ReasonCode = "winner-selection-failed",
-                Left = left,
-                Right = right
+                Left = leftEntry,
+                Right = rightEntry
             };
         }
 
-        var preferredSide = string.Equals(winner.MainPath, left.Path, StringComparison.OrdinalIgnoreCase)
+        var preferredSide = string.Equals(winner.MainPath, leftEntry.Path, StringComparison.OrdinalIgnoreCase)
             ? CollectionCompareSide.Left
             : CollectionCompareSide.Right;
 
@@ -461,8 +464,8 @@ public static class CollectionCompareService
             ReasonCode = preferredSide == CollectionCompareSide.Left
                 ? "left-preferred"
                 : "right-preferred",
-            Left = left,
-            Right = right
+            Left = leftEntry,
+            Right = rightEntry
         };
     }
 

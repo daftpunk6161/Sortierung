@@ -595,13 +595,7 @@ public sealed partial class RunOrchestrator
                             sourceBytes = sourceInfo.Length;
                     }
 
-                    long? targetBytes = r.TargetBytes;
-                    if (!targetBytes.HasValue)
-                    {
-                        var targetInfo = new FileInfo(r.TargetPath);
-                        if (targetInfo.Exists)
-                            targetBytes = targetInfo.Length;
-                    }
+                    var targetBytes = ResolveTotalTargetBytes(r);
 
                     if (sourceBytes.HasValue && targetBytes.HasValue)
                         savedBytes += sourceBytes.Value - targetBytes.Value;
@@ -627,6 +621,42 @@ public sealed partial class RunOrchestrator
             TotalSavedBytes = savedBytes,
             Results = results
         };
+    }
+
+    private static long? ResolveTotalTargetBytes(ConversionResult result)
+    {
+        long totalBytes = 0;
+        var hasMeasuredBytes = false;
+
+        if (result.TargetBytes.HasValue)
+        {
+            totalBytes += result.TargetBytes.Value;
+            hasMeasuredBytes = true;
+        }
+        else if (!string.IsNullOrWhiteSpace(result.TargetPath))
+        {
+            var targetInfo = new FileInfo(result.TargetPath);
+            if (targetInfo.Exists)
+            {
+                totalBytes += targetInfo.Length;
+                hasMeasuredBytes = true;
+            }
+        }
+
+        foreach (var additionalTargetPath in result.AdditionalTargetPaths)
+        {
+            if (string.IsNullOrWhiteSpace(additionalTargetPath))
+                continue;
+
+            var additionalInfo = new FileInfo(additionalTargetPath);
+            if (!additionalInfo.Exists)
+                continue;
+
+            totalBytes += additionalInfo.Length;
+            hasMeasuredBytes = true;
+        }
+
+        return hasMeasuredBytes ? totalBytes : null;
     }
 
     /// <summary>FEAT-02: Generate HTML and CSV reports from pipeline results.</summary>

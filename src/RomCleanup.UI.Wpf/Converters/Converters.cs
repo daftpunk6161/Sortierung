@@ -133,8 +133,8 @@ public sealed class PipelinePhaseBrushConverter : IValueConverter
         RunState.Preflight => 1,
         RunState.Scanning => 2,
         RunState.Deduplicating => 3,
-        RunState.Sorting => 4,
-        RunState.Moving => 5,
+        RunState.Moving => 4,
+        RunState.Sorting => 5,
         RunState.Converting => 6,
         RunState.Completed or RunState.CompletedDryRun => 7,
         _ => 0
@@ -188,8 +188,8 @@ public sealed class PhaseDetailConverter : IValueConverter
         "Preflight: Konfiguration und Pfade prüfen",
         "Scan: ROM-Verzeichnisse durchsuchen",
         "Dedupe: Duplikate erkennen und beste Version wählen",
+        "Move: Duplikate und Junk sicher verschieben",
         "Sort: Dateien nach Konsole gruppieren",
-        "Move: Duplikate in Papierkorb verschieben",
         "Convert: Formate optimieren (CHD/RVZ/ZIP)",
         "Fertig: Ergebnis und Report"
     ];
@@ -206,8 +206,8 @@ public sealed class PhaseDetailConverter : IValueConverter
             RunState.Preflight => 1,
             RunState.Scanning => 2,
             RunState.Deduplicating => 3,
-            RunState.Sorting => 4,
-            RunState.Moving => 5,
+            RunState.Moving => 4,
+            RunState.Sorting => 5,
             RunState.Converting => 6,
             RunState.Completed or RunState.CompletedDryRun => 7,
             _ => 0
