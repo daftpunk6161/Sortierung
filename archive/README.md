@@ -19,10 +19,11 @@ Aktive Pläne → [`plan/`](../plan/README.md)
 
 ---
 
-## audits/ — 20 Dokumente
+## audits/ — 21 Dokumente
 
 | Datei | Datum | Beschreibung |
 |-------|-------|--------------|
+| `DEEP_BUGHUNT_ROMULUS_2026-04-01.md` | 2026-04-02 | Archivierte Deep-Bughunt-Momentaufnahme; Findings auf aktuellem Repo-Stand umgesetzt und verifiziert |
 | `CONSOLIDATED_AUDIT_2026-03-31.md` | 2026-04-01 | Konsolidierter Audit-Abgleich gegen den aktuellen Repo-Stand |
 | `2026-03-27-core-recognition-audit.md` | 2026-03-27 | Erkennungs-/Sorting-/DAT-Audit mit Benchmark-Basis |
 | `BENCHMARK_AUDIT_REPORT.md` | 2026-03-22 | Benchmark-/Evaluation-Dokumentationsaudit |

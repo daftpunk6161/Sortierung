@@ -1,4 +1,10 @@
-# Deep Bughunt – Romulus
+# Deep Bughunt – Romulus (Archiviert)
+
+> **Status:** abgeschlossen und archiviert am `2026-04-02`
+> **Dokumenttyp:** historische Momentaufnahme des Repo-Stands vom `2026-04-01`
+> **Hinweis:** Die in diesem Dokument priorisierten Findings (`QA-01` bis `QA-11`, `QA-T01` bis `QA-T04`) sind auf aktuellem Repo-Stand umgesetzt und verifiziert.
+> **Verifikation auf Archivierungsstand:** Vollsuite gruen mit `7249/7249` Tests.
+> **Aktiver Zweck:** nur noch Nachvollziehbarkeit; nicht mehr als aktiver Release-Blocker-Tracker verwenden.
 
 ## 1. Executive Verdict
 
