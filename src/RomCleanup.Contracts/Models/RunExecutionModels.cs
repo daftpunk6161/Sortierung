@@ -99,6 +99,7 @@ public sealed class RunResult
     public int DatRenameExecutedCount { get; init; }
     public int DatRenameSkippedCount { get; init; }
     public int DatRenameFailedCount { get; init; }
+    public IReadOnlyList<PathMutation> DatRenamePathMutations { get; init; } = Array.Empty<PathMutation>();
     public long DurationMs { get; init; }
     public string? ReportPath { get; init; }
 

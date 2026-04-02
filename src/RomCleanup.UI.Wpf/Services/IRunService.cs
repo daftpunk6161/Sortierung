@@ -18,4 +18,6 @@ public interface IRunService
         CancellationToken ct);
 
     string GetSiblingDirectory(string rootPath, string siblingName);
+
+    bool HasVerifiedRollback(string? auditPath) => false;
 }

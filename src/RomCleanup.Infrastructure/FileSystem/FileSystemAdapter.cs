@@ -160,10 +160,9 @@ public sealed class FileSystemAdapter : IFileSystem
             throw new InvalidOperationException("Blocked: Destination path contains directory traversal.");
 
         // SEC-MOVE-03: Block NTFS Alternate Data Streams (parity with ResolveChildPathWithinRoot)
-        if (sourcePath.Contains(':') && !Path.IsPathRooted(sourcePath))
+        if (HasAlternateDataStreamReference(sourcePath))
             throw new InvalidOperationException("Blocked: Source path contains NTFS ADS reference.");
-        var destFileName = Path.GetFileName(destinationPath);
-        if (destFileName.Contains(':'))
+        if (HasAlternateDataStreamReference(destinationPath))
             throw new InvalidOperationException("Blocked: Destination filename contains NTFS ADS reference.");
 
         var fullSource = NormalizePathNfc(sourcePath);
@@ -519,6 +518,22 @@ public sealed class FileSystemAdapter : IFileSystem
         };
     }
 
+    private static bool HasAlternateDataStreamReference(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        var trimmedPath = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (trimmedPath.Length == 0)
+            return false;
+
+        var fileName = Path.GetFileName(trimmedPath);
+        if (string.IsNullOrEmpty(fileName))
+            return false;
+
+        return fileName.Contains(':');
+    }
+
     private static bool HasReparsePointInAncestry(string path, string stopAtRoot)
     {
         var normalizedRoot = Path.GetFullPath(stopAtRoot).TrimEnd(Path.DirectorySeparatorChar);
@@ -599,6 +614,11 @@ public sealed class FileSystemAdapter : IFileSystem
 
         var fullSource = NormalizePathNfc(validatedSource);
         var fullDest = NormalizePathNfc(validatedDest);
+
+        if (HasAlternateDataStreamReference(fullSource))
+            throw new InvalidOperationException("Blocked: Source path contains NTFS ADS reference.");
+        if (HasAlternateDataStreamReference(fullDest))
+            throw new InvalidOperationException("Blocked: Destination filename contains NTFS ADS reference.");
 
         var destFileName = Path.GetFileName(fullDest);
         if (IsWindowsReservedDeviceName(destFileName))

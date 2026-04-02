@@ -80,31 +80,15 @@ public sealed partial class RunOrchestrator
         IReadOnlyList<RomCandidate> processingCandidates,
         RunResultBuilder result,
         PhaseMetricsCollector metrics,
-        PipelineState pipelineState,
-        System.Diagnostics.Stopwatch sw,
         CancellationToken cancellationToken,
-        out RunResult finalResult)
+        PipelineState pipelineState)
     {
-        finalResult = default!;
-
         if (!options.ConvertOnly || _converter is null)
             return false;
 
         ExecuteConvertOnlyPhase(processingCandidates, options, result, metrics, cancellationToken);
         result.AllCandidates = candidates;
         result.TotalFilesScanned = candidates.Count;
-
-        sw.Stop();
-        result.DurationMs = sw.ElapsedMilliseconds;
-        result.PhaseMetrics = metrics.GetMetrics();
-        result.ReportPath = new ReportPhaseStep(() => GenerateReport(result, options))
-            .Execute(pipelineState, cancellationToken).TypedResult as string;
-
-        var convertOnlyHasErrors = result.ConvertErrorCount > 0;
-        var convertOnlyOutcome = convertOnlyHasErrors ? RunOutcome.CompletedWithErrors : RunOutcome.Ok;
-        result.Status = convertOnlyOutcome.ToStatusString();
-        result.ExitCode = convertOnlyHasErrors ? 1 : 0;
-        finalResult = result.Build();
         return true;
     }
 }

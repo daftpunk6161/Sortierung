@@ -60,6 +60,82 @@ public sealed partial class RunOrchestrator
         }
     }
 
+    private RunResult FinalizeCompletedRun(
+        RunOptions options,
+        RunResultBuilder result,
+        PipelineState pipelineState,
+        PhaseMetricsCollector metrics,
+        System.Diagnostics.Stopwatch sw,
+        CancellationToken cancellationToken)
+    {
+        sw.Stop();
+        result.DurationMs = sw.ElapsedMilliseconds;
+        result.PhaseMetrics = metrics.GetMetrics();
+
+        var runOutcome = ResolveRunOutcome(result);
+        if (!TryGenerateRequestedReport(result, options, pipelineState, cancellationToken) && runOutcome == RunOutcome.Ok)
+            runOutcome = RunOutcome.CompletedWithErrors;
+
+        result.Status = runOutcome.ToStatusString();
+        result.ExitCode = runOutcome == RunOutcome.Ok ? 0 : 1;
+
+        try
+        {
+            new AuditSealPhaseStep(() => WriteCompletedAuditSidecar(options, result, sw.ElapsedMilliseconds, runOutcome))
+                .Execute(pipelineState, cancellationToken);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            _onProgress?.Invoke($"[Audit] Sidecar write failed: {ex.GetType().Name}: {ex.Message}");
+            if (runOutcome == RunOutcome.Ok)
+            {
+                result.Status = RunOutcome.CompletedWithErrors.ToStatusString();
+                result.ExitCode = 1;
+            }
+        }
+
+        _onProgress?.Invoke($"[Fertig] Pipeline abgeschlossen in {sw.ElapsedMilliseconds}ms — {result.TotalFilesScanned} Dateien, {result.GroupCount} Gruppen");
+        return result.Build();
+    }
+
+    private bool TryGenerateRequestedReport(
+        RunResultBuilder result,
+        RunOptions options,
+        PipelineState pipelineState,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(options.ReportPath))
+            return true;
+
+        var reportStep = new ReportPhaseStep(() =>
+        {
+            _onProgress?.Invoke("[Report] Generiere HTML-Report…");
+            return GenerateReport(result, options);
+        });
+
+        result.ReportPath = reportStep.Execute(pipelineState, cancellationToken).TypedResult as string;
+        if (!string.IsNullOrEmpty(result.ReportPath))
+        {
+            _onProgress?.Invoke($"[Report] Report erstellt: {result.ReportPath}");
+            return true;
+        }
+
+        _onProgress?.Invoke("[Report] Angeforderter Report konnte weder am Zielpfad noch im Fallback geschrieben werden.");
+        return false;
+    }
+
+    private static RunOutcome ResolveRunOutcome(RunResultBuilder result)
+    {
+        var hasErrors = result.ConvertErrorCount > 0
+                        || result.ConvertVerifyFailedCount > 0
+                        || (result.MoveResult is { FailCount: > 0 })
+                        || (result.JunkMoveResult is { FailCount: > 0 })
+                        || result.DatRenameFailedCount > 0
+                        || (result.ConsoleSortResult is { Failed: > 0 });
+
+        return hasErrors ? RunOutcome.CompletedWithErrors : RunOutcome.Ok;
+    }
+
     private void WriteCompletedAuditSidecar(RunOptions options, RunResultBuilder result, long elapsedMs, RunOutcome? outcome = null)
     {
         _onProgress?.Invoke("[Audit] Schreibe Audit-Sidecar…");

@@ -1,9 +1,13 @@
+using System.Reflection;
+using System.Runtime.ExceptionServices;
+using System.Text.RegularExpressions;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Classification;
 using RomCleanup.Infrastructure.Index;
+using RomCleanup.Infrastructure.Metrics;
 using RomCleanup.Infrastructure.Orchestration;
-using System.Text.RegularExpressions;
 using Xunit;
 
 namespace RomCleanup.Tests;
@@ -337,7 +341,7 @@ public class RunOrchestratorTests : IDisposable
     }
 
     [Fact]
-    public void Execute_WithInvalidReportPath_LeavesReportPathNull()
+    public void Execute_WithInvalidReportPath_DegradesToCompletedWithErrors()
     {
         CreateFile("Game (USA).zip", 100);
 
@@ -356,7 +360,8 @@ public class RunOrchestratorTests : IDisposable
         var result = orch.Execute(options);
 
         Assert.Null(result.ReportPath);
-        Assert.Equal("ok", result.Status);
+        Assert.Equal("completed_with_errors", result.Status);
+        Assert.Equal(1, result.ExitCode);
     }
 
     [Fact]
@@ -698,6 +703,280 @@ public class RunOrchestratorTests : IDisposable
         Assert.NotNull(await index.TryGetByPathAsync(stalePath));
     }
 
+    [Fact]
+    public void Execute_ConvertOnly_Success_WritesVerifiedAuditSidecar()
+    {
+        CreateFile("Convert Me.zip", 128);
+        var auditPath = Path.Combine(_tempDir, "convert-only-audit.csv");
+        var audit = new RomCleanup.Infrastructure.Audit.AuditCsvStore();
+        var orchestrator = new RunOrchestrator(
+            new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter(),
+            audit,
+            converter: new FakeFormatConverter());
+
+        var result = orchestrator.Execute(new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = RunConstants.ModeMove,
+            ConvertOnly = true,
+            ConvertFormat = "chd",
+            AuditPath = auditPath
+        });
+
+        Assert.Equal("ok", result.Status);
+        Assert.True(File.Exists(auditPath));
+        Assert.True(audit.TestMetadataSidecar(auditPath));
+        Assert.True(File.Exists(auditPath + ".meta.json"));
+    }
+
+    [Fact]
+    public void RunDatRenameStep_RebasesLoserPathsBeforeMove()
+    {
+        var winnerPath = CreateFile("winner.zip", 64);
+        var loserPath = CreateFile("loser.zip", 48);
+        var renamedLoserPath = Path.Combine(_tempDir, "renamed-loser.zip");
+        var winner = CreateCandidate(winnerPath, "game", "PS1");
+        var loser = CreateCandidate(loserPath, "game", "PS1");
+        var state = new PipelineState();
+        state.SetScanOutput([winner, loser], [winner, loser]);
+        state.SetDedupeOutput(
+        [
+            new DedupeGroup
+            {
+                GameKey = "game",
+                Winner = winner,
+                Losers = [loser]
+            }
+        ],
+        [
+            new DedupeGroup
+            {
+                GameKey = "game",
+                Winner = winner,
+                Losers = [loser]
+            }
+        ]);
+        state.SetDatAuditOutput(new DatAuditResult(
+            Entries:
+            [
+                new DatAuditEntry(
+                    loserPath,
+                    "hash-loser",
+                    DatAuditStatus.HaveWrongName,
+                    "Game",
+                    "renamed-loser.zip",
+                    "PS1",
+                    100)
+            ],
+            HaveCount: 0,
+            HaveWrongNameCount: 1,
+            MissCount: 0,
+            UnknownCount: 0,
+            AmbiguousCount: 0));
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = RunConstants.ModeMove,
+            EnableDatRename = true
+        };
+        var orchestrator = new RunOrchestrator(
+            new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter(),
+            new FakeAuditStore());
+        var builder = new RunResultBuilder();
+        var metrics = CreateMetricsCollector();
+
+        InvokePhaseStep(orchestrator, "RunDatRenameStep", state, options, builder, metrics);
+
+        Assert.Equal(renamedLoserPath, state.GameGroups!.Single().Losers.Single().MainPath);
+        Assert.True(File.Exists(renamedLoserPath));
+        Assert.False(File.Exists(loserPath));
+
+        InvokePhaseStep(orchestrator, "RunMoveStep", state, options, builder, metrics);
+
+        Assert.NotNull(builder.MoveResult);
+        Assert.Equal(1, builder.MoveResult!.MoveCount);
+        Assert.Equal(0, builder.MoveResult.FailCount);
+        Assert.Contains(renamedLoserPath, builder.MoveResult.MovedSourcePaths!);
+        Assert.True(File.Exists(Path.Combine(_tempDir, RunConstants.WellKnownFolders.TrashRegionDedupe, "renamed-loser.zip")));
+        Assert.False(File.Exists(renamedLoserPath));
+    }
+
+    [Fact]
+    public void RunDatRenameStep_RebasesCandidatePathsBeforeConsoleSort()
+    {
+        var originalPath = CreateFile("game.zip", 96);
+        var renamedPath = Path.Combine(_tempDir, "renamed.zip");
+        var sortedPath = Path.Combine(_tempDir, "PS1", "renamed.zip");
+        var candidate = CreateCandidate(originalPath, "game", "PS1");
+        var state = new PipelineState();
+        state.SetScanOutput([candidate], [candidate]);
+        state.SetDatAuditOutput(new DatAuditResult(
+            Entries:
+            [
+                new DatAuditEntry(
+                    originalPath,
+                    "hash-a",
+                    DatAuditStatus.HaveWrongName,
+                    "Game",
+                    "renamed.zip",
+                    "PS1",
+                    100)
+            ],
+            HaveCount: 0,
+            HaveWrongNameCount: 1,
+            MissCount: 0,
+            UnknownCount: 0,
+            AmbiguousCount: 0));
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = RunConstants.ModeMove,
+            EnableDatRename = true,
+            SortConsole = true
+        };
+        var orchestrator = new RunOrchestrator(
+            new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter(),
+            new FakeAuditStore(),
+            consoleDetector: BuildConsoleDetector("PS1", ".zip"));
+        var builder = new RunResultBuilder();
+        var metrics = CreateMetricsCollector();
+
+        InvokePhaseStep(orchestrator, "RunDatRenameStep", state, options, builder, metrics);
+        InvokePhaseStep(orchestrator, "RunConsoleSortStep", state, options, builder, metrics);
+
+        Assert.Equal(sortedPath, state.AllCandidates!.Single().MainPath);
+        Assert.NotNull(builder.ConsoleSortResult);
+        Assert.Contains(builder.ConsoleSortResult!.PathMutations!, m =>
+            string.Equals(m.SourcePath, renamedPath, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(m.TargetPath, sortedPath, StringComparison.OrdinalIgnoreCase));
+        Assert.True(File.Exists(sortedPath));
+        Assert.False(File.Exists(originalPath));
+        Assert.False(File.Exists(renamedPath));
+    }
+
+    [Fact]
+    public void RunDatRenameStep_RebasesWinnerPathsBeforeWinnerConversion()
+    {
+        var winnerPath = CreateFile("winner.zip", 112);
+        var renamedWinnerPath = Path.Combine(_tempDir, "renamed-winner.zip");
+        var winner = CreateCandidate(winnerPath, "game", "PS1");
+        var state = new PipelineState();
+        state.SetScanOutput([winner], [winner]);
+        state.SetDedupeOutput(
+        [
+            new DedupeGroup
+            {
+                GameKey = "game",
+                Winner = winner,
+                Losers = Array.Empty<RomCandidate>()
+            }
+        ],
+        [
+            new DedupeGroup
+            {
+                GameKey = "game",
+                Winner = winner,
+                Losers = Array.Empty<RomCandidate>()
+            }
+        ]);
+        state.SetDatAuditOutput(new DatAuditResult(
+            Entries:
+            [
+                new DatAuditEntry(
+                    winnerPath,
+                    "hash-w",
+                    DatAuditStatus.HaveWrongName,
+                    "Game",
+                    "renamed-winner.zip",
+                    "PS1",
+                    100)
+            ],
+            HaveCount: 0,
+            HaveWrongNameCount: 1,
+            MissCount: 0,
+            UnknownCount: 0,
+            AmbiguousCount: 0));
+
+        var converter = new FakeFormatConverter();
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = RunConstants.ModeMove,
+            EnableDatRename = true,
+            ConvertFormat = "chd"
+        };
+        var orchestrator = new RunOrchestrator(
+            new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter(),
+            new FakeAuditStore(),
+            converter: converter);
+        var builder = new RunResultBuilder();
+        var metrics = CreateMetricsCollector();
+
+        InvokePhaseStep(orchestrator, "RunDatRenameStep", state, options, builder, metrics);
+        InvokePhaseStep(orchestrator, "RunWinnerConversionStep", state, options, builder, metrics);
+
+        Assert.Single(converter.ConvertedPaths);
+        Assert.Equal(renamedWinnerPath, converter.ConvertedPaths.Single());
+        Assert.True(File.Exists(renamedWinnerPath + ".chd"));
+    }
+
+    [Fact]
+    public void RunConsoleSortStep_RebasesWinnerPathsBeforeWinnerConversion()
+    {
+        var winnerPath = CreateFile("winner.zip", 112);
+        var sortedWinnerPath = Path.Combine(_tempDir, "PS1", "winner.zip");
+        var winner = CreateCandidate(winnerPath, "game", "PS1");
+        var state = new PipelineState();
+        state.SetScanOutput([winner], [winner]);
+        state.SetDedupeOutput(
+        [
+            new DedupeGroup
+            {
+                GameKey = "game",
+                Winner = winner,
+                Losers = Array.Empty<RomCandidate>()
+            }
+        ],
+        [
+            new DedupeGroup
+            {
+                GameKey = "game",
+                Winner = winner,
+                Losers = Array.Empty<RomCandidate>()
+            }
+        ]);
+
+        var converter = new FakeFormatConverter();
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = RunConstants.ModeMove,
+            SortConsole = true,
+            ConvertFormat = "chd"
+        };
+        var orchestrator = new RunOrchestrator(
+            new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter(),
+            new FakeAuditStore(),
+            consoleDetector: BuildConsoleDetector("PS1", ".zip"),
+            converter: converter);
+        var builder = new RunResultBuilder();
+        var metrics = CreateMetricsCollector();
+
+        InvokePhaseStep(orchestrator, "RunConsoleSortStep", state, options, builder, metrics);
+        InvokePhaseStep(orchestrator, "RunWinnerConversionStep", state, options, builder, metrics);
+
+        Assert.Single(converter.ConvertedPaths);
+        Assert.Equal(sortedWinnerPath, converter.ConvertedPaths.Single());
+        Assert.True(File.Exists(sortedWinnerPath + ".chd"));
+    }
+
     // ── Helpers ───────────────────────────────────────────────────
 
     private string CreateFile(string name, int sizeBytes)
@@ -726,6 +1005,48 @@ public class RunOrchestratorTests : IDisposable
                 Array.Empty<string>(),
                 [consoleKey])
         ]);
+
+    private static PhaseStepResult InvokePhaseStep(
+        RunOrchestrator orchestrator,
+        string methodName,
+        PipelineState state,
+        RunOptions options,
+        RunResultBuilder builder,
+        PhaseMetricsCollector metrics)
+    {
+        var method = typeof(RunOrchestrator).GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException($"Phase step method not found: {methodName}");
+
+        try
+        {
+            return (PhaseStepResult)(method.Invoke(orchestrator, [state, options, builder, metrics, CancellationToken.None])
+                ?? throw new InvalidOperationException($"Phase step returned null: {methodName}"));
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+            throw;
+        }
+    }
+
+    private static PhaseMetricsCollector CreateMetricsCollector()
+    {
+        var metrics = new PhaseMetricsCollector();
+        metrics.Initialize();
+        return metrics;
+    }
+
+    private static RomCandidate CreateCandidate(string mainPath, string gameKey, string consoleKey)
+        => new()
+        {
+            MainPath = mainPath,
+            GameKey = gameKey,
+            Extension = Path.GetExtension(mainPath),
+            ConsoleKey = consoleKey,
+            Category = FileCategory.Game,
+            SortDecision = SortDecision.Sort,
+            SizeBytes = new FileInfo(mainPath).Length
+        };
 
     // ── Fakes ─────────────────────────────────────────────────────
 

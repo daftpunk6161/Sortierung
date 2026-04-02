@@ -96,7 +96,7 @@ public sealed partial class MainViewModel
         {
             _lastAuditPath = value;
             OnPropertyChanged();
-            CanRollback = !string.IsNullOrEmpty(_lastAuditPath) && File.Exists(_lastAuditPath);
+            CanRollback = _runService.HasVerifiedRollback(_lastAuditPath);
         }
     }
 
@@ -753,7 +753,7 @@ public sealed partial class MainViewModel
         ConvertOnly = false; // Reset transient flag
         var resolvedReportPath = string.IsNullOrWhiteSpace(reportPath) ? null : reportPath;
         LastReportPath = resolvedReportPath ?? string.Empty;
-        CanRollback = !string.IsNullOrEmpty(LastAuditPath) && File.Exists(LastAuditPath);
+        CanRollback = _runService.HasVerifiedRollback(LastAuditPath);
         if (success && DryRun)
         {
             _lastSuccessfulPreviewFingerprint = BuildPreviewConfigurationFingerprint();
@@ -768,7 +768,7 @@ public sealed partial class MainViewModel
         else if (success && !DryRun)
         {
             CurrentRunState = RunState.Completed;
-            CanRollback = true;
+            CanRollback = _runService.HasVerifiedRollback(LastAuditPath);
             ShowMoveCompleteBanner = true;
             Shell.SelectedNavTag = "Analyse";
             SelectedResultSection = "Dashboard";

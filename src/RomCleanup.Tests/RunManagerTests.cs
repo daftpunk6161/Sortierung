@@ -400,7 +400,7 @@ public class RunManagerTests
     }
 
     [Fact]
-    public async Task CancelledRun_ExposesAuditRollbackRecoveryState()
+    public async Task CancelledRun_WithCsvOnlyAudit_RequiresManualCleanupRecoveryState()
     {
         var auditPath = Path.Combine(Path.GetTempPath(), $"api-recovery-{Guid.NewGuid():N}.csv");
         File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n");
@@ -421,8 +421,8 @@ public class RunManagerTests
             await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(5));
 
             var completed = mgr.Get(run.RunId)!;
-            Assert.Equal("partial-rollback-available", completed.RecoveryState);
-            Assert.True(completed.CanRollback);
+            Assert.Equal("manual-cleanup-may-be-required", completed.RecoveryState);
+            Assert.False(completed.CanRollback);
             Assert.False(completed.ResumeSupported);
             Assert.Equal("audit-rollback-only", completed.RecoveryModel);
         }
@@ -433,7 +433,7 @@ public class RunManagerTests
     }
 
     [Fact]
-    public async Task FailedRun_WithAudit_ExposesPartialRollbackRecoveryState()
+    public async Task FailedRun_WithCsvOnlyAudit_RequiresManualCleanupRecoveryState()
     {
         var auditPath = Path.Combine(Path.GetTempPath(), $"api-failure-{Guid.NewGuid():N}.csv");
         File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n");
@@ -454,8 +454,8 @@ public class RunManagerTests
             await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(5));
 
             var completed = mgr.Get(run.RunId)!;
-            Assert.Equal("partial-rollback-available", completed.RecoveryState);
-            Assert.True(completed.CanRollback);
+            Assert.Equal("manual-cleanup-may-be-required", completed.RecoveryState);
+            Assert.False(completed.CanRollback);
             Assert.True(completed.CanRetry);
             Assert.False(completed.ResumeSupported);
             Assert.Equal("audit-rollback-only", completed.RecoveryModel);
@@ -468,7 +468,7 @@ public class RunManagerTests
     }
 
     [Fact]
-    public async Task CompletedWithErrorsRun_WithAudit_ExposesPartialRollbackRecoveryState()
+    public async Task CompletedWithErrorsRun_WithCsvOnlyAudit_RequiresManualCleanupRecoveryState()
     {
         var auditPath = Path.Combine(Path.GetTempPath(), $"api-completed-errors-{Guid.NewGuid():N}.csv");
         File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n");
@@ -490,12 +490,47 @@ public class RunManagerTests
             await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(5));
 
             var completed = mgr.Get(run.RunId)!;
+            Assert.Equal("manual-cleanup-may-be-required", completed.RecoveryState);
+            Assert.False(completed.CanRollback);
+        }
+        finally
+        {
+            try { File.Delete(auditPath); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task CompletedWithErrorsRun_WithVerifiedSidecar_ExposesRollbackRecoveryState()
+    {
+        var auditPath = Path.Combine(Path.GetTempPath(), $"api-completed-errors-verified-{Guid.NewGuid():N}.csv");
+        File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n");
+        var auditStore = new AuditCsvStore();
+        auditStore.WriteMetadataSidecar(auditPath, new Dictionary<string, object> { ["Status"] = "completed_with_errors" });
+
+        try
+        {
+            var mgr = new RunManager(new FileSystemAdapter(), auditStore, (run, _, _, _) =>
+            {
+                run.AuditPath = auditPath;
+                return new RunExecutionOutcome(ApiRunStatus.CompletedWithErrors, new ApiRunResult
+                {
+                    OrchestratorStatus = "completed_with_errors",
+                    ExitCode = 1,
+                    FailCount = 1
+                });
+            });
+
+            var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "Move", "idem-005c").Run!;
+            await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(5));
+
+            var completed = mgr.Get(run.RunId)!;
             Assert.Equal("partial-rollback-available", completed.RecoveryState);
             Assert.True(completed.CanRollback);
         }
         finally
         {
             try { File.Delete(auditPath); } catch { }
+            try { File.Delete(auditPath + ".meta.json"); } catch { }
         }
     }
 

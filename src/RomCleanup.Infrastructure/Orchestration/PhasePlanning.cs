@@ -79,6 +79,84 @@ public sealed class PipelineState
 
         DatRenameResult = result;
     }
+
+    public void ApplyPathMutations(IReadOnlyList<PathMutation> pathMutations)
+    {
+        ArgumentNullException.ThrowIfNull(pathMutations);
+        if (pathMutations.Count == 0)
+            return;
+
+        var mutationMap = pathMutations
+            .Where(static mutation =>
+                !string.IsNullOrWhiteSpace(mutation.SourcePath)
+                && !string.IsNullOrWhiteSpace(mutation.TargetPath))
+            .GroupBy(static mutation => mutation.SourcePath, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                static group => group.Key,
+                static group => group.Last().TargetPath,
+                StringComparer.OrdinalIgnoreCase);
+
+        if (mutationMap.Count == 0)
+            return;
+
+        if (AllCandidates is { Count: > 0 } allCandidates)
+            AllCandidates = RebaseCandidates(allCandidates, mutationMap);
+
+        if (ProcessingCandidates is { Count: > 0 } processingCandidates)
+            ProcessingCandidates = RebaseCandidates(processingCandidates, mutationMap);
+
+        if (AllGroups is { Count: > 0 } allGroups)
+            AllGroups = RebaseGroups(allGroups, mutationMap);
+
+        if (GameGroups is { Count: > 0 } gameGroups)
+            GameGroups = RebaseGroups(gameGroups, mutationMap);
+
+        if (JunkRemovedPaths is { Count: > 0 } junkRemovedPaths)
+            JunkRemovedPaths = junkRemovedPaths
+                .Select(path => mutationMap.TryGetValue(path, out var rebasedPath) ? rebasedPath : path)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (DatAuditResult is { Entries.Count: > 0 } datAuditResult)
+        {
+            var rebasedEntries = datAuditResult.Entries
+                .Select(entry => mutationMap.TryGetValue(entry.FilePath, out var rebasedPath)
+                    ? entry with { FilePath = rebasedPath }
+                    : entry)
+                .ToArray();
+
+            DatAuditResult = datAuditResult with { Entries = rebasedEntries };
+        }
+    }
+
+    private static IReadOnlyList<RomCandidate> RebaseCandidates(
+        IReadOnlyList<RomCandidate> candidates,
+        IReadOnlyDictionary<string, string> mutationMap)
+    {
+        return candidates
+            .Select(candidate => mutationMap.TryGetValue(candidate.MainPath, out var rebasedPath)
+                ? candidate with { MainPath = rebasedPath }
+                : candidate)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<DedupeGroup> RebaseGroups(
+        IReadOnlyList<DedupeGroup> groups,
+        IReadOnlyDictionary<string, string> mutationMap)
+    {
+        return groups
+            .Select(group => group with
+            {
+                Winner = mutationMap.TryGetValue(group.Winner.MainPath, out var rebasedWinnerPath)
+                    ? group.Winner with { MainPath = rebasedWinnerPath }
+                    : group.Winner,
+                Losers = group.Losers
+                    .Select(loser => mutationMap.TryGetValue(loser.MainPath, out var rebasedLoserPath)
+                        ? loser with { MainPath = rebasedLoserPath }
+                        : loser)
+                    .ToArray()
+            })
+            .ToArray();
+    }
 }
 
 public sealed record ScanPhaseResult(

@@ -1,4 +1,5 @@
 using RomCleanup.Infrastructure.Audit;
+using RomCleanup.Contracts.Models;
 using Xunit;
 
 namespace RomCleanup.Tests;
@@ -195,5 +196,28 @@ public class AuditCsvStoreTests : IDisposable
             new[] { _tempDir }, new[] { _tempDir });
 
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public void AppendAuditRows_WhenReplaceFails_LeavesExistingAuditUnchanged()
+    {
+        var csvPath = Path.Combine(_tempDir, "audit.csv");
+        File.WriteAllLines(csvPath, new[]
+        {
+            "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
+            $"{_tempDir},{Path.Combine(_tempDir, "a.rom")},{Path.Combine(_tempDir, "b.rom")},Move,GAME,,,2025-01-01"
+        });
+
+        var originalContent = File.ReadAllText(csvPath);
+        using var lockHandle = new FileStream(csvPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+        Assert.ThrowsAny<IOException>(() => _audit.AppendAuditRows(csvPath,
+        [
+            new AuditAppendRow(_tempDir, "source.iso", "target.chd", "CONVERT", "GAME", "", "format-convert:test"),
+            new AuditAppendRow(_tempDir, "source.iso", "trash\\source.iso", "CONVERT_SOURCE", "GAME", "", "source-convert-trash")
+        ]));
+
+        lockHandle.Dispose();
+        Assert.Equal(originalContent, File.ReadAllText(csvPath));
     }
 }

@@ -31,12 +31,9 @@ internal static class PipelinePhaseHelpers
 
     internal static void AppendConversionAudit(PipelineContext context, RunOptions options, string sourcePath, string? targetPath, string toolName)
     {
-        if (string.IsNullOrEmpty(options.AuditPath) || string.IsNullOrEmpty(targetPath))
-            return;
-
-        var root = FindRootForPath(sourcePath, options.Roots);
-        if (root is not null)
-            context.AuditStore.AppendAuditRow(options.AuditPath, root, sourcePath, targetPath, RunConstants.AuditActions.Convert, "GAME", "", $"format-convert:{toolName}");
+        var row = CreateAuditRow(options, sourcePath, targetPath, RunConstants.AuditActions.Convert, "GAME", "", $"format-convert:{toolName}");
+        if (row is not null)
+            context.AuditStore.AppendAuditRow(options.AuditPath!, row.RootPath, row.OldPath, row.NewPath, row.Action, row.Category, row.Hash, row.Reason);
     }
 
     internal static void AppendConversionSourceAudit(
@@ -47,42 +44,23 @@ internal static class PipelinePhaseHelpers
         string category,
         string reason)
     {
-        if (string.IsNullOrEmpty(options.AuditPath) || string.IsNullOrEmpty(trashPath))
-            return;
-
-        var root = FindRootForPath(sourcePath, options.Roots);
-        if (root is not null)
-        {
-            context.AuditStore.AppendAuditRow(
-                options.AuditPath,
-                root,
-                sourcePath,
-                trashPath,
-                RunConstants.AuditActions.ConvertSource,
-                category,
-                "",
-                reason);
-        }
+        var row = CreateAuditRow(options, sourcePath, trashPath, RunConstants.AuditActions.ConvertSource, category, "", reason);
+        if (row is not null)
+            context.AuditStore.AppendAuditRow(options.AuditPath!, row.RootPath, row.OldPath, row.NewPath, row.Action, row.Category, row.Hash, row.Reason);
     }
 
     internal static void AppendConversionFailedAudit(PipelineContext context, RunOptions options, string sourcePath, string? targetPath, string toolName)
     {
-        if (string.IsNullOrEmpty(options.AuditPath) || string.IsNullOrEmpty(targetPath))
-            return;
-
-        var root = FindRootForPath(sourcePath, options.Roots);
-        if (root is not null)
-            context.AuditStore.AppendAuditRow(options.AuditPath, root, sourcePath, targetPath, "CONVERT_FAILED", "GAME", "", $"verify-failed:{toolName}");
+        var row = CreateAuditRow(options, sourcePath, targetPath, "CONVERT_FAILED", "GAME", "", $"verify-failed:{toolName}");
+        if (row is not null)
+            context.AuditStore.AppendAuditRow(options.AuditPath!, row.RootPath, row.OldPath, row.NewPath, row.Action, row.Category, row.Hash, row.Reason);
     }
 
     internal static void AppendConversionErrorAudit(PipelineContext context, RunOptions options, string sourcePath, string? reason)
     {
-        if (string.IsNullOrEmpty(options.AuditPath))
-            return;
-
-        var root = FindRootForPath(sourcePath, options.Roots);
-        if (root is not null)
-            context.AuditStore.AppendAuditRow(options.AuditPath, root, sourcePath, "", "CONVERT_ERROR", "GAME", "", $"convert-error:{reason}");
+        var row = CreateAuditRow(options, sourcePath, string.Empty, "CONVERT_ERROR", "GAME", "", $"convert-error:{reason}");
+        if (row is not null)
+            context.AuditStore.AppendAuditRow(options.AuditPath!, row.RootPath, row.OldPath, row.NewPath, row.Action, row.Category, row.Hash, row.Reason);
     }
 
     internal static string? MoveConvertedSourceToTrash(PipelineContext context, RunOptions options, string sourcePath, string? convertedPath)
@@ -190,5 +168,31 @@ internal static class PipelinePhaseHelpers
     internal static IReadOnlyList<string> GetSetMembers(string filePath, string ext, bool includeM3uMembers = true)
     {
         return SetDescriptorSupport.GetRelatedFiles(filePath, ext, includeM3uMembers);
+    }
+
+    internal static AuditAppendRow? CreateAuditRow(
+        RunOptions options,
+        string sourcePath,
+        string? targetPath,
+        string action,
+        string category = "",
+        string hash = "",
+        string reason = "")
+    {
+        if (string.IsNullOrEmpty(options.AuditPath))
+            return null;
+
+        var root = FindRootForPath(sourcePath, options.Roots);
+        if (root is null)
+            return null;
+
+        return new AuditAppendRow(
+            root,
+            sourcePath,
+            targetPath ?? string.Empty,
+            action,
+            category,
+            hash,
+            reason);
     }
 }

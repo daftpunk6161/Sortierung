@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Collections.Concurrent;
+using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.FileSystem;
 
@@ -92,19 +93,65 @@ public sealed class AuditCsvStore : IAuditStore
             if (writeHeader)
                 sw.WriteLine("RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp");
 
-            // V2-L07: Consistent UTC timestamps across CLI and API
-            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
-            sw.WriteLine(string.Join(",",
-                SanitizeCsvField(rootPath),
-                SanitizeCsvField(oldPath),
-                SanitizeCsvField(newPath),
-                SanitizeCsvField(action),
-                SanitizeCsvField(category),
-                SanitizeCsvField(hash),
-                SanitizeCsvField(reason),
-                SanitizeCsvField(timestamp)));
+            WriteAuditRowCore(sw, new AuditAppendRow(rootPath, oldPath, newPath, action, category, hash, reason));
             sw.Flush();
             fs.Flush(flushToDisk: true);
+        }
+    }
+
+    public void AppendAuditRows(string auditCsvPath, IReadOnlyList<AuditAppendRow> rows)
+    {
+        if (string.IsNullOrWhiteSpace(auditCsvPath))
+            throw new ArgumentException("Audit CSV path must not be empty.", nameof(auditCsvPath));
+
+        ArgumentNullException.ThrowIfNull(rows);
+        if (rows.Count == 0)
+            return;
+
+        var dir = Path.GetDirectoryName(auditCsvPath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+
+        var lockObj = FileLocks.GetOrAdd(auditCsvPath, static _ => new object());
+        lock (lockObj)
+        {
+            var tempPath = auditCsvPath + $".append.{Guid.NewGuid():N}.tmp";
+
+            try
+            {
+                if (File.Exists(auditCsvPath))
+                {
+                    File.Copy(auditCsvPath, tempPath, overwrite: true);
+                }
+                else
+                {
+                    File.WriteAllText(tempPath, AuditCsvHeader, Encoding.UTF8);
+                }
+
+                using (var fs = new FileStream(tempPath, FileMode.Append, FileAccess.Write, FileShare.None))
+                using (var sw = new StreamWriter(fs, Encoding.UTF8))
+                {
+                    foreach (var row in rows)
+                        WriteAuditRowCore(sw, row);
+
+                    sw.Flush();
+                    fs.Flush(flushToDisk: true);
+                }
+
+                File.Move(tempPath, auditCsvPath, overwrite: true);
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(tempPath))
+                        File.Delete(tempPath);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // best effort cleanup only
+                }
+            }
         }
     }
 
@@ -122,5 +169,20 @@ public sealed class AuditCsvStore : IAuditStore
 
         var lineCount = File.ReadLines(auditCsvPath, Encoding.UTF8).Count();
         return Math.Max(0, lineCount - 1);
+    }
+
+    private static void WriteAuditRowCore(TextWriter writer, AuditAppendRow row)
+    {
+        // V2-L07: Consistent UTC timestamps across CLI and API
+        var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+        writer.WriteLine(string.Join(",",
+            SanitizeCsvField(row.RootPath),
+            SanitizeCsvField(row.OldPath),
+            SanitizeCsvField(row.NewPath),
+            SanitizeCsvField(row.Action),
+            SanitizeCsvField(row.Category),
+            SanitizeCsvField(row.Hash),
+            SanitizeCsvField(row.Reason),
+            SanitizeCsvField(timestamp)));
     }
 }

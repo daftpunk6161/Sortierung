@@ -261,7 +261,7 @@ public sealed class ReportParityTests : IDisposable
     }
 
     [Fact]
-    public void CliRun_WhenReportCreationFails_LogsWarningInsteadOfFakeReportPath()
+    public void CliRun_WhenReportCreationFails_ReturnsExitCodeOneAndNoFakeReportPath()
     {
         var root = Path.Combine(_tempDir, "invalid-report-root");
         Directory.CreateDirectory(root);
@@ -278,7 +278,7 @@ public sealed class ReportParityTests : IDisposable
 
         var (cliExitCode, _, cliStderr) = RunCliWithCapturedConsole(cliOptions);
 
-        Assert.Equal(0, cliExitCode);
+        Assert.Equal(1, cliExitCode);
         Assert.Contains("Report requested but not written", cliStderr, StringComparison.OrdinalIgnoreCase);
         // Ensure no "[Report] <path>" line was emitted by CLI (only progress messages are OK)
         Assert.DoesNotContain("[Report] " + cliOptions.ReportPath, cliStderr, StringComparison.OrdinalIgnoreCase);

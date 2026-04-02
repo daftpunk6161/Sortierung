@@ -266,6 +266,7 @@ public sealed class RunRecord
     private string? _progressMessage;
     private string _recoveryState = "in-progress";
     private bool _cancellationRequested;
+    private bool _canRollback;
     private readonly HashSet<string> _approvedReviewPaths = new(StringComparer.OrdinalIgnoreCase);
 
     public string RunId { get; init; } = "";
@@ -371,7 +372,11 @@ public sealed class RunRecord
     public string RestartRecovery { get; init; } = "not-persisted";
     public bool ResumeSupported => false;
     public bool CanRetry => Status != "running";
-    public bool CanRollback => !string.IsNullOrWhiteSpace(AuditPath);
+    public bool CanRollback
+    {
+        get { lock (_lock) return _canRollback; }
+        set { lock (_lock) _canRollback = value; }
+    }
     public string RecoveryState
     {
         get { lock (_lock) return _recoveryState; }

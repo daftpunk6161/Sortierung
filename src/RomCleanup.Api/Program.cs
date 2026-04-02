@@ -634,7 +634,9 @@ app.MapPost("/export/frontend", async (
             fileSystem,
             collectionIndex,
             env.EnrichmentFingerprint,
-            runCandidates: run?.CoreRunResult?.AllCandidates,
+            runCandidates: run?.CoreRunResult is { } exportRunResult
+                ? RunArtifactProjection.Project(exportRunResult).AllCandidates
+                : null,
             ct: ct);
 
         return Results.Ok(exportResult);
@@ -1164,13 +1166,14 @@ app.MapPost("/runs/{runId}/reviews/approve", async (string runId, HttpContext ct
         run.TryApproveReviewPath(item.MainPath);
 
     var coreRunResult = run.CoreRunResult;
-    if (coreRunResult is not null && coreRunResult.AllCandidates.Count > 0)
+    if (coreRunResult is not null)
     {
+        var projectedArtifacts = RunArtifactProjection.Project(coreRunResult);
         var approvedPaths = matched
             .Select(static item => item.MainPath)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var approvedCandidates = coreRunResult.AllCandidates
+        var approvedCandidates = projectedArtifacts.AllCandidates
             .Where(candidate => approvedPaths.Contains(candidate.MainPath))
             .ToArray();
 
@@ -1769,7 +1772,9 @@ app.MapGet("/runs/{runId}/completeness", async (string runId, HttpContext ctx, R
         runOptions.Roots,
         env.CollectionIndex,
         runOptions.Extensions,
-        run.CoreRunResult?.AllCandidates,
+        run.CoreRunResult is { } frontendExportRunResult
+            ? RunArtifactProjection.Project(frontendExportRunResult).AllCandidates
+            : null,
         ct);
 
     return Results.Ok(new
@@ -2015,13 +2020,16 @@ static async Task<ApiReviewQueue> BuildReviewQueueAsync(
         };
     }
 
+    var projectedArtifacts = RunArtifactProjection.Project(core);
+    var projectedCandidates = projectedArtifacts.AllCandidates;
+
     var approvedPaths = reviewDecisionService is null
         ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         : await reviewDecisionService.GetApprovedPathSetAsync(
-            core.AllCandidates.Select(static candidate => candidate.MainPath).ToArray(),
+            projectedCandidates.Select(static candidate => candidate.MainPath).ToArray(),
             ct);
 
-    var items = core.AllCandidates
+    var items = projectedCandidates
         .Where(c => c.SortDecision is SortDecision.Review or SortDecision.Blocked or SortDecision.Unknown)
         .OrderBy(c => c.ConsoleKey, StringComparer.OrdinalIgnoreCase)
         .ThenBy(c => c.MainPath, StringComparer.OrdinalIgnoreCase)

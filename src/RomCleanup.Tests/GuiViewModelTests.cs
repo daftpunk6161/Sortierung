@@ -1774,7 +1774,8 @@ public class GuiViewModelTests
                     ],
                     DedupeGroups = Array.Empty<DedupeGroup>()
                 },
-                auditPath: auditPath);
+                auditPath: auditPath,
+                hasVerifiedRollback: true);
 
             var vm = new MainViewModel(new ThemeService(), dialog, runService: runService);
             vm.Roots.Add(root);
@@ -2519,12 +2520,18 @@ public class GuiViewModelTests
         private readonly RunResult _result;
         private readonly string? _auditPath;
         private readonly string? _reportPath;
+        private readonly bool _hasVerifiedRollback;
 
-        public RecordingRunService(RunResult result, string? auditPath = null, string? reportPath = null)
+        public RecordingRunService(
+            RunResult result,
+            string? auditPath = null,
+            string? reportPath = null,
+            bool hasVerifiedRollback = false)
         {
             _result = result;
             _auditPath = auditPath;
             _reportPath = reportPath;
+            _hasVerifiedRollback = hasVerifiedRollback;
         }
 
         public int ExecuteRunCallCount { get; private set; }
@@ -2566,6 +2573,8 @@ public class GuiViewModelTests
 
         public string GetSiblingDirectory(string rootPath, string siblingName)
             => Path.Combine(Path.GetDirectoryName(rootPath) ?? rootPath, siblingName);
+
+        public bool HasVerifiedRollback(string? auditPath) => _hasVerifiedRollback;
     }
 
     private sealed class FakeRunService : IRunService
@@ -2610,6 +2619,8 @@ public class GuiViewModelTests
 
         public string GetSiblingDirectory(string rootPath, string siblingName)
             => Path.Combine(Path.GetDirectoryName(rootPath) ?? rootPath, siblingName);
+
+        public bool HasVerifiedRollback(string? auditPath) => false;
     }
 
     // ═══ XAML Binding Validation (VERIFY-001) ═══════════════════════════

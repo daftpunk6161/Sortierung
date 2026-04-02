@@ -78,6 +78,7 @@ public sealed class ConsoleSorter
     {
         int total = 0, moved = 0, skipped = 0, unknown = 0, setMembersMoved = 0, failed = 0, reviewed = 0, blocked = 0;
         var unknownReasons = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var pathMutations = new List<PathMutation>();
 
         foreach (var root in roots)
         {
@@ -150,15 +151,44 @@ public sealed class ConsoleSorter
                     {
                         var junkDir = Path.Combine(root, RunConstants.WellKnownFolders.TrashJunk, consoleKey);
                         var junkFileName = Path.GetFileName(filePath);
-                        if (MoveFile(root, filePath, junkDir, junkFileName, dryRun))
+                        if (setPrimaryToMembers.TryGetValue(filePath, out var junkMembers))
                         {
-                            blocked++;
-                            WriteAuditRow(root, filePath, Path.Combine(junkDir, junkFileName), $"junk-sort:{consoleKey}");
+                            var setMoveResult = MoveSetAtomically(
+                                root,
+                                filePath,
+                                junkMembers,
+                                junkDir,
+                                dryRun,
+                                $"junk-sort:{consoleKey}");
+
+                            if (setMoveResult.PrimaryMoved)
+                            {
+                                blocked++;
+                                setMembersMoved += setMoveResult.MembersMoved;
+                                pathMutations.AddRange(setMoveResult.PathMutations);
+                            }
+                            else
+                            {
+                                failed += junkMembers.Count + 1;
+                            }
                         }
                         else
                         {
-                            failed++;
+                            if (TryMoveFile(root, filePath, junkDir, junkFileName, dryRun, out var actualDest))
+                            {
+                                blocked++;
+                                if (actualDest is not null)
+                                {
+                                    pathMutations.Add(new PathMutation(filePath, actualDest));
+                                    WriteAuditRow(root, filePath, actualDest, $"junk-sort:{consoleKey}");
+                                }
+                            }
+                            else
+                            {
+                                failed++;
+                            }
                         }
+
                         continue;
                     }
 
@@ -171,15 +201,44 @@ public sealed class ConsoleSorter
                 {
                     var reviewDir = Path.Combine(root, RunConstants.WellKnownFolders.Review, consoleKey);
                     var reviewFileName = Path.GetFileName(filePath);
-                    if (MoveFile(root, filePath, reviewDir, reviewFileName, dryRun))
+                    if (setPrimaryToMembers.TryGetValue(filePath, out var reviewMembers))
                     {
-                        reviewed++;
-                        WriteAuditRow(root, filePath, Path.Combine(reviewDir, reviewFileName), $"review-sort:{consoleKey}");
+                        var setMoveResult = MoveSetAtomically(
+                            root,
+                            filePath,
+                            reviewMembers,
+                            reviewDir,
+                            dryRun,
+                            $"review-sort:{consoleKey}");
+
+                        if (setMoveResult.PrimaryMoved)
+                        {
+                            reviewed++;
+                            setMembersMoved += setMoveResult.MembersMoved;
+                            pathMutations.AddRange(setMoveResult.PathMutations);
+                        }
+                        else
+                        {
+                            failed += reviewMembers.Count + 1;
+                        }
                     }
                     else
                     {
-                        failed++;
+                        if (TryMoveFile(root, filePath, reviewDir, reviewFileName, dryRun, out var actualDest))
+                        {
+                            reviewed++;
+                            if (actualDest is not null)
+                            {
+                                pathMutations.Add(new PathMutation(filePath, actualDest));
+                                WriteAuditRow(root, filePath, actualDest, $"review-sort:{consoleKey}");
+                            }
+                        }
+                        else
+                        {
+                            failed++;
+                        }
                     }
+
                     continue;
                 }
 
@@ -204,20 +263,33 @@ public sealed class ConsoleSorter
                     }
                     else
                     {
-                        var (primaryMoved, membersMoved) = MoveSetAtomically(
-                            root, filePath, members, expectedDir, dryRun);
-                        if (primaryMoved) moved++;
+                        var setMoveResult = MoveSetAtomically(
+                            root,
+                            filePath,
+                            members,
+                            expectedDir,
+                            dryRun,
+                            consoleKey);
+                        if (setMoveResult.PrimaryMoved)
+                        {
+                            moved++;
+                            pathMutations.AddRange(setMoveResult.PathMutations);
+                        }
                         else failed += members.Count + 1;
-                        setMembersMoved += membersMoved;
+                        setMembersMoved += setMoveResult.MembersMoved;
                     }
                 }
                 else
                 {
                     // Standalone file — no set members
-                    if (MoveFile(root, filePath, expectedDir, fileName, dryRun))
+                    if (TryMoveFile(root, filePath, expectedDir, fileName, dryRun, out var actualDest))
                     {
                         moved++;
-                        WriteAuditRow(root, filePath, Path.Combine(expectedDir, fileName), consoleKey);
+                        if (actualDest is not null)
+                        {
+                            pathMutations.Add(new PathMutation(filePath, actualDest));
+                            WriteAuditRow(root, filePath, actualDest, consoleKey);
+                        }
                     }
                     else
                     {
@@ -227,21 +299,22 @@ public sealed class ConsoleSorter
             }
         }
 
-        return new ConsoleSortResult(total, moved, setMembersMoved, skipped, unknown, unknownReasons, failed, reviewed, blocked);
+        return new ConsoleSortResult(total, moved, setMembersMoved, skipped, unknown, unknownReasons, failed, reviewed, blocked, pathMutations);
     }
 
     /// <summary>
     /// Moves a primary file and all its set members atomically.
     /// If any member fails to move, all previously moved files are rolled back.
     /// </summary>
-    private (bool PrimaryMoved, int MembersMoved) MoveSetAtomically(
+    private (bool PrimaryMoved, int MembersMoved, IReadOnlyList<PathMutation> PathMutations) MoveSetAtomically(
         string root,
         string primaryPath,
         List<string> members,
         string destDir,
-        bool dryRun)
+        bool dryRun,
+        string auditReasonTag)
     {
-        if (dryRun) return (true, members.Count);
+        if (dryRun) return (true, members.Count, Array.Empty<PathMutation>());
 
         // Track all moves so we can roll back on partial failure
         var completedMoves = new List<(string Source, string Dest)>();
@@ -250,11 +323,12 @@ public sealed class ConsoleSorter
         {
             // Move primary first
             var primaryDest = ResolveMoveDestination(root, primaryPath, destDir);
-            if (primaryDest is null) return (false, 0);
+            if (primaryDest is null) return (false, 0, Array.Empty<PathMutation>());
             _fs.EnsureDirectory(destDir);
-            if (_fs.MoveItemSafely(primaryPath, primaryDest) is null)
-                return (false, 0);
-            completedMoves.Add((primaryPath, primaryDest));
+            var primaryActualDest = _fs.MoveItemSafely(primaryPath, primaryDest);
+            if (primaryActualDest is null)
+                return (false, 0, Array.Empty<PathMutation>());
+            completedMoves.Add((primaryPath, primaryActualDest));
 
             // Move each member
             foreach (var member in members)
@@ -264,19 +338,19 @@ public sealed class ConsoleSorter
                     throw new InvalidOperationException(
                         $"Path traversal blocked for set member: {member}");
 
-                if (_fs.MoveItemSafely(member, memberDest) is null)
+                var memberActualDest = _fs.MoveItemSafely(member, memberDest);
+                if (memberActualDest is null)
                     throw new InvalidOperationException(
                         $"Move failed for set member: {member}");
-                completedMoves.Add((member, memberDest));
+                completedMoves.Add((member, memberActualDest));
             }
 
             // Audit all moves in the atomic set after all succeeded
-            var consoleKey = Path.GetFileName(destDir);
-            WriteAuditRow(root, primaryPath, primaryDest, consoleKey);
+            WriteAuditRow(root, primaryPath, primaryActualDest, auditReasonTag);
             foreach (var (src, dst) in completedMoves.Skip(1)) // skip primary, already written
-                WriteAuditRow(root, src, dst, consoleKey + ":set-member");
+                WriteAuditRow(root, src, dst, auditReasonTag + ":set-member");
 
-            return (true, members.Count);
+            return (true, members.Count, completedMoves.Select(static move => new PathMutation(move.Source, move.Dest)).ToArray());
         }
         catch (Exception ex)
         {
@@ -286,9 +360,8 @@ public sealed class ConsoleSorter
             {
                 try
                 {
-                    var actualDest = FindActualDestination(dest);
-                    if (actualDest is not null && _fs.FileExists(actualDest))
-                        _ = _fs.MoveItemSafely(actualDest, source);
+                    if (_fs.FileExists(dest))
+                        _ = _fs.MoveItemSafely(dest, source);
                 }
                 catch (Exception rbEx)
                 {
@@ -303,7 +376,7 @@ public sealed class ConsoleSorter
                     ex);
             }
 
-            return (false, 0);
+            return (false, 0, Array.Empty<PathMutation>());
         }
     }
 
@@ -318,62 +391,13 @@ public sealed class ConsoleSorter
         return _fs.ResolveChildPathWithinRoot(root, Path.Combine(relativeDest, fileName));
     }
 
-    /// <summary>
-    /// Finds the actual file on disk, accounting for __DUP collision renaming.
-    /// Returns the exact path if found, or null.
-    /// </summary>
-    private string? FindActualDestination(string intendedDest)
+    private bool TryMoveFile(string root, string sourcePath, string destDir, string fileName, bool dryRun, out string? actualDestinationPath)
     {
-        if (_fs.FileExists(intendedDest))
-            return intendedDest;
-
-        // Check for __DUP renamed versions using directory listing
-        var dir = Path.GetDirectoryName(intendedDest) ?? "";
-        if (!_fs.DirectoryExists(dir))
-            return null;
-
-        var baseName = Path.GetFileNameWithoutExtension(intendedDest);
-        var ext = Path.GetExtension(intendedDest);
-        var pattern = $"{baseName}__DUP*{ext}";
-
-        var matches = _fs.GetDirectoryFiles(dir, pattern).ToArray();
-        if (matches.Length == 0) return null;
-        if (matches.Length == 1) return matches[0];
-        // SEC-SORT-01: Sort for determinism using numeric DUP suffix first.
-        // Lexical ordering breaks for 10+ duplicates (__DUP10 comes before __DUP2).
-        Array.Sort(matches, (left, right) =>
+        if (dryRun)
         {
-            var leftDup = ParseDupSuffix(left, baseName, ext);
-            var rightDup = ParseDupSuffix(right, baseName, ext);
-            var byDup = leftDup.CompareTo(rightDup);
-            if (byDup != 0)
-                return byDup;
-
-            return StringComparer.OrdinalIgnoreCase.Compare(left, right);
-        });
-        return matches[^1];
-    }
-
-    private static int ParseDupSuffix(string path, string baseName, string ext)
-    {
-        var fileName = Path.GetFileName(path);
-        if (string.IsNullOrEmpty(fileName))
-            return 0;
-
-        var expectedPrefix = baseName + "__DUP";
-        if (!fileName.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase)
-            || !fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
-        {
-            return 0;
+            actualDestinationPath = null;
+            return true;
         }
-
-        var numberPart = fileName.Substring(expectedPrefix.Length, fileName.Length - expectedPrefix.Length - ext.Length);
-        return int.TryParse(numberPart, out var parsed) ? parsed : 0;
-    }
-
-    private bool MoveFile(string root, string sourcePath, string destDir, string fileName, bool dryRun)
-    {
-        if (dryRun) return true;
 
         _fs.EnsureDirectory(destDir);
         var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
@@ -383,9 +407,14 @@ public sealed class ConsoleSorter
             : Path.GetFileName(destDir);
         var destPath = _fs.ResolveChildPathWithinRoot(root, Path.Combine(relativeDest, fileName));
 
-        if (destPath is null) return false; // path traversal blocked
+        if (destPath is null)
+        {
+            actualDestinationPath = null;
+            return false; // path traversal blocked
+        }
 
-        return _fs.MoveItemSafely(sourcePath, destPath) is not null;
+        actualDestinationPath = _fs.MoveItemSafely(sourcePath, destPath);
+        return actualDestinationPath is not null;
     }
 
     private List<string> GetFilesForRoot(
@@ -473,13 +502,13 @@ public sealed class ConsoleSorter
         }
     }
 
-    private void WriteAuditRow(string root, string oldPath, string newPath, string consoleKey)
+    private void WriteAuditRow(string root, string oldPath, string newPath, string reasonTag)
     {
         if (_audit is null || string.IsNullOrEmpty(_auditPath))
             return;
 
         _audit.AppendAuditRow(_auditPath, root, oldPath, newPath,
-            "CONSOLE_SORT", "GAME", "", $"console-sort:{consoleKey}");
+            "CONSOLE_SORT", "GAME", "", $"console-sort:{reasonTag}");
     }
 
     private void WriteAuditWarning(string root, string reason)

@@ -5,6 +5,7 @@ using RomCleanup.Contracts;
 using RomCleanup.Contracts.Errors;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.Paths;
 
 namespace RomCleanup.Api;
@@ -342,21 +343,11 @@ public sealed class RunLifecycleManager
         }
     }
 
-    private static void UpdateRecoveryState(RunRecord run)
+    private void UpdateRecoveryState(RunRecord run)
     {
-        var hasAudit = !string.IsNullOrWhiteSpace(run.AuditPath);
-        run.RecoveryState = run.Status switch
-        {
-            ApiRunStatus.Running => "in-progress",
-            ApiRunStatus.Completed when hasAudit => "rollback-available",
-            ApiRunStatus.Completed => "not-required",
-            ApiRunStatus.CompletedWithErrors when hasAudit => "partial-rollback-available",
-            ApiRunStatus.CompletedWithErrors => "manual-cleanup-may-be-required",
-            ApiRunStatus.Cancelled when hasAudit => "partial-rollback-available",
-            ApiRunStatus.Failed when hasAudit => "partial-rollback-available",
-            ApiRunStatus.Cancelled or ApiRunStatus.Failed => "manual-cleanup-may-be-required",
-            _ => "unknown"
-        };
+        var canRollback = AuditRecoveryStateResolver.HasVerifiedRollback(_audit, run.AuditPath);
+        run.CanRollback = canRollback;
+        run.RecoveryState = AuditRecoveryStateResolver.ResolveRecoveryState(run.Status, canRollback);
     }
 
     private void TryWriteEmergencyShutdownSidecar(string? runId)

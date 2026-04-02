@@ -187,6 +187,18 @@ public class FileSystemAdapterTests : IDisposable
     }
 
     [Fact]
+    public void MoveItemSafely_BlocksRootedAdsSource()
+    {
+        var source = Path.Combine(_tempDir, "game.rom");
+        var destination = Path.Combine(_tempDir, "dest.rom");
+        File.WriteAllText(source, "data");
+
+        var rootedAdsSource = source + ":hidden";
+
+        Assert.Throws<InvalidOperationException>(() => _fs.MoveItemSafely(rootedAdsSource, destination));
+    }
+
+    [Fact]
     public void CopyFile_BlocksAdsDestination()
     {
         var src = Path.Combine(_tempDir, "source.rom");

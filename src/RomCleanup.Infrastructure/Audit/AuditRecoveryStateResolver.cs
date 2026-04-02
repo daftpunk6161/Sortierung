@@ -27,7 +27,8 @@ public static class AuditRecoveryStateResolver
 
     public static string ResolveRecoveryState(string status, bool canRollback)
     {
-        return status switch
+        var normalizedStatus = status?.Trim().ToLowerInvariant() ?? string.Empty;
+        return normalizedStatus switch
         {
             "running" => "in-progress",
             "completed" when canRollback => "rollback-available",

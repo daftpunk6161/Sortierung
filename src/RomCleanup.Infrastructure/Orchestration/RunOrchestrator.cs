@@ -176,25 +176,8 @@ public sealed partial class RunOrchestrator : IDisposable
             // Ensure a mid-scan cancel that left 0 processing candidates uses the cancel path.
             cancellationToken.ThrowIfCancellationRequested();
 
-            result.Status = RunOutcome.Ok.ToStatusString();
-            result.ExitCode = 0;
             result.AllCandidates = candidates;
-            sw.Stop();
-            result.DurationMs = sw.ElapsedMilliseconds;
-            result.PhaseMetrics = metrics.GetMetrics();
-            if (!string.IsNullOrEmpty(options.ReportPath))
-            {
-                var reportStep = new ReportPhaseStep(() =>
-                {
-                    _onProgress?.Invoke("[Report] Generiere HTML-Report…");
-                    return GenerateReport(result, options);
-                });
-                var reportOutcome = reportStep.Execute(pipelineState, cancellationToken);
-                result.ReportPath = reportOutcome.TypedResult as string;
-                if (!string.IsNullOrEmpty(result.ReportPath))
-                    _onProgress?.Invoke($"[Report] Report erstellt: {result.ReportPath}");
-            }
-            return result.Build();
+            return FinalizeCompletedRun(options, result, pipelineState, metrics, sw, cancellationToken);
         }
 
         // Integrate deferred services in a non-destructive analysis pass.
@@ -203,21 +186,21 @@ public sealed partial class RunOrchestrator : IDisposable
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (TryExecuteConvertOnlyPath(options, candidates, processingCandidates, result, metrics, pipelineState, sw, cancellationToken, out var convertOnlyResult))
-            return convertOnlyResult;
-
-        var phasePlan = _phasePlanBuilder.Build(options, new StandardPhaseStepActions
+        if (!TryExecuteConvertOnlyPath(options, candidates, processingCandidates, result, metrics, cancellationToken, pipelineState))
         {
-            DatAudit = (state, ct) => RunDatAuditStep(state, options, result, metrics, ct),
-            Deduplicate = (state, ct) => RunDeduplicateStep(state, options, result, metrics, ct),
-            JunkRemoval = (state, ct) => RunJunkRemovalStep(state, options, result, metrics, ct),
-            DatRename = (state, ct) => RunDatRenameStep(state, options, result, metrics, ct),
-            Move = (state, ct) => RunMoveStep(state, options, result, metrics, ct),
-            ConsoleSort = (state, ct) => RunConsoleSortStep(state, options, result, metrics, ct),
-            WinnerConversion = (state, ct) => RunWinnerConversionStep(state, options, result, metrics, ct)
-        });
+            var phasePlan = _phasePlanBuilder.Build(options, new StandardPhaseStepActions
+            {
+                DatAudit = (state, ct) => RunDatAuditStep(state, options, result, metrics, ct),
+                Deduplicate = (state, ct) => RunDeduplicateStep(state, options, result, metrics, ct),
+                JunkRemoval = (state, ct) => RunJunkRemovalStep(state, options, result, metrics, ct),
+                DatRename = (state, ct) => RunDatRenameStep(state, options, result, metrics, ct),
+                Move = (state, ct) => RunMoveStep(state, options, result, metrics, ct),
+                ConsoleSort = (state, ct) => RunConsoleSortStep(state, options, result, metrics, ct),
+                WinnerConversion = (state, ct) => RunWinnerConversionStep(state, options, result, metrics, ct)
+            });
 
-        ExecutePhasePlan(phasePlan, pipelineState, cancellationToken);
+            ExecutePhasePlan(phasePlan, pipelineState, cancellationToken);
+        }
 
         // Propagate DatAudit / DatRename results from pipeline state to builder
         if (pipelineState.DatAuditResult is { } datAudit)
@@ -236,54 +219,10 @@ public sealed partial class RunOrchestrator : IDisposable
             result.DatRenameExecutedCount = datRename.ExecutedCount;
             result.DatRenameSkippedCount = datRename.SkippedCount;
             result.DatRenameFailedCount = datRename.FailedCount;
+            result.DatRenamePathMutations = datRename.PathMutations;
         }
 
-        sw.Stop();
-        // TASK-151: Derive status based on ALL phase errors (incl. DatRename + ConsoleSort)
-        var hasErrors = result.ConvertErrorCount > 0
-                 || result.ConvertVerifyFailedCount > 0
-                     || (result.MoveResult is { FailCount: > 0 })
-                     || (result.JunkMoveResult is { FailCount: > 0 })
-                     || result.DatRenameFailedCount > 0
-                     || (result.ConsoleSortResult is { Failed: > 0 });
-        var runOutcome = hasErrors ? RunOutcome.CompletedWithErrors : RunOutcome.Ok;
-        result.Status = runOutcome.ToStatusString();
-        result.ExitCode = hasErrors ? 1 : 0;
-        result.DurationMs = sw.ElapsedMilliseconds;
-        result.PhaseMetrics = metrics.GetMetrics();
-
-        // FEAT-02: Generate report at end of pipeline
-        if (!string.IsNullOrEmpty(options.ReportPath))
-        {
-            var reportStep = new ReportPhaseStep(() =>
-            {
-                _onProgress?.Invoke("[Report] Generiere HTML-Report…");
-                return GenerateReport(result, options);
-            });
-            result.ReportPath = reportStep.Execute(pipelineState, cancellationToken).TypedResult as string;
-            if (!string.IsNullOrEmpty(result.ReportPath))
-                _onProgress?.Invoke($"[Report] Report erstellt: {result.ReportPath}");
-        }
-
-        // FEAT-03: Write final audit sidecar with HMAC signature after all phases.
-        // TASK-145: Pass actual RunOutcome so sidecar status reflects errors.
-        try
-        {
-            new AuditSealPhaseStep(() => WriteCompletedAuditSidecar(options, result, sw.ElapsedMilliseconds, runOutcome))
-                .Execute(pipelineState, cancellationToken);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
-        {
-            _onProgress?.Invoke($"[Audit] Sidecar write failed: {ex.GetType().Name}: {ex.Message}");
-            if (runOutcome == RunOutcome.Ok)
-            {
-                result.Status = RunOutcome.CompletedWithErrors.ToStatusString();
-                result.ExitCode = 1;
-            }
-        }
-
-        _onProgress?.Invoke($"[Fertig] Pipeline abgeschlossen in {sw.ElapsedMilliseconds}ms — {result.TotalFilesScanned} Dateien, {result.GroupCount} Gruppen");
-        return result.Build();
+        return FinalizeCompletedRun(options, result, pipelineState, metrics, sw, cancellationToken);
         }
         catch (OperationCanceledException)
         {

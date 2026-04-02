@@ -17,29 +17,39 @@ public static class RunArtifactProjection
     {
         ArgumentNullException.ThrowIfNull(result);
 
+        var datRenameMutations = BuildPathMutationMap(result.DatRenamePathMutations);
+        var consoleSortMutations = BuildPathMutationMap(result.ConsoleSortResult?.PathMutations);
         var successfulConversions = BuildSuccessfulConversionMap(result.ConversionReport);
-        if (successfulConversions.Count == 0)
+        if (datRenameMutations.Count == 0
+            && consoleSortMutations.Count == 0
+            && successfulConversions.Count == 0)
+        {
             return new ProjectedRunArtifacts(result.AllCandidates, result.DedupeGroups);
+        }
 
         return new ProjectedRunArtifacts(
-            ProjectCandidates(result.AllCandidates, successfulConversions),
-            ProjectGroups(result.DedupeGroups, successfulConversions));
+            ProjectCandidates(result.AllCandidates, datRenameMutations, consoleSortMutations, successfulConversions),
+            ProjectGroups(result.DedupeGroups, datRenameMutations, consoleSortMutations, successfulConversions));
     }
 
     private static IReadOnlyList<RomCandidate> ProjectCandidates(
         IReadOnlyList<RomCandidate> candidates,
+        IReadOnlyDictionary<string, string> datRenameMutations,
+        IReadOnlyDictionary<string, string> consoleSortMutations,
         IReadOnlyDictionary<string, ConversionResult> successfulConversions)
     {
         if (candidates.Count == 0)
             return candidates;
 
         return candidates
-            .Select(candidate => ProjectCandidate(candidate, successfulConversions))
+            .Select(candidate => ProjectCandidate(candidate, datRenameMutations, consoleSortMutations, successfulConversions))
             .ToArray();
     }
 
     private static IReadOnlyList<DedupeGroup> ProjectGroups(
         IReadOnlyList<DedupeGroup> groups,
+        IReadOnlyDictionary<string, string> datRenameMutations,
+        IReadOnlyDictionary<string, string> consoleSortMutations,
         IReadOnlyDictionary<string, ConversionResult> successfulConversions)
     {
         if (groups.Count == 0)
@@ -48,9 +58,9 @@ public static class RunArtifactProjection
         return groups
             .Select(group => group with
             {
-                Winner = ProjectCandidate(group.Winner, successfulConversions),
+                Winner = ProjectCandidate(group.Winner, datRenameMutations, consoleSortMutations, successfulConversions),
                 Losers = group.Losers
-                    .Select(loser => ProjectCandidate(loser, successfulConversions))
+                    .Select(loser => ProjectCandidate(loser, datRenameMutations, consoleSortMutations, successfulConversions))
                     .ToArray()
             })
             .ToArray();
@@ -58,24 +68,31 @@ public static class RunArtifactProjection
 
     private static RomCandidate ProjectCandidate(
         RomCandidate candidate,
+        IReadOnlyDictionary<string, string> datRenameMutations,
+        IReadOnlyDictionary<string, string> consoleSortMutations,
         IReadOnlyDictionary<string, ConversionResult> successfulConversions)
     {
-        if (!successfulConversions.TryGetValue(candidate.MainPath, out var conversionResult)
+        var projectedPath = ApplyPathMutations(candidate.MainPath, datRenameMutations, consoleSortMutations);
+        var projectedCandidate = projectedPath is null || projectedPath.Equals(candidate.MainPath, StringComparison.OrdinalIgnoreCase)
+            ? candidate
+            : candidate with { MainPath = projectedPath };
+
+        if (!successfulConversions.TryGetValue(projectedCandidate.MainPath, out var conversionResult)
             || string.IsNullOrWhiteSpace(conversionResult.TargetPath))
         {
-            return candidate;
+            return projectedCandidate;
         }
 
-        var projectedPath = conversionResult.TargetPath;
-        var projectedExtension = Path.GetExtension(projectedPath);
+        var convertedPath = conversionResult.TargetPath;
+        var projectedExtension = Path.GetExtension(convertedPath);
         if (string.IsNullOrWhiteSpace(projectedExtension))
-            projectedExtension = candidate.Extension;
+            projectedExtension = projectedCandidate.Extension;
 
-        var projectedSizeBytes = ResolveProjectedSizeBytes(conversionResult, candidate.SizeBytes);
+        var projectedSizeBytes = ResolveProjectedSizeBytes(conversionResult, projectedCandidate.SizeBytes);
 
-        return candidate with
+        return projectedCandidate with
         {
-            MainPath = projectedPath,
+            MainPath = convertedPath,
             Extension = projectedExtension,
             SizeBytes = projectedSizeBytes,
             FormatScore = FormatScorer.GetFormatScore(projectedExtension),
@@ -102,6 +119,44 @@ public static class RunArtifactProjection
         }
 
         return successfulConversions;
+    }
+
+    private static Dictionary<string, string> BuildPathMutationMap(IReadOnlyList<PathMutation>? pathMutations)
+    {
+        var mutationMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (pathMutations is null)
+            return mutationMap;
+
+        foreach (var pathMutation in pathMutations)
+        {
+            if (string.IsNullOrWhiteSpace(pathMutation.SourcePath)
+                || string.IsNullOrWhiteSpace(pathMutation.TargetPath))
+            {
+                continue;
+            }
+
+            mutationMap[pathMutation.SourcePath] = pathMutation.TargetPath;
+        }
+
+        return mutationMap;
+    }
+
+    private static string? ApplyPathMutations(
+        string? originalPath,
+        IReadOnlyDictionary<string, string> datRenameMutations,
+        IReadOnlyDictionary<string, string> consoleSortMutations)
+    {
+        if (string.IsNullOrWhiteSpace(originalPath))
+            return originalPath;
+
+        var currentPath = originalPath;
+        if (datRenameMutations.TryGetValue(currentPath, out var renamedPath))
+            currentPath = renamedPath;
+
+        if (consoleSortMutations.TryGetValue(currentPath, out var sortedPath))
+            currentPath = sortedPath;
+
+        return currentPath;
     }
 
     private static long ResolveProjectedSizeBytes(ConversionResult conversionResult, long fallbackSizeBytes)

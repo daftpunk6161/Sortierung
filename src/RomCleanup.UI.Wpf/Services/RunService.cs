@@ -3,6 +3,7 @@ using System.Linq;
 using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Audit;
 using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Paths;
@@ -24,16 +25,19 @@ public sealed class RunService : IRunService
     private readonly IAppState _appState;
     private readonly IRunEnvironmentFactory _runEnvironmentFactory;
     private readonly RunConfigurationMaterializer _runConfigurationMaterializer;
+    private readonly IAuditStore _recoveryAuditStore;
 
     public RunService(
         IAppState? appState = null,
         IRunOptionsFactory? runOptionsFactory = null,
         IRunEnvironmentFactory? runEnvironmentFactory = null,
         RunConfigurationMaterializer? runConfigurationMaterializer = null,
-        RunProfileService? runProfileService = null)
+        RunProfileService? runProfileService = null,
+        IAuditStore? recoveryAuditStore = null)
     {
         _appState = appState ?? new AppStateStore();
         _runEnvironmentFactory = runEnvironmentFactory ?? new RunEnvironmentFactory();
+        _recoveryAuditStore = recoveryAuditStore ?? new AuditCsvStore();
         var dataDir = FeatureService.ResolveDataDirectory()
                       ?? RunEnvironmentBuilder.ResolveDataDir();
         var optionsFactory = runOptionsFactory ?? new RunOptionsFactory();
@@ -187,5 +191,8 @@ public sealed class RunService : IRunService
         var fullRoot = ArtifactPathResolver.NormalizeRoot(rootPath);
         return ArtifactPathResolver.GetSiblingDirectory(fullRoot, siblingName);
     }
+
+    public bool HasVerifiedRollback(string? auditPath)
+        => AuditRecoveryStateResolver.HasVerifiedRollback(_recoveryAuditStore, auditPath);
 
 }

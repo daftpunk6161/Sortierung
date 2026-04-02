@@ -15,7 +15,8 @@ public sealed class DatRenameKpiPropagationTests
     {
         var state = new PipelineState();
         var renameResult = new DatRenameResult(
-            Proposals: [],
+            Proposals: Array.Empty<DatRenameProposal>(),
+            PathMutations: Array.Empty<PathMutation>(),
             ProposedCount: 5,
             ExecutedCount: 3,
             SkippedCount: 1,
@@ -30,7 +31,13 @@ public sealed class DatRenameKpiPropagationTests
     public void PipelineState_SetDatRenameOutput_ThrowsOnDoubleAssign()
     {
         var state = new PipelineState();
-        var renameResult = new DatRenameResult([], 0, 0, 0, 0);
+        var renameResult = new DatRenameResult(
+            Array.Empty<DatRenameProposal>(),
+            Array.Empty<PathMutation>(),
+            0,
+            0,
+            0,
+            0);
         state.SetDatRenameOutput(renameResult);
 
         Assert.Throws<InvalidOperationException>(() => state.SetDatRenameOutput(renameResult));

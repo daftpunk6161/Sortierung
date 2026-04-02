@@ -372,23 +372,34 @@ internal static class ConversionPhaseHelper
 
         try
         {
-            PipelinePhaseHelpers.AppendConversionAudit(
-                context,
+            var auditRows = new List<AuditAppendRow>();
+            var conversionAuditRow = PipelinePhaseHelpers.CreateAuditRow(
                 options,
                 sourcePath,
                 convResult.TargetPath,
-                ConversionVerificationHelpers.ResolveToolName(convResult, target));
+                RunConstants.AuditActions.Convert,
+                "GAME",
+                "",
+                $"format-convert:{ConversionVerificationHelpers.ResolveToolName(convResult, target)}");
+            if (conversionAuditRow is not null)
+                auditRows.Add(conversionAuditRow);
 
             foreach (var movedArtifact in movedArtifacts)
             {
-                PipelinePhaseHelpers.AppendConversionSourceAudit(
-                    context,
+                var sourceAuditRow = PipelinePhaseHelpers.CreateAuditRow(
                     options,
                     movedArtifact.SourcePath,
                     movedArtifact.TrashPath,
+                    RunConstants.AuditActions.ConvertSource,
                     movedArtifact.Category,
+                    "",
                     movedArtifact.Reason);
+                if (sourceAuditRow is not null)
+                    auditRows.Add(sourceAuditRow);
             }
+
+            if (auditRows.Count > 0)
+                context.AuditStore.AppendAuditRows(options.AuditPath!, auditRows);
 
             return true;
         }

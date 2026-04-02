@@ -122,6 +122,9 @@ public sealed partial class RunOrchestrator
         };
 
         var renameResult = phase.Execute(new DatRenameInput(entries, options), context, cancellationToken);
+        if (renameResult.PathMutations.Count > 0)
+            state.ApplyPathMutations(renameResult.PathMutations);
+
         state.SetDatRenameOutput(renameResult);
         return PhaseStepResult.Ok(renameResult.ExecutedCount, renameResult);
     }
@@ -190,6 +193,9 @@ public sealed partial class RunOrchestrator
             enrichedSortDecisions: enrichedSortDecisions,
             enrichedCategories: enrichedCategories,
             candidatePaths: candidatePaths);
+
+        if (!dryRunSort && result.ConsoleSortResult?.PathMutations is { Count: > 0 } pathMutations)
+            state.ApplyPathMutations(pathMutations);
 
         _onProgress?.Invoke("[Sort] Konsolen-Sortierung abgeschlossen");
         metrics.CompletePhase();

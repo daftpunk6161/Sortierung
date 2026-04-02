@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Classification;
@@ -271,6 +270,29 @@ public class ConsoleSorterTests : IDisposable
     }
 
     [Fact]
+    public void Sort_ReviewDecision_MovesCueSetAtomically()
+    {
+        var cuePath = CreateFile("ReviewSet.cue", "FILE \"ReviewSet.bin\" BINARY\r\n  TRACK 01 MODE1/2352\r\n    INDEX 01 00:00:00");
+        var binPath = CreateFile("ReviewSet.bin", "binary data");
+        var sorter = new ConsoleSorter(new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter(), BuildDetector());
+
+        var result = sorter.Sort(
+            new[] { _tempDir },
+            new[] { ".cue" },
+            dryRun: false,
+            enrichedConsoleKeys: EnrichedKeys((cuePath, "NES")),
+            enrichedSortDecisions: SortDecisions((cuePath, "Review")),
+            candidatePaths: new[] { cuePath, binPath });
+
+        Assert.Equal(1, result.Reviewed);
+        Assert.True(result.SetMembersMoved >= 1);
+        Assert.True(File.Exists(Path.Combine(_tempDir, "_REVIEW", "NES", "ReviewSet.cue")));
+        Assert.True(File.Exists(Path.Combine(_tempDir, "_REVIEW", "NES", "ReviewSet.bin")));
+        Assert.Contains(result.PathMutations ?? [], mutation => mutation.SourcePath == cuePath);
+        Assert.Contains(result.PathMutations ?? [], mutation => mutation.SourcePath == binPath);
+    }
+
+    [Fact]
     public void Sort_BlockedGame_NotMoved()
     {
         var romPath = CreateFile("Game.nes", "nes content");
@@ -312,6 +334,30 @@ public class ConsoleSorterTests : IDisposable
     }
 
     [Fact]
+    public void Sort_BlockedJunk_MovesCueSetAtomicallyToTrashJunk()
+    {
+        var cuePath = CreateFile("TrashSet.cue", "FILE \"TrashSet.bin\" BINARY\r\n  TRACK 01 MODE1/2352\r\n    INDEX 01 00:00:00");
+        var binPath = CreateFile("TrashSet.bin", "binary data");
+        var sorter = new ConsoleSorter(new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter(), BuildDetector());
+
+        var result = sorter.Sort(
+            new[] { _tempDir },
+            new[] { ".cue" },
+            dryRun: false,
+            enrichedConsoleKeys: EnrichedKeys((cuePath, "NES")),
+            enrichedSortDecisions: SortDecisions((cuePath, "Blocked")),
+            enrichedCategories: Categories((cuePath, "Junk")),
+            candidatePaths: new[] { cuePath, binPath });
+
+        Assert.Equal(1, result.Blocked);
+        Assert.True(result.SetMembersMoved >= 1);
+        Assert.True(File.Exists(Path.Combine(_tempDir, "_TRASH_JUNK", "NES", "TrashSet.cue")));
+        Assert.True(File.Exists(Path.Combine(_tempDir, "_TRASH_JUNK", "NES", "TrashSet.bin")));
+        Assert.Contains(result.PathMutations ?? [], mutation => mutation.SourcePath == cuePath);
+        Assert.Contains(result.PathMutations ?? [], mutation => mutation.SourcePath == binPath);
+    }
+
+    [Fact]
     public void Sort_DatVerified_MovesToConsoleSubdir()
     {
         var romPath = CreateFile("Verified.nes", "verified content");
@@ -346,21 +392,6 @@ public class ConsoleSorterTests : IDisposable
 
         Assert.Equal(1, result.Moved);
         Assert.True(File.Exists(Path.Combine(_tempDir, "NES", "Default.nes")));
-    }
-
-    [Fact]
-    public void FindActualDestination_WithDuplicateSuffixAboveTen_UsesNumericOrder()
-    {
-        var intended = Path.Combine(_tempDir, "Game.chd");
-        File.WriteAllText(Path.Combine(_tempDir, "Game__DUP2.chd"), "2");
-        File.WriteAllText(Path.Combine(_tempDir, "Game__DUP10.chd"), "10");
-        var sorter = new ConsoleSorter(new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter(), BuildDetector());
-
-        var method = typeof(ConsoleSorter).GetMethod("FindActualDestination", BindingFlags.NonPublic | BindingFlags.Instance);
-        Assert.NotNull(method);
-
-        var actual = (string?)method!.Invoke(sorter, new object[] { intended });
-        Assert.Equal(Path.Combine(_tempDir, "Game__DUP10.chd"), actual);
     }
 
     [Fact]

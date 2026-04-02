@@ -16,6 +16,7 @@ public sealed class DatRenamePipelinePhase : IPipelinePhase<DatRenameInput, DatR
         context.Metrics.StartPhase(Name);
 
         var proposals = new List<DatRenameProposal>(input.Entries.Count);
+        var pathMutations = new List<PathMutation>();
         var proposedCount = 0;
         var executedCount = 0;
         var skippedCount = 0;
@@ -69,6 +70,7 @@ public sealed class DatRenamePipelinePhase : IPipelinePhase<DatRenameInput, DatR
             }
 
             executedCount++;
+            pathMutations.Add(new PathMutation(entry.FilePath, renamedPath));
 
             if (!string.IsNullOrWhiteSpace(input.Options.AuditPath))
             {
@@ -93,6 +95,7 @@ public sealed class DatRenamePipelinePhase : IPipelinePhase<DatRenameInput, DatR
 
         return new DatRenameResult(
             proposals,
+            pathMutations,
             proposedCount,
             executedCount,
             skippedCount,
@@ -119,6 +122,7 @@ public sealed record DatRenameInput(
 /// <param name="FailedCount">Count of attempted renames that failed in I/O layer.</param>
 public sealed record DatRenameResult(
     IReadOnlyList<DatRenameProposal> Proposals,
+    IReadOnlyList<PathMutation> PathMutations,
     int ProposedCount,
     int ExecutedCount,
     int SkippedCount,

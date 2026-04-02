@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
@@ -13,6 +14,9 @@ namespace RomCleanup.Infrastructure.Tools;
 /// </summary>
 public sealed class ToolRunnerAdapter : IToolRunner
 {
+    internal const string ConversionToolsRootOverrideEnvVar = "ROMCLEANUP_CONVERSION_TOOLS_ROOT";
+    private const string DefaultConversionToolsRoot = @"C:\tools\conversion";
+
     private readonly string? _toolHashesPath;
     private readonly bool _allowInsecureHashBypass;
     private readonly int _timeoutMinutes;
@@ -46,7 +50,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
 
         // Build candidate paths using environment-based folders (no hardcoded drive letters)
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var candidates = name switch
+        var baseCandidates = name switch
         {
             "chdman" => new[]
             {
@@ -100,6 +104,22 @@ public sealed class ToolRunnerAdapter : IToolRunner
             },
             _ => Array.Empty<string>()
         };
+        var programFilesConversionCandidates = GetProgramFilesConversionCandidates(name, programFiles, programFilesX86);
+        var overrideCandidates = GetConversionToolsRootCandidates(name, out var hasExplicitOverride);
+        var orderedCandidates = new List<string>(baseCandidates.Length + programFilesConversionCandidates.Length + overrideCandidates.Length);
+        if (hasExplicitOverride)
+        {
+            orderedCandidates.AddRange(overrideCandidates);
+            orderedCandidates.AddRange(baseCandidates);
+            orderedCandidates.AddRange(programFilesConversionCandidates);
+        }
+        else
+        {
+            orderedCandidates.AddRange(baseCandidates);
+            orderedCandidates.AddRange(programFilesConversionCandidates);
+            orderedCandidates.AddRange(overrideCandidates);
+        }
+        var candidates = orderedCandidates.ToArray();
 
         foreach (var c in candidates)
         {
@@ -113,6 +133,92 @@ public sealed class ToolRunnerAdapter : IToolRunner
             return pathResult;
 
         return null;
+    }
+
+    private static string[] GetProgramFilesConversionCandidates(string toolName, string programFiles, string programFilesX86)
+    {
+        var roots = new[]
+        {
+            Path.Combine(programFiles, "conversion"),
+            Path.Combine(programFiles, "tools", "conversion"),
+            Path.Combine(programFilesX86, "conversion"),
+            Path.Combine(programFilesX86, "tools", "conversion")
+        };
+
+        var candidates = new List<string>();
+        foreach (var root in roots)
+        {
+            if (string.IsNullOrWhiteSpace(root))
+                continue;
+
+            candidates.AddRange(GetRootToolCandidates(toolName, root));
+        }
+
+        return candidates.ToArray();
+    }
+
+    private static string[] GetConversionToolsRootCandidates(string toolName, out bool hasExplicitOverride)
+    {
+        var root = ResolveConversionToolsRoot(out hasExplicitOverride);
+        if (string.IsNullOrWhiteSpace(root))
+            return Array.Empty<string>();
+
+        return GetRootToolCandidates(toolName, root);
+    }
+
+    private static string[] GetRootToolCandidates(string toolName, string root)
+    {
+        return toolName switch
+        {
+            "chdman" => new[]
+            {
+                Path.Combine(root, "chdman.exe"),
+                Path.Combine(root, "chdman", "chdman.exe"),
+                Path.Combine(root, "mame", "chdman.exe")
+            },
+            "dolphintool" => new[]
+            {
+                Path.Combine(root, "DolphinTool.exe"),
+                Path.Combine(root, "dolphintool", "DolphinTool.exe"),
+                Path.Combine(root, "dolphin", "DolphinTool.exe")
+            },
+            "7z" => new[]
+            {
+                Path.Combine(root, "7z.exe"),
+                Path.Combine(root, "7zip", "7z.exe"),
+                Path.Combine(root, "7-Zip", "7z.exe")
+            },
+            "psxtract" => new[]
+            {
+                Path.Combine(root, "psxtract.exe"),
+                Path.Combine(root, "psxtract", "psxtract.exe")
+            },
+            "ciso" => new[]
+            {
+                Path.Combine(root, "ciso.exe"),
+                Path.Combine(root, "maxcso.exe"),
+                Path.Combine(root, "ciso", "ciso.exe"),
+                Path.Combine(root, "maxcso", "maxcso.exe")
+            },
+            "unecm" => new[]
+            {
+                Path.Combine(root, "unecm.exe"),
+                Path.Combine(root, "ecm", "unecm.exe")
+            },
+            "nkit" => new[]
+            {
+                Path.Combine(root, "NKitProcessingApp.exe"),
+                Path.Combine(root, "nkit", "NKitProcessingApp.exe")
+            },
+            _ => Array.Empty<string>()
+        };
+    }
+
+    private static string ResolveConversionToolsRoot(out bool hasExplicitOverride)
+    {
+        var overrideRoot = Environment.GetEnvironmentVariable(ConversionToolsRootOverrideEnvVar);
+        hasExplicitOverride = !string.IsNullOrWhiteSpace(overrideRoot);
+        return hasExplicitOverride ? overrideRoot!.Trim() : DefaultConversionToolsRoot;
     }
 
     public ToolResult InvokeProcess(string filePath, string[] arguments, string? errorLabel = null)
@@ -167,6 +273,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
         TimeSpan? timeout,
         CancellationToken cancellationToken)
     {
+        var invocation = BuildInvocationSummary(exePath, arguments);
         try
         {
             var psi = new ProcessStartInfo
@@ -186,7 +293,10 @@ public sealed class ToolRunnerAdapter : IToolRunner
 
             using var process = Process.Start(psi);
             if (process is null)
-                return new ToolResult(-1, $"{label}: failed to start process", false);
+                return new ToolResult(
+                    -1,
+                    BuildFailureOutput(label, "failed to start process", invocation, null, null),
+                    false);
 
             // Read both stdout and stderr asynchronously to prevent pipe deadlock.
             // If either pipe fills its 4KB OS buffer while the parent blocks reading the other,
@@ -218,27 +328,144 @@ public sealed class ToolRunnerAdapter : IToolRunner
                     try { process.Kill(entireProcessTree: true); }
                     catch (Exception ex) { _log?.Invoke($"{label}: failed to kill timed-out process: {ex.Message}"); }
 
-                if (DateTime.UtcNow >= deadlineUtc)
-                    return new ToolResult(-1, $"{label}: process timed out after {effectiveTimeout.TotalMinutes:0.##} minutes", false);
+                TryDrainProcessTasks(stdoutTask, stderrTask);
 
-                return new ToolResult(-1, $"{label}: process cancelled", false);
+                if (DateTime.UtcNow >= deadlineUtc)
+                {
+                    return new ToolResult(
+                        -1,
+                        BuildFailureOutput(
+                            label,
+                            $"process timed out after {effectiveTimeout.TotalMinutes:0.##} minutes",
+                            invocation,
+                            stdout,
+                            stderr),
+                        false);
+                }
+
+                return new ToolResult(
+                    -1,
+                    BuildFailureOutput(label, "process cancelled", invocation, stdout, stderr),
+                    false);
             }
 
             process.WaitForExit();
 
-            var output = string.IsNullOrEmpty(stderr) ? stdout ?? "" : $"{stdout}\n{stderr}".Trim();
-            var success = process.ExitCode == 0;
+            var output = CombineToolOutput(stdout, stderr);
+            if (process.ExitCode != 0)
+            {
+                return new ToolResult(
+                    process.ExitCode,
+                    BuildFailureOutput(label, $"process exited with code {process.ExitCode}", invocation, stdout, stderr),
+                    false);
+            }
 
-            return new ToolResult(process.ExitCode, output, success);
+            return new ToolResult(process.ExitCode, output, true);
         }
         catch (OperationCanceledException)
         {
-            return new ToolResult(-1, $"{label}: process cancelled", false);
+            return new ToolResult(-1, BuildFailureOutput(label, "process cancelled", invocation, null, null), false);
         }
         catch (Exception ex)
         {
-            return new ToolResult(-1, $"{label}: {ex.Message}", false);
+            return new ToolResult(-1, BuildFailureOutput(label, ex.Message, invocation, null, null), false);
         }
+    }
+
+    private static void TryDrainProcessTasks(Task stdoutTask, Task stderrTask)
+    {
+        try
+        {
+            Task.WaitAll([stdoutTask, stderrTask], TimeSpan.FromSeconds(2));
+        }
+        catch (AggregateException)
+        {
+            // Best effort only.
+        }
+    }
+
+    private static string BuildFailureOutput(
+        string label,
+        string reason,
+        string invocation,
+        string? stdout,
+        string? stderr)
+    {
+        var builder = new StringBuilder();
+        builder.Append(label).Append(": ").Append(reason);
+        builder.AppendLine();
+        builder.Append("Invocation: ").Append(invocation);
+
+        var output = CombineToolOutput(stdout, stderr);
+        if (!string.IsNullOrWhiteSpace(output))
+        {
+            builder.AppendLine();
+            builder.Append("Tool output:").AppendLine();
+            builder.Append(TruncateForDiagnostics(output, 4096));
+        }
+
+        return builder.ToString();
+    }
+
+    private static string BuildInvocationSummary(string exePath, string[] arguments)
+    {
+        var builder = new StringBuilder();
+        builder.Append('"').Append(exePath).Append('"');
+
+        foreach (var argument in arguments)
+        {
+            builder.Append(' ').Append(RenderArgument(argument));
+        }
+
+        return builder.ToString();
+    }
+
+    private static string RenderArgument(string argument)
+    {
+        if (string.IsNullOrEmpty(argument))
+            return "\"\"";
+
+        var requiresQuotes = false;
+        foreach (var ch in argument)
+        {
+            if (char.IsWhiteSpace(ch) || ch == '"')
+            {
+                requiresQuotes = true;
+                break;
+            }
+        }
+
+        if (!requiresQuotes)
+            return argument;
+
+        return "\"" + argument.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
+    }
+
+    private static string CombineToolOutput(string? stdout, string? stderr)
+    {
+        if (string.IsNullOrWhiteSpace(stdout) && string.IsNullOrWhiteSpace(stderr))
+            return string.Empty;
+
+        if (string.IsNullOrWhiteSpace(stderr))
+            return stdout!.Trim();
+
+        if (string.IsNullOrWhiteSpace(stdout))
+            return stderr.Trim();
+
+        return $"{stdout.Trim()}{Environment.NewLine}{stderr.Trim()}";
+    }
+
+    private static string TruncateForDiagnostics(string value, int maxChars)
+    {
+        if (value.Length <= maxChars)
+            return value;
+
+        const int headLength = 2300;
+        const int tailLength = 1400;
+        var omitted = value.Length - headLength - tailLength;
+        var head = value[..headLength];
+        var tail = value[^tailLength..];
+        return $"{head}{Environment.NewLine}...[truncated {omitted} chars]...{Environment.NewLine}{tail}";
     }
 
     private bool VerifyToolHash(string toolPath, ToolRequirement? requirement)
