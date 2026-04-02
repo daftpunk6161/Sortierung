@@ -34,8 +34,11 @@ internal sealed class DolphinToolConverter
                 "dolphintool-failed", result.ExitCode);
         }
 
-        if (!File.Exists(targetPath))
-            return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "output-not-created");
+        if (!ConversionOutputValidator.TryValidateCreatedOutput(targetPath, out var outputFailureReason))
+        {
+            ChdmanToolConverter.CleanupPartialOutput(targetPath);
+            return new ConversionResult(sourcePath, null, ConversionOutcome.Error, outputFailureReason);
+        }
 
         return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success);
     }

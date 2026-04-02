@@ -183,7 +183,7 @@ internal static class ConversionPhaseHelper
 
         if (converter is FormatConverterAdapter advancedConverter)
         {
-            convResult = advancedConverter.ConvertForConsole(filePath, consoleKey, cancellationToken);
+            convResult = advancedConverter.ConvertForConsole(filePath, consoleKey, context.OnProgress, cancellationToken);
         }
         else
         {

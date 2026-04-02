@@ -183,6 +183,34 @@ public sealed class ConversionExecutorHardeningTests
     }
 
     [Fact]
+    public void Execute_SingleStepSuccess_PromotesStagedFinalOutput_AndLeavesNoTempArtifact()
+    {
+        var source = CreateTempFile(".iso");
+        var sourceDir = Path.GetDirectoryName(source)!;
+        var baseName = Path.GetFileNameWithoutExtension(source);
+        var stagedPath = Path.Combine(sourceDir, $"{baseName}.tmp.final.step1.chd");
+        var finalPath = Path.Combine(sourceDir, $"{baseName}.chd");
+
+        try
+        {
+            var plan = BuildPlan(source);
+            var executor = new ConversionExecutor([new PassThroughInvoker()], allowReviewRequiredPlans: true);
+
+            var result = executor.Execute(plan);
+
+            Assert.Equal(ConversionOutcome.Success, result.Outcome);
+            Assert.True(File.Exists(finalPath));
+            Assert.False(File.Exists(stagedPath));
+        }
+        finally
+        {
+            if (File.Exists(source)) File.Delete(source);
+            if (File.Exists(stagedPath)) File.Delete(stagedPath);
+            if (File.Exists(finalPath)) File.Delete(finalPath);
+        }
+    }
+
+    [Fact]
     public void Execute_SingleStepVerifyFail_CleansOutput()
     {
         var source = CreateTempFile(".iso");
@@ -204,6 +232,35 @@ public sealed class ConversionExecutorHardeningTests
         finally
         {
             Cleanup(source, ".chd");
+        }
+    }
+
+    [Fact]
+    public void Execute_SingleStepEmptyOutput_ReturnsErrorAndCleansStagedArtifact()
+    {
+        var source = CreateTempFile(".iso");
+        var sourceDir = Path.GetDirectoryName(source)!;
+        var baseName = Path.GetFileNameWithoutExtension(source);
+        var stagedPath = Path.Combine(sourceDir, $"{baseName}.tmp.final.step1.chd");
+        var finalPath = Path.Combine(sourceDir, $"{baseName}.chd");
+
+        try
+        {
+            var plan = BuildPlan(source);
+            var executor = new ConversionExecutor([new EmptyOutputInvoker()], allowReviewRequiredPlans: true);
+
+            var result = executor.Execute(plan);
+
+            Assert.Equal(ConversionOutcome.Error, result.Outcome);
+            Assert.Equal("output-empty", result.Reason);
+            Assert.False(File.Exists(stagedPath));
+            Assert.False(File.Exists(finalPath));
+        }
+        finally
+        {
+            if (File.Exists(source)) File.Delete(source);
+            if (File.Exists(stagedPath)) File.Delete(stagedPath);
+            if (File.Exists(finalPath)) File.Delete(finalPath);
         }
     }
 
@@ -524,6 +581,20 @@ public sealed class ConversionExecutorHardeningTests
 
         public VerificationStatus Verify(string targetPath, ConversionCapability capability)
             => VerificationStatus.VerifyFailed;
+    }
+
+    private sealed class EmptyOutputInvoker : IToolInvoker
+    {
+        public bool CanHandle(ConversionCapability capability) => true;
+
+        public ToolInvocationResult Invoke(string sourcePath, string targetPath, ConversionCapability capability, CancellationToken cancellationToken = default)
+        {
+            using var _ = File.Create(targetPath);
+            return new ToolInvocationResult(true, targetPath, 0, "ok", null, 1, VerificationStatus.NotAttempted);
+        }
+
+        public VerificationStatus Verify(string targetPath, ConversionCapability capability)
+            => VerificationStatus.Verified;
     }
 
     private sealed class NoneHandleInvoker : IToolInvoker

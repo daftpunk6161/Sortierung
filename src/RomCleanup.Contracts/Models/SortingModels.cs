@@ -12,7 +12,8 @@ public sealed record ConsoleSortResult(
     IReadOnlyDictionary<string, int> UnknownReasons,
     int Failed = 0,
     int Reviewed = 0,
-    int Blocked = 0);
+    int Blocked = 0,
+    IReadOnlyList<PathMutation>? PathMutations = null);
 
 /// <summary>
 /// Result of a ZIP sort operation.

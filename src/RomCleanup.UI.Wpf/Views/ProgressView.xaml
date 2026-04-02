@@ -134,7 +134,7 @@
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="260"/>
+          <ColumnDefinition Width="300"/>
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0" Margin="0,0,16,0">
@@ -150,7 +150,8 @@
             <TextBlock Text="{Binding ProgressText}" FontSize="32" FontWeight="Bold"
                        Foreground="{DynamicResource BrushAccentCyan}" HorizontalAlignment="Center"/>
             <TextBlock Text="{Binding Loc[Progress.CancelHint]}" FontSize="12"
-                       Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                       Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center"
+                       TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0"/>
           </StackPanel>
         </Border>
       </Grid>

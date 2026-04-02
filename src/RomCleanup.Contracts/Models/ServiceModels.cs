@@ -100,6 +100,18 @@ public sealed class AuditRollbackResult
 }
 
 /// <summary>
+/// Immutable audit row payload used for single-row and batched audit commits.
+/// </summary>
+public sealed record AuditAppendRow(
+    string RootPath,
+    string OldPath,
+    string NewPath,
+    string Action,
+    string Category = "",
+    string Hash = "",
+    string Reason = "");
+
+/// <summary>
 /// Parallel hashing result.
 /// </summary>
 public sealed class ParallelHashResult

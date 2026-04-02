@@ -1,3 +1,5 @@
+using RomCleanup.Contracts.Models;
+
 namespace RomCleanup.Contracts.Ports;
 
 /// <summary>
@@ -13,4 +15,21 @@ public interface IAuditStore
     IReadOnlyList<string> Rollback(string auditCsvPath, string[] allowedRestoreRoots, string[] allowedCurrentRoots, bool dryRun = false);
     void AppendAuditRow(string auditCsvPath, string rootPath, string oldPath,
         string newPath, string action, string category = "", string hash = "", string reason = "");
+    void AppendAuditRows(string auditCsvPath, IReadOnlyList<AuditAppendRow> rows)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+
+        foreach (var row in rows)
+        {
+            AppendAuditRow(
+                auditCsvPath,
+                row.RootPath,
+                row.OldPath,
+                row.NewPath,
+                row.Action,
+                row.Category,
+                row.Hash,
+                row.Reason);
+        }
+    }
 }

@@ -951,11 +951,16 @@ public sealed partial class MainViewModel
             var (orchestrator, runOptions, auditPath, reportPath) = await Task.Run(() =>
             {
                 DateTime lastProgressUpdate = DateTime.MinValue;
+                string lastProgressPhaseKey = string.Empty;
                 return _runService.BuildOrchestrator(this, msg =>
                 {
                     var now = DateTime.UtcNow;
-                    if ((now - lastProgressUpdate).TotalMilliseconds < 100) return;
+                    if (!ShouldDispatchProgressMessage(msg, now, lastProgressUpdate, lastProgressPhaseKey))
+                        return;
+
                     lastProgressUpdate = now;
+                    if (TrySplitProgressMessage(msg, out var phaseKey, out _))
+                        lastProgressPhaseKey = phaseKey;
 
                     if (_syncContext is null)
                     {
@@ -1336,6 +1341,21 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(ShowConfigChangedBanner));
         OnPropertyChanged(nameof(RollbackActionHint));
         DeferCommandRequery();
+    }
+
+    private static bool ShouldDispatchProgressMessage(
+        string message,
+        DateTime nowUtc,
+        DateTime lastProgressUpdateUtc,
+        string lastProgressPhaseKey)
+    {
+        if (TrySplitProgressMessage(message, out var phaseKey, out _)
+            && !phaseKey.Equals(lastProgressPhaseKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return (nowUtc - lastProgressUpdateUtc).TotalMilliseconds >= 100;
     }
 
     private void SetRunSummary(string text, UiErrorSeverity severity)

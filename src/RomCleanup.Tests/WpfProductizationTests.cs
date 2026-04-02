@@ -195,6 +195,16 @@ public sealed class WpfProductizationTests : IDisposable
         Assert.DoesNotContain("Shell.CurrentWorkspaceTitle", subTabBarXaml, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ProgressView_WrapsCancelHint_ToAvoidClipping()
+    {
+        var progressViewXaml = File.ReadAllText(FindUiFile("Views", "ProgressView.xaml"));
+
+        Assert.Contains("Text=\"{Binding Loc[Progress.CancelHint]}\"", progressViewXaml);
+        Assert.Contains("TextWrapping=\"Wrap\"", progressViewXaml);
+        Assert.Contains("TextAlignment=\"Center\"", progressViewXaml);
+    }
+
     private static MainViewModel CreateViewModel(RecordingDialogService? dialog = null)
     {
         dialog ??= new RecordingDialogService();

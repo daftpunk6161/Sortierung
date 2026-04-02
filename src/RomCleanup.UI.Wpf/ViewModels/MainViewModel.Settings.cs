@@ -648,11 +648,16 @@ public sealed partial class MainViewModel
         SaveSettings();
     }
 
-    private void OnBrowseDatMappingFile(DatMapRow? row)
+    private void OnBrowseDatMappingFileCommand(object? parameter)
     {
-        if (row is null)
+        if (parameter is not DatMapRow row)
             return;
 
+        OnBrowseDatMappingFile(row);
+    }
+
+    private void OnBrowseDatMappingFile(DatMapRow row)
+    {
         var path = _dialog.BrowseFile(
             "DAT-Datei auswählen",
             "DAT-Dateien (*.dat;*.xml)|*.dat;*.xml|Alle Dateien|*.*");

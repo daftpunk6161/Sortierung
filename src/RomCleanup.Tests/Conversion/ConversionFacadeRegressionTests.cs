@@ -62,6 +62,31 @@ public sealed class ConversionFacadeRegressionTests : IDisposable
     }
 
     [Fact]
+    public void ConvertForConsole_PlannerBackedExecution_EmitsConvertStartProgress()
+    {
+        var source = CreateTempFile(".iso");
+        var expectedTarget = Path.ChangeExtension(source, ".chd");
+        var executor = new RecordingExecutor(ConversionOutcome.Success, expectedTarget);
+        var planner = new ExecutablePlanner(".chd");
+        var messages = new List<string>();
+
+        var adapter = new FormatConverterAdapter(
+            new StubToolRunner(),
+            bestFormats: null,
+            registry: null,
+            planner: planner,
+            executor: executor);
+
+        var result = adapter.ConvertForConsole(source, "PS2", messages.Add);
+
+        Assert.Equal(ConversionOutcome.Success, result.Outcome);
+        Assert.Contains(messages, message =>
+            message.StartsWith("[Convert]", StringComparison.Ordinal)
+            && message.Contains(Path.GetFileName(source), StringComparison.Ordinal)
+            && message.Contains(".chd", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void ConvertForConsole_NoPlannerOrExecutor_FallsBackToLegacy()
     {
         var source = CreateTempFile(".cue");

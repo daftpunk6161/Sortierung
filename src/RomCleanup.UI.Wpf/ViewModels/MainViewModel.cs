@@ -118,7 +118,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         // Browse commands (parameter = property name to set)
         BrowseToolPathCommand = new RelayCommand<string>(OnBrowseToolPath);
         BrowseFolderPathCommand = new RelayCommand<string>(OnBrowseFolderPath);
-        BrowseDatMappingFileCommand = new RelayCommand<DatMapRow>(OnBrowseDatMappingFile);
+        BrowseDatMappingFileCommand = new RelayCommand<object?>(OnBrowseDatMappingFileCommand);
 
         // Settings commands
         SaveSettingsCommand = new RelayCommand(OnSaveSettings);

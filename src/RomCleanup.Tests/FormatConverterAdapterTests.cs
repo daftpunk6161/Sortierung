@@ -338,6 +338,32 @@ public class FormatConverterAdapterTests
         }
     }
 
+    [Fact]
+    public void Convert_WhenToolCreatesEmptyOutput_ReturnsErrorAndCleansPartialTarget()
+    {
+        var target = new ConversionTarget(".chd", "chdman", "createcd");
+        var source = Path.Combine(Path.GetTempPath(), $"empty_output_{Guid.NewGuid():N}.cue");
+        var expectedTarget = Path.ChangeExtension(source, ".chd");
+
+        try
+        {
+            File.WriteAllText(source, "FILE \"track01.bin\" BINARY");
+            _tools.CreateEmptyOutput = true;
+
+            var result = _converter.Convert(source, target);
+
+            Assert.Equal(ConversionOutcome.Error, result.Outcome);
+            Assert.Equal("output-empty", result.Reason);
+            Assert.False(File.Exists(expectedTarget));
+        }
+        finally
+        {
+            _tools.CreateEmptyOutput = false;
+            if (File.Exists(source)) File.Delete(source);
+            if (File.Exists(expectedTarget)) File.Delete(expectedTarget);
+        }
+    }
+
     /// <summary>
     /// Simple mock IToolRunner for unit testing conversion logic.
     /// </summary>
@@ -353,6 +379,7 @@ public class FormatConverterAdapterTests
 
         public ToolResult LastInvocation { get; private set; } = new(0, "", true);
         public string[] LastArgs { get; private set; } = Array.Empty<string>();
+        public bool CreateEmptyOutput { get; set; }
 
         public string? FindTool(string toolName)
         {
@@ -374,7 +401,16 @@ public class FormatConverterAdapterTests
                 if (!string.IsNullOrEmpty(dir))
                     Directory.CreateDirectory(dir);
                 if (!File.Exists(outputPath))
-                    File.WriteAllBytes(outputPath, [1, 2, 3, 4]);
+                {
+                    if (CreateEmptyOutput)
+                    {
+                        using var _ = File.Create(outputPath);
+                    }
+                    else
+                    {
+                        File.WriteAllBytes(outputPath, [1, 2, 3, 4]);
+                    }
+                }
             }
 
             return LastInvocation;

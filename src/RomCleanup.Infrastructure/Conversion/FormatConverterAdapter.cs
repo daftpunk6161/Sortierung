@@ -210,6 +210,13 @@ public sealed class FormatConverterAdapter : IFormatConverter
     /// Falls back to legacy conversion flow if planner/executor are not available.
     /// </summary>
     public ConversionResult ConvertForConsole(string sourcePath, string consoleKey, CancellationToken cancellationToken = default)
+        => ConvertForConsole(sourcePath, consoleKey, onProgress: null, cancellationToken);
+
+    public ConversionResult ConvertForConsole(
+        string sourcePath,
+        string consoleKey,
+        Action<string>? onProgress,
+        CancellationToken cancellationToken = default)
     {
         if (!File.Exists(sourcePath))
             return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "source-not-found");
@@ -221,6 +228,8 @@ public sealed class FormatConverterAdapter : IFormatConverter
             var target = GetTargetFormat(consoleKey, sourceExt);
             if (target is null)
                 return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped, "no-target-defined");
+
+            EmitConvertStartProgress(onProgress, sourcePath, target.Extension);
             return Convert(sourcePath, target, cancellationToken);
         }
 
@@ -245,7 +254,10 @@ public sealed class FormatConverterAdapter : IFormatConverter
             {
                 var fallbackTarget = GetTargetFormat(consoleKey, sourceExt);
                 if (fallbackTarget is not null)
+                {
+                    EmitConvertStartProgress(onProgress, sourcePath, fallbackTarget.Extension);
                     return ConvertLegacy(sourcePath, fallbackTarget, cancellationToken);
+                }
             }
 
             var outcome = plan.Safety == ConversionSafety.Blocked
@@ -261,7 +273,12 @@ public sealed class FormatConverterAdapter : IFormatConverter
             };
         }
 
-        return _executor.Execute(plan, cancellationToken: cancellationToken);
+        EmitConvertStartProgress(onProgress, sourcePath, plan.FinalTargetExtension);
+
+        return _executor.Execute(
+            plan,
+            onStepComplete: CreateStepProgressEmitter(sourcePath, plan, onProgress),
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -281,6 +298,34 @@ public sealed class FormatConverterAdapter : IFormatConverter
     {
         return string.Equals(extension, ".zip", StringComparison.OrdinalIgnoreCase)
             || string.Equals(extension, ".7z", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void EmitConvertStartProgress(Action<string>? onProgress, string sourcePath, string? targetExtension)
+    {
+        if (onProgress is null || string.IsNullOrWhiteSpace(targetExtension))
+            return;
+
+        onProgress($"[Convert] {Path.GetFileName(sourcePath)} -> {targetExtension}");
+    }
+
+    private static Action<ConversionStep, ConversionStepResult>? CreateStepProgressEmitter(
+        string sourcePath,
+        ConversionPlan plan,
+        Action<string>? onProgress)
+    {
+        if (onProgress is null || plan.Steps.Count <= 1)
+            return null;
+
+        var fileName = Path.GetFileName(sourcePath);
+        var totalSteps = plan.Steps.Count;
+
+        return (step, result) =>
+        {
+            if (!result.Success)
+                return;
+
+            onProgress($"[Convert] {fileName} Schritt {step.Order + 1} von {totalSteps} abgeschlossen");
+        };
     }
 
     private ConversionResult ConvertLegacy(string sourcePath, ConversionTarget target, CancellationToken cancellationToken)

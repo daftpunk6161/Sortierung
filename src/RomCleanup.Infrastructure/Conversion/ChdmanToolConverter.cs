@@ -67,8 +67,11 @@ internal sealed class ChdmanToolConverter
                 $"chdman-failed{detail}", result.ExitCode);
         }
 
-        if (!File.Exists(targetPath))
-            return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "output-not-created");
+        if (!ConversionOutputValidator.TryValidateCreatedOutput(targetPath, out var outputFailureReason))
+        {
+            CleanupPartialOutput(targetPath);
+            return new ConversionResult(sourcePath, null, ConversionOutcome.Error, outputFailureReason);
+        }
 
         return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success);
     }
@@ -185,8 +188,11 @@ internal sealed class ChdmanToolConverter
                     $"chdman-failed{detail}", result.ExitCode);
             }
 
-            if (!File.Exists(targetPath))
-                return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "output-not-created");
+            if (!ConversionOutputValidator.TryValidateCreatedOutput(targetPath, out var outputFailureReason))
+            {
+                CleanupPartialOutput(targetPath);
+                return new ConversionResult(sourcePath, null, ConversionOutcome.Error, outputFailureReason);
+            }
 
             return new ConversionResult(sourcePath, targetPath, ConversionOutcome.Success);
         }
@@ -228,7 +234,7 @@ internal sealed class ChdmanToolConverter
             var args = new[] { command, "-i", cueFiles[i], "-o", targetPath };
             var result = _tools.InvokeProcess(toolPath, args, "chdman");
 
-            if (!result.Success || !File.Exists(targetPath))
+            if (!result.Success)
             {
                 // Rollback: delete all already-created CHDs
                 foreach (var output in outputs)
@@ -237,6 +243,16 @@ internal sealed class ChdmanToolConverter
 
                 return new ConversionResult(sourcePath, null, ConversionOutcome.Error,
                     $"multi-cue-failed:disc{i + 1}of{cueFiles.Length}");
+            }
+
+            if (!ConversionOutputValidator.TryValidateCreatedOutput(targetPath, out var outputFailureReason))
+            {
+                foreach (var output in outputs)
+                    CleanupPartialOutput(output);
+                CleanupPartialOutput(targetPath);
+
+                return new ConversionResult(sourcePath, null, ConversionOutcome.Error,
+                    $"{outputFailureReason}:disc{i + 1}of{cueFiles.Length}");
             }
 
             outputs.Add(targetPath);

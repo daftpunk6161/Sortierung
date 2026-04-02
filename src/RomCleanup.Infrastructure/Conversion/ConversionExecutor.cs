@@ -110,8 +110,8 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var outputPath = BuildOutputPath(fullSourceDirectory, baseName, step);
-                    if (File.Exists(outputPath))
+                    var finalOutputPath = BuildOutputPath(fullSourceDirectory, baseName, step);
+                    if (File.Exists(finalOutputPath))
                     {
                         CleanupArtifacts(intermediateArtifacts);
                         return BuildResult(
@@ -119,6 +119,26 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
                             null,
                             ConversionOutcome.Skipped,
                             "target-exists",
+                            0,
+                            VerificationStatus.NotAttempted,
+                            totalWatch.ElapsedMilliseconds);
+                    }
+
+                    var invocationOutputPath = BuildInvocationOutputPath(finalOutputPath, step);
+                    if (!PathsEqual(invocationOutputPath, finalOutputPath)
+                        && File.Exists(invocationOutputPath))
+                    {
+                        CleanupPath(invocationOutputPath);
+                    }
+
+                    if (File.Exists(invocationOutputPath))
+                    {
+                        CleanupArtifacts(intermediateArtifacts);
+                        return BuildResult(
+                            plan,
+                            null,
+                            ConversionOutcome.Error,
+                            "staged-output-exists",
                             0,
                             VerificationStatus.NotAttempted,
                             totalWatch.ElapsedMilliseconds);
@@ -140,43 +160,80 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
 
                     // SEC-CONV-05: Register intermediate artifact BEFORE invocation so that
                     // cancellation between Invoke and registration still gets cleaned up.
-                    if (step.IsIntermediate)
-                        intermediateArtifacts.Add(outputPath);
+                    if (step.IsIntermediate || !PathsEqual(invocationOutputPath, finalOutputPath))
+                        intermediateArtifacts.Add(invocationOutputPath);
 
-                    var invokeResult = invoker.Invoke(currentInputPath, outputPath, step.Capability, cancellationToken);
+                    var invokeResult = invoker.Invoke(currentInputPath, invocationOutputPath, step.Capability, cancellationToken);
                     exitCode = invokeResult.ExitCode;
-
-                    var verifyStatus = invokeResult.Verification == VerificationStatus.NotAttempted
-                        ? invoker.Verify(outputPath, step.Capability)
-                        : invokeResult.Verification;
-
-                    var stepResult = new ConversionStepResult(
-                        step.Order,
-                        outputPath,
-                        invokeResult.Success,
-                        verifyStatus,
-                        invokeResult.Success ? null : invokeResult.StdErr,
-                        invokeResult.DurationMs);
-                    onStepComplete?.Invoke(step, stepResult);
 
                     if (!invokeResult.Success)
                     {
+                        onStepComplete?.Invoke(
+                            step,
+                            new ConversionStepResult(
+                                step.Order,
+                                finalOutputPath,
+                                false,
+                                invokeResult.Verification,
+                                invokeResult.StdErr,
+                                invokeResult.DurationMs));
+
                         CleanupArtifacts(intermediateArtifacts);
-                        CleanupPath(outputPath);
+                        CleanupPath(invocationOutputPath);
                         return BuildResult(
                             plan,
                             null,
                             ConversionOutcome.Error,
-                            "conversion-step-failed",
+                            string.IsNullOrWhiteSpace(invokeResult.StdErr)
+                                ? "conversion-step-failed"
+                                : invokeResult.StdErr,
                             exitCode,
-                            verifyStatus,
+                            invokeResult.Verification,
                             totalWatch.ElapsedMilliseconds);
                     }
 
+                    if (!ConversionOutputValidator.TryValidateCreatedOutput(invocationOutputPath, out var outputFailureReason))
+                    {
+                        onStepComplete?.Invoke(
+                            step,
+                            new ConversionStepResult(
+                                step.Order,
+                                finalOutputPath,
+                                false,
+                                VerificationStatus.NotAttempted,
+                                outputFailureReason,
+                                invokeResult.DurationMs));
+
+                        CleanupArtifacts(intermediateArtifacts);
+                        CleanupPath(invocationOutputPath);
+                        return BuildResult(
+                            plan,
+                            null,
+                            ConversionOutcome.Error,
+                            outputFailureReason,
+                            exitCode,
+                            VerificationStatus.NotAttempted,
+                            totalWatch.ElapsedMilliseconds);
+                    }
+
+                    var verifyStatus = invokeResult.Verification == VerificationStatus.NotAttempted
+                        ? invoker.Verify(invocationOutputPath, step.Capability)
+                        : invokeResult.Verification;
+
                     if (verifyStatus == VerificationStatus.VerifyFailed)
                     {
+                        onStepComplete?.Invoke(
+                            step,
+                            new ConversionStepResult(
+                                step.Order,
+                                finalOutputPath,
+                                true,
+                                verifyStatus,
+                                null,
+                                invokeResult.DurationMs));
+
                         CleanupArtifacts(intermediateArtifacts);
-                        CleanupPath(outputPath);
+                        CleanupPath(invocationOutputPath);
                         return BuildResult(
                             plan,
                             null,
@@ -187,8 +244,22 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
                             totalWatch.ElapsedMilliseconds);
                     }
 
+                    PromoteFinalOutputIfNeeded(invocationOutputPath, finalOutputPath);
+                    if (!step.IsIntermediate)
+                        intermediateArtifacts.Remove(invocationOutputPath);
+
+                    onStepComplete?.Invoke(
+                        step,
+                        new ConversionStepResult(
+                            step.Order,
+                            finalOutputPath,
+                            true,
+                            verifyStatus,
+                            null,
+                            invokeResult.DurationMs));
+
                     finalVerification = verifyStatus;
-                    currentInputPath = outputPath;
+                    currentInputPath = finalOutputPath;
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -235,6 +306,47 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
             throw new InvalidOperationException("output-path-outside-source-root");
 
         return combined;
+    }
+
+    private static string BuildInvocationOutputPath(string finalOutputPath, ConversionStep step)
+    {
+        if (step.IsIntermediate)
+            return finalOutputPath;
+
+        var directory = Path.GetDirectoryName(finalOutputPath)
+            ?? throw new InvalidOperationException("invalid-final-output-directory");
+        var fileName = Path.GetFileNameWithoutExtension(finalOutputPath);
+        var extension = Path.GetExtension(finalOutputPath);
+
+        return Path.Combine(directory, $"{fileName}.tmp.final.step{step.Order + 1}{extension}");
+    }
+
+    private static void PromoteFinalOutputIfNeeded(string invocationOutputPath, string finalOutputPath)
+    {
+        if (PathsEqual(invocationOutputPath, finalOutputPath))
+            return;
+
+        try
+        {
+            if (!File.Exists(invocationOutputPath))
+                throw new InvalidOperationException("staged-output-missing");
+
+            File.Move(invocationOutputPath, finalOutputPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            CleanupPath(invocationOutputPath);
+            CleanupPath(finalOutputPath);
+            throw new InvalidOperationException("staged-output-promote-failed");
+        }
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        return string.Equals(
+            Path.GetFullPath(left),
+            Path.GetFullPath(right),
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasContiguousStepOrder(IReadOnlyList<ConversionStep> steps)

@@ -43,6 +43,14 @@ public sealed class RunOptions
 }
 
 /// <summary>
+/// A persisted path mutation from one concrete artifact location to another.
+/// Used to project the executed filesystem truth across channels.
+/// </summary>
+public sealed record PathMutation(
+    string SourcePath,
+    string TargetPath);
+
+/// <summary>
 /// Result of the move phase.
 /// </summary>
 public sealed record MovePhaseResult(

@@ -1507,6 +1507,26 @@ public class GuiViewModelTests
         Assert.Equal("Fortschritt: 1/3 Dateien", vm.PerfFile);
     }
 
+    [Fact]
+    public void ShouldDispatchProgressMessage_AllowsImmediatePhaseChange_WithinThrottleWindow()
+    {
+        var method = typeof(MainViewModel).GetMethod(
+            "ShouldDispatchProgressMessage",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+
+        Assert.NotNull(method);
+
+        var shouldDispatch = (bool)method!.Invoke(null, new object[]
+        {
+            "[Convert] game.iso -> .chd",
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            "[Scan]"
+        })!;
+
+        Assert.True(shouldDispatch);
+    }
+
     // ═══ TEST-007: DryRun E2E Smoke-Test ════════════════════════════════
 
     [Fact]
