@@ -15,6 +15,65 @@ public sealed partial class FeatureCommandService
 {
     // ═══ SICHERHEIT & INTEGRITÄT ════════════════════════════════════════
 
+    private void PatchPipeline()
+    {
+        var sourcePath = _dialog.BrowseFile(
+            "Quell-ROM fuer Patch waehlen",
+            "ROM-Dateien (*.zip;*.7z;*.chd;*.iso;*.bin;*.cue;*.nes;*.sfc;*.gba;*.gb;*.gbc;*.n64;*.z64;*.v64)|*.zip;*.7z;*.chd;*.iso;*.bin;*.cue;*.nes;*.sfc;*.gba;*.gb;*.gbc;*.n64;*.z64;*.v64|Alle Dateien (*.*)|*.*");
+        if (sourcePath is null)
+            return;
+
+        var patchPath = _dialog.BrowseFile(
+            "Patch-Datei waehlen",
+            "Patch-Dateien (*.ips;*.bps;*.ups;*.xdelta;*.xdelta3;*.vcdiff)|*.ips;*.bps;*.ups;*.xdelta;*.xdelta3;*.vcdiff|Alle Dateien (*.*)|*.*");
+        if (patchPath is null)
+            return;
+
+        var patchFormat = ResolvePatchFormatForDialog(patchPath);
+        if (patchFormat is null)
+        {
+            LogWarning("PATCH-FORMAT", "Patch-Format nicht erkannt. Unterstuetzt: IPS, BPS, UPS, xdelta.");
+            return;
+        }
+
+        var sourceExtension = Path.GetExtension(sourcePath);
+        var defaultName = Path.GetFileNameWithoutExtension(sourcePath) + ".patched" + sourceExtension;
+        var outputPath = _dialog.SaveFile(
+            "Patch-Ausgabe speichern",
+            string.IsNullOrWhiteSpace(sourceExtension)
+                ? "Alle Dateien (*.*)|*.*"
+                : $"ROM (*{sourceExtension})|*{sourceExtension}|Alle Dateien (*.*)|*.*",
+            defaultName);
+        if (!TryResolveSafeOutputPath(outputPath, "Patch-Pipeline", out var safeOutputPath))
+            return;
+
+        try
+        {
+            var result = FeatureService.ApplyPatch(
+                sourcePath,
+                patchPath,
+                safeOutputPath,
+                toolRunner: new ToolRunnerAdapter());
+
+            var toolLine = string.IsNullOrWhiteSpace(result.ToolPath)
+                ? "Tool: intern"
+                : $"Tool: {result.ToolPath}";
+            _dialog.ShowText(
+                "Patch-Pipeline",
+                $"Format: {result.Format}\nQuelle: {result.SourcePath}\nPatch: {result.PatchPath}\nZiel: {result.OutputPath}\nGroesse: {FeatureService.FormatSize(result.OutputSizeBytes)}\nSHA256: {result.OutputSha256}\n{toolLine}");
+            _vm.AddLog($"Patch angewendet ({result.Format}): {Path.GetFileName(result.PatchPath)} -> {result.OutputPath}", "INFO");
+        }
+        catch (InvalidOperationException ex)
+        {
+            LogWarning("PATCH-APPLY", $"Patch konnte nicht angewendet werden: {ex.Message}");
+            _dialog.Error($"Patch konnte nicht angewendet werden:\n\n{ex.Message}", "Patch-Pipeline");
+        }
+        catch (Exception ex)
+        {
+            LogError("PATCH-APPLY", $"Patch-Pipeline fehlgeschlagen: {ex.Message}");
+        }
+    }
+
     private async Task IntegrityMonitorAsync()
     {
         if (_vm.LastCandidates.Count == 0)
@@ -175,6 +234,18 @@ public sealed partial class FeatureCommandService
         }
 
         _dialog.ShowText("Header-Reparatur", $"Datei: {Path.GetFileName(path)}\n\nPlattform: {header.Platform}\nFormat: {header.Format}\n{header.Details}\n\nAutomatische Reparatur ist nur für NES und SNES verfügbar.");
+    }
+
+    private static string? ResolvePatchFormatForDialog(string patchPath)
+    {
+        var format = FeatureService.DetectPatchFormat(patchPath);
+        if (!string.IsNullOrWhiteSpace(format))
+            return format;
+
+        var extension = Path.GetExtension(patchPath).ToLowerInvariant();
+        return extension is ".xdelta" or ".xdelta3" or ".vcdiff"
+            ? "XDELTA"
+            : null;
     }
 
 }

@@ -2,8 +2,10 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using RomCleanup.Core.Classification;
 using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Infrastructure.Analysis;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Profiles;
 using RomCleanup.Infrastructure.Workflow;
@@ -17,6 +19,31 @@ public sealed partial class MainViewModel
     private RunConfigurationMaterializer _runConfigurationMaterializer = null!;
     private bool _suppressRunConfigurationSelectionApply;
     private bool _applyingRunConfigurationSelection;
+    private bool _wizardAnalysisDirty = true;
+    private CancellationTokenSource? _wizardAnalysisCts;
+
+    private bool _wizardAnalysisInProgress;
+    public bool WizardAnalysisInProgress
+    {
+        get => _wizardAnalysisInProgress;
+        private set => SetProperty(ref _wizardAnalysisInProgress, value);
+    }
+
+    private string _wizardAnalysisSummary = string.Empty;
+    public string WizardAnalysisSummary
+    {
+        get => _wizardAnalysisSummary;
+        private set => SetProperty(ref _wizardAnalysisSummary, value);
+    }
+
+    private string _wizardRecommendationSummary = string.Empty;
+    public string WizardRecommendationSummary
+    {
+        get => _wizardRecommendationSummary;
+        private set => SetProperty(ref _wizardRecommendationSummary, value);
+    }
+
+    public bool WizardHasAnalysis => !string.IsNullOrWhiteSpace(WizardAnalysisSummary);
 
     public ObservableCollection<RunProfileSummary> AvailableRunProfiles { get; } = [];
     public ObservableCollection<WorkflowScenarioDefinition> AvailableWorkflows { get; } = [];
@@ -357,16 +384,254 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(SelectedRunProfileDescription));
         OnPropertyChanged(nameof(RunConfigurationSelectionSummary));
         OnPropertyChanged(nameof(CanAdvanceWizard));
+        OnPropertyChanged(nameof(WizardHasAnalysis));
     }
 
     private void OnShellStatePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ShellViewModel.WizardStep))
+        {
             OnPropertyChanged(nameof(CanAdvanceWizard));
+            if (Shell.ShowFirstRunWizard && Shell.WizardStep >= 1)
+                EnsureWizardAnalysisStarted();
+        }
 
         if (e.PropertyName is nameof(ShellViewModel.SelectedNavTag) or nameof(ShellViewModel.SelectedSubTab))
             OnPropertyChanged(nameof(ShowSmartActionBar));
     }
+
+    private void InvalidateWizardAnalysis()
+    {
+        _wizardAnalysisDirty = true;
+        _wizardAnalysisCts?.Cancel();
+        _wizardAnalysisCts = null;
+        WizardAnalysisInProgress = false;
+        WizardAnalysisSummary = string.Empty;
+        WizardRecommendationSummary = string.Empty;
+        OnPropertyChanged(nameof(WizardHasAnalysis));
+    }
+
+    private void EnsureWizardAnalysisStarted()
+    {
+        if (!_wizardAnalysisDirty || WizardAnalysisInProgress || Roots.Count == 0)
+            return;
+
+        _wizardAnalysisCts?.Cancel();
+        _wizardAnalysisCts = new CancellationTokenSource();
+        _ = AnalyzeWizardSetupAsync(_wizardAnalysisCts.Token);
+    }
+
+    internal async Task AnalyzeWizardSetupAsync(CancellationToken cancellationToken = default)
+    {
+        if (Roots.Count == 0)
+        {
+            InvalidateWizardAnalysis();
+            return;
+        }
+
+        WizardAnalysisInProgress = true;
+        WizardAnalysisSummary = "Analyse laeuft...";
+        WizardRecommendationSummary = string.Empty;
+        OnPropertyChanged(nameof(WizardHasAnalysis));
+
+        try
+        {
+            var roots = Roots
+                .Where(static root => !string.IsNullOrWhiteSpace(root))
+                .Select(static root => root.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            var selectedExtensions = BuildSelectedExtensionsForRunConfiguration();
+            var extensionSet = new HashSet<string>(selectedExtensions
+                .Where(static ext => !string.IsNullOrWhiteSpace(ext))
+                .Select(static ext => ext.StartsWith('.') ? ext : "." + ext), StringComparer.OrdinalIgnoreCase);
+
+            var analysis = await Task.Run(
+                () => BuildWizardScanData(roots, extensionSet, AggressiveJunk, cancellationToken),
+                cancellationToken).ConfigureAwait(true);
+
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
+            var advisor = FeatureService.GetConversionAdvisor(analysis.Candidates);
+            var topConsoles = analysis.ConsoleCounts
+                .OrderByDescending(static kv => kv.Value)
+                .ThenBy(static kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+                .Take(5)
+                .Select(static kv => $"{kv.Key} ({kv.Value})")
+                .ToArray();
+
+            var recommendedWorkflowId = ResolveRecommendedWizardWorkflow(
+                analysis.HasDiscLikeFormats,
+                analysis.HasCartridgeFormats,
+                advisor.SavedBytes);
+
+            var workflow = WorkflowScenarioCatalog.TryGet(recommendedWorkflowId);
+            if (string.IsNullOrWhiteSpace(SelectedWorkflowScenarioId))
+                SelectedWorkflowScenarioId = recommendedWorkflowId;
+            if (string.IsNullOrWhiteSpace(SelectedRunProfileId) && workflow is not null)
+                SelectedRunProfileId = workflow.RecommendedProfileId;
+
+            var convertibleFiles = advisor.Consoles.Sum(static item => item.FileCount);
+            WizardAnalysisSummary =
+                $"Erkannt: {analysis.TotalFiles} Datei(en), Junk-Schaetzung: {analysis.JunkFiles}, konvertierbar: {convertibleFiles}, Einsparpotenzial: {FeatureService.FormatSize(advisor.SavedBytes)}.";
+
+            WizardRecommendationSummary =
+                $"Empfohlen: {(workflow?.Name ?? recommendedWorkflowId)} | Top-Systeme: {(topConsoles.Length > 0 ? string.Join(", ", topConsoles) : "keine")}";
+
+            _wizardAnalysisDirty = false;
+            OnPropertyChanged(nameof(WizardHasAnalysis));
+            OnPropertyChanged(nameof(CanAdvanceWizard));
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore canceled wizard analyses.
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            WizardAnalysisSummary = "Analyse fehlgeschlagen.";
+            WizardRecommendationSummary = ex.Message;
+            OnPropertyChanged(nameof(WizardHasAnalysis));
+        }
+        finally
+        {
+            WizardAnalysisInProgress = false;
+        }
+    }
+
+    private static string ResolveRecommendedWizardWorkflow(
+        bool hasDiscLikeFormats,
+        bool hasCartridgeFormats,
+        long estimatedSavingsBytes)
+    {
+        if (hasDiscLikeFormats && !hasCartridgeFormats)
+            return WorkflowScenarioIds.FormatOptimization;
+        if (hasDiscLikeFormats && hasCartridgeFormats)
+            return WorkflowScenarioIds.NewCollectionSetup;
+        if (!hasDiscLikeFormats && hasCartridgeFormats)
+            return estimatedSavingsBytes > 0 ? WorkflowScenarioIds.QuickClean : WorkflowScenarioIds.FullAudit;
+
+        return WorkflowScenarioIds.FullAudit;
+    }
+
+    private static WizardScanData BuildWizardScanData(
+        IReadOnlyList<string> roots,
+        HashSet<string> extensionSet,
+        bool aggressiveJunk,
+        CancellationToken cancellationToken)
+    {
+        var detector = TryLoadWizardConsoleDetector();
+        var consoleCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var candidates = new List<RomCandidate>();
+        var totalFiles = 0;
+        var junkFiles = 0;
+        var hasDiscLikeFormats = false;
+        var hasCartridgeFormats = false;
+
+        foreach (var root in roots)
+        {
+            if (!Directory.Exists(root))
+                continue;
+
+            IEnumerable<string> files;
+            try
+            {
+                files = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories);
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                continue;
+            }
+
+            foreach (var file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var extension = Path.GetExtension(file);
+                if (string.IsNullOrWhiteSpace(extension) || !extensionSet.Contains(extension))
+                    continue;
+
+                long sizeBytes;
+                try
+                {
+                    sizeBytes = new FileInfo(file).Length;
+                }
+                catch (IOException)
+                {
+                    continue;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    continue;
+                }
+
+                totalFiles++;
+                var baseName = Path.GetFileNameWithoutExtension(file);
+                if (CollectionExportService.GetJunkReason(baseName, aggressiveJunk) is not null)
+                    junkFiles++;
+
+                var normalizedExtension = extension.ToLowerInvariant();
+                if (normalizedExtension is ".iso" or ".bin" or ".cue" or ".chd" or ".gdi" or ".cso" or ".pbp" or ".rvz" or ".wbfs")
+                    hasDiscLikeFormats = true;
+                if (normalizedExtension is ".nes" or ".sfc" or ".smc" or ".gba" or ".gb" or ".gbc" or ".nds" or ".z64" or ".n64" or ".v64")
+                    hasCartridgeFormats = true;
+
+                var consoleKey = detector?.DetectByExtension(extension)
+                                 ?? detector?.DetectByFolder(file, root)
+                                 ?? "unknown";
+                consoleCounts[consoleKey] = consoleCounts.TryGetValue(consoleKey, out var count) ? count + 1 : 1;
+
+                candidates.Add(new RomCandidate
+                {
+                    MainPath = file,
+                    Extension = extension,
+                    SizeBytes = sizeBytes,
+                    ConsoleKey = consoleKey,
+                    Category = FileCategory.Game
+                });
+
+                if (candidates.Count >= 25000)
+                    return new WizardScanData(totalFiles, junkFiles, hasDiscLikeFormats, hasCartridgeFormats, consoleCounts, candidates);
+            }
+        }
+
+        return new WizardScanData(totalFiles, junkFiles, hasDiscLikeFormats, hasCartridgeFormats, consoleCounts, candidates);
+    }
+
+    private static ConsoleDetector? TryLoadWizardConsoleDetector()
+    {
+        var dataDir = RunEnvironmentBuilder.ResolveDataDir();
+        var consolesPath = Path.Combine(dataDir, "consoles.json");
+        if (!File.Exists(consolesPath))
+            return null;
+
+        try
+        {
+            var json = File.ReadAllText(consolesPath);
+            return ConsoleDetector.LoadFromJson(json);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private sealed record WizardScanData(
+        int TotalFiles,
+        int JunkFiles,
+        bool HasDiscLikeFormats,
+        bool HasCartridgeFormats,
+        IReadOnlyDictionary<string, int> ConsoleCounts,
+        IReadOnlyList<RomCandidate> Candidates);
 
     private void SetRunConfigurationSelectionInternal(string? workflowScenarioId, string? profileId)
     {

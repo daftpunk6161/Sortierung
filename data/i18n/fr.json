@@ -653,6 +653,8 @@
   "Tool.ConversionVerify.Desc": "V├®rifier les fichiers convertis",
   "Tool.FormatPriority": "Priorit├® des formats",
   "Tool.FormatPriority.Desc": "Afficher la liste de priorit├® des formats",
+  "Tool.PatchPipeline": "Pipeline de patch",
+  "Tool.PatchPipeline.Desc": "Appliquer des patchs IPS/BPS/UPS/xdelta",
   "Tool.DatAutoUpdate": "Mise ├á jour automatique DAT",
   "Tool.DatAutoUpdate.Desc": "V├®rifier les fichiers DAT locaux",
   "Tool.DatDiffViewer": "Visualiseur de diff DAT",

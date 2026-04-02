@@ -9,6 +9,9 @@ public static class FrontendExportTargets
     public const string LaunchBox = "launchbox";
     public const string EmulationStation = "emulationstation";
     public const string Playnite = "playnite";
+    public const string MiSTer = "mister";
+    public const string AnaloguePocket = "analoguepocket";
+    public const string OnionOs = "onionos";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -18,7 +21,10 @@ public static class FrontendExportTargets
         RetroArch,
         LaunchBox,
         EmulationStation,
-        Playnite
+        Playnite,
+        MiSTer,
+        AnaloguePocket,
+        OnionOs
     };
 }
 

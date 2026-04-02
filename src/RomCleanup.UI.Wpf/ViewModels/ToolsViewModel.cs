@@ -273,6 +273,7 @@ public sealed class ToolsViewModel : ObservableObject
             new(FeatureCommandKeys.ConversionPipeline, "Conversion", "\xE8AB", false, false, ToolMaturity.Guided),
             new(FeatureCommandKeys.ConversionVerify, "Conversion", "\xE73E", false, true, ToolMaturity.Production),
             new(FeatureCommandKeys.FormatPriority, "Conversion", "\xE9D9", false, false, ToolMaturity.Guided),
+            new(FeatureCommandKeys.PatchPipeline, "Conversion", "\xE8A5", false, false, ToolMaturity.Guided),
             new(FeatureCommandKeys.HeaderRepair, "Conversion", "\xE90F", false, true, ToolMaturity.Production),
 
             new(FeatureCommandKeys.DatAutoUpdate, "DatVerify", "\xE895", false, true, ToolMaturity.Production),
@@ -363,6 +364,7 @@ public sealed class ToolsViewModel : ObservableObject
             {
                 AddRecommendation(FeatureCommandKeys.FormatPriority, _loc["Tools.Recommend.ConversionPlan"]);
                 AddRecommendation(FeatureCommandKeys.ConversionVerify, _loc["Tools.Recommend.ConversionCheck"]);
+                AddRecommendation(FeatureCommandKeys.PatchPipeline, _loc["Tools.Recommend.ConversionPlan"]);
             }
 
             if (snapshot.RootCount > 1)

@@ -42,6 +42,9 @@ public static class FrontendExportService
             FrontendExportTargets.LaunchBox => WriteLaunchBoxArtifacts(loaded.Games, request.OutputPath),
             FrontendExportTargets.EmulationStation => WriteEmulationStationArtifacts(loaded.Games, request.OutputPath),
             FrontendExportTargets.Playnite => WritePlayniteArtifacts(loaded.Games, request.OutputPath),
+            FrontendExportTargets.MiSTer => WriteMiSTerArtifacts(loaded.Games, request.OutputPath),
+            FrontendExportTargets.AnaloguePocket => WriteAnaloguePocketArtifacts(loaded.Games, request.OutputPath),
+            FrontendExportTargets.OnionOs => WriteOnionOsArtifacts(loaded.Games, request.OutputPath),
             FrontendExportTargets.Csv => WriteSingleArtifact(request.OutputPath, "Collection CSV", CollectionExportService.ExportCollectionCsv(loaded.Candidates)),
             FrontendExportTargets.Json => WriteSingleArtifact(
                 request.OutputPath,
@@ -243,6 +246,113 @@ public static class FrontendExportService
         return artifacts;
     }
 
+    private static IReadOnlyList<FrontendExportArtifact> WriteMiSTerArtifacts(
+        IReadOnlyList<ExportableGame> games,
+        string outputPath)
+    {
+        if (HasFileExtension(outputPath))
+        {
+            var payload = SerializeIndented(new
+            {
+                format = "mister-library",
+                generatedUtc = DateTime.UtcNow,
+                systems = games
+                    .GroupBy(static game => game.ConsoleLabel, StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(static group => group.Key, StringComparer.OrdinalIgnoreCase)
+                    .Select(group => BuildMiSTerSystemPayload(group.Key, group))
+                    .ToArray()
+            });
+
+            return WriteSingleArtifact(outputPath, "MiSTer manifest", payload);
+        }
+
+        var root = EnsureTargetRoot(outputPath, "games");
+        return games
+            .GroupBy(static game => game.ConsoleLabel, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var consoleRoot = EnsureChildPath(root, SanitizeFileNameSegment(group.Key));
+                Directory.CreateDirectory(consoleRoot);
+                var targetPath = EnsureChildPath(consoleRoot, "_romulus-index.json");
+                File.WriteAllText(targetPath, SerializeIndented(BuildMiSTerSystemPayload(group.Key, group)), Encoding.UTF8);
+                return new FrontendExportArtifact(targetPath, group.Key, group.Count());
+            })
+            .ToArray();
+    }
+
+    private static IReadOnlyList<FrontendExportArtifact> WriteAnaloguePocketArtifacts(
+        IReadOnlyList<ExportableGame> games,
+        string outputPath)
+    {
+        if (HasFileExtension(outputPath))
+        {
+            var payload = SerializeIndented(new
+            {
+                format = "analogue-pocket-library",
+                generatedUtc = DateTime.UtcNow,
+                assets = games.Select(BuildAnaloguePocketGamePayload).ToArray()
+            });
+            return WriteSingleArtifact(outputPath, "Analogue Pocket manifest", payload);
+        }
+
+        var root = EnsureTargetRoot(outputPath, "Assets");
+        return games
+            .GroupBy(static game => game.ConsoleLabel, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var consoleRoot = EnsureChildPath(root, SanitizeFileNameSegment(group.Key));
+                Directory.CreateDirectory(consoleRoot);
+                var targetPath = EnsureChildPath(consoleRoot, "library.json");
+                var payload = SerializeIndented(new
+                {
+                    format = "analogue-pocket-system",
+                    system = group.Key,
+                    games = group.Select(BuildAnaloguePocketGamePayload).ToArray()
+                });
+                File.WriteAllText(targetPath, payload, Encoding.UTF8);
+                return new FrontendExportArtifact(targetPath, group.Key, group.Count());
+            })
+            .ToArray();
+    }
+
+    private static IReadOnlyList<FrontendExportArtifact> WriteOnionOsArtifacts(
+        IReadOnlyList<ExportableGame> games,
+        string outputPath)
+    {
+        if (HasFileExtension(outputPath))
+        {
+            var payload = SerializeIndented(new
+            {
+                format = "onionos-library",
+                generatedUtc = DateTime.UtcNow,
+                roms = games.Select(BuildOnionOsGamePayload).ToArray()
+            });
+            return WriteSingleArtifact(outputPath, "OnionOS manifest", payload);
+        }
+
+        var root = EnsureTargetRoot(outputPath, "Roms");
+        return games
+            .GroupBy(static game => game.ConsoleLabel, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var consoleRoot = EnsureChildPath(root, SanitizeFileNameSegment(group.Key));
+                Directory.CreateDirectory(consoleRoot);
+                var targetPath = EnsureChildPath(consoleRoot, "romlist.json");
+                var payload = SerializeIndented(new
+                {
+                    format = "onionos-system",
+                    system = group.Key,
+                    roms = group.Select(BuildOnionOsGamePayload).ToArray()
+                });
+                File.WriteAllText(targetPath, payload, Encoding.UTF8);
+                return new FrontendExportArtifact(targetPath, group.Key, group.Count());
+            })
+            .ToArray();
+    }
+
     private static object BuildPlaynitePayload(ExportableGame game)
     {
         return new
@@ -257,6 +367,54 @@ public static class FrontendExportService
             sizeBytes = game.SizeBytes,
             datVerified = game.DatVerified,
             addedUtc = DateTime.UtcNow
+        };
+    }
+
+    private static object BuildMiSTerSystemPayload(string system, IEnumerable<ExportableGame> games)
+    {
+        var core = CollectionAnalysisService.DefaultCoreMapping.GetValueOrDefault(system.ToLowerInvariant(), string.Empty);
+        return new
+        {
+            system,
+            core,
+            games = games.Select(game => new
+            {
+                title = game.DisplayName,
+                sourcePath = game.SourcePath,
+                fileName = game.FileName,
+                region = game.Region,
+                gameKey = game.GameKey
+            }).ToArray()
+        };
+    }
+
+    private static object BuildAnaloguePocketGamePayload(ExportableGame game)
+    {
+        var consoleFolder = SanitizeFileNameSegment(game.ConsoleLabel);
+        var fileName = SanitizeFileNameSegment(Path.GetFileNameWithoutExtension(game.FileName)) + game.Extension;
+        return new
+        {
+            title = game.DisplayName,
+            platform = game.ConsoleLabel,
+            assetPath = $"Assets/{consoleFolder}/{fileName}",
+            sourcePath = game.SourcePath,
+            gameKey = game.GameKey,
+            region = game.Region
+        };
+    }
+
+    private static object BuildOnionOsGamePayload(ExportableGame game)
+    {
+        var consoleFolder = SanitizeFileNameSegment(game.ConsoleLabel);
+        var targetFileName = SanitizeFileNameSegment(Path.GetFileNameWithoutExtension(game.FileName)) + game.Extension;
+        return new
+        {
+            title = game.DisplayName,
+            system = game.ConsoleLabel,
+            targetPath = $"Roms/{consoleFolder}/{targetFileName}",
+            sourcePath = game.SourcePath,
+            gameKey = game.GameKey,
+            region = game.Region
         };
     }
 
@@ -345,6 +503,9 @@ public static class FrontendExportService
 
         return builder.ToString().Trim('.', ' ');
     }
+
+    private static string SerializeIndented<T>(T value)
+        => JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true });
 
     private static string BuildStableId(ExportableGame game)
     {

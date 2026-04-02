@@ -135,7 +135,7 @@ Usage:
 
 Subcommands:
   romulus analyze --roots <path>              Collection health score and heatmap
-  romulus export --roots <path> [--format csv|json|excel|retroarch|launchbox|emulationstation|playnite] [-o <file>]
+    romulus export --roots <path> [--format csv|json|excel|retroarch|launchbox|emulationstation|playnite|mister|analoguepocket|onionos] [-o <file>]
   romulus profiles list
   romulus profiles show --id <profile-id>
   romulus profiles import --input <file>

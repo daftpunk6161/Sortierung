@@ -697,6 +697,8 @@
   "Tool.ConversionVerify.Desc": "Verify converted files",
   "Tool.FormatPriority": "Format Priority",
   "Tool.FormatPriority.Desc": "Show format priority list",
+  "Tool.PatchPipeline": "Patch Pipeline",
+  "Tool.PatchPipeline.Desc": "Apply IPS/BPS/UPS/xdelta patches",
 
   "Tool.DatAutoUpdate": "DAT Auto-Update",
   "Tool.DatAutoUpdate.Desc": "Check local DAT files",

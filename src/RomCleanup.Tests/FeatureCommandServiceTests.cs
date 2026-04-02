@@ -82,6 +82,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
     [InlineData("ConversionPipeline")]
     [InlineData("ConversionVerify")]
     [InlineData("FormatPriority")]
+    [InlineData("PatchPipeline")]
     [InlineData("DatAutoUpdate")]
     [InlineData("DatDiffViewer")]
     [InlineData("CustomDatEditor")]
@@ -407,6 +408,17 @@ public sealed class FeatureCommandServiceTests : IDisposable
         Assert.Contains("wii", shown.Content, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void PatchPipeline_WhenSourceSelectionCancelled_DoesNothing()
+    {
+        _sut.RegisterCommands();
+        _dialog.BrowseFileResult = null;
+
+        _vm.FeatureCommands["PatchPipeline"].Execute(null);
+
+        Assert.Empty(_dialog.ShowTextCalls);
+    }
+
     // ═══ WINDOW HOST COMMANDS ═══════════════════════════════════════════
 
     [Fact]
@@ -639,6 +651,57 @@ public sealed class FeatureCommandServiceTests : IDisposable
         var content = _dialog.ShowTextCalls[0].Content;
         Assert.Contains("Konsolen-Heatmap", content);
         Assert.Contains("SNES", content);
+    }
+
+    [Fact]
+    public void DuplicateAnalysis_WithDedupeGroups_ShowsGroupInspectorScoreBreakdown()
+    {
+        _sut.RegisterCommands();
+        _vm.LastDedupeGroups.Add(new DedupeGroup
+        {
+            GameKey = "InspectorGame",
+            Winner = new RomCandidate
+            {
+                MainPath = "winner.sfc",
+                GameKey = "InspectorGame",
+                Region = "US",
+                Extension = ".sfc",
+                SizeBytes = 1024,
+                ConsoleKey = "SNES",
+                RegionScore = 10,
+                FormatScore = 8,
+                VersionScore = 4,
+                HeaderScore = 2,
+                CompletenessScore = 3,
+                SizeTieBreakScore = 1
+            },
+            Losers =
+            [
+                new RomCandidate
+                {
+                    MainPath = "loser.sfc",
+                    GameKey = "InspectorGame",
+                    Region = "EU",
+                    Extension = ".sfc",
+                    SizeBytes = 1024,
+                    ConsoleKey = "SNES",
+                    RegionScore = 8,
+                    FormatScore = 8,
+                    VersionScore = 4,
+                    HeaderScore = 2,
+                    CompletenessScore = 3,
+                    SizeTieBreakScore = 1
+                }
+            ]
+        });
+
+        _vm.FeatureCommands["DuplicateAnalysis"].Execute(null);
+
+        var content = _dialog.ShowTextCalls[0].Content;
+        Assert.Contains("Gruppen-Inspektor", content);
+        Assert.Contains("Score=", content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Kriterien:", content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Δ", content, StringComparison.Ordinal);
     }
 
     [Fact]

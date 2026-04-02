@@ -102,6 +102,20 @@ public sealed class ToolRunnerAdapter : IToolRunner
                 Path.Combine(programFilesX86, "NKit", "NKitProcessingApp.exe"),
                 Path.Combine(programFiles, "NKitProcessingApp.exe"),
             },
+            "flips" => new[]
+            {
+                Path.Combine(localAppData, "RomCleanup", "tools", "flips.exe"),
+                Path.Combine(programFiles, "flips", "flips.exe"),
+                Path.Combine(programFilesX86, "flips", "flips.exe"),
+                Path.Combine(programFiles, "flips.exe"),
+            },
+            "xdelta3" => new[]
+            {
+                Path.Combine(localAppData, "RomCleanup", "tools", "xdelta3.exe"),
+                Path.Combine(programFiles, "xdelta3", "xdelta3.exe"),
+                Path.Combine(programFilesX86, "xdelta3", "xdelta3.exe"),
+                Path.Combine(programFiles, "xdelta3.exe"),
+            },
             _ => Array.Empty<string>()
         };
         var programFilesConversionCandidates = GetProgramFilesConversionCandidates(name, programFiles, programFilesX86);
@@ -209,6 +223,16 @@ public sealed class ToolRunnerAdapter : IToolRunner
             {
                 Path.Combine(root, "NKitProcessingApp.exe"),
                 Path.Combine(root, "nkit", "NKitProcessingApp.exe")
+            },
+            "flips" => new[]
+            {
+                Path.Combine(root, "flips.exe"),
+                Path.Combine(root, "flips", "flips.exe")
+            },
+            "xdelta3" => new[]
+            {
+                Path.Combine(root, "xdelta3.exe"),
+                Path.Combine(root, "xdelta3", "xdelta3.exe")
             },
             _ => Array.Empty<string>()
         };

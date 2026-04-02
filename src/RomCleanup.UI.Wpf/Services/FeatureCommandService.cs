@@ -205,6 +205,7 @@ public sealed partial class FeatureCommandService
         cmds[FeatureCommandKeys.ConversionPipeline] = new RelayCommand(ConversionPipeline);
         cmds[FeatureCommandKeys.ConversionVerify] = new RelayCommand(ConversionVerify);
         cmds[FeatureCommandKeys.FormatPriority] = new RelayCommand(FormatPriority);
+        cmds[FeatureCommandKeys.PatchPipeline] = new RelayCommand(PatchPipeline);
 
         // ── DAT & Verifizierung ─────────────────────────────────────────
         cmds[FeatureCommandKeys.DatAutoUpdate] = new AsyncRelayCommand(DatAutoUpdateAsync);
@@ -562,8 +563,54 @@ public sealed partial class FeatureCommandService
             if (crossRootGroups.Count == 0) sb.AppendLine("  Keine Cross-Root-Duplikate gefunden.");
         }
 
+        // Section 4: Gruppen-Inspektor (Winner/Loser Score-Breakdown)
+        sb.AppendLine();
+        sb.AppendLine("═══ Gruppen-Inspektor ═══\n");
+        if (_vm.LastDedupeGroups.Count == 0)
+        {
+            sb.AppendLine("  Keine Deduplizierungs-Daten vorhanden.\n");
+        }
+        else
+        {
+            foreach (var group in _vm.LastDedupeGroups
+                         .OrderByDescending(static item => item.Losers.Count)
+                         .ThenBy(static item => item.GameKey, StringComparer.OrdinalIgnoreCase)
+                         .Take(20))
+            {
+                var winnerScore = GetCandidateTotalScore(group.Winner);
+                sb.AppendLine($"  [{group.GameKey}] ({group.Losers.Count} Loser)");
+                sb.AppendLine($"    Winner: {Path.GetFileName(group.Winner.MainPath)} [{group.Winner.Region}] Score={winnerScore}");
+                sb.AppendLine($"      Kriterien: {FormatScoreBreakdown(group.Winner)}");
+
+                foreach (var loser in group.Losers
+                             .OrderByDescending(GetCandidateTotalScore)
+                             .ThenBy(static item => item.MainPath, StringComparer.OrdinalIgnoreCase)
+                             .Take(3))
+                {
+                    var loserScore = GetCandidateTotalScore(loser);
+                    var delta = winnerScore - loserScore;
+                    sb.AppendLine($"    Loser:  {Path.GetFileName(loser.MainPath)} [{loser.Region}] Score={loserScore} (Δ {delta:+#;-#;0})");
+                    sb.AppendLine($"      Kriterien: {FormatScoreBreakdown(loser)}");
+                }
+            }
+
+            if (_vm.LastDedupeGroups.Count > 20)
+                sb.AppendLine($"\n  … und {_vm.LastDedupeGroups.Count - 20} weitere Gruppen");
+        }
+
         _dialog.ShowText(_vm.Loc["Cmd.DupeInspectorTitle"], sb.ToString());
     }
+
+    private static long GetCandidateTotalScore(RomCandidate candidate)
+        => (long)candidate.RegionScore
+           + candidate.FormatScore
+           + candidate.VersionScore
+           + candidate.HeaderScore
+           + candidate.CompletenessScore
+           + candidate.SizeTieBreakScore;
+
+    private static string FormatScoreBreakdown(RomCandidate candidate)
+        => $"Region={candidate.RegionScore}, Format={candidate.FormatScore}, Version={candidate.VersionScore}, Header={candidate.HeaderScore}, Completeness={candidate.CompletenessScore}, SizeTieBreak={candidate.SizeTieBreakScore}";
 
     private void RollbackHistoryBack()
     {

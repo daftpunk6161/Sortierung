@@ -108,6 +108,18 @@
             </Button>
             <TextBlock Text="{Binding Roots.Count, StringFormat='{}{0} Ordner ausgewählt'}"
                        Style="{StaticResource CaptionText}" HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                <TextBlock Text="Analyse laeuft..."
+                     Style="{StaticResource CaptionText}"
+                     HorizontalAlignment="Center"
+                     Margin="0,8,0,0"
+                     Visibility="{Binding WizardAnalysisInProgress, Converter={StaticResource BoolToVis}}"/>
+                <TextBlock Text="{Binding WizardAnalysisSummary}"
+                     Style="{StaticResource CaptionText}"
+                     HorizontalAlignment="Center"
+                     Margin="0,8,0,0"
+                     MaxWidth="460"
+                     TextWrapping="Wrap"
+                     TextAlignment="Center"/>
 
             <Border Background="{DynamicResource BrushCard}"
                     BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
@@ -183,6 +195,13 @@
             <TextBlock Text="{Binding RunConfigurationSelectionSummary}"
                        Style="{StaticResource CaptionText}"
                        HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       MaxWidth="420"
+                       TextAlignment="Center"/>
+            <TextBlock Text="{Binding WizardRecommendationSummary}"
+                       Style="{StaticResource CaptionText}"
+                       HorizontalAlignment="Center"
+                       Margin="0,8,0,0"
                        TextWrapping="Wrap"
                        MaxWidth="420"
                        TextAlignment="Center"/>

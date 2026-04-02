@@ -138,7 +138,23 @@ public sealed partial class FeatureCommandService
                 return;
             }
 
-            _dialog.ShowText("Run-Vergleich", RunHistoryInsightsService.FormatComparisonReport(comparison));
+            var insights = RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, 30).GetAwaiter().GetResult();
+            var report = new StringBuilder();
+            report.AppendLine("Time-Travel Vergleich");
+            report.AppendLine(new string('=', 50));
+            report.AppendLine();
+            report.AppendLine("Snapshot-Timeline (neueste zuerst):");
+            foreach (var snapshot in snapshots.Take(10))
+            {
+                report.AppendLine($"  {snapshot.RunId,-24} {snapshot.CompletedUtc:yyyy-MM-dd HH:mm}  {snapshot.Status,-22} Files={snapshot.TotalFiles,6} Health={snapshot.HealthScore,3}%");
+            }
+
+            report.AppendLine();
+            report.AppendLine(RunHistoryInsightsService.FormatComparisonReport(comparison));
+            report.AppendLine();
+            report.AppendLine(RunHistoryInsightsService.FormatStorageInsightReport(insights));
+
+            _dialog.ShowText("Run-Vergleich", report.ToString());
         }
     }
 

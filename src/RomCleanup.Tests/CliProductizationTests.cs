@@ -43,7 +43,7 @@ public sealed class CliProductizationTests : IDisposable
         Assert.Contains("--workflow <id>", text, StringComparison.Ordinal);
         Assert.Contains("--profile <id>", text, StringComparison.Ordinal);
         Assert.Contains("--profile-file <file>", text, StringComparison.Ordinal);
-        Assert.Contains("launchbox|emulationstation|playnite", text, StringComparison.Ordinal);
+        Assert.Contains("launchbox|emulationstation|playnite|mister|analoguepocket|onionos", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -132,5 +132,23 @@ public sealed class CliProductizationTests : IDisposable
         Assert.NotNull(result.Options);
         Assert.Equal(90, result.Options!.HistoryLimit);
         Assert.Equal(outputPath, result.Options.OutputPath);
+    }
+
+    [Theory]
+    [InlineData("mister")]
+    [InlineData("analoguepocket")]
+    [InlineData("onionos")]
+    public void CliArgsParser_Export_AcceptsAdditionalFrontendFormats(string format)
+    {
+        var result = CliArgsParser.Parse([
+            "export",
+            "--roots", _tempDir,
+            "--format", format
+        ]);
+
+        Assert.Equal(CliCommand.Export, result.Command);
+        Assert.Equal(0, result.ExitCode);
+        Assert.NotNull(result.Options);
+        Assert.Equal(format, result.Options!.ExportFormat, StringComparer.OrdinalIgnoreCase);
     }
 }

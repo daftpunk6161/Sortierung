@@ -100,7 +100,10 @@ public sealed partial class FeatureCommandService
             "  4 - RetroArch Playlist\n" +
             "  5 - LaunchBox XML\n" +
             "  6 - EmulationStation gamelist\n" +
-            "  7 - Playnite Bibliothek\n\n" +
+            "  7 - Playnite Bibliothek\n" +
+            "  8 - MiSTer Paket (games/)\n" +
+            "  9 - Analogue Pocket Paket (Assets/)\n" +
+            " 10 - OnionOS Paket (Roms/)\n\n" +
             "Nummer eingeben:",
             "Sammlung exportieren");
         if (string.IsNullOrWhiteSpace(choice))
@@ -129,8 +132,17 @@ public sealed partial class FeatureCommandService
             case "7":
                 ExportFrontend(FrontendExportTargets.Playnite, "JSON (*.json)|*.json", "playnite-library.json", "Romulus");
                 break;
+            case "8":
+                ExportFrontend(FrontendExportTargets.MiSTer, "Ordner|*.*", "mister", "Romulus");
+                break;
+            case "9":
+                ExportFrontend(FrontendExportTargets.AnaloguePocket, "Ordner|*.*", "analogue-pocket", "Romulus");
+                break;
+            case "10":
+                ExportFrontend(FrontendExportTargets.OnionOs, "Ordner|*.*", "onionos", "Romulus");
+                break;
             default:
-                _vm.AddLog("Ungueltige Auswahl. Bitte 1 bis 7 eingeben.", "WARN");
+                _vm.AddLog("Ungueltige Auswahl. Bitte 1 bis 10 eingeben.", "WARN");
                 break;
         }
     }

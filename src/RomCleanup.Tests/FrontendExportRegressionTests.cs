@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using System.Text.Json;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Export;
 using RomCleanup.Infrastructure.FileSystem;
@@ -210,5 +211,128 @@ public sealed class FrontendExportRegressionTests : IDisposable
                 runCandidates: candidates));
 
         Assert.Contains("protected system path", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task FrontendExportService_MiSTer_DirectoryExport_WritesGamesManifestWithCoreMapping()
+    {
+        var outputDirectory = Path.Combine(_tempRoot, "mister-export");
+        var candidates = new[]
+        {
+            new RomCandidate
+            {
+                MainPath = @"C:\roms\ps1\Chrono Cross.chd",
+                GameKey = "chrono-cross",
+                ConsoleKey = "ps1",
+                Region = "US",
+                Extension = ".chd",
+                SizeBytes = 42,
+                DatMatch = true,
+                Category = FileCategory.Game
+            }
+        };
+
+        var result = await FrontendExportService.ExportAsync(
+            new FrontendExportRequest(
+                FrontendExportTargets.MiSTer,
+                outputDirectory,
+                "Collection",
+                [@"C:\roms"],
+                [".chd"]),
+            new FileSystemAdapter(),
+            collectionIndex: null,
+            enrichmentFingerprint: null,
+            runCandidates: candidates);
+
+        Assert.Equal(FrontendExportTargets.MiSTer, result.Frontend);
+        var artifact = Assert.Single(result.Artifacts);
+        Assert.Contains(Path.Combine("games", "ps1"), artifact.Path, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("_romulus-index.json", artifact.Path, StringComparison.OrdinalIgnoreCase);
+
+        using var json = JsonDocument.Parse(await File.ReadAllTextAsync(artifact.Path));
+        Assert.Equal("ps1", json.RootElement.GetProperty("system").GetString());
+        Assert.Equal("mednafen_psx_hw_libretro", json.RootElement.GetProperty("core").GetString());
+    }
+
+    [Fact]
+    public async Task FrontendExportService_AnaloguePocket_DirectoryExport_WritesAssetsLibrary()
+    {
+        var outputDirectory = Path.Combine(_tempRoot, "pocket-export");
+        var candidates = new[]
+        {
+            new RomCandidate
+            {
+                MainPath = @"C:\roms\gba\Golden Sun.gba",
+                GameKey = "golden-sun",
+                ConsoleKey = "gba",
+                Region = "EU",
+                Extension = ".gba",
+                SizeBytes = 1024,
+                DatMatch = true,
+                Category = FileCategory.Game
+            }
+        };
+
+        var result = await FrontendExportService.ExportAsync(
+            new FrontendExportRequest(
+                FrontendExportTargets.AnaloguePocket,
+                outputDirectory,
+                "Collection",
+                [@"C:\roms"],
+                [".gba"]),
+            new FileSystemAdapter(),
+            collectionIndex: null,
+            enrichmentFingerprint: null,
+            runCandidates: candidates);
+
+        Assert.Equal(FrontendExportTargets.AnaloguePocket, result.Frontend);
+        var artifact = Assert.Single(result.Artifacts);
+        Assert.Contains(Path.Combine("Assets", "gba"), artifact.Path, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("library.json", artifact.Path, StringComparison.OrdinalIgnoreCase);
+
+        using var json = JsonDocument.Parse(await File.ReadAllTextAsync(artifact.Path));
+        var game = json.RootElement.GetProperty("games")[0];
+        Assert.Contains("Assets/gba", game.GetProperty("assetPath").GetString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task FrontendExportService_OnionOs_DirectoryExport_WritesRomsList()
+    {
+        var outputDirectory = Path.Combine(_tempRoot, "onion-export");
+        var candidates = new[]
+        {
+            new RomCandidate
+            {
+                MainPath = @"C:\roms\gb\Tetris.gb",
+                GameKey = "tetris",
+                ConsoleKey = "gb",
+                Region = "WORLD",
+                Extension = ".gb",
+                SizeBytes = 2048,
+                DatMatch = false,
+                Category = FileCategory.Game
+            }
+        };
+
+        var result = await FrontendExportService.ExportAsync(
+            new FrontendExportRequest(
+                FrontendExportTargets.OnionOs,
+                outputDirectory,
+                "Collection",
+                [@"C:\roms"],
+                [".gb"]),
+            new FileSystemAdapter(),
+            collectionIndex: null,
+            enrichmentFingerprint: null,
+            runCandidates: candidates);
+
+        Assert.Equal(FrontendExportTargets.OnionOs, result.Frontend);
+        var artifact = Assert.Single(result.Artifacts);
+        Assert.Contains(Path.Combine("Roms", "gb"), artifact.Path, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("romlist.json", artifact.Path, StringComparison.OrdinalIgnoreCase);
+
+        using var json = JsonDocument.Parse(await File.ReadAllTextAsync(artifact.Path));
+        var rom = json.RootElement.GetProperty("roms")[0];
+        Assert.Contains("Roms/gb", rom.GetProperty("targetPath").GetString(), StringComparison.OrdinalIgnoreCase);
     }
 }

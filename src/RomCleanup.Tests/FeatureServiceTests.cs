@@ -975,6 +975,46 @@ public sealed class FeatureServiceTests : IDisposable
         Assert.Null(FeatureService.DetectPatchFormat(path));
     }
 
+    [Fact]
+    public void ApplyPatch_IpsPatch_ProducesPatchedOutput()
+    {
+        var sourcePath = Path.Combine(_tempDir, "source.rom");
+        var patchPath = Path.Combine(_tempDir, "update.ips");
+        var outputPath = Path.Combine(_tempDir, "patched.rom");
+
+        File.WriteAllBytes(sourcePath, [0x10, 0x20, 0x30]);
+        File.WriteAllBytes(patchPath,
+        [
+            (byte)'P', (byte)'A', (byte)'T', (byte)'C', (byte)'H',
+            0x00, 0x00, 0x01,
+            0x00, 0x01,
+            0x7F,
+            (byte)'E', (byte)'O', (byte)'F'
+        ]);
+
+        var result = FeatureService.ApplyPatch(sourcePath, patchPath, outputPath);
+
+        Assert.Equal("IPS", result.Format);
+        Assert.Equal(outputPath, result.OutputPath);
+        Assert.Equal(3, result.OutputSizeBytes);
+        Assert.Null(result.ToolPath);
+        Assert.False(string.IsNullOrWhiteSpace(result.OutputSha256));
+        Assert.Equal([0x10, 0x7F, 0x30], File.ReadAllBytes(outputPath));
+        Assert.Equal([0x10, 0x20, 0x30], File.ReadAllBytes(sourcePath));
+    }
+
+    [Fact]
+    public void ApplyPatch_UnknownFormat_ThrowsInvalidOperationException()
+    {
+        var sourcePath = Path.Combine(_tempDir, "source2.rom");
+        var patchPath = Path.Combine(_tempDir, "unknown.patch");
+        var outputPath = Path.Combine(_tempDir, "out.rom");
+        File.WriteAllBytes(sourcePath, [0xAA, 0xBB, 0xCC]);
+        File.WriteAllBytes(patchPath, [0x00, 0x01, 0x02]);
+
+        Assert.Throws<InvalidOperationException>(() => FeatureService.ApplyPatch(sourcePath, patchPath, outputPath));
+    }
+
     // ═══ FindCommonRoot ═════════════════════════════════════════════════
 
     [Fact]

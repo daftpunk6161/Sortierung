@@ -761,6 +761,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
 
     private void OnRootsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        InvalidateWizardAnalysis();
         RefreshStatus();
         OnPropertyChanged(nameof(HasNoRoots));
         OnPropertyChanged(nameof(HasRootsConfigured));

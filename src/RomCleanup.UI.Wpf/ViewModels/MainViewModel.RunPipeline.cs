@@ -5,7 +5,9 @@ using System.Text;
 using System.Windows.Input;
 using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Infrastructure.Analysis;
 using RomCleanup.Infrastructure.Conversion;
+using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.UI.Wpf.Models;
 using RomCleanup.UI.Wpf.Services;
@@ -1098,6 +1100,7 @@ public sealed partial class MainViewModel
     {
         if (Roots.Count > 0)
         {
+            _ = EmitCollectionHealthMonitorHintsAsync();
             AddLog(_loc["Log.WatchTriggered"], "INFO");
             DryRun = true;
             RunCommand.Execute(null);
@@ -1110,11 +1113,79 @@ public sealed partial class MainViewModel
         {
             if (!IsBusy && Roots.Count > 0)
             {
+                _ = EmitCollectionHealthMonitorHintsAsync();
                 AddLog(_loc["Log.ScheduledRunStarted"], "INFO");
                 DryRun = true;
                 RunCommand.Execute(null);
             }
         }, null);
+    }
+
+    internal async Task EmitCollectionHealthMonitorHintsAsync(CancellationToken cancellationToken = default)
+    {
+        if (Roots.Count == 0)
+            return;
+
+        var datEnabled = UseDat;
+        var datRoot = DatRoot;
+
+        List<(string Level, string Message)> hints;
+        try
+        {
+            hints = await Task.Run(() =>
+            {
+                var entries = new List<(string Level, string Message)>();
+
+                try
+                {
+                    using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath());
+                    var insights = RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, 14, cancellationToken).GetAwaiter().GetResult();
+                    if (insights.SampleCount > 1)
+                    {
+                        if (insights.TotalFiles.Delta != 0)
+                            entries.Add(("INFO", $"[Health] Dateibestand seit letztem Snapshot: {insights.TotalFiles.Delta:+#;-#;0}."));
+
+                        if (insights.HealthScore.Delta < 0)
+                            entries.Add(("WARN", $"[Health] Health-Score gesunken ({insights.HealthScore.Delta:+#;-#;0}). DryRun + DAT-Pruefung empfohlen."));
+                        else if (insights.HealthScore.Delta > 0)
+                            entries.Add(("INFO", $"[Health] Health-Score verbessert ({insights.HealthScore.Delta:+#;-#;0})."));
+                    }
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
+                {
+                    entries.Add(("DEBUG", $"[Health] Snapshot-Analyse nicht verfuegbar: {ex.Message}"));
+                }
+
+                if (datEnabled && !string.IsNullOrWhiteSpace(datRoot) && Directory.Exists(datRoot))
+                {
+                    try
+                    {
+                        var (_, localDatCount, staleDatCount) = DatAnalysisService.BuildDatAutoUpdateReport(datRoot);
+                        if (localDatCount == 0)
+                        {
+                            entries.Add(("WARN", "[Health] Keine lokalen DAT-Dateien gefunden. DAT-Verifizierung ist eingeschraenkt."));
+                        }
+                        else if (staleDatCount > 0)
+                        {
+                            entries.Add(("WARN", $"[Health] {staleDatCount} DAT-Datei(en) sind aelter als 6 Monate. DAT-Update empfohlen."));
+                        }
+                    }
+                    catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
+                    {
+                        entries.Add(("DEBUG", $"[Health] DAT-Status konnte nicht geprueft werden: {ex.Message}"));
+                    }
+                }
+
+                return entries;
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        foreach (var (level, message) in hints)
+            AddLog(message, level);
     }
 
     /// <summary>GUI-115: Dispose watch-mode and scheduler resources — unsubscribe all events.</summary>
@@ -1262,7 +1333,10 @@ public sealed partial class MainViewModel
     private void OnExtensionFilterChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(Models.ExtensionFilterItem.IsChecked))
+        {
+            InvalidateWizardAnalysis();
             OnMovePreviewGateChanged();
+        }
     }
 
     private void OnConfigurationPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -1275,6 +1349,9 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(IsMovePhaseApplicable));
             OnPropertyChanged(nameof(IsConvertPhaseApplicable));
         }
+
+        if (e.PropertyName is nameof(AggressiveJunk))
+            InvalidateWizardAnalysis();
     }
 
     private string BuildPreviewConfigurationFingerprint()

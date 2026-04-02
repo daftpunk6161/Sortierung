@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Contracts.Ports;
 using RomCleanup.Core.Classification;
 using RomCleanup.Infrastructure.Analysis;
 using RomCleanup.Infrastructure.Orchestration;
@@ -99,5 +100,15 @@ public static partial class FeatureService
 
     public static string? DetectPatchFormat(string patchPath)
         => IntegrityService.DetectPatchFormat(patchPath);
+
+    public static PatchApplyResult ApplyPatch(
+        string sourceRomPath,
+        string patchPath,
+        string outputPath,
+        IToolRunner? toolRunner = null,
+        string? flipsToolPath = null,
+        string? xdeltaToolPath = null,
+        CancellationToken ct = default)
+        => IntegrityService.ApplyPatch(sourceRomPath, patchPath, outputPath, toolRunner, flipsToolPath, xdeltaToolPath, ct);
 
 }

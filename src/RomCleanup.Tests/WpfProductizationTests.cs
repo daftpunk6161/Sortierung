@@ -155,6 +155,79 @@ public sealed class WpfProductizationTests : IDisposable
 
         Assert.Contains("RunConfigurationSelectionSummary", wizardXaml);
         Assert.Contains("CanAdvanceWizard", wizardXaml);
+        Assert.Contains("WizardAnalysisInProgress", wizardXaml);
+        Assert.Contains("WizardAnalysisSummary", wizardXaml);
+        Assert.Contains("WizardRecommendationSummary", wizardXaml);
+    }
+
+    [Fact]
+    public async Task MainViewModel_AnalyzeWizardSetupAsync_PopulatesSummaryAndRecommendation()
+    {
+        var vm = CreateViewModel();
+        vm.RestoreRunConfigurationSelection(null, null);
+
+        var root = Path.Combine(_tempRoot, "wizard-analyze");
+        Directory.CreateDirectory(root);
+        File.WriteAllBytes(Path.Combine(root, "disc-title.iso"), new byte[4096]);
+        File.WriteAllBytes(Path.Combine(root, "cart-title.sfc"), new byte[2048]);
+        File.WriteAllText(Path.Combine(root, "ignore.txt"), "not-a-rom");
+
+        vm.Roots.Add(root);
+
+        await vm.AnalyzeWizardSetupAsync();
+
+        Assert.False(vm.WizardAnalysisInProgress);
+        Assert.True(vm.WizardHasAnalysis);
+        Assert.Contains("Erkannt: 2 Datei(en)", vm.WizardAnalysisSummary, StringComparison.Ordinal);
+        Assert.Contains("Empfohlen:", vm.WizardRecommendationSummary, StringComparison.Ordinal);
+        Assert.Equal(WorkflowScenarioIds.NewCollectionSetup, vm.SelectedWorkflowScenarioId);
+    }
+
+    [Fact]
+    public async Task MainViewModel_WhenRootsChange_InvalidatesWizardAnalysis()
+    {
+        var vm = CreateViewModel();
+        var rootA = Path.Combine(_tempRoot, "wizard-root-a");
+        var rootB = Path.Combine(_tempRoot, "wizard-root-b");
+        Directory.CreateDirectory(rootA);
+        Directory.CreateDirectory(rootB);
+        File.WriteAllBytes(Path.Combine(rootA, "sample.iso"), new byte[2048]);
+
+        vm.Roots.Add(rootA);
+        await vm.AnalyzeWizardSetupAsync();
+
+        Assert.True(vm.WizardHasAnalysis);
+        Assert.False(string.IsNullOrWhiteSpace(vm.WizardRecommendationSummary));
+
+        vm.Roots.Add(rootB);
+
+        Assert.False(vm.WizardHasAnalysis);
+        Assert.Equal(string.Empty, vm.WizardAnalysisSummary);
+        Assert.Equal(string.Empty, vm.WizardRecommendationSummary);
+    }
+
+    [Fact]
+    public async Task MainViewModel_EmitCollectionHealthMonitorHintsAsync_ReportsStaleDatWarning()
+    {
+        var vm = CreateViewModel();
+        var root = Path.Combine(_tempRoot, "health-root");
+        var datRoot = Path.Combine(_tempRoot, "health-dat");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(datRoot);
+
+        var staleDat = Path.Combine(datRoot, "stale.dat");
+        File.WriteAllText(staleDat, "<datafile></datafile>");
+        File.SetLastWriteTime(staleDat, DateTime.Now.AddDays(-190));
+
+        vm.Roots.Add(root);
+        vm.UseDat = true;
+        vm.DatRoot = datRoot;
+
+        await vm.EmitCollectionHealthMonitorHintsAsync();
+
+        Assert.Contains(vm.LogEntries, entry =>
+            entry.Level == "WARN" &&
+            entry.Text.Contains("DAT-Datei(en) sind aelter als 6 Monate", StringComparison.Ordinal));
     }
 
     [Fact]
