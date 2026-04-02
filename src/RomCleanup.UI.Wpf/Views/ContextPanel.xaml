@@ -43,8 +43,9 @@
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
             <Border Style="{StaticResource AccentHeaderChip}" Margin="0,0,0,8">
               <StackPanel Orientation="Horizontal">
-                <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,8,0"
-                         Fill="{Binding ReadyStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+                <Border Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,8,0"
+                        CornerRadius="2"
+                        Background="{Binding ReadyStatusLevel, Converter={StaticResource StatusToBrush}}"/>
                 <StackPanel>
                   <TextBlock Text="{Binding StatusReady}" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold"/>
                   <TextBlock Text="{Binding StatusRuntime}" Style="{StaticResource CaptionText}"/>
@@ -54,26 +55,83 @@
             <WrapPanel>
               <Border Style="{StaticResource HeaderChip}">
                 <StackPanel Orientation="Horizontal">
-                  <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
-                           Fill="{Binding RootsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+                  <Border Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
+                          CornerRadius="2"
+                          Background="{Binding RootsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
                   <TextBlock Text="{Binding StatusRoots}" Foreground="{DynamicResource BrushTextPrimary}"/>
                 </StackPanel>
               </Border>
               <Border Style="{StaticResource HeaderChip}">
                 <StackPanel Orientation="Horizontal">
-                  <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
-                           Fill="{Binding ToolsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+                  <Border Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
+                          CornerRadius="2"
+                          Background="{Binding ToolsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
                   <TextBlock Text="{Binding StatusTools}" Foreground="{DynamicResource BrushTextPrimary}"/>
                 </StackPanel>
               </Border>
               <Border Style="{StaticResource HeaderChip}">
                 <StackPanel Orientation="Horizontal">
-                  <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
-                           Fill="{Binding DatStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+                  <Border Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
+                          CornerRadius="2"
+                          Background="{Binding DatStatusLevel, Converter={StaticResource StatusToBrush}}"/>
                   <TextBlock Text="{Binding StatusDat}" Foreground="{DynamicResource BrushTextPrimary}"/>
                 </StackPanel>
               </Border>
             </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource SectionCard}"
+                Visibility="{Binding HasRecommendedTools, Converter={StaticResource BoolToVis}}">
+          <StackPanel>
+            <DockPanel Margin="0,0,0,8">
+              <Button DockPanel.Dock="Right"
+                      Content="{Binding Loc[Tools.OpenCatalog]}"
+                      Command="{Binding GoToToolsCommand}"
+                      Padding="8,2"
+                      AutomationProperties.Name="{Binding Loc[Tools.OpenCatalog]}"/>
+              <TextBlock Text="{Binding Loc[Tools.ContextRecommendedTitle]}"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource BrushTextMuted}"/>
+            </DockPanel>
+            <ItemsControl ItemsSource="{Binding RecommendedToolItems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Button Margin="0,0,0,8"
+                          Padding="10,8"
+                          HorizontalContentAlignment="Left"
+                          Command="{Binding Command}"
+                          ToolTip="{Binding MaturityDescription}"
+                          AutomationProperties.Name="{Binding DisplayName}">
+                    <StackPanel>
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                   Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,8,0"/>
+                        <StackPanel>
+                          <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                          <TextBlock Text="{Binding RecommendationReason}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                      </StackPanel>
+                      <TextBlock Text="{Binding MaturityBadgeText}" FontSize="10" FontWeight="SemiBold" Margin="22,6,0,0">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource BrushSuccess}"/>
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding IsGuided}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource BrushAccentCyan}"/>
+                              </DataTrigger>
+                              <DataTrigger Binding="{Binding IsExperimental}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource BrushWarning}"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </StackPanel>
         </Border>
 

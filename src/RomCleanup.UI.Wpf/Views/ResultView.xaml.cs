@@ -21,7 +21,11 @@ public partial class ResultView : UserControl
         if (DataContext is not MainViewModel vm) return;
         vm.PropertyChanged += OnVmPropertyChanged;
         if (vm.HasRunResult || vm.Run.HasRunData)
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => RefreshCharts(vm));
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, async () =>
+            {
+                RefreshCharts(vm);
+                await RefreshReportPreviewAsync();
+            });
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -32,13 +36,17 @@ public partial class ResultView : UserControl
 
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.HasRunResult)
+        if (e.PropertyName is nameof(MainViewModel.HasRunResult) or nameof(MainViewModel.LastReportPath)
             && sender is MainViewModel vm
             && (vm.HasRunResult || vm.Run.HasRunData))
         {
             // Defer: HasRunResult may fire before ConsoleDistribution is populated.
             // Dispatcher.BeginInvoke ensures RefreshCharts runs after ApplyRunResult completes.
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => RefreshCharts(vm));
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, async () =>
+            {
+                RefreshCharts(vm);
+                await RefreshReportPreviewAsync();
+            });
         }
     }
 
@@ -114,4 +122,7 @@ public partial class ResultView : UserControl
         chart.Plot.DataBackground.Color = ScottPlot.Color.FromHex("#16213e");
         chart.Plot.Axes.Color(ScottPlot.Color.FromHex("#888888"));
     }
+
+    private Task RefreshReportPreviewAsync()
+        => reportPreviewSection.RefreshReportPreviewAsync();
 }

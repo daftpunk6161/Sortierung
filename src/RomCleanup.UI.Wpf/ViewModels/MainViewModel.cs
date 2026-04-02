@@ -522,8 +522,10 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     public ObservableCollection<ToolCategory> ToolCategories => Tools.ToolCategories;
     public ObservableCollection<ToolItem> QuickAccessItems => Tools.QuickAccessItems;
     public ObservableCollection<ToolItem> RecentToolItems => Tools.RecentToolItems;
+    public ObservableCollection<ToolItem> RecommendedToolItems => Tools.RecommendedToolItems;
 
     public bool IsToolSearchActive => Tools.IsToolSearchActive;
+    public bool HasRecommendedTools => Tools.HasRecommendedTools;
 
     public string ToolFilterText
     {
@@ -554,7 +556,35 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
 
     public void ToggleToolPin(string toolKey) => Tools.ToggleToolPin(toolKey);
 
-    public void RefreshToolLockState() => Tools.RefreshToolLockState(HasRunResult);
+    public void RefreshToolLockState() => RefreshToolSurfaceState();
+
+    private void RefreshToolSurfaceState()
+    {
+        Tools.RefreshContext(BuildToolContextSnapshot());
+        OnPropertyChanged(nameof(HasRecommendedTools));
+        OnPropertyChanged(nameof(HasRecentTools));
+    }
+
+    private ToolContextSnapshot BuildToolContextSnapshot()
+    {
+        var candidateCount = LastCandidates.Count;
+        var unverifiedCount = LastCandidates.Count(static candidate => !candidate.DatMatch);
+
+        return new ToolContextSnapshot(
+            HasRoots: Roots.Count > 0,
+            RootCount: Roots.Count,
+            HasRunResult: HasRunResult,
+            CandidateCount: candidateCount,
+            DedupeGroupCount: LastDedupeGroups.Count,
+            JunkCount: LastCandidates.Count(static candidate => candidate.Category == FileCategory.Junk),
+            UnverifiedCount: unverifiedCount,
+            UseDat: UseDat,
+            DatConfigured: !string.IsNullOrWhiteSpace(DatRoot),
+            ConvertEnabled: ConvertEnabled,
+            ConvertOnly: ConvertOnly,
+            ConvertedCount: LastRunResult?.ConvertedCount ?? 0,
+            CanRollback: CanRollback);
+    }
 
     // ═══ LOCALIZATION (GUI-047) ═════════════════════════════════════════
     /// <summary>XAML-bindable localization: {Binding Loc[Key]}.</summary>
@@ -681,6 +711,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         foreach (var kvp in FeatureCommands)
             Tools.FeatureCommands[kvp.Key] = kvp.Value;
         Tools.WireToolItemCommands();
+        RefreshToolSurfaceState();
     }
 
     /// <summary>Add a log entry (thread-safe via Dispatcher if needed). Caps at 10,000 entries with batch trimming.</summary>

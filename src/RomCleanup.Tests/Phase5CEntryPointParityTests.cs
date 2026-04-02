@@ -388,7 +388,7 @@ public class Phase5CEntryPointParityTests
     [Fact]
     public void TGAP38_ConsoleFilter_LabelClearlyIndicatesDisplayOnly()
     {
-        var xaml = File.ReadAllText(FindUiFile("Views", "ConfigFiltersView.xaml"));
+        var xaml = File.ReadAllText(FindUiFile("Views", "ConfigOptionsView.xaml"));
 
         Assert.Contains("kein Einfluss auf die Pipeline", xaml, StringComparison.OrdinalIgnoreCase);
     }

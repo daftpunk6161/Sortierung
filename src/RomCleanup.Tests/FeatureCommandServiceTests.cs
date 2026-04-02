@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.UI.Wpf.Models;
@@ -856,6 +857,123 @@ public sealed class FeatureCommandServiceTests : IDisposable
 
         _sut.RegisterCommands();
         Assert.True(_vm.FeatureCommands.ContainsKey(FeatureCommandKeys.CollectionMerge));
+    }
+
+    [Fact]
+    public void ToolsViewModel_MaturityAssignments_AreExplicitForKnownFeatures()
+    {
+        var vm = new ToolsViewModel(new LocalizationService());
+
+        Assert.Equal(ToolMaturity.Production, vm.ToolItems.Single(item => item.Key == FeatureCommandKeys.HealthScore).Maturity);
+        Assert.Equal(ToolMaturity.Guided, vm.ToolItems.Single(item => item.Key == FeatureCommandKeys.ConversionPipeline).Maturity);
+        Assert.Equal(ToolMaturity.Experimental, vm.ToolItems.Single(item => item.Key == FeatureCommandKeys.CollectionManager).Maturity);
+        Assert.All(vm.ToolItems, item =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(item.MaturityBadgeText));
+            Assert.False(string.IsNullOrWhiteSpace(item.MaturityDescription));
+        });
+    }
+
+    [Fact]
+    public void ToolsViewModel_WiredToolCommand_RecordsRecentUsage()
+    {
+        var vm = new ToolsViewModel(new LocalizationService());
+        var executions = 0;
+        vm.FeatureCommands[FeatureCommandKeys.HealthScore] = new RelayCommand(() => executions++);
+        vm.WireToolItemCommands();
+        vm.RefreshContext(new ToolContextSnapshot(
+            HasRoots: true,
+            RootCount: 1,
+            HasRunResult: true,
+            CandidateCount: 1,
+            DedupeGroupCount: 0,
+            JunkCount: 0,
+            UnverifiedCount: 0,
+            UseDat: false,
+            DatConfigured: false,
+            ConvertEnabled: false,
+            ConvertOnly: false,
+            ConvertedCount: 0,
+            CanRollback: false));
+
+        var item = vm.ToolItems.Single(tool => tool.Key == FeatureCommandKeys.HealthScore);
+        Assert.NotNull(item.Command);
+        Assert.True(item.Command!.CanExecute(null));
+
+        item.Command.Execute(null);
+
+        Assert.Equal(1, executions);
+        Assert.Single(vm.RecentToolItems);
+        Assert.Equal(FeatureCommandKeys.HealthScore, vm.RecentToolItems[0].Key);
+    }
+
+    [Fact]
+    public void ToolsViewModel_Recommendations_ExcludeExperimentalFeatures()
+    {
+        var vm = new ToolsViewModel(new LocalizationService());
+        foreach (var key in new[]
+                 {
+                     FeatureCommandKeys.DatAutoUpdate,
+                     FeatureCommandKeys.FormatPriority,
+                     FeatureCommandKeys.ConversionVerify,
+                     FeatureCommandKeys.CollectionMerge,
+                     FeatureCommandKeys.CommandPalette,
+                     FeatureCommandKeys.RulePackSharing,
+                     FeatureCommandKeys.AutoProfile
+                 })
+        {
+            vm.FeatureCommands[key] = new RelayCommand(() => { });
+        }
+
+        vm.WireToolItemCommands();
+        vm.RefreshContext(new ToolContextSnapshot(
+            HasRoots: true,
+            RootCount: 2,
+            HasRunResult: false,
+            CandidateCount: 0,
+            DedupeGroupCount: 0,
+            JunkCount: 0,
+            UnverifiedCount: 0,
+            UseDat: true,
+            DatConfigured: false,
+            ConvertEnabled: true,
+            ConvertOnly: false,
+            ConvertedCount: 0,
+            CanRollback: false));
+
+        Assert.NotEmpty(vm.RecommendedToolItems);
+        Assert.DoesNotContain(vm.RecommendedToolItems, item => item.IsExperimental);
+        Assert.DoesNotContain(vm.RecommendedToolItems, item => item.Key == FeatureCommandKeys.AutoProfile);
+        Assert.Contains(vm.RecommendedToolItems, item => item.Key == FeatureCommandKeys.DatAutoUpdate);
+        Assert.Contains(vm.RecommendedToolItems, item => item.Key == FeatureCommandKeys.CommandPalette);
+    }
+
+    [Fact]
+    public void ToolsViewModel_AvailableToolCount_ExcludesLockedTools()
+    {
+        var vm = new ToolsViewModel(new LocalizationService());
+        vm.FeatureCommands[FeatureCommandKeys.HealthScore] = new RelayCommand(() => { });
+        vm.FeatureCommands[FeatureCommandKeys.CommandPalette] = new RelayCommand(() => { });
+        vm.WireToolItemCommands();
+
+        vm.RefreshContext(new ToolContextSnapshot(
+            HasRoots: true,
+            RootCount: 1,
+            HasRunResult: false,
+            CandidateCount: 0,
+            DedupeGroupCount: 0,
+            JunkCount: 0,
+            UnverifiedCount: 0,
+            UseDat: false,
+            DatConfigured: false,
+            ConvertEnabled: false,
+            ConvertOnly: false,
+            ConvertedCount: 0,
+            CanRollback: false));
+
+        Assert.Equal(1, vm.AvailableToolCount);
+        Assert.Contains(vm.ToolItems, item => item.Key == FeatureCommandKeys.HealthScore && item.IsLocked);
+        Assert.Contains(vm.ToolItems, item => item.Key == FeatureCommandKeys.CommandPalette && !item.IsLocked && !item.IsUnavailable);
     }
 
     [Fact]

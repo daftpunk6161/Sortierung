@@ -31,8 +31,9 @@
       <WrapPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
         <Border Style="{StaticResource AccentHeaderChip}">
           <StackPanel Orientation="Horizontal">
-            <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,8,0"
-                     Fill="{Binding ReadyStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+            <Border Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,8,0"
+                    CornerRadius="2"
+                    Background="{Binding ReadyStatusLevel, Converter={StaticResource StatusToBrush}}"/>
             <StackPanel>
               <TextBlock Text="{Binding StatusReady}" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold"/>
               <TextBlock Text="{Binding StatusRuntime}" Style="{StaticResource CaptionText}"
@@ -43,24 +44,27 @@
 
         <Border Style="{StaticResource HeaderChip}">
           <StackPanel Orientation="Horizontal">
-            <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
-                     Fill="{Binding RootsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+            <Border Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
+                    CornerRadius="2"
+                    Background="{Binding RootsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
             <TextBlock Text="{Binding StatusRoots}" Foreground="{DynamicResource BrushTextPrimary}"/>
           </StackPanel>
         </Border>
 
         <Border Style="{StaticResource HeaderChip}">
           <StackPanel Orientation="Horizontal">
-            <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
-                     Fill="{Binding ToolsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+            <Border Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
+                    CornerRadius="2"
+                    Background="{Binding ToolsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
             <TextBlock Text="{Binding StatusTools}" Foreground="{DynamicResource BrushTextPrimary}"/>
           </StackPanel>
         </Border>
 
         <Border Style="{StaticResource HeaderChip}">
           <StackPanel Orientation="Horizontal">
-            <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
-                     Fill="{Binding DatStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+            <Border Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
+                    CornerRadius="2"
+                    Background="{Binding DatStatusLevel, Converter={StaticResource StatusToBrush}}"/>
             <TextBlock Text="{Binding StatusDat}" Foreground="{DynamicResource BrushTextPrimary}"/>
           </StackPanel>
         </Border>
@@ -83,6 +87,21 @@
                   ToolTip="{Binding Loc[Profile.QuickSwitch]}"
                   AutomationProperties.Name="{Binding Loc[Profile.QuickSwitch]}"
                   Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
+
+        <Button Style="{StaticResource HeaderActionButton}"
+                Command="{Binding ToggleCommandPaletteCommand}"
+                ToolTip="{Binding Loc[Tools.CommandSearchTip]}"
+                AutomationProperties.Name="{Binding Loc[Tools.CommandSearch]}"
+                AutomationProperties.AcceleratorKey="Ctrl+K"
+                Margin="0,0,8,0">
+          <StackPanel Orientation="Horizontal">
+            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE721;" FontSize="14"
+                       Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,6,0"/>
+            <TextBlock Text="{Binding Loc[Tools.CommandSearch]}"
+                       Foreground="{DynamicResource BrushTextPrimary}"
+                       Visibility="{Binding Shell.IsCompactNav, Converter={StaticResource InverseBoolToVis}}"/>
+          </StackPanel>
+        </Button>
 
         <Button Style="{StaticResource HeaderActionButton}"
                 Command="{Binding Shell.ToggleContextWingCommand}"

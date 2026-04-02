@@ -524,10 +524,10 @@
               <Border x:Name="radioBorder" Width="16" Height="16" Margin="0 0 8 0"
                       Background="{DynamicResource BrushSurface}"
                       BorderBrush="{DynamicResource BrushBorder}"
-                      BorderThickness="1" CornerRadius="8">
-                <Ellipse x:Name="radioDot" Width="8" Height="8" Visibility="Collapsed"
-                         Fill="{DynamicResource BrushAccentCyan}"
-                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                      BorderThickness="1" CornerRadius="3">
+                <Border x:Name="radioDot" Width="8" Height="8" Visibility="Collapsed"
+                        Background="{DynamicResource BrushAccentCyan}" CornerRadius="2"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
               </Border>
               <ContentPresenter VerticalAlignment="Center"
                                 Margin="{TemplateBinding Padding}"
@@ -579,7 +579,7 @@
       <Setter Property="Background" Value="{DynamicResource BrushSurface}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="999"/>
+      <Setter Property="CornerRadius" Value="{DynamicResource RadiusMD}"/>
       <Setter Property="Padding" Value="10 6"/>
       <Setter Property="Margin" Value="0 0 8 6"/>
     </Style>
@@ -603,7 +603,7 @@
                     Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}"
-                    CornerRadius="999">
+                    CornerRadius="{DynamicResource RadiusMD}">
               <ContentPresenter Margin="{TemplateBinding Padding}"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"/>
@@ -633,7 +633,7 @@
                     Background="{DynamicResource BrushSurface}"
                     BorderBrush="{DynamicResource BrushBorder}"
                     BorderThickness="1"
-                    CornerRadius="999">
+                    CornerRadius="{DynamicResource RadiusMD}">
               <ContentPresenter Margin="{TemplateBinding Padding}"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
@@ -820,7 +820,7 @@
             <Border Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}"
-                    Padding="{TemplateBinding Padding}" CornerRadius="999">
+                    Padding="{TemplateBinding Padding}" CornerRadius="{DynamicResource RadiusMD}">
               <ContentPresenter/>
             </Border>
             <ControlTemplate.Triggers>

@@ -165,6 +165,368 @@
         </StackPanel>
       </Border>
 
+      <!-- ── Filter & Sammlungsscope (aus separatem Filtering-Tab konsolidiert) ── -->
+      <TextBlock Text="{Binding Loc[Settings.SectionFilters]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <StackPanel>
+          <DockPanel Margin="0,0,0,8">
+            <TextBlock Text="{Binding Loc[Settings.LabelConsoles]}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <Border DockPanel.Dock="Right" HorizontalAlignment="Right" CornerRadius="10"
+                    Background="{DynamicResource BrushAccentCyan}" Padding="10,3" VerticalAlignment="Center">
+              <TextBlock Text="{Binding ConsoleCountDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+            </Border>
+          </DockPanel>
+
+          <TextBlock Text="Anzeige-Filter: Keine Auswahl = alle Konsolen sichtbar (kein Einfluss auf die Pipeline)"
+                     Style="{StaticResource CaptionText}"
+                     Margin="0,0,0,8"
+                     TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrushTextMuted}"/>
+
+          <Border Background="{DynamicResource BrushSurfaceAlt}"
+                  BorderBrush="{DynamicResource BrushBorder}"
+                  BorderThickness="1"
+                  CornerRadius="8"
+                  Margin="{DynamicResource SpaceBottomSM}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                         Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="8,0"/>
+              <TextBox Grid.Column="1"
+                       Text="{Binding ConsoleFilterText, UpdateSourceTrigger=PropertyChanged}"
+                       Padding="6,8"
+                       BorderThickness="0"
+                       Background="Transparent"
+                       FontSize="13"
+                       AutomationProperties.Name="{Binding Loc[Settings.ConsoleSearchLabel]}"
+                       ToolTip="{Binding Loc[Settings.ConsoleSearchTip]}"/>
+            </Grid>
+          </Border>
+
+          <ItemsControl ItemsSource="{Binding ConsoleFilters}" Margin="0,0,0,8">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Margin="0,0,4,4" Padding="8,4" CornerRadius="12"
+                        Background="{DynamicResource BrushAccentCyan}" Cursor="Hand">
+                  <Border.Style>
+                    <Style TargetType="Border">
+                      <Setter Property="Visibility" Value="Collapsed"/>
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsChecked}" Value="True">
+                          <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding DisplayName}" FontSize="11" Foreground="White" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <Button Content="✕" Padding="2,0" FontSize="9" Cursor="Hand"
+                            Background="Transparent" BorderThickness="0" Foreground="White"
+                            Command="{Binding DataContext.RemoveConsoleSelectionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding}"
+                            AutomationProperties.Name="{Binding DisplayName, StringFormat='{}{0} entfernen'}"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <Border Background="{DynamicResource BrushSurfaceAlt}"
+                  BorderBrush="{DynamicResource BrushBorder}"
+                  BorderThickness="1"
+                  CornerRadius="8"
+                  Margin="{DynamicResource SpaceBottomSM}">
+            <StackPanel Margin="12,10">
+              <TextBlock Text="Schnellauswahl" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" Margin="{DynamicResource SpaceBottomXS}"/>
+              <WrapPanel>
+                <Button Content="🏆 Top 10" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                        Command="{Binding ConsolePresetTop10Command}"
+                        ToolTip="PS1, PS2, SNES, NES, N64, GC, Wii, GBA, MD, DC"
+                        AutomationProperties.Name="Preset Top 10 Konsolen"/>
+                <Button Content="💿 Disc-basiert" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                        Command="{Binding ConsolePresetDiscBasedCommand}"
+                        ToolTip="PS1–PS3, PSP, GC, Wii, Wii U, Sega CD, Saturn, DC, 3DO, PCECD, Neo Geo CD"
+                        AutomationProperties.Name="Preset Disc-basierte Konsolen"/>
+                <Button Content="🎮 Handhelds" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                        Command="{Binding ConsolePresetHandheldsCommand}"
+                        ToolTip="GB, GBC, GBA, NDS, 3DS, PSP, GG, Switch"
+                        AutomationProperties.Name="Preset Handheld Konsolen"/>
+                <Button Content="👾 Retro" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                        Command="{Binding ConsolePresetRetroCommand}"
+                        ToolTip="NES, SNES, N64, GB, GBC, GBA, MD, SMS, GG, Saturn, PCE, Neo Geo"
+                        AutomationProperties.Name="Preset Retro Konsolen"/>
+                <Button Content="Alle" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                        Command="{Binding SelectAllConsolesCommand}"
+                        AutomationProperties.Name="Alle Konsolen auswählen"/>
+                <Button Content="Keine" Margin="0,0,6,4" Padding="10,5" FontSize="11"
+                        Command="{Binding ClearAllConsolesCommand}"
+                        AutomationProperties.Name="Keine Konsolen auswählen"/>
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <Border Background="{DynamicResource BrushSurfaceAlt}"
+                  BorderBrush="{DynamicResource BrushBorder}"
+                  BorderThickness="1"
+                  CornerRadius="8"
+                  Margin="{DynamicResource SpaceBottomSM}">
+            <ListBox ItemsSource="{Binding ConsoleFiltersView}"
+                     MaxHeight="400"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling"
+                     ScrollViewer.CanContentScroll="True"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     AutomationProperties.Name="{Binding Loc[Settings.LabelConsoles]}">
+              <ListBox.GroupStyle>
+                <GroupStyle>
+                  <GroupStyle.HeaderTemplate>
+                    <DataTemplate>
+                      <DockPanel Margin="0,8,0,4">
+                        <TextBlock Text="{Binding Name}" Style="{StaticResource CategoryHeader}" VerticalAlignment="Center"/>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" Margin="8,0,0,0">
+                          <Button Content="Alle" Padding="6,2" FontSize="10" Margin="0,0,4,0"
+                                  Background="Transparent" BorderThickness="0"
+                                  Foreground="{DynamicResource BrushAccentCyan}" Cursor="Hand"
+                                  Command="{Binding DataContext.SelectConsoleGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding Name}"
+                                  AutomationProperties.Name="{Binding Name, StringFormat='Alle {0} auswählen'}"/>
+                          <Button Content="Keine" Padding="6,2" FontSize="10"
+                                  Background="Transparent" BorderThickness="0"
+                                  Foreground="{DynamicResource BrushTextMuted}" Cursor="Hand"
+                                  Command="{Binding DataContext.DeselectConsoleGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding Name}"
+                                  AutomationProperties.Name="{Binding Name, StringFormat='Keine {0} auswählen'}"/>
+                        </StackPanel>
+                      </DockPanel>
+                    </DataTemplate>
+                  </GroupStyle.HeaderTemplate>
+                  <GroupStyle.Panel>
+                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                  </GroupStyle.Panel>
+                </GroupStyle>
+              </ListBox.GroupStyle>
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <CheckBox Content="{Binding DisplayName}"
+                            IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                            Margin="0,0,12,4"
+                            AutomationProperties.Name="{Binding DisplayName, StringFormat='Konsole {0} filtern'}"/>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Border>
+
+          <TextBlock Text="{Binding Loc[Settings.LabelFileTypes]}" Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="0,4,0,4"/>
+          <Border Background="{DynamicResource BrushSurfaceAlt}"
+                  BorderBrush="{DynamicResource BrushBorder}"
+                  BorderThickness="1"
+                  CornerRadius="8">
+            <ItemsControl ItemsSource="{Binding ExtensionFiltersView}" Margin="12,10">
+              <ItemsControl.GroupStyle>
+                <GroupStyle>
+                  <GroupStyle.HeaderTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Name}" Style="{StaticResource CategoryHeader}"/>
+                    </DataTemplate>
+                  </GroupStyle.HeaderTemplate>
+                  <GroupStyle.Panel>
+                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                  </GroupStyle.Panel>
+                </GroupStyle>
+              </ItemsControl.GroupStyle>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <CheckBox Content="{Binding Extension}" IsChecked="{Binding IsChecked}"
+                            ToolTip="{Binding ToolTip}" Margin="0,0,12,4"
+                            AutomationProperties.Name="{Binding Extension, StringFormat='Dateityp {0} filtern'}"/>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- ── DAT & Verifizierung (primaerer Einstieg) ── -->
+      <TextBlock Text="{Binding Loc[Settings.SectionDat]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <StackPanel>
+          <CheckBox Content="{Binding Loc[Settings.UseDat]}"
+                    Margin="0,0,0,8"
+                    IsChecked="{Binding UseDat}"
+                    ToolTip="{Binding Loc[Settings.UseDatTip]}"
+                    AutomationProperties.Name="{Binding Loc[Settings.UseDat]}"/>
+          <TextBlock Text="{Binding Loc[Settings.UseDatTip]}"
+                     Style="{StaticResource CaptionText}"
+                     Margin="0,0,0,12"
+                     TextWrapping="Wrap"/>
+
+          <Grid Visibility="{Binding UseDat, Converter={StaticResource BoolToVis}}">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="140"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="38"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="10"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Label Grid.Row="0" Grid.Column="0"
+                   Content="{Binding Loc[Settings.DatRootLabel]}"
+                   VerticalAlignment="Center"/>
+            <TextBox Grid.Row="0" Grid.Column="1"
+                     Text="{Binding DatRoot, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
+                     Margin="{DynamicResource SpaceRightXS}"
+                     AutomationProperties.Name="{Binding Loc[Settings.DatRootName]}"/>
+            <Button Grid.Row="0" Grid.Column="2"
+                    Content="&#xE838;"
+                    FontFamily="Segoe MDL2 Assets"
+                    Width="34"
+                    Command="{Binding BrowseFolderPathCommand}"
+                    CommandParameter="Dat"
+                    AutomationProperties.Name="{Binding Loc[Settings.DatRootBrowse]}"/>
+
+            <WrapPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3">
+              <CheckBox Content="{Binding Loc[Settings.EnableDatAudit]}"
+                        Margin="0,0,24,6"
+                        IsChecked="{Binding EnableDatAudit}"
+                        ToolTip="{Binding Loc[Settings.EnableDatAuditTip]}"
+                        AutomationProperties.Name="{Binding Loc[Settings.EnableDatAudit]}"/>
+              <CheckBox Content="{Binding Loc[Settings.EnableDatRename]}"
+                        Margin="0,0,24,6"
+                        IsChecked="{Binding EnableDatRename}"
+                        ToolTip="{Binding Loc[Settings.EnableDatRenameTip]}"
+                        AutomationProperties.Name="{Binding Loc[Settings.EnableDatRename]}"/>
+              <CheckBox Content="{Binding Loc[Settings.DatFallback]}"
+                        Margin="0,0,24,6"
+                        IsChecked="{Binding DatFallback}"
+                        ToolTip="{Binding Loc[Settings.DatFallbackTip]}"
+                        AutomationProperties.Name="{Binding Loc[Settings.DatFallback]}"/>
+              <CheckBox Content="{Binding Loc[Settings.CrcVerify]}"
+                        Margin="0,0,24,6"
+                        IsChecked="{Binding CrcVerifyScan}"
+                        ToolTip="{Binding Loc[Settings.CrcVerifyTip]}"
+                        AutomationProperties.Name="{Binding Loc[Settings.CrcVerify]}"/>
+            </WrapPanel>
+          </Grid>
+
+          <TextBlock Text="{Binding Loc[Settings.DatPerfNote]}"
+                     Style="{StaticResource CaptionText}"
+                     Margin="0,8,0,0"
+                     TextWrapping="Wrap"/>
+        </StackPanel>
+      </Border>
+
+      <!-- ── DAT-Mapping (erweitert, aus Tools-Subtab konsolidiert) ── -->
+      <TextBlock Text="{Binding Loc[Settings.SectionDatMapping]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <StackPanel>
+          <TextBlock Text="{Binding Loc[Settings.DatMappingDesc]}"
+                     Style="{StaticResource CaptionText}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+          <DataGrid MinHeight="200" MaxHeight="400"
+                    ItemsSource="{Binding DatMappings}"
+                    AutoGenerateColumns="False"
+                    CanUserAddRows="True"
+                    CanUserDeleteRows="True"
+                    SelectionMode="Single"
+                    VirtualizingPanel.IsVirtualizing="True"
+                    VirtualizingPanel.VirtualizationMode="Recycling"
+                    ScrollViewer.CanContentScroll="True"
+                    AutomationProperties.Name="{Binding Loc[Settings.DatMappingName]}">
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Header="Console" Width="130">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Console}" VerticalAlignment="Center" Margin="4,0"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+                <DataGridTemplateColumn.CellEditingTemplate>
+                  <DataTemplate>
+                    <ComboBox SelectedItem="{Binding Console, UpdateSourceTrigger=PropertyChanged}"
+                              ItemsSource="{Binding DataContext.AllConsoleKeys, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              MaxDropDownHeight="300"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellEditingTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="DAT File" Width="*">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <DockPanel>
+                      <Button DockPanel.Dock="Right" Content="&#xE838;" FontFamily="Segoe MDL2 Assets" Width="30" Padding="2"
+                              Command="{Binding DataContext.BrowseDatMappingFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}"
+                              AutomationProperties.Name="{Binding DataContext.Loc[Settings.DatMappingBrowse], RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                      <TextBlock Text="{Binding DatFile}" VerticalAlignment="Center" Margin="4,0"
+                                 TextTrimming="CharacterEllipsis" ToolTip="{Binding DatFile}"/>
+                    </DockPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+                <DataGridTemplateColumn.CellEditingTemplate>
+                  <DataTemplate>
+                    <DockPanel>
+                      <Button DockPanel.Dock="Right" Content="&#xE838;" FontFamily="Segoe MDL2 Assets" Width="30" Padding="2"
+                              Command="{Binding DataContext.BrowseDatMappingFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}"
+                              AutomationProperties.Name="{Binding DataContext.Loc[Settings.DatMappingBrowse], RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                      <TextBox Text="{Binding DatFile, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellEditingTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+          <Button Margin="0,8,0,0" Padding="12,6"
+                  HorizontalAlignment="Left"
+                  Command="{Binding AutoDetectDatMappingsCommand}"
+                  ToolTip="{Binding Loc[Settings.DatMappingAutoDetectTip]}"
+                  AutomationProperties.Name="{Binding Loc[Settings.DatMappingAutoDetect]}">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="&#xE773;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,6,0"/>
+              <TextBlock Text="{Binding Loc[Settings.DatMappingAutoDetect]}" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Border>
+
+      <!-- ── GameKey-Diagnose (aus Tools-Subtab konsolidiert) ── -->
+      <TextBlock Text="{Binding Loc[Settings.SectionGameKey]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <StackPanel>
+          <TextBlock Text="{Binding Loc[Settings.GameKeyPreviewDesc]}"
+                     Style="{StaticResource CaptionText}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="130"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="120"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="6"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Label Grid.Row="0" Grid.Column="0" Content="{Binding Loc[Settings.GameKeyTitleLabel]}" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding GameKeyPreviewInput, UpdateSourceTrigger=PropertyChanged}"
+                     Margin="{DynamicResource SpaceRightSM}" ToolTip="{Binding Loc[Settings.GameKeyTitleTip]}"
+                     AutomationProperties.Name="{Binding Loc[Settings.GameKeyTitleName]}"/>
+            <Button Grid.Row="0" Grid.Column="2" Command="{Binding GameKeyPreviewCommand}" Content="{Binding Loc[Settings.GameKeyPreview]}" Width="110"
+                    AutomationProperties.Name="{Binding Loc[Settings.GameKeyPreviewName]}"/>
+            <Label Grid.Row="2" Grid.Column="0" Content="{Binding Loc[Settings.GameKeyLabel]}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                       Text="{Binding GameKeyPreviewOutput}" Foreground="{DynamicResource BrushAccentCyan}" TextTrimming="CharacterEllipsis"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+
       <!-- ── Watch-Modus (aus Dashboard verlagert) ── -->
       <TextBlock Text="{Binding Loc[Advanced.WatchMode]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
       <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">

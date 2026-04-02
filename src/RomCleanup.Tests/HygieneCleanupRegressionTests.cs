@@ -332,16 +332,18 @@ public sealed class HygieneCleanupRegressionTests
         Assert.DoesNotContain("DialogService.ConfirmConversionReview(", code, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void ToolsDatView_MustNotUseBrowseClickHandler()
+    [Theory]
+    [InlineData("ToolsDatView.xaml")]
+    [InlineData("ToolsConversionView.xaml")]
+    [InlineData("ToolsGameKeyLabView.xaml")]
+    [InlineData("ToolsDatView.xaml.cs")]
+    [InlineData("ToolsConversionView.xaml.cs")]
+    [InlineData("ToolsGameKeyLabView.xaml.cs")]
+    public void RetiredSpecialistToolViews_MustStayRemoved(string fileName)
     {
-        var xamlPath = FindWpfViewPath("ToolsDatView.xaml");
-        var codeBehindPath = FindWpfViewPath("ToolsDatView.xaml.cs");
-        var xaml = File.ReadAllText(xamlPath);
-        var codeBehind = File.ReadAllText(codeBehindPath);
+        var viewPath = FindWpfViewPath(fileName);
 
-        Assert.DoesNotContain("OnBrowseDatFile_Click", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("DialogService.BrowseFile(", codeBehind, StringComparison.Ordinal);
+        Assert.False(File.Exists(viewPath), $"{fileName} should stay removed after navigation consolidation.");
     }
 
     [Fact]

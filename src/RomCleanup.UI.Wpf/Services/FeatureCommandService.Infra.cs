@@ -132,6 +132,7 @@ public sealed partial class FeatureCommandService
         if (_vm.FeatureCommands.TryGetValue(key, out var featureCmd))
         {
             featureCmd.Execute(null);
+            _vm.RecordToolUsage(key);
             return;
         }
 

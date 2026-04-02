@@ -50,6 +50,12 @@ public sealed partial class ToolItem : ObservableObject
     public required string Description { get; init; }
     public required string Icon { get; init; }
     public bool RequiresRunResult { get; init; }
+    public bool IsEssential { get; init; }
+    public ToolMaturity Maturity { get; init; } = ToolMaturity.Production;
+    public string MaturityBadgeText { get; init; } = string.Empty;
+    public string MaturityDescription { get; init; } = string.Empty;
+    public string UnlockRequirementText { get; init; } = string.Empty;
+    public string UnavailableText { get; init; } = string.Empty;
 
     /// <summary>Bound to the templated Button in the Werkzeuge tab. Set after FeatureCommands are registered.</summary>
     public System.Windows.Input.ICommand? Command { get; set; }
@@ -68,8 +74,46 @@ public sealed partial class ToolItem : ObservableObject
     [ObservableProperty]
     private bool _isLocked;
 
+    /// <summary>True when the current host does not provide a backing command for this feature.</summary>
+    [ObservableProperty]
+    private bool _isUnavailable;
+
+    [ObservableProperty]
+    private bool _isRecommended;
+
+    [ObservableProperty]
+    private string _recommendationReason = string.Empty;
+
     /// <summary>P1-004: True for features that are planned but not yet fully implemented.</summary>
     public bool IsPlanned { get; init; }
+
+    public bool IsProductionReady => Maturity == ToolMaturity.Production;
+    public bool IsGuided => Maturity == ToolMaturity.Guided;
+    public bool IsExperimental => Maturity == ToolMaturity.Experimental;
+
+    public string AvailabilityText => IsUnavailable
+        ? UnavailableText
+        : IsLocked
+            ? UnlockRequirementText
+            : string.Empty;
+
+    public bool HasAvailabilityText => !string.IsNullOrWhiteSpace(AvailabilityText);
+    public bool HasRecommendationReason => !string.IsNullOrWhiteSpace(RecommendationReason);
+
+    partial void OnIsLockedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(AvailabilityText));
+        OnPropertyChanged(nameof(HasAvailabilityText));
+    }
+
+    partial void OnIsUnavailableChanged(bool value)
+    {
+        OnPropertyChanged(nameof(AvailabilityText));
+        OnPropertyChanged(nameof(HasAvailabilityText));
+    }
+
+    partial void OnRecommendationReasonChanged(string value)
+        => OnPropertyChanged(nameof(HasRecommendationReason));
 }
 
 /// <summary>
@@ -101,3 +145,25 @@ public sealed partial class RegionPriorityItem : ObservableObject
     [ObservableProperty]
     private int _position;
 }
+
+public enum ToolMaturity
+{
+    Production = 0,
+    Guided = 1,
+    Experimental = 2
+}
+
+public sealed record ToolContextSnapshot(
+    bool HasRoots,
+    int RootCount,
+    bool HasRunResult,
+    int CandidateCount,
+    int DedupeGroupCount,
+    int JunkCount,
+    int UnverifiedCount,
+    bool UseDat,
+    bool DatConfigured,
+    bool ConvertEnabled,
+    bool ConvertOnly,
+    int ConvertedCount,
+    bool CanRollback);

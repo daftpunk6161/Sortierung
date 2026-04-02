@@ -97,6 +97,7 @@ public sealed partial class MainViewModel
             _lastAuditPath = value;
             OnPropertyChanged();
             CanRollback = _runService.HasVerifiedRollback(_lastAuditPath);
+            RefreshToolSurfaceState();
         }
     }
 
@@ -201,6 +202,7 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(ShowSmartActionBar));
             OnPropertyChanged(nameof(CanStartCurrentRun));
             OnPropertyChanged(nameof(CanStartMoveWithCurrentPreview));
+            RefreshToolSurfaceState();
             DeferCommandRequery();
         }
 
@@ -314,6 +316,7 @@ public sealed partial class MainViewModel
         {
             SetProperty(ref _canRollback, value);
             OnPropertyChanged(nameof(ShowSmartActionBar));
+            RefreshToolSurfaceState();
             DeferCommandRequery();
         }
     }
@@ -929,6 +932,8 @@ public sealed partial class MainViewModel
             CurrentStep = hasRoots ? 1 : 0;
             StepLabel3 = _loc["Step.PressF5"];
         }
+
+        RefreshToolSurfaceState();
     }
 
     // ═══ RUN PIPELINE EXECUTION ═════════════════════════════════════════
@@ -1328,6 +1333,7 @@ public sealed partial class MainViewModel
         ProgressText = "0%";
         RunSummaryText = "";
         RunSummarySeverity = UiErrorSeverity.Info;
+        RefreshToolSurfaceState();
     }
 
     private void OnMovePreviewGateChanged()

@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Tools;
 using RomCleanup.UI.Wpf.Services;
 using RomCleanup.UI.Wpf.Models;
 using RomCleanup.UI.Wpf.ViewModels;
@@ -27,6 +28,7 @@ public partial class MainWindow : Window, IWindowHost
 
     // Detached API process from Mobile Web UI
     private Process? _apiProcess;
+    private IDisposable? _apiProcessTrackingLease;
     // Guard against recursive OnClosing calls
     private bool _isClosing;
     // Explicit app-exit intent (e.g. tray 'Beenden') should bypass minimize-to-tray interception.
@@ -64,6 +66,7 @@ public partial class MainWindow : Window, IWindowHost
         var featureCommands = new FeatureCommandService(_vm, _settings, dialog, this);
         featureCommands.RegisterCommands();
         _vm.WireToolItemCommands();
+        _vm.Tools.LoadConversionRegistry();
         _vm.NotifyFeatureCommandsReady();
 
         // Wire Command Palette execute callback to FeatureCommandService
@@ -215,6 +218,9 @@ public partial class MainWindow : Window, IWindowHost
         // Kill detached API process if running
         SafeKillApiProcess();
 
+        // Final safety net: terminate any remaining tracked child processes.
+        ExternalProcessGuard.KillAllTrackedProcesses("app-shutdown", msg => _vm.AddLog(msg, "WARN"));
+
         // GUI-115: Dispose file watchers (owned by VM) — includes WatchService event unsubscription
         _vm.CleanupWatchers();
 
@@ -268,7 +274,7 @@ public partial class MainWindow : Window, IWindowHost
 
         if (_vm.CurrentRunState is RunState.Completed or RunState.CompletedDryRun)
         {
-            // Report preview auto-refreshes via LibraryReportView.OnLoaded
+            // ResultView contains the integrated report preview and refreshes on load.
         }
     }
 
@@ -314,6 +320,13 @@ public partial class MainWindow : Window, IWindowHost
         };
         SafeKillApiProcess();
         _apiProcess = Process.Start(psi);
+        if (_apiProcess is null)
+        {
+            _vm.AddLog("REST API Start fehlgeschlagen: Prozess konnte nicht gestartet werden.", "WARN");
+            return;
+        }
+        _apiProcessTrackingLease?.Dispose();
+        _apiProcessTrackingLease = ExternalProcessGuard.Track(_apiProcess, "api-process", msg => _vm.AddLog(msg, "WARN"));
         _vm.AddLog("REST API gestartet: http://127.0.0.1:5000", "INFO");
         _ = Task.Delay(2000).ContinueWith(_ =>
         {
@@ -340,6 +353,8 @@ public partial class MainWindow : Window, IWindowHost
     {
         var proc = _apiProcess;
         _apiProcess = null;
+        _apiProcessTrackingLease?.Dispose();
+        _apiProcessTrackingLease = null;
         if (proc is null) return;
 
         try

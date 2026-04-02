@@ -238,7 +238,7 @@
         </UniformGrid>
       </Grid>
 
-      <Grid Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=QuickStart}">
+      <Grid Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Dashboard}">
         <UniformGrid Margin="{DynamicResource SpaceBottomMD}">
           <UniformGrid.Style>
             <Style TargetType="UniformGrid">
@@ -263,7 +263,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                   </Grid.ColumnDefinitions>
-                  <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource BrushAccentCyan}" Margin="0,0,10,0">
+                  <Border Width="26" Height="26" CornerRadius="4" Background="{DynamicResource BrushAccentCyan}" Margin="0,0,10,0">
                     <TextBlock Text="1" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                   </Border>
                   <StackPanel Grid.Column="1">
@@ -281,7 +281,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                   </Grid.ColumnDefinitions>
-                  <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource BrushAccentCyan}" Margin="0,0,10,0">
+                  <Border Width="26" Height="26" CornerRadius="4" Background="{DynamicResource BrushAccentCyan}" Margin="0,0,10,0">
                     <TextBlock Text="2" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                   </Border>
                   <StackPanel Grid.Column="1">
@@ -299,7 +299,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                   </Grid.ColumnDefinitions>
-                  <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource BrushAccentCyan}" Margin="0,0,10,0">
+                  <Border Width="26" Height="26" CornerRadius="4" Background="{DynamicResource BrushAccentCyan}" Margin="0,0,10,0">
                     <TextBlock Text="3" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                   </Border>
                   <StackPanel Grid.Column="1">
@@ -335,6 +335,91 @@
           </Border>
         </UniformGrid>
       </Grid>
+
+      <Border Style="{StaticResource SectionCard}"
+              Margin="{DynamicResource SpaceBottomMD}"
+              Visibility="{Binding HasRecommendedTools, Converter={StaticResource BoolToVis}}">
+        <StackPanel>
+          <DockPanel Margin="{DynamicResource SpaceBottomSM}">
+            <Button DockPanel.Dock="Right"
+                    Command="{Binding GoToToolsCommand}"
+                    Content="{Binding Loc[Tools.OpenCatalog]}"
+                    Padding="10,4"
+                    AutomationProperties.Name="{Binding Loc[Tools.OpenCatalog]}"/>
+            <StackPanel>
+              <TextBlock Text="{Binding Loc[Tools.StartRecommendedTitle]}" Style="{StaticResource SectionHeader}"/>
+              <TextBlock Text="{Binding Loc[Tools.StartRecommendedDesc]}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"/>
+            </StackPanel>
+          </DockPanel>
+
+          <ItemsControl ItemsSource="{Binding RecommendedToolItems}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Margin="0,0,10,10"
+                        Padding="12,10"
+                        MinWidth="220"
+                        MaxWidth="280"
+                        HorizontalContentAlignment="Left"
+                        Command="{Binding Command}"
+                        ToolTip="{Binding MaturityDescription}"
+                        AutomationProperties.Name="{Binding DisplayName}">
+                  <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                 Foreground="{DynamicResource BrushAccentCyan}" Margin="{DynamicResource SpaceRightSM}"/>
+                      <StackPanel>
+                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                        <TextBlock Text="{Binding RecommendationReason}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="220"/>
+                      </StackPanel>
+                    </StackPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                      <Border CornerRadius="3" Padding="4,1" Margin="0,0,6,0">
+                        <Border.Style>
+                          <Style TargetType="Border">
+                            <Setter Property="Background" Value="{DynamicResource BrushSuccessBg}"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource BrushSuccess}"/>
+                            <Setter Property="BorderThickness" Value="1"/>
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding IsGuided}" Value="True">
+                                <Setter Property="Background" Value="#1A00F5FF"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentCyan}"/>
+                              </DataTrigger>
+                              <DataTrigger Binding="{Binding IsExperimental}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource BrushWarningBg}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource BrushWarning}"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding MaturityBadgeText}" FontSize="9" FontWeight="SemiBold">
+                          <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                              <Setter Property="Foreground" Value="{DynamicResource BrushSuccess}"/>
+                              <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsGuided}" Value="True">
+                                  <Setter Property="Foreground" Value="{DynamicResource BrushAccentCyan}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsExperimental}" Value="True">
+                                  <Setter Property="Foreground" Value="{DynamicResource BrushWarning}"/>
+                                </DataTrigger>
+                              </Style.Triggers>
+                            </Style>
+                          </TextBlock.Style>
+                        </TextBlock>
+                      </Border>
+                    </WrapPanel>
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
 
       <Border Margin="{DynamicResource SpaceBottomMD}">
         <Border.Style>

@@ -166,6 +166,64 @@ public sealed class WpfProductizationTests : IDisposable
     }
 
     [Fact]
+    public void ToolSurfaces_Xaml_ExposeRecommendationsPinsAndCommandSearch()
+    {
+        var toolsViewXaml = File.ReadAllText(FindUiFile("Views", "ToolsView.xaml"));
+        var startViewXaml = File.ReadAllText(FindUiFile("Views", "StartView.xaml"));
+        var contextPanelXaml = File.ReadAllText(FindUiFile("Views", "ContextPanel.xaml"));
+        var commandBarXaml = File.ReadAllText(FindUiFile("Views", "CommandBar.xaml"));
+
+        Assert.Contains("RecommendedToolItems", toolsViewXaml);
+        Assert.Contains("ToggleToolPinCommand", toolsViewXaml);
+        Assert.Contains("MaturityBadgeText", toolsViewXaml);
+        Assert.Contains("RecommendedToolItems", startViewXaml);
+        Assert.Contains("RecommendedToolItems", contextPanelXaml);
+        Assert.Contains("ToggleCommandPaletteCommand", commandBarXaml);
+    }
+
+    [Fact]
+    public void ConfigOptionsView_ExposesPrimaryDatControls_InMainSetupFlow()
+    {
+        var configOptionsXaml = File.ReadAllText(FindUiFile("Views", "ConfigOptionsView.xaml"));
+
+        Assert.Contains("IsChecked=\"{Binding UseDat}\"", configOptionsXaml);
+        Assert.Contains("Text=\"{Binding Loc[Settings.SectionDat]}\"", configOptionsXaml);
+        Assert.Contains("IsChecked=\"{Binding EnableDatAudit}\"", configOptionsXaml);
+        Assert.Contains("IsChecked=\"{Binding EnableDatRename}\"", configOptionsXaml);
+        Assert.Contains("Text=\"{Binding DatRoot", configOptionsXaml);
+    }
+
+    [Fact]
+    public void NavigationAndViews_ConsolidateRetiredSubTabsIntoPrimarySurfaces()
+    {
+        var startViewXaml = File.ReadAllText(FindUiFile("Views", "StartView.xaml"));
+        var subTabBarXaml = File.ReadAllText(FindUiFile("Views", "SubTabBar.xaml"));
+        var mainWindowXaml = File.ReadAllText(FindUiFile("", "MainWindow.xaml"));
+        var configOptionsXaml = File.ReadAllText(FindUiFile("Views", "ConfigOptionsView.xaml"));
+        var resultViewXaml = File.ReadAllText(FindUiFile("Views", "ResultView.xaml"));
+        var toolsViewXaml = File.ReadAllText(FindUiFile("Views", "ToolsView.xaml"));
+
+        Assert.DoesNotContain("ConverterParameter=QuickStart", subTabBarXaml);
+        Assert.DoesNotContain("ConverterParameter=Filtering", subTabBarXaml);
+        Assert.DoesNotContain("ConverterParameter=Report", subTabBarXaml);
+        Assert.DoesNotContain("ConverterParameter=DatManagement", subTabBarXaml);
+        Assert.DoesNotContain("ConverterParameter=Conversion", subTabBarXaml);
+        Assert.DoesNotContain("ConverterParameter=GameKeyLab", subTabBarXaml);
+        Assert.DoesNotContain("ConfigFiltersView", mainWindowXaml);
+        Assert.DoesNotContain("LibraryReportView", mainWindowXaml);
+        Assert.DoesNotContain("ToolsDatView", mainWindowXaml);
+        Assert.DoesNotContain("ToolsConversionView", mainWindowXaml);
+        Assert.DoesNotContain("ToolsGameKeyLabView", mainWindowXaml);
+        Assert.Contains("ConverterParameter=Dashboard", startViewXaml);
+        Assert.Contains("ConsoleFiltersView", configOptionsXaml);
+        Assert.Contains("ExtensionFiltersView", configOptionsXaml);
+        Assert.Contains("DatMappings", configOptionsXaml);
+        Assert.Contains("GameKeyPreviewInput", configOptionsXaml);
+        Assert.Contains("LibraryReportView", resultViewXaml);
+        Assert.Contains("ConversionCapabilities", toolsViewXaml);
+    }
+
+    [Fact]
     public void MainViewModel_DashboardPrimaryAction_SwitchesToConvertOnly_ForConvertPreset()
     {
         var vm = CreateViewModel();

@@ -33,8 +33,9 @@
           <Border Style="{StaticResource MetricCard}" Width="150" MinHeight="76">
             <StackPanel>
               <StackPanel Orientation="Horizontal">
-                <Ellipse Width="16" Height="16" Margin="0,0,8,0"
-                         Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=1}"/>
+                <Border Width="16" Height="16" Margin="0,0,8,0"
+                        CornerRadius="3"
+                        Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=1}"/>
                 <TextBlock Text="{Binding Loc[Phase.Preflight]}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
               </StackPanel>
               <TextBlock Text="Konfiguration prüfen" Style="{StaticResource CaptionText}" Margin="0,8,0,0"/>
@@ -44,8 +45,9 @@
           <Border Style="{StaticResource MetricCard}" Width="150" MinHeight="76">
             <StackPanel>
               <StackPanel Orientation="Horizontal">
-                <Ellipse Width="16" Height="16" Margin="0,0,8,0"
-                         Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=2}"/>
+                <Border Width="16" Height="16" Margin="0,0,8,0"
+                        CornerRadius="3"
+                        Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=2}"/>
                 <TextBlock Text="{Binding Loc[Phase.Scan]}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
               </StackPanel>
               <TextBlock Text="Quellen materialisieren" Style="{StaticResource CaptionText}" Margin="0,8,0,0"/>
@@ -55,8 +57,9 @@
           <Border Style="{StaticResource MetricCard}" Width="150" MinHeight="76">
             <StackPanel>
               <StackPanel Orientation="Horizontal">
-                <Ellipse Width="16" Height="16" Margin="0,0,8,0"
-                         Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=3}"/>
+                <Border Width="16" Height="16" Margin="0,0,8,0"
+                        CornerRadius="3"
+                        Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=3}"/>
                 <TextBlock Text="{Binding Loc[Phase.Dedupe]}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
               </StackPanel>
               <TextBlock Text="Kandidaten bewerten" Style="{StaticResource CaptionText}" Margin="0,8,0,0"/>
@@ -76,8 +79,9 @@
             </Border.Style>
             <StackPanel>
               <StackPanel Orientation="Horizontal">
-                <Ellipse Width="16" Height="16" Margin="0,0,8,0"
-                         Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=4}"/>
+                <Border Width="16" Height="16" Margin="0,0,8,0"
+                        CornerRadius="3"
+                        Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=4}"/>
                 <TextBlock Text="{Binding Loc[Phase.Move]}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
               </StackPanel>
               <TextBlock Text="Sichere Moves ausführen" Style="{StaticResource CaptionText}" Margin="0,8,0,0"/>
@@ -87,8 +91,9 @@
           <Border Style="{StaticResource MetricCard}" Width="150" MinHeight="76">
             <StackPanel>
               <StackPanel Orientation="Horizontal">
-                <Ellipse Width="16" Height="16" Margin="0,0,8,0"
-                         Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=5}"/>
+                <Border Width="16" Height="16" Margin="0,0,8,0"
+                        CornerRadius="3"
+                        Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=5}"/>
                 <TextBlock Text="{Binding Loc[Phase.Sort]}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
               </StackPanel>
               <TextBlock Text="Zielstruktur aufbauen" Style="{StaticResource CaptionText}" Margin="0,8,0,0"/>
@@ -108,8 +113,9 @@
             </Border.Style>
             <StackPanel>
               <StackPanel Orientation="Horizontal">
-                <Ellipse Width="16" Height="16" Margin="0,0,8,0"
-                         Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=6}"/>
+                <Border Width="16" Height="16" Margin="0,0,8,0"
+                        CornerRadius="3"
+                        Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=6}"/>
                 <TextBlock Text="{Binding Loc[Phase.Convert]}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
               </StackPanel>
               <TextBlock Text="Formate optimieren" Style="{StaticResource CaptionText}" Margin="0,8,0,0"/>
@@ -119,8 +125,9 @@
           <Border Style="{StaticResource MetricCard}" Width="150" MinHeight="76">
             <StackPanel>
               <StackPanel Orientation="Horizontal">
-                <Ellipse Width="16" Height="16" Margin="0,0,8,0"
-                         Fill="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=7}"/>
+                <Border Width="16" Height="16" Margin="0,0,8,0"
+                        CornerRadius="3"
+                        Background="{Binding CurrentRunState, Converter={StaticResource PhaseBrush}, ConverterParameter=7}"/>
                 <TextBlock Text="{Binding Loc[Phase.Done]}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
               </StackPanel>
               <TextBlock Text="Report und Undo bereit" Style="{StaticResource CaptionText}" Margin="0,8,0,0"/>

@@ -121,8 +121,6 @@
                   Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Decisions}"/>
               <views:LibrarySafetyView
                   Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Safety}"/>
-              <views:LibraryReportView
-                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Report}"/>
               <views:DatAuditView DataContext="{Binding DatAudit}"
                   Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=DatAudit}"/>
             </Grid>
@@ -132,8 +130,6 @@
                   KeyboardNavigation.TabIndex="53">
               <views:ConfigRegionsView
                   Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Regions}"/>
-              <views:ConfigFiltersView
-                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Filtering}"/>
               <views:ConfigOptionsView
                   Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Options}"/>
               <views:ConfigProfilesView
@@ -147,12 +143,6 @@
                   Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=ExternalTools}"/>
               <views:ToolsView DataContext="{Binding Tools}"
                   Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Features}"/>
-              <views:ToolsDatView
-                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=DatManagement}"/>
-              <views:ToolsConversionView
-                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Conversion}"/>
-              <views:ToolsGameKeyLabView
-                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=GameKeyLab}"/>
             </Grid>
 
             <!-- ── System (sub-tab-aware) ──────────────────────── -->

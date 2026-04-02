@@ -16,10 +16,6 @@
                          Visibility="{Binding Shell.ShowMissionDashboardTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Dashboard}"
                          AutomationProperties.Name="Dashboard"/>
-            <RadioButton GroupName="SubTab" Content="Quick Start" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowMissionQuickStartTab, Converter={StaticResource BoolToVis}}"
-                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=QuickStart}"
-                         AutomationProperties.Name="Quick Start"/>
             <RadioButton GroupName="SubTab" Content="Recent Runs" Style="{StaticResource SubTabPill}"
                          Visibility="{Binding Shell.ShowMissionRecentRunsTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=RecentRuns}"
@@ -40,10 +36,6 @@
                          Visibility="{Binding Shell.ShowLibrarySafetyTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Safety}"
                          AutomationProperties.Name="Safety Review"/>
-            <RadioButton GroupName="SubTab" Content="Report" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowLibraryReportTab, Converter={StaticResource BoolToVis}}"
-                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Report}"
-                         AutomationProperties.Name="Report Viewer"/>
             <RadioButton GroupName="SubTab" Content="DAT Audit" Style="{StaticResource SubTabPill}"
                          Visibility="{Binding Shell.ShowLibraryDatAuditTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=DatAudit}"
@@ -56,10 +48,6 @@
                          Visibility="{Binding Shell.ShowConfigRegionsTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Regions}"
                          AutomationProperties.Name="Region Priority Configuration"/>
-            <RadioButton GroupName="SubTab" Content="Filtering" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowConfigFilteringTab, Converter={StaticResource BoolToVis}}"
-                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Filtering}"
-                         AutomationProperties.Name="Filter Settings"/>
             <RadioButton GroupName="SubTab" Content="Options" Style="{StaticResource SubTabPill}"
                          Visibility="{Binding Shell.ShowConfigOptionsTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Options}"
@@ -72,26 +60,14 @@
 
           <StackPanel Orientation="Horizontal"
                       Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}">
-            <RadioButton GroupName="SubTab" Content="External Tools" Style="{StaticResource SubTabPill}"
+            <RadioButton GroupName="SubTab" Content="Toolchain" Style="{StaticResource SubTabPill}"
                          Visibility="{Binding Shell.ShowToolsExternalToolsTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=ExternalTools}"
                          AutomationProperties.Name="External Tools"/>
-            <RadioButton GroupName="SubTab" Content="Features" Style="{StaticResource SubTabPill}"
+            <RadioButton GroupName="SubTab" Content="Werkzeuge" Style="{StaticResource SubTabPill}"
                          Visibility="{Binding Shell.ShowToolsFeaturesTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Features}"
                          AutomationProperties.Name="Features"/>
-            <RadioButton GroupName="SubTab" Content="DAT Management" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowToolsDatManagementTab, Converter={StaticResource BoolToVis}}"
-                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=DatManagement}"
-                         AutomationProperties.Name="DAT Management"/>
-            <RadioButton GroupName="SubTab" Content="Conversion" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowToolsConversionTab, Converter={StaticResource BoolToVis}}"
-                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Conversion}"
-                         AutomationProperties.Name="Conversion Registry"/>
-            <RadioButton GroupName="SubTab" Content="GameKey Lab" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowToolsGameKeyLabTab, Converter={StaticResource BoolToVis}}"
-                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=GameKeyLab}"
-                         AutomationProperties.Name="GameKey Lab"/>
           </StackPanel>
 
           <StackPanel Orientation="Horizontal"

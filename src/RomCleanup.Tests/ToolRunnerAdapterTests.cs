@@ -90,6 +90,33 @@ public sealed class ToolRunnerAdapterTests : IDisposable
     }
 
     [Fact]
+    public void InvokeProcess_CancelledToken_KillsSpawnedProcess()
+    {
+        var exe = GetExistingExecutable();
+        var missingHashes = Path.Combine(_tempDir, "missing-tool-hashes.json");
+        var runner = new ToolRunnerAdapter(missingHashes, allowInsecureHashBypass: true, timeoutMinutes: 30);
+        var trackedBefore = ExternalProcessGuard.GetTrackedProcessCountForTests();
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(350));
+
+        var result = runner.InvokeProcess(
+            exe,
+            ["/c", "ping", "127.0.0.1", "-n", "30"],
+            "cancel-leak-test",
+            TimeSpan.FromSeconds(30),
+            cts.Token);
+
+        Assert.False(result.Success);
+        Assert.Contains("cancel", result.Output, StringComparison.OrdinalIgnoreCase);
+
+        SpinWait.SpinUntil(
+            () => ExternalProcessGuard.GetTrackedProcessCountForTests() <= trackedBefore,
+            TimeSpan.FromSeconds(5));
+
+        Assert.Equal(trackedBefore, ExternalProcessGuard.GetTrackedProcessCountForTests());
+    }
+
+    [Fact]
     public void InvokeProcess_Timeout_IncludesInvocationAndToolOutput()
     {
         var exe = GetExistingExecutable();

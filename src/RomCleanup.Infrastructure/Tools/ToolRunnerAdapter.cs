@@ -274,6 +274,14 @@ public sealed class ToolRunnerAdapter : IToolRunner
         CancellationToken cancellationToken)
     {
         var invocation = BuildInvocationSummary(exePath, arguments);
+        Process? process = null;
+        Task? stderrTask = null;
+        Task? stdoutTask = null;
+        IDisposable? processTrackingLease = null;
+        CancellationTokenRegistration cancellationRegistration = default;
+        string? stderr = null;
+        string? stdout = null;
+
         try
         {
             var psi = new ProcessStartInfo
@@ -291,20 +299,24 @@ public sealed class ToolRunnerAdapter : IToolRunner
             foreach (var arg in arguments)
                 psi.ArgumentList.Add(arg);
 
-            using var process = Process.Start(psi);
+            process = Process.Start(psi);
             if (process is null)
                 return new ToolResult(
                     -1,
                     BuildFailureOutput(label, "failed to start process", invocation, null, null),
                     false);
 
+            processTrackingLease = ExternalProcessGuard.Track(process, label, _log);
+            cancellationRegistration = cancellationToken.Register(() =>
+            {
+                ExternalProcessGuard.TryTerminate(process, label, TimeSpan.FromSeconds(5), _log);
+            });
+
             // Read both stdout and stderr asynchronously to prevent pipe deadlock.
             // If either pipe fills its 4KB OS buffer while the parent blocks reading the other,
             // both processes deadlock indefinitely.
-            string? stderr = null;
-            string? stdout = null;
-            var stderrTask = Task.Run(() => stderr = process.StandardError.ReadToEnd());
-            var stdoutTask = Task.Run(() => stdout = process.StandardOutput.ReadToEnd());
+            stderrTask = Task.Run(() => stderr = process.StandardError.ReadToEnd());
+            stdoutTask = Task.Run(() => stdout = process.StandardOutput.ReadToEnd());
 
             var effectiveTimeout = timeout ?? TimeSpan.FromMinutes(_timeoutMinutes);
             var deadlineUtc = DateTime.UtcNow + effectiveTimeout;
@@ -324,9 +336,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
 
             if (!completed)
             {
-                if (!process.HasExited)
-                    try { process.Kill(entireProcessTree: true); }
-                    catch (Exception ex) { _log?.Invoke($"{label}: failed to kill timed-out process: {ex.Message}"); }
+                ExternalProcessGuard.TryTerminate(process, label, TimeSpan.FromSeconds(5), _log);
 
                 TryDrainProcessTasks(stdoutTask, stderrTask);
 
@@ -352,6 +362,14 @@ public sealed class ToolRunnerAdapter : IToolRunner
             process.WaitForExit();
 
             var output = CombineToolOutput(stdout, stderr);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return new ToolResult(
+                    -1,
+                    BuildFailureOutput(label, "process cancelled", invocation, stdout, stderr),
+                    false);
+            }
+
             if (process.ExitCode != 0)
             {
                 return new ToolResult(
@@ -364,16 +382,37 @@ public sealed class ToolRunnerAdapter : IToolRunner
         }
         catch (OperationCanceledException)
         {
-            return new ToolResult(-1, BuildFailureOutput(label, "process cancelled", invocation, null, null), false);
+            if (process is not null)
+                ExternalProcessGuard.TryTerminate(process, label, TimeSpan.FromSeconds(5), _log);
+            TryDrainProcessTasks(stdoutTask, stderrTask);
+            return new ToolResult(
+                -1,
+                BuildFailureOutput(label, "process cancelled", invocation, stdout, stderr),
+                false);
         }
         catch (Exception ex)
         {
-            return new ToolResult(-1, BuildFailureOutput(label, ex.Message, invocation, null, null), false);
+            if (process is not null)
+                ExternalProcessGuard.TryTerminate(process, label, TimeSpan.FromSeconds(5), _log);
+            TryDrainProcessTasks(stdoutTask, stderrTask);
+            return new ToolResult(
+                -1,
+                BuildFailureOutput(label, ex.Message, invocation, stdout, stderr),
+                false);
+        }
+        finally
+        {
+            cancellationRegistration.Dispose();
+            processTrackingLease?.Dispose();
+            process?.Dispose();
         }
     }
 
-    private static void TryDrainProcessTasks(Task stdoutTask, Task stderrTask)
+    private static void TryDrainProcessTasks(Task? stdoutTask, Task? stderrTask)
     {
+        if (stdoutTask is null || stderrTask is null)
+            return;
+
         try
         {
             Task.WaitAll([stdoutTask, stderrTask], TimeSpan.FromSeconds(2));

@@ -693,7 +693,7 @@ public sealed class WpfNewTests : IDisposable
     }
 
     [Fact]
-    public void ShellViewModel_EnableSimpleMode_CoercesExpertNavToMissionControl()
+    public void ShellViewModel_RetiredToolSubTab_FallsBackToFeatureCatalog()
     {
         var shell = new ShellViewModel(new LocalizationService())
         {
@@ -703,11 +703,9 @@ public sealed class WpfNewTests : IDisposable
         shell.SelectedNavTag = "Tools";
         shell.SelectedSubTab = "GameKeyLab";
 
-        shell.IsSimpleMode = true;
-
-        Assert.Equal("MissionControl", shell.SelectedNavTag);
-        Assert.Equal("Dashboard", shell.SelectedSubTab);
-        Assert.False(shell.ShowToolsNav);
+        Assert.Equal("Tools", shell.SelectedNavTag);
+        Assert.Equal("Features", shell.SelectedSubTab);
+        Assert.True(shell.ShowToolsNav);
     }
 
     [Fact]
@@ -726,6 +724,22 @@ public sealed class WpfNewTests : IDisposable
         Assert.Equal("Results", shell.SelectedSubTab);
         Assert.False(shell.ShowLibraryDecisionsTab);
         Assert.True(shell.ShowLibrarySafetyTab);
+    }
+
+    [Fact]
+    public void ShellViewModel_RetiredLibraryReportSubTab_FallsBackToResults()
+    {
+        var shell = new ShellViewModel(new LocalizationService())
+        {
+            IsSimpleMode = false,
+            SelectedNavTag = "Library"
+        };
+
+        shell.SelectedSubTab = "Report";
+
+        Assert.Equal("Library", shell.SelectedNavTag);
+        Assert.Equal("Results", shell.SelectedSubTab);
+        Assert.False(shell.ShowLibraryReportTab);
     }
 
     // ═══ SettingsDto — Record Defaults ══════════════════════════════════

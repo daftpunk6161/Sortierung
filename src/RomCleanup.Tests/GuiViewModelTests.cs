@@ -694,7 +694,7 @@ public class GuiViewModelTests
         vm.ToolChdman = @"C:\nonexistent\chdman.exe";  // doesn't exist
         vm.RefreshStatus();
         Assert.Equal(StatusLevel.Warning, vm.ToolsStatusLevel);
-        Assert.Equal("Tools nicht gefunden", vm.StatusTools);
+        Assert.Equal("Toolchain unvollständig", vm.StatusTools);
     }
 
     [Fact]
@@ -3589,10 +3589,9 @@ public class GuiViewModelTests
     // ═══ TASK-127: Code-behind must not reference Infrastructure ═══════
 
     [Fact]
-    public void ToolsConversionView_CodeBehind_NoInfrastructureImport()
+    public void ToolsView_CodeBehind_NoInfrastructureImport()
     {
-        // RED: ToolsConversionView.xaml.cs currently imports RomCleanup.Infrastructure.Conversion
-        var codeBehindPath = FindWpfFile(Path.Combine("Views", "ToolsConversionView.xaml.cs"));
+        var codeBehindPath = FindWpfFile(Path.Combine("Views", "ToolsView.xaml.cs"));
         var content = File.ReadAllText(codeBehindPath);
         Assert.DoesNotContain("RomCleanup.Infrastructure", content);
     }
@@ -4771,14 +4770,19 @@ public class GuiViewModelTests
     }
 
     [Fact]
-    public void SubTabBar_ExpertTabs_BindToShellModeVisibility()
+    public void SubTabBar_ExpertTabs_ReflectConsolidatedNavigation()
     {
         var subTabPath = FindUiFile("Views", "SubTabBar.xaml");
         var content = File.ReadAllText(subTabPath);
 
         Assert.Contains("Shell.ShowLibraryDecisionsTab", content);
-        Assert.Contains("Shell.ShowConfigFilteringTab", content);
         Assert.Contains("Shell.ShowSystemActivityLogTab", content);
+        Assert.DoesNotContain("ConverterParameter=QuickStart", content);
+        Assert.DoesNotContain("ConverterParameter=Filtering", content);
+        Assert.DoesNotContain("ConverterParameter=Report", content);
+        Assert.DoesNotContain("ConverterParameter=DatManagement", content);
+        Assert.DoesNotContain("ConverterParameter=Conversion", content);
+        Assert.DoesNotContain("ConverterParameter=GameKeyLab", content);
     }
 
     // ═══ BUG-FIX: EnableDatAudit missing from GUI layer ═════════════════

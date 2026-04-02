@@ -29,21 +29,21 @@
           <!-- Counters -->
           <WrapPanel Grid.Column="1" Margin="24,0,0,0" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
-              <Ellipse Width="10" Height="10" Fill="{DynamicResource BrushSuccess}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+              <Border Width="10" Height="10" Background="{DynamicResource BrushSuccess}" CornerRadius="2" Margin="0,0,6,0" VerticalAlignment="Center"/>
               <TextBlock VerticalAlignment="Center">
                 <Run Text="Winners: " Foreground="{DynamicResource BrushTextMuted}"/>
                 <Run Text="{Binding Run.DashWinners, Mode=OneWay}" FontWeight="SemiBold"/>
               </TextBlock>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
-              <Ellipse Width="10" Height="10" Fill="{DynamicResource BrushWarning}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+              <Border Width="10" Height="10" Background="{DynamicResource BrushWarning}" CornerRadius="2" Margin="0,0,6,0" VerticalAlignment="Center"/>
               <TextBlock VerticalAlignment="Center">
                 <Run Text="Dupes: " Foreground="{DynamicResource BrushTextMuted}"/>
                 <Run Text="{Binding Run.DashDupes, Mode=OneWay}" FontWeight="SemiBold"/>
               </TextBlock>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
-              <Ellipse Width="10" Height="10" Fill="{DynamicResource BrushAccentCyan}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+              <Border Width="10" Height="10" Background="{DynamicResource BrushAccentCyan}" CornerRadius="2" Margin="0,0,6,0" VerticalAlignment="Center"/>
               <TextBlock VerticalAlignment="Center">
                 <Run Text="Gruppen: " Foreground="{DynamicResource BrushTextMuted}"/>
                 <Run Text="{Binding Run.DedupeGroupItems.Count, Mode=OneWay}" FontWeight="SemiBold"/>
