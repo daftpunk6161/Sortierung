@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using RomCleanup.UI.Wpf.ViewModels;
@@ -21,10 +20,9 @@ public partial class ResultView : UserControl
         if (DataContext is not MainViewModel vm) return;
         vm.PropertyChanged += OnVmPropertyChanged;
         if (vm.HasRunResult || vm.Run.HasRunData)
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, async () =>
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () =>
             {
                 RefreshCharts(vm);
-                await RefreshReportPreviewAsync();
             });
     }
 
@@ -40,58 +38,15 @@ public partial class ResultView : UserControl
             && sender is MainViewModel vm
             && (vm.HasRunResult || vm.Run.HasRunData))
         {
-            // Defer: HasRunResult may fire before ConsoleDistribution is populated.
-            // Dispatcher.BeginInvoke ensures RefreshCharts runs after ApplyRunResult completes.
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, async () =>
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () =>
             {
                 RefreshCharts(vm);
-                await RefreshReportPreviewAsync();
             });
         }
     }
 
-    /// <summary>GUI-104/106: Populate ScottPlot charts with run result data.</summary>
     private void RefreshCharts(MainViewModel vm)
     {
-        // ── Pie Chart: Console Distribution ──
-        var items = vm.Run.ConsoleDistribution;
-        chartConsolePie.Plot.Clear();
-        if (items.Count > 0)
-        {
-            var slices = new List<PieSlice>();
-            var palette = new ScottPlot.Palettes.Category10();
-            var hideSliceLabels = items.Count > 8;
-            for (int i = 0; i < items.Count; i++)
-            {
-                slices.Add(new PieSlice
-                {
-                    Value = items[i].FileCount,
-                    Label = items[i].DisplayName,
-                    FillColor = palette.GetColor(i),
-                });
-            }
-            double total = slices.Sum(s => s.Value);
-            foreach (var s in slices)
-            {
-                s.LabelFontSize = 15;
-                s.LabelFontColor = ScottPlot.Colors.White;
-                if (hideSliceLabels || (total > 0 && s.Value / total < 0.05))
-                    s.Label = string.Empty;
-            }
-
-            var pie = chartConsolePie.Plot.Add.Pie(slices);
-            pie.DonutFraction = 0.4;
-            pie.SliceLabelDistance = 1.5;
-
-            var legend = chartConsolePie.Plot.ShowLegend();
-            legend.FontSize = 13;
-            legend.FontColor = ScottPlot.Colors.White;
-        }
-        StyleChart(chartConsolePie);
-        chartConsolePie.Plot.Axes.Frameless();
-        chartConsolePie.Plot.HideGrid();
-        chartConsolePie.Refresh();
-
         // ── Bar Chart: Before/After (Keep vs Move vs Junk) ──
         chartBeforeAfter.Plot.Clear();
         var totalGames = vm.Run.GamesRaw;
@@ -120,9 +75,6 @@ public partial class ResultView : UserControl
     {
         chart.Plot.FigureBackground.Color = ScottPlot.Color.FromHex("#1a1a2e");
         chart.Plot.DataBackground.Color = ScottPlot.Color.FromHex("#16213e");
-        chart.Plot.Axes.Color(ScottPlot.Color.FromHex("#888888"));
+        chart.Plot.Axes.Color(ScottPlot.Color.FromHex("#d8e1ff"));
     }
-
-    private Task RefreshReportPreviewAsync()
-        => reportPreviewSection.RefreshReportPreviewAsync();
 }

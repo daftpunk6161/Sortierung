@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Text;
 using System.Text.RegularExpressions;
 using RomCleanup.Core.Classification;
 using Xunit;
@@ -94,6 +95,80 @@ public class ConsoleDetectorTests
         Assert.Equal("PS1", detector.DetectByFolder(@"D:\PS1\game.bin", @"D:\PS1"));
         Assert.Equal("PS1", detector.DetectByFolder(@"D:\ps1\game.bin", @"D:\ps1"));
         Assert.Equal("PS1", detector.DetectByFolder(@"D:\Ps1\game.bin", @"D:\Ps1"));
+    }
+
+    [Fact]
+    public void DetectByFolder_VendorPrefixedSegment_ResolvesAliasPart()
+    {
+        var detector = CreateDetector();
+
+        var detected = detector.DetectByFolder(
+            @"I:\\Sony - Playstation 2\\Konvert\\game.iso",
+            @"I:\\");
+
+        Assert.Equal("PS2", detected);
+    }
+
+    [Fact]
+    public void DetectByFolder_RootVendorPrefixed_ResolvesAliasPart()
+    {
+        var detector = CreateDetector();
+
+        var detected = detector.DetectByFolder(
+            @"I:\\Sony - Playstation 2\\game.iso",
+            @"I:\\Sony - Playstation 2");
+
+        Assert.Equal("PS2", detected);
+    }
+
+    [Fact]
+    public void DetectByFolder_RootNestedUnderVendorPrefixedParent_ResolvesAliasPart()
+    {
+        var detector = CreateDetector();
+
+        var detected = detector.DetectByFolder(
+            @"I:\\Sony - Playstation 2\\Konvert\\game.iso",
+            @"I:\\Sony - Playstation 2\\Konvert");
+
+        Assert.Equal("PS2", detected);
+    }
+
+    [Fact]
+    public void DetectWithConfidence_GenericPs1Header_WithPs2FolderHint_PrefersPs2()
+    {
+        var consoles = new[]
+        {
+            new ConsoleInfo("PS1", "PlayStation", true,
+                Array.Empty<string>(), Array.Empty<string>(),
+                new[] { "ps1", "psx", "playstation" }),
+            new ConsoleInfo("PS2", "PlayStation 2", true,
+                Array.Empty<string>(), Array.Empty<string>(),
+                new[] { "ps2", "playstation2", "playstation 2" }),
+        };
+        var detector = new ConsoleDetector(consoles, new DiscHeaderDetector());
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"detector-ps2-hint-{Guid.NewGuid():N}");
+        var nestedRoot = Path.Combine(tempRoot, "Sony - Playstation 2", "Konvert");
+        Directory.CreateDirectory(nestedRoot);
+
+        var data = new byte[0x8000 + 128];
+        data[0x8000] = 0x01;
+        Encoding.ASCII.GetBytes("CD001").CopyTo(data, 0x8001);
+        Encoding.ASCII.GetBytes("PLAYSTATION").CopyTo(data, 0x8008);
+
+        var isoPath = Path.Combine(nestedRoot, "sample.iso");
+        File.WriteAllBytes(isoPath, data);
+
+        try
+        {
+            var result = detector.DetectWithConfidence(isoPath, nestedRoot);
+            Assert.Equal("PS2", result.ConsoleKey);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+                Directory.Delete(tempRoot, true);
+        }
     }
 
     // ── Extension detection ─────────────────────────────────────────────

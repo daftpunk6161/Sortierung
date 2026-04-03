@@ -221,7 +221,8 @@ public sealed class ConsoleDetector
         // Check folder segments (skip the filename itself)
         for (int i = 0; i < segments.Length - 1; i++)
         {
-            if (_folderMap.TryGetValue(segments[i], out var consoleKey))
+            var consoleKey = ResolveFolderAlias(segments[i]);
+            if (consoleKey is not null)
             {
                 _folderDetectCache.Set(cacheKey, consoleKey);
                 return consoleKey;
@@ -230,13 +231,49 @@ public sealed class ConsoleDetector
 
         // Fallback: check the root folder's own name (e.g. root = "Y:\Games\Sega CD")
         var rootName = Path.GetFileName(rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-        if (!string.IsNullOrEmpty(rootName) && _folderMap.TryGetValue(rootName, out var rootConsole))
+        var rootConsole = ResolveFolderAlias(rootName);
+        if (rootConsole is not null)
         {
             _folderDetectCache.Set(cacheKey, rootConsole);
             return rootConsole;
         }
 
+        // Fallback: when root is nested (e.g. "I:\\Sony - Playstation 2\\Konvert"),
+        // inspect parent root segments to recover the console hint.
+        var rootSegments = rootPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        for (int i = rootSegments.Length - 2; i >= 0; i--)
+        {
+            var parentConsole = ResolveFolderAlias(rootSegments[i]);
+            if (parentConsole is not null)
+            {
+                _folderDetectCache.Set(cacheKey, parentConsole);
+                return parentConsole;
+            }
+        }
+
         _folderDetectCache.Set(cacheKey, "");
+        return null;
+    }
+
+    private string? ResolveFolderAlias(string? folderSegment)
+    {
+        if (string.IsNullOrWhiteSpace(folderSegment))
+            return null;
+
+        if (_folderMap.TryGetValue(folderSegment, out var direct))
+            return direct;
+
+        // Support common vendor-prefixed folder names like "Sony - Playstation 2".
+        var parts = folderSegment.Split(" - ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length <= 1)
+            return null;
+
+        foreach (var part in parts)
+        {
+            if (_folderMap.TryGetValue(part, out var resolved))
+                return resolved;
+        }
+
         return null;
     }
 
@@ -361,8 +398,21 @@ public sealed class ConsoleDetector
                     ? _discHeaderDetector.DetectFromDiscImage(filePath)
                     : null;
             if (byHeader is not null)
-                hypotheses.Add(new DetectionHypothesis(byHeader, (int)DetectionSource.DiscHeader,
-                    DetectionSource.DiscHeader, $"disc-header={byHeader}"));
+            {
+                var source = DetectionSource.DiscHeader;
+                var confidence = (int)DetectionSource.DiscHeader;
+
+                // Generic PS1 header strings can appear in PS2 images without BOOT2 markers.
+                // If folder evidence points to PS2 on disc-like extensions, treat this as soft evidence.
+                if (ShouldDowngradeGenericPs1Header(byFolder, byHeader, discExt))
+                {
+                    source = DetectionSource.AmbiguousExtension;
+                    confidence = (int)DetectionSource.AmbiguousExtension;
+                }
+
+                hypotheses.Add(new DetectionHypothesis(byHeader, confidence,
+                    source, $"disc-header={byHeader}"));
+            }
         }
 
         // Method 5: Archive interior
@@ -393,6 +443,17 @@ public sealed class ConsoleDetector
                 DetectionSource.FilenameKeyword, $"keyword={fileName}"));
 
         return HypothesisResolver.Resolve(hypotheses);
+    }
+
+    private static bool ShouldDowngradeGenericPs1Header(string? byFolder, string byHeader, string discExt)
+    {
+        if (!string.Equals(byHeader, "PS1", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (!string.Equals(byFolder, "PS2", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return discExt is ".iso" or ".bin" or ".img" or ".chd";
     }
 
     private static bool IsClearlyInvalidFile(string filePath)

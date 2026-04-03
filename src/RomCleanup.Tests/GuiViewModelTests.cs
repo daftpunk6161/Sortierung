@@ -161,6 +161,54 @@ public class GuiViewModelTests
         }
     }
 
+    [Fact]
+    public void AutoDetectDatMappingsCommand_DoesNotAssignPs1ToVitaDat()
+    {
+        var vm = new MainViewModel();
+
+        var tempDatRoot = Path.Combine(Path.GetTempPath(), "RomCleanup_DatMap_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDatRoot);
+
+        var ps1Dat = Path.Combine(tempDatRoot, "Sony - PlayStation - Datfile (2026-04-03 01-01-13).dat");
+        var vitaDat = Path.Combine(tempDatRoot, "Sony - PlayStation Vita - Datfile (2026-04-03 01-01-13).dat");
+
+        // Regression guard: old substring+filesize heuristic could map PS1 to Vita DAT.
+        File.WriteAllText(ps1Dat, "<datafile><game name=\"ps1\"/></datafile>");
+        File.WriteAllText(vitaDat, new string('V', 4096));
+
+        try
+        {
+            vm.DatMappings.Clear();
+            vm.DatRoot = tempDatRoot;
+
+            Assert.True(vm.AutoDetectDatMappingsCommand.CanExecute(null));
+            vm.AutoDetectDatMappingsCommand.Execute(null);
+
+            DatMapRow? ps1Mapping = null;
+            foreach (var mapping in vm.DatMappings)
+            {
+                if (string.Equals(mapping.Console, "PS1", StringComparison.OrdinalIgnoreCase))
+                {
+                    ps1Mapping = mapping;
+                    break;
+                }
+            }
+
+            Assert.NotNull(ps1Mapping);
+            Assert.True(
+                string.Equals(
+                    Path.GetFullPath(ps1Dat),
+                    Path.GetFullPath(ps1Mapping!.DatFile ?? string.Empty),
+                    StringComparison.OrdinalIgnoreCase),
+                $"Expected PS1 mapping '{ps1Dat}', got '{ps1Mapping!.DatFile}'.");
+        }
+        finally
+        {
+            if (Directory.Exists(tempDatRoot))
+                Directory.Delete(tempDatRoot, true);
+        }
+    }
+
     [Theory]
     [InlineData(RunState.Preflight, "3")]  // Phase 3 pending when at phase 1
     [InlineData(RunState.Scanning, "5")]   // Phase 5 pending when at phase 2
@@ -4385,10 +4433,13 @@ public class GuiViewModelTests
     {
         var xaml = File.ReadAllText(FindUiFile("Views", "ResultView.xaml"));
 
+        // Redesigned dashboard: no Expanders, no pie chart, compact bar chart
         Assert.DoesNotContain("MinWidth=\"420\"", xaml);
         Assert.DoesNotContain("Height=\"460\"", xaml);
-        Assert.Contains("Height=\"320\"", xaml);
-        Assert.Contains("Expander Header=\"{Binding Loc[Result.ConsoleDistribution]}\"", xaml);
+        Assert.Contains("chartBeforeAfter", xaml);
+        Assert.Contains("ConsoleDistribution", xaml);
+        // No redundant inline dedupe decisions (own tab handles that)
+        Assert.DoesNotContain("DedupeGroupItems", xaml);
     }
 
     // ═══ TASK-115: SmartActionBar RunState DataTriggers ════════════════

@@ -131,7 +131,13 @@ public static class RunReportWriter
         // independent from dedupe grouping internals.
         if (projection.TotalFiles > 0)
         {
-            var accountedTotal = projection.Candidates + projection.FilteredNonGameCount;
+            // Newer pipelines keep AllCandidates as the full scanned set.
+            // In that case FilteredNonGameCount is already represented in Candidates
+            // and must not be added again.
+            var accountedTotal = projection.Candidates;
+            if (accountedTotal < projection.TotalFiles)
+                accountedTotal += projection.FilteredNonGameCount;
+
             if (accountedTotal != projection.TotalFiles)
                 throw new InvalidOperationException($"Report summary invariant failed: accounted={accountedTotal}, scanned={projection.TotalFiles}");
         }

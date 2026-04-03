@@ -448,6 +448,37 @@ public class RunOrchestratorTests : IDisposable
         Assert.True(File.Exists(result.ReportPath!));
     }
 
+    [Fact]
+    public void Execute_ConvertOnly_OnlyGames_WithReportPath_WritesReport()
+    {
+        CreateFile("Game (USA).zip", 100);
+        CreateFile("Disk Utility (Tool).zip", 30);
+
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var audit = new FakeAuditStore();
+        var orch = new RunOrchestrator(fs, audit, converter: new FakeFormatConverter());
+        var reportPath = Path.Combine(_tempDir, "reports", "convert-only.html");
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = RunConstants.ModeMove,
+            ConvertOnly = true,
+            ConvertFormat = "chd",
+            OnlyGames = true,
+            KeepUnknownWhenOnlyGames = false,
+            ReportPath = reportPath
+        };
+
+        var result = orch.Execute(options);
+
+        Assert.Equal("ok", result.Status);
+        Assert.True(result.FilteredNonGameCount > 0);
+        Assert.Equal(Path.GetFullPath(reportPath), result.ReportPath);
+        Assert.True(File.Exists(reportPath));
+    }
+
     // ── Move Phase Tests ──────────────────────────────────────────
 
     [Fact]
