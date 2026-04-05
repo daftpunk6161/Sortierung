@@ -45,6 +45,20 @@ public sealed class FeatureCommandServiceTests : IDisposable
     private bool HasOutput() =>
         _vm.LogEntries.Count > 0 || _dialog.ShowTextCalls.Count > 0 || _dialog.InfoCalls.Count > 0;
 
+    private async Task ExecuteFeatureCommandAsync(string commandKey)
+    {
+        var command = _vm.FeatureCommands[commandKey];
+        if (command is IAsyncRelayCommand asyncCommand)
+        {
+            asyncCommand.Execute(null);
+            if (asyncCommand.ExecutionTask is { } executionTask)
+                await executionTask;
+            return;
+        }
+
+        command.Execute(null);
+    }
+
     // ═══ REGISTER COMMANDS ══════════════════════════════════════════════
 
     [Fact]
@@ -347,19 +361,48 @@ public sealed class FeatureCommandServiceTests : IDisposable
     {
         _sut.RegisterCommands();
 
-        var command = _vm.FeatureCommands["Completeness"];
-        if (command is IAsyncRelayCommand asyncCommand)
-        {
-            asyncCommand.Execute(null);
-            if (asyncCommand.ExecutionTask is { } executionTask)
-                await executionTask;
-        }
-        else
-        {
-            command.Execute(null);
-        }
+        await ExecuteFeatureCommandAsync("Completeness");
 
         Assert.True(HasOutput());
+    }
+
+    [Fact]
+    public async Task Completeness_FixDatWriteFailure_ShowsErrorAndAddsErrorSummaryItem()
+    {
+        _sut.RegisterCommands();
+
+        var datRoot = Path.Combine(_tempDir, "datroot");
+        Directory.CreateDirectory(datRoot);
+        var datPath = Path.Combine(datRoot, "snes.dat");
+        await File.WriteAllTextAsync(datPath,
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <datafile>
+              <header>
+                <name>SNES Test DAT</name>
+              </header>
+              <game name="Missing Test Game">
+                <description>Missing Test Game</description>
+                <rom name="Missing Test Game.sfc" crc="1A2B3C4D" />
+              </game>
+            </datafile>
+            """);
+
+        _vm.Roots.Clear();
+        _vm.Roots.Add(_tempDir);
+        _vm.UseDat = true;
+        _vm.DatRoot = datRoot;
+
+        _dialog.ConfirmResult = true;
+        _dialog.SaveFileResult = _tempDir; // directory path -> write should fail
+
+        await ExecuteFeatureCommandAsync("Completeness");
+
+        Assert.Contains(_dialog.ErrorCalls, message =>
+            message.Contains("FixDAT-Export fehlgeschlagen", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(_vm.ErrorSummaryItems, item =>
+            string.Equals(item.Code, "ANALYSIS-FIXDAT", StringComparison.Ordinal) &&
+            item.Message.Contains("FixDAT-Export fehlgeschlagen", StringComparison.OrdinalIgnoreCase));
     }
 
     // ═══ COLLECTION MANAGER ═════════════════════════════════════════════

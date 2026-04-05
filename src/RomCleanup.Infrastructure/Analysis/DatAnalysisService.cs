@@ -91,13 +91,13 @@ public static class DatAnalysisService
         DatIndex datIndex,
         CompletenessReport report,
         string datName,
-        DateTime? generatedUtc = null)
+        DateTime generatedUtc)
     {
         ArgumentNullException.ThrowIfNull(datIndex);
         ArgumentNullException.ThrowIfNull(report);
         ArgumentException.ThrowIfNullOrWhiteSpace(datName);
 
-        var generatedOnUtc = (generatedUtc ?? DateTime.UtcNow).ToUniversalTime();
+        var generatedOnUtc = generatedUtc.ToUniversalTime();
 
         var gameElements = new List<XElement>();
         var consoleSummaries = new List<FixDatConsoleSummary>();

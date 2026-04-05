@@ -25,7 +25,8 @@ public sealed class DatAnalysisServiceFixDatTests
                 MissingGames: ["Metal Gear Solid", "Tekken 3"])
         ]);
 
-        var result = DatAnalysisService.BuildFixDatFromCompleteness(datIndex, report, "Romulus-Test-FixDAT");
+        var generatedUtc = new DateTime(2026, 04, 05, 00, 00, 00, DateTimeKind.Utc);
+        var result = DatAnalysisService.BuildFixDatFromCompleteness(datIndex, report, "Romulus-Test-FixDAT", generatedUtc);
 
         Assert.Equal("Romulus-Test-FixDAT", result.DatName);
         Assert.Equal(1, result.ConsoleCount);
@@ -64,7 +65,8 @@ public sealed class DatAnalysisServiceFixDatTests
                 MissingGames: Array.Empty<string>())
         ]);
 
-        var result = DatAnalysisService.BuildFixDatFromCompleteness(datIndex, report, "Empty-FixDAT");
+        var generatedUtc = new DateTime(2026, 04, 05, 00, 00, 00, DateTimeKind.Utc);
+        var result = DatAnalysisService.BuildFixDatFromCompleteness(datIndex, report, "Empty-FixDAT", generatedUtc);
 
         Assert.Equal(0, result.ConsoleCount);
         Assert.Equal(0, result.MissingGames);

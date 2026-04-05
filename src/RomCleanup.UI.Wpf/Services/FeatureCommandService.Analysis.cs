@@ -115,22 +115,34 @@ public sealed partial class FeatureCommandService
             if (!_dialog.Confirm("FixDAT fuer fehlende Spiele erzeugen?", "Vollstaendigkeit"))
                 return;
 
-            var generatedUtc = DateTime.UtcNow;
-            var datName = $"Romulus-FixDAT-{generatedUtc:yyyyMMdd-HHmmss}";
-            var fixDat = DatAnalysisService.BuildFixDatFromCompleteness(environment.DatIndex, report, datName, generatedUtc);
-
-            if (fixDat.MissingGames == 0)
+            try
             {
-                _dialog.Info("Keine fehlenden DAT-Eintraege erkannt. Es wurde keine FixDAT-Datei erzeugt.", "FixDAT");
-                return;
+                var generatedUtc = DateTime.UtcNow;
+                var datName = $"Romulus-FixDAT-{generatedUtc:yyyyMMdd-HHmmss}";
+                var fixDat = DatAnalysisService.BuildFixDatFromCompleteness(environment.DatIndex, report, datName, generatedUtc);
+
+                if (fixDat.MissingGames == 0)
+                {
+                    _dialog.Info("Keine fehlenden DAT-Eintraege erkannt. Es wurde keine FixDAT-Datei erzeugt.", "FixDAT");
+                    return;
+                }
+
+                var savePath = _dialog.SaveFile("FixDAT speichern", "DAT (*.dat)|*.dat", $"{datName}.dat");
+                if (!TryResolveSafeOutputPath(savePath, "FixDAT-Export", out var safePath))
+                    return;
+
+                await File.WriteAllTextAsync(safePath, fixDat.XmlContent, Encoding.UTF8);
+                _vm.AddLog($"FixDAT exportiert: {safePath} (Spiele={fixDat.MissingGames}, ROMs={fixDat.MissingRoms})", "INFO");
             }
-
-            var savePath = _dialog.SaveFile("FixDAT speichern", "DAT (*.dat)|*.dat", $"{datName}.dat");
-            if (!TryResolveSafeOutputPath(savePath, "FixDAT-Export", out var safePath))
-                return;
-
-            await File.WriteAllTextAsync(safePath, fixDat.XmlContent, Encoding.UTF8);
-            _vm.AddLog($"FixDAT exportiert: {safePath} (Spiele={fixDat.MissingGames}, ROMs={fixDat.MissingRoms})", "INFO");
+            catch (OperationCanceledException)
+            {
+                LogWarning("ANALYSIS-FIXDAT", "FixDAT-Export abgebrochen.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                LogError("ANALYSIS-FIXDAT", $"FixDAT-Export fehlgeschlagen: {ex.Message}");
+                _dialog.Error($"FixDAT-Export fehlgeschlagen:\n\n{ex.Message}", "FixDAT");
+            }
         }
     }
 

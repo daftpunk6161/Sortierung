@@ -78,4 +78,50 @@ public class AppStoragePathResolverTests
         Assert.Throws<InvalidOperationException>(() =>
             AppStoragePathResolver.ResolveLocalPath("cache", rooted));
     }
+
+    [Fact]
+    public void ResolveRoamingPath_ReparsePointInAncestry_Throws()
+    {
+        var root = AppStoragePathResolver.ResolveRoamingAppDirectory();
+        Directory.CreateDirectory(root);
+
+        var id = Guid.NewGuid().ToString("N");
+        var targetDir = Path.Combine(root, $"reparse-target-{id}");
+        var linkDir = Path.Combine(root, $"reparse-link-{id}");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            try
+            {
+                _ = Directory.CreateSymbolicLink(linkDir, targetDir);
+            }
+            catch
+            {
+                // Symbolic links can require elevated privileges; skip when unavailable.
+                return;
+            }
+
+            Assert.Throws<InvalidOperationException>(() =>
+                AppStoragePathResolver.ResolveRoamingPath(Path.GetFileName(linkDir), "payload.dat"));
+        }
+        finally
+        {
+            TryDeleteDirectory(linkDir);
+            TryDeleteDirectory(targetDir);
+        }
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
+        }
+        catch
+        {
+            // best effort
+        }
+    }
 }

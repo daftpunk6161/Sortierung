@@ -1,3 +1,4 @@
+using System.Security;
 using RomCleanup.Contracts;
 
 namespace RomCleanup.Infrastructure.Paths;
@@ -71,6 +72,49 @@ public static class AppStoragePathResolver
             throw new InvalidOperationException("Path segments resolved outside application storage root.");
         }
 
+        EnsureNoReparsePointInExistingAncestry(combined);
+
         return combined;
+    }
+
+    private static void EnsureNoReparsePointInExistingAncestry(string fullPath)
+    {
+        try
+        {
+            if (File.Exists(fullPath))
+            {
+                var fileAttributes = File.GetAttributes(fullPath);
+                if ((fileAttributes & FileAttributes.ReparsePoint) != 0)
+                    throw new InvalidOperationException($"Path resolves to a reparse point: {fullPath}");
+            }
+
+            var current = Directory.Exists(fullPath)
+                ? fullPath
+                : Path.GetDirectoryName(fullPath);
+
+            while (!string.IsNullOrWhiteSpace(current))
+            {
+                if (Directory.Exists(current))
+                {
+                    var directoryAttributes = File.GetAttributes(current);
+                    if ((directoryAttributes & FileAttributes.ReparsePoint) != 0)
+                        throw new InvalidOperationException($"Path contains a reparse point in ancestry: {current}");
+                }
+
+                var trimmedCurrent = current.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var root = Path.GetPathRoot(trimmedCurrent);
+                if (!string.IsNullOrWhiteSpace(root) &&
+                    string.Equals(trimmedCurrent, root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+
+                current = Path.GetDirectoryName(trimmedCurrent);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SecurityException)
+        {
+            throw new InvalidOperationException("Unable to validate reparse-point ancestry for application storage path.", ex);
+        }
     }
 }
