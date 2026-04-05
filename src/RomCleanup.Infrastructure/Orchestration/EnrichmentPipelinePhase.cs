@@ -20,6 +20,12 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
     private static readonly IFamilyDatStrategyResolver DefaultFamilyDatStrategyResolver = new FamilyDatStrategyResolver();
     private static readonly FamilyPipelineSelector DefaultFamilyPipelineSelector = new();
 
+    /// <summary>Generic stems too short or ambiguous to qualify as strict DAT name candidates.</summary>
+    private static readonly HashSet<string> GenericDatNameBlocklist = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "track", "disk", "disc", "rom", "game", "image"
+    };
+
     public string Name => "Enrichment";
 
     public List<RomCandidate> Execute(EnrichmentPhaseInput input, PipelineContext context, CancellationToken cancellationToken)
@@ -208,16 +214,16 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
 
         // Even with a DAT-first hit, run detector once to gather family/context evidence.
         // This enables post-validation for cross-family mismatches (Phase 4).
+        // IMPORTANT: Only extract family/conflict information. Do NOT overwrite primary
+        // enrichment variables (confidence, conflict flag, hardEvidence, isSoftOnly)
+        // to avoid side-effects on the DAT-authority decision path.
         if (datResult.DatMatch && detectionResult is null && consoleDetector is not null)
         {
             var parityDetection = consoleDetector.DetectWithConfidence(filePath, root);
             if (parityDetection.ConsoleKey is not "UNKNOWN" and not "")
             {
                 detectionResult = parityDetection;
-                detectionConfidence = Math.Max(detectionConfidence, parityDetection.Confidence);
-                detectionConflict = parityDetection.HasConflict;
-                hasHardEvidence = parityDetection.HasHardEvidence;
-                isSoftOnly = parityDetection.IsSoftOnly;
+                // Only enrich matchEvidence if it was completely empty (DAT-first with no prior detection)
                 if (matchEvidence.PrimaryMatchKind == MatchKind.None)
                     matchEvidence = parityDetection.MatchEvidence ?? matchEvidence;
             }
@@ -865,7 +871,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             return false;
 
         var lowered = normalized.ToLowerInvariant();
-        if (lowered is "track" or "disk" or "disc" or "rom" or "game" or "image")
+        if (GenericDatNameBlocklist.Contains(lowered))
             return false;
 
         var lettersOrDigits = normalized.Count(char.IsLetterOrDigit);

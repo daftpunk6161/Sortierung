@@ -37,6 +37,8 @@ public sealed partial class RunOrchestrator : IDisposable
     private readonly IReadOnlySet<string>? _knownBiosHashes;
     private readonly string? _enrichmentFingerprint;
     private readonly PersistedReviewDecisionService? _reviewDecisionService;
+    private readonly IFamilyDatStrategyResolver? _familyDatStrategyResolver;
+    private readonly FamilyPipelineSelector? _familyPipelineSelector;
     private bool _disposed;
 
     public RunOrchestrator(
@@ -53,7 +55,9 @@ public sealed partial class RunOrchestrator : IDisposable
         IReadOnlySet<string>? knownBiosHashes = null,
         Contracts.Ports.ICollectionIndex? collectionIndex = null,
         string? enrichmentFingerprint = null,
-        PersistedReviewDecisionService? reviewDecisionService = null)
+        PersistedReviewDecisionService? reviewDecisionService = null,
+        IFamilyDatStrategyResolver? familyDatStrategyResolver = null,
+        FamilyPipelineSelector? familyPipelineSelector = null)
     {
         _fs = fs;
         _audit = audit;
@@ -69,6 +73,8 @@ public sealed partial class RunOrchestrator : IDisposable
         _knownBiosHashes = knownBiosHashes;
         _enrichmentFingerprint = string.IsNullOrWhiteSpace(enrichmentFingerprint) ? null : enrichmentFingerprint;
         _reviewDecisionService = reviewDecisionService;
+        _familyDatStrategyResolver = familyDatStrategyResolver;
+        _familyPipelineSelector = familyPipelineSelector;
     }
 
     /// <summary>

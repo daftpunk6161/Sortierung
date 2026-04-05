@@ -300,7 +300,7 @@ public sealed class RunProjectionConsistencyTests
             DatRenameSkippedCount: 0, DatRenameFailedCount: 0,
             JunkRemovedCount: 10, FilteredNonGameCount: 5,
             MoveCount: 30, SkipCount: 10, JunkFailCount: 0,
-            ConsoleSortMoved: 0, ConsoleSortFailed: 0, ConsoleSortReviewed: 0, ConsoleSortBlocked: 0,
+            ConsoleSortMoved: 0, ConsoleSortFailed: 0, ConsoleSortReviewed: 0, ConsoleSortBlocked: 0, ConsoleSortUnknown: 0,
             FailCount: 0, SavedBytes: 0, DurationMs: 100, HealthScore: 80);
 
         // Category breakdown should cover candidates
@@ -326,7 +326,7 @@ public sealed class RunProjectionConsistencyTests
             DatRenameSkippedCount: 0, DatRenameFailedCount: 0,
             JunkRemovedCount: 0, FilteredNonGameCount: 0,
             MoveCount: 0, SkipCount: 0, JunkFailCount: 0,
-            ConsoleSortMoved: 0, ConsoleSortFailed: 0, ConsoleSortReviewed: 0, ConsoleSortBlocked: 0,
+            ConsoleSortMoved: 0, ConsoleSortFailed: 0, ConsoleSortReviewed: 0, ConsoleSortBlocked: 0, ConsoleSortUnknown: 0,
             FailCount: 0, SavedBytes: 0, DurationMs: 100, HealthScore: 95);
 
         // Converted + Errors + Skipped == Attempted (50 total)

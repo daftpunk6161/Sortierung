@@ -964,7 +964,8 @@ public sealed class DetectionPipelineTests
     [Fact]
     public void Resolver_UnknownFamily_TreatedAsIntraFamily()
     {
-        // Unknown keys → family = Unknown → treated conservatively as IntraFamily (not CrossFamily).
+        // Unknown keys → family = Unknown → treated conservatively.
+        // Winner (PS1) is known; competitor (MYSTERY) is Unknown → conflict type is None.
         PlatformFamily lookup(string key) => key == "PS1" ? PlatformFamily.RedumpDisc : PlatformFamily.Unknown;
 
         var hypotheses = new List<DetectionHypothesis>
@@ -976,8 +977,8 @@ public sealed class DetectionPipelineTests
         var result = HypothesisResolver.Resolve(hypotheses, lookup);
 
         Assert.True(result.HasConflict);
-        // Unknown family → not cross-family
-        Assert.NotEqual(ConflictType.CrossFamily, result.ConflictType);
+        // Unknown competitor → can't determine relationship → None
+        Assert.Equal(ConflictType.None, result.ConflictType);
         Assert.NotEqual(DecisionClass.Blocked, result.DecisionClass);
     }
 

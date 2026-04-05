@@ -463,7 +463,7 @@ public sealed partial class RunOrchestrator
         CancellationToken cancellationToken)
     {
         var enrichmentPhase = new EnrichmentPipelinePhase();
-        var input = new EnrichmentPhaseInput(files, _consoleDetector, _hashService, _archiveHashService, _datIndex, _headerlessHasher, _knownBiosHashes);
+        var input = new EnrichmentPhaseInput(files, _consoleDetector, _hashService, _archiveHashService, _datIndex, _headerlessHasher, _knownBiosHashes, _familyDatStrategyResolver, _familyPipelineSelector);
 
         try
         {

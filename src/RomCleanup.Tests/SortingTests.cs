@@ -310,7 +310,9 @@ public class ConsoleSorterTests : IDisposable
 
         Assert.Equal(1, result.Blocked);
         Assert.Equal(0, result.Moved);
-        Assert.True(File.Exists(romPath), "Blocked game should NOT be moved");
+        // Blocked non-junk game is moved to _BLOCKED/{reason}/ staging folder
+        Assert.True(File.Exists(Path.Combine(_tempDir, "_BLOCKED", "blocked", "Game.nes")),
+            "Blocked game should be staged in _BLOCKED/ folder");
     }
 
     [Fact]

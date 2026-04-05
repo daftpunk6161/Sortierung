@@ -437,6 +437,7 @@ public sealed class ApiRunResult
     public int ConsoleSortFailed { get; init; }
     public int ConsoleSortReviewed { get; init; }
     public int ConsoleSortBlocked { get; init; }
+    public int ConsoleSortUnknown { get; init; }
     public int FailCount { get; init; }
     public long SavedBytes { get; init; }
     public long DurationMs { get; init; }

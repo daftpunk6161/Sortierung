@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Infrastructure.Audit;
+using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.FileSystem;
 using RomCleanup.Infrastructure.Hashing;
 using RomCleanup.Infrastructure.Index;
@@ -40,6 +41,8 @@ public static class SharedServiceRegistration
         services.AddSingleton<IRunOptionsFactory, RunOptionsFactory>();
         services.AddSingleton<IRunEnvironmentFactory, RunEnvironmentFactory>();
         services.AddSingleton<IPhasePlanBuilder, PhasePlanBuilder>();
+        services.AddSingleton<IFamilyDatStrategyResolver, FamilyDatStrategyResolver>();
+        services.AddSingleton<FamilyPipelineSelector>();
 
         return services;
     }

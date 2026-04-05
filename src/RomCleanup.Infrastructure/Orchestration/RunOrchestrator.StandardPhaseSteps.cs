@@ -162,7 +162,7 @@ public sealed partial class RunOrchestrator
             {
                 enrichedCategories[c.MainPath] = c.Category.ToString();
                 enrichedSortDecisions[c.MainPath] = c.SortDecision.ToString();
-                enrichedSortReasons[c.MainPath] = BuildSortReasonTag(c);
+                enrichedSortReasons[c.MainPath] = ConsoleSorter.BuildSortReasonTag(c);
 
                 if (string.IsNullOrEmpty(c.ConsoleKey) ||
                     c.ConsoleKey is "UNKNOWN" or "AMBIGUOUS")
@@ -253,28 +253,6 @@ public sealed partial class RunOrchestrator
         return remainingPaths
             .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-    }
-
-    private static string BuildSortReasonTag(RomCandidate candidate)
-    {
-        if (candidate.DetectionConflictType == ConflictType.CrossFamily)
-            return "cross-family-conflict";
-
-        if (candidate.DetectionConflictType == ConflictType.IntraFamily)
-            return "intra-family-conflict";
-
-        if (candidate.SortDecision == SortDecision.Unknown)
-            return "insufficient-evidence";
-
-        if (candidate.SortDecision == SortDecision.Blocked && candidate.Category == FileCategory.Junk)
-            return "junk-category";
-
-        if (!string.IsNullOrWhiteSpace(candidate.MatchEvidence.Reasoning))
-            return candidate.MatchEvidence.Reasoning;
-
-        return candidate.PrimaryMatchKind != MatchKind.None
-            ? candidate.PrimaryMatchKind.ToString()
-            : candidate.ClassificationReasonCode;
     }
 
     private PhaseStepResult RunWinnerConversionStep(

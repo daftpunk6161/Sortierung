@@ -52,6 +52,7 @@ internal static class ApiRunResultMapper
             ConsoleSortFailed = projection.ConsoleSortFailed,
             ConsoleSortReviewed = projection.ConsoleSortReviewed,
             ConsoleSortBlocked = projection.ConsoleSortBlocked,
+            ConsoleSortUnknown = projection.ConsoleSortUnknown,
             FailCount = projection.FailCount,
             SavedBytes = projection.SavedBytes,
             DurationMs = projection.DurationMs,

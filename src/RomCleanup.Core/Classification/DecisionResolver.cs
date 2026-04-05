@@ -36,39 +36,43 @@ public static class DecisionResolver
         bool datAvailable,
         ConflictType conflictType)
     {
-        // Tier0 = exact DAT hash. Absolute authority.
-        if (tier == EvidenceTier.Tier0_ExactDat && !hasConflict)
-            return DecisionClass.DatVerified;
-
-        if (tier == EvidenceTier.Tier0_ExactDat && hasConflict)
-        {
-            // Cross-family DAT conflict → Blocked (fundamentally different systems)
-            if (conflictType == ConflictType.CrossFamily)
-                return DecisionClass.Blocked;
-            return DecisionClass.Review;
-        }
-
-        // Cross-family conflict at any non-DAT tier → always Blocked
+        // ── Cross-family conflict gate (applies to ALL tiers) ──
+        // Fundamentally different platform families (e.g. PS1/RedumpDisc vs Vita/Hybrid)
+        // are always blocked regardless of evidence strength.
         if (hasConflict && conflictType == ConflictType.CrossFamily)
             return DecisionClass.Blocked;
 
-        // Conservative DAT gate: DAT loaded but no hash match → cap at Review
-        if (tier == EvidenceTier.Tier1_Structural && datAvailable)
-            return DecisionClass.Review;
+        // ── Tier 0: Exact DAT hash match ──
+        if (tier == EvidenceTier.Tier0_ExactDat)
+        {
+            return hasConflict ? DecisionClass.Review : DecisionClass.DatVerified;
+        }
 
-        // Tier1 without DAT loaded: original behavior
-        if (tier == EvidenceTier.Tier1_Structural && !hasConflict && confidence >= 85)
-            return DecisionClass.Sort;
-
+        // ── Tier 1: Structural evidence (disc header, cartridge header, unique ext) ──
         if (tier == EvidenceTier.Tier1_Structural)
-            return DecisionClass.Review;
+        {
+            // Conservative DAT gate: DAT loaded but file hash NOT in DAT → negative signal.
+            // Cap at Review even without conflict. Rationale: a loaded DAT that doesn't
+            // contain the hash suggests the file may be undumped, bad, or misidentified.
+            if (datAvailable)
+                return DecisionClass.Review;
 
+            // Without DAT: structural evidence can reach Sort if high-confidence and no conflict.
+            if (!hasConflict && confidence >= 85)
+                return DecisionClass.Sort;
+
+            return DecisionClass.Review;
+        }
+
+        // ── Tier 2: Strong heuristic (folder + extension combo) ──
         if (tier == EvidenceTier.Tier2_StrongHeuristic)
             return DecisionClass.Review;
 
+        // ── Tier 3: Weak heuristic (ambiguous extension only) ──
         if (tier == EvidenceTier.Tier3_WeakHeuristic)
             return DecisionClass.Blocked;
 
+        // ── Tier 4+: No evidence ──
         return DecisionClass.Unknown;
     }
 }

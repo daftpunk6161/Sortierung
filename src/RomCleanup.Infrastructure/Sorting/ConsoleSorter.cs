@@ -581,6 +581,14 @@ public sealed class ConsoleSorter
         }
     }
 
+    // Windows reserved device names (case-insensitive).
+    private static readonly HashSet<string> WindowsReservedNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL",
+        "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    };
+
     private static string ToSafeReasonSegment(string? reason, string fallback)
     {
         if (string.IsNullOrWhiteSpace(reason))
@@ -590,6 +598,15 @@ public sealed class ConsoleSorter
         normalized = RxReasonSegment.Replace(normalized, "-").Trim('-');
 
         if (normalized.Length == 0)
+            return fallback;
+
+        // Defense-in-depth: strip path traversal sequences
+        normalized = normalized.Replace("..", "").Trim('-');
+        if (normalized.Length == 0)
+            return fallback;
+
+        // Block Windows reserved device names
+        if (WindowsReservedNames.Contains(normalized))
             return fallback;
 
         return normalized.Length > 64
@@ -604,6 +621,32 @@ public sealed class ConsoleSorter
 
         _audit.AppendAuditRow(_auditPath, root, oldPath, newPath,
             "CONSOLE_SORT", "GAME", "", $"console-sort:{reasonTag}");
+    }
+
+    /// <summary>
+    /// Computes a deterministic sort-reason tag from enriched candidate properties.
+    /// Shared between orchestration (reason dictionary population) and any future consumers.
+    /// </summary>
+    internal static string BuildSortReasonTag(RomCandidate candidate)
+    {
+        if (candidate.DetectionConflictType == ConflictType.CrossFamily)
+            return "cross-family-conflict";
+
+        if (candidate.DetectionConflictType == ConflictType.IntraFamily)
+            return "intra-family-conflict";
+
+        if (candidate.SortDecision == SortDecision.Unknown)
+            return "insufficient-evidence";
+
+        if (candidate.SortDecision == SortDecision.Blocked && candidate.Category == FileCategory.Junk)
+            return "junk-category";
+
+        if (!string.IsNullOrWhiteSpace(candidate.MatchEvidence.Reasoning))
+            return candidate.MatchEvidence.Reasoning;
+
+        return candidate.PrimaryMatchKind != MatchKind.None
+            ? candidate.PrimaryMatchKind.ToString()
+            : candidate.ClassificationReasonCode;
     }
 
     private void WriteAuditWarning(string root, string reason)

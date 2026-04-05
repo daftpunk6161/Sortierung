@@ -3,6 +3,8 @@
 > **Erstellt:** 2026-03-29  
 > **Status:** Living Document  
 > **Zielgruppe:** Produktentscheidung, Priorisierung, Sprint-Planung
+> **Hinweis zum Lesefluss:** Abschnitte 1-5 enthalten den urspruenglichen Ideation-Stand.  
+> Der aktuell verifizierte Umsetzungsstand wird in Abschnitt 6 als Tracking-Quelle gepflegt.
 
 ---
 
@@ -661,94 +663,86 @@ Die Features mit dem hoechsten Community-Impact sind: Smart Patch Pipeline (taeg
 
 ## 6. Priorisiertes Backlog
 
-| ID | Titel | Kategorie | Problem | Zielgruppe | Nutzen | Aufwand | Risiko | Prio | Status | Naechster Schritt |
-|----|-------|-----------|---------|------------|--------|---------|--------|------|--------|-------------------|
-| FEAT-007 | Multi-Disc Playlist Generator | Integration | Multi-Disc-Games brauchen .m3u manuell | Emulations-User | Hoch | Klein | Niedrig | P1 | Proposed | Spec: .m3u Format + Disc-Detection-Regeln |
-| FEAT-010 | Space Savings Estimator | UX | Konvertierungsentscheidung uninformiert | Alle | Hoch | Klein | Niedrig | P1 | Proposed | Spec: Kompressionsraten-DB pro Format |
-| FEAT-018 | Fixdat Generator | DAT | Fehlende ROMs nicht als Standard-DAT exportierbar | Power-User | Hoch | Klein | Niedrig | P1 | Proposed | Logiqx XML Writer implementieren |
-| FEAT-017 | CLI Preset Profiles | CLI | CLI-Befehle lang und fehleranfaellig | CLI-User | Mittel | Klein | Niedrig | P2 | Proposed | profiles.json Schema definieren |
-| FEAT-002 | Smart Patch Pipeline | Core | Patching manuell, 4-5 separate Schritte | Alle | Sehr hoch | Mittel | Niedrig | P1 | Proposed | IPS/BPS Parser evaluieren (NuGet) |
-| FEAT-003 | Frontend Sync Engine | Integration | Export-Stubs nicht verdrahtet | Frontend-User | Sehr hoch | Mittel | Niedrig | P1 | Proposed | Bestehende Stubs verdrahten (RetroArch zuerst) |
-| FEAT-005 | Completionist Tracker | UX | "Wie komplett bin ich?" unbeantwortet | Sammler | Sehr hoch | Mittel | Niedrig | P1 | Proposed | DAT-Audit-Ergebnis in Dashboard projizieren |
-| FEAT-009 | Smart First-Run Wizard | UX | Einsteiger ueberfordert | Einsteiger | Hoch | Mittel | Niedrig | P1 | Proposed | Quick-Scan-Engine spezifizieren |
-| FEAT-021 | Parallel Conversion | Performance | Conversion sequentiell = langsam | Power-User | Hoch | Mittel | Mittel | P2 | Proposed | Thread-Safety-Analyse der Conversion-Pipeline |
-| FEAT-013 | ROM Header Manager | Core | Header-Mismatch → falsche DAT-Matches | No-Intro-User | Mittel | Mittel | Niedrig | P2 | Proposed | Header-Formate dokumentieren (NES, SNES, Lynx) |
-| FEAT-014 | Custom Junk Rules Editor | UX | Junk-Regeln hardcoded | Power-User | Mittel | Mittel | Niedrig | P2 | Proposed | rules.json Schema erweitern |
-| FEAT-015 | Duplicate Group Inspector | UX | Dedup-Entscheidung = Black Box | Power-User | Hoch | Mittel | Niedrig | P2 | Proposed | GroupDetails-ViewModel entwerfen |
-| FEAT-008 | DAT Changelog Engine | DAT | DAT-Aenderungen unsichtbar | Power-User | Mittel | Mittel | Niedrig | P2 | Proposed | DAT-Diff-Algorithmus spezifizieren |
-| FEAT-023 | RetroAchievements Integration | Integration | RA-Kompatibilitaet unbekannt | RA-Community | Hoch | Mittel | Niedrig | P2 | Proposed | RA API evaluieren + Rate-Limits |
-| FEAT-024 | ZSTD Zip Support | Core | Nur deflate-ZIPs unterstuetzt | Cross-Tool-User | Mittel | Mittel | Niedrig | P2 | Proposed | ZstdNet NuGet evaluieren |
-| FEAT-020 | Config Export/Share | Community | Config nicht portierfaehig | Community | Mittel | Klein | Niedrig | P2 | Proposed | Export-Schema definieren |
-| FEAT-004 | Collection Diff & Merge | Core | Multi-Source-Merge manuell | Sammler | Hoch | Mittel | Niedrig | P2 | Selected for R5 | `docs/epics/C8-collection-diff-merge.md` + `plan/r5-collection-diff-merge-execution.md` |
-| FEAT-006 | Metadata Enrichment | Integration | Sammlung "leblos" — nur Dateien | Einsteiger | Hoch | Gross | Mittel | P2 | Proposed | IGDB API Key + Schema evaluieren |
-| FEAT-001 | Collection Health Monitor | Innovation | Keine proaktive Ueberwachung | Power-User | Sehr hoch | Gross | Mittel | P2 | Proposed | FileSystemWatcher-PoC |
-| FEAT-011 | Collection Snapshot / Time Travel | Innovation | Manuelle Aenderungen unsichtbar | Archivare | Mittel | Mittel | Niedrig | P3 | Proposed | Snapshot-Format spezifizieren |
-| FEAT-012 | Arcade Set Manager | Core | Arcade-Sets nicht transformierbar | Arcade-User | Mittel | Gross | Hoch | P3 | Proposed | MAME Parent/Clone Spec studieren |
-| FEAT-016 | Watch Mode / Incremental | Performance | Full-Scan bei kleinen Aenderungen | Power-User | Hoch | Gross | Hoch | P3 | Proposed | Cache-Invalidation-Strategie |
-| FEAT-019 | Local Name Support | i18n | Nur englische Spielnamen | Internationale User | Niedrig | Mittel | Niedrig | P3 | Proposed | Retool Clonelist-Daten evaluieren |
-| FEAT-022 | Portable Mode | Distribution | Nicht portabel | Community | Niedrig | Klein | Niedrig | P3 | Proposed | Relative-Path-Settings-Fallback |
-| FEAT-025 | Dir2DAT Generator | DAT | Kein DAT-Export aus Dateistruktur | DAT-Ersteller | Niedrig | Mittel | Niedrig | P3 | Proposed | Logiqx XML Format implementieren |
+> **Ist-Stand Update:** 2026-04-05 (Code-Realitaet gegen `src/` geprueft).  
+> **Tracking-Regel:** `[x]` = fuer Produktbetrieb nutzbar implementiert, `[ ]` = noch offen oder nur teilweise umgesetzt.
+
+| Track | ID | Titel | Prio | Ist-Status | Detailstand (kurz) | Naechster Schritt |
+|------|----|-------|------|------------|--------------------|-------------------|
+| [ ] | FEAT-001 | Collection Health Monitor | P2 | Teilweise | Watch/Scheduler + Health-Hints vorhanden; kein persistentes Always-On Monitoring mit Alert-Regeln | Persistente Baselines + regelbasierte Warnungen (Schwellwerte) einfuehren |
+| [x] | FEAT-002 | Smart Patch Pipeline | P1 | Implementiert | IPS/BPS/UPS/xdelta ueber zentrale Patch-Pipeline inkl. Verify/Tool-Absicherung | CLI/API-Pfad fuer Patch-Flow angleichen und End-to-End-Tests erweitern |
+| [x] | FEAT-003 | Frontend Sync Engine | P1 | Implementiert | Export fuer RetroArch/LaunchBox/EmulationStation/Playnite/MiSTer/Analogue Pocket/OnionOS + CSV/JSON/Excel verdrahtet | Multi-Disc-Playlist-Generierung aus FEAT-007 anbinden |
+| [x] | FEAT-004 | Collection Diff & Merge | P2 | Implementiert | Vergleich + Merge-Plan + Apply inkl. Audit/Review-Entscheidungen vorhanden | Konflikt-UX weiter schaerfen (gezielte Review-Reason Codes) |
+| [ ] | FEAT-005 | Completionist Tracker / Missing ROM Dashboard | P1 | Teilweise | Vollstaendigkeits- und Missing-Reports vorhanden, aber ohne ausgebaute Wunschlisten-/MIA-Workflows | Wishlist-Export + MIA-/Filtermodell ergaenzen |
+| [ ] | FEAT-006 | Metadata Enrichment | P2 | Offen | Keine produktive Provider-Integration (IGDB/ScreenScraper/MobyGames) im aktiven Codepfad | Provider-Port definieren, API-Limits/Cache-Strategie umsetzen |
+| [ ] | FEAT-007 | Multi-Disc Playlist Generator | P1 | Teilweise | M3U-Parsing/Set-Unterstuetzung vorhanden, aber kein automatischer M3U-Generator im Run-Flow | Disc-Gruppierung + M3U-Writer + Frontend-Export-Hook implementieren |
+| [x] | FEAT-008 | DAT Changelog / Diff Engine | P2 | Implementiert | DAT-Diff + Auto-Update/Alterungs-Analysen verfuegbar | Diff-Historie persistieren und im UI trendbar machen |
+| [x] | FEAT-009 | Smart First-Run Wizard | P1 | Implementiert | Wizard-/Setup-Flow und Empfehlungspfade vorhanden | Wizard-Outcome-Metriken und Abbruchgruende sichtbarer machen |
+| [x] | FEAT-010 | Space Savings Estimator | P1 | Implementiert | Conversion Estimate + Advisor inkl. Einsparprognosen vorhanden | Prognoseguete mit realen Run-Deltas rueckkoppeln |
+| [x] | FEAT-011 | Collection Snapshot / Time Travel | P3 | Implementiert | Snapshot-Vergleich, Trend/History-Insights und DryRun-Compare vorhanden | Snapshot-Restore/Replay als gefuehrten Flow ergaenzen |
+| [ ] | FEAT-012 | Arcade Set Manager | P3 | Teilweise | Arcade Merge/Split Analyse vorhanden, aber keine vollstaendige Set-Transformation | Parent/Clone Transform (merged/split/non-merged) als Execute-Pfad bauen |
+| [ ] | FEAT-013 | ROM Header Manager | P2 | Teilweise | Header-Analyse + gezielte NES/SNES-Reparatur vorhanden, aber kein breiter Multi-System-Manager | Weitere Systeme (z. B. Lynx) + Batch-Operationen + CLI/API anbinden |
+| [ ] | FEAT-014 | Custom Junk Rules Editor | P2 | Teilweise | RuleEngine + RulePack Import/Export vorhanden, aber kein vollwertiger In-App-Editor | CRUD-Editor mit Validierung/Vorschau fuer `rules.json` einfuehren |
+| [x] | FEAT-015 | Duplicate Group Inspector | P2 | Implementiert | Duplicate-/Clone-Inspektionspfade und Transparenzansichten vorhanden | Entscheidungsgruende je Gruppe noch expliziter visualisieren |
+| [ ] | FEAT-016 | Watch Mode / Incremental | P3 | Teilweise | Watch-Trigger vorhanden, fuehrt aber im Kern wieder DryRun/Full-Pipeline aus | Echte inkrementelle Queue/Invalidation-Logik fuer Delta-Verarbeitung bauen |
+| [x] | FEAT-017 | CLI Preset Profiles | P2 | Implementiert | Profile-/Workflow-Subcommands inkl. import/export/list/show/delete vorhanden | Profilschema-Migration + Guardrails fuer Breaking-Changes erweitern |
+| [ ] | FEAT-018 | Fixdat Generator | P1 | Teilweise | Missing-/DAT-Utilities vorhanden, aber kein vollstaendiger FixDAT-Generator ueber ganze Lueckenmengen | Vollstaendigen Logiqx-FixDAT-Writer inkl. Konsole/Filter implementieren |
+| [ ] | FEAT-019 | Local Name Support | P3 | Offen | UI-Lokalisierung vorhanden, aber keine belastbare lokale Spielnamen-Quelle im Produktpfad | Datenquelle/Mapping-Pipeline fuer lokalisierte Titel aufbauen |
+| [x] | FEAT-020 | Config Export/Share | P2 | Implementiert | Profil-/Konfig-Export, Import und Sharing-Pfade vorhanden | Optionale Signierung/Vertrauensmodell fuer geteilte Bundles ergaenzen |
+| [x] | FEAT-021 | Parallel Conversion | P2 | Implementiert | Konvertierung laeuft kontrolliert parallel (deterministische Reihenfolge, begrenzte Parallelitaet) | Adaptive Parallelitaet pro System/Tool unter Safety-Limits evaluieren |
+| [ ] | FEAT-022 | Portable Mode | P3 | Teilweise | `.portable` beeinflusst Teile der Persistenz (z. B. DB/Hash-Cache), aber nicht alle Settings/Profile-Pfade | Zentralen Path-Resolver fuer vollstaendige Portable-Paritaet durchziehen |
+| [ ] | FEAT-023 | RetroAchievements Integration | P2 | Offen | Keine produktive RA-Integration (API + Hash-Mapping + Sync) vorhanden | RA-API-Spike, Rate-Limit-Konzept, Datamodel und Opt-in UX definieren |
+| [ ] | FEAT-024 | ZSTD Zip Support | P2 | Teilweise | ZSTD spielt im RVZ-Kontext eine Rolle; ZIP-Pfad selbst nutzt klassisch `-tzip` (deflate) | Explizite zstd-zip/torrentzip Modi inkl. Verify einbauen |
+| [ ] | FEAT-025 | Dir2DAT Generator | P3 | Teilweise | Einzelne Logiqx-Bausteine/Custom-Eintraege vorhanden, aber kein vollstaendiger Dir2DAT-Lauf | Verzeichnis-Scan -> Logiqx-DAT Export (Header + Entries + Filters) implementieren |
 
 ---
 
-## 7. Empfohlene Roadmap
+## 7. Empfohlene Roadmap (ab Ist-Stand 2026-04-05)
 
-### Quick Wins (klein, sofort umsetzbar, hoher Impact)
+### Sprint-ready (naechste 1-2 Sprints)
 
 | ID | Feature | Warum jetzt |
 |----|---------|-------------|
-| FEAT-007 | Multi-Disc Playlist Generator | Klein, .m3u ist trivial, grosser Emulator-Nutzen |
-| FEAT-010 | Space Savings Estimator | Klein, nutzt vorhandene ConversionPolicy-Daten |
-| FEAT-018 | Fixdat Generator | Standard-Feature, erwartet, klein |
-| FEAT-017 | CLI Preset Profiles | Klein, verbessert CLI-Erlebnis sofort |
-| FEAT-020 | Config Export/Share | Klein, foerdert Community-Engagement |
+| FEAT-007 | Multi-Disc Playlist Generator | Hoher Nutzer-Impact, technische Basis vorhanden (M3U-Parsing), klarer Scope |
+| FEAT-018 | Fixdat Generator | Kernwunsch fuer DAT-Workflows, vorhandene DAT-Bausteine nutzbar |
+| FEAT-014 | Custom Junk Rules Editor | Regeln existieren bereits, es fehlt vor allem der Editor-Workflow |
+| FEAT-022 | Portable Mode (Vollausbau) | Niedriger Aufwand mit hoher operativer Wirkung fuer Community/USB-Nutzung |
 
-### Starke mittlere Features (mittel, hoher Nutzen, differenzierend)
+### Produktisierung bestehender Teilfeatures (naechste 2-4 Sprints)
 
 | ID | Feature | Warum wichtig |
 |----|---------|---------------|
-| FEAT-003 | Frontend Sync Engine | Schliesst die "letzte Meile", Stubs existieren |
-| FEAT-005 | Completionist Tracker | Kernmehrwert fuer Sammler, nutzt DAT-Audit |
-| FEAT-002 | Smart Patch Pipeline | Hoher Community-Bedarf, differenzierend |
-| FEAT-009 | Smart First-Run Wizard | Senkt Einstiegshuerde massiv |
-| FEAT-015 | Duplicate Group Inspector | Macht Dedup transparent und vertrauenswuerdig |
-| FEAT-021 | Parallel Conversion | Performance-Erwartung bei grossen Sammlungen |
+| FEAT-005 | Completionist Tracker | Sammler-Mehrwert ist hoch, Feinschliff (Wishlist/MIA) fehlt |
+| FEAT-013 | ROM Header Manager | Bereits nutzbar fuer NES/SNES, sollte systemuebergreifend abgeschlossen werden |
+| FEAT-016 | Watch Mode / Incremental | Watch ist da, echter Delta-Run fehlt fuer Performancegewinne |
+| FEAT-025 | Dir2DAT Generator | DAT-Authoring-Faehigkeit komplettiert das Toolset fuer Power-User |
+| FEAT-024 | ZSTD Zip Support | Interop-Luecke (zstd-zip/torrentzip) schliessen fuer Cross-Tool-Paritaet |
 
-### Grosse Differenzierungsmerkmale (hohes Innovationspotential)
-
-| ID | Feature | USP |
-|----|---------|-----|
-| FEAT-001 | Collection Health Monitor | Proaktive Ueberwachung — Paradigmenwechsel |
-| FEAT-004 | Collection Diff & Merge | "Collection A vs B" existiert nirgends |
-| FEAT-023 | RetroAchievements Integration | RA-Hash als Dedup-Faktor — einzigartig |
-| FEAT-008 | DAT Changelog Engine | "Was hat sich in der DAT geaendert?" — neu |
-
-### Spaetere Epics (gross, komplex, nach Release)
+### Strategische Epics (nach Stabilisierung)
 
 | ID | Feature | Warum spaeter |
 |----|---------|---------------|
-| FEAT-006 | Metadata Enrichment | Gross, API-Abhaengigkeiten, nicht release-kritisch |
-| FEAT-012 | Arcade Set Manager | Komplex, gut von bestehenden Tools abgedeckt |
-| FEAT-016 | Watch Mode / Incremental | Technisch riskant, Determinismus-Herausforderung |
-| FEAT-011 | Collection Snapshot / Time Travel | Innovativ, aber nicht dringend |
-| FEAT-019 | Local Name Support | Nice-to-have, Retool deprecated = Chance |
+| FEAT-001 | Collection Health Monitor | Hoher Nutzen, aber anspruchsvoll in Persistenz/Alerting/Noise-Kontrolle |
+| FEAT-012 | Arcade Set Manager | Transformation merged/split/non-merged ist fachlich komplex |
+| FEAT-006 | Metadata Enrichment | Externe APIs, Caching und Lizenz-/Rate-Limit-Themen machen es gross |
+| FEAT-023 | RetroAchievements Integration | Externe Abhaengigkeit + Mapping/Sync-Design benoetigt eigenen Spike |
+| FEAT-019 | Local Name Support | Datenquelle/Qualitaet noch unklar, nicht release-kritisch |
 
 ---
 
-## Top-10 der besten neuen Feature-Ideen fuer Romulus
+## Top-10 offene Ausbau-Ideen fuer Romulus (Stand 2026-04-05)
 
-| Rang | ID | Titel | Tags |
-|------|----|-------|------|
-| 🥇 1 | FEAT-005 | **Completionist Tracker / Missing ROM Dashboard** | `Community Win`, `Differenzierungsmerkmal` |
-| 🥈 2 | FEAT-002 | **Smart Patch Pipeline** | `Community Win`, `Differenzierungsmerkmal` |
-| 🥉 3 | FEAT-003 | **Frontend Sync Engine** | `Community Win`, `Power-User Win` |
-| 4 | FEAT-009 | **Smart First-Run Wizard** | `Community Win`, `Differenzierungsmerkmal` |
-| 5 | FEAT-001 | **Collection Health Monitor** | `Differenzierungsmerkmal`, `Power-User Win` |
-| 6 | FEAT-010 | **Space Savings Estimator** | `Community Win`, `Quick Win` |
-| 7 | FEAT-023 | **RetroAchievements Integration** | `Community Win`, `Differenzierungsmerkmal` |
-| 8 | FEAT-015 | **Duplicate Group Inspector** | `Power-User Win`, `Differenzierungsmerkmal` |
-| 9 | FEAT-004 | **Collection Diff & Merge** | `Differenzierungsmerkmal`, `Power-User Win` |
-| 10 | FEAT-008 | **DAT Changelog Engine** | `Power-User Win`, `Differenzierungsmerkmal` |
+| Rang | ID | Titel | Aktueller Stand |
+|------|----|-------|-----------------|
+| 1 | FEAT-007 | Multi-Disc Playlist Generator | Teilweise |
+| 2 | FEAT-018 | Fixdat Generator | Teilweise |
+| 3 | FEAT-005 | Completionist Tracker / Missing ROM Dashboard | Teilweise |
+| 4 | FEAT-016 | Watch Mode / Incremental | Teilweise |
+| 5 | FEAT-014 | Custom Junk Rules Editor | Teilweise |
+| 6 | FEAT-013 | ROM Header Manager | Teilweise |
+| 7 | FEAT-001 | Collection Health Monitor | Teilweise |
+| 8 | FEAT-024 | ZSTD Zip Support | Teilweise |
+| 9 | FEAT-006 | Metadata Enrichment | Offen |
+| 10 | FEAT-023 | RetroAchievements Integration | Offen |
 
 ---
 

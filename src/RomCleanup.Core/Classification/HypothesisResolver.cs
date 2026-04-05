@@ -398,20 +398,32 @@ public static class HypothesisResolver
 
         var winnerFamily = familyLookup(sortedGroups[0].Key);
 
+        // If the winner itself is Unknown family, we can't classify the conflict type.
+        // Conservative: return None to avoid both over-blocking (CrossFamily) and
+        // misleading intra-family labeling.
+        if (winnerFamily == PlatformFamily.Unknown)
+            return ConflictType.None;
+
+        bool hasKnownCompetitor = false;
+
         // Check ALL competing groups, not just the runner-up.
         // This catches 3+ console scenarios (PS1 vs PS2 vs PSP).
         for (int i = 1; i < sortedGroups.Count; i++)
         {
             var competitorFamily = familyLookup(sortedGroups[i].Key);
 
-            // Unknown family on either side → treat as intra-family (conservative: don't over-block)
-            if (winnerFamily == PlatformFamily.Unknown || competitorFamily == PlatformFamily.Unknown)
+            // Unknown family on competitor → skip (can't determine relationship)
+            if (competitorFamily == PlatformFamily.Unknown)
                 continue;
+
+            hasKnownCompetitor = true;
 
             if (winnerFamily != competitorFamily)
                 return ConflictType.CrossFamily;
         }
 
-        return ConflictType.IntraFamily;
+        // Only classify as IntraFamily if at least one known competitor was in the same family.
+        // If all competitors were Unknown, we can't determine the conflict type.
+        return hasKnownCompetitor ? ConflictType.IntraFamily : ConflictType.None;
     }
 }
