@@ -56,6 +56,8 @@ Describe 'ApiServer unit helpers' {
   }
 
   It 'builds CLI arguments with required summary flags' {
+    $script:_RomCleanupRepoRoot = $repoRoot
+
     $payload = [pscustomobject]@{
       mode = 'DryRun'
       roots = @('C:\ROMs')
@@ -69,14 +71,14 @@ Describe 'ApiServer unit helpers' {
     $args | Should -Contain '-NotifyAfterRun'
   }
 
-  It 'resolves client identifier from forwarded header when present' {
+  It 'resolves client identifier from remote endpoint to prevent spoofing' {
     $request = [pscustomobject]@{
       Headers = @{ 'X-Forwarded-For' = '203.0.113.7, 10.0.0.1' }
       RemoteEndPoint = [System.Net.IPEndPoint]::new([System.Net.IPAddress]::Loopback, 12345)
     }
 
     $id = Get-ApiClientIdentifier -Request $request
-    [string]$id | Should -Be '203.0.113.7'
+    [string]$id | Should -Be '127.0.0.1'
   }
 
   It 'enforces in-memory rate limit per client within the active window' {

@@ -500,7 +500,7 @@ public sealed partial class MainViewModel
         }
     }
 
-    private static string ResolveRecommendedWizardWorkflow(
+    internal static string ResolveRecommendedWizardWorkflow(
         bool hasDiscLikeFormats,
         bool hasCartridgeFormats,
         long estimatedSavingsBytes)
@@ -703,6 +703,6 @@ public sealed partial class MainViewModel
             .ToArray();
     }
 
-    private static string? NormalizeSelection(string? value)
+    internal static string? NormalizeSelection(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

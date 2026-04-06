@@ -154,7 +154,7 @@ public sealed partial class FeatureCommandService
         return true;
     }
 
-    private static string NormalizeProfileId(string name)
+    internal static string NormalizeProfileId(string name)
     {
         var builder = new StringBuilder(name.Length);
         foreach (var ch in name.Trim())
@@ -199,7 +199,7 @@ public sealed partial class FeatureCommandService
         }
     }
 
-    private static string BuildRunSnapshotChoicePrompt(IReadOnlyList<CollectionRunSnapshot> snapshots)
+    internal static string BuildRunSnapshotChoicePrompt(IReadOnlyList<CollectionRunSnapshot> snapshots)
     {
         var lines = new List<string>
         {
@@ -215,7 +215,7 @@ public sealed partial class FeatureCommandService
         return string.Join(Environment.NewLine, lines);
     }
 
-    private static IReadOnlyList<string> ResolveComparisonPair(
+    internal static IReadOnlyList<string> ResolveComparisonPair(
         string? input,
         IReadOnlyList<CollectionRunSnapshot> snapshots)
     {
@@ -266,7 +266,7 @@ public sealed partial class FeatureCommandService
         }
     }
 
-    private static string FormatFrontendExportSummary(FrontendExportResult exportResult)
+    internal static string FormatFrontendExportSummary(FrontendExportResult exportResult)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"Frontend-Export: {exportResult.Frontend}");

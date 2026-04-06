@@ -69,7 +69,7 @@ public static partial class FeatureService
         return value;
     }
 
-    private static bool IsPlainNegativeNumber(string value)
+    internal static bool IsPlainNegativeNumber(string value)
     {
         if (value.Length < 2 || value[0] != '-') return false;
         for (int i = 1; i < value.Length; i++)

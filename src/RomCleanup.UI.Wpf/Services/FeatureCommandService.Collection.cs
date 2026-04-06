@@ -143,7 +143,7 @@ public sealed partial class FeatureCommandService
         };
     }
 
-    private static string FormatCollectionMergePlan(CollectionMergePlan plan)
+    internal static string FormatCollectionMergePlan(CollectionMergePlan plan)
     {
         var sb = new StringBuilder();
         sb.AppendLine("Collection Merge Plan");
@@ -168,7 +168,7 @@ public sealed partial class FeatureCommandService
         return sb.ToString();
     }
 
-    private static string FormatCollectionMergeApply(CollectionMergeApplyResult result)
+    internal static string FormatCollectionMergeApply(CollectionMergeApplyResult result)
     {
         var sb = new StringBuilder();
         sb.AppendLine("Collection Merge Ergebnis");

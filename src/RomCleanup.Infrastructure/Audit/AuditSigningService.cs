@@ -556,7 +556,7 @@ public sealed class AuditSigningService
         };
     }
 
-    private static string? NormalizeRollbackAction(string action)
+    internal static string? NormalizeRollbackAction(string action)
     {
         if (string.Equals(action, RunConstants.AuditActions.MovePending, StringComparison.OrdinalIgnoreCase)
             || string.Equals(action, RunConstants.AuditActions.Move, StringComparison.OrdinalIgnoreCase)
@@ -583,7 +583,7 @@ public sealed class AuditSigningService
         return null;
     }
 
-    private static string BuildPendingOperationKey(string action, string oldPath, string newPath)
+    internal static string BuildPendingOperationKey(string action, string oldPath, string newPath)
         => $"{action}|{oldPath}|{newPath}";
 
     /// <summary>

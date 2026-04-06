@@ -811,7 +811,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         return new DatUnknownResolution(true, selectedKey, matchMap[selectedKey].IsBios, true, matchMap[selectedKey].GameName);
     }
 
-    private static PlatformFamily ResolveFamily(
+    internal static PlatformFamily ResolveFamily(
         ConsoleDetector? consoleDetector,
         string consoleKey,
         ConsoleDetectionResult? detectionResult)
@@ -836,7 +836,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         return PlatformFamily.Unknown;
     }
 
-    private static string? ResolveHashStrategy(
+    internal static string? ResolveHashStrategy(
         ConsoleDetector? consoleDetector,
         string consoleKey,
         ConsoleDetectionResult? detectionResult)
@@ -861,7 +861,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         return null;
     }
 
-    private static bool IsStrictDatNameCandidate(string stem)
+    internal static bool IsStrictDatNameCandidate(string stem)
     {
         if (string.IsNullOrWhiteSpace(stem))
             return false;
@@ -878,7 +878,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         return lettersOrDigits >= 3;
     }
 
-    private static int GetParallelismHint(int itemCountHint = int.MaxValue)
+    internal static int GetParallelismHint(int itemCountHint = int.MaxValue)
     {
         var optimalThreads = ParallelHasher.GetOptimalThreadCount();
         if (itemCountHint <= ParallelizationThreshold || optimalThreads <= 1)

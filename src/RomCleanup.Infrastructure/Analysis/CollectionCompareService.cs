@@ -148,7 +148,7 @@ public static class CollectionCompareService
             .ToArray();
     }
 
-    private static CollectionSourceScope NormalizeScope(CollectionSourceScope scope)
+    internal static CollectionSourceScope NormalizeScope(CollectionSourceScope scope)
     {
         var normalizedRoots = scope.Roots
             .Where(static root => !string.IsNullOrWhiteSpace(root))
@@ -188,7 +188,7 @@ public static class CollectionCompareService
         };
     }
 
-    private static string[] NormalizeExtensions(IReadOnlyList<string> extensions)
+    internal static string[] NormalizeExtensions(IReadOnlyList<string> extensions)
     {
         var source = extensions.Count > 0
             ? extensions
@@ -207,17 +207,17 @@ public static class CollectionCompareService
             .ToArray();
     }
 
-    private static string NormalizeSourceId(string? sourceId)
+    internal static string NormalizeSourceId(string? sourceId)
         => string.IsNullOrWhiteSpace(sourceId)
             ? "source"
             : sourceId.Trim();
 
-    private static string NormalizeLabel(string? label, string? sourceId)
+    internal static string NormalizeLabel(string? label, string? sourceId)
         => string.IsNullOrWhiteSpace(label)
             ? NormalizeSourceId(sourceId)
             : label.Trim();
 
-    private static string? ResolveEffectiveEnrichmentFingerprint(
+    internal static string? ResolveEffectiveEnrichmentFingerprint(
         CollectionSourceScope scope,
         IReadOnlyList<CollectionIndexEntry> scopedEntries)
     {

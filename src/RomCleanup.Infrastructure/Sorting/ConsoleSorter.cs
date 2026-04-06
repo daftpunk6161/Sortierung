@@ -554,7 +554,7 @@ public sealed class ConsoleSorter
         }
     }
 
-    private static bool IsInExcludedFolder(string filePath, string root)
+    internal static bool IsInExcludedFolder(string filePath, string root)
     {
         var relative = filePath.Substring(root.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var firstSegment = relative.Split(new[] { '/', '\\' }, 2, StringSplitOptions.RemoveEmptyEntries);
@@ -562,7 +562,7 @@ public sealed class ConsoleSorter
                ExcludedFolders.Any(e => e.Equals(firstSegment[0], StringComparison.OrdinalIgnoreCase));
     }
 
-    private static bool IsPathWithinRoot(string filePath, string root)
+    internal static bool IsPathWithinRoot(string filePath, string root)
     {
         if (string.IsNullOrWhiteSpace(filePath) || string.IsNullOrWhiteSpace(root))
             return false;

@@ -35,8 +35,11 @@ public static class GameKeyNormalizer
         IReadOnlyList<System.Text.RegularExpressions.Regex> tagPatterns,
         IReadOnlyDictionary<string, string> alwaysAliasMap)
     {
-        _registeredPatterns = tagPatterns ?? throw new ArgumentNullException(nameof(tagPatterns));
-        _registeredAliasMap = alwaysAliasMap ?? throw new ArgumentNullException(nameof(alwaysAliasMap));
+        ArgumentNullException.ThrowIfNull(tagPatterns);
+        ArgumentNullException.ThrowIfNull(alwaysAliasMap);
+
+        _registeredPatterns = tagPatterns;
+        _registeredAliasMap = alwaysAliasMap;
     }
 
     /// <summary>

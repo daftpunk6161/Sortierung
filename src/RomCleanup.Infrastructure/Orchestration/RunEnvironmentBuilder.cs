@@ -500,7 +500,7 @@ public sealed class RunEnvironmentBuilder
             .ToArray();
     }
 
-    private static string? FindExactStemMatch(string[] datRootFiles, params string[] stems)
+    internal static string? FindExactStemMatch(string[] datRootFiles, params string[] stems)
     {
         foreach (var stem in stems)
         {

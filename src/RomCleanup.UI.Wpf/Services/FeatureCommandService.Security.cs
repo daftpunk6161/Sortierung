@@ -258,7 +258,7 @@ public sealed partial class FeatureCommandService
         }
     }
 
-    private static string BuildDefaultCustomJunkRulesJson()
+    internal static string BuildDefaultCustomJunkRulesJson()
     {
         var template = new CustomJunkRulesDocument
         {
@@ -281,7 +281,7 @@ public sealed partial class FeatureCommandService
         return JsonSerializer.Serialize(template, CustomJunkRulesWriteOptions);
     }
 
-    private static bool TryNormalizeCustomJunkRules(
+    internal static bool TryNormalizeCustomJunkRules(
         string json,
         out CustomJunkRulesDocument normalizedDocument,
         out string preview,
@@ -427,7 +427,7 @@ public sealed partial class FeatureCommandService
         return true;
     }
 
-    private static bool TryValidateCustomRegexPattern(string pattern, out string error)
+    internal static bool TryValidateCustomRegexPattern(string pattern, out string error)
     {
         error = string.Empty;
 
@@ -443,7 +443,7 @@ public sealed partial class FeatureCommandService
         }
     }
 
-    private static string BuildCustomJunkRulesPreview(CustomJunkRulesDocument document)
+    internal static string BuildCustomJunkRulesPreview(CustomJunkRulesDocument document)
     {
         var sb = new StringBuilder();
         sb.AppendLine("Custom Junk Rules Vorschau");
@@ -465,7 +465,7 @@ public sealed partial class FeatureCommandService
         return sb.ToString();
     }
 
-    private static string MapToRuleEngineField(string field)
+    internal static string MapToRuleEngineField(string field)
         => field switch
         {
             "name" => "Name",
@@ -475,13 +475,13 @@ public sealed partial class FeatureCommandService
             _ => field
         };
 
-    private sealed class CustomJunkRulesDocument
+    internal sealed class CustomJunkRulesDocument
     {
         public bool Enabled { get; set; } = true;
         public List<CustomJunkRuleEntry> Rules { get; set; } = [];
     }
 
-    private sealed class CustomJunkRuleEntry
+    internal sealed class CustomJunkRuleEntry
     {
         public string Field { get; set; } = string.Empty;
         public string Operator { get; set; } = string.Empty;

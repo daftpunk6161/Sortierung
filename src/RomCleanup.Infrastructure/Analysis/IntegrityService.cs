@@ -284,7 +284,7 @@ public static class IntegrityService
             toolPath);
     }
 
-    private static string ResolvePatchFormat(string patchPath)
+    internal static string ResolvePatchFormat(string patchPath)
     {
         var detected = DetectPatchFormat(patchPath);
         if (!string.IsNullOrWhiteSpace(detected))
@@ -423,14 +423,14 @@ public static class IntegrityService
         File.WriteAllBytes(outputPath, output.ToArray());
     }
 
-    private static int ReadUInt16BigEndian(BinaryReader reader)
+    internal static int ReadUInt16BigEndian(BinaryReader reader)
     {
         var high = reader.ReadByte();
         var low = reader.ReadByte();
         return (high << 8) | low;
     }
 
-    private static int ReadUInt24BigEndian(BinaryReader reader)
+    internal static int ReadUInt24BigEndian(BinaryReader reader)
     {
         var b0 = reader.ReadByte();
         var b1 = reader.ReadByte();
@@ -438,7 +438,7 @@ public static class IntegrityService
         return (b0 << 16) | (b1 << 8) | b2;
     }
 
-    private static void EnsureOutputLength(List<byte> output, int targetLength)
+    internal static void EnsureOutputLength(List<byte> output, int targetLength)
     {
         if (targetLength <= output.Count)
             return;

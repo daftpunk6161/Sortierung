@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using RomCleanup.Core.GameKeys;
 using RomCleanup.Infrastructure.Orchestration;
 
 namespace RomCleanup.Tests;
@@ -15,17 +16,36 @@ internal static class ModuleInit
     [ModuleInitializer]
     internal static void Init()
     {
-        // Skip if already set (e.g. by CI or manual override)
-        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ROMCLEANUP_DATA_DIR")))
-            return;
+        // Keep manual/CI overrides only when they point to a valid data directory.
+        var configuredDataDir = Environment.GetEnvironmentVariable("ROMCLEANUP_DATA_DIR");
+        if (string.IsNullOrWhiteSpace(configuredDataDir) || !IsValidDataDir(configuredDataDir))
+        {
+            var dataDir = ResolveDataDirFromSource();
+            if (dataDir is not null)
+                Environment.SetEnvironmentVariable("ROMCLEANUP_DATA_DIR", dataDir);
+        }
 
-        var dataDir = ResolveDataDirFromSource();
-        if (dataDir is not null)
-            Environment.SetEnvironmentVariable("ROMCLEANUP_DATA_DIR", dataDir);
+        // Load rules.json-backed normalization data and register it explicitly.
+        // This avoids relying on module initializer load-order across different test runners.
+        var patterns = GameKeyNormalizationProfile.TagPatterns;
+        var aliases = GameKeyNormalizationProfile.AlwaysAliasMap;
+        if (patterns is { Count: > 0 })
+            GameKeyNormalizer.RegisterDefaultPatterns(patterns, aliases);
+    }
 
-        // Trigger lazy loading of GameKeyNormalizationProfile so that
-        // GameKeyNormalizer.Normalize(string) uses rules.json patterns.
-        _ = GameKeyNormalizationProfile.TagPatterns;
+    private static bool IsValidDataDir(string path)
+    {
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            return Directory.Exists(fullPath) &&
+                   File.Exists(Path.Combine(fullPath, "consoles.json")) &&
+                   File.Exists(Path.Combine(fullPath, "rules.json"));
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private static string? ResolveDataDirFromSource([CallerFilePath] string? callerPath = null)

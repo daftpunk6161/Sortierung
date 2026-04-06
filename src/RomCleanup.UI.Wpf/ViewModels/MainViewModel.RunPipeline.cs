@@ -1631,7 +1631,7 @@ public sealed partial class MainViewModel
         PerfFile = string.IsNullOrWhiteSpace(detail) ? "–" : detail;
     }
 
-    private static bool TrySplitProgressMessage(string message, out string phase, out string detail)
+    internal static bool TrySplitProgressMessage(string message, out string phase, out string detail)
     {
         phase = string.Empty;
         detail = string.Empty;
@@ -1648,7 +1648,7 @@ public sealed partial class MainViewModel
         return true;
     }
 
-    private static bool TryParseProgressFraction(string message, out double fraction)
+    internal static bool TryParseProgressFraction(string message, out double fraction)
     {
         fraction = 0;
         if (string.IsNullOrWhiteSpace(message))

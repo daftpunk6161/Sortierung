@@ -25,10 +25,18 @@ foreach ($fileName in $splitFiles) {
 }
 
 if (Get-Command Reset-ArchiveEntryCache -ErrorAction SilentlyContinue) {
-  Reset-ArchiveEntryCache
+  try {
+    Reset-ArchiveEntryCache
+  } catch {
+    # Best-effort reset only: leaked test scopes may expose the function without a valid backing cache.
+  }
 }
 if (Get-Command Reset-ClassificationCaches -ErrorAction SilentlyContinue) {
-  Reset-ClassificationCaches
+  try {
+    Reset-ClassificationCaches
+  } catch {
+    # Best-effort reset only: never block module bootstrap on cache reset errors.
+  }
 }
 
 Remove-Variable -Name splitFiles, fileName, filePath -ErrorAction SilentlyContinue

@@ -601,7 +601,7 @@ public sealed partial class FeatureCommandService
         _dialog.ShowText(_vm.Loc["Cmd.DupeInspectorTitle"], sb.ToString());
     }
 
-    private static long GetCandidateTotalScore(RomCandidate candidate)
+    internal static long GetCandidateTotalScore(RomCandidate candidate)
         => (long)candidate.RegionScore
            + candidate.FormatScore
            + candidate.VersionScore
@@ -609,7 +609,7 @@ public sealed partial class FeatureCommandService
            + candidate.CompletenessScore
            + candidate.SizeTieBreakScore;
 
-    private static string FormatScoreBreakdown(RomCandidate candidate)
+    internal static string FormatScoreBreakdown(RomCandidate candidate)
         => $"Region={candidate.RegionScore}, Format={candidate.FormatScore}, Version={candidate.VersionScore}, Header={candidate.HeaderScore}, Completeness={candidate.CompletenessScore}, SizeTieBreak={candidate.SizeTieBreakScore}";
 
     private void RollbackHistoryBack()
