@@ -32,6 +32,18 @@ internal sealed class TestToolRunner : IToolRunner
             : new ToolResult(0, string.Empty, true);
     }
 
+    public ToolResult InvokeProcess(
+        string filePath,
+        string[] arguments,
+        RomCleanup.Contracts.Models.ToolRequirement? requirement,
+        string? errorLabel,
+        TimeSpan? timeout,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return InvokeProcess(filePath, arguments, errorLabel);
+    }
+
     public ToolResult Invoke7z(string sevenZipPath, string[] arguments)
         => InvokeProcess(sevenZipPath, arguments, "7z");
 }

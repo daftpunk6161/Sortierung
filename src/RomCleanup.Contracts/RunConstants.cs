@@ -30,6 +30,25 @@ public static class RunConstants
     /// <summary>Default hash type.</summary>
     public const string DefaultHashType = "SHA1";
 
+    // ── Convert format constants ────────────────────────────────────
+
+    public const string ConvertFormatAuto = "auto";
+    public const string ConvertFormatChd = "chd";
+    public const string ConvertFormatRvz = "rvz";
+    public const string ConvertFormatZip = "zip";
+    public const string ConvertFormat7z = "7z";
+
+    /// <summary>Valid convert format names.</summary>
+    public static readonly IReadOnlySet<string> ValidConvertFormats =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ConvertFormatAuto,
+            ConvertFormatChd,
+            ConvertFormatRvz,
+            ConvertFormatZip,
+            ConvertFormat7z
+        };
+
     // ── Run Mode constants ──────────────────────────────────────────
 
     /// <summary>DryRun mode — preview only, no file operations.</summary>

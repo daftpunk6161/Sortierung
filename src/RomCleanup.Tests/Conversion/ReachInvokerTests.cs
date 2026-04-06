@@ -113,6 +113,15 @@ public sealed class ReachInvokerTests : IDisposable
             return new ToolResult(0, "ok", true);
         }
 
+        public ToolResult InvokeProcess(
+            string filePath, string[] arguments,
+            RomCleanup.Contracts.Models.ToolRequirement? requirement,
+            string? errorLabel, TimeSpan? timeout, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return InvokeProcess(filePath, arguments, errorLabel);
+        }
+
         public ToolResult Invoke7z(string sevenZipPath, string[] arguments) => new(0, "ok", true);
     }
 }

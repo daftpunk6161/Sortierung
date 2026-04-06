@@ -170,20 +170,32 @@ public sealed class VersionScorer
         }
 
         // Language bonus: en = +50 + multi-lang bonus, de = +25
+        // Security/Correctness: evaluate exact language tokens, never substring matches.
         var langMatch = SafeRegex.Match(_rxLang, baseName);
         if (langMatch.Success)
         {
-            var langs = langMatch.Value.ToLowerInvariant();
-            if (langs.Contains("en"))
+            var langTokens = langMatch.Value
+                .Trim('(', ')')
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            var hasEn = false;
+            var hasDe = false;
+            foreach (var token in langTokens)
+            {
+                if (token.Equals("en", StringComparison.OrdinalIgnoreCase))
+                    hasEn = true;
+                else if (token.Equals("de", StringComparison.OrdinalIgnoreCase))
+                    hasDe = true;
+            }
+
+            if (hasEn)
             {
                 score += 50;
-                var langCount = langs.Split(',').Length;
-                score += langCount * 5;
+                score += langTokens.Length * 5;
             }
-            if (langs.Contains("de"))
-            {
+
+            if (hasDe)
                 score += 25;
-            }
         }
 
         return score;

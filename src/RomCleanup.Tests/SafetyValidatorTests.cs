@@ -256,6 +256,8 @@ public sealed class SafetyValidatorTests
         public string? FindTool(string toolName) => $@"C:\tools\{toolName}.exe";
         public ToolResult InvokeProcess(string filePath, string[] arguments, string? errorLabel = null)
             => new(0, "v1.0.0", true);
+        public ToolResult InvokeProcess(string filePath, string[] arguments, string? errorLabel, TimeSpan? timeout, CancellationToken cancellationToken)
+            => InvokeProcess(filePath, arguments, errorLabel);
         public ToolResult Invoke7z(string sevenZipPath, string[] arguments)
             => new(0, "7-Zip 21.07", true);
     }

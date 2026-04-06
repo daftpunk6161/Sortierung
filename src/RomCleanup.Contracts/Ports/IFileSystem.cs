@@ -9,26 +9,27 @@ public interface IFileSystem
     bool TestPath(string literalPath, string pathType = "Any");
     string EnsureDirectory(string path);
     IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? allowedExtensions = null);
-    bool FileExists(string literalPath) => File.Exists(literalPath);
-    bool DirectoryExists(string literalPath) => Directory.Exists(literalPath);
+    bool FileExists(string literalPath)
+    {
+        if (string.IsNullOrWhiteSpace(literalPath))
+            return false;
+
+        return TestPath(literalPath, "Leaf");
+    }
+
+    bool DirectoryExists(string literalPath)
+    {
+        if (string.IsNullOrWhiteSpace(literalPath))
+            return false;
+
+        return TestPath(literalPath, "Container");
+    }
+
     IReadOnlyList<string> GetDirectoryFiles(string directoryPath, string searchPattern)
     {
-        if (string.IsNullOrWhiteSpace(directoryPath) || string.IsNullOrWhiteSpace(searchPattern))
-            return Array.Empty<string>();
-
-        try
-        {
-            if (!Directory.Exists(directoryPath))
-                return Array.Empty<string>();
-
-            var files = Directory.GetFiles(directoryPath, searchPattern);
-            Array.Sort(files, StringComparer.OrdinalIgnoreCase);
-            return files;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DirectoryNotFoundException)
-        {
-            return Array.Empty<string>();
-        }
+        // Contract-level default intentionally performs no direct I/O.
+        // Implementations with real filesystem access should override this method.
+        return Array.Empty<string>();
     }
     string? MoveItemSafely(string sourcePath, string destinationPath);
     /// <summary>
@@ -91,32 +92,25 @@ public interface IFileSystem
         if (string.Equals(fullSource, fullDest, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Source and destination are the same path.");
 
+        if (!DirectoryExists(fullSource))
+            return false;
+
         // SEC-DIRMOVE-03: Block reparse points on source directory
-        if (Directory.Exists(fullSource))
-        {
-            var sourceInfo = new DirectoryInfo(fullSource);
-            if ((sourceInfo.Attributes & FileAttributes.ReparsePoint) != 0)
-                throw new InvalidOperationException("Blocked: Source directory is a reparse point.");
-        }
+        if (IsReparsePoint(fullSource))
+            throw new InvalidOperationException("Blocked: Source directory is a reparse point.");
 
         // SEC-DIRMOVE-04: Block reparse points on destination parent
         var destParent = Path.GetDirectoryName(fullDest);
-        if (!string.IsNullOrEmpty(destParent) && Directory.Exists(destParent))
+        if (!string.IsNullOrEmpty(destParent)
+            && DirectoryExists(destParent)
+            && IsReparsePoint(destParent))
         {
-            var destParentInfo = new DirectoryInfo(destParent);
-            if ((destParentInfo.Attributes & FileAttributes.ReparsePoint) != 0)
-                throw new InvalidOperationException("Blocked: Destination parent is a reparse point.");
+            throw new InvalidOperationException("Blocked: Destination parent is a reparse point.");
         }
 
-        try
-        {
-            Directory.Move(fullSource, fullDest);
-            return true;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DirectoryNotFoundException)
-        {
-            return false;
-        }
+        // Contract-level default intentionally performs no direct I/O move.
+        // Implementations with real filesystem access should override this method.
+        return false;
     }
     string? ResolveChildPathWithinRoot(string rootPath, string relativePath);
     bool IsReparsePoint(string path);

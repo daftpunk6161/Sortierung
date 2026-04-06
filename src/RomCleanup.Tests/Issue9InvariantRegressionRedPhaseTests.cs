@@ -281,7 +281,7 @@ public sealed class Issue9InvariantRegressionRedPhaseTests : IDisposable
             EnableDat = true,
             DatRoot = root,
             HashType = "sha1",
-            ConvertFormat = true,
+            ConvertFormat = "auto",
             ConvertOnly = false,
             ConflictPolicy = "Rename",
             TrashRoot = Path.Combine(root, "trash")

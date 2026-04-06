@@ -205,8 +205,11 @@ public class DeduplicationEngineTests
     }
 
     [Fact]
-    public void Deduplicate_SameMainPathDifferentCandidates_RetainsLoser()
+    public void Deduplicate_SameMainPathDifferentCandidates_FiltersSamePathLoser()
     {
+        // Safety invariant: a physical file path must never be both winner and loser.
+        // When two candidates share the same MainPath, the loser is filtered out
+        // because you cannot move a file to trash that is also the winner.
         var stronger = MakeCandidate(
             mainPath: "same_path.zip",
             gameKey: "game",
@@ -224,7 +227,7 @@ public class DeduplicationEngineTests
 
         Assert.Single(results);
         Assert.Equal("same_path.zip", results[0].Winner.MainPath);
-        Assert.Single(results[0].Losers);
+        Assert.Empty(results[0].Losers);
     }
 
     [Fact]

@@ -331,7 +331,7 @@ internal static class ConversionPhaseHelper
 
         foreach (var member in members)
         {
-            if (!File.Exists(member))
+            if (!context.FileSystem.FileExists(member))
                 continue;
 
             // SEC-MOVE-06: Validate set member path is within an allowed root.
@@ -433,7 +433,13 @@ internal static class ConversionPhaseHelper
             var movedArtifact = movedArtifacts[i];
             try
             {
-                context.FileSystem.MoveItemSafely(movedArtifact.TrashPath, movedArtifact.SourcePath);
+                var restoredPath = context.FileSystem.MoveItemSafely(movedArtifact.TrashPath, movedArtifact.SourcePath);
+                if (string.IsNullOrWhiteSpace(restoredPath)
+                    || !string.Equals(restoredPath, movedArtifact.SourcePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    context.OnProgress?.Invoke(
+                        $"WARNING: Could not restore moved conversion source: {movedArtifact.TrashPath} -> {movedArtifact.SourcePath} (restore mismatch)");
+                }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
@@ -449,7 +455,7 @@ internal static class ConversionPhaseHelper
         {
             try
             {
-                if (File.Exists(outputPath))
+                if (context.FileSystem.FileExists(outputPath))
                     context.FileSystem.DeleteFile(outputPath);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)

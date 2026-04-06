@@ -83,11 +83,14 @@ public static class DeduplicationEngine
         {
             var items = groupDict[key];
             var winner = SelectWinner(items)!;
-            // Use reference equality so same-MainPath candidates are still retained as losers.
+            // Safety invariant:
+            // A physical file path must never be both winner and loser within the same group.
+            // Also deduplicate loser paths to avoid duplicate move attempts for identical files.
             var losers = items
-                .Where(x => !ReferenceEquals(x, winner))
+                .Where(x => !string.Equals(x.MainPath, winner.MainPath, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(x => x.MainPath, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(x => x.MainPath, StringComparer.Ordinal)
+                .DistinctBy(x => x.MainPath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             results.Add(new DedupeGroup
@@ -106,7 +109,7 @@ public static class DeduplicationEngine
         {
             var group = results[i];
             var filtered = group.Losers
-                .Where(l => !winnerPaths.Contains(l.MainPath) || string.Equals(l.MainPath, group.Winner.MainPath, StringComparison.OrdinalIgnoreCase))
+                .Where(l => !winnerPaths.Contains(l.MainPath))
                 .ToList();
             if (filtered.Count != group.Losers.Count)
             {

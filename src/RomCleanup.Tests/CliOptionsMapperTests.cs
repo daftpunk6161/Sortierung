@@ -30,7 +30,7 @@ public sealed class CliOptionsMapperTests
         var cli = new CliRunOptions
         {
             Roots = new[] { "C:\\temp" },
-            ConvertFormat = true,
+            ConvertFormat = "auto",
             ConvertOnly = true,
             ConflictPolicy = "Skip"
         };
@@ -125,13 +125,13 @@ public sealed class CliOptionsMapperTests
     }
 
     [Fact]
-    public void Map_ConvertFormatFalse_ProducesNullFormat()
+    public void Map_ConvertFormatMissing_ProducesNullFormat()
     {
         var settings = new RomCleanupSettings();
         var cli = new CliRunOptions
         {
             Roots = new[] { "C:\\temp" },
-            ConvertFormat = false
+            ConvertFormat = null
         };
 
         var (runOptions, _) = CliOptionsMapper.Map(cli, settings);

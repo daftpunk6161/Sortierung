@@ -73,7 +73,7 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                 }
 
                 if (string.Equals(input.Options.ConflictPolicy, "Skip", StringComparison.OrdinalIgnoreCase)
-                    && File.Exists(destPath))
+                    && context.FileSystem.FileExists(destPath))
                 {
                     context.OnProgress?.Invoke($"Skip (conflict): {Path.GetFileName(loser.MainPath)}");
                     if (hasAuditPath)
@@ -116,7 +116,7 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                     if (alreadyMovedAsSetMember.Contains(member))
                         continue;
 
-                    if (!File.Exists(member))
+                    if (!context.FileSystem.FileExists(member))
                     {
                         setPreflightFailed = true;
                         break;
@@ -140,13 +140,24 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                     }
 
                     if (string.Equals(input.Options.ConflictPolicy, "Skip", StringComparison.OrdinalIgnoreCase)
-                        && File.Exists(memberDest))
+                        && context.FileSystem.FileExists(memberDest))
                     {
                         setPreflightFailed = true;
                         break;
                     }
 
-                    plannedMemberMoves.Add((member, memberDest, new FileInfo(member).Length));
+                    long memberSizeBytes;
+                    try
+                    {
+                        memberSizeBytes = new FileInfo(member).Length;
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        setPreflightFailed = true;
+                        break;
+                    }
+
+                    plannedMemberMoves.Add((member, memberDest, memberSizeBytes));
                 }
 
                 if (setPreflightFailed)
@@ -196,16 +207,31 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
 
                     if (memberMoveFailed)
                     {
+                        var rollbackFailures = new List<string>();
                         foreach (var movedItem in movedItems.AsEnumerable().Reverse())
                         {
-                            _ = context.FileSystem.MoveItemSafely(movedItem.ActualDestPath, movedItem.SourcePath);
+                            var restoredPath = context.FileSystem.MoveItemSafely(movedItem.ActualDestPath, movedItem.SourcePath);
+                            if (string.IsNullOrWhiteSpace(restoredPath)
+                                || !string.Equals(restoredPath, movedItem.SourcePath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                rollbackFailures.Add($"{movedItem.ActualDestPath} -> {movedItem.SourcePath}");
+                            }
                         }
 
                         failCount++;
                         if (hasAuditPath)
                         {
+                            var reason = rollbackFailures.Count == 0
+                                ? "region-dedupe:set-member-rollback"
+                                : $"region-dedupe:set-member-rollback-partial:{rollbackFailures.Count}";
                             context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, loser.MainPath, destPath,
-                                "MOVE_FAILED", loser.Category.ToString().ToUpperInvariant(), "", "region-dedupe:set-member-rollback");
+                                "MOVE_FAILED", loser.Category.ToString().ToUpperInvariant(), "", reason);
+                        }
+
+                        if (rollbackFailures.Count > 0)
+                        {
+                            context.OnProgress?.Invoke(
+                                $"WARNING: Set-member rollback incomplete for {Path.GetFileName(loser.MainPath)} ({rollbackFailures.Count} restore failure(s)).");
                         }
                     }
                     else

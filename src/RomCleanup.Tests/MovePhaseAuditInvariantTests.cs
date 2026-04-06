@@ -420,7 +420,16 @@ public sealed class MovePhaseAuditInvariantTests : IDisposable
     {
         public Dictionary<string, string> MoveResults { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-        public bool TestPath(string literalPath, string pathType = "Any") => true;
+        public bool TestPath(string literalPath, string pathType = "Any")
+        {
+            if (string.IsNullOrWhiteSpace(literalPath)) return false;
+            return pathType switch
+            {
+                "Leaf" => File.Exists(literalPath),
+                "Container" => Directory.Exists(literalPath),
+                _ => File.Exists(literalPath) || Directory.Exists(literalPath)
+            };
+        }
         public string EnsureDirectory(string path)
         {
             Directory.CreateDirectory(path);

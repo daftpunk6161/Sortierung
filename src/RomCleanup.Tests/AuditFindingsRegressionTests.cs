@@ -321,6 +321,15 @@ public sealed class AuditFindingsRegressionTests : IDisposable
             return new ToolResult(0, "ok", true);
         }
 
+        public ToolResult InvokeProcess(
+            string filePath, string[] arguments,
+            RomCleanup.Contracts.Models.ToolRequirement? requirement,
+            string? errorLabel, TimeSpan? timeout, CancellationToken cancellationToken)
+        {
+            cts.Cancel();
+            return new ToolResult(0, "ok", true);
+        }
+
         public ToolResult Invoke7z(string sevenZipPath, string[] arguments)
             => new(0, "ok", true);
     }

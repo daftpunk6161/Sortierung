@@ -510,7 +510,7 @@ public sealed class CliProgramTests : IDisposable
     {
         var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--convertformat" });
         Assert.NotNull(opts);
-        Assert.True(opts!.ConvertFormat);
+        Assert.Equal("auto", opts!.ConvertFormat);
     }
 
     [Fact]
@@ -519,7 +519,7 @@ public sealed class CliProgramTests : IDisposable
         var (opts, _) = CliProgram.ParseArgs(new[] { "--roots", _tempDir, "--convertonly" });
         Assert.NotNull(opts);
         Assert.True(opts!.ConvertOnly);
-        Assert.True(opts.ConvertFormat);
+        Assert.Equal("auto", opts.ConvertFormat);
     }
 
     [Fact]
@@ -790,7 +790,7 @@ public sealed class CliProgramTests : IDisposable
         Assert.False(opts.AggressiveJunk);
         Assert.False(opts.SortConsole);
         Assert.False(opts.EnableDat);
-        Assert.False(opts.ConvertFormat);
+        Assert.Null(opts.ConvertFormat);
         Assert.False(opts.Yes);
         Assert.Null(opts.TrashRoot);
         Assert.Null(opts.DatRoot);

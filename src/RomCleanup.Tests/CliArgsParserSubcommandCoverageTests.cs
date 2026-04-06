@@ -1,5 +1,6 @@
 using Xunit;
 using RomCleanup.CLI;
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 
 namespace RomCleanup.Tests;
@@ -831,7 +832,7 @@ public sealed class CliArgsParserSubcommandCoverageTests : IDisposable
     {
         var result = CliArgsParser.Parse(["--roots", _tempDir, "--convertformat"]);
         Assert.Equal(CliCommand.Run, result.Command);
-        Assert.True(result.Options!.ConvertFormat);
+        Assert.Equal(RunConstants.ConvertFormatAuto, result.Options!.ConvertFormat);
         Assert.True(result.Options.ConvertFormatExplicit);
     }
 

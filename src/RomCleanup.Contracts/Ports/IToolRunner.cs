@@ -13,14 +13,28 @@ public interface IToolRunner
         string[] arguments,
         RomCleanup.Contracts.Models.ToolRequirement? requirement,
         string? errorLabel = null)
-        => InvokeProcess(filePath, arguments, errorLabel);
+        => InvokeProcess(
+            filePath,
+            arguments,
+            requirement,
+            errorLabel,
+            timeout: null,
+            cancellationToken: CancellationToken.None);
+
     ToolResult InvokeProcess(
         string filePath,
         string[] arguments,
         string? errorLabel,
         TimeSpan? timeout,
         CancellationToken cancellationToken)
-        => InvokeProcess(filePath, arguments, errorLabel);
+        => InvokeProcess(
+            filePath,
+            arguments,
+            requirement: null,
+            errorLabel,
+            timeout,
+            cancellationToken);
+
     ToolResult InvokeProcess(
         string filePath,
         string[] arguments,
@@ -28,7 +42,23 @@ public interface IToolRunner
         string? errorLabel,
         TimeSpan? timeout,
         CancellationToken cancellationToken)
-        => InvokeProcess(filePath, arguments, requirement, errorLabel);
+    {
+        // Default fallback for lightweight test doubles that only implement
+        // the 3-argument signature. Do not silently drop advanced semantics.
+        var hasRequirement = requirement is not null;
+        var hasTimeout = timeout is not null;
+        var hasCancellation = cancellationToken.CanBeCanceled;
+
+        if (hasRequirement || hasTimeout || hasCancellation)
+        {
+            return new ToolResult(
+                -1,
+                "Tool invocation requires advanced overload support (requirement/timeout/cancellation), but current IToolRunner implementation exposes only the basic InvokeProcess signature.",
+                false);
+        }
+
+        return InvokeProcess(filePath, arguments, errorLabel);
+    }
     ToolResult Invoke7z(string sevenZipPath, string[] arguments);
 }
 

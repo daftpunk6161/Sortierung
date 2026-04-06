@@ -26,6 +26,7 @@ internal static class CliArgsParser
     };
 
     private static readonly IReadOnlySet<string> AllowedConflictPolicies = RomCleanup.Contracts.RunConstants.ValidConflictPolicies;
+    private static readonly IReadOnlySet<string> AllowedConvertFormats = RomCleanup.Contracts.RunConstants.ValidConvertFormats;
 
     internal static CliParseResult Parse(string[] args)
     {
@@ -127,7 +128,7 @@ internal static class CliArgsParser
 
                 case "-convertonly" or "--convertonly":
                     opts.ConvertOnly = true;
-                    opts.ConvertFormat = true;
+                    opts.ConvertFormat ??= RunConstants.ConvertFormatAuto;
                     opts.ConvertOnlyExplicit = true;
                     opts.ConvertFormatExplicit = true;
                     break;
@@ -274,9 +275,22 @@ internal static class CliArgsParser
                     break;
 
                 case "-convertformat" or "--convertformat":
-                    opts.ConvertFormat = true;
+                {
+                    var convertFormatValue = RunConstants.ConvertFormatAuto;
+                    if (TryConsumeOptionalValue(args, ref i, out var explicitConvertFormat))
+                        convertFormatValue = explicitConvertFormat;
+
+                    var normalizedConvertFormat = NormalizeConvertFormatValue(convertFormatValue);
+                    if (normalizedConvertFormat is null || !AllowedConvertFormats.Contains(normalizedConvertFormat))
+                    {
+                        errors.Add($"[Error] Invalid convert format '{convertFormatValue}'. Must be auto, chd, rvz, zip, or 7z.");
+                        break;
+                    }
+
+                    opts.ConvertFormat = normalizedConvertFormat;
                     opts.ConvertFormatExplicit = true;
                     break;
+                }
 
                 case "-yes" or "--yes" or "-y":
                     opts.Yes = true;
@@ -1361,6 +1375,27 @@ internal static class CliArgsParser
         return CliParseResult.Subcommand(command, opts);
     }
 
+    private static string? NormalizeConvertFormatValue(string? convertFormat)
+        => string.IsNullOrWhiteSpace(convertFormat)
+            ? null
+            : convertFormat.Trim().ToLowerInvariant();
+
+    private static bool TryConsumeOptionalValue(string[] args, ref int index, out string value)
+    {
+        value = "";
+        var candidateIndex = index + 1;
+        if (candidateIndex >= args.Length)
+            return false;
+
+        var candidate = args[candidateIndex];
+        if (IsFlagLikeArgument(candidate))
+            return false;
+
+        index = candidateIndex;
+        value = candidate;
+        return true;
+    }
+
     /// <summary>
     /// Consumes the next argument as a value, with strict validation.
     /// Returns false if: value missing (adds error) OR value looks like a flag (puts back, no error).
@@ -1378,7 +1413,7 @@ internal static class CliArgsParser
         }
 
         var candidate = args[index];
-        if (candidate.StartsWith('-') && !candidate.StartsWith("-.") && !candidate.StartsWith("-/"))
+        if (IsFlagLikeArgument(candidate))
         {
             // Value looks like a flag — put back so it's parsed next iteration.
             // No error: the flag was just used without its optional value.
@@ -1389,6 +1424,9 @@ internal static class CliArgsParser
         value = candidate;
         return true;
     }
+
+    private static bool IsFlagLikeArgument(string candidate)
+        => candidate.StartsWith('-') && !candidate.StartsWith("-.") && !candidate.StartsWith("-/");
 
     private static bool TryParseRootsArgument(string rawValue, out string[] roots, out string? error)
     {
@@ -1542,7 +1580,7 @@ internal sealed class CliRunOptions
     public bool DatRootExplicit { get; set; }
     public string? HashType { get; set; }
     public bool HashTypeExplicit { get; set; }
-    public bool ConvertFormat { get; set; }
+    public string? ConvertFormat { get; set; }
     public bool ConvertFormatExplicit { get; set; }
     public bool ConvertOnly { get; set; }
     public bool ConvertOnlyExplicit { get; set; }

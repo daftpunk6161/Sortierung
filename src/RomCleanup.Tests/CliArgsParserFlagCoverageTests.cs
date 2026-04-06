@@ -178,7 +178,7 @@ public sealed class CliArgsParserFlagCoverageTests : IDisposable
     {
         var result = CliArgsParser.Parse(["--roots", _tempDir, "--convertformat"]);
         Assert.Equal(CliCommand.Run, result.Command);
-        Assert.True(result.Options!.ConvertFormat);
+        Assert.Equal(RunConstants.ConvertFormatAuto, result.Options!.ConvertFormat);
         Assert.True(result.Options.ConvertFormatExplicit);
     }
 
@@ -689,7 +689,7 @@ public sealed class CliArgsParserFlagCoverageTests : IDisposable
         Assert.True(result.Options.EnableDat);
         Assert.True(result.Options.EnableDatAudit);
         Assert.True(result.Options.EnableDatRename);
-        Assert.True(result.Options.ConvertFormat);
+        Assert.Equal(RunConstants.ConvertFormatAuto, result.Options.ConvertFormat);
         Assert.True(result.Options.ApproveReviews);
         Assert.True(result.Options.ApproveConversionReview);
         Assert.True(result.Options.Yes);

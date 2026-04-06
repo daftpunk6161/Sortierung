@@ -215,8 +215,8 @@ internal static class Program
                 return 3;
             }
 
-            if (cliOpts.ConvertFormat)
-                log?.Info("CLI", "convert-init", "Format conversion enabled", "init");
+            if (!string.IsNullOrWhiteSpace(cliOpts.ConvertFormat))
+                log?.Info("CLI", "convert-init", $"Format conversion enabled: {cliOpts.ConvertFormat}", "init");
 
             using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
             using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);

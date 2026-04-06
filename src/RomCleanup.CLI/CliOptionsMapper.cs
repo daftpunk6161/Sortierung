@@ -87,7 +87,7 @@ internal static class CliOptionsMapper
             EnableDatRename = cli.EnableDatRenameExplicit ? cli.EnableDatRename : null,
             DatRoot = cli.DatRootExplicit ? cli.DatRoot : null,
             HashType = cli.HashTypeExplicit ? cli.HashType : null,
-            ConvertFormat = cli.ConvertFormatExplicit ? NormalizeConvertFormat(cli.ConvertFormat ? "auto" : null) : null,
+            ConvertFormat = cli.ConvertFormatExplicit ? NormalizeConvertFormat(cli.ConvertFormat) : null,
             ConvertOnly = cli.ConvertOnlyExplicit ? cli.ConvertOnly : null,
             ApproveReviews = cli.ApproveReviewsExplicit ? cli.ApproveReviews : null,
             ApproveConversionReview = cli.ApproveConversionReviewExplicit ? cli.ApproveConversionReview : null,
@@ -123,9 +123,19 @@ internal static class CliOptionsMapper
     }
 
     private static string? NormalizeConvertFormat(string? convertFormat)
-        => string.IsNullOrWhiteSpace(convertFormat)
-            ? null
-            : convertFormat.Trim().ToLowerInvariant();
+    {
+        if (string.IsNullOrWhiteSpace(convertFormat))
+            return null;
+
+        var normalized = convertFormat.Trim().ToLowerInvariant();
+        if (!RunConstants.ValidConvertFormats.Contains(normalized))
+        {
+            throw new InvalidOperationException(
+                $"Invalid convertFormat '{convertFormat}'. Must be one of: {string.Join(", ", RunConstants.ValidConvertFormats.OrderBy(static value => value, StringComparer.OrdinalIgnoreCase))}.");
+        }
+
+        return normalized;
+    }
 
     private static void EnsureLegacyExplicitness(CliRunOptions cli)
     {
@@ -176,8 +186,14 @@ internal static class CliOptionsMapper
         if (!cli.HashTypeExplicit && !string.IsNullOrWhiteSpace(cli.HashType))
             cli.HashTypeExplicit = true;
 
-        if (!cli.ConvertFormatExplicit && cli.ConvertFormat)
+        if (!cli.ConvertFormatExplicit && !string.IsNullOrWhiteSpace(cli.ConvertFormat))
             cli.ConvertFormatExplicit = true;
+
+        if (cli.ConvertOnly && string.IsNullOrWhiteSpace(cli.ConvertFormat))
+        {
+            cli.ConvertFormat = RunConstants.ConvertFormatAuto;
+            cli.ConvertFormatExplicit = true;
+        }
 
         if (!cli.ConvertOnlyExplicit && cli.ConvertOnly)
             cli.ConvertOnlyExplicit = true;

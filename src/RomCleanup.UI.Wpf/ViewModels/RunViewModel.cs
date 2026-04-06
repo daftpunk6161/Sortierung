@@ -53,7 +53,12 @@ public sealed class RunViewModel : ObservableObject
     public RunResult? LastRunResult
     {
         get => _lastRunResult;
-        set { _lastRunResult = value; OnPropertyChanged(); }
+        set
+        {
+            _lastRunResult = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasRunResult));
+        }
     }
 
     private string? _lastAuditPath;
@@ -92,7 +97,10 @@ public sealed class RunViewModel : ObservableObject
         or RunState.Deduplicating or RunState.Sorting or RunState.Moving or RunState.Converting;
     public bool IsIdle => !IsBusy;
     public bool ShowStartMoveButton => _runState == RunState.CompletedDryRun && !IsBusy;
-    public bool HasRunResult => _runState is RunState.Completed or RunState.CompletedDryRun;
+    public bool HasRunResult =>
+        _runState is RunState.Completed or RunState.CompletedDryRun
+        || (_runState is RunState.Cancelled or RunState.Failed
+            && (LastRunResult?.TotalFilesScanned ?? 0) > 0);
 
     // BUG-39: Rollback stacks removed — dead code from partial refactor.
     // Active rollback logic lives in MainViewModel.RunPipeline.cs.
