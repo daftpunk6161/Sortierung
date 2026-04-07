@@ -1238,12 +1238,10 @@ public sealed class HardGuiInvariantTests
     }
 
     [Fact]
-    public void GUI_INV_10_PopulateErrorSummary_MustShowConvertErrors_RunViewModel()
+    public void GUI_INV_10_PopulateErrorSummary_MustShowConvertErrors_Projection()
     {
-        // Arrange
-        var runVm = new RunViewModel();
-        SetRunViewModelStateViaValidPath(runVm, RunState.Preflight);
-
+        // After cleanup: PopulateErrorSummary moved from RunViewModel to MainViewModel.
+        // We now test the underlying ErrorSummaryProjection.Build directly.
         var resultWithConvertErrors = new RunResult
         {
             Status = "completed_with_errors",
@@ -1256,19 +1254,14 @@ public sealed class HardGuiInvariantTests
             DedupeGroups = []
         };
 
-        runVm.LastRunResult = resultWithConvertErrors;
-        runVm.LastCandidates = new System.Collections.ObjectModel.ObservableCollection<RomCandidate>(
-            resultWithConvertErrors.AllCandidates);
-        SetRunViewModelStateViaValidPath(runVm, RunState.Completed);
-
-        var errorItems = new System.Collections.ObjectModel.ObservableCollection<UiError>();
-        var logEntries = new System.Collections.ObjectModel.ObservableCollection<LogEntry>();
-
         // Act
-        runVm.PopulateErrorSummary(errorItems, logEntries);
+        var errors = ErrorSummaryProjection.Build(
+            resultWithConvertErrors,
+            resultWithConvertErrors.AllCandidates,
+            []);
 
         // Assert — INVARIANT: ConvertErrorCount > 0 MUST surface in error summary
-        Assert.Contains(errorItems, e =>
+        Assert.Contains(errors, e =>
             e.Code.Contains("CONVERT", StringComparison.OrdinalIgnoreCase) ||
             e.Message.Contains("konvert", StringComparison.OrdinalIgnoreCase) ||
             e.Message.Contains("convert", StringComparison.OrdinalIgnoreCase));
@@ -1316,33 +1309,25 @@ public sealed class HardGuiInvariantTests
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // GUI-INV-04: RunViewModel.CompleteRun after CancelRun MUST NOT crash
+    // GUI-INV-04: Cancelled state is terminal — no invalid transitions
     // ═══════════════════════════════════════════════════════════════
-    // Finding: RunViewModel.CancelRun() sets state to Cancelled.
-    //          RunViewModel.CompleteRun(success=false, dryRun) tries
-    //          to set Failed (because it lacks a `cancelled` parameter).
-    //          Cancelled → Failed is NOT a valid transition.
-    //          → throws InvalidOperationException at runtime.
-    // Impact:  UI crash when cancel is followed by cleanup/complete call.
-    // File:    RunViewModel.cs lines ~322-340
+    // Original: RunViewModel.CancelRun() + CompleteRun(false, dryRun)
+    //           caused Cancelled→Failed crash.
+    // After cleanup: CancelRun/CompleteRun removed from RunViewModel.
+    // New invariant: RunStateMachine guards Cancelled as terminal state.
     // ═══════════════════════════════════════════════════════════════
 
     [Fact]
-    public void GUI_INV_04_RunViewModel_CancelThenCompleteRun_MustNotThrow()
+    public void GUI_INV_04_RunViewModel_CancelledState_IsTerminal()
     {
         // Arrange
         var runVm = new RunViewModel();
         SetRunViewModelStateViaValidPath(runVm, RunState.Scanning);
-
-        // Act — simulate cancel during scan, then orchestrator complete call
-        runVm.CancelRun();
+        runVm.CurrentRunState = RunState.Cancelled;
         Assert.Equal(RunState.Cancelled, runVm.CurrentRunState);
 
-        // Assert — INVARIANT: CompleteRun after cancel must NOT throw.
-        // BUG: CompleteRun(success=false, dryRun=true) tries Cancelled→Failed
-        // which is an invalid transition, throwing InvalidOperationException.
-        var ex = Record.Exception(() => runVm.CompleteRun(success: false, dryRun: true));
-        Assert.Null(ex);
+        // Assert — Cancelled is terminal: no transition to Failed allowed
+        Assert.Throws<InvalidOperationException>(() => runVm.CurrentRunState = RunState.Failed);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1632,10 +1617,11 @@ public sealed class HardGuiInvariantTests
     public void GUI_INV_16_ApplyRunResult_MustNotMutateAfterCancel()
     {
         var vm = CreateTestVm();
-        vm.DashWinners = "sentinel";
-        vm.DashDupes = "sentinel";
         SetRunStateViaValidPath(vm, RunState.Scanning);
         vm.TransitionTo(RunState.Cancelled);
+        // Set sentinels AFTER reaching Cancelled — Preflight triggers ResetDashboardForNewRun
+        vm.DashWinners = "sentinel";
+        vm.DashDupes = "sentinel";
 
         var result = new RunResult
         {

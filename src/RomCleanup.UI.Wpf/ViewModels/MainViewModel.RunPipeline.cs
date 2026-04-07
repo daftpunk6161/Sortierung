@@ -61,6 +61,7 @@ public sealed partial class MainViewModel
 
     // ═══ RUN RESULT STATE ═══════════════════════════════════════════════
     private int _runLogStartIndex;
+    private int _isExecutingRun; // Single-flight guard for ExecuteRunAsync
     private ObservableCollection<RomCandidate> _lastCandidates = [];
     public ObservableCollection<RomCandidate> LastCandidates
     {
@@ -134,6 +135,16 @@ public sealed partial class MainViewModel
     public bool IsMovePhaseApplicable => !DryRun && !ConvertOnly;
     public bool IsConvertPhaseApplicable => ConvertOnly || (!DryRun && ConvertEnabled);
 
+    public bool ShowSkippedPhaseInfo => !IsMovePhaseApplicable || !IsConvertPhaseApplicable;
+
+    public string SkippedPhaseInfoText => (!IsMovePhaseApplicable, !IsConvertPhaseApplicable) switch
+    {
+        (true, true) => _loc["Phase.Skipped.MoveConvert"],
+        (true, false) => _loc["Phase.Skipped.MoveOnly"],
+        (false, true) => _loc["Phase.Skipped.ConvertOnly"],
+        _ => string.Empty
+    };
+
     // ═══ RUN STATE — delegated to RunViewModel (TASK-122 / ADR-0006) ══
     // RunState is owned exclusively by RunViewModel.
     // MainViewModel exposes delegation properties for XAML binding compatibility.
@@ -152,6 +163,20 @@ public sealed partial class MainViewModel
     public bool IsIdle => Run.IsIdle;
 
     public bool ShowStartMoveButton => CanStartMoveWithCurrentPreview;
+
+    public bool ShowResultMoveButton => ShowStartMoveButton && !ShowSmartActionBar;
+
+    public bool ShowActionBarMoveButton => ShowStartMoveButton && ShowSmartActionBar;
+
+    public bool CanExecuteInlineStartMove =>
+        Shell.ShowMoveInlineConfirm && DateTime.UtcNow >= _inlineMoveUnlockAtUtc;
+
+    public string InlineMoveConfirmHint =>
+        !Shell.ShowMoveInlineConfirm
+            ? string.Empty
+            : CanExecuteInlineStartMove
+                ? _loc["Result.InlineConfirmReady"]
+                : _loc["Result.InlineConfirmWaiting"];
 
     public bool ShowSmartActionBar =>
         IsBusy ||
@@ -185,7 +210,7 @@ public sealed partial class MainViewModel
     private static readonly HashSet<string> _forwardedRunProperties =
     [
         nameof(CurrentRunState), nameof(IsBusy), nameof(IsIdle),
-        nameof(HasRunResult), nameof(ShowStartMoveButton)
+        nameof(HasRunResult)
     ];
 
     private void OnRunPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -200,8 +225,13 @@ public sealed partial class MainViewModel
         // RunState changes also affect derived MainViewModel-only properties
         if (e.PropertyName == nameof(CurrentRunState))
         {
+            if (Run.CurrentRunState == RunState.Preflight)
+                ResetDashboardForNewRun();
+
             OnPropertyChanged(nameof(RunStateDisplayText));
             OnPropertyChanged(nameof(ShowStartMoveButton));
+            OnPropertyChanged(nameof(ShowResultMoveButton));
+            OnPropertyChanged(nameof(ShowActionBarMoveButton));
             OnPropertyChanged(nameof(ShowSmartActionBar));
             OnPropertyChanged(nameof(CanStartCurrentRun));
             OnPropertyChanged(nameof(CanStartMoveWithCurrentPreview));
@@ -209,8 +239,12 @@ public sealed partial class MainViewModel
             DeferCommandRequery();
         }
 
-        if (e.PropertyName is nameof(IsBusy) or nameof(IsIdle) or nameof(ShowStartMoveButton))
+        if (e.PropertyName is nameof(IsBusy) or nameof(IsIdle))
+        {
             OnPropertyChanged(nameof(ShowSmartActionBar));
+            OnPropertyChanged(nameof(ShowResultMoveButton));
+            OnPropertyChanged(nameof(ShowActionBarMoveButton));
+        }
     }
 
     /// <summary>GUI-065: True when no roots are configured (for StartView hero drop-zone).</summary>
@@ -358,7 +392,51 @@ public sealed partial class MainViewModel
 
     public bool HasRunSummary => Run.HasRunSummary;
 
-    public string RollbackActionHint => Run.RollbackActionHint;
+    private bool _isConvertOnlyDashboard;
+    public bool IsConvertOnlyDashboard
+    {
+        get => _isConvertOnlyDashboard;
+        set
+        {
+            if (SetProperty(ref _isConvertOnlyDashboard, value))
+                OnPropertyChanged(nameof(ShowDedupeDashboard));
+        }
+    }
+
+    public bool ShowDedupeDashboard => !IsConvertOnlyDashboard;
+
+    private string _dashboardContextHint = string.Empty;
+    public string DashboardContextHint
+    {
+        get => _dashboardContextHint;
+        set
+        {
+            if (SetProperty(ref _dashboardContextHint, value))
+                OnPropertyChanged(nameof(HasDashboardContextHint));
+        }
+    }
+
+    private UiErrorSeverity _dashboardContextSeverity = UiErrorSeverity.Info;
+    public UiErrorSeverity DashboardContextSeverity
+    {
+        get => _dashboardContextSeverity;
+        set => SetProperty(ref _dashboardContextSeverity, value);
+    }
+
+    public bool HasDashboardContextHint => !string.IsNullOrWhiteSpace(DashboardContextHint);
+
+    public bool HasActionableErrorSummary => ErrorSummaryItems.Any(static issue => issue.Severity != UiErrorSeverity.Info);
+
+    public IReadOnlyList<UiError> ActionableErrorSummaryItems => ErrorSummaryItems
+        .Where(static issue => issue.Severity != UiErrorSeverity.Info)
+        .Take(5)
+        .ToList();
+
+    public string ActionableErrorSummaryTitle => _loc.Format("Result.ErrorSummaryHeadline", ActionableErrorSummaryItems.Count);
+
+    public string RollbackActionHint => CanRollback
+        ? _loc["Run.RollbackHintEnabled"]
+        : _loc["Run.RollbackHintDisabled"];
 
     // ═══ STATUS INDICATORS ══════════════════════════════════════════════
     private string _statusRoots = "–";
@@ -405,7 +483,21 @@ public sealed partial class MainViewModel
     public string CisoStatusText { get => _cisoStatusText; set => SetProperty(ref _cisoStatusText, value); }
 
     // ═══ DASHBOARD COUNTERS (delegated to RunViewModel) ════════════════
-    public string DashMode { get => Run.DashMode; set => Run.DashMode = value; }
+    public string DashMode
+    {
+        get => Run.DashMode;
+        set
+        {
+            Run.DashMode = value;
+            if (string.Equals(value, "Rollback", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(RunSummaryText))
+            {
+                SetRunSummary(
+                    _loc.Format("Result.Summary.RollbackDone", 0, 0, 0, 0),
+                    UiErrorSeverity.Info);
+            }
+        }
+    }
     public string DashWinners { get => Run.DashWinners; set => Run.DashWinners = value; }
     public string DashDupes { get => Run.DashDupes; set => Run.DashDupes = value; }
     public string DashJunk { get => Run.DashJunk; set => Run.DashJunk = value; }
@@ -421,6 +513,10 @@ public sealed partial class MainViewModel
     public string DashDatRenameProposed { get => Run.DashDatRenameProposed; set => Run.DashDatRenameProposed = value; }
     public string DashDatRenameExecuted { get => Run.DashDatRenameExecuted; set => Run.DashDatRenameExecuted = value; }
     public string DashDatRenameFailed { get => Run.DashDatRenameFailed; set => Run.DashDatRenameFailed = value; }
+    public string DashConverted { get => Run.DashConverted; set => Run.DashConverted = value; }
+    public string DashConvertBlocked { get => Run.DashConvertBlocked; set => Run.DashConvertBlocked = value; }
+    public string DashConvertReview { get => Run.DashConvertReview; set => Run.DashConvertReview = value; }
+    public string DashConvertSaved { get => Run.DashConvertSaved; set => Run.DashConvertSaved = value; }
     public string DedupeRate { get => Run.DedupeRate; set => Run.DedupeRate = value; }
 
     // ═══ ANALYSE DATA (delegated to RunViewModel) ═══════════════════════
@@ -614,7 +710,7 @@ public sealed partial class MainViewModel
         CurrentRunState = RunState.Preflight;
         ResetDashboardForNewRun();
         BusyHint = ConvertOnly ? _loc["Progress.BusyHint.Converting"] : DryRun ? (IsSimpleMode ? _loc["Progress.BusyHint.Preview"] : _loc["Progress.BusyHint.DryRun"]) : _loc["Progress.BusyHint.Move"];
-        DashMode = ConvertOnly ? "Convert" : DryRun ? (IsSimpleMode ? _loc["Progress.BusyHint.Preview"] : "DryRun") : "Move";
+        DashMode = ConvertOnly ? _loc["Result.Mode.ConvertOnly"] : DryRun ? (IsSimpleMode ? _loc["Progress.BusyHint.Preview"] : "DryRun") : "Move";
         Progress = 0;
         ProgressText = "0%";
         PerfPhase = "–";
@@ -629,7 +725,7 @@ public sealed partial class MainViewModel
 
     private void OnCancel()
     {
-        Shell.ShowMoveInlineConfirm = false;
+        ResetInlineMoveConfirmDebounce();
         // F-02 FIX: Cancel under lock to prevent race with CreateRunCancellation/Dispose
         lock (_ctsLock)
         {
@@ -643,7 +739,16 @@ public sealed partial class MainViewModel
 
     private async Task OnRollbackAsync()
     {
-        var rollbackPreview = _loc.Format("Dialog.Rollback.Preview", MoveConsequenceText, DashWinners, DashDupes, DashJunk);
+        var restoreCount = (LastRunResult?.MoveResult?.MoveCount ?? 0)
+            + (LastRunResult?.JunkMoveResult?.MoveCount ?? 0);
+        var rollbackPreview = _loc.Format(
+            "Dialog.Rollback.Preview",
+            MoveConsequenceText,
+            DashWinners,
+            DashDupes,
+            DashJunk,
+            restoreCount,
+            TrashRoot);
 
         if (!_dialog.Confirm(rollbackPreview, _loc["Dialog.Rollback.Title"]))
             return;
@@ -678,6 +783,9 @@ public sealed partial class MainViewModel
                 restored.Failed > 0 ? "WARN" : "INFO");
             CanRollback = false;
             ShowMoveCompleteBanner = false;
+            // SEC-002: Invalidate preview fingerprint — filesystem state changed, old preview is stale
+            _lastSuccessfulPreviewFingerprint = null;
+            OnMovePreviewGateChanged();
             ResetDashboardForNewRun();
             DashMode = "Rollback";
             Shell.SelectedNavTag = "Analyse";
@@ -755,9 +863,9 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>Complete a run (call from UI thread when orchestration finishes).</summary>
-    public void CompleteRun(bool success, string? reportPath = null, bool cancelled = false)
+    public void CompleteRun(bool success, string? reportPath = null, bool cancelled = false, bool completedWithErrors = false)
     {
-        Shell.ShowMoveInlineConfirm = false;
+        ResetInlineMoveConfirmDebounce();
         BusyHint = "";
         ConvertOnly = false; // Reset transient flag
         var resolvedReportPath = string.IsNullOrWhiteSpace(reportPath) ? null : reportPath;
@@ -771,7 +879,10 @@ public sealed partial class MainViewModel
             SelectedResultSection = "Dashboard";
             IsResultPerfDetailsExpanded = true;
             SetRunSummary(
-                _loc.Format("Result.Summary.PreviewDone", DashDupes, DashJunk),
+                string.Concat(
+                    _loc.Format("Result.Summary.PreviewDone", DashDupes, DashJunk),
+                    " ",
+                    _loc["Result.Summary.PreviewShortcutHint"]),
                 UiErrorSeverity.Info);
         }
         else if (success && !DryRun)
@@ -787,9 +898,18 @@ public sealed partial class MainViewModel
         else if (cancelled)
         {
             CurrentRunState = RunState.Cancelled;
+            ShowMoveCompleteBanner = false;
             Shell.SelectedNavTag = "Analyse";
             SelectedResultSection = "Dashboard";
-            SetRunSummary(_loc["Result.Summary.CancelledPartial"], UiErrorSeverity.Warning);
+            SetRunSummary(BuildCancelledRunSummary(), UiErrorSeverity.Warning);
+        }
+        else if (completedWithErrors)
+        {
+            CurrentRunState = RunState.Failed;
+            Shell.SelectedNavTag = "Analyse";
+            SelectedResultSection = "Dashboard";
+            IsResultPerfDetailsExpanded = true;
+            SetRunSummary(_loc["Result.Summary.CompletedWithErrors"], UiErrorSeverity.Warning);
         }
         else
         {
@@ -800,6 +920,25 @@ public sealed partial class MainViewModel
         }
         RefreshStatus();
         OnMovePreviewGateChanged();
+    }
+
+    private string BuildCancelledRunSummary()
+    {
+        var phase = string.IsNullOrWhiteSpace(PerfPhase) || PerfPhase == "–"
+            ? _loc["State.Cancelled"]
+            : PerfPhase;
+
+        var movedFiles = (LastRunResult?.MoveResult?.MoveCount ?? 0)
+            + (LastRunResult?.JunkMoveResult?.MoveCount ?? 0);
+
+        if (movedFiles <= 0)
+            return _loc.Format("Result.Summary.CancelledInPhase", phase);
+
+        var rollbackHint = CanRollback
+            ? _loc["Result.Summary.RollbackAvailable"]
+            : _loc["Result.Summary.RollbackUnavailable"];
+
+        return _loc.Format("Result.Summary.CancelledInPhaseMoved", phase, movedFiles, rollbackHint);
     }
 
     private static string? TryFindLatestReportPath()
@@ -947,8 +1086,25 @@ public sealed partial class MainViewModel
     /// <summary>Execute the full run pipeline (scan, dedupe, sort, convert, move).</summary>
     public async Task ExecuteRunAsync()
     {
+        // Single-flight guard: prevent concurrent pipeline execution
+        if (Interlocked.CompareExchange(ref _isExecutingRun, 1, 0) != 0) return;
+        try
+        {
+            await ExecuteRunCoreAsync();
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isExecutingRun, 0);
+        }
+    }
+
+    private async Task ExecuteRunCoreAsync()
+    {
         if (!DryRun && !ConvertOnly && ConfirmMove && !ConfirmMoveDialog())
         {
+            // SEC-001: Reset transient flags on dialog decline before returning to Idle
+            ConvertOnly = false;
+            BusyHint = "";
             CurrentRunState = RunState.Idle;
             return;
         }
@@ -987,6 +1143,9 @@ public sealed partial class MainViewModel
             var conversionReviewDecision = await ConfirmConversionReviewDialogAsync(runOptions, ct);
             if (!conversionReviewDecision.Proceed)
             {
+                // SEC-001: Reset transient flags on dialog decline before returning to Idle
+                ConvertOnly = false;
+                BusyHint = "";
                 CurrentRunState = RunState.Idle;
                 return;
             }
@@ -997,6 +1156,9 @@ public sealed partial class MainViewModel
 
             if (!await ConfirmDatRenamePreviewDialogAsync(runOptions, ct))
             {
+                // SEC-001: Reset transient flags on dialog decline before returning to Idle
+                ConvertOnly = false;
+                BusyHint = "";
                 CurrentRunState = RunState.Idle;
                 return;
             }
@@ -1027,8 +1189,19 @@ public sealed partial class MainViewModel
 
             if (!ct.IsCancellationRequested)
             {
-                AddLog(_loc["Log.RunComplete"], "INFO");
-                CompleteRun(true, svcResult.ReportPath);
+                var isPartialFailure = string.Equals(svcResult.Result.Status,
+                    Contracts.RunConstants.StatusCompletedWithErrors, StringComparison.OrdinalIgnoreCase);
+
+                if (isPartialFailure)
+                {
+                    AddLog(_loc["Log.RunCompletedWithErrors"], "WARN");
+                    CompleteRun(false, svcResult.ReportPath, completedWithErrors: true);
+                }
+                else
+                {
+                    AddLog(_loc["Log.RunComplete"], "INFO");
+                    CompleteRun(true, svcResult.ReportPath);
+                }
                 PopulateErrorSummary();
             }
             else
@@ -1237,6 +1410,10 @@ public sealed partial class MainViewModel
 
         foreach (var issue in projected)
             ErrorSummaryItems.Add(issue);
+
+        OnPropertyChanged(nameof(HasActionableErrorSummary));
+        OnPropertyChanged(nameof(ActionableErrorSummaryItems));
+        OnPropertyChanged(nameof(ActionableErrorSummaryTitle));
     }
 
     /// <summary>Apply run results from orchestrator to all dashboard/state properties.</summary>
@@ -1260,6 +1437,7 @@ public sealed partial class MainViewModel
                                (result.MoveResult is null && result.JunkMoveResult is null &&
                                 (result.ConvertedCount > 0 || result.ConvertErrorCount > 0 || result.ConvertSkippedCount > 0 || result.ConvertBlockedCount > 0));
         var isDryRun = DryRun;
+        var hasCandidates = projectedArtifacts.AllCandidates.Count > 0;
         var dashboard = DashboardProjection.From(projection, result, isConvertOnlyRun, isDryRun);
 
         DashWinners = dashboard.Winners;
@@ -1277,7 +1455,45 @@ public sealed partial class MainViewModel
         DashDatRenameProposed = dashboard.DatRenameProposedDisplay;
         DashDatRenameExecuted = dashboard.DatRenameExecutedDisplay;
         DashDatRenameFailed = dashboard.DatRenameFailedDisplay;
+        DashConverted = dashboard.ConvertedDisplay;
+        DashConvertBlocked = dashboard.ConvertBlockedDisplay;
+        DashConvertReview = dashboard.ConvertReviewDisplay;
+        DashConvertSaved = dashboard.ConvertSavedBytesDisplay;
         DedupeRate = dashboard.DedupeRate;
+        IsConvertOnlyDashboard = isConvertOnlyRun;
+
+        if (isConvertOnlyRun)
+        {
+            DashboardContextHint = _loc["Result.Context.ConvertOnly"];
+            DashboardContextSeverity = UiErrorSeverity.Info;
+        }
+        else if (string.Equals(result.Status, RunConstants.StatusCancelled, StringComparison.OrdinalIgnoreCase) && hasCandidates)
+        {
+            DashboardContextHint = _loc["Result.Context.CancelledPartial"];
+            DashboardContextSeverity = UiErrorSeverity.Warning;
+        }
+        else if (string.Equals(result.Status, RunConstants.StatusCancelled, StringComparison.OrdinalIgnoreCase) && !hasCandidates)
+        {
+            DashboardContextHint = _loc["Result.Context.CancelledNoData"];
+            DashboardContextSeverity = UiErrorSeverity.Warning;
+        }
+        else if (isDryRun)
+        {
+            DashboardContextHint = _loc["Result.Context.Preview"];
+            DashboardContextSeverity = UiErrorSeverity.Info;
+        }
+        else if (string.Equals(result.Status, RunConstants.StatusOk, StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(result.Status, RunConstants.StatusCompletedWithErrors, StringComparison.OrdinalIgnoreCase)
+                 || string.IsNullOrWhiteSpace(result.Status))
+        {
+            DashboardContextHint = _loc["Result.Context.MoveCompleted"];
+            DashboardContextSeverity = UiErrorSeverity.Info;
+        }
+        else
+        {
+            DashboardContextHint = string.Empty;
+            DashboardContextSeverity = UiErrorSeverity.Info;
+        }
 
         // Raw int values for chart rendering (display strings contain suffixes like "(vorläufig) (Plan)")
         Run.GamesRaw = projection.Games;
@@ -1374,6 +1590,10 @@ public sealed partial class MainViewModel
         {
             OnPropertyChanged(nameof(IsMovePhaseApplicable));
             OnPropertyChanged(nameof(IsConvertPhaseApplicable));
+            OnPropertyChanged(nameof(ShowSkippedPhaseInfo));
+            OnPropertyChanged(nameof(SkippedPhaseInfoText));
+            OnPropertyChanged(nameof(ShowResultMoveButton));
+            OnPropertyChanged(nameof(ShowActionBarMoveButton));
         }
 
         if (e.PropertyName is nameof(AggressiveJunk))
@@ -1433,12 +1653,22 @@ public sealed partial class MainViewModel
         DashDatRenameProposed = "–";
         DashDatRenameExecuted = "–";
         DashDatRenameFailed = "–";
+        DashConverted = "–";
+        DashConvertBlocked = "–";
+        DashConvertReview = "–";
+        DashConvertSaved = "–";
         DedupeRate = "–";
+        IsConvertOnlyDashboard = false;
+        DashboardContextHint = string.Empty;
+        DashboardContextSeverity = UiErrorSeverity.Info;
         MoveConsequenceText = "";
         Progress = 0;
         ProgressText = "0%";
         RunSummaryText = "";
         RunSummarySeverity = UiErrorSeverity.Info;
+        OnPropertyChanged(nameof(HasActionableErrorSummary));
+        OnPropertyChanged(nameof(ActionableErrorSummaryItems));
+        OnPropertyChanged(nameof(ActionableErrorSummaryTitle));
         RefreshToolSurfaceState();
     }
 
@@ -1449,6 +1679,8 @@ public sealed partial class MainViewModel
 
         OnPropertyChanged(nameof(CanStartMoveWithCurrentPreview));
         OnPropertyChanged(nameof(ShowStartMoveButton));
+        OnPropertyChanged(nameof(ShowResultMoveButton));
+        OnPropertyChanged(nameof(ShowActionBarMoveButton));
         OnPropertyChanged(nameof(MoveApplyGateText));
         OnPropertyChanged(nameof(ShowConfigChangedBanner));
         OnPropertyChanged(nameof(RollbackActionHint));

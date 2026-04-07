@@ -41,6 +41,9 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     private CancellationTokenSource? _cts;
     // V2-THR-H02: Lock for consistent CTS access between OnCancel and CreateRunCancellation
     private readonly object _ctsLock = new();
+    private static readonly TimeSpan InlineMoveConfirmDebounceDelay = TimeSpan.FromMilliseconds(1500);
+    private DateTime _inlineMoveUnlockAtUtc = DateTime.MinValue;
+    private int _inlineMoveConfirmDebounceToken;
 
     // ═══ CHILD VIEWMODELS (GUI-021: shell ViewModel pattern) ════════════
     /// <summary>Shell state: navigation, overlays, wizard, notifications.</summary>
@@ -84,7 +87,8 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         Shell.PropertyChanged += OnShellStatePropertyChanged;
         Setup = new SetupViewModel(_theme, _dialog, _settings, _loc);
         Tools = new ToolsViewModel(_loc);
-        Run = new RunViewModel(_loc);
+        Tools.SetSimpleMode(_isSimpleMode);
+        Run = new RunViewModel();
         CommandPalette = new CommandPaletteViewModel(_loc);
         DatAudit = new DatAuditViewModel(_loc, _dialog);
         DatCatalog = new DatCatalogViewModel(_loc, _dialog, () => DatRoot, AddLog);
@@ -95,7 +99,6 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         Setup.StatusRefreshRequested += () => RefreshStatus();
         Setup.PropertyChanged += OnSetupPropertyChanged;
         Run.CommandRequeryRequested += DeferCommandRequery;
-        Run.RunRequested += (_, _) => OnRun();
         Run.PropertyChanged += OnRunPropertyChanged;
 
         // Wire collection changes to status refresh
@@ -154,15 +157,15 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
 
         // Inline confirm commands delegate to Shell.ShowMoveInlineConfirm
         RequestStartMoveCommand = new RelayCommand(
-            () => Shell.ShowMoveInlineConfirm = true,
+            ArmInlineMoveConfirmDebounce,
             () => ShowStartMoveButton && !Shell.ShowMoveInlineConfirm);
         CancelStartMoveCommand = new RelayCommand(
-            () => Shell.ShowMoveInlineConfirm = false,
+            ResetInlineMoveConfirmDebounce,
             () => Shell.ShowMoveInlineConfirm);
         StartMoveCommand = new RelayCommand(
             () =>
             {
-                Shell.ShowMoveInlineConfirm = false;
+                ResetInlineMoveConfirmDebounce();
                 if (HasBlockingValidationErrors)
                 {
                     var blockingValidationMessage = GetBlockingValidationMessage();
@@ -197,6 +200,57 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         _watchService.RunTriggered += OnWatchRunTriggered;
         _watchService.WatcherError += OnWatcherError;
         _scheduleService.Triggered += OnScheduledRunTriggered;
+    }
+
+    private void ArmInlineMoveConfirmDebounce()
+    {
+        Shell.ShowMoveInlineConfirm = true;
+        _inlineMoveUnlockAtUtc = DateTime.UtcNow.Add(InlineMoveConfirmDebounceDelay);
+        var token = Interlocked.Increment(ref _inlineMoveConfirmDebounceToken);
+
+        OnPropertyChanged(nameof(CanExecuteInlineStartMove));
+        OnPropertyChanged(nameof(InlineMoveConfirmHint));
+        DeferCommandRequery();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(InlineMoveConfirmDebounceDelay).ConfigureAwait(false);
+            }
+            catch
+            {
+                return;
+            }
+
+            if (token != _inlineMoveConfirmDebounceToken || !Shell.ShowMoveInlineConfirm)
+                return;
+
+            if (_syncContext is null)
+            {
+                OnPropertyChanged(nameof(CanExecuteInlineStartMove));
+                OnPropertyChanged(nameof(InlineMoveConfirmHint));
+                DeferCommandRequery();
+                return;
+            }
+
+            _syncContext.Post(_ =>
+            {
+                OnPropertyChanged(nameof(CanExecuteInlineStartMove));
+                OnPropertyChanged(nameof(InlineMoveConfirmHint));
+                DeferCommandRequery();
+            }, null);
+        });
+    }
+
+    private void ResetInlineMoveConfirmDebounce()
+    {
+        Interlocked.Increment(ref _inlineMoveConfirmDebounceToken);
+        _inlineMoveUnlockAtUtc = DateTime.MinValue;
+        Shell.ShowMoveInlineConfirm = false;
+        OnPropertyChanged(nameof(CanExecuteInlineStartMove));
+        OnPropertyChanged(nameof(InlineMoveConfirmHint));
+        DeferCommandRequery();
     }
 
     /// <summary>GUI-115: Named handler for proper unsubscription in CleanupWatchers.</summary>

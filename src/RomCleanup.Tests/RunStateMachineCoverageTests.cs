@@ -29,6 +29,7 @@ public sealed class RunStateMachineCoverageTests
     // ── Happy path forward transitions ────────────────────────────
     [Theory]
     [InlineData(RunState.Idle, RunState.Preflight)]
+    [InlineData(RunState.Preflight, RunState.Idle)] // SEC-001: dialog-decline abort
     [InlineData(RunState.Preflight, RunState.Scanning)]
     [InlineData(RunState.Scanning, RunState.Deduplicating)]
     [InlineData(RunState.Deduplicating, RunState.Sorting)]

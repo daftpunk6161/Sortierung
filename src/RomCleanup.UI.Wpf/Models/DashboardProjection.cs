@@ -35,18 +35,43 @@ public sealed record DashboardProjection(
 {
     public static DashboardProjection From(RunProjection projection, RunResult result, bool isConvertOnlyRun, bool isDryRun = false)
     {
-        var isPartialCancelledOrFailed = IsPartialCancelledOrFailed(result);
+        var isCancelledOrFailed = IsCancelledOrFailed(result);
+        var hasCandidates = (result.AllCandidates?.Count ?? 0) > 0;
+        var isPartialCancelledOrFailed = isCancelledOrFailed && hasCandidates;
+        var isCancelledOrFailedWithoutData = isCancelledOrFailed && !hasCandidates;
         var projectedArtifacts = RunArtifactProjection.Project(result);
 
-        var winners = isConvertOnlyRun ? "–" : MarkPlan(MarkProvisional(projection.Keep.ToString(), isPartialCancelledOrFailed), isDryRun);
-        var dupes = isConvertOnlyRun ? "–" : MarkPlan(MarkProvisional(projection.Dupes.ToString(), isPartialCancelledOrFailed), isDryRun);
-        var junk = isConvertOnlyRun ? "–" : MarkPlan(MarkProvisional(projection.Junk.ToString(), isPartialCancelledOrFailed), isDryRun);
+        var winners = isConvertOnlyRun
+            ? "Entfällt"
+            : isCancelledOrFailedWithoutData
+                ? "–"
+            : MarkDisplayValue(projection.Keep.ToString(), isPartialCancelledOrFailed, isDryRun);
+        var dupes = isConvertOnlyRun
+            ? "Entfällt"
+            : isCancelledOrFailedWithoutData
+                ? "–"
+            : MarkDisplayValue(projection.Dupes.ToString(), isPartialCancelledOrFailed, isDryRun);
+        var junk = isConvertOnlyRun
+            ? "Entfällt"
+            : isCancelledOrFailedWithoutData
+                ? "–"
+            : MarkDisplayValue(projection.Junk.ToString(), isPartialCancelledOrFailed, isDryRun);
         var duration = $"{projection.DurationMs / 1000.0:F1}s";
-        var healthScore = isConvertOnlyRun || projection.TotalFiles <= 0
-            ? "–"
-            : MarkPlan(MarkProvisional($"{projection.HealthScore}%", isPartialCancelledOrFailed), isDryRun);
-        var games = isConvertOnlyRun ? "–" : MarkPlan(MarkProvisional(projection.Games.ToString(), isPartialCancelledOrFailed), isDryRun);
-        var datHits = isConvertOnlyRun ? "–" : MarkPlan(MarkProvisional(projection.DatMatches.ToString(), isPartialCancelledOrFailed), isDryRun);
+        var healthScore = isConvertOnlyRun
+            ? "Entfällt"
+            : projection.TotalFiles <= 0 || isCancelledOrFailedWithoutData
+                ? "–"
+            : MarkDisplayValue($"{projection.HealthScore}%", isPartialCancelledOrFailed, isDryRun);
+        var games = isConvertOnlyRun
+            ? "Entfällt"
+            : isCancelledOrFailedWithoutData
+                ? "–"
+            : MarkDisplayValue(projection.Games.ToString(), isPartialCancelledOrFailed, isDryRun);
+        var datHits = isConvertOnlyRun
+            ? "Entfällt"
+            : isCancelledOrFailedWithoutData
+                ? "–"
+            : MarkDisplayValue(projection.DatMatches.ToString(), isPartialCancelledOrFailed, isDryRun);
         var hasDatAudit = projection.DatHaveCount > 0
                           || projection.DatHaveWrongNameCount > 0
                           || projection.DatMissCount > 0
@@ -58,9 +83,11 @@ public sealed record DashboardProjection(
         var datUnknownDisplay = hasDatAudit ? projection.DatUnknownCount.ToString() : "–";
         var datAmbiguousDisplay = hasDatAudit ? projection.DatAmbiguousCount.ToString() : "–";
         var dedupeDenominator = projection.Keep + projection.Dupes;
-        var dedupeRate = isConvertOnlyRun || dedupeDenominator <= 0
-            ? "–"
-            : MarkPlan(MarkProvisional($"{100.0 * projection.Dupes / dedupeDenominator:F0}%", isPartialCancelledOrFailed), isDryRun);
+        var dedupeRate = isConvertOnlyRun
+            ? "Entfällt"
+            : dedupeDenominator <= 0 || isCancelledOrFailedWithoutData
+                ? "–"
+            : MarkDisplayValue($"{100.0 * projection.Dupes / dedupeDenominator:F0}%", isPartialCancelledOrFailed, isDryRun);
 
         var consoleDistribution = BuildConsoleDistribution(projectedArtifacts.AllCandidates);
         var dedupeGroups = BuildDedupeGroupItems(projectedArtifacts.DedupeGroups);
@@ -70,8 +97,10 @@ public sealed record DashboardProjection(
             ? "Nur Konvertierung aktiv. Keine Dateien werden verschoben."
             : isPartialCancelledOrFailed
                 ? "Lauf abgebrochen. Kennzahlen sind vorläufig und basieren auf bereits gescannten Dateien."
+            : isCancelledOrFailedWithoutData
+                ? "Lauf abgebrochen. Keine verlässlichen Kennzahlen verfügbar."
             : isDryRun
-                ? "Vorschau (Plan): Kennzahlen zeigen geplante Aktionen, es wurden keine Dateien verschoben."
+                ? "Vorschau-Ergebnis: Kennzahlen zeigen geplante Aktionen, es wurden keine Dateien verschoben."
             : totalMove > 0
                 ? $"Es werden {totalMove} Dateien verschoben ({projection.Dupes} Duplikate, {projection.Junk} Junk)."
                 : "Keine Dateien zum Verschieben erkannt.";
@@ -117,22 +146,22 @@ public sealed record DashboardProjection(
             DedupeGroups: dedupeGroups);
     }
 
-    private static bool IsPartialCancelledOrFailed(RunResult result)
+    private static bool IsCancelledOrFailed(RunResult result)
     {
-        var isCancelledOrFailed =
-            string.Equals(result.Status, "cancelled", StringComparison.OrdinalIgnoreCase)
+        return string.Equals(result.Status, "cancelled", StringComparison.OrdinalIgnoreCase)
             || string.Equals(result.Status, "failed", StringComparison.OrdinalIgnoreCase);
-
-        var hasCandidates = (result.AllCandidates?.Count ?? 0) > 0;
-
-        return isCancelledOrFailed && hasCandidates;
     }
 
-    private static string MarkProvisional(string value, bool isProvisional)
-        => isProvisional && value != "–" ? $"{value} (vorläufig)" : value;
+    private static string MarkDisplayValue(string value, bool isProvisional, bool isDryRun)
+    {
+        if (value == "–")
+            return value;
 
-    private static string MarkPlan(string value, bool isDryRun)
-        => isDryRun && value != "–" ? $"{value} (Plan)" : value;
+        if (isProvisional)
+            return $"{value} (vorläufig)";
+
+        return isDryRun ? $"{value} (Vorschau)" : value;
+    }
 
     private static string FormatBytes(long bytes)
     {

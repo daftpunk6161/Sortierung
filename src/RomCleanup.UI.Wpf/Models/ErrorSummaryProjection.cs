@@ -1,3 +1,4 @@
+using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Orchestration;
 
@@ -9,6 +10,17 @@ namespace RomCleanup.UI.Wpf.Models;
 /// </summary>
 public static class ErrorSummaryProjection
 {
+    private static readonly HashSet<string> KnownStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        RunConstants.StatusOk,
+        RunConstants.StatusCompletedWithErrors,
+        RunConstants.StatusBlocked,
+        RunConstants.StatusCancelled,
+        RunConstants.StatusFailed,
+        "completed", // OperationResult.StatusCompleted — used by some flows
+        "" // empty/null treated as ok
+    };
+
     public static IReadOnlyList<UiError> Build(
         RunResult? result,
         IReadOnlyList<RomCandidate> candidates,
@@ -26,6 +38,10 @@ public static class ErrorSummaryProjection
 
         if (result is not null)
         {
+            // Guard: unknown status must surface as warning, never silently fall through to RUN-OK
+            if (!string.IsNullOrEmpty(result.Status) && !KnownStatuses.Contains(result.Status))
+                issues.Insert(0, new UiError("RUN-UNKNOWN", $"Unbekannter Run-Status: {result.Status}", UiErrorSeverity.Warning));
+
             if (result.Status == "blocked")
                 issues.Insert(0, new UiError("RUN-BLOCKED", $"Preflight: {result.Preflight?.Reason}", UiErrorSeverity.Blocked));
 

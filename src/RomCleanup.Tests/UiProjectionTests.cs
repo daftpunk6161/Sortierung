@@ -80,7 +80,12 @@ public sealed class UiProjectionTests
         var dashboard = DashboardProjection.From(runProjection, result, isConvertOnlyRun: true);
 
         Assert.Equal("Nur Konvertierung aktiv. Keine Dateien werden verschoben.", dashboard.MoveConsequenceText);
-        Assert.Equal("–", dashboard.Winners);
+        Assert.Equal("Entfällt", dashboard.Winners);
+        Assert.Equal("Entfällt", dashboard.Dupes);
+        Assert.Equal("Entfällt", dashboard.Junk);
+        Assert.Equal("Entfällt", dashboard.Games);
+        Assert.Equal("Entfällt", dashboard.HealthScore);
+        Assert.Equal("Entfällt", dashboard.DedupeRate);
         Assert.Single(dashboard.ConsoleDistribution);
         Assert.Single(dashboard.DedupeGroups);
     }
@@ -260,9 +265,9 @@ public sealed class UiProjectionTests
         var projection = RunProjectionFactory.Create(result);
         var dashboard = DashboardProjection.From(projection, result, isConvertOnlyRun: false, isDryRun: true);
 
-        Assert.Contains("(Plan)", dashboard.Winners, StringComparison.Ordinal);
-        Assert.Contains("(Plan)", dashboard.Dupes, StringComparison.Ordinal);
-        Assert.Contains("(Plan)", dashboard.Junk, StringComparison.Ordinal);
+        Assert.Contains("(Vorschau)", dashboard.Winners, StringComparison.Ordinal);
+        Assert.Contains("(Vorschau)", dashboard.Dupes, StringComparison.Ordinal);
+        Assert.Contains("(Vorschau)", dashboard.Junk, StringComparison.Ordinal);
         Assert.Contains("Vorschau", dashboard.MoveConsequenceText, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -284,115 +289,7 @@ public sealed class UiProjectionTests
         Assert.Contains("weitere", trunc.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    // ═══ TASK-121: ProgressProjection ════════════════════════════════════
-
-    [Fact]
-    public void ProgressProjection_Idle_HasDefaults()
-    {
-        var p = ProgressProjection.Idle;
-        Assert.Equal(0, p.Progress);
-        Assert.Equal(RunState.Idle, p.CurrentRunState);
-        Assert.False(p.IsBusy);
-        Assert.NotNull(p.ProgressText);
-        Assert.NotNull(p.CurrentPhase);
-        Assert.NotNull(p.CurrentFile);
-    }
-
-    [Fact]
-    public void ProgressProjection_CanCreateWithValues()
-    {
-        var p = new ProgressProjection(42.5, "42%", "Phase: Scan", "rom.zip", RunState.Scanning, true, "Scanning...");
-        Assert.Equal(42.5, p.Progress);
-        Assert.Equal("42%", p.ProgressText);
-        Assert.Equal(RunState.Scanning, p.CurrentRunState);
-        Assert.True(p.IsBusy);
-    }
-
-    [Fact]
-    public void ProgressProjection_IsImmutable()
-    {
-        var p1 = new ProgressProjection(10, "10%", "Scan", "a.zip", RunState.Scanning, true, "");
-        var p2 = p1 with { Progress = 50 };
-        Assert.Equal(10, p1.Progress);
-        Assert.Equal(50, p2.Progress);
-    }
-
-    // ═══ TASK-121: StatusProjection ══════════════════════════════════════
-
-    [Fact]
-    public void StatusProjection_Empty_AllMissing()
-    {
-        var s = StatusProjection.Empty;
-        Assert.Equal(StatusLevel.Missing, s.RootsStatusLevel);
-        Assert.Equal(StatusLevel.Missing, s.ToolsStatusLevel);
-        Assert.Equal(StatusLevel.Missing, s.DatStatusLevel);
-        Assert.Equal(StatusLevel.Missing, s.ReadyStatusLevel);
-        Assert.Equal("–", s.ChdmanStatusText);
-        Assert.Equal("–", s.DolphinStatusText);
-    }
-
-    [Fact]
-    public void StatusProjection_CanCreateWithValues()
-    {
-        var s = new StatusProjection(
-            "3 Ordner", StatusLevel.Ok,
-            "4 Tools", StatusLevel.Ok,
-            "2 DATs", StatusLevel.Warning,
-            "Bereit", StatusLevel.Ok,
-            ".NET 10",
-            "✓", "✓", "✓", "–", "–");
-        Assert.Equal(StatusLevel.Ok, s.RootsStatusLevel);
-        Assert.Equal(StatusLevel.Warning, s.DatStatusLevel);
-        Assert.Equal("✓", s.ChdmanStatusText);
-    }
-
-    // ═══ TASK-121: BannerProjection ══════════════════════════════════════
-
-    [Fact]
-    public void BannerProjection_None_AllFalse()
-    {
-        var b = BannerProjection.None;
-        Assert.False(b.ShowDryRunBanner);
-        Assert.False(b.ShowMoveCompleteBanner);
-        Assert.False(b.ShowConfigChangedBanner);
-    }
-
-    [Fact]
-    public void BannerProjection_CanCreateWithValues()
-    {
-        var b = new BannerProjection(true, false, true);
-        Assert.True(b.ShowDryRunBanner);
-        Assert.False(b.ShowMoveCompleteBanner);
-        Assert.True(b.ShowConfigChangedBanner);
-    }
-
-    // ═══ TASK-121: MoveGateProjection ════════════════════════════════════
-
-    [Fact]
-    public void MoveGateProjection_Idle_HasDefaults()
-    {
-        var m = MoveGateProjection.Idle;
-        Assert.False(m.ShowStartMoveButton);
-        Assert.False(m.HasRunResult);
-        Assert.False(m.CanRollback);
-        Assert.Equal("", m.LastReportPath);
-    }
-
-    [Fact]
-    public void MoveGateProjection_CanCreateWithValues()
-    {
-        var m = new MoveGateProjection(true, true, true, "/report.html");
-        Assert.True(m.ShowStartMoveButton);
-        Assert.True(m.HasRunResult);
-        Assert.Equal("/report.html", m.LastReportPath);
-    }
-
-    [Fact]
-    public void MoveGateProjection_IsImmutable()
-    {
-        var m1 = new MoveGateProjection(false, false, false, "");
-        var m2 = m1 with { HasRunResult = true };
-        Assert.False(m1.HasRunResult);
-        Assert.True(m2.HasRunResult);
-    }
+    // ═══ Dead projection records removed (TASK-121 cleanup) ═══════════
+    // StatusProjection, ProgressProjection, BannerProjection, MoveGateProjection
+    // were never wired into production code and have been deleted.
 }

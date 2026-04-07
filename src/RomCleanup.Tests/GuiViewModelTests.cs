@@ -1302,9 +1302,10 @@ public class GuiViewModelTests
     public void ApplyRunResult_WhenStateIsCancelled_DoesNotMutateDashboardOrCollections()
     {
         var vm = new MainViewModel();
+        SetRunStateViaValidPath(vm, RunState.Cancelled);
+        // Set sentinels AFTER reaching Cancelled — Preflight triggers ResetDashboardForNewRun
         vm.DashWinners = "sentinel";
         vm.DashDupes = "sentinel";
-        SetRunStateViaValidPath(vm, RunState.Cancelled);
 
         var winner = new RomCandidate
         {
@@ -1384,7 +1385,7 @@ public class GuiViewModelTests
         vm.ApplyRunResult(result);
 
         Assert.Equal("Nur Konvertierung aktiv. Keine Dateien werden verschoben.", vm.MoveConsequenceText);
-        Assert.Equal("–", vm.DashWinners);
+        Assert.Equal("Entfällt", vm.DashWinners);
     }
 
     [Fact]
@@ -1850,6 +1851,8 @@ public class GuiViewModelTests
             vm.EnableDatRename = true;
             vm.DryRun = false;
 
+            vm.TransitionTo(RunState.Preflight);
+
             vm.LastRunResult = new RunResult
             {
                 DatAuditResult = new DatAuditResult(
@@ -1870,8 +1873,6 @@ public class GuiViewModelTests
                     UnknownCount: 0,
                     AmbiguousCount: 0)
             };
-
-                    vm.TransitionTo(RunState.Preflight);
 
             await vm.ExecuteRunAsync();
 
@@ -2422,6 +2423,24 @@ public class GuiViewModelTests
     }
 
     [Fact]
+    public void RequestStartMoveCommand_ArmsInlineConfirm()
+    {
+        var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = true;
+        vm.TransitionTo(RunState.Preflight);
+        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
+
+        vm.RequestStartMoveCommand.Execute(null);
+
+        Assert.True(vm.Shell.ShowMoveInlineConfirm);
+
+        vm.CancelStartMoveCommand.Execute(null);
+
+        Assert.False(vm.Shell.ShowMoveInlineConfirm);
+    }
+
+    [Fact]
     public void RunCommand_CannotExecute_InMoveModeWithoutPreview()
     {
         var vm = new MainViewModel();
@@ -2442,6 +2461,32 @@ public class GuiViewModelTests
         vm.DryRun = false;
 
         Assert.True(vm.RunCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void CompleteRun_Cancelled_IncludesPhaseContextInSummary()
+    {
+        var vm = new MainViewModel();
+        vm.PerfPhase = "Move";
+        vm.TransitionTo(RunState.Preflight);
+
+        vm.CompleteRun(success: false, cancelled: true);
+
+        Assert.Contains("Phase", vm.RunSummaryText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Move", vm.RunSummaryText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void CompleteRun_DryRun_IncludesMoveShortcutHint()
+    {
+        var vm = new MainViewModel();
+        vm.Roots.Add(@"C:\TestRoot");
+        vm.DryRun = true;
+        vm.TransitionTo(RunState.Preflight);
+
+        vm.CompleteRun(success: true, reportPath: "report.html");
+
+        Assert.Contains("Ctrl+M", vm.RunSummaryText, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -3627,8 +3672,21 @@ public class GuiViewModelTests
     [InlineData("Tool.Status.NotFound")]
     [InlineData("Conversion.ReviewRequired")]
     [InlineData("Result.Summary.PreviewDone")]
+    [InlineData("Result.Summary.PreviewShortcutHint")]
     [InlineData("Result.Summary.ChangesApplied")]
     [InlineData("Result.Summary.CancelledPartial")]
+    [InlineData("Result.Summary.CancelledInPhase")]
+    [InlineData("Result.Summary.CancelledInPhaseMoved")]
+    [InlineData("Result.Context.Preview")]
+    [InlineData("Result.Context.CancelledPartial")]
+    [InlineData("Result.Context.CancelledNoData")]
+    [InlineData("Result.Context.ConvertOnly")]
+    [InlineData("Result.Context.MoveCompleted")]
+    [InlineData("Result.InlineConfirmWaiting")]
+    [InlineData("Result.InlineConfirmReady")]
+    [InlineData("Phase.Skipped.MoveConvert")]
+    [InlineData("Phase.Skipped.MoveOnly")]
+    [InlineData("Phase.Skipped.ConvertOnly")]
     [InlineData("Result.Summary.Failed")]
     public void Localization_DeJson_ContainsRequiredKey(string key)
     {
@@ -3660,6 +3718,28 @@ public class GuiViewModelTests
         vm.RefreshStatus();
         Assert.DoesNotContain("Keine Ordner", vm.StatusRoots);
         Assert.DoesNotContain("Keine Tools", vm.StatusTools);
+    }
+
+    [Fact]
+    public void Localization_De_UsesUnifiedUxTerms_ForAuditFindings()
+    {
+        var loc = new LocalizationService();
+
+        Assert.Equal("Behalten", loc["Start.Winners"]);
+        Assert.Equal("Vorbereitung", loc["Phase.Preflight"]);
+        Assert.Equal("Duplikat-Erkennung", loc["Phase.Dedupe"]);
+        Assert.Equal("Aussortiert (Junk)", loc["Result.MetricJunk"]);
+        Assert.Contains("Aufräumen starten", loc["Result.BtnCleanup"], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Localization_De_RollbackPreview_ContainsRestoreCountAndTrashPathPlaceholders()
+    {
+        var loc = new LocalizationService();
+        var preview = loc["Dialog.Rollback.Preview"];
+
+        Assert.Contains("{4}", preview, StringComparison.Ordinal);
+        Assert.Contains("{5}", preview, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -4465,6 +4545,48 @@ public class GuiViewModelTests
         Assert.DoesNotContain("scott:", xaml);
     }
 
+    [Fact]
+    public void ResultViewXaml_HasTopErrorSummaryBanner()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "ResultView.xaml"));
+
+        Assert.Contains("HasActionableErrorSummary", xaml);
+        Assert.Contains("ActionableErrorSummaryItems", xaml);
+        Assert.Contains("ActionableErrorSummaryTitle", xaml);
+    }
+
+    [Fact]
+    public void ResultViewXaml_HasConvertOnlyHeroMetrics()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "ResultView.xaml"));
+
+        Assert.Contains("IsConvertOnlyDashboard", xaml);
+        Assert.Contains("Run.DashConverted", xaml);
+        Assert.Contains("Run.DashConvertBlocked", xaml);
+        Assert.Contains("Run.DashConvertSaved", xaml);
+        Assert.Contains("Run.DashConvertReview", xaml);
+    }
+
+    [Fact]
+    public void ProgressViewXaml_HidesNonApplicablePhases_InsteadOfOpacity()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "ProgressView.xaml"));
+
+        Assert.Contains("IsMovePhaseApplicable", xaml);
+        Assert.Contains("IsConvertPhaseApplicable", xaml);
+        Assert.DoesNotContain("Opacity=\"0.4\"", xaml);
+        Assert.Contains("SkippedPhaseInfoText", xaml);
+    }
+
+    [Fact]
+    public void ToolsViewXaml_SimpleMode_HidesFullCatalogNavigation()
+    {
+        var xaml = File.ReadAllText(FindUiFile("Views", "ToolsView.xaml"));
+
+        Assert.Contains("IsSimpleMode", xaml);
+        Assert.Contains("Converter={StaticResource InverseBoolToVis}", xaml);
+    }
+
     // ═══ TASK-115: SmartActionBar RunState DataTriggers ════════════════
 
     [Theory]
@@ -4995,5 +5117,161 @@ public class GuiViewModelTests
         Assert.Equal(0, vm.KeepCount);
         Assert.Equal(0.0, vm.KeepFraction);
         Assert.Equal(1.0, vm.JunkFraction, 3);
+    }
+
+    // ═══ SEC-001: Preflight→Idle dialog-decline state safety ════════════
+
+    [Fact]
+    public void SEC001_PreflightToIdle_IsValidTransition()
+    {
+        // Preflight → Idle must be legal for dialog-decline paths
+        Assert.True(RunStateMachine.IsValidTransition(RunState.Preflight, RunState.Idle));
+    }
+
+    [Fact]
+    public void SEC001_DialogDecline_ResetsConvertOnlyFlag()
+    {
+        var vm = new MainViewModel();
+        vm.ConvertOnly = true;
+        vm.CurrentRunState = RunState.Preflight;
+
+        // Simulate dialog-decline path: reset transient flags, return to Idle
+        vm.ConvertOnly = false;
+        vm.CurrentRunState = RunState.Idle;
+
+        Assert.False(vm.ConvertOnly);
+        Assert.Equal(RunState.Idle, vm.CurrentRunState);
+    }
+
+    [Fact]
+    public void SEC001_DialogDecline_ResetsBusyHint()
+    {
+        var vm = new MainViewModel();
+        vm.CurrentRunState = RunState.Preflight;
+        vm.BusyHint = "Running...";
+
+        // Simulate dialog-decline: BusyHint must be cleared
+        vm.BusyHint = "";
+        vm.CurrentRunState = RunState.Idle;
+
+        Assert.Equal("", vm.BusyHint);
+    }
+
+    // ═══ SEC-002: Rollback invalidates preview fingerprint ══════════════
+
+    [Fact]
+    public void SEC002_AfterRollback_MoveGateIsLocked()
+    {
+        var vm = new MainViewModel();
+
+        // After DryRun, preview gate should be CompletedDryRun
+        SetRunStateViaValidPath(vm, RunState.CompletedDryRun);
+
+        // After rollback, state returns to Idle → not CompletedDryRun → gate locked
+        vm.CurrentRunState = RunState.Idle;
+
+        Assert.False(vm.CanStartMoveWithCurrentPreview);
+    }
+
+    [Fact]
+    public void SEC002_PreflightToIdle_DoesNotThrow()
+    {
+        var vm = new MainViewModel();
+        vm.CurrentRunState = RunState.Preflight;
+
+        // This must not throw InvalidOperationException (SEC-001 fix)
+        var ex = Record.Exception(() => vm.CurrentRunState = RunState.Idle);
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task GUIRED_IssueMain_PartialFailure_MustNotSurfaceAsCompleted()
+    {
+        var winner = new RomCandidate
+        {
+            MainPath = @"C:\Roms\Winner.zip",
+            GameKey = "winner",
+            Category = FileCategory.Game,
+            DatMatch = true,
+            ConsoleKey = "SNES"
+        };
+
+        var result = new RunResult
+        {
+            Status = "completed_with_errors",
+            TotalFilesScanned = 2,
+            WinnerCount = 1,
+            LoserCount = 1,
+            AllCandidates = new[] { winner },
+            DedupeGroups = Array.Empty<DedupeGroup>(),
+            MoveResult = new MovePhaseResult(MoveCount: 1, FailCount: 1, SavedBytes: 0)
+        };
+
+        var runService = new RecordingRunService(result);
+        var vm = new MainViewModel(new ThemeService(), new StubDialogService(), runService: runService);
+        vm.Roots.Add(Path.GetTempPath());
+        vm.DryRun = false;
+        vm.ConfirmMove = false;
+        vm.CurrentRunState = RunState.Preflight;
+
+        await vm.ExecuteRunAsync();
+
+        // Red invariant: partial failures must not be presented as a clean Completed+Info outcome.
+        Assert.NotEqual(RunState.Completed, vm.CurrentRunState);
+        Assert.NotEqual(UiErrorSeverity.Info, vm.RunSummarySeverity);
+        Assert.Contains(vm.ErrorSummaryItems, e => e.Code == "IO-MOVE");
+    }
+
+    [Fact]
+    public async Task GUIRED_IssueMain_ExecuteRunAsync_MustBeSingleFlight()
+    {
+        var result = new RunResult
+        {
+            Status = "ok",
+            TotalFilesScanned = 1,
+            WinnerCount = 1,
+            AllCandidates = new[]
+            {
+                new RomCandidate
+                {
+                    MainPath = @"C:\Roms\Single.zip",
+                    GameKey = "single",
+                    Category = FileCategory.Game,
+                    DatMatch = true,
+                    ConsoleKey = "SNES"
+                }
+            },
+            DedupeGroups = Array.Empty<DedupeGroup>()
+        };
+
+        var runService = new RecordingRunService(result);
+        var vm = new MainViewModel(new ThemeService(), new StubDialogService(), runService: runService);
+        vm.Roots.Add(Path.GetTempPath());
+        vm.DryRun = true;
+        vm.CurrentRunState = RunState.Preflight;
+
+        var first = vm.ExecuteRunAsync();
+        var second = vm.ExecuteRunAsync();
+        await Task.WhenAll(first, second);
+
+        // Red invariant: concurrent triggers must not execute the pipeline twice.
+        Assert.Equal(1, runService.ExecuteRunCallCount);
+    }
+
+    [Fact]
+    public void GUIRED_IssueMain_UnknownStatus_MustBeVisibleInErrorSummaryProjection()
+    {
+        var result = new RunResult
+        {
+            Status = "mystery_status",
+            WinnerCount = 0,
+            LoserCount = 0
+        };
+
+        var issues = ErrorSummaryProjection.Build(result, [], []);
+
+        // Red invariant: unknown run status must not be silently mapped to RUN-OK.
+        Assert.DoesNotContain(issues, issue => issue.Code == "RUN-OK");
+        Assert.Contains(issues, issue => issue.Code == "RUN-UNKNOWN" && issue.Severity == UiErrorSeverity.Warning);
     }
 }

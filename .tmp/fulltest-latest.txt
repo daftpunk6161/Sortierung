@@ -1,0 +1,5 @@
+Testlauf f├╝r "C:\Code\Sortierung\src\RomCleanup.Tests\bin\Debug\net10.0-windows\RomCleanup.Tests.dll" (.NETCoreApp,Version=v10.0)
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster ├╝berein.
+[xUnit.net 00:00:16.30]     RomCleanup.Tests.RunManagerTests.WaitForCompletion_CancellationToken_DoesNotCancelUnderlyingRun [FAIL]
+
+Fehler!      : Fehler:     1, erfolgreich: 10585, ├╝bersprungen:     0, gesamt: 10586, Dauer: 3 m 1 s - RomCleanup.Tests.dll (net10.0)

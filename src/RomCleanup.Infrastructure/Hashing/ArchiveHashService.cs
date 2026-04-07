@@ -42,6 +42,7 @@ public sealed class ArchiveHashService
         try
         {
             var tempRoot = Path.GetTempPath();
+            var staleThreshold = DateTime.UtcNow.AddMinutes(-5);
             foreach (var dir in Directory.GetDirectories(tempRoot, "romcleanup_7z_*"))
             {
                 try
@@ -49,6 +50,10 @@ public sealed class ArchiveHashService
                     // Block reparse points to prevent directory junction attacks
                     var dirInfo = new DirectoryInfo(dir);
                     if ((dirInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+                        continue;
+                    // Only clean up directories older than 5 minutes to avoid
+                    // deleting temp dirs still in use by concurrent operations.
+                    if (dirInfo.CreationTimeUtc > staleThreshold)
                         continue;
                     Directory.Delete(dir, recursive: true);
                 }

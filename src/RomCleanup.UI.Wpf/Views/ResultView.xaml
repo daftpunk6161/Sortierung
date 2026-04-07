@@ -63,9 +63,32 @@
                      Foreground="{DynamicResource BrushTextPrimary}" FontSize="14" FontWeight="SemiBold"/>
         </Border>
 
+        <Border Padding="14,10" CornerRadius="8" Margin="0,0,0,16"
+                Background="{DynamicResource BrushDangerBg}"
+                BorderBrush="{DynamicResource BrushDanger}"
+                BorderThickness="1"
+                Visibility="{Binding HasActionableErrorSummary, Converter={StaticResource BoolToVis}}">
+          <StackPanel>
+            <TextBlock Text="{Binding ActionableErrorSummaryTitle}"
+                       Foreground="{DynamicResource BrushDanger}"
+                       FontWeight="Bold"
+                       Margin="0,0,0,6"/>
+            <ItemsControl ItemsSource="{Binding ActionableErrorSummaryItems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource BrushTextPrimary}" FontSize="12" Margin="0,0,0,4">
+                    <Run Text="• "/>
+                    <Run Text="{Binding Message}"/>
+                  </TextBlock>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
         <Border Background="{DynamicResource BrushSurfaceAlt}" BorderBrush="{DynamicResource BrushDanger}"
                 BorderThickness="1" CornerRadius="{DynamicResource RadiusXL}" Padding="20,16" Margin="0,0,0,16"
-                Visibility="{Binding ShowStartMoveButton, Converter={StaticResource BoolToVis}}">
+          Visibility="{Binding ShowResultMoveButton, Converter={StaticResource BoolToVis}}">
           <StackPanel>
             <TextBlock Text="{Binding Loc[Result.ApplyWarningTitle]}" FontSize="16" FontWeight="Bold"
                        Foreground="{DynamicResource BrushDanger}" Margin="0,0,0,6"/>
@@ -89,6 +112,7 @@
             <StackPanel Orientation="Horizontal"
                         Visibility="{Binding Shell.ShowMoveInlineConfirm, Converter={StaticResource BoolToVis}}">
               <Button Command="{Binding StartMoveCommand}" Style="{StaticResource DangerButton}"
+                      IsEnabled="{Binding CanExecuteInlineStartMove}"
                       Padding="14,6" Margin="0,0,8,0"
                       ToolTip="{Binding MoveApplyGateText}" AutomationProperties.Name="Move jetzt ausführen">
                 <StackPanel Orientation="Horizontal">
@@ -105,13 +129,18 @@
               </Button>
             </StackPanel>
 
+            <TextBlock Text="{Binding InlineMoveConfirmHint}" Style="{StaticResource CaptionText}"
+                       Foreground="{DynamicResource BrushWarning}" Margin="0,8,0,0"
+                       Visibility="{Binding Shell.ShowMoveInlineConfirm, Converter={StaticResource BoolToVis}}"/>
+
             <TextBlock Text="{Binding Loc[Result.TrustSignal]}" Style="{StaticResource CaptionText}"
                        Margin="0,12,0,0" Foreground="{DynamicResource BrushSuccess}"/>
           </StackPanel>
         </Border>
 
         <!-- ── Hero KPIs ────────────────────────────────────────── -->
-        <UniformGrid Columns="4" Margin="0,0,0,16">
+        <UniformGrid Columns="4" Margin="0,0,0,16"
+               Visibility="{Binding ShowDedupeDashboard, Converter={StaticResource BoolToVis}}">
           <Border Style="{StaticResource MetricCard}" MinHeight="100" Margin="0,0,8,0" Focusable="True"
                   AutomationProperties.Name="{Binding Loc[Result.MetricGames]}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -149,6 +178,65 @@
             </StackPanel>
           </Border>
         </UniformGrid>
+
+        <UniformGrid Columns="4" Margin="0,0,0,16"
+                     Visibility="{Binding IsConvertOnlyDashboard, Converter={StaticResource BoolToVis}}">
+          <Border Style="{StaticResource MetricCard}" MinHeight="100" Margin="0,0,8,0" Focusable="True"
+                  AutomationProperties.Name="Konvertiert">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+              <TextBlock Text="&#xE8AB;" FontFamily="Segoe MDL2 Assets" FontSize="22"
+                         Foreground="{DynamicResource BrushSuccess}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+              <TextBlock Text="{Binding Run.DashConverted}" Foreground="{DynamicResource BrushSuccess}" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Konvertiert" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource MetricCard}" MinHeight="100" Margin="0,0,8,0" Focusable="True"
+                  AutomationProperties.Name="Blockiert">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+              <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="22"
+                         Foreground="{DynamicResource BrushWarning}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+              <TextBlock Text="{Binding Run.DashConvertBlocked}" Foreground="{DynamicResource BrushWarning}" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Blockiert" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource MetricCard}" MinHeight="100" Margin="0,0,8,0" Focusable="True"
+                  AutomationProperties.Name="Ersparnis">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+              <TextBlock Text="&#xECAA;" FontFamily="Segoe MDL2 Assets" FontSize="22"
+                         Foreground="{DynamicResource BrushAccentCyan}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+              <TextBlock Text="{Binding Run.DashConvertSaved}" Foreground="{DynamicResource BrushAccentCyan}" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Gespart" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource MetricCard}" MinHeight="100" Focusable="True"
+                  AutomationProperties.Name="Review">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+              <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="22"
+                         Foreground="{DynamicResource BrushDanger}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+              <TextBlock Text="{Binding Run.DashConvertReview}" Foreground="{DynamicResource BrushDanger}" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+              <TextBlock Text="Review" Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+        </UniformGrid>
+
+        <Border Padding="12,8" CornerRadius="8" Margin="0,0,0,16"
+                Visibility="{Binding HasDashboardContextHint, Converter={StaticResource BoolToVis}}">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="Background" Value="{DynamicResource BrushInfoBg}"/>
+              <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentCyan}"/>
+              <Setter Property="BorderThickness" Value="1"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding DashboardContextSeverity}" Value="Warning">
+                  <Setter Property="Background" Value="{DynamicResource BrushWarningBg}"/>
+                  <Setter Property="BorderBrush" Value="{DynamicResource BrushWarning}"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+          <TextBlock Text="{Binding DashboardContextHint}" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrushTextPrimary}" FontSize="12" FontWeight="SemiBold"/>
+        </Border>
 
         <!-- ── Run Details (compact) ──────────────────────────── -->
         <Border Background="{DynamicResource BrushSurfaceAlt}" BorderBrush="{DynamicResource BrushBorder}"

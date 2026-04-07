@@ -473,6 +473,7 @@ public sealed partial class MainViewModel
             if (SetProperty(ref _isSimpleMode, value))
             {
                 Shell.IsSimpleMode = value;
+                Tools.SetSimpleMode(value);
                 OnPropertyChanged(nameof(IsExpertMode));
                 OnPropertyChanged(nameof(CurrentUiModeLabel));
             }

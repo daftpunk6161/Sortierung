@@ -11,6 +11,7 @@ public static class RunStateMachine
         return (from, to) switch
         {
             (RunState.Idle, RunState.Preflight) => true,
+            (RunState.Preflight, RunState.Idle) => true, // SEC-001: dialog-decline abort before work
             (RunState.Preflight, RunState.Scanning) => true,
             (RunState.Scanning, RunState.Deduplicating) => true,
             (RunState.Deduplicating, RunState.Sorting) => true,

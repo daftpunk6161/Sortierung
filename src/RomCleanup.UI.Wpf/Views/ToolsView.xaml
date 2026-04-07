@@ -132,16 +132,19 @@
         <RadioButton GroupName="ToolsSection" Tag="Schnellzugriff"
                      Content="{Binding DataContext.Loc[Tools.NavQuickAccess], RelativeSource={RelativeSource AncestorType=Window}}"
                      Style="{DynamicResource SidebarNavItem}"
+                     Visibility="{Binding IsSimpleMode, Converter={StaticResource InverseBoolToVis}}"
                      IsChecked="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Schnellzugriff}"
                      AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavQuickAccess], RelativeSource={RelativeSource AncestorType=Window}}"/>
         <RadioButton GroupName="ToolsSection" Tag="Zuletzt verwendet"
                      Content="{Binding DataContext.Loc[Tools.NavRecent], RelativeSource={RelativeSource AncestorType=Window}}"
                      Style="{DynamicResource SidebarNavItem}"
+                     Visibility="{Binding IsSimpleMode, Converter={StaticResource InverseBoolToVis}}"
                      IsChecked="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Zuletzt verwendet}"
                      AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavRecent], RelativeSource={RelativeSource AncestorType=Window}}"/>
         <RadioButton GroupName="ToolsSection" Tag="Alle Werkzeuge"
                      Content="{Binding DataContext.Loc[Tools.NavAll], RelativeSource={RelativeSource AncestorType=Window}}"
                      Style="{DynamicResource SidebarNavItem}"
+                     Visibility="{Binding IsSimpleMode, Converter={StaticResource InverseBoolToVis}}"
                      IsChecked="{Binding SelectedToolsSection, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Alle Werkzeuge}"
                      AutomationProperties.Name="{Binding DataContext.Loc[Tools.NavAll], RelativeSource={RelativeSource AncestorType=Window}}"/>
       </StackPanel>

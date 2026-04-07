@@ -88,6 +88,13 @@ public sealed class ToolsViewModel : ObservableObject
         set => SetProperty(ref _selectedToolsSection, value);
     }
 
+    private bool _isSimpleMode = true;
+    public bool IsSimpleMode
+    {
+        get => _isSimpleMode;
+        private set => SetProperty(ref _isSimpleMode, value);
+    }
+
     // ═══ FEATURE COMMANDS ═════════════════════════════════════════════
     public Dictionary<string, ICommand> FeatureCommands { get; } = new(StringComparer.Ordinal);
 
@@ -124,6 +131,13 @@ public sealed class ToolsViewModel : ObservableObject
                 ToggleToolPin(toolKey);
         });
         InitToolItems();
+    }
+
+    public void SetSimpleMode(bool simpleMode)
+    {
+        IsSimpleMode = simpleMode;
+        if (simpleMode && !string.Equals(SelectedToolsSection, SectionRecommended, StringComparison.Ordinal))
+            SelectedToolsSection = SectionRecommended;
     }
 
     /// <summary>Assigns FeatureCommands to matching ToolItems. Call after FeatureCommandService.RegisterCommands().</summary>
