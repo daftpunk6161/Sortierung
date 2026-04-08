@@ -23,6 +23,7 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
         IReadOnlyCollection<string> extensions,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        var effectiveExtensions = ExpandSetMemberExtensions(extensions);
         var candidates = new List<ScannedFileEntry>();
         var seenCandidatePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var setMemberPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -33,7 +34,11 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
             _context.OnProgress?.Invoke($"[Scan] {root}: Dateien sammeln…");
             var normalizedRoot = Path.GetFullPath(root);
 
-            var files = _context.FileSystem.GetFilesSafe(root, extensions);
+            var files = _context.FileSystem.GetFilesSafe(root, effectiveExtensions);
+            var scanWarnings = _context.FileSystem.ConsumeScanWarnings();
+            foreach (var warning in scanWarnings)
+                _context.OnProgress?.Invoke($"WARNING: {warning}");
+
             _context.OnProgress?.Invoke($"[Scan] {root}: {files.Count} Dateien gefunden");
 
             var processed = 0;
@@ -105,5 +110,54 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
         {
             return null;
         }
+    }
+
+    private static IReadOnlyCollection<string> ExpandSetMemberExtensions(IReadOnlyCollection<string> extensions)
+    {
+        if (extensions.Count == 0)
+            return Array.Empty<string>();
+
+        var expanded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var extension in extensions)
+        {
+            if (string.IsNullOrWhiteSpace(extension))
+                continue;
+
+            var normalized = extension.StartsWith('.') ? extension : "." + extension;
+            expanded.Add(normalized.ToLowerInvariant());
+        }
+
+        if (expanded.Contains(".cue"))
+        {
+            expanded.Add(".bin");
+            expanded.Add(".wav");
+            expanded.Add(".iso");
+        }
+
+        if (expanded.Contains(".gdi"))
+        {
+            expanded.Add(".bin");
+            expanded.Add(".raw");
+            expanded.Add(".iso");
+        }
+
+        if (expanded.Contains(".ccd"))
+        {
+            expanded.Add(".img");
+            expanded.Add(".sub");
+        }
+
+        if (expanded.Contains(".mds"))
+            expanded.Add(".mdf");
+
+        if (expanded.Contains(".m3u") || expanded.Contains(".m3u8"))
+        {
+            expanded.Add(".cue");
+            expanded.Add(".gdi");
+            expanded.Add(".ccd");
+            expanded.Add(".mds");
+        }
+
+        return expanded;
     }
 }

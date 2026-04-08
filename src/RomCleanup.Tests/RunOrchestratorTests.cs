@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
@@ -365,6 +366,40 @@ public class RunOrchestratorTests : IDisposable
         Assert.Contains(messages, m => m.Contains("Preflight"));
         Assert.Contains(messages, m => m.Contains("[Scan]"));
         Assert.Contains(messages, m => m.Contains("[Dedupe]"));
+    }
+
+    [Fact]
+    public void Execute_ProgressCallback_UsesEnglishPreflightMessage_WhenCurrentUiCultureIsEnglish_FindingF33()
+    {
+        CreateFile("Game (USA).zip", 50);
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var audit = new FakeAuditStore();
+        var messages = new List<string>();
+
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        var previousCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = new CultureInfo("en-US");
+            CultureInfo.CurrentCulture = new CultureInfo("en-US");
+
+            var orch = new RunOrchestrator(fs, audit, onProgress: msg => messages.Add(msg));
+            var options = new RunOptions
+            {
+                Roots = new[] { _tempDir },
+                Extensions = new[] { ".zip" }
+            };
+
+            orch.Execute(options);
+
+            Assert.Contains(messages,
+                message => message.StartsWith("[Preflight] Checking prerequisites", StringComparison.Ordinal));
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previousUiCulture;
+            CultureInfo.CurrentCulture = previousCulture;
+        }
     }
 
     [Fact]
@@ -1354,6 +1389,34 @@ public class RunOrchestratorTests : IDisposable
         Assert.Contains("Normal (USA).zip", converter.ConvertedPaths[0]);
         // Junk file must NOT appear in conversion list
         Assert.DoesNotContain(converter.ConvertedPaths, p => p.Contains("Junkonly"));
+    }
+
+    [Fact]
+    public void Execute_DryRun_RemoveJunk_WritesJunkPreviewAuditRow_FindingF08()
+    {
+        CreateFile("Junkonly (Beta).zip", 50);
+
+        var fs = new RomCleanup.Infrastructure.FileSystem.FileSystemAdapter();
+        var audit = new FakeAuditStore();
+        var orch = new RunOrchestrator(fs, audit);
+
+        var auditPath = Path.Combine(Path.GetTempPath(), "RunOrchAudit", Guid.NewGuid().ToString("N"), "audit.csv");
+        Directory.CreateDirectory(Path.GetDirectoryName(auditPath)!);
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            Mode = "DryRun",
+            RemoveJunk = true,
+            AuditPath = auditPath,
+            PreferRegions = new[] { "US" }
+        };
+
+        var result = orch.Execute(options);
+
+        Assert.Equal("ok", result.Status);
+        Assert.Contains(audit.AuditRows, row => string.Equals(row.action, "JUNK_PREVIEW", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

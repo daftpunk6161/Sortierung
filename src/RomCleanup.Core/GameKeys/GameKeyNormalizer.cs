@@ -124,7 +124,9 @@ public static class GameKeyNormalizer
             var category = CharUnicodeInfo.GetUnicodeCategory(ch);
             if (category != UnicodeCategory.NonSpacingMark &&
                 category != UnicodeCategory.SpacingCombiningMark &&
-                category != UnicodeCategory.EnclosingMark)
+                category != UnicodeCategory.EnclosingMark &&
+                category != UnicodeCategory.Format &&
+                category != UnicodeCategory.Control)
             {
                 sb.Append(ch);
             }

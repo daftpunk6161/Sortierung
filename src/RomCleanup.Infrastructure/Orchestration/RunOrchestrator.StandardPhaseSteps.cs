@@ -77,7 +77,10 @@ public sealed partial class RunOrchestrator
         metrics.StartPhase("Move");
         var groups = state.GameGroups ?? Array.Empty<DedupeGroup>();
         var totalLosers = groups.Sum(g => g.Losers.Count);
-        _onProgress?.Invoke($"[Move] Verschiebe {totalLosers} Duplikate in Trash…");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Move.Start",
+            "[Move] Verschiebe {0} Duplikate in Trash…",
+            totalLosers));
 
         var movePhase = new MovePipelinePhase();
         var moveContext = new PipelineContext
@@ -90,7 +93,11 @@ public sealed partial class RunOrchestrator
         };
 
         var moveResult = movePhase.Execute(new MovePhaseInput(groups, options), moveContext, cancellationToken);
-        _onProgress?.Invoke($"[Move] Abgeschlossen: {moveResult.MoveCount} verschoben, {moveResult.FailCount} Fehler");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Move.Completed",
+            "[Move] Abgeschlossen: {0} verschoben, {1} Fehler",
+            moveResult.MoveCount,
+            moveResult.FailCount));
         result.MoveResult = moveResult;
         metrics.CompletePhase(moveResult.MoveCount);
 
@@ -140,7 +147,9 @@ public sealed partial class RunOrchestrator
             return PhaseStepResult.Skipped();
 
         metrics.StartPhase("ConsoleSort");
-        _onProgress?.Invoke("[Sort] Sortiere Dateien nach Konsole…");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Sort.Start",
+            "[Sort] Sortiere Dateien nach Konsole…"));
 
         // Build sort-decision map from enrichment phase.
         // We use the SortDecision computed by HypothesisResolver to route files.
@@ -207,7 +216,9 @@ public sealed partial class RunOrchestrator
         if (!dryRunSort && result.ConsoleSortResult?.PathMutations is { Count: > 0 } pathMutations)
             state.ApplyPathMutations(pathMutations);
 
-        _onProgress?.Invoke("[Sort] Konsolen-Sortierung abgeschlossen");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Sort.Completed",
+            "[Sort] Konsolen-Sortierung abgeschlossen"));
         metrics.CompletePhase();
         return PhaseStepResult.Ok(result.ConsoleSortResult?.Moved ?? 0, result.ConsoleSortResult);
     }

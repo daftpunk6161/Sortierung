@@ -14,9 +14,15 @@ public sealed partial class RunOrchestrator
         CancellationToken cancellationToken)
     {
         metrics.StartPhase("Scan");
-        _onProgress?.Invoke($"[Scan] Scanne {options.Roots.Count} Root-Ordner…");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Scan.Start",
+            "[Scan] Scanne {0} Root-Ordner…",
+            options.Roots.Count));
         foreach (var root in options.Roots)
-            _onProgress?.Invoke($"[Scan] Root: {root}");
+            _onProgress?.Invoke(RunProgressLocalization.Format(
+                "Scan.Root",
+                "[Scan] Root: {0}",
+                root));
 
         var scanSw = System.Diagnostics.Stopwatch.StartNew();
         var scanContext = new PipelineContext
@@ -54,12 +60,20 @@ public sealed partial class RunOrchestrator
 
             filteredNonGameCount = candidates.Count - processingCandidates.Count;
             result.FilteredNonGameCount = filteredNonGameCount;
-            _onProgress?.Invoke($"[Filter] OnlyGames aktiv: {filteredNonGameCount} Nicht-Spiel-Dateien ausgeschlossen (KeepUnknown={keepUnknown})");
+            _onProgress?.Invoke(RunProgressLocalization.Format(
+                "Filter.OnlyGames",
+                "[Filter] OnlyGames aktiv: {0} Nicht-Spiel-Dateien ausgeschlossen (KeepUnknown={1})",
+                filteredNonGameCount,
+                keepUnknown));
         }
 
         scanSw.Stop();
         result.TotalFilesScanned = candidates.Count;
-        _onProgress?.Invoke($"[Scan] Abgeschlossen: {candidates.Count} Dateien in {scanSw.ElapsedMilliseconds}ms");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Scan.Completed",
+            "[Scan] Abgeschlossen: {0} Dateien in {1}ms",
+            candidates.Count,
+            scanSw.ElapsedMilliseconds));
         metrics.CompletePhase(candidates.Count);
 
         if (candidates.Count > 100_000)

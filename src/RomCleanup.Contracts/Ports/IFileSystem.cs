@@ -9,6 +9,13 @@ public interface IFileSystem
     bool TestPath(string literalPath, string pathType = "Any");
     string EnsureDirectory(string path);
     IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? allowedExtensions = null);
+
+    /// <summary>
+    /// Returns scan warnings collected during the last GetFilesSafe call.
+    /// Default implementation returns no warnings.
+    /// </summary>
+    IReadOnlyList<string> ConsumeScanWarnings() => Array.Empty<string>();
+
     bool FileExists(string literalPath)
     {
         if (string.IsNullOrWhiteSpace(literalPath))

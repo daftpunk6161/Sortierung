@@ -253,13 +253,17 @@ public sealed class CliRedPhaseTests : IDisposable
     [Fact]
     public void Move_WithAuditPath_CreatesAuditCsvFile_Issue9()
     {
-        File.WriteAllText(Path.Combine(_tempDir, "Game (USA).zip"), "usa");
-        File.WriteAllText(Path.Combine(_tempDir, "Game (Europe).zip"), "eu");
+        var runRoot = Path.Combine(_tempDir, "move-audit-root");
+        Directory.CreateDirectory(runRoot);
+        File.WriteAllText(Path.Combine(runRoot, "Game (USA).zip"), "usa");
+        File.WriteAllText(Path.Combine(runRoot, "Game (Europe).zip"), "eu");
 
-        var auditPath = Path.Combine(_tempDir, "audit-test.csv");
+        var outputsDir = Path.Combine(_tempDir, "outputs");
+        Directory.CreateDirectory(outputsDir);
+        var auditPath = Path.Combine(outputsDir, "audit-test.csv");
         var opts = new CliRunOptions
         {
-            Roots = [_tempDir],
+            Roots = [runRoot],
             Mode = "Move",
             PreferRegions = ["US"],
             AuditPath = auditPath
@@ -277,12 +281,16 @@ public sealed class CliRedPhaseTests : IDisposable
     [Fact]
     public void DryRun_WithReportPath_CreatesReportFile_Issue9()
     {
-        File.WriteAllText(Path.Combine(_tempDir, "Game (USA).zip"), "usa");
+        var runRoot = Path.Combine(_tempDir, "dryrun-report-root");
+        Directory.CreateDirectory(runRoot);
+        File.WriteAllText(Path.Combine(runRoot, "Game (USA).zip"), "usa");
 
-        var reportPath = Path.Combine(_tempDir, "report-test.html");
+        var outputsDir = Path.Combine(_tempDir, "outputs");
+        Directory.CreateDirectory(outputsDir);
+        var reportPath = Path.Combine(outputsDir, "report-test.html");
         var opts = new CliRunOptions
         {
-            Roots = [_tempDir],
+            Roots = [runRoot],
             Mode = "DryRun",
             ReportPath = reportPath
         };

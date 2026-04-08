@@ -59,7 +59,6 @@ public sealed class RunOptions
     public string? AuditPath { get; init; }
     public string? ReportPath { get; init; }
     public string ConflictPolicy { get; init; } = "Rename";
-    public HashSet<string> DiscBasedConsoles { get; init; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>

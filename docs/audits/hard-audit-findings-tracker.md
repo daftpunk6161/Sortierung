@@ -9,16 +9,16 @@
 
 | Pass | Findings | P0 | P1 | P2 | P3 | Erledigt |
 |------|----------|----|----|----|----|---------:|
-| 1    | F01–F08  | 0  | 3  | 5  | 0  |   3 / 8  |
-| 2    | F09–F16  | 0  | 3  | 5  | 0  |   4 / 8  |
-| 3    | F17–F19  | 0  | 1  | 1  | 1  |   2 / 3  |
-| 4    | F20–F24  | 0  | 2  | 2  | 1  |   4 / 5  |
+| 1    | F01–F08  | 0  | 3  | 5  | 0  |   8 / 8  |
+| 2    | F09–F16  | 0  | 3  | 5  | 0  |   8 / 8  |
+| 3    | F17–F19  | 0  | 1  | 1  | 1  |   3 / 3  |
+| 4    | F20–F24  | 0  | 2  | 2  | 1  |   5 / 5  |
 | 5    | F25–F28  | 0  | 1  | 2  | 1  |   4 / 4  |
-| 6    | F29–F33  | 0  | 0  | 3  | 2  |   3 / 5  |
-| 7    | F34–F36  | 0  | 0  | 2  | 1  |   1 / 3  |
+| 6    | F29–F33  | 0  | 0  | 3  | 2  |   5 / 5  |
+| 7    | F34–F36  | 0  | 0  | 2  | 1  |   3 / 3  |
 | 8    | F37–F38  | 0  | 0  | 1  | 1  |   2 / 2  |
 | 9    | F39      | 0  | 0  | 0  | 1  |   1 / 1  |
-| **Σ** | **39**  | **0** | **10** | **21** | **8** | **24 / 39** |
+| **Σ** | **39**  | **0** | **10** | **21** | **8** | **39 / 39** |
 
 ---
 
@@ -46,35 +46,35 @@
 - **Test:** ConvertOnly + OnlyGames Run → Report generiert korrekt
 
 ### F04 – SetMember-Pfade ohne Extension-Filter
-- [ ] **P2** | Scan-Accuracy
+- [x] **P2** | Scan-Accuracy
 - **Impact:** Set-Members (.bin/.cue) könnten nicht in Extensions-Filter sein
 - **Datei:** `src/RomCleanup.Infrastructure/Orchestration/ScanPhase.cs`
 - **Fix:** Set-Member-Extensions automatisch in Extensions-Liste aufnehmen
 - **Test:** .cue-Datei mit .bin-Members, nur .cue in Extensions → Members trotzdem erkannt
 
 ### F05 – GameKey-Normalisierung bei Sonderzeichen
-- [ ] **P2** | Determinismus
+- [x] **P2** | Determinismus
 - **Impact:** Inkonsistente Keys bei Sonderzeichen in Titeln
 - **Datei:** `src/RomCleanup.Core/GameKeys/GameKeyNormalizer.cs`
 - **Fix:** Normalisierungsregeln für Sonderzeichen verschärfen
 - **Test:** Verschiedene Unicode-Varianten → identischer Key
 
 ### F06 – CSV-Export ohne Injection-Schutz
-- [ ] **P2** | Security
+- [x] **P2** | Security
 - **Impact:** Formeln in Dateinamen könnten in Excel ausgeführt werden
 - **Datei:** `src/RomCleanup.Infrastructure/Reporting/`
 - **Fix:** Felder mit `=`, `+`, `-`, `@` prefixieren
 - **Test:** Dateiname `=CMD()` → escapet in CSV
 
 ### F07 – HTML-Report ohne konsequentes Encoding
-- [ ] **P2** | Security
+- [x] **P2** | Security
 - **Impact:** XSS bei Dateinamen mit HTML-Zeichen
 - **Datei:** `src/RomCleanup.Infrastructure/Reporting/HtmlReportWriter.cs`
 - **Fix:** Alle dynamischen Werte durch `HtmlEncoder.Default.Encode()` schicken
 - **Test:** Dateiname `<script>alert(1)</script>` → korrekt escapet
 
 ### F08 – Kein Audit-Trail für Junk-Entscheidungen in DryRun
-- [ ] **P2** | Audit-Gap
+- [x] **P2** | Audit-Gap
 - **Impact:** DryRun zeigt Junk-Candidates, aber keine Audit-Zeile
 - **Datei:** `src/RomCleanup.Infrastructure/Orchestration/JunkRemovalPipelinePhase.cs`
 - **Fix:** DryRun-Junk-Entscheidungen als `JUNK_PREVIEW` auditen
@@ -113,28 +113,28 @@
 - **Test:** Zwei API-Keys gleiche IP → unabhängige Rate-Limits
 
 ### F13 – CLI --json Output unvollständig
-- [ ] **P2** | CLI / Parity
+- [x] **P2** | CLI / Parity
 - **Impact:** JSON-Output enthält nicht alle Felder die Report hat
 - **Datei:** `src/RomCleanup.CLI/Program.cs`
 - **Fix:** JSON-Output aus RunResult-Projection generieren
 - **Test:** CLI --json → alle Report-Felder vorhanden
 
 ### F14 – GUI DatRoot-Pfad nicht validiert bei Eingabe
-- [ ] **P2** | GUI / UX
+- [x] **P2** | GUI / UX
 - **Impact:** Ungültiger DatRoot erst bei Run-Start erkannt → Late Failure
 - **Datei:** `src/RomCleanup.UI.Wpf/ViewModels/MainViewModel.Settings.cs`
 - **Fix:** DatRoot bei Eingabe validieren, Feedback zeigen
 - **Test:** Ungültiger DatRoot → sofort Warnung, nicht erst beim Run
 
 ### F15 – API CORS nicht konfigurierbar
-- [ ] **P2** | API / Security
+- [x] **P2** | API / Security
 - **Impact:** Keine Cross-Origin-Zugriffe möglich oder zu offene Defaults
 - **Datei:** `src/RomCleanup.Api/Program.cs`
 - **Fix:** CORS-Policy aus appsettings konfigurierbar machen
 - **Test:** CORS-Header korrekt gesetzt
 
 ### F16 – GUI-Error-Dialog blockiert Event-Loop
-- [ ] **P2** | GUI / UX
+- [x] **P2** | GUI / UX
 - **Impact:** MessageBox auf UI-Thread kann Deadlock verursachen
 - **Datei:** `src/RomCleanup.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs`
 - **Fix:** Async Dialog-Pattern verwenden
@@ -152,10 +152,10 @@
 - **Test:** Zweite CLI-Instanz → Exit mit klarer Meldung
 
 ### F18 – JunkRemoval keine Set-Member-Prüfung
-- [ ] **P2** | Junk / Data-Integrity
+- [x] **P2** | Junk / Data-Integrity
 - **Impact:** Set-Member als Junk markiert → Descriptor verliert Members
-- **Datei:** `src/RomCleanup.Core/Classification/JunkClassifier.cs`
-- **Fix:** Set-Member-Check vor Junk-Klassifikation
+- **Datei:** `src/RomCleanup.Infrastructure/Orchestration/JunkRemovalPipelinePhase.cs`
+- **Fix:** Referenzierte Set-Member vor Junk-Removal schützen (Descriptor-basierter Guard)
 - **Test:** .bin-Datei als Set-Member von .cue → kein Junk
 
 ### F19 – IntegrityService JSON-Ordnung non-deterministic
@@ -197,11 +197,11 @@
 - **Test:** Approval für Pfad → Datei geändert → Approval wird als stale erkannt
 
 ### F23 – Settings-Corruption stiller Verlust (CLI/API)
-- [ ] **P2** | Configuration / UX
+- [x] **P2** | Configuration / UX
 - **Impact:** Korrupte User-Settings werden still durch Defaults ersetzt, User weiß nichts davon
 - **Datei:** `src/RomCleanup.Infrastructure/Configuration/SettingsLoader.cs` (Zeile 300–380)
 - **Ursache:** `MergeFromUserSettings()` hat `catch (JsonException)` ohne Logging/Warning
-- **Fix:** Warning-Callback oder Logging bei corrupt settings; `SettingsLoadResult` mit `WasCorrupt`
+- **Fix:** Corrupt-Backup (`.bak`) + optionaler Warning-Callback im User-Settings-Merge
 - **Test:** Korrupte settings.json → Warning wird emittiert; Defaults werden korrekt verwendet
 
 ### F24 – WPF Cancel hinterlässt stale Progress-Anzeige
@@ -280,20 +280,20 @@
 - **Test:** Nicht-beschreibbares TrashRoot → Preflight Warning/Blocked
 
 ### F32 – DiscBasedConsoles-Property nie befüllt (toter Code)
-- [ ] **P3** | Hygiene / Dead Code
+- [x] **P3** | Hygiene / Dead Code
 - **Impact:** `RunOptions.DiscBasedConsoles` ist immer ein leeres Set; wird nirgends konsumiert (kein `.Contains()`-Aufruf)
 - **Dateien:** `src/RomCleanup.Contracts/Models/RunExecutionModels.cs` (Zeile 62), `src/RomCleanup.Infrastructure/Orchestration/RunOptionsBuilder.cs` (Zeile 123, 155)
 - **Ursache:** `ConsoleDetector` lädt `discBased`-Flag in `ConsoleInfo`, aber niemand transferiert das nach `RunOptions.DiscBasedConsoles`
-- **Fix:** Entweder entfernen (toter Code) oder korrekt befüllen wenn geplant
+- **Fix:** Property und Clone-Pfade entfernt (vollständige Dead-Code-Bereinigung)
 - **Test:** *(kein funktionaler Test nötig — Property ist unbenutzt)*
 
 ### F33 – Hardcoded-Strings in Pipeline-Phasen (i18n-Bypass)
-- [ ] **P3** | i18n / Wartbarkeit
+- [x] **P3** | i18n / Wartbarkeit
 - **Impact:** Alle Progress-/Status-Nachrichten in RunOrchestrator und Pipeline-Phasen sind hardcoded Deutsch — unabhängig von User-Locale
 - **Dateien:** `src/RomCleanup.Infrastructure/Orchestration/RunOrchestrator.cs` (200+ Zeilen), `EnrichmentPipelinePhase.cs`, `MovePipelinePhase.cs`
 - **Ursache:** `_onProgress?.Invoke("…")` mit String-Literalen statt i18n-Keys
-- **Fix:** Progress-Strings durch Locale-Lookup ersetzen (wenn Mehrsprachigkeit gewünscht)
-- **Test:** *(niedrige Priorität — kein funktionales Risiko)*
+- **Fix:** `RunProgressLocalization` eingeführt (de/en/fr-Template-Lookup via `CurrentUICulture`) und zentrale Progress-Meldungen auf lokalisierte Templates umgestellt
+- **Test:** `Execute_ProgressCallback_UsesEnglishPreflightMessage_WhenCurrentUiCultureIsEnglish_FindingF33`
 
 ---
 
@@ -308,20 +308,20 @@
 - **Test:** Zwei Dateien im selben Verzeichnis mit gleichem DAT-Zielnamen → definierter Winner bekommt den echten Namen
 
 ### F35 – Scan-Phase verschluckt Permission-Errors ohne Zählung/Log
-- [ ] **P2** | Scan / Sichtbarkeit
+- [x] **P2** | Scan / Sichtbarkeit
 - **Impact:** `GetFilesSafe()` fängt `UnauthorizedAccessException` und `DirectoryNotFoundException` still ab — User erfährt nicht, ob ganze Verzeichnisse/Dateien übersprungen wurden. Report-Zahlen stimmen intern, aber können fachlich zu optimistisch wirken
 - **Dateien:** `src/RomCleanup.Infrastructure/FileSystem/FileSystemAdapter.cs` (Zeile 83–89, 95–98, 109–112)
 - **Ursache:** Defensive `catch` ohne Zähler, Warnung oder Logging
 - **Reproduktion:** Verzeichnis mit verweigerten Leserechten innerhalb eines Roots → 0 Dateien gescannt, keine Warnung
-- **Fix:** Skipped-Counters für inaccessible Directories/Files; als Warning in Run-Result emittieren
-- **Test:** Root mit gesperrtem Subfolder → Warning enthält Anzahl/Pfade der übersprungenen Verzeichnisse
+- **Fix:** Scan-Warnings im FileSystem sammeln (`ConsumeScanWarnings`) und in der Streaming-Scan-Phase als `WARNING`-Progress emittieren
+- **Test:** `ScanPhase_EmitsWarning_WhenFileSystemReportsInaccessiblePaths_FindingF35`
 
 ### F36 – LiteDB CollectionIndex wächst unbegrenzt ohne Compaction
-- [ ] **P3** | Hygiene / Ressourcen
+- [x] **P3** | Hygiene / Ressourcen
 - **Impact:** Bei vielen Runs kann die CollectionIndex-Datei unbegrenzt wachsen — gelöschte/geänderte Einträge belegen weiterhin Speicher im LiteDB-Journal
 - **Datei:** `src/RomCleanup.Infrastructure/Index/LiteDbCollectionIndex.cs`
 - **Ursache:** Keine `Shrink()`- oder Compaction-Logik; LiteDB allokiert intern Seiten, gibt sie aber nicht automatisch frei
-- **Fix:** Periodisch oder nach großen Deltas `_database.Rebuild()` oder `Shrink()` aufrufen
+- **Fix:** Periodische Best-Effort-Compaction via `_database.Rebuild()` nach Mutationsschwelle
 - **Test:** *(niedrige Priorität — nur Ressourcen-Hygiene)*
 
 ---

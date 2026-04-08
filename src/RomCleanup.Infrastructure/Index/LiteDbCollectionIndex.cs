@@ -14,6 +14,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
 {
     private const int CurrentSchemaVersion = 2;
     private static readonly byte[] LiteDbSignature = "** This is a LiteDB file **"u8.ToArray();
+    private const int MutationCompactionThreshold = 5000;
     private const string MetadataCollectionName = "metadata";
     private const string EntriesCollectionName = "entries";
     private const string HashesCollectionName = "hashes";
@@ -24,6 +25,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Action<string>? _onWarning;
     private LiteDatabase _database;
+    private int _pendingMutationCount;
     private bool _disposed;
 
     public LiteDbCollectionIndex(string databasePath, Action<string>? onWarning = null)
@@ -208,6 +210,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             }
 
             TouchMetadata();
+            RegisterMutationAndMaybeCompact(entries.Count);
         }
         finally
         {
@@ -235,6 +238,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             }
 
             TouchMetadata();
+            RegisterMutationAndMaybeCompact(paths.Count);
         }
         finally
         {
@@ -279,6 +283,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             _database.GetCollection<CollectionHashCacheDocument>(HashesCollectionName)
                 .Upsert(ToDocument(entry));
             TouchMetadata();
+            RegisterMutationAndMaybeCompact(1);
         }
         finally
         {
@@ -299,6 +304,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             _database.GetCollection<CollectionRunSnapshotDocument>(SnapshotsCollectionName)
                 .Upsert(ToDocument(snapshot));
             TouchMetadata();
+            RegisterMutationAndMaybeCompact(1);
         }
         finally
         {
@@ -344,6 +350,29 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
         finally
         {
             _gate.Release();
+        }
+    }
+
+    private void RegisterMutationAndMaybeCompact(int mutationCount)
+    {
+        if (mutationCount <= 0)
+            return;
+
+        _pendingMutationCount += mutationCount;
+        if (_pendingMutationCount < MutationCompactionThreshold)
+            return;
+
+        try
+        {
+            _database.Rebuild();
+        }
+        catch (Exception ex)
+        {
+            _onWarning?.Invoke($"[CollectionIndex] Periodic compaction skipped: {ex.Message}");
+        }
+        finally
+        {
+            _pendingMutationCount = 0;
         }
     }
 

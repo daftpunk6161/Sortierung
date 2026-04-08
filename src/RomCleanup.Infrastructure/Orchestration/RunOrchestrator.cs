@@ -205,21 +205,34 @@ public sealed partial class RunOrchestrator : IDisposable
 
         // Phase 1: Preflight
         metrics.StartPhase("Preflight");
-        _onProgress?.Invoke("[Preflight] Voraussetzungen prüfen…");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Preflight.Checking",
+            "[Preflight] Voraussetzungen prüfen…"));
         var preflight = Preflight(options);
         result.Preflight = preflight;
         metrics.CompletePhase();
         if (preflight.ShouldReturn)
         {
-            _onProgress?.Invoke($"[Preflight] Blockiert: {preflight.Reason}");
+            _onProgress?.Invoke(RunProgressLocalization.Format(
+                "Preflight.Blocked",
+                "[Preflight] Blockiert: {0}",
+                preflight.Reason ?? string.Empty));
             result.Status = RunOutcome.Blocked.ToStatusString();
             result.ExitCode = RunOutcome.Blocked.ToExitCode();
             return result.Build();
         }
-        _onProgress?.Invoke($"[Preflight] OK — {options.Roots.Count} Root(s), {options.Extensions.Count} Extension(s), Modus: {options.Mode}");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Preflight.Ok",
+            "[Preflight] OK — {0} Root(s), {1} Extension(s), Modus: {2}",
+            options.Roots.Count,
+            options.Extensions.Count,
+            options.Mode));
         if (preflight.Warnings.Count > 0)
             foreach (var w in preflight.Warnings)
-                _onProgress?.Invoke($"[Preflight] Warnung: {w}");
+                _onProgress?.Invoke(RunProgressLocalization.Format(
+                    "Preflight.Warning",
+                    "[Preflight] Warnung: {0}",
+                    w));
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -316,7 +329,11 @@ public sealed partial class RunOrchestrator : IDisposable
             // Keep best-effort partial data for diagnostics and UI continuity after failures.
             ApplyPartialPipelineState(pipelineState, result);
 
-            _onProgress?.Invoke($"[FEHLER] Pipeline abgebrochen: {ex.GetType().Name}: {ex.Message}");
+            _onProgress?.Invoke(RunProgressLocalization.Format(
+                "Pipeline.Error.Aborted",
+                "[FEHLER] Pipeline abgebrochen: {0}: {1}",
+                ex.GetType().Name,
+                ex.Message));
 
             // Write partial audit sidecar so rollback is possible even after crash
             try

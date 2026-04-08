@@ -194,11 +194,11 @@ public sealed class ReportGeneratorExtendedCoverageTests
 
         var csv = ReportGenerator.GenerateCsv(entries);
 
-        // Formula-prefix values should be wrapped in quotes (RFC-4180 quoting)
-        // =CMD("calc") → "=CMD(""calc"")" in CSV
-        Assert.Contains("\"=CMD(\"\"calc\"\")", csv);
-        Assert.Contains("\"+exploit.nes\"", csv);
-        Assert.Contains("\"@SUM(A1:A2)\"", csv);
+        // Formula-prefix values should be apostrophe-prefixed and RFC-4180 quoted.
+        // =CMD("calc") → "'=CMD(""calc"")" in CSV
+        Assert.Contains("\"'=CMD(\"\"calc\"\")", csv);
+        Assert.Contains("\"'+exploit.nes\"", csv);
+        Assert.Contains("\"'@SUM(A1:A2)\"", csv);
     }
 
     [Fact]

@@ -371,6 +371,10 @@ public sealed class FeatureCommandServiceTests : IDisposable
     {
         _sut.RegisterCommands();
 
+        var runRoot = Path.Combine(_tempDir, "completeness-root");
+        Directory.CreateDirectory(runRoot);
+        await File.WriteAllTextAsync(Path.Combine(runRoot, "Present Game.sfc"), "rom");
+
         var datRoot = Path.Combine(_tempDir, "datroot");
         Directory.CreateDirectory(datRoot);
         var datPath = Path.Combine(datRoot, "snes.dat");
@@ -389,7 +393,7 @@ public sealed class FeatureCommandServiceTests : IDisposable
             """);
 
         _vm.Roots.Clear();
-        _vm.Roots.Add(_tempDir);
+    _vm.Roots.Add(runRoot);
         _vm.UseDat = true;
         _vm.DatRoot = datRoot;
 

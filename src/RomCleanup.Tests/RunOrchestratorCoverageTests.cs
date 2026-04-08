@@ -336,6 +336,9 @@ public sealed class RunOrchestratorCoverageTests : IDisposable
     [Fact]
     public void Preflight_AuditDirUnwritable_ReturnsBlocked()
     {
+        var runRoot = Path.Combine(_tempDir, "preflight-root");
+        Directory.CreateDirectory(runRoot);
+
         // Create a file where the audit dir should be → can't create dir
         var blocker = Path.Combine(_tempDir, "blocked-audit");
         File.WriteAllText(blocker, "not a directory");
@@ -346,7 +349,7 @@ public sealed class RunOrchestratorCoverageTests : IDisposable
 
         var result = orch.Preflight(new RunOptions
         {
-            Roots = [_tempDir],
+            Roots = [runRoot],
             Extensions = [".zip"],
             AuditPath = Path.Combine(blocker, "sub", "audit.csv")
         });
@@ -358,8 +361,10 @@ public sealed class RunOrchestratorCoverageTests : IDisposable
     [Fact]
     public void Execute_WithAuditPath_WritesAuditRows()
     {
-        CreateFile("Game (USA).zip", 100);
-        CreateFile("Game (Europe).zip", 100);
+        var runRoot = Path.Combine(_tempDir, "execute-audit-root");
+        Directory.CreateDirectory(runRoot);
+        CreateFileIn(runRoot, "Game (USA).zip", 100);
+        CreateFileIn(runRoot, "Game (Europe).zip", 100);
 
         var auditDir = Path.Combine(_tempDir, "audit-logs");
         Directory.CreateDirectory(auditDir);
@@ -372,7 +377,7 @@ public sealed class RunOrchestratorCoverageTests : IDisposable
 
         var result = orch.Execute(new RunOptions
         {
-            Roots = [_tempDir],
+            Roots = [runRoot],
             Extensions = [".zip"],
             Mode = "Move",
             PreferRegions = ["US"],

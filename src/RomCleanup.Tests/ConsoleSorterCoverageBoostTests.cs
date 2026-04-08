@@ -319,8 +319,10 @@ public sealed class ConsoleSorterCoverageBoostTests : IDisposable
             enrichedConsoleKeys: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 { [file] = "NES" });
 
-        Assert.NotEmpty(result.PathMutations);
-        Assert.All(result.PathMutations, pm =>
+        var pathMutations = result.PathMutations;
+        Assert.NotNull(pathMutations);
+        Assert.NotEmpty(pathMutations);
+        Assert.All(pathMutations, pm =>
         {
             Assert.NotEmpty(pm.SourcePath);
             Assert.NotEmpty(pm.TargetPath);

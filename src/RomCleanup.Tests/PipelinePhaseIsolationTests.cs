@@ -85,6 +85,63 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
     }
 
     [Fact]
+    public void ScanPhase_CueOnlyExtensions_ExpandsSetMemberExtensions_FindingF04()
+    {
+        var root = Path.Combine(_tempDir, "scan-f04");
+        Directory.CreateDirectory(root);
+
+        var cuePath = Path.Combine(root, "disc.cue");
+        var binPath = Path.Combine(root, "track01.bin");
+
+        File.WriteAllText(cuePath, "FILE \"track01.bin\" BINARY");
+        File.WriteAllText(binPath, "track");
+
+        var fs = new TestFileSystem();
+        fs.SetFiles(root, cuePath, binPath);
+
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".cue" }
+        };
+
+        var phase = new ScanPipelinePhase();
+        _ = phase.Execute(options, CreateContext(options, fs), CancellationToken.None);
+
+        Assert.True(fs.AllowedExtensionsByRoot.TryGetValue(root, out var requestedExtensions));
+        Assert.Contains(requestedExtensions, ext => string.Equals(ext, ".bin", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ScanPhase_EmitsWarning_WhenFileSystemReportsInaccessiblePaths_FindingF35()
+    {
+        var root = Path.Combine(_tempDir, "scan-f35");
+        Directory.CreateDirectory(root);
+
+        var romPath = Path.Combine(root, "game.zip");
+        File.WriteAllText(romPath, "game");
+
+        var fs = new TestFileSystem();
+        fs.SetFiles(root, romPath);
+        fs.PendingScanWarnings.Add("Skipped inaccessible directory: denied-subfolder");
+
+        var progress = new List<string>();
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".zip" }
+        };
+
+        var phase = new ScanPipelinePhase();
+        _ = phase.Execute(options, CreateContext(options, fs, onProgress: progress.Add), CancellationToken.None);
+
+        Assert.Contains(
+            progress,
+            message => message.Contains("WARNING", StringComparison.OrdinalIgnoreCase)
+                       && message.Contains("denied-subfolder", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void DeduplicatePhase_FiltersOutJunkOnlyGroups_ForGameGroupsOutput()
     {
         var gameUs = Candidate("C:/roms/game (US).zip", "game", "US", 1000, FileCategory.Game);
@@ -204,6 +261,50 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
         Assert.Equal(1, result.MoveResult.MoveCount);
         Assert.Contains(junkStandalone, result.RemovedPaths);
         Assert.DoesNotContain(junkNotStandalone, result.RemovedPaths);
+    }
+
+    [Fact]
+    public void JunkRemovalPhase_DoesNotRemoveDescriptorReferencedSetMemberJunk_FindingF18()
+    {
+        var root = Path.Combine(_tempDir, "junk-setmember-root");
+        Directory.CreateDirectory(root);
+
+        var descriptor = Path.Combine(root, "game.cue");
+        var member = Path.Combine(root, "track01.bin");
+        File.WriteAllText(descriptor, "FILE \"track01.bin\" BINARY");
+        File.WriteAllText(member, "member");
+
+        var fs = new TestFileSystem();
+        fs.MoveResults[member] = Path.Combine(root, "_TRASH_JUNK", "track01.bin");
+
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".cue", ".bin" },
+            Mode = RunConstants.ModeMove
+        };
+
+        var groups = new[]
+        {
+            new DedupeGroup
+            {
+                GameKey = "set-descriptor",
+                Winner = Candidate(descriptor, "set-descriptor", "UNKNOWN", 100, FileCategory.Game),
+                Losers = Array.Empty<RomCandidate>()
+            },
+            new DedupeGroup
+            {
+                GameKey = "set-member",
+                Winner = Candidate(member, "set-member", "UNKNOWN", 100, FileCategory.Junk),
+                Losers = Array.Empty<RomCandidate>()
+            }
+        };
+
+        var phase = new JunkRemovalPipelinePhase();
+        var result = phase.Execute(new JunkRemovalPhaseInput(groups, options), CreateContext(options, fs), CancellationToken.None);
+
+        Assert.Equal(0, result.MoveResult.MoveCount);
+        Assert.DoesNotContain(member, result.RemovedPaths);
     }
 
     [Fact]
@@ -589,6 +690,8 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
         private readonly Dictionary<string, IReadOnlyList<string>> _filesByRoot = new(StringComparer.OrdinalIgnoreCase);
 
         public Dictionary<string, string> MoveResults { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, IReadOnlyList<string>> AllowedExtensionsByRoot { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public List<string> PendingScanWarnings { get; } = new();
 
         public void SetFiles(string root, params string[] files)
         {
@@ -614,6 +717,8 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
 
         public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? allowedExtensions = null)
         {
+            AllowedExtensionsByRoot[root] = allowedExtensions?.ToArray() ?? Array.Empty<string>();
+
             if (!_filesByRoot.TryGetValue(root, out var all))
                 return Array.Empty<string>();
 
@@ -622,6 +727,13 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
 
             var allowed = new HashSet<string>(allowedExtensions, StringComparer.OrdinalIgnoreCase);
             return all.Where(f => allowed.Contains(Path.GetExtension(f))).ToArray();
+        }
+
+        public IReadOnlyList<string> ConsumeScanWarnings()
+        {
+            var warnings = PendingScanWarnings.ToArray();
+            PendingScanWarnings.Clear();
+            return warnings;
         }
 
         public string? MoveItemSafely(string sourcePath, string destinationPath)

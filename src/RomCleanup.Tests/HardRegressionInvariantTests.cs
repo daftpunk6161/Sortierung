@@ -304,7 +304,7 @@ public sealed class HardRegressionInvariantTests : IDisposable
         // Status bei Fehlern muss "completed_with_errors" sein, NICHT "ok"
         Assert.NotEqual("ok", result.Status);
         Assert.Equal("completed_with_errors", result.Status);
-        Assert.Equal(1, result.ExitCode);
+        Assert.Equal(4, result.ExitCode);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -537,7 +537,9 @@ public sealed class HardRegressionInvariantTests : IDisposable
     [Fact]
     public void INV_CAN_02_CancelSidecar_MustContain_LastPhase()
     {
-        CreateFile("Game (USA).zip", 50);
+        var runRoot = Path.Combine(_tempDir, "cancel_sidecar_root");
+        Directory.CreateDirectory(runRoot);
+        CreateFileAt(runRoot, "Game (USA).zip", 50);
 
         var auditPath = Path.Combine(_tempDir, "audit", "cancel_sidecar.csv");
         Directory.CreateDirectory(Path.GetDirectoryName(auditPath)!);
@@ -553,7 +555,7 @@ public sealed class HardRegressionInvariantTests : IDisposable
         var orch = new RunOrchestrator(fs, audit);
         var result = orch.Execute(new RunOptions
         {
-            Roots = new[] { _tempDir },
+            Roots = new[] { runRoot },
             Extensions = new[] { ".zip" },
             Mode = "Move",
             PreferRegions = new[] { "USA" },
@@ -609,10 +611,12 @@ public sealed class HardRegressionInvariantTests : IDisposable
     [Fact]
     public void INV_AUD_02_Sidecar_MoveCount_MustMatch_AuditRowCount()
     {
-        CreateFile("Game (USA).zip", 50);
-        CreateFile("Game (Europe).zip", 60);
-        CreateFile("Other (USA).zip", 30);
-        CreateFile("Other (Japan).zip", 40);
+        var runRoot = Path.Combine(_tempDir, "sidecar_count_root");
+        Directory.CreateDirectory(runRoot);
+        CreateFileAt(runRoot, "Game (USA).zip", 50);
+        CreateFileAt(runRoot, "Game (Europe).zip", 60);
+        CreateFileAt(runRoot, "Other (USA).zip", 30);
+        CreateFileAt(runRoot, "Other (Japan).zip", 40);
 
         var auditPath = Path.Combine(_tempDir, "audit", "sidecar_count.csv");
         Directory.CreateDirectory(Path.GetDirectoryName(auditPath)!);
@@ -625,7 +629,7 @@ public sealed class HardRegressionInvariantTests : IDisposable
 
         var result = orch.Execute(new RunOptions
         {
-            Roots = new[] { _tempDir },
+            Roots = new[] { runRoot },
             Extensions = new[] { ".zip" },
             Mode = "Move",
             PreferRegions = new[] { "USA" },
@@ -868,8 +872,10 @@ public sealed class HardRegressionInvariantTests : IDisposable
     [Fact]
     public void INV_PAR_04_CompletionSidecar_MustContain_AllCriticalFields()
     {
-        CreateFile("Game (USA).zip", 50);
-        CreateFile("Game (Europe).zip", 60);
+        var runRoot = Path.Combine(_tempDir, "completion_sidecar_root");
+        Directory.CreateDirectory(runRoot);
+        CreateFileAt(runRoot, "Game (USA).zip", 50);
+        CreateFileAt(runRoot, "Game (Europe).zip", 60);
 
         var auditPath = Path.Combine(_tempDir, "audit", "completion.csv");
         Directory.CreateDirectory(Path.GetDirectoryName(auditPath)!);
@@ -882,7 +888,7 @@ public sealed class HardRegressionInvariantTests : IDisposable
 
         var result = orch.Execute(new RunOptions
         {
-            Roots = new[] { _tempDir },
+            Roots = new[] { runRoot },
             Extensions = new[] { ".zip" },
             Mode = "Move",
             PreferRegions = new[] { "USA" },

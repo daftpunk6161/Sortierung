@@ -411,13 +411,15 @@ public sealed class ApiSecurityTests : IDisposable
         using var factory = CreateFactory();
         using var client = CreateAuthClient(factory, "owner-redact");
         var root = CreateTempRoot();
+        var datRoot = CreateTempRoot();
+        var trashRoot = CreateTempRoot();
 
         var payload = JsonSerializer.Serialize(new
         {
             roots = new[] { root },
             mode = "DryRun",
-            datRoot = root,
-            trashRoot = root
+            datRoot,
+            trashRoot
         });
 
         using var content = new StringContent(payload, Encoding.UTF8, "application/json");

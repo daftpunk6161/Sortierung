@@ -320,10 +320,10 @@ public sealed class ReportGeneratorHtmlCoverageTests
 
         var csv = ReportGenerator.GenerateCsv([entry]);
 
-        // CSV-injection protection wraps formula prefixes in quotes per RFC-4180
-        Assert.Contains("\"=CMD", csv);
-        Assert.Contains("\"+HYPERLINK", csv);
-        Assert.Contains("\"@SUM", csv);
+        // CSV-injection protection prefixes formula vectors with apostrophe and keeps RFC-4180 quoting.
+        Assert.Contains("\"'=CMD", csv);
+        Assert.Contains("\"'+HYPERLINK", csv);
+        Assert.Contains("\"'@SUM", csv);
     }
 
     [Fact]

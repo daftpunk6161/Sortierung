@@ -33,8 +33,8 @@ public sealed class EnrichmentPhaseHelperCoverageTests
     [InlineData("a")]
     [InlineData("--")] // no alphanumeric >= 3
     [InlineData("...")] // no alphanumeric >= 3
-    public void IsStrictDatNameCandidate_TooShortOrEmpty_False(string stem)
-        => Assert.False(EnrichmentPipelinePhase.IsStrictDatNameCandidate(stem));
+    public void IsStrictDatNameCandidate_TooShortOrEmpty_False(string? stem)
+        => Assert.False(EnrichmentPipelinePhase.IsStrictDatNameCandidate(stem!));
 
     [Theory]
     [InlineData("track")]

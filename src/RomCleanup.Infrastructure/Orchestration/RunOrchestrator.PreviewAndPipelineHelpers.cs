@@ -95,7 +95,12 @@ public sealed partial class RunOrchestrator
             }
         }
 
-        _onProgress?.Invoke($"[Fertig] Pipeline abgeschlossen in {sw.ElapsedMilliseconds}ms — {result.TotalFilesScanned} Dateien, {result.GroupCount} Gruppen");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Done.Pipeline",
+            "[Fertig] Pipeline abgeschlossen in {0}ms — {1} Dateien, {2} Gruppen",
+            sw.ElapsedMilliseconds,
+            result.TotalFilesScanned,
+            result.GroupCount));
         return result.Build();
     }
 
@@ -110,18 +115,25 @@ public sealed partial class RunOrchestrator
 
         var reportStep = new ReportPhaseStep(() =>
         {
-            _onProgress?.Invoke("[Report] Generiere HTML-Report…");
+            _onProgress?.Invoke(RunProgressLocalization.Format(
+                "Report.Generate",
+                "[Report] Generiere HTML-Report…"));
             return GenerateReport(result, options);
         });
 
         result.ReportPath = reportStep.Execute(pipelineState, cancellationToken).TypedResult as string;
         if (!string.IsNullOrEmpty(result.ReportPath))
         {
-            _onProgress?.Invoke($"[Report] Report erstellt: {result.ReportPath}");
+            _onProgress?.Invoke(RunProgressLocalization.Format(
+                "Report.Created",
+                "[Report] Report erstellt: {0}",
+                result.ReportPath));
             return true;
         }
 
-        _onProgress?.Invoke("[Report] Angeforderter Report konnte weder am Zielpfad noch im Fallback geschrieben werden.");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Report.Failed",
+            "[Report] Angeforderter Report konnte weder am Zielpfad noch im Fallback geschrieben werden."));
         return false;
     }
 
@@ -139,7 +151,9 @@ public sealed partial class RunOrchestrator
 
     private void WriteCompletedAuditSidecar(RunOptions options, RunResultBuilder result, long elapsedMs, RunOutcome? outcome = null)
     {
-        _onProgress?.Invoke("[Audit] Schreibe Audit-Sidecar…");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Audit.WriteSidecar",
+            "[Audit] Schreibe Audit-Sidecar…"));
         if (string.IsNullOrEmpty(options.AuditPath) || !File.Exists(options.AuditPath))
             return;
 
@@ -578,7 +592,13 @@ public sealed partial class RunOrchestrator
         CancellationToken cancellationToken)
     {
         var junkRemovedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (!options.RemoveJunk || options.Mode != RunConstants.ModeMove)
+        if (!options.RemoveJunk)
+            return new JunkPhaseResult(new MovePhaseResult(0, 0, 0, 0), junkRemovedPaths);
+
+        var mode = options.Mode?.Trim();
+        var isMoveMode = string.Equals(mode, RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase);
+        var isDryRunMode = string.Equals(mode, RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase);
+        if (!isMoveMode && !isDryRunMode)
             return new JunkPhaseResult(new MovePhaseResult(0, 0, 0, 0), junkRemovedPaths);
 
         var phase = new JunkRemovalPipelinePhase();

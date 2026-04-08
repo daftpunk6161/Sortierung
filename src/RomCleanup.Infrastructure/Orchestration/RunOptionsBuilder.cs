@@ -121,8 +121,7 @@ public static class RunOptionsBuilder
             TrashRoot = options.TrashRoot,
             ReportPath = options.ReportPath,
             AuditPath = options.AuditPath,
-            HashType = string.IsNullOrWhiteSpace(options.HashType) ? "SHA1" : options.HashType,
-            DiscBasedConsoles = new HashSet<string>(options.DiscBasedConsoles, StringComparer.OrdinalIgnoreCase)
+            HashType = string.IsNullOrWhiteSpace(options.HashType) ? "SHA1" : options.HashType
         };
     }
 
@@ -211,8 +210,7 @@ public static class RunOptionsBuilder
             TrashRoot = options.TrashRoot,
             AuditPath = options.AuditPath,
             ReportPath = options.ReportPath,
-            ConflictPolicy = options.ConflictPolicy,
-            DiscBasedConsoles = new HashSet<string>(options.DiscBasedConsoles, StringComparer.OrdinalIgnoreCase)
+            ConflictPolicy = options.ConflictPolicy
         };
     }
 }

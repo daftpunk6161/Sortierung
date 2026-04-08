@@ -357,4 +357,19 @@ public sealed class SettingsLoaderCoverageBoostTests : IDisposable
 
         Assert.Equal("Warning", settings.General.LogLevel);
     }
+
+    [Fact]
+    public void LoadWithExplicitUserPath_CorruptUserSettings_CreatesBackupAndKeepsDefaults_FindingF23()
+    {
+        var defaultsPath = Path.Combine(_tempDir, "defaults-f23.json");
+        File.WriteAllText(defaultsPath, """{"logLevel":"Warning","mode":"DryRun"}""");
+
+        var userPath = Path.Combine(_tempDir, "user-corrupt-f23.json");
+        File.WriteAllText(userPath, "{ invalid json");
+
+        var settings = SettingsLoader.LoadWithExplicitUserPath(defaultsPath, userPath);
+
+        Assert.Equal("Warning", settings.General.LogLevel);
+        Assert.True(File.Exists(userPath + ".bak"));
+    }
 }

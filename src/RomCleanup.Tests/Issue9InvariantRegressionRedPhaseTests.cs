@@ -266,7 +266,11 @@ public sealed class Issue9InvariantRegressionRedPhaseTests : IDisposable
     public void Should_BuildEquivalentRunOptionsAcrossEntryPoints_When_SameIntentGiven_Issue9_INV12_P01()
     {
         var root = Path.Combine(_tempDir, "roots");
+        var datRoot = Path.Combine(_tempDir, "dat");
+        var trashRoot = Path.Combine(_tempDir, "trash");
         Directory.CreateDirectory(root);
+        Directory.CreateDirectory(datRoot);
+        Directory.CreateDirectory(trashRoot);
 
         var cli = new CliRunOptions
         {
@@ -279,12 +283,12 @@ public sealed class Issue9InvariantRegressionRedPhaseTests : IDisposable
             AggressiveJunk = false,
             SortConsole = true,
             EnableDat = true,
-            DatRoot = root,
+            DatRoot = datRoot,
             HashType = "sha1",
             ConvertFormat = "auto",
             ConvertOnly = false,
             ConflictPolicy = "Rename",
-            TrashRoot = Path.Combine(root, "trash")
+            TrashRoot = trashRoot
         };
 
         var cliSettings = new RomCleanupSettings();
@@ -305,12 +309,12 @@ public sealed class Issue9InvariantRegressionRedPhaseTests : IDisposable
             AggressiveJunk = false,
             SortConsole = true,
             EnableDat = true,
-            DatRoot = root,
+            DatRoot = datRoot,
             HashType = "sha1",
             ConvertFormat = "auto",
             ConvertOnly = false,
             ConflictPolicy = "Rename",
-            TrashRoot = Path.Combine(root, "trash")
+            TrashRoot = trashRoot
         }, "Move", idempotencyKey: "issue9-inv12");
 
         var api = apiCreate.Run!;
@@ -321,12 +325,12 @@ public sealed class Issue9InvariantRegressionRedPhaseTests : IDisposable
         vm.AggressiveJunk = false;
         vm.SortConsole = true;
         vm.UseDat = true;
-        vm.DatRoot = root;
+        vm.DatRoot = datRoot;
         vm.DatHashType = "SHA1";
         vm.ConvertEnabled = true;
         vm.ConvertOnly = false;
         vm.ConflictPolicy = ConflictPolicy.Rename;
-        vm.TrashRoot = Path.Combine(root, "trash");
+        vm.TrashRoot = trashRoot;
 
         var (_, wpfRunOptions, _, _) = new RunService().BuildOrchestrator(vm);
 

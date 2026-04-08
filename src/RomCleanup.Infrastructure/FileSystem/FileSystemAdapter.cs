@@ -13,6 +13,9 @@ namespace RomCleanup.Infrastructure.FileSystem;
 public sealed class FileSystemAdapter : IFileSystem
 {
     private const int MaxDuplicateAttempts = 10_000;
+    private const int MaxScanWarningsPerCall = 200;
+    private readonly object _scanWarningsGate = new();
+    private readonly List<string> _scanWarnings = new();
 
     /// <summary>
     /// Issue #21: Normalize path to NFC to handle macOS NFD-encoded paths
@@ -44,6 +47,8 @@ public sealed class FileSystemAdapter : IFileSystem
 
     public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? allowedExtensions = null)
     {
+        ClearScanWarnings();
+
         if (string.IsNullOrWhiteSpace(root))
             return Array.Empty<string>();
 
@@ -80,6 +85,7 @@ public sealed class FileSystemAdapter : IFileSystem
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
+                    RecordScanWarning($"Skipped inaccessible directory '{dir}': {ex.Message}");
                     continue; // inaccessible directory
                 }
             }
@@ -91,10 +97,12 @@ public sealed class FileSystemAdapter : IFileSystem
             }
             catch (UnauthorizedAccessException)
             {
+                RecordScanWarning($"Skipped inaccessible directory '{dir}': unauthorized");
                 continue;
             }
             catch (DirectoryNotFoundException)
             {
+                RecordScanWarning($"Skipped missing directory '{dir}' during scan");
                 continue;
             }
 
@@ -109,6 +117,7 @@ public sealed class FileSystemAdapter : IFileSystem
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
+                    RecordScanWarning($"Skipped inaccessible file '{file}': {ex.Message}");
                     continue; // inaccessible file
                 }
 
@@ -128,10 +137,12 @@ public sealed class FileSystemAdapter : IFileSystem
             }
             catch (UnauthorizedAccessException)
             {
+                RecordScanWarning($"Skipped subdirectory listing for '{dir}': unauthorized");
                 continue;
             }
             catch (DirectoryNotFoundException)
             {
+                RecordScanWarning($"Skipped subdirectory listing for missing '{dir}'");
                 continue;
             }
 
@@ -145,6 +156,33 @@ public sealed class FileSystemAdapter : IFileSystem
             results[i] = results[i].Normalize(System.Text.NormalizationForm.FormC);
         results.Sort(StringComparer.OrdinalIgnoreCase);
         return results;
+    }
+
+    public IReadOnlyList<string> ConsumeScanWarnings()
+    {
+        lock (_scanWarningsGate)
+        {
+            var warnings = _scanWarnings.ToArray();
+            _scanWarnings.Clear();
+            return warnings;
+        }
+    }
+
+    private void ClearScanWarnings()
+    {
+        lock (_scanWarningsGate)
+            _scanWarnings.Clear();
+    }
+
+    private void RecordScanWarning(string warning)
+    {
+        lock (_scanWarningsGate)
+        {
+            if (_scanWarnings.Count >= MaxScanWarningsPerCall)
+                return;
+
+            _scanWarnings.Add(warning);
+        }
     }
 
     public string? MoveItemSafely(string sourcePath, string destinationPath)

@@ -428,7 +428,11 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         if (sizeBytes > 50_000_000)
         {
             var sizeMb = sizeBytes / (1024.0 * 1024.0);
-            onProgress?.Invoke($"[Scan] Hash: {Path.GetFileName(filePath)} ({sizeMb:F0} MB)…");
+            onProgress?.Invoke(RunProgressLocalization.Format(
+                "Scan.HashLarge",
+                "[Scan] Hash: {0} ({1:F0} MB)…",
+                Path.GetFileName(filePath),
+                sizeMb));
         }
 
         var lowerExt = ext.ToLowerInvariant();

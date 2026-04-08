@@ -238,6 +238,15 @@ public sealed class GameKeyNormalizerCoverageTests
     }
 
     [Fact]
+    public void Normalize_ZeroWidthSpace_DoesNotChangeKey_FindingF05()
+    {
+        var plain = GameKeyNormalizer.Normalize("Pokemon", EmptyPatterns, EmptyAliases);
+        var withZeroWidthSpace = GameKeyNormalizer.Normalize("Po\u200Bkemon", EmptyPatterns, EmptyAliases);
+
+        Assert.Equal(plain, withZeroWidthSpace);
+    }
+
+    [Fact]
     public void Normalize_ResultAlwaysLowercase()
     {
         var key = GameKeyNormalizer.Normalize("SUPER MARIO WORLD", EmptyPatterns, EmptyAliases);

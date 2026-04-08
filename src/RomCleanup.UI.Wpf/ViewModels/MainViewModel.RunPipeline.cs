@@ -689,13 +689,18 @@ public sealed partial class MainViewModel
         return _loc["Conversion.ReviewRequired"];
     }
 
+    private void ShowInfoDialogNonBlocking(string message, string title)
+    {
+        _ = Task.Run(() => _dialog.Info(message, title));
+    }
+
     private void OnRun()
     {
         if (HasBlockingValidationErrors)
         {
             var blockingValidationMessage = GetBlockingValidationMessage();
             AddLog(blockingValidationMessage, "WARN");
-            _dialog.Info(blockingValidationMessage, _loc["Dialog.Info.StartBlocked"]);
+            ShowInfoDialogNonBlocking(blockingValidationMessage, _loc["Dialog.Info.StartBlocked"]);
             DeferCommandRequery();
             return;
         }
@@ -703,7 +708,7 @@ public sealed partial class MainViewModel
         if (!DryRun && !ConvertOnly && !CanStartMoveWithCurrentPreview)
         {
             AddLog(MoveApplyGateText, "WARN");
-            _dialog.Info(MoveApplyGateText, _loc["Dialog.Info.MoveBlocked"]);
+            ShowInfoDialogNonBlocking(MoveApplyGateText, _loc["Dialog.Info.MoveBlocked"]);
             DeferCommandRequery();
             return;
         }

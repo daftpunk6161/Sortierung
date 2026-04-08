@@ -91,6 +91,7 @@ public static class RunConstants
         public const string Moved = "MOVED";
         public const string MoveFailed = "MOVE_FAILED";
         public const string JunkRemove = "JUNK_REMOVE";
+        public const string JunkPreview = "JUNK_PREVIEW";
         public const string ConsoleSort = "CONSOLE_SORT";
         public const string Convert = "CONVERT";
         public const string ConvertSource = "CONVERT_SOURCE";

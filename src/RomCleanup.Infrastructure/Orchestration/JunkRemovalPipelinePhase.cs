@@ -15,10 +15,15 @@ public sealed class JunkRemovalPipelinePhase : IPipelinePhase<JunkRemovalPhaseIn
         context.Metrics.StartPhase(Name);
         context.OnProgress?.Invoke("[Junk] Entferne Junk-Dateien…");
 
+        var protectedSetMembers = CollectReferencedSetMemberPaths(input.Groups);
+
         var junkToRemove = input.Groups
             .Where(g => g.Losers.Count == 0 && g.Winner.Category == FileCategory.Junk)
             .Select(g => g.Winner)
+            .Where(winner => !protectedSetMembers.Contains(NormalizePathSafe(winner.MainPath)))
             .ToList();
+
+        var isDryRun = string.Equals(input.Options.Mode, RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase);
 
         var removedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         int moveCount = 0;
@@ -37,9 +42,6 @@ public sealed class JunkRemovalPipelinePhase : IPipelinePhase<JunkRemovalPhaseIn
             }
 
             var trashBase = string.IsNullOrEmpty(input.Options.TrashRoot) ? root : input.Options.TrashRoot;
-            var trashDir = Path.Combine(trashBase, RunConstants.WellKnownFolders.TrashJunk);
-            context.FileSystem.EnsureDirectory(trashDir);
-
             var fileName = Path.GetFileName(junk.MainPath);
             var destPath = context.FileSystem.ResolveChildPathWithinRoot(trashBase, Path.Combine(RunConstants.WellKnownFolders.TrashJunk, fileName));
             if (destPath is null)
@@ -47,6 +49,27 @@ public sealed class JunkRemovalPipelinePhase : IPipelinePhase<JunkRemovalPhaseIn
                 failCount++;
                 continue;
             }
+
+            if (isDryRun)
+            {
+                if (!string.IsNullOrEmpty(input.Options.AuditPath))
+                {
+                    context.AuditStore.AppendAuditRow(
+                        input.Options.AuditPath,
+                        root,
+                        junk.MainPath,
+                        destPath,
+                        RunConstants.AuditActions.JunkPreview,
+                        "JUNK",
+                        "",
+                        "junk-preview");
+                }
+
+                continue;
+            }
+
+            var trashDir = Path.Combine(trashBase, RunConstants.WellKnownFolders.TrashJunk);
+            context.FileSystem.EnsureDirectory(trashDir);
 
             var actualDest = context.FileSystem.MoveItemSafely(junk.MainPath, destPath);
             if (actualDest is null)
@@ -70,6 +93,60 @@ public sealed class JunkRemovalPipelinePhase : IPipelinePhase<JunkRemovalPhaseIn
         context.Metrics.CompletePhase(moveCount);
 
         return new JunkRemovalPhaseOutput(new MovePhaseResult(moveCount, failCount, savedBytes), removedPaths);
+    }
+
+    private static HashSet<string> CollectReferencedSetMemberPaths(IReadOnlyList<DedupeGroup> groups)
+    {
+        var referencedMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in groups)
+        {
+            AddReferencedSetMembers(group.Winner.MainPath, referencedMembers);
+            foreach (var loser in group.Losers)
+                AddReferencedSetMembers(loser.MainPath, referencedMembers);
+        }
+
+        return referencedMembers;
+    }
+
+    private static void AddReferencedSetMembers(string path, HashSet<string> referencedMembers)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        var extension = Path.GetExtension(path);
+        if (string.IsNullOrWhiteSpace(extension))
+            return;
+
+        IReadOnlyList<string> members;
+        try
+        {
+            members = PipelinePhaseHelpers.GetSetMembers(path, extension, includeM3uMembers: true);
+        }
+        catch
+        {
+            return;
+        }
+
+        foreach (var member in members)
+        {
+            if (string.IsNullOrWhiteSpace(member))
+                continue;
+
+            referencedMembers.Add(NormalizePathSafe(member));
+        }
+    }
+
+    private static string NormalizePathSafe(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch
+        {
+            return path;
+        }
     }
 
 

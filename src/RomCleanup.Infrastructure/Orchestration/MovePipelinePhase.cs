@@ -29,7 +29,11 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
             if (availableBytes.HasValue && availableBytes.Value < estimatedMoveBytes)
             {
                 context.OnProgress?.Invoke(
-                    $"[Move] Abbruch: Zu wenig freier Speicher im Ziel ({availableBytes.Value} Bytes verfuegbar, {estimatedMoveBytes} Bytes benoetigt).");
+                    RunProgressLocalization.Format(
+                        "Move.Abort.OutOfSpace",
+                        "[Move] Abbruch: Zu wenig freier Speicher im Ziel ({0} Bytes verfuegbar, {1} Bytes benoetigt).",
+                        availableBytes.Value,
+                        estimatedMoveBytes));
                 return new MovePhaseResult(0, totalLosers, 0, 0, movedSourcePaths);
             }
         }
@@ -65,7 +69,14 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                 {
                     failCount++;
                     if (processedLosers % 100 == 0 || processedLosers == totalLosers)
-                        context.OnProgress?.Invoke($"[Move] Fortschritt: {processedLosers}/{totalLosers} (moved={moveCount}, skipped={skipCount}, failed={failCount})");
+                        context.OnProgress?.Invoke(RunProgressLocalization.Format(
+                            "Move.Progress",
+                            "[Move] Fortschritt: {0}/{1} (moved={2}, skipped={3}, failed={4})",
+                            processedLosers,
+                            totalLosers,
+                            moveCount,
+                            skipCount,
+                            failCount));
                     continue;
                 }
 
@@ -81,7 +92,14 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                 {
                     failCount++;
                     if (processedLosers % 100 == 0 || processedLosers == totalLosers)
-                        context.OnProgress?.Invoke($"[Move] Fortschritt: {processedLosers}/{totalLosers} (moved={moveCount}, skipped={skipCount}, failed={failCount})");
+                        context.OnProgress?.Invoke(RunProgressLocalization.Format(
+                            "Move.Progress",
+                            "[Move] Fortschritt: {0}/{1} (moved={2}, skipped={3}, failed={4})",
+                            processedLosers,
+                            totalLosers,
+                            moveCount,
+                            skipCount,
+                            failCount));
                     continue;
                 }
 
@@ -96,7 +114,14 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
 
                     skipCount++;
                     if (processedLosers % 100 == 0 || processedLosers == totalLosers)
-                        context.OnProgress?.Invoke($"[Move] Fortschritt: {processedLosers}/{totalLosers} (moved={moveCount}, skipped={skipCount}, failed={failCount})");
+                        context.OnProgress?.Invoke(RunProgressLocalization.Format(
+                            "Move.Progress",
+                            "[Move] Fortschritt: {0}/{1} (moved={2}, skipped={3}, failed={4})",
+                            processedLosers,
+                            totalLosers,
+                            moveCount,
+                            skipCount,
+                            failCount));
                     continue;
                 }
 
@@ -181,7 +206,14 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                     }
 
                     if (processedLosers % 100 == 0 || processedLosers == totalLosers)
-                        context.OnProgress?.Invoke($"[Move] Fortschritt: {processedLosers}/{totalLosers} (moved={moveCount}, skipped={skipCount}, failed={failCount})");
+                        context.OnProgress?.Invoke(RunProgressLocalization.Format(
+                            "Move.Progress",
+                            "[Move] Fortschritt: {0}/{1} (moved={2}, skipped={3}, failed={4})",
+                            processedLosers,
+                            totalLosers,
+                            moveCount,
+                            skipCount,
+                            failCount));
                     continue;
                 }
 
@@ -294,7 +326,14 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                 }
 
                 if (processedLosers % 100 == 0 || processedLosers == totalLosers)
-                    context.OnProgress?.Invoke($"[Move] Fortschritt: {processedLosers}/{totalLosers} (moved={moveCount}, skipped={skipCount}, failed={failCount})");
+                    context.OnProgress?.Invoke(RunProgressLocalization.Format(
+                        "Move.Progress",
+                        "[Move] Fortschritt: {0}/{1} (moved={2}, skipped={3}, failed={4})",
+                        processedLosers,
+                        totalLosers,
+                        moveCount,
+                        skipCount,
+                        failCount));
             }
         }
 

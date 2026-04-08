@@ -2512,6 +2512,46 @@ public class GuiViewModelTests
     }
 
     [Fact]
+    public async Task RunCommand_BlockedValidation_DoesNotBlockCallerWhileShowingInfoDialog_IssueF16()
+    {
+        var dialog = new BlockingInfoDialogService();
+        var vm = new MainViewModel(new ThemeService(), dialog);
+        var root = Path.Combine(Path.GetTempPath(), $"run_block_ui_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+
+        Task? runTask = null;
+        try
+        {
+            vm.Roots.Add(root);
+            vm.AuditRoot = $"bad{'\0'}path";
+
+            Assert.True(vm.HasBlockingValidationErrors);
+
+            runTask = Task.Run(() => vm.RunCommand.Execute(null));
+
+            await dialog.InfoEntered.WaitAsync(TimeSpan.FromSeconds(1));
+            try
+            {
+                await runTask.WaitAsync(TimeSpan.FromMilliseconds(200));
+            }
+            catch (TimeoutException)
+            {
+                Assert.Fail("RunCommand should return quickly and not wait for modal info dialog completion.");
+            }
+        }
+        finally
+        {
+            dialog.ReleaseInfo();
+            if (runTask is not null)
+            {
+                await runTask.WaitAsync(TimeSpan.FromSeconds(1));
+            }
+
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public void RunCommand_CanExecute_WhenOnlyValidationWarningExists()
     {
         var vm = new MainViewModel();
@@ -2625,6 +2665,35 @@ public class GuiViewModelTests
             ConfirmCallCount++;
             return ConfirmReturnValue;
         }
+    }
+
+    private sealed class BlockingInfoDialogService : IDialogService
+    {
+        private readonly TaskCompletionSource<bool> _infoEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<bool> _releaseInfo = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task InfoEntered => _infoEntered.Task;
+
+        public void ReleaseInfo() => _releaseInfo.TrySetResult(true);
+
+        public string? BrowseFolder(string title = "Ordner auswählen") => null;
+        public string? BrowseFile(string title = "Datei auswählen", string filter = "Alle Dateien|*.*") => null;
+        public string? SaveFile(string title = "Speichern unter", string filter = "Alle Dateien|*.*", string? defaultFileName = null) => null;
+        public bool Confirm(string message, string title = "Bestätigung") => true;
+
+        public void Info(string message, string title = "Information")
+        {
+            _infoEntered.TrySetResult(true);
+            _releaseInfo.Task.GetAwaiter().GetResult();
+        }
+
+        public void Error(string message, string title = "Fehler") { }
+        public ConfirmResult YesNoCancel(string message, string title = "Frage") => ConfirmResult.Yes;
+        public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "") => defaultValue;
+        public void ShowText(string title, string content) { }
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
+        public bool ConfirmConversionReview(string title, string summary, IReadOnlyList<RomCleanup.Contracts.Models.ConversionReviewEntry> entries) => true;
+        public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => true;
     }
 
     private sealed class RecordingRunService : IRunService

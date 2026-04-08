@@ -154,8 +154,8 @@ public sealed class ReportGeneratorCoverageTests
     {
         var json = ReportGenerator.GenerateJson(MakeSummary(), [MakeEntry()]);
         var doc = System.Text.Json.JsonDocument.Parse(json);
-        Assert.NotNull(doc.RootElement.GetProperty("summary"));
-        Assert.NotNull(doc.RootElement.GetProperty("entries"));
+        Assert.Equal(System.Text.Json.JsonValueKind.Object, doc.RootElement.GetProperty("summary").ValueKind);
+        Assert.Equal(System.Text.Json.JsonValueKind.Array, doc.RootElement.GetProperty("entries").ValueKind);
     }
 
     [Fact]

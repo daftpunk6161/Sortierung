@@ -437,7 +437,7 @@ public sealed class ToolRunnerAdapterCoverageTests : IDisposable
 
         Assert.True(truncated);
         Assert.Contains("truncated", result, StringComparison.OrdinalIgnoreCase);
-        Assert.True(result.StartsWith(new string('x', 256), StringComparison.Ordinal));
+        Assert.StartsWith(new string('x', 256), result);
     }
 
     // =================================================================

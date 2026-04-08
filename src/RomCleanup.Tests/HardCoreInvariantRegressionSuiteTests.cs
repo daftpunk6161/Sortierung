@@ -828,7 +828,7 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
         });
 
         Assert.Equal("completed_with_errors", result.Status);
-        Assert.Equal(1, result.ExitCode);
+        Assert.Equal(4, result.ExitCode);
     }
 
     [Fact]
@@ -1281,11 +1281,58 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
     private static JsonDocument ParseCliSummaryJson(string stdout)
     {
         var start = stdout.IndexOf('{');
-        var end = stdout.LastIndexOf('}');
-        if (start >= 0 && end > start)
-            return JsonDocument.Parse(stdout[start..(end + 1)]);
+        if (start < 0)
+            return JsonDocument.Parse(stdout);
 
-        return JsonDocument.Parse(stdout);
+        var depth = 0;
+        var inString = false;
+        var escaped = false;
+
+        for (var i = start; i < stdout.Length; i++)
+        {
+            var ch = stdout[i];
+
+            if (inString)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (ch == '\\')
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (ch == '"')
+                    inString = false;
+
+                continue;
+            }
+
+            if (ch == '"')
+            {
+                inString = true;
+                continue;
+            }
+
+            if (ch == '{')
+            {
+                depth++;
+                continue;
+            }
+
+            if (ch != '}')
+                continue;
+
+            depth--;
+            if (depth == 0)
+                return JsonDocument.Parse(stdout[start..(i + 1)]);
+        }
+
+        return JsonDocument.Parse(stdout[start..]);
     }
 
     private sealed class SuccessfulConverter : IFormatConverter

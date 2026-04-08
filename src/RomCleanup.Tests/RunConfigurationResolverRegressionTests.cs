@@ -249,9 +249,6 @@ public sealed class RunConfigurationResolverRegressionTests : IDisposable
     Assert.Equal(expected.AuditPath, actual.AuditPath);
     Assert.Equal(expected.ReportPath, actual.ReportPath);
     Assert.Equal(expected.ConflictPolicy, actual.ConflictPolicy);
-    Assert.Equal(
-      expected.DiscBasedConsoles.OrderBy(static value => value, StringComparer.OrdinalIgnoreCase),
-      actual.DiscBasedConsoles.OrderBy(static value => value, StringComparer.OrdinalIgnoreCase));
   }
 
     private const string BuiltInProfilesJson =

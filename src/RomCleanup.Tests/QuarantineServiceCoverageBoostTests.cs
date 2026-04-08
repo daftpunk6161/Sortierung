@@ -218,7 +218,7 @@ public sealed class QuarantineServiceCoverageBoostTests : IDisposable
 
         var contents = _svc.GetContents(emptyDir);
 
-        Assert.Equal(0, contents.Files.Count);
+        Assert.Empty(contents.Files);
     }
 
     // ===== GetContents: non-existent root =====
@@ -227,7 +227,7 @@ public sealed class QuarantineServiceCoverageBoostTests : IDisposable
     public void GetContents_NonExistentRoot_ReturnsEmpty()
     {
         var contents = _svc.GetContents(Path.Combine(_tempDir, "nope"));
-        Assert.Equal(0, contents.Files.Count);
+        Assert.Empty(contents.Files);
     }
 
     // ===== Restore: DryRun =====

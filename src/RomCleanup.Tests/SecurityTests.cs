@@ -90,10 +90,22 @@ public sealed class SecurityTests : IDisposable
             new ReportEntry { GameKey = input, FileName = "test.chd", Extension = ".chd" }
         };
         var csv = ReportGenerator.GenerateCsv(entries);
-        // BUG-14: RFC-4180 quoting — value must be wrapped in double quotes
-        // The raw dangerous prefix must NOT appear unquoted in the CSV
-        var escaped = input.Replace("\"", "\"\"");
+        // Report CSV hardening: dangerous formula prefixes are apostrophe-prefixed and RFC-4180 quoted.
+        var escaped = ("'" + input).Replace("\"", "\"\"");
         Assert.Contains($"\"{escaped}\"", csv);
+    }
+
+    [Fact]
+    public void CsvInjection_EqualsFormula_IsPrefixedWithApostrophe_FindingF06()
+    {
+        var entries = new List<ReportEntry>
+        {
+            new ReportEntry { GameKey = "=CMD()", FileName = "test.chd", Extension = ".chd" }
+        };
+
+        var csv = ReportGenerator.GenerateCsv(entries);
+
+        Assert.Contains("\"'=CMD()\"", csv, StringComparison.Ordinal);
     }
 
     // ── TEST-SEC: HTML injection in report ──

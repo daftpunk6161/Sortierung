@@ -28,7 +28,7 @@ public sealed class SettingsLoader
     /// <summary>
     /// Load settings with fallback chain: user settings → defaults.json → hardcoded defaults.
     /// </summary>
-    public static RomCleanupSettings Load(string? defaultsJsonPath = null)
+    public static RomCleanupSettings Load(string? defaultsJsonPath = null, Action<string>? onWarning = null)
     {
         var settings = LoadDefaultsOnly(defaultsJsonPath);
 
@@ -36,7 +36,7 @@ public sealed class SettingsLoader
         var userPath = UserSettingsPath;
         if (File.Exists(userPath))
         {
-            MergeFromUserSettings(settings, userPath);
+            MergeFromUserSettings(settings, userPath, onWarning);
         }
 
         return settings;
@@ -60,12 +60,12 @@ public sealed class SettingsLoader
     /// Load settings with an explicit user settings path instead of %APPDATA% (TASK-161).
     /// Used by the API to decouple from per-user desktop settings on server deployments.
     /// </summary>
-    public static RomCleanupSettings LoadWithExplicitUserPath(string? defaultsJsonPath, string userSettingsPath)
+    public static RomCleanupSettings LoadWithExplicitUserPath(string? defaultsJsonPath, string userSettingsPath, Action<string>? onWarning = null)
     {
         var settings = LoadDefaultsOnly(defaultsJsonPath);
 
         if (File.Exists(userSettingsPath))
-            MergeFromUserSettings(settings, userSettingsPath);
+            MergeFromUserSettings(settings, userSettingsPath, onWarning);
 
         return settings;
     }
@@ -300,7 +300,7 @@ public sealed class SettingsLoader
         }
     }
 
-    private static void MergeFromUserSettings(RomCleanupSettings settings, string path)
+    private static void MergeFromUserSettings(RomCleanupSettings settings, string path, Action<string>? onWarning = null)
     {
         try
         {
@@ -362,11 +362,25 @@ public sealed class SettingsLoader
                 // Fail closed to sane defaults if merged settings become invalid.
                 settings.General = new GeneralSettings();
                 settings.Dat = new DatSettings();
+                onWarning?.Invoke($"[Warning] User settings '{path}' produced invalid values; reverted to safe defaults.");
             }
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            // Malformed user settings — keep defaults
+            TryBackupCorruptUserSettings(path);
+            onWarning?.Invoke($"[Warning] Corrupt user settings '{path}' ignored: {ex.Message}");
+        }
+    }
+
+    private static void TryBackupCorruptUserSettings(string path)
+    {
+        try
+        {
+            File.Copy(path, path + ".bak", overwrite: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Best-effort backup.
         }
     }
 
