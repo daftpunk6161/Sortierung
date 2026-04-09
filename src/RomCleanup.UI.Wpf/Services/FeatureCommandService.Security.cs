@@ -100,7 +100,7 @@ public sealed partial class FeatureCommandService
             LogWarning("PATCH-APPLY", $"Patch konnte nicht angewendet werden: {ex.Message}");
             _dialog.Error($"Patch konnte nicht angewendet werden:\n\n{ex.Message}", "Patch-Pipeline");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
             LogError("PATCH-APPLY", $"Patch-Pipeline fehlgeschlagen: {ex.Message}");
         }
@@ -121,7 +121,7 @@ public sealed partial class FeatureCommandService
                 var baseline = await FeatureService.CreateBaseline(paths, progress);
                 _vm.AddLog($"Baseline erstellt: {baseline.Count} Dateien", "INFO");
             }
-            catch (Exception ex) { LogError("SEC-BASELINE", $"Baseline-Fehler: {ex.Message}"); }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-BASELINE", $"Baseline-Fehler: {ex.Message}"); }
         }
         else
         {
@@ -134,7 +134,7 @@ public sealed partial class FeatureCommandService
                     $"Intakt: {check.Intact.Count}\nGeändert: {check.Changed.Count}\nFehlend: {check.Missing.Count}\n" +
                     $"Bit-Rot-Risiko: {(check.BitRotRisk ? "⚠ JA" : "Nein")}");
             }
-            catch (Exception ex) { LogError("SEC-INTEGRITY", $"Integritäts-Fehler: {ex.Message}"); }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-INTEGRITY", $"Integritäts-Fehler: {ex.Message}"); }
         }
     }
 
@@ -151,7 +151,7 @@ public sealed partial class FeatureCommandService
             var sessionDir = FeatureService.CreateBackup(winners, backupRoot, "winners");
             _vm.AddLog($"Backup erstellt: {sessionDir} ({winners.Count} Dateien)", "INFO");
         }
-        catch (Exception ex) { LogError("SEC-BACKUP", $"Backup-Fehler: {ex.Message}"); }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-BACKUP", $"Backup-Fehler: {ex.Message}"); }
     }
 
     private void Quarantine()
@@ -182,7 +182,7 @@ public sealed partial class FeatureCommandService
         if (mode == ConfirmResult.Yes)
         {
             try { _dialog.ShowText("Regel-Engine", FeatureService.BuildRuleEngineReport()); }
-            catch (Exception ex) { LogError("SEC-RULES", $"Fehler beim Laden der Regeln: {ex.Message}"); }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or JsonException) { LogError("SEC-RULES", $"Fehler beim Laden der Regeln: {ex.Message}"); }
             return;
         }
 
@@ -226,7 +226,7 @@ public sealed partial class FeatureCommandService
             File.WriteAllText(rulesPath, normalizedJson, Encoding.UTF8);
             _vm.AddLog($"Custom Junk Rules gespeichert: {rulesPath} ({normalizedDocument.Rules.Count} Regeln)", "INFO");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or ArgumentException or JsonException)
         {
             LogError("SEC-CUSTOM-RULES", $"Custom Junk Rules Editor fehlgeschlagen: {ex.Message}");
         }
@@ -538,7 +538,7 @@ public sealed partial class FeatureCommandService
                 else
                     _dialog.Info($"NES-Header ist sauber. Keine Reparatur nötig.\n\n{header.Details}", "Header-Reparatur");
             }
-            catch (Exception ex) { LogError("SEC-HEADER", $"Header-Reparatur fehlgeschlagen: {ex.Message}"); }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-HEADER", $"Header-Reparatur fehlgeschlagen: {ex.Message}"); }
             return;
         }
 
@@ -577,7 +577,7 @@ public sealed partial class FeatureCommandService
                 else
                     _dialog.Info($"SNES-ROM hat keinen Copier-Header. Keine Reparatur nötig.\n\n{header.Details}", "Header-Reparatur");
             }
-            catch (Exception ex) { LogError("SEC-HEADER", $"Header-Reparatur fehlgeschlagen: {ex.Message}"); }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-HEADER", $"Header-Reparatur fehlgeschlagen: {ex.Message}"); }
             return;
         }
 

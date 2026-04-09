@@ -6,6 +6,8 @@ using RomCleanup.Contracts.Errors;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
 using RomCleanup.Api;
+using RomCleanup.Infrastructure.Analysis;
+using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Review;
@@ -417,6 +419,206 @@ public partial class Program
         }
 
         return null;
+    }
+
+    internal static async Task<IResult> HandleRunCompletenessAsync(
+        string runId,
+        HttpContext context,
+        RunLifecycleManager manager,
+        AllowedRootPathPolicy allowedRootPolicy,
+        bool trustForwardedFor,
+        CancellationToken ct)
+    {
+        if (!Guid.TryParse(runId, out _))
+            return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+
+        var run = manager.Get(runId);
+        if (run is null)
+            return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+
+        if (!CanAccessRun(run, GetClientBindingId(context, trustForwardedFor)))
+            return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+
+        if (run.Status == "running")
+            return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
+
+        var dataDir = RunEnvironmentBuilder.TryResolveDataDir()
+            ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
+        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+
+        var runRoots = run.Roots ?? Array.Empty<string>();
+        if (runRoots.Length == 0)
+            return ApiError(400, "RUN-NO-ROOTS", "Run has no roots configured.", runId: runId);
+
+        foreach (var runRoot in runRoots)
+        {
+            var pathError = ValidatePathSecurity(runRoot, "roots", allowedRootPolicy);
+            if (pathError is not null)
+                return pathError;
+        }
+
+        var effectiveDatRoot = run.DatRoot ?? settings.Dat?.DatRoot;
+        if (!string.IsNullOrWhiteSpace(effectiveDatRoot))
+        {
+            var pathError = ValidatePathSecurity(effectiveDatRoot, "datRoot", allowedRootPolicy);
+            if (pathError is not null)
+                return pathError;
+        }
+
+        var runOptions = new RomCleanup.Contracts.Models.RunOptions
+        {
+            Roots = runRoots,
+            EnableDat = true,
+            DatRoot = effectiveDatRoot,
+            Extensions = run.Extensions
+        };
+
+        using var env = new RunEnvironmentFactory().Create(runOptions);
+        if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
+            return ApiError(400, "DAT-NOT-AVAILABLE", "No DAT index available. Configure DatRoot in settings.", runId: runId);
+
+        var report = await CompletenessReportService.BuildAsync(
+            env.DatIndex,
+            runOptions.Roots,
+            env.CollectionIndex,
+            runOptions.Extensions,
+            run.CoreRunResult is { } frontendExportRunResult
+                ? RunArtifactProjection.Project(frontendExportRunResult).AllCandidates
+                : null,
+            ct);
+
+        return Results.Ok(new
+        {
+            runId,
+            source = report.Source,
+            sourceItemCount = report.SourceItemCount,
+            entries = report.Entries.Select(e => new
+            {
+                e.ConsoleKey,
+                e.TotalInDat,
+                e.Verified,
+                e.MissingCount,
+                e.Percentage,
+                missingGames = e.MissingGames.Take(100).ToArray(),
+                truncated = e.MissingGames.Count > 100
+            }).ToArray(),
+            totalInDat = report.Entries.Sum(e => e.TotalInDat),
+            totalVerified = report.Entries.Sum(e => e.Verified),
+            totalMissing = report.Entries.Sum(e => e.MissingCount),
+            overallPercentage = report.Entries.Sum(e => e.TotalInDat) > 0
+                ? Math.Round(100.0 * report.Entries.Sum(e => e.Verified) / report.Entries.Sum(e => e.TotalInDat), 1)
+                : 0.0
+        });
+    }
+
+    internal static async Task<IResult> HandleRunFixDatAsync(
+        string runId,
+        string? outputPath,
+        string? name,
+        HttpContext context,
+        RunLifecycleManager manager,
+        AllowedRootPathPolicy allowedRootPolicy,
+        bool trustForwardedFor,
+        CancellationToken ct)
+    {
+        if (!Guid.TryParse(runId, out _))
+            return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+
+        var run = manager.Get(runId);
+        if (run is null)
+            return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+
+        if (!CanAccessRun(run, GetClientBindingId(context, trustForwardedFor)))
+            return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+
+        if (run.Status == "running")
+            return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
+
+        if (string.IsNullOrWhiteSpace(outputPath))
+            return ApiError(400, "FIXDAT-OUTPUT-REQUIRED", "outputPath is required.", runId: runId);
+
+        var outputPathError = ValidatePathSecurity(outputPath.Trim(), "outputPath", allowedRootPolicy);
+        if (outputPathError is not null)
+            return outputPathError;
+
+        var dataDir = RunEnvironmentBuilder.TryResolveDataDir()
+            ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
+        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+
+        var runRoots = run.Roots ?? Array.Empty<string>();
+        if (runRoots.Length == 0)
+            return ApiError(400, "RUN-NO-ROOTS", "Run has no roots configured.", runId: runId);
+
+        foreach (var runRoot in runRoots)
+        {
+            var pathError = ValidatePathSecurity(runRoot, "roots", allowedRootPolicy);
+            if (pathError is not null)
+                return pathError;
+        }
+
+        var effectiveDatRoot = run.DatRoot ?? settings.Dat?.DatRoot;
+        if (!string.IsNullOrWhiteSpace(effectiveDatRoot))
+        {
+            var pathError = ValidatePathSecurity(effectiveDatRoot, "datRoot", allowedRootPolicy);
+            if (pathError is not null)
+                return pathError;
+        }
+
+        var runOptions = new RomCleanup.Contracts.Models.RunOptions
+        {
+            Roots = runRoots,
+            EnableDat = true,
+            DatRoot = effectiveDatRoot,
+            Extensions = run.Extensions
+        };
+
+        using var env = new RunEnvironmentFactory().Create(runOptions);
+        if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
+            return ApiError(400, "DAT-NOT-AVAILABLE", "No DAT index available. Configure DatRoot in settings.", runId: runId);
+
+        var report = await CompletenessReportService.BuildAsync(
+            env.DatIndex,
+            runOptions.Roots,
+            env.CollectionIndex,
+            runOptions.Extensions,
+            run.CoreRunResult is { } fixDatRunResult
+                ? RunArtifactProjection.Project(fixDatRunResult).AllCandidates
+                : null,
+            ct);
+
+        var generatedUtc = DateTime.UtcNow;
+        var datName = string.IsNullOrWhiteSpace(name)
+            ? $"Romulus-FixDAT-{runId}"
+            : name.Trim();
+
+        var fixDat = DatAnalysisService.BuildFixDatFromCompleteness(env.DatIndex, report, datName, generatedUtc);
+
+        string safeOutputPath;
+        try
+        {
+            safeOutputPath = SafetyValidator.EnsureSafeOutputPath(outputPath.Trim(), allowUnc: false);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ApiError(400, SecurityErrorCodes.InvalidPath, $"Invalid outputPath: {ex.Message}", ErrorKind.Critical, runId: runId);
+        }
+
+        var directory = Path.GetDirectoryName(safeOutputPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+            Directory.CreateDirectory(directory);
+
+        await File.WriteAllTextAsync(safeOutputPath, fixDat.XmlContent, Encoding.UTF8, ct);
+
+        return Results.Ok(new
+        {
+            runId,
+            outputPath = safeOutputPath,
+            fixDat.DatName,
+            fixDat.ConsoleCount,
+            fixDat.MissingGames,
+            fixDat.MissingRoms,
+            consoles = fixDat.Consoles
+        });
     }
 
     internal static async Task<(T? Value, IResult? Error)> ReadJsonBodyAsync<T>(

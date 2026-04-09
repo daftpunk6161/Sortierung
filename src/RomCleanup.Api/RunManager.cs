@@ -269,6 +269,8 @@ public sealed class RunRecord
     private bool _cancellationSourceDisposed;
     private bool _canRollback;
     private readonly HashSet<string> _approvedReviewPaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly TaskCompletionSource<bool> _completion =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public string RunId { get; init; } = "";
     [JsonIgnore]
@@ -433,6 +435,10 @@ public sealed class RunRecord
             _cancellationSourceDisposed = true;
         }
     }
+
+    internal Task CompletionTask => _completion.Task;
+
+    internal void SignalCompletion() => _completion.TrySetResult(true);
 }
 
 public sealed class ApiRunResult

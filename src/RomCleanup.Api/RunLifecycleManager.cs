@@ -194,27 +194,34 @@ public sealed class RunLifecycleManager
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
-        var start = DateTime.UtcNow;
+        if (!_runs.TryGetValue(runId, out var run))
+            return new RunWaitResult(RunWaitDisposition.NotFound, null);
 
-        while (_runs.TryGetValue(runId, out var run))
+        if (run.Status != ApiRunStatus.Running && run.CompletedUtc is not null)
+            return new RunWaitResult(RunWaitDisposition.Completed, run);
+
+        try
         {
-            if (run.Status != ApiRunStatus.Running && run.CompletedUtc is not null)
-                return new RunWaitResult(RunWaitDisposition.Completed, run);
-
-            if (timeout is not null && DateTime.UtcNow - start >= timeout.Value)
-                return new RunWaitResult(RunWaitDisposition.TimedOut, run);
-
-            try
-            {
-                await Task.Delay(pollMs, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                return new RunWaitResult(RunWaitDisposition.ClientDisconnected, Get(runId));
-            }
+            if (timeout is { } waitTimeout)
+                await run.CompletionTask.WaitAsync(waitTimeout, cancellationToken);
+            else
+                await run.CompletionTask.WaitAsync(cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            return new RunWaitResult(RunWaitDisposition.TimedOut, Get(runId) ?? run);
+        }
+        catch (OperationCanceledException)
+        {
+            return new RunWaitResult(RunWaitDisposition.ClientDisconnected, Get(runId) ?? run);
         }
 
-        return new RunWaitResult(RunWaitDisposition.NotFound, null);
+        var completed = Get(runId) ?? run;
+        if (completed.Status != ApiRunStatus.Running && completed.CompletedUtc is not null)
+            return new RunWaitResult(RunWaitDisposition.Completed, completed);
+
+        // Defensive fallback: completion is signaled after final state update.
+        return new RunWaitResult(RunWaitDisposition.TimedOut, completed);
     }
 
     /// <summary>
@@ -317,6 +324,7 @@ public sealed class RunLifecycleManager
             run.ReportPath = File.Exists(reportPath) ? reportPath : run.ReportPath;
             run.CompletedUtc = DateTime.UtcNow;
             UpdateRecoveryState(run);
+            run.SignalCompletion();
             run.DisposeCancellationSource();
             lock (_activeLock)
             {

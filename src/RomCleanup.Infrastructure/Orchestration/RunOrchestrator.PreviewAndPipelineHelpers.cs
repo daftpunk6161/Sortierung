@@ -765,7 +765,7 @@ public sealed partial class RunOrchestrator
             _onProgress?.Invoke($"Report written: {actualPath}");
             return actualPath;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or NotSupportedException)
         {
             _onProgress?.Invoke($"ERROR: Report generation failed at target path: {ex.GetType().Name}: {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"Report generation failed (primary): {ex}");
@@ -783,7 +783,7 @@ public sealed partial class RunOrchestrator
                 _onProgress?.Invoke($"Report written (fallback): {actualPath}");
                 return actualPath;
             }
-            catch (Exception fallbackEx)
+            catch (Exception fallbackEx) when (fallbackEx is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or NotSupportedException)
             {
                 _onProgress?.Invoke($"ERROR: Report fallback failed: {fallbackEx.GetType().Name}: {fallbackEx.Message}");
                 System.Diagnostics.Debug.WriteLine($"Report generation failed (fallback): {fallbackEx}");
