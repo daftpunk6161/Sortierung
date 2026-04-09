@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Analysis;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Reporting;
 using RomCleanup.UI.Wpf.Services;
@@ -353,7 +354,7 @@ public sealed class WpfCoverageBoostTests : IDisposable
         var datPath = Path.Combine(_tempDir, "test.dat");
         File.WriteAllText(datPath, "<datafile><game name=\"Game 1\"><rom name=\"g1.bin\" /></game><game name=\"Game 2\"><rom name=\"g2.bin\" /></game></datafile>");
 
-        var names = FeatureService.LoadDatGameNames(datPath);
+        var names = DatAnalysisService.LoadDatGameNames(datPath);
         Assert.Contains("Game 1", names);
         Assert.Contains("Game 2", names);
     }
@@ -364,7 +365,7 @@ public sealed class WpfCoverageBoostTests : IDisposable
         var datPath = Path.Combine(_tempDir, "empty.dat");
         File.WriteAllText(datPath, "<datafile></datafile>");
 
-        var names = FeatureService.LoadDatGameNames(datPath);
+        var names = DatAnalysisService.LoadDatGameNames(datPath);
         Assert.Empty(names);
     }
 
@@ -374,7 +375,7 @@ public sealed class WpfCoverageBoostTests : IDisposable
     public void BuildGameElementMap_ReturnsGameRomMapping()
     {
         var doc = XDocument.Parse("<datafile><game name=\"TestGame\"><rom name=\"test.bin\" crc=\"AABB\" sha1=\"112233\" size=\"1024\" /></game></datafile>");
-        var map = FeatureService.BuildGameElementMap(doc);
+        var map = DatAnalysisService.BuildGameElementMap(doc);
         Assert.True(map.Count > 0);
     }
 

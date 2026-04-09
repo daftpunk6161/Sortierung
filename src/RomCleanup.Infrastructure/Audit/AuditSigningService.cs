@@ -99,7 +99,7 @@ public sealed class AuditSigningService
                         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log?.Invoke("Could not set HMAC key file permissions to 0600"); }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     _log?.Invoke($"Failed to persist HMAC key: {ex.Message}");
                 }
@@ -174,7 +174,7 @@ public sealed class AuditSigningService
             _log?.Invoke($"Audit sidecar written: {metaPath}");
             return metaPath;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _log?.Invoke($"Failed to write audit sidecar: {ex.Message}");
             return null;
@@ -243,7 +243,7 @@ public sealed class AuditSigningService
             {
                 VerifyMetadataSidecar(auditCsvPath);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is FileNotFoundException or InvalidDataException or IOException or UnauthorizedAccessException)
             {
                 _log?.Invoke($"Audit integrity check failed: {ex.Message}");
                 return new AuditRollbackResult
@@ -535,7 +535,7 @@ public sealed class AuditSigningService
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     failed++;
                     _log?.Invoke($"Rollback failed: {newPath} -> {oldPath}: {ex.Message}");

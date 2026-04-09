@@ -36,7 +36,7 @@ internal static class Program
     private static readonly AsyncLocal<bool> ConsoleOverrideEnabled = new();
     private static readonly AsyncLocal<bool?> NonInteractiveOverride = new();
 
-    private static int Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         try
         {
@@ -68,62 +68,62 @@ internal static class Program
                     return Rollback(result.Options!);
 
                 case CliCommand.UpdateDats:
-                    return UpdateDats(result.Options!);
+                    return await UpdateDatsAsync(result.Options!).ConfigureAwait(false);
 
                 // Subcommands
                 case CliCommand.Analyze:
                     return SubcommandAnalyze(result.Options!);
 
                 case CliCommand.Export:
-                    return SubcommandExport(result.Options!);
+                    return await SubcommandExportAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.DatDiff:
                     return SubcommandDatDiff(result.Options!);
 
                 case CliCommand.DatFix:
-                    return SubcommandDatFix(result.Options!);
+                    return await SubcommandDatFixAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.IntegrityCheck:
-                    return SubcommandIntegrityCheck();
+                    return await SubcommandIntegrityCheckAsync().ConfigureAwait(false);
 
                 case CliCommand.IntegrityBaseline:
-                    return SubcommandIntegrityBaseline(result.Options!);
+                    return await SubcommandIntegrityBaselineAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.History:
-                    return SubcommandHistory(result.Options!);
+                    return await SubcommandHistoryAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.ProfilesList:
-                    return SubcommandProfilesList();
+                    return await SubcommandProfilesListAsync().ConfigureAwait(false);
 
                 case CliCommand.ProfilesShow:
-                    return SubcommandProfilesShow(result.Options!);
+                    return await SubcommandProfilesShowAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.ProfilesImport:
-                    return SubcommandProfilesImport(result.Options!);
+                    return await SubcommandProfilesImportAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.ProfilesExport:
-                    return SubcommandProfilesExport(result.Options!);
+                    return await SubcommandProfilesExportAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.ProfilesDelete:
-                    return SubcommandProfilesDelete(result.Options!);
+                    return await SubcommandProfilesDeleteAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.Workflows:
                     return SubcommandWorkflows(result.Options!);
 
                 case CliCommand.Diff:
-                    return SubcommandDiff(result.Options!);
+                    return await SubcommandDiffAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.Merge:
-                    return SubcommandMerge(result.Options!);
+                    return await SubcommandMergeAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.Compare:
-                    return SubcommandCompare(result.Options!);
+                    return await SubcommandCompareAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.Trends:
-                    return SubcommandTrends(result.Options!);
+                    return await SubcommandTrendsAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.Watch:
-                    return SubcommandWatch(result.Options!);
+                    return await SubcommandWatchAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.Convert:
                     return SubcommandConvert(result.Options!);
@@ -135,7 +135,7 @@ internal static class Program
                     return SubcommandJunkReport(result.Options!);
 
                 case CliCommand.Completeness:
-                    return SubcommandCompleteness(result.Options!);
+                    return await SubcommandCompletenessAsync(result.Options!).ConfigureAwait(false);
 
                 default:
                     return result.ExitCode;
@@ -326,11 +326,6 @@ internal static class Program
                 Console.CancelKeyPress -= cancelHandler;
         }
     }
-
-    // --- Backward-compatible delegates for tests ---
-
-    private static int UpdateDats(CliRunOptions cliOpts)
-        => Task.Run(() => UpdateDatsAsync(cliOpts)).Result;
 
     private static async Task<int> UpdateDatsAsync(CliRunOptions cliOpts)
     {
@@ -567,7 +562,7 @@ internal static class Program
         return 0;
     }
 
-    private static int SubcommandExport(CliRunOptions opts)
+    private static async Task<int> SubcommandExportAsync(CliRunOptions opts)
     {
         SafeErrorWriteLine($"[Export] Preparing {opts.Roots.Length} root(s)...");
         var dataDir = RunEnvironmentBuilder.ResolveDataDir();
@@ -580,7 +575,7 @@ internal static class Program
         }
 
         using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        var exportResult = FrontendExportService.ExportAsync(
+        var exportResult = await FrontendExportService.ExportAsync(
             new FrontendExportRequest(
                 opts.ExportFormat ?? FrontendExportTargets.Csv,
                 opts.OutputPath ?? Path.Combine(
@@ -593,7 +588,7 @@ internal static class Program
             env.CollectionIndex,
             env.EnrichmentFingerprint,
             fallbackCandidateFactory: exportCt => LoadExportCandidatesAsync(runOptions, env, exportCt),
-            ct: CancellationToken.None).GetAwaiter().GetResult();
+            ct: CancellationToken.None).ConfigureAwait(false);
 
         SafeStandardWriteLine(JsonSerializer.Serialize(exportResult, new JsonSerializerOptions { WriteIndented = true }));
         foreach (var artifact in exportResult.Artifacts)
@@ -621,7 +616,7 @@ internal static class Program
         return 0;
     }
 
-    private static int SubcommandDatFix(CliRunOptions opts)
+    private static async Task<int> SubcommandDatFixAsync(CliRunOptions opts)
     {
         SafeErrorWriteLine($"[FixDAT] Scanning {opts.Roots.Length} root(s)...");
         var dataDir = RunEnvironmentBuilder.ResolveDataDir();
@@ -643,11 +638,11 @@ internal static class Program
             return 1;
         }
 
-        var completeness = CompletenessReportService.BuildAsync(
+        var completeness = await CompletenessReportService.BuildAsync(
             env.DatIndex,
             runOptions.Roots,
             env.CollectionIndex,
-            runOptions.Extensions).GetAwaiter().GetResult();
+            runOptions.Extensions).ConfigureAwait(false);
 
         var generatedUtc = DateTime.UtcNow;
         var datName = string.IsNullOrWhiteSpace(opts.DatName)
@@ -686,12 +681,11 @@ internal static class Program
         return 0;
     }
 
-    private static int SubcommandIntegrityCheck()
+    private static async Task<int> SubcommandIntegrityCheckAsync()
     {
         SafeErrorWriteLine("[Integrity] Checking against baseline...");
-        var resultTask = IntegrityService.CheckIntegrity(
-            new Progress<string>(SafeErrorWriteLine));
-        var result = resultTask.GetAwaiter().GetResult();
+        var result = await IntegrityService.CheckIntegrity(
+            new Progress<string>(SafeErrorWriteLine)).ConfigureAwait(false);
 
         if (result.Message is not null)
         {
@@ -716,7 +710,7 @@ internal static class Program
         return result.BitRotRisk ? 1 : 0;
     }
 
-    private static int SubcommandIntegrityBaseline(CliRunOptions opts)
+    private static async Task<int> SubcommandIntegrityBaselineAsync(CliRunOptions opts)
     {
         SafeErrorWriteLine($"[Integrity] Creating baseline from {opts.Roots.Length} root(s)...");
         var files = new List<string>();
@@ -737,23 +731,22 @@ internal static class Program
         }
 
         SafeErrorWriteLine($"[Integrity] Found {files.Count} files.");
-        var task = IntegrityService.CreateBaseline(files,
-            new Progress<string>(SafeErrorWriteLine));
-        var entries = task.GetAwaiter().GetResult();
+        var entries = await IntegrityService.CreateBaseline(files,
+            new Progress<string>(SafeErrorWriteLine)).ConfigureAwait(false);
         SafeStandardWriteLine($"Baseline created: {entries.Count} entries");
         return 0;
     }
 
-    private static int SubcommandHistory(CliRunOptions opts)
+    private static async Task<int> SubcommandHistoryAsync(CliRunOptions opts)
     {
         using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
-        return WriteHistory(collectionIndex, opts);
+        return await WriteHistoryAsync(collectionIndex, opts).ConfigureAwait(false);
     }
 
     internal static int HistoryForTests(CliRunOptions opts, ICollectionIndex collectionIndex)
-        => WriteHistory(collectionIndex, opts);
+        => WriteHistoryAsync(collectionIndex, opts).GetAwaiter().GetResult();
 
-    private static int WriteHistory(ICollectionIndex collectionIndex, CliRunOptions opts)
+    private static async Task<int> WriteHistoryAsync(ICollectionIndex collectionIndex, CliRunOptions opts)
     {
         ArgumentNullException.ThrowIfNull(collectionIndex);
         ArgumentNullException.ThrowIfNull(opts);
@@ -762,8 +755,8 @@ internal static class Program
         var fetchLimit = opts.HistoryOffset > int.MaxValue - effectiveLimit
             ? int.MaxValue
             : opts.HistoryOffset + effectiveLimit;
-        var total = collectionIndex.CountRunSnapshotsAsync().GetAwaiter().GetResult();
-        var snapshots = collectionIndex.ListRunSnapshotsAsync(fetchLimit).GetAwaiter().GetResult();
+        var total = await collectionIndex.CountRunSnapshotsAsync().ConfigureAwait(false);
+        var snapshots = await collectionIndex.ListRunSnapshotsAsync(fetchLimit).ConfigureAwait(false);
         var page = CollectionRunHistoryPageBuilder.Build(snapshots, total, opts.HistoryOffset, effectiveLimit);
         var json = CliOutputWriter.FormatRunHistoryJson(page);
 
@@ -778,18 +771,18 @@ internal static class Program
         return 0;
     }
 
-    private static int SubcommandProfilesList()
+    private static async Task<int> SubcommandProfilesListAsync()
     {
         var profileService = CreateRunProfileService();
-        var profiles = profileService.ListAsync().GetAwaiter().GetResult();
+        var profiles = await profileService.ListAsync().ConfigureAwait(false);
         SafeStandardWriteLine(JsonSerializer.Serialize(profiles, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
 
-    private static int SubcommandProfilesShow(CliRunOptions opts)
+    private static async Task<int> SubcommandProfilesShowAsync(CliRunOptions opts)
     {
         var profileService = CreateRunProfileService();
-        var profile = profileService.TryGetAsync(opts.ProfileId!).GetAwaiter().GetResult();
+        var profile = await profileService.TryGetAsync(opts.ProfileId!).ConfigureAwait(false);
         if (profile is null)
         {
             SafeErrorWriteLine($"[Error] Profile '{opts.ProfileId}' was not found.");
@@ -800,27 +793,27 @@ internal static class Program
         return 0;
     }
 
-    private static int SubcommandProfilesImport(CliRunOptions opts)
+    private static async Task<int> SubcommandProfilesImportAsync(CliRunOptions opts)
     {
         var profileService = CreateRunProfileService();
-        var profile = profileService.ImportAsync(opts.InputPath!).GetAwaiter().GetResult();
+        var profile = await profileService.ImportAsync(opts.InputPath!).ConfigureAwait(false);
         SafeStandardWriteLine(JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true }));
         SafeErrorWriteLine($"[Profiles] Imported '{profile.Id}' from {opts.InputPath}");
         return 0;
     }
 
-    private static int SubcommandProfilesExport(CliRunOptions opts)
+    private static async Task<int> SubcommandProfilesExportAsync(CliRunOptions opts)
     {
         var profileService = CreateRunProfileService();
-        var path = profileService.ExportAsync(opts.ProfileId!, opts.OutputPath!).GetAwaiter().GetResult();
+        var path = await profileService.ExportAsync(opts.ProfileId!, opts.OutputPath!).ConfigureAwait(false);
         SafeStandardWriteLine(path);
         return 0;
     }
 
-    private static int SubcommandProfilesDelete(CliRunOptions opts)
+    private static async Task<int> SubcommandProfilesDeleteAsync(CliRunOptions opts)
     {
         var profileService = CreateRunProfileService();
-        var deleted = profileService.DeleteAsync(opts.ProfileId!).GetAwaiter().GetResult();
+        var deleted = await profileService.DeleteAsync(opts.ProfileId!).ConfigureAwait(false);
         if (!deleted)
         {
             SafeErrorWriteLine($"[Error] Profile '{opts.ProfileId}' was not found.");
@@ -852,25 +845,25 @@ internal static class Program
         return 0;
     }
 
-    private static int SubcommandDiff(CliRunOptions opts)
+    private static async Task<int> SubcommandDiffAsync(CliRunOptions opts)
     {
         using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
-        return WriteCollectionDiff(opts, collectionIndex, new FileSystemAdapter());
+        return await WriteCollectionDiffAsync(opts, collectionIndex, new FileSystemAdapter()).ConfigureAwait(false);
     }
 
     internal static int DiffForTests(CliRunOptions opts, ICollectionIndex collectionIndex, IFileSystem fileSystem)
-        => WriteCollectionDiff(opts, collectionIndex, fileSystem);
+        => WriteCollectionDiffAsync(opts, collectionIndex, fileSystem).GetAwaiter().GetResult();
 
-    private static int WriteCollectionDiff(CliRunOptions opts, ICollectionIndex collectionIndex, IFileSystem fileSystem)
+    private static async Task<int> WriteCollectionDiffAsync(CliRunOptions opts, ICollectionIndex collectionIndex, IFileSystem fileSystem)
     {
         ArgumentNullException.ThrowIfNull(opts);
         ArgumentNullException.ThrowIfNull(collectionIndex);
         ArgumentNullException.ThrowIfNull(fileSystem);
 
-        var build = CollectionCompareService.CompareAsync(
+        var build = await CollectionCompareService.CompareAsync(
             collectionIndex,
             fileSystem,
-            BuildCollectionCompareRequest(opts)).GetAwaiter().GetResult();
+            BuildCollectionCompareRequest(opts)).ConfigureAwait(false);
         if (!build.CanUse || build.Result is null)
         {
             SafeErrorWriteLine($"[Error] Collection diff unavailable: {build.Reason}");
@@ -889,7 +882,7 @@ internal static class Program
         return 0;
     }
 
-    private static int SubcommandMerge(CliRunOptions opts)
+    private static async Task<int> SubcommandMergeAsync(CliRunOptions opts)
     {
         if (opts.MergeApply && IsNonInteractiveExecution() && !opts.Yes)
         {
@@ -900,13 +893,13 @@ internal static class Program
         using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
         var fileSystem = new FileSystemAdapter();
         var auditStore = new AuditCsvStore(fileSystem, SafeErrorWriteLine);
-        return WriteCollectionMerge(opts, collectionIndex, fileSystem, auditStore);
+        return await WriteCollectionMergeAsync(opts, collectionIndex, fileSystem, auditStore).ConfigureAwait(false);
     }
 
     internal static int MergeForTests(CliRunOptions opts, ICollectionIndex collectionIndex, IFileSystem fileSystem, IAuditStore auditStore)
-        => WriteCollectionMerge(opts, collectionIndex, fileSystem, auditStore);
+        => WriteCollectionMergeAsync(opts, collectionIndex, fileSystem, auditStore).GetAwaiter().GetResult();
 
-    private static int WriteCollectionMerge(CliRunOptions opts, ICollectionIndex collectionIndex, IFileSystem fileSystem, IAuditStore auditStore)
+    private static async Task<int> WriteCollectionMergeAsync(CliRunOptions opts, ICollectionIndex collectionIndex, IFileSystem fileSystem, IAuditStore auditStore)
     {
         ArgumentNullException.ThrowIfNull(opts);
         ArgumentNullException.ThrowIfNull(collectionIndex);
@@ -916,7 +909,7 @@ internal static class Program
         var mergeRequest = BuildCollectionMergeRequest(opts);
         if (!opts.MergeApply)
         {
-            var build = CollectionMergeService.BuildPlanAsync(collectionIndex, fileSystem, mergeRequest).GetAwaiter().GetResult();
+            var build = await CollectionMergeService.BuildPlanAsync(collectionIndex, fileSystem, mergeRequest).ConfigureAwait(false);
             if (!build.CanUse || build.Plan is null)
             {
                 SafeErrorWriteLine($"[Error] Collection merge plan unavailable: {build.Reason}");
@@ -935,7 +928,7 @@ internal static class Program
             return 0;
         }
 
-        var applyResult = CollectionMergeService.ApplyAsync(
+        var applyResult = await CollectionMergeService.ApplyAsync(
             collectionIndex,
             fileSystem,
             auditStore,
@@ -943,7 +936,7 @@ internal static class Program
             {
                 MergeRequest = mergeRequest,
                 AuditPath = opts.AuditPath ?? CollectionMergeService.CreateDefaultAuditPath(mergeRequest.TargetRoot)
-            }).GetAwaiter().GetResult();
+            }).ConfigureAwait(false);
 
         if (!string.IsNullOrWhiteSpace(applyResult.BlockedReason))
         {
@@ -968,11 +961,11 @@ internal static class Program
         return applyResult.Summary.Failed > 0 ? 1 : 0;
     }
 
-    private static int SubcommandCompare(CliRunOptions opts)
+    private static async Task<int> SubcommandCompareAsync(CliRunOptions opts)
     {
         using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
-        var comparison = RunHistoryInsightsService.CompareAsync(collectionIndex, opts.RunId!, opts.CompareToRunId!)
-            .GetAwaiter().GetResult();
+        var comparison = await RunHistoryInsightsService.CompareAsync(collectionIndex, opts.RunId!, opts.CompareToRunId!)
+            .ConfigureAwait(false);
         if (comparison is null)
         {
             SafeErrorWriteLine("[Error] One or both run snapshots were not found.");
@@ -990,12 +983,12 @@ internal static class Program
         return 0;
     }
 
-    private static int SubcommandTrends(CliRunOptions opts)
+    private static async Task<int> SubcommandTrendsAsync(CliRunOptions opts)
     {
         using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
-        var report = RunHistoryInsightsService.BuildStorageInsightsAsync(
+        var report = await RunHistoryInsightsService.BuildStorageInsightsAsync(
             collectionIndex,
-            opts.HistoryLimit ?? 30).GetAwaiter().GetResult();
+            opts.HistoryLimit ?? 30).ConfigureAwait(false);
 
         if (!string.IsNullOrWhiteSpace(opts.OutputPath))
         {
@@ -1038,7 +1031,7 @@ internal static class Program
         return Task.FromResult<IReadOnlyList<RomCandidate>>(result.AllCandidates);
     }
 
-    private static int SubcommandWatch(CliRunOptions opts)
+    private static async Task<int> SubcommandWatchAsync(CliRunOptions opts)
     {
         if (string.Equals(opts.Mode, RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase) && !opts.Yes)
         {
@@ -1049,7 +1042,7 @@ internal static class Program
         using var daemonCts = new CancellationTokenSource();
         using var watchService = new WatchFolderService();
         using var scheduleService = new ScheduleService();
-        using var stopSignal = new ManualResetEventSlim(false);
+        var stopSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var busyFlag = 0;
         var cancellationRequested = 0;
@@ -1091,7 +1084,7 @@ internal static class Program
                     watchService.FlushPendingIfNeeded();
                     scheduleService.FlushPendingIfNeeded();
                     if (daemonCts.IsCancellationRequested)
-                        stopSignal.Set();
+                        stopSignal.TrySetResult();
                 }
             }, daemonCts.Token);
         }
@@ -1112,7 +1105,7 @@ internal static class Program
                 scheduleService.Stop();
                 daemonCts.Cancel();
                 if (!IsBusy())
-                    stopSignal.Set();
+                    stopSignal.TrySetResult();
                 return;
             }
 
@@ -1134,7 +1127,7 @@ internal static class Program
 
             try
             {
-                stopSignal.Wait(daemonCts.Token);
+                await stopSignal.Task.WaitAsync(daemonCts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -1142,7 +1135,7 @@ internal static class Program
             }
 
             if (activeRunTask is not null)
-                activeRunTask.GetAwaiter().GetResult();
+                await activeRunTask.ConfigureAwait(false);
 
             if (backgroundError is not null)
                 throw backgroundError;
@@ -1253,7 +1246,7 @@ internal static class Program
         return 0;
     }
 
-    private static int SubcommandCompleteness(CliRunOptions opts)
+    private static async Task<int> SubcommandCompletenessAsync(CliRunOptions opts)
     {
         SafeErrorWriteLine($"[Completeness] Scanning {opts.Roots.Length} root(s)...");
         var dataDir = RunEnvironmentBuilder.ResolveDataDir();
@@ -1276,11 +1269,11 @@ internal static class Program
             return 1;
         }
 
-        var report = CompletenessReportService.BuildAsync(
+        var report = await CompletenessReportService.BuildAsync(
             env.DatIndex,
             runOptions.Roots,
             env.CollectionIndex,
-            runOptions.Extensions).GetAwaiter().GetResult();
+            runOptions.Extensions).ConfigureAwait(false);
         SafeStandardWriteLine(CompletenessReportService.FormatReport(report));
 
         // Also output JSON summary for machine consumption

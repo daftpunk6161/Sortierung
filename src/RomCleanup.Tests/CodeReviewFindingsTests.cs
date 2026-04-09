@@ -471,4 +471,64 @@ public sealed class CodeReviewFindingsTests : IDisposable
             process.Dispose();
         }
     }
+
+    [Fact]
+    public void F9_ExternalProcessGuard_EmitDiagnostic_WithNullLogger_FallsBackToTrace()
+    {
+        var method = typeof(ExternalProcessGuard).GetMethod(
+            "EmitDiagnostic",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var marker = $"F9-trace-fallback-{Guid.NewGuid():N}";
+        using var writer = new StringWriter();
+        using var listener = new System.Diagnostics.TextWriterTraceListener(writer);
+        var listeners = System.Diagnostics.Trace.Listeners;
+        listeners.Add(listener);
+        var previousAutoFlush = System.Diagnostics.Trace.AutoFlush;
+        System.Diagnostics.Trace.AutoFlush = true;
+
+        try
+        {
+            method!.Invoke(null, [null, marker]);
+            listener.Flush();
+            Assert.Contains(marker, writer.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            System.Diagnostics.Trace.AutoFlush = previousAutoFlush;
+            listeners.Remove(listener);
+        }
+    }
+
+    [Fact]
+    public void F9_ExternalProcessGuard_EmitDiagnostic_PrefersProvidedLogger()
+    {
+        var method = typeof(ExternalProcessGuard).GetMethod(
+            "EmitDiagnostic",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var marker = $"F9-callback-path-{Guid.NewGuid():N}";
+        string? captured = null;
+        Action<string> callback = msg => captured = msg;
+
+        using var writer = new StringWriter();
+        using var listener = new System.Diagnostics.TextWriterTraceListener(writer);
+        var listeners = System.Diagnostics.Trace.Listeners;
+        listeners.Add(listener);
+
+        try
+        {
+            method!.Invoke(null, [callback, marker]);
+            listener.Flush();
+
+            Assert.Equal(marker, captured);
+            Assert.DoesNotContain(marker, writer.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            listeners.Remove(listener);
+        }
+    }
 }

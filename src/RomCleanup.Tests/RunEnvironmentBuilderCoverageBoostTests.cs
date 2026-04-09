@@ -309,7 +309,9 @@ public sealed class RunEnvironmentBuilderCoverageBoostTests : IDisposable
     public void Build_ConversionEnabled_CreatesConverter()
     {
         File.WriteAllText(Path.Combine(_dataDir, "consoles.json"), MinimalConsolesJson);
-        File.WriteAllText(Path.Combine(_dataDir, "conversion-registry.json"), "{}");
+        File.WriteAllText(
+            Path.Combine(_dataDir, "conversion-registry.json"),
+            "{\"schemaVersion\":\"conversion-registry-v1\",\"capabilities\":[]}");
 
         var options = new RunOptions
         {

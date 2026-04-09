@@ -5,6 +5,7 @@ using System.Xml;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Orchestration;
+using RomCleanup.Infrastructure.Dat;
 
 namespace RomCleanup.Infrastructure.Analysis;
 
@@ -230,9 +231,10 @@ public static class DatAnalysisService
         else
             sb.AppendLine($"\n  Catalog not found: {catalogPath}");
 
-        var oldDats = localDats.Where(d => (DateTime.Now - File.GetLastWriteTime(d)).TotalDays > 180).ToList();
+        var staleThresholdDays = DatCatalogStateService.StaleThresholdDays;
+        var oldDats = localDats.Where(d => (DateTime.Now - File.GetLastWriteTime(d)).TotalDays > staleThresholdDays).ToList();
         if (oldDats.Count > 0)
-            sb.AppendLine($"\n  WARNING: {oldDats.Count} DATs are older than 6 months!");
+            sb.AppendLine($"\n  WARNING: {oldDats.Count} DATs are older than {staleThresholdDays} days!");
 
         return (sb.ToString(), localDats.Count, oldDats.Count);
     }
@@ -304,7 +306,7 @@ public static class DatAnalysisService
 
     // --- Internal helpers ---
 
-    internal static List<string> LoadDatGameNames(string path)
+    public static List<string> LoadDatGameNames(string path)
     {
         if (string.IsNullOrEmpty(path) || !File.Exists(path))
             return [];
@@ -322,7 +324,7 @@ public static class DatAnalysisService
         }
     }
 
-    internal static Dictionary<string, string> BuildGameElementMap(XDocument doc)
+    public static Dictionary<string, string> BuildGameElementMap(XDocument doc)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var game in doc.Descendants("game"))

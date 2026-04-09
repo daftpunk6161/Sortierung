@@ -175,7 +175,7 @@ public sealed class RunEnvironmentBuilder
                         PbpEncryptionDetector.IsEncrypted);
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidOperationException)
             {
                 onWarning?.Invoke($"[Warning] Conversion registry loading failed, fallback to legacy mapping: {ex.Message}");
             }
@@ -344,7 +344,7 @@ public sealed class RunEnvironmentBuilder
 
             return hashes.Count > 0 ? hashes : null;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {
             onWarning?.Invoke($"[Warning] Could not load bios-hashes.json: {ex.Message}");
             return null;

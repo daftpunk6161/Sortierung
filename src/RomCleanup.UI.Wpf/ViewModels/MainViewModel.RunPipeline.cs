@@ -7,6 +7,7 @@ using RomCleanup.Contracts;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Infrastructure.Analysis;
 using RomCleanup.Infrastructure.Conversion;
+using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.Index;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Paths;
@@ -1317,14 +1318,14 @@ public sealed partial class MainViewModel
         List<(string Level, string Message)> hints;
         try
         {
-            hints = await Task.Run(() =>
+            hints = await Task.Run(async () =>
             {
                 var entries = new List<(string Level, string Message)>();
 
                 try
                 {
                     using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath());
-                    var insights = RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, 14, cancellationToken).GetAwaiter().GetResult();
+                    var insights = await RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, 14, cancellationToken);
                     if (insights.SampleCount > 1)
                     {
                         if (insights.TotalFiles.Delta != 0)
@@ -1352,7 +1353,7 @@ public sealed partial class MainViewModel
                         }
                         else if (staleDatCount > 0)
                         {
-                            entries.Add(("WARN", $"[Health] {staleDatCount} DAT-Datei(en) sind aelter als 6 Monate. DAT-Update empfohlen."));
+                            entries.Add(("WARN", $"[Health] {staleDatCount} DAT-Datei(en) sind aelter als {DatCatalogStateService.StaleThresholdDays} Tage. DAT-Update empfohlen."));
                         }
                     }
                     catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)

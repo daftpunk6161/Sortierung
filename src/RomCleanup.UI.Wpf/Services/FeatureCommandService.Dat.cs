@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Input;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.Reporting;
 using RomCleanup.Infrastructure.Tools;
 using RomCleanup.UI.Wpf.ViewModels;
@@ -14,9 +15,6 @@ namespace RomCleanup.UI.Wpf.Services;
 public sealed partial class FeatureCommandService
 {
     // ═══ DAT & VERIFIZIERUNG ════════════════════════════════════════════
-
-    /// <summary>Threshold in days after which a local DAT is considered outdated.</summary>
-    private const int DatStaleThresholdDays = 365;
 
     private async Task DatAutoUpdateAsync()
     {
@@ -48,7 +46,8 @@ public sealed partial class FeatureCommandService
             StringComparer.OrdinalIgnoreCase);
 
         // ── Klassifizierung ────────────────────────────────────────────
-        var staleDats = localDats.Where(d => (DateTime.Now - File.GetLastWriteTime(d)).TotalDays > DatStaleThresholdDays).ToList();
+        var staleThresholdDays = DatCatalogStateService.StaleThresholdDays;
+        var staleDats = localDats.Where(d => (DateTime.Now - File.GetLastWriteTime(d)).TotalDays > staleThresholdDays).ToList();
         var freshCount = localDats.Count - staleDats.Count;
 
         var missing = catalog
@@ -98,7 +97,7 @@ public sealed partial class FeatureCommandService
         {
             sb.Append($"Aktuell: {freshCount}");
             if (staleDats.Count > 0)
-                sb.Append($"  ·  Veraltet (>{DatStaleThresholdDays}d): {staleDats.Count}");
+                sb.Append($"  ·  Veraltet (>{staleThresholdDays}d): {staleDats.Count}");
             sb.AppendLine();
         }
 

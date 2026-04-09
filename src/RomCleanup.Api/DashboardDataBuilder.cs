@@ -221,11 +221,12 @@ internal static class DashboardDataBuilder
             .ToArray();
 
         var oldFileCount = 0;
+        var staleThresholdDays = DatCatalogStateService.StaleThresholdDays;
         foreach (var file in datFiles)
         {
             try
             {
-                if ((DateTime.UtcNow - File.GetLastWriteTimeUtc(file)).TotalDays > 180)
+                if ((DateTime.UtcNow - File.GetLastWriteTimeUtc(file)).TotalDays > staleThresholdDays)
                     oldFileCount++;
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
@@ -257,7 +258,7 @@ internal static class DashboardDataBuilder
             OldFileCount = oldFileCount,
             CatalogEntries = catalogEntries,
             StaleWarning = oldFileCount > 0
-                ? $"{oldFileCount} DAT files are older than 6 months"
+                ? $"{oldFileCount} DAT files are older than {staleThresholdDays} days"
                 : null,
             WithinAllowedRoots = allowedRootPolicy.IsPathAllowed(datRoot)
         });

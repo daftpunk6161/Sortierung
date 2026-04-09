@@ -914,7 +914,7 @@ public sealed class CliProgramTests : IDisposable
                 var main = typeof(CliProgram).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
                 Assert.NotNull(main);
 
-                var exitCode = (int)(main!.Invoke(null, new object[] { new[] { "--roots", _tempDir, "--mode", "Move" } }) ?? -1);
+                var exitCode = UnwrapMainResult(main!.Invoke(null, new object[] { new[] { "--roots", _tempDir, "--mode", "Move" } }));
 
                 Assert.Equal(2, exitCode);
                 Assert.Contains("Execute mode will move files", stderr.ToString(), StringComparison.OrdinalIgnoreCase);
@@ -960,7 +960,7 @@ public sealed class CliProgramTests : IDisposable
             var main = typeof(CliProgram).GetMethod("Main", BindingFlags.NonPublic | BindingFlags.Static);
             Assert.NotNull(main);
 
-            var exitCode = (int)(main!.Invoke(null, new object[] { new[] { "--version" } }) ?? -1);
+            var exitCode = UnwrapMainResult(main!.Invoke(null, new object[] { new[] { "--version" } }));
             var output = stdout.ToString().Trim();
 
             Assert.Equal(0, exitCode);
@@ -989,6 +989,14 @@ public sealed class CliProgramTests : IDisposable
             CliProgram.SetConsoleOverrides(null, null);
         }
     }
+
+    private static int UnwrapMainResult(object? invocationResult)
+        => invocationResult switch
+        {
+            int exitCode => exitCode,
+            Task<int> exitCodeTask => exitCodeTask.GetAwaiter().GetResult(),
+            _ => -1
+        };
 
     // ═══ TGAP-06: BUG-10 – ExtractFirstCsvField with RFC-4180 quoting ═══
 

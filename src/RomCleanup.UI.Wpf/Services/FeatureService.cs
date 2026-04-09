@@ -48,6 +48,12 @@ public static partial class FeatureService
         return XDocument.Load(reader);
     }
 
+    internal static List<string> LoadDatGameNames(string path)
+        => DatAnalysisService.LoadDatGameNames(path);
+
+    internal static Dictionary<string, string> BuildGameElementMap(XDocument doc)
+        => DatAnalysisService.BuildGameElementMap(doc);
+
 
     internal static string DetectConsoleFromPath(string path)
         => CollectionAnalysisService.DetectConsoleFromPath(path);

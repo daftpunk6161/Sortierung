@@ -74,7 +74,7 @@ public static class CollectionAnalysisService
         ).ToList();
     }
 
-    public static string AnalyzeStorageTiers(IReadOnlyList<RomCandidate> candidates, int hotThresholdDays = 30)
+    public static string AnalyzeStorageTiers(IReadOnlyList<RomCandidate> candidates, int hotThresholdDays = 30, TimeProvider? timeProvider = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine("Storage Tiering Analysis");
@@ -82,7 +82,7 @@ public static class CollectionAnalysisService
 
         long hotSize = 0, coldSize = 0;
         int hotCount = 0, coldCount = 0;
-        var now = DateTime.Now;
+        var now = (timeProvider ?? TimeProvider.System).GetLocalNow().DateTime;
 
         foreach (var c in candidates)
         {

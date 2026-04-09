@@ -324,7 +324,7 @@ public sealed class FolderDeduplicator
                                 errorCount++;
                             }
                         }
-                        catch (Exception ex)
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                         {
                             action = action with { Action = "ERROR", Error = ex.Message };
                             errorCount++;

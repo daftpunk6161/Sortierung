@@ -144,12 +144,16 @@ public sealed class DatCatalogStateService
                 {
                     // Deterministic policy: choose the alphabetically first stem, then path.
                     // This keeps repeated scans stable across runs and machines.
-                    localMatch = localFiles
+                    var systemMatch = localFiles
                         .Where(pair => pair.Key.StartsWith(entry.System, StringComparison.OrdinalIgnoreCase))
                         .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
                         .ThenBy(pair => pair.Value.Path, StringComparer.OrdinalIgnoreCase)
                         .Select(pair => pair.Value)
                         .FirstOrDefault();
+
+                    // Avoid treating the default tuple (no match) as a real local file.
+                    if (!string.IsNullOrWhiteSpace(systemMatch.Path))
+                        localMatch = systemMatch;
                 }
             }
 

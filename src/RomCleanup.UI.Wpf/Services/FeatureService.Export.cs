@@ -19,38 +19,7 @@ public static partial class FeatureService
 
     // ═══ JUNK REPORT ════════════════════════════════════════════════════
     // Port of JunkReport.ps1
-
-    private static readonly (string pattern, string tag, string reason)[] JunkPatterns =
-    [
-        (@"\(Beta[^)]*\)", "Beta", "Beta-Version"),
-        (@"\(Proto[^)]*\)", "Proto", "Prototyp"),
-        (@"\(Demo[^)]*\)", "Demo", "Demo-Version"),
-        (@"\(Sample\)", "Sample", "Sample"),
-        (@"\(Homebrew\)", "Homebrew", "Homebrew"),
-        (@"\(Hack\)", "Hack", "ROM-Hack"),
-        (@"\(Unl\)", "Unlicensed", "Unlizenziert"),
-        (@"\(Aftermarket\)", "Aftermarket", "Aftermarket"),
-        (@"\(Pirate\)", "Pirate", "Pirate"),
-        (@"\(Program\)", "Program", "Programm/Utility"),
-        (@"\[b\d*\]", "[b]", "Bad Dump"),
-        (@"\[h\d*\]", "[h]", "Hack-Tag"),
-        (@"\[o\d*\]", "[o]", "Overdump"),
-        (@"\[t\d*\]", "[t]", "Trainer"),
-        (@"\[f\d*\]", "[f]", "Fixed"),
-        (@"\[T[\+\-]", "[T]", "Translation")
-    ];
-
-
-    private static readonly (string pattern, string tag, string reason)[] AggressivePatterns =
-    [
-        (@"\(Alt[^)]*\)", "Alt", "Alternative Version"),
-        (@"\(Bonus Disc\)", "Bonus", "Bonus Disc"),
-        (@"\(Reprint\)", "Reprint", "Nachdruck"),
-        (@"\(Virtual Console\)", "VC", "Virtual Console")
-    ];
-
-
-    private static readonly TimeSpan JunkRxTimeout = TimeSpan.FromMilliseconds(500);
+    // Pattern definitions live in CollectionExportService (single source of truth).
 
     public static JunkReportEntry? GetJunkReason(string baseName, bool aggressive)
         => CollectionExportService.GetJunkReason(baseName, aggressive);

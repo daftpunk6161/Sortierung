@@ -1,6 +1,7 @@
 using System.Collections;
 using RomCleanup.Contracts.Models;
 using RomCleanup.Contracts.Ports;
+using RomCleanup.Infrastructure.Dat;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Profiles;
 using RomCleanup.UI.Wpf.Models;
@@ -248,7 +249,7 @@ public sealed class WpfProductizationTests : IDisposable
 
         var staleDat = Path.Combine(datRoot, "stale.dat");
         File.WriteAllText(staleDat, "<datafile></datafile>");
-        File.SetLastWriteTime(staleDat, DateTime.Now.AddDays(-190));
+        File.SetLastWriteTime(staleDat, DateTime.Now.AddDays(-(DatCatalogStateService.StaleThresholdDays + 10)));
 
         vm.Roots.Add(root);
         vm.UseDat = true;
@@ -258,7 +259,7 @@ public sealed class WpfProductizationTests : IDisposable
 
         Assert.Contains(vm.LogEntries, entry =>
             entry.Level == "WARN" &&
-            entry.Text.Contains("DAT-Datei(en) sind aelter als 6 Monate", StringComparison.Ordinal));
+            entry.Text.Contains($"DAT-Datei(en) sind aelter als {DatCatalogStateService.StaleThresholdDays} Tage", StringComparison.Ordinal));
     }
 
     [Fact]

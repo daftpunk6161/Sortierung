@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using RomCleanup.Contracts.Models;
+using RomCleanup.Infrastructure.Analysis;
 using RomCleanup.Infrastructure.Orchestration;
 using RomCleanup.Infrastructure.Tools;
 using RomCleanup.Infrastructure.Reporting;
@@ -17,81 +18,10 @@ public static partial class FeatureService
 {
 
     // ═══ DAT FILE COMPARE ══════════════════════════════════════════════
-    // Compare two Logiqx XML DAT files and return a diff summary.
+    // Delegates to DatAnalysisService (single source of truth).
 
     public static DatDiffResult CompareDatFiles(string pathA, string pathB)
-    {
-        var gamesA = LoadDatGameNames(pathA);
-        var gamesB = LoadDatGameNames(pathB);
-
-        var setA = new HashSet<string>(gamesA, StringComparer.OrdinalIgnoreCase);
-        var setB = new HashSet<string>(gamesB, StringComparer.OrdinalIgnoreCase);
-
-        var added = gamesB.Where(g => !setA.Contains(g)).ToList();
-        var removed = gamesA.Where(g => !setB.Contains(g)).ToList();
-        var common = gamesA.Where(g => setB.Contains(g)).ToList();
-
-        // Modified detection: compare <rom> child elements for games in both
-        int modified = 0;
-        int unchanged = 0;
-        if (File.Exists(pathA) && File.Exists(pathB))
-        {
-            var docA = SafeLoadXDocument(pathA);
-            var docB = SafeLoadXDocument(pathB);
-            var gameMapA = BuildGameElementMap(docA);
-            var gameMapB = BuildGameElementMap(docB);
-
-            foreach (var name in common)
-            {
-                var xmlA = gameMapA.GetValueOrDefault(name);
-                var xmlB = gameMapB.GetValueOrDefault(name);
-                if (xmlA is not null && xmlB is not null &&
-                    !string.Equals(xmlA, xmlB, StringComparison.Ordinal))
-                    modified++;
-                else
-                    unchanged++;
-            }
-        }
-        else
-        {
-            unchanged = common.Count;
-        }
-
-        return new DatDiffResult(added, removed, modified, unchanged);
-    }
-
-
-    internal static List<string> LoadDatGameNames(string path)
-    {
-        if (string.IsNullOrEmpty(path) || !File.Exists(path))
-            return [];
-        try
-        {
-            var doc = SafeLoadXDocument(path);
-            return doc.Descendants("game")
-                .Select(e => e.Attribute("name")?.Value ?? "")
-                .Where(n => n.Length > 0)
-                .ToList();
-        }
-        catch (Exception ex) when (ex is XmlException or IOException or UnauthorizedAccessException)
-        {
-            System.Diagnostics.Debug.WriteLine($"[FeatureService] LoadDatGameNames failed for '{path}': {ex.Message}");
-            return [];
-        }
-    }
-
-
-    internal static Dictionary<string, string> BuildGameElementMap(XDocument doc)
-    {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var game in doc.Descendants("game"))
-        {
-            var name = game.Attribute("name")?.Value;
-            if (name is not null)
-                map.TryAdd(name, game.ToString());
-        }
-        return map;
-    }
+        => DatAnalysisService.CompareDatFiles(pathA, pathB);
 
 
     // ═══ LOGIQX XML GENERATOR ══════════════════════════════════════════
@@ -190,65 +120,11 @@ public static partial class FeatureService
 
 
     /// <summary>
-    /// Build a DAT auto-update status report showing local DAT files, ages, and catalog info.
+    /// Build a DAT auto-update status report.
+    /// Delegates to <see cref="DatAnalysisService.BuildDatAutoUpdateReport"/> (single source of truth).
     /// </summary>
     public static (string Report, int LocalCount, int OldCount) BuildDatAutoUpdateReport(string datRoot)
-    {
-        var dataDir = ResolveDataDirectory() ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
-        var catalogPath = Path.Combine(dataDir, "dat-catalog.json");
-
-        var sb = new StringBuilder();
-        sb.AppendLine("DAT Auto-Update");
-        sb.AppendLine(new string('═', 50));
-        sb.AppendLine($"\n  DAT-Root: {datRoot}");
-
-        var localDats = Directory.GetFiles(datRoot, "*.dat", SearchOption.AllDirectories)
-            .Concat(Directory.GetFiles(datRoot, "*.xml", SearchOption.AllDirectories))
-            .ToList();
-
-        sb.AppendLine($"  Lokale DAT-Dateien: {localDats.Count}\n");
-
-        if (localDats.Count > 0)
-        {
-            sb.AppendLine("  Lokale Dateien (nach Alter sortiert):");
-            foreach (var dat in localDats.OrderBy(d => File.GetLastWriteTime(d)).Take(20))
-            {
-                var age = DateTime.Now - File.GetLastWriteTime(dat);
-                var ageStr = age.TotalDays > 365 ? $"{age.TotalDays / 365:0.0} Jahre"
-                    : age.TotalDays > 30 ? $"{age.TotalDays / 30:0.0} Monate"
-                    : $"{age.TotalDays:0} Tage";
-                sb.AppendLine($"    {Path.GetFileName(dat),-40} {ageStr} alt");
-            }
-            if (localDats.Count > 20)
-                sb.AppendLine($"    … und {localDats.Count - 20} weitere");
-        }
-
-        if (File.Exists(catalogPath))
-        {
-            try
-            {
-                var catalogJson = File.ReadAllText(catalogPath);
-                using var doc = JsonDocument.Parse(catalogJson);
-                var entries = doc.RootElement.EnumerateArray().ToList();
-                var withUrl = entries.Count(e => e.TryGetProperty("Url", out var u) && u.GetString()?.Length > 0);
-                var groups = entries.GroupBy(e => e.TryGetProperty("Group", out var g) ? g.GetString() : "?");
-
-                sb.AppendLine($"\n  Katalog: {entries.Count} Einträge ({withUrl} mit Download-URL)");
-                foreach (var g in groups)
-                    sb.AppendLine($"    {g.Key}: {g.Count()} Systeme");
-            }
-            catch (Exception ex)
-            { sb.AppendLine($"\n  Katalog-Fehler: {ex.Message}"); }
-        }
-        else
-            sb.AppendLine($"\n  Katalog nicht gefunden: {catalogPath}");
-
-        var oldDats = localDats.Where(d => (DateTime.Now - File.GetLastWriteTime(d)).TotalDays > 180).ToList();
-        if (oldDats.Count > 0)
-            sb.AppendLine($"\n  ⚠ {oldDats.Count} DATs sind älter als 6 Monate!");
-
-        return (sb.ToString(), localDats.Count, oldDats.Count);
-    }
+        => DatAnalysisService.BuildDatAutoUpdateReport(datRoot);
 
 
     // ═══ ARCADE MERGE/SPLIT REPORT ══════════════════════════════════════

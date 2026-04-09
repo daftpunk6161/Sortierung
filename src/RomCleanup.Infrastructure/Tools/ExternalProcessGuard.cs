@@ -19,6 +19,34 @@ public static class ExternalProcessGuard
     private static bool _jobInitialized;
     private static bool _jobAvailable;
 
+    private static void EmitDiagnostic(Action<string>? log, string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return;
+
+        if (log is not null)
+        {
+            try
+            {
+                log(message);
+                return;
+            }
+            catch (Exception ex)
+            {
+                message = $"{message} [logger-failed: {ex.GetType().Name}: {ex.Message}]";
+            }
+        }
+
+        try
+        {
+            Trace.WriteLine(message);
+        }
+        catch
+        {
+            // Never throw from guard diagnostics.
+        }
+    }
+
     static ExternalProcessGuard()
     {
         AppDomain.CurrentDomain.ProcessExit += (_, _) => KillAllTrackedProcesses("process-exit");
@@ -76,7 +104,7 @@ public static class ExternalProcessGuard
             {
                 process.Kill(entireProcessTree: true);
                 if (!process.WaitForExit(timeoutMs))
-                    log?.Invoke($"{owner}: process {(pid > 0 ? pid : 0)} did not exit within {timeout.TotalSeconds:0.#}s");
+                    EmitDiagnostic(log, $"{owner}: process {(pid > 0 ? pid : 0)} did not exit within {timeout.TotalSeconds:0.#}s");
             }
         }
         catch (InvalidOperationException)
@@ -85,7 +113,7 @@ public static class ExternalProcessGuard
         }
         catch (Win32Exception ex)
         {
-            log?.Invoke($"{owner}: failed to terminate process {(pid > 0 ? pid : 0)}: {ex.Message}");
+            EmitDiagnostic(log, $"{owner}: failed to terminate process {(pid > 0 ? pid : 0)}: {ex.Message}");
         }
         finally
         {
@@ -139,7 +167,7 @@ public static class ExternalProcessGuard
                 // ERROR_ACCESS_DENIED (5): already in a non-breakaway job.
                 // ERROR_INVALID_PARAMETER (87): invalid/terminated process.
                 if (error is not (5 or 87))
-                    log?.Invoke($"{owner}: AssignProcessToJobObject failed for pid {process.Id} (win32={error}).");
+                    EmitDiagnostic(log, $"{owner}: AssignProcessToJobObject failed for pid {process.Id} (win32={error}).");
             }
         }
         catch (InvalidOperationException)
@@ -160,7 +188,7 @@ public static class ExternalProcessGuard
             if (_jobHandle == nint.Zero)
             {
                 var error = Marshal.GetLastWin32Error();
-                log?.Invoke($"{owner}: CreateJobObject failed (win32={error}).");
+                EmitDiagnostic(log, $"{owner}: CreateJobObject failed (win32={error}).");
                 _jobAvailable = false;
                 return false;
             }
@@ -185,7 +213,7 @@ public static class ExternalProcessGuard
                         (uint)size))
                 {
                     var error = Marshal.GetLastWin32Error();
-                    log?.Invoke($"{owner}: SetInformationJobObject failed (win32={error}).");
+                    EmitDiagnostic(log, $"{owner}: SetInformationJobObject failed (win32={error}).");
                     CloseHandle(_jobHandle);
                     _jobHandle = nint.Zero;
                     _jobAvailable = false;

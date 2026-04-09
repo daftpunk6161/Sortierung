@@ -45,10 +45,11 @@ public static class IntegrityService
 
     // --- Trend Analysis ---
 
-    public static void SaveTrendSnapshot(int totalFiles, long sizeBytes, int verified, int dupes, int junk)
+    public static void SaveTrendSnapshot(int totalFiles, long sizeBytes, int verified, int dupes, int junk, TimeProvider? timeProvider = null)
     {
+        var now = (timeProvider ?? TimeProvider.System).GetLocalNow().DateTime;
         var history = LoadLegacyTrendHistory();
-        history.Add(new TrendSnapshot(DateTime.Now, totalFiles, sizeBytes, verified, dupes, junk,
+        history.Add(new TrendSnapshot(now, totalFiles, sizeBytes, verified, dupes, junk,
             CollectionAnalysisService.CalculateHealthScore(totalFiles, dupes, junk, verified)));
         if (history.Count > 365) history.RemoveRange(0, history.Count - 365);
         Directory.CreateDirectory(Path.GetDirectoryName(TrendFile)!);
@@ -167,9 +168,10 @@ public static class IntegrityService
 
     // --- Backup ---
 
-    public static string CreateBackup(IReadOnlyList<string> filePaths, string backupRoot, string label)
+    public static string CreateBackup(IReadOnlyList<string> filePaths, string backupRoot, string label, TimeProvider? timeProvider = null)
     {
-        var sessionDir = Path.Combine(backupRoot, $"{DateTime.Now:yyyyMMdd-HHmmss}_{label}");
+        var now = (timeProvider ?? TimeProvider.System).GetLocalNow().DateTime;
+        var sessionDir = Path.Combine(backupRoot, $"{now:yyyyMMdd-HHmmss}_{label}");
         Directory.CreateDirectory(sessionDir);
 
         var commonRoot = FindCommonRoot(filePaths);
@@ -188,10 +190,10 @@ public static class IntegrityService
         return sessionDir;
     }
 
-    public static int CleanupOldBackups(string backupRoot, int retentionDays, Func<int, bool>? confirmDelete = null)
+    public static int CleanupOldBackups(string backupRoot, int retentionDays, Func<int, bool>? confirmDelete = null, TimeProvider? timeProvider = null)
     {
         if (!Directory.Exists(backupRoot)) return 0;
-        var cutoff = DateTime.Now.AddDays(-retentionDays);
+        var cutoff = (timeProvider ?? TimeProvider.System).GetLocalNow().DateTime.AddDays(-retentionDays);
         var expired = Directory.GetDirectories(backupRoot)
             .Where(dir => Directory.GetCreationTime(dir) < cutoff)
             .ToList();
