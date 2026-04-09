@@ -96,9 +96,93 @@ internal static class DashboardDataBuilder
             });
         }
 
-        var datFiles = Directory.GetFiles(datRoot, "*.dat", SearchOption.AllDirectories)
-            .Concat(Directory.GetFiles(datRoot, "*.xml", SearchOption.AllDirectories))
-            .ToArray();
+        return BuildDatStatusAsync(datRoot, dataDir, allowedRootPolicy, ct);
+    }
+
+    /// <summary>
+    /// Testable overload that accepts explicit paths instead of resolving them from
+    /// static environment state. Wraps I/O calls in try/catch to handle
+    /// <see cref="UnauthorizedAccessException"/> gracefully (F3+F6 fix).
+    /// </summary>
+    internal static Task<DashboardDatStatusResponse> BuildDatStatusAsync(
+        string datRoot,
+        string dataDir,
+        AllowedRootPathPolicy allowedRootPolicy,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        if (string.IsNullOrWhiteSpace(datRoot) || !Directory.Exists(datRoot))
+        {
+            return Task.FromResult(new DashboardDatStatusResponse
+            {
+                Configured = false,
+                DatRoot = datRoot ?? string.Empty,
+                Message = "DatRoot is not configured or does not exist.",
+                TotalFiles = 0,
+                Consoles = Array.Empty<DashboardDatConsoleStatus>(),
+                OldFileCount = 0,
+                CatalogEntries = 0,
+                WithinAllowedRoots = string.IsNullOrWhiteSpace(datRoot) || allowedRootPolicy.IsPathAllowed(datRoot)
+            });
+        }
+
+        string[] datFiles;
+        try
+        {
+            datFiles = Directory.GetFiles(datRoot, "*.dat", SearchOption.AllDirectories)
+                .Concat(Directory.GetFiles(datRoot, "*.xml", SearchOption.AllDirectories))
+                .ToArray();
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            // Graceful degradation: scan each top-level subdirectory individually
+            // so one inaccessible folder doesn't block the entire status.
+            var accessible = new List<string>();
+            try
+            {
+                foreach (var dir in Directory.GetDirectories(datRoot))
+                {
+                    try
+                    {
+                        accessible.AddRange(Directory.GetFiles(dir, "*.dat", SearchOption.AllDirectories));
+                        accessible.AddRange(Directory.GetFiles(dir, "*.xml", SearchOption.AllDirectories));
+                    }
+                    catch (Exception inner) when (inner is UnauthorizedAccessException or IOException)
+                    {
+                        // Skip inaccessible subdirectory
+                    }
+                }
+
+                // Also scan root-level files
+                foreach (var pattern in new[] { "*.dat", "*.xml" })
+                {
+                    try
+                    {
+                        accessible.AddRange(Directory.GetFiles(datRoot, pattern, SearchOption.TopDirectoryOnly));
+                    }
+                    catch (Exception inner) when (inner is UnauthorizedAccessException or IOException)
+                    {
+                        // Skip
+                    }
+                }
+            }
+            catch (Exception outerEx) when (outerEx is UnauthorizedAccessException or IOException)
+            {
+                // Entire root is inaccessible
+                return Task.FromResult(new DashboardDatStatusResponse
+                {
+                    Configured = true,
+                    DatRoot = datRoot,
+                    Message = $"Cannot access DAT root: {ex.GetType().Name}",
+                    TotalFiles = 0,
+                    Consoles = Array.Empty<DashboardDatConsoleStatus>(),
+                    WithinAllowedRoots = allowedRootPolicy.IsPathAllowed(datRoot)
+                });
+            }
+
+            datFiles = accessible.ToArray();
+        }
 
         var consoleStats = datFiles
             .GroupBy(file =>
@@ -108,17 +192,48 @@ internal static class DashboardDataBuilder
                     ? Path.GetFileName(dir)
                     : "root";
             }, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new DashboardDatConsoleStatus
+            .Select(group =>
             {
-                Console = group.Key,
-                FileCount = group.Count(),
-                NewestFileUtc = group.Max(File.GetLastWriteTimeUtc).ToString("o"),
-                OldestFileUtc = group.Min(File.GetLastWriteTimeUtc).ToString("o")
+                DateTime newest = DateTime.MinValue, oldest = DateTime.MaxValue;
+                foreach (var file in group)
+                {
+                    try
+                    {
+                        var mtime = File.GetLastWriteTimeUtc(file);
+                        if (mtime > newest) newest = mtime;
+                        if (mtime < oldest) oldest = mtime;
+                    }
+                    catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+                    {
+                        // Skip files with inaccessible metadata
+                    }
+                }
+
+                return new DashboardDatConsoleStatus
+                {
+                    Console = group.Key,
+                    FileCount = group.Count(),
+                    NewestFileUtc = newest == DateTime.MinValue ? string.Empty : newest.ToString("o"),
+                    OldestFileUtc = oldest == DateTime.MaxValue ? string.Empty : oldest.ToString("o")
+                };
             })
             .OrderBy(static item => item.Console, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        var oldFiles = datFiles.Where(file => (DateTime.UtcNow - File.GetLastWriteTimeUtc(file)).TotalDays > 180).ToArray();
+        var oldFileCount = 0;
+        foreach (var file in datFiles)
+        {
+            try
+            {
+                if ((DateTime.UtcNow - File.GetLastWriteTimeUtc(file)).TotalDays > 180)
+                    oldFileCount++;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                // Skip inaccessible files
+            }
+        }
+
         var catalogPath = Path.Combine(dataDir, "dat-catalog.json");
         var catalogEntries = 0;
         if (File.Exists(catalogPath))
@@ -139,10 +254,10 @@ internal static class DashboardDataBuilder
             DatRoot = datRoot,
             TotalFiles = datFiles.Length,
             Consoles = consoleStats,
-            OldFileCount = oldFiles.Length,
+            OldFileCount = oldFileCount,
             CatalogEntries = catalogEntries,
-            StaleWarning = oldFiles.Length > 0
-                ? $"{oldFiles.Length} DAT files are older than 6 months"
+            StaleWarning = oldFileCount > 0
+                ? $"{oldFileCount} DAT files are older than 6 months"
                 : null,
             WithinAllowedRoots = allowedRootPolicy.IsPathAllowed(datRoot)
         });

@@ -20,54 +20,13 @@ public static class RunReportWriter
 
         foreach (var group in projectedArtifacts.DedupeGroups)
         {
-            entries.Add(new ReportEntry
-            {
-                GameKey = group.GameKey,
-                Action = "KEEP",
-                Category = ToReportCategory(group.Winner.Category),
-                Region = group.Winner.Region,
-                FilePath = group.Winner.MainPath,
-                FileName = Path.GetFileName(group.Winner.MainPath),
-                Extension = group.Winner.Extension,
-                SizeBytes = group.Winner.SizeBytes,
-                RegionScore = group.Winner.RegionScore,
-                FormatScore = group.Winner.FormatScore,
-                VersionScore = (int)group.Winner.VersionScore,
-                Console = group.Winner.ConsoleKey ?? string.Empty,
-                DatMatch = group.Winner.DatMatch,
-                DecisionClass = group.Winner.DecisionClass.ToString(),
-                EvidenceTier = group.Winner.EvidenceTier.ToString(),
-                PrimaryMatchKind = group.Winner.PrimaryMatchKind.ToString(),
-                PlatformFamily = group.Winner.PlatformFamily.ToString(),
-                MatchLevel = group.Winner.MatchEvidence.Level.ToString(),
-                MatchReasoning = group.Winner.MatchEvidence.Reasoning
-            });
+            entries.Add(BuildReportEntry(group.Winner, group.GameKey, "KEEP"));
             seenPaths.Add(group.Winner.MainPath);
 
             foreach (var loser in group.Losers)
             {
-                entries.Add(new ReportEntry
-                {
-                    GameKey = group.GameKey,
-                        Action = loser.Category == FileCategory.Junk ? "JUNK" : (isDryRun ? "DUPE" : "MOVE"),
-                        Category = ToReportCategory(loser.Category),
-                    Region = loser.Region,
-                    FilePath = loser.MainPath,
-                    FileName = Path.GetFileName(loser.MainPath),
-                    Extension = loser.Extension,
-                    SizeBytes = loser.SizeBytes,
-                    RegionScore = loser.RegionScore,
-                    FormatScore = loser.FormatScore,
-                    VersionScore = (int)loser.VersionScore,
-                    Console = loser.ConsoleKey ?? string.Empty,
-                    DatMatch = loser.DatMatch,
-                    DecisionClass = loser.DecisionClass.ToString(),
-                    EvidenceTier = loser.EvidenceTier.ToString(),
-                    PrimaryMatchKind = loser.PrimaryMatchKind.ToString(),
-                    PlatformFamily = loser.PlatformFamily.ToString(),
-                    MatchLevel = loser.MatchEvidence.Level.ToString(),
-                    MatchReasoning = loser.MatchEvidence.Reasoning
-                });
+                var loserAction = loser.Category == FileCategory.Junk ? "JUNK" : (isDryRun ? "DUPE" : "MOVE");
+                entries.Add(BuildReportEntry(loser, group.GameKey, loserAction));
                 seenPaths.Add(loser.MainPath);
             }
         }
@@ -86,32 +45,35 @@ public static class RunReportWriter
                 _ => "KEEP"
             };
 
-            entries.Add(new ReportEntry
-            {
-                GameKey = candidate.GameKey,
-                Action = action,
-                Category = ToReportCategory(candidate.Category),
-                Region = candidate.Region,
-                FilePath = candidate.MainPath,
-                FileName = Path.GetFileName(candidate.MainPath),
-                Extension = candidate.Extension,
-                SizeBytes = candidate.SizeBytes,
-                RegionScore = candidate.RegionScore,
-                FormatScore = candidate.FormatScore,
-                VersionScore = (int)candidate.VersionScore,
-                Console = candidate.ConsoleKey ?? string.Empty,
-                DatMatch = candidate.DatMatch,
-                DecisionClass = candidate.DecisionClass.ToString(),
-                EvidenceTier = candidate.EvidenceTier.ToString(),
-                PrimaryMatchKind = candidate.PrimaryMatchKind.ToString(),
-                PlatformFamily = candidate.PlatformFamily.ToString(),
-                MatchLevel = candidate.MatchEvidence.Level.ToString(),
-                MatchReasoning = candidate.MatchEvidence.Reasoning
-            });
+            entries.Add(BuildReportEntry(candidate, candidate.GameKey, action));
         }
 
         return entries;
     }
+
+    private static ReportEntry BuildReportEntry(RomCandidate candidate, string gameKey, string action)
+        => new()
+        {
+            GameKey = gameKey,
+            Action = action,
+            Category = ToReportCategory(candidate.Category),
+            Region = candidate.Region,
+            FilePath = candidate.MainPath,
+            FileName = Path.GetFileName(candidate.MainPath),
+            Extension = candidate.Extension,
+            SizeBytes = candidate.SizeBytes,
+            RegionScore = candidate.RegionScore,
+            FormatScore = candidate.FormatScore,
+            VersionScore = (int)candidate.VersionScore,
+            Console = candidate.ConsoleKey ?? string.Empty,
+            DatMatch = candidate.DatMatch,
+            DecisionClass = candidate.DecisionClass.ToString(),
+            EvidenceTier = candidate.EvidenceTier.ToString(),
+            PrimaryMatchKind = candidate.PrimaryMatchKind.ToString(),
+            PlatformFamily = candidate.PlatformFamily.ToString(),
+            MatchLevel = candidate.MatchEvidence.Level.ToString(),
+            MatchReasoning = candidate.MatchEvidence.Reasoning
+        };
 
     private static string ToReportCategory(FileCategory category)
         => category.ToString().ToUpperInvariant();

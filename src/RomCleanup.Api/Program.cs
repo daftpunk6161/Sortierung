@@ -546,30 +546,11 @@ app.MapPost("/export/frontend", async (
     AllowedRootPathPolicy allowedRootPolicy,
     CancellationToken ct) =>
 {
-    if (ctx.Request.ContentLength is > 1_048_576)
-        return ApiError(400, "EXPORT-BODY-TOO-LARGE", "Request body too large (max 1MB).");
+    var requestRead = await ReadJsonBodyAsync<ApiFrontendExportRequest>(ctx, "EXPORT", ct);
+    if (requestRead.Error is not null)
+        return requestRead.Error;
 
-    string body;
-    try
-    {
-        using var reader = new StreamReader(ctx.Request.Body, Encoding.UTF8);
-        body = await reader.ReadToEndAsync(ct);
-    }
-    catch (IOException)
-    {
-        return ApiError(400, "EXPORT-READ-ERROR", "Failed to read request body.");
-    }
-
-    ApiFrontendExportRequest? request;
-    try
-    {
-        request = JsonSerializer.Deserialize<ApiFrontendExportRequest>(body,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-    }
-    catch (JsonException)
-    {
-        return ApiError(400, "EXPORT-INVALID-JSON", "Invalid JSON.");
-    }
+    var request = requestRead.Value;
 
     if (request is null || string.IsNullOrWhiteSpace(request.Frontend))
         return ApiError(400, "EXPORT-FRONTEND-REQUIRED", "frontend is required.");
@@ -2374,7 +2355,13 @@ static async Task<(T? Value, IResult? Error)> ReadJsonBodyAsync<T>(
     try
     {
         using var reader = new StreamReader(context.Request.Body, Encoding.UTF8);
-        body = await reader.ReadToEndAsync(ct);
+        // Limit read to 1MB + 1 byte to detect oversized chunked bodies
+        // (same pattern as POST /runs body reading).
+        var buffer = new char[1_048_577];
+        var charsRead = await reader.ReadBlockAsync(buffer, 0, buffer.Length);
+        if (charsRead > 1_048_576)
+            return (default, ApiError(400, $"{codePrefix}-BODY-TOO-LARGE", "Request body too large (max 1MB)."));
+        body = new string(buffer, 0, charsRead);
     }
     catch (IOException)
     {

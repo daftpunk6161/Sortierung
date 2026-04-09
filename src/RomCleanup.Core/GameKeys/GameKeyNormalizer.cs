@@ -23,9 +23,10 @@ public static class GameKeyNormalizer
     /// <see cref="RegisterDefaultPatterns"/>. When set, the convenience <see cref="Normalize(string)"/>
     /// overload uses these instead of requiring explicit pattern injection.
     /// </summary>
-    private static IReadOnlyList<System.Text.RegularExpressions.Regex>? _registeredPatterns;
-    private static IReadOnlyDictionary<string, string>? _registeredAliasMap;
-    private static Func<(IReadOnlyList<System.Text.RegularExpressions.Regex>? Patterns, IReadOnlyDictionary<string, string> Aliases)>? _patternFactory;
+    private static readonly object _registrationLock = new();
+    private static volatile IReadOnlyList<System.Text.RegularExpressions.Regex>? _registeredPatterns;
+    private static volatile IReadOnlyDictionary<string, string>? _registeredAliasMap;
+    private static volatile Func<(IReadOnlyList<System.Text.RegularExpressions.Regex>? Patterns, IReadOnlyDictionary<string, string> Aliases)>? _patternFactory;
 
     /// <summary>
     /// Registers the default tag patterns and alias map (typically loaded from rules.json).
@@ -38,8 +39,11 @@ public static class GameKeyNormalizer
         ArgumentNullException.ThrowIfNull(tagPatterns);
         ArgumentNullException.ThrowIfNull(alwaysAliasMap);
 
-        _registeredPatterns = tagPatterns;
-        _registeredAliasMap = alwaysAliasMap;
+        lock (_registrationLock)
+        {
+            _registeredPatterns = tagPatterns;
+            _registeredAliasMap = alwaysAliasMap;
+        }
     }
 
     /// <summary>
@@ -50,16 +54,27 @@ public static class GameKeyNormalizer
     public static void RegisterPatternFactory(
         Func<(IReadOnlyList<System.Text.RegularExpressions.Regex>? Patterns, IReadOnlyDictionary<string, string> Aliases)> factory)
     {
-        _patternFactory = factory ?? throw new ArgumentNullException(nameof(factory));
+        lock (_registrationLock)
+        {
+            _patternFactory = factory ?? throw new ArgumentNullException(nameof(factory));
+        }
     }
 
     private static void EnsurePatternsLoaded()
     {
         if (_registeredPatterns is not null) return;
-        if (_patternFactory is null) return;
-        var (patterns, aliases) = _patternFactory();
-        if (patterns is not null)
-            RegisterDefaultPatterns(patterns, aliases);
+
+        lock (_registrationLock)
+        {
+            if (_registeredPatterns is not null) return;
+            if (_patternFactory is null) return;
+            var (patterns, aliases) = _patternFactory();
+            if (patterns is not null)
+            {
+                _registeredPatterns = patterns;
+                _registeredAliasMap = aliases;
+            }
+        }
     }
 
     private static readonly System.Text.RegularExpressions.Regex MsDosTrailingBracketRegex =

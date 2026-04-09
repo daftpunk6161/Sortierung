@@ -142,7 +142,7 @@ public static class ReportGenerator
         var sb = new StringBuilder();
         // V2-L15: UTF-8 BOM for Excel compatibility
         sb.Append('\uFEFF');
-        sb.AppendLine("GameKey,Action,Category,Region,FileName,Extension,SizeBytes,RegionScore,FormatScore,VersionScore,Console,DatMatch,DecisionClass,EvidenceTier,PrimaryMatchKind,PlatformFamily,MatchLevel,MatchReasoning");
+        sb.AppendLine("GameKey,Action,Category,Region,FilePath,FileName,Extension,SizeBytes,RegionScore,FormatScore,VersionScore,Console,DatMatch,DecisionClass,EvidenceTier,PrimaryMatchKind,PlatformFamily,MatchLevel,MatchReasoning");
 
         foreach (var e in entries)
         {
@@ -151,6 +151,7 @@ public static class ReportGenerator
                 CsvSafe(e.Action),
                 CsvSafe(e.Category),
                 CsvSafe(e.Region),
+                CsvSafe(e.FilePath),
                 CsvSafe(e.FileName),
                 CsvSafe(e.Extension),
                 e.SizeBytes.ToString(),
