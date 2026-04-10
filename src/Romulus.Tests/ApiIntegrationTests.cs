@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Romulus.Api;
+using Romulus.Contracts;
 using Romulus.Contracts.Errors;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
@@ -643,7 +644,7 @@ public sealed class ApiIntegrationTests
         {
             File.WriteAllText(reportPath, "<html><body>report-ok</body></html>");
             run.ReportPath = reportPath;
-            return new RunExecutionOutcome(ApiRunStatus.Completed, new ApiRunResult
+            return new RunExecutionOutcome(RunConstants.StatusCompleted, new ApiRunResult
             {
                 OrchestratorStatus = "ok",
                 ExitCode = 0
@@ -685,7 +686,7 @@ public sealed class ApiIntegrationTests
         {
             File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action\nC:\\roms\\a,C:\\roms\\a,C:\\trash\\a,move\n");
             run.AuditPath = auditPath;
-            return new RunExecutionOutcome(ApiRunStatus.Completed, new ApiRunResult
+            return new RunExecutionOutcome(RunConstants.StatusCompleted, new ApiRunResult
             {
                 OrchestratorStatus = "ok",
                 ExitCode = 0

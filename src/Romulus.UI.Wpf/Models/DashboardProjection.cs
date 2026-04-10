@@ -1,3 +1,4 @@
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Infrastructure.Orchestration;
 using System.IO;
@@ -148,8 +149,8 @@ public sealed record DashboardProjection(
 
     private static bool IsCancelledOrFailed(RunResult result)
     {
-        return string.Equals(result.Status, "cancelled", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(result.Status, "failed", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(result.Status, RunConstants.StatusCancelled, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(result.Status, RunConstants.StatusFailed, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string MarkDisplayValue(string value, bool isProvisional, bool isDryRun)

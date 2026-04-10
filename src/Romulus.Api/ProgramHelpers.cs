@@ -439,7 +439,7 @@ public partial class Program
         if (!CanAccessRun(run, GetClientBindingId(context, trustForwardedFor)))
             return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
-        if (run.Status == "running")
+        if (run.Status == RunConstants.StatusRunning)
             return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
 
         var dataDir = RunEnvironmentBuilder.TryResolveDataDir()
@@ -531,7 +531,7 @@ public partial class Program
         if (!CanAccessRun(run, GetClientBindingId(context, trustForwardedFor)))
             return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
-        if (run.Status == "running")
+        if (run.Status == RunConstants.StatusRunning)
             return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
 
         if (string.IsNullOrWhiteSpace(outputPath))

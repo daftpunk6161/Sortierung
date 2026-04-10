@@ -470,7 +470,7 @@ public sealed class HygieneCleanupRegressionTests
 
     [Fact]
     public void OperationResult_Ok_UsesStatusConstant()
-        => Assert.Equal(OperationResult.StatusOk, OperationResult.Ok().Status);
+        => Assert.Equal(RunConstants.StatusOk, OperationResult.Ok().Status);
 
     [Fact]
     public void OperationResult_Completed_UsesStatusConstant()
@@ -478,7 +478,7 @@ public sealed class HygieneCleanupRegressionTests
 
     [Fact]
     public void OperationResult_Blocked_UsesStatusConstant()
-        => Assert.Equal(OperationResult.StatusBlocked, OperationResult.Blocked("x").Status);
+        => Assert.Equal(RunConstants.StatusBlocked, OperationResult.Blocked("x").Status);
 
     [Fact]
     public void OperationResult_Error_UsesStatusConstant()

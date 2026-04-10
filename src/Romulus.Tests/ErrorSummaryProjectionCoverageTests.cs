@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.UI.Wpf.Models;
@@ -57,7 +58,7 @@ public sealed class ErrorSummaryProjectionCoverageTests
     [Fact]
     public void Build_BlockedResult_InsertsBlockedAtTop()
     {
-        var result = new RunResult { Status = "blocked", Preflight = new OperationResult { Status = OperationResult.StatusBlocked, Reason = "no roots" } };
+        var result = new RunResult { Status = "blocked", Preflight = new OperationResult { Status = RunConstants.StatusBlocked, Reason = "no roots" } };
         var items = ErrorSummaryProjection.Build(result, [], []);
         Assert.Equal("RUN-BLOCKED", items[0].Code);
         Assert.Equal(UiErrorSeverity.Blocked, items[0].Severity);
@@ -147,7 +148,7 @@ public sealed class ErrorSummaryProjectionCoverageTests
     [Fact]
     public void Build_ResultIssues_InsertedBeforeLogs()
     {
-        var result = new RunResult { Status = "blocked", Preflight = new OperationResult { Status = OperationResult.StatusBlocked, Reason = "x" } };
+        var result = new RunResult { Status = "blocked", Preflight = new OperationResult { Status = RunConstants.StatusBlocked, Reason = "x" } };
         var logs = new[] { new LogEntry("warn1", "WARN") };
         var items = ErrorSummaryProjection.Build(result, [], logs);
         Assert.Equal("RUN-BLOCKED", items[0].Code);

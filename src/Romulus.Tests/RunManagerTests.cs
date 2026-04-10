@@ -21,7 +21,7 @@ public class RunManagerTests
         var run = mgr.TryCreate(request, "DryRun");
 
         Assert.NotNull(run);
-        Assert.Equal("running", run!.Status);
+        Assert.Equal(RunConstants.StatusRunning, run!.Status);
         Assert.Equal("DryRun", run.Mode);
         Assert.NotEmpty(run.RunId);
     }
@@ -146,7 +146,7 @@ public class RunManagerTests
         {
             runStarted.Set();
             allowCompletion.Wait(TimeSpan.FromSeconds(5));
-            return new RunExecutionOutcome(ApiRunStatus.Completed, new ApiRunResult
+            return new RunExecutionOutcome(RunConstants.StatusCompleted, new ApiRunResult
             {
                 OrchestratorStatus = "ok",
                 ExitCode = 0
@@ -200,7 +200,7 @@ public class RunManagerTests
 
             var completed = mgr.Get(run.RunId);
             Assert.NotNull(completed);
-            Assert.NotEqual("running", completed!.Status);
+            Assert.NotEqual(RunConstants.StatusRunning, completed!.Status);
             Assert.NotNull(completed.CompletedUtc);
         }
         finally
@@ -222,7 +222,7 @@ public class RunManagerTests
 
         var completed = mgr.Get(run.RunId);
         Assert.NotNull(completed);
-        Assert.Equal(ApiRunStatus.Blocked, completed!.Status);
+        Assert.Equal(RunConstants.StatusBlocked, completed!.Status);
         Assert.Equal("blocked", completed.Result!.OrchestratorStatus);
         Assert.Equal(3, completed.Result.ExitCode);
     }
@@ -413,14 +413,14 @@ public class RunManagerTests
 
         var finalWait = await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(5));
         Assert.Equal(RunWaitDisposition.Completed, finalWait.Disposition);
-        Assert.Equal("completed", mgr.Get(run.RunId)!.Status);
+        Assert.Equal(RunConstants.StatusCompleted, mgr.Get(run.RunId)!.Status);
     }
 
     [Fact]
     public async Task TGAP48_Api_StatusStrings_UseCentralConstants()
     {
         var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (_, _, _, _) =>
-            new RunExecutionOutcome(ApiRunStatus.CompletedWithErrors, new ApiRunResult
+            new RunExecutionOutcome(RunConstants.StatusCompletedWithErrors, new ApiRunResult
             {
                 OrchestratorStatus = "ok",
                 ExitCode = 0
@@ -428,12 +428,12 @@ public class RunManagerTests
 
         var run = mgr.TryCreateOrReuse(new RunRequest { Roots = new[] { GetTestRoot() } }, "DryRun", "tgap-48").Run!;
 
-        Assert.Contains(run.Status, new[] { ApiRunStatus.Running, ApiRunStatus.CompletedWithErrors });
+        Assert.Contains(run.Status, new[] { RunConstants.StatusRunning, RunConstants.StatusCompletedWithErrors });
 
         await mgr.WaitForCompletion(run.RunId, timeout: TimeSpan.FromSeconds(5));
 
         var completed = mgr.Get(run.RunId)!;
-        Assert.Equal(ApiRunStatus.CompletedWithErrors, completed.Status);
+        Assert.Equal(RunConstants.StatusCompletedWithErrors, completed.Status);
     }
 
     [Fact]
@@ -537,7 +537,7 @@ public class RunManagerTests
             var mgr = new RunManager(new FileSystemAdapter(), new AuditCsvStore(), (run, _, _, _) =>
             {
                 run.AuditPath = auditPath;
-                return new RunExecutionOutcome(ApiRunStatus.CompletedWithErrors, new ApiRunResult
+                return new RunExecutionOutcome(RunConstants.StatusCompletedWithErrors, new ApiRunResult
                 {
                     OrchestratorStatus = "completed_with_errors",
                     ExitCode = 0,
@@ -572,7 +572,7 @@ public class RunManagerTests
             var mgr = new RunManager(new FileSystemAdapter(), auditStore, (run, _, _, _) =>
             {
                 run.AuditPath = auditPath;
-                return new RunExecutionOutcome(ApiRunStatus.CompletedWithErrors, new ApiRunResult
+                return new RunExecutionOutcome(RunConstants.StatusCompletedWithErrors, new ApiRunResult
                 {
                     OrchestratorStatus = "completed_with_errors",
                     ExitCode = 1,

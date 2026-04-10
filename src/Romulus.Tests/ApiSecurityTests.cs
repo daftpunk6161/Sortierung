@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Romulus.Api;
+using Romulus.Contracts;
 using Romulus.Contracts.Errors;
 using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.FileSystem;
@@ -381,7 +382,7 @@ public sealed class ApiSecurityTests : IDisposable
             File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action\n");
             run.ReportPath = reportPath;
             run.AuditPath = auditPath;
-            return new RunExecutionOutcome(ApiRunStatus.Completed, new ApiRunResult
+            return new RunExecutionOutcome(RunConstants.StatusCompleted, new ApiRunResult
             {
                 OrchestratorStatus = "ok",
                 ExitCode = 0

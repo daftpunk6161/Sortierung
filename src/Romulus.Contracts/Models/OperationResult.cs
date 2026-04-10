@@ -24,6 +24,7 @@ public static class RunOutcomeExtensions
     public static RunOutcome ParseRunOutcome(string? status) => status switch
     {
         RunConstants.StatusOk => RunOutcome.Ok,
+        RunConstants.StatusCompleted => RunOutcome.Ok,
         RunConstants.StatusCompletedWithErrors => RunOutcome.CompletedWithErrors,
         RunConstants.StatusBlocked => RunOutcome.Blocked,
         RunConstants.StatusCancelled => RunOutcome.Cancelled,
@@ -52,14 +53,12 @@ public static class RunOutcomeExtensions
 public sealed class OperationResult
 {
     // ── Operation-level status constants ─────────────────────────────
-    public const string StatusOk = "ok";
     public const string StatusCompleted = "completed";
     public const string StatusSkipped = "skipped";
-    public const string StatusBlocked = "blocked";
     public const string StatusError = "error";
     public const string StatusContinue = "continue";
 
-    public string Status { get; init; } = StatusOk;
+    public string Status { get; init; } = RunConstants.StatusOk;
     public string? Reason { get; init; }
     public object? Value { get; init; }
     public Dictionary<string, object> Meta { get; init; } = new();
@@ -67,16 +66,16 @@ public sealed class OperationResult
     public Dictionary<string, double> Metrics { get; init; } = new();
     public List<string> Artifacts { get; init; } = new();
 
-    public bool ShouldReturn => Status is StatusBlocked or StatusError;
+    public bool ShouldReturn => Status is RunConstants.StatusBlocked or StatusError;
     public string Outcome => Status switch
     {
         StatusSkipped => "SKIP",
-        StatusBlocked or StatusError => "ERROR",
+        RunConstants.StatusBlocked or StatusError => "ERROR",
         _ => "OK"
     };
 
     public static OperationResult Ok(string? reason = null, object? value = null)
-        => new() { Status = StatusOk, Reason = reason, Value = value };
+        => new() { Status = RunConstants.StatusOk, Reason = reason, Value = value };
 
     public static OperationResult Completed(string? reason = null, object? value = null)
         => new() { Status = StatusCompleted, Reason = reason, Value = value };
@@ -85,7 +84,7 @@ public sealed class OperationResult
         => new() { Status = StatusSkipped, Reason = reason };
 
     public static OperationResult Blocked(string reason)
-        => new() { Status = StatusBlocked, Reason = reason };
+        => new() { Status = RunConstants.StatusBlocked, Reason = reason };
 
     public static OperationResult Error(string reason)
         => new() { Status = StatusError, Reason = reason };

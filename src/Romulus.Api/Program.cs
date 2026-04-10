@@ -880,7 +880,7 @@ app.MapPost("/runs", async (
         });
     }
 
-    if (create.Disposition == RunCreateDisposition.Reused && run.Status != "running")
+    if (create.Disposition == RunCreateDisposition.Reused && run.Status != RunConstants.StatusRunning)
         return Results.Ok(new { run = run.ToDto(), result = run.Result, reused = true });
 
     return Results.Accepted($"/runs/{run.RunId}", new { run = run.ToDto(), reused = create.Disposition == RunCreateDisposition.Reused });
@@ -920,7 +920,7 @@ app.MapGet("/runs/{runId}/result", (string runId, HttpContext ctx, RunLifecycleM
         return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
         return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
-    if (run.Status == "running")
+    if (run.Status == RunConstants.StatusRunning)
         return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
     return Results.Ok(new { run = run.ToDto(), result = run.Result });
 })
@@ -941,7 +941,7 @@ app.MapGet("/runs/{runId}/report", (string runId, HttpContext ctx, RunLifecycleM
         return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
         return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
-    if (run.Status == ApiRunStatus.Running)
+    if (run.Status == RunConstants.StatusRunning)
         return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
 
     return CreateArtifactDownloadResult(
@@ -969,7 +969,7 @@ app.MapGet("/runs/{runId}/audit", (string runId, HttpContext ctx, RunLifecycleMa
         return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
         return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
-    if (run.Status == ApiRunStatus.Running)
+    if (run.Status == RunConstants.StatusRunning)
         return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
 
     return CreateArtifactDownloadResult(
@@ -1027,7 +1027,7 @@ app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, string? dr
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
         return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
-    if (run.Status == "running")
+    if (run.Status == RunConstants.StatusRunning)
         return ApiError(409, "RUN-IN-PROGRESS", "Rollback is only available for completed runs.", runId: runId);
 
     if (string.IsNullOrWhiteSpace(run.AuditPath) || !File.Exists(run.AuditPath))
@@ -1391,14 +1391,14 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunLife
             {
                 lastStateJson = stateJson;
                 lastHeartbeat = DateTime.UtcNow;
-                if (current.Status != "running")
+                if (current.Status != RunConstants.StatusRunning)
                 {
                     var terminalEvent = current.Status switch
                     {
-                        "cancelled" => "cancelled",
-                        "failed" => "failed",
-                        "completed_with_errors" => "completed_with_errors",
-                        _ => "completed"
+                        RunConstants.StatusCancelled => RunConstants.StatusCancelled,
+                        RunConstants.StatusFailed => RunConstants.StatusFailed,
+                        RunConstants.StatusCompletedWithErrors => RunConstants.StatusCompletedWithErrors,
+                        _ => RunConstants.StatusCompleted
                     };
                     await WriteSseEvent(writer, encoding, terminalEvent, new { run = current.ToDto(), result = current.Result });
                     break;

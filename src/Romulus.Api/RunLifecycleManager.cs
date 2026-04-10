@@ -70,7 +70,7 @@ public sealed class RunLifecycleManager
             if (_activeRunId is not null)
             {
                 var activeRun = Get(_activeRunId);
-                if (activeRun is null || activeRun.Status != ApiRunStatus.Running)
+                if (activeRun is null || activeRun.Status != RunConstants.StatusRunning)
                 {
                     // Stale active marker from a run that already completed.
                     // This closes a race where status flips before finally clears _activeRunId.
@@ -104,7 +104,7 @@ public sealed class RunLifecycleManager
             var record = new RunRecord
             {
                 RunId = runId,
-                Status = ApiRunStatus.Running,
+                Status = RunConstants.StatusRunning,
                 Mode = mode,
                 WorkflowScenarioId = string.IsNullOrWhiteSpace(request.WorkflowScenarioId) ? null : request.WorkflowScenarioId.Trim(),
                 ProfileId = string.IsNullOrWhiteSpace(request.ProfileId) ? null : request.ProfileId.Trim(),
@@ -173,7 +173,7 @@ public sealed class RunLifecycleManager
         if (!_runs.TryGetValue(runId, out var run))
             return new RunCancelResult(RunCancelDisposition.NotFound, null);
 
-        if (run.Status == ApiRunStatus.Running)
+        if (run.Status == RunConstants.StatusRunning)
         {
             run.CancellationRequested = true;
             run.CancelledAtUtc = DateTime.UtcNow;
@@ -197,7 +197,7 @@ public sealed class RunLifecycleManager
         if (!_runs.TryGetValue(runId, out var run))
             return new RunWaitResult(RunWaitDisposition.NotFound, null);
 
-        if (run.Status != ApiRunStatus.Running && run.CompletedUtc is not null)
+        if (run.Status != RunConstants.StatusRunning && run.CompletedUtc is not null)
             return new RunWaitResult(RunWaitDisposition.Completed, run);
 
         try
@@ -217,7 +217,7 @@ public sealed class RunLifecycleManager
         }
 
         var completed = Get(runId) ?? run;
-        if (completed.Status != ApiRunStatus.Running && completed.CompletedUtc is not null)
+        if (completed.Status != RunConstants.StatusRunning && completed.CompletedUtc is not null)
             return new RunWaitResult(RunWaitDisposition.Completed, completed);
 
         // Defensive fallback: completion is signaled after final state update.
@@ -290,16 +290,16 @@ public sealed class RunLifecycleManager
             run.Result = outcome.Result;
             run.ProgressPercent = 100;
             // SEC: If run completed despite cancellation request, clear misleading CancelledAtUtc
-            if (run.Status is ApiRunStatus.Completed or ApiRunStatus.CompletedWithErrors && run.CancelledAtUtc is not null)
+            if (run.Status is RunConstants.StatusCompleted or RunConstants.StatusCompletedWithErrors && run.CancelledAtUtc is not null)
                 run.CancelledAtUtc = null;
         }
         catch (OperationCanceledException)
         {
             var elapsedMs = (long)Math.Max(0, (DateTime.UtcNow - run.StartedUtc).TotalMilliseconds);
-            run.Status = ApiRunStatus.Cancelled;
+            run.Status = RunConstants.StatusCancelled;
             run.Result = new ApiRunResult
             {
-                OrchestratorStatus = ApiRunStatus.Cancelled,
+                OrchestratorStatus = RunConstants.StatusCancelled,
                 ExitCode = 2,
                 DurationMs = elapsedMs
             };
@@ -307,12 +307,12 @@ public sealed class RunLifecycleManager
         }
         catch (Exception ex)
         {
-            run.Status = ApiRunStatus.Failed;
+            run.Status = RunConstants.StatusFailed;
             // SEC: Do not leak exception details to clients — log internally, return generic message
             SafeLog($"[ERROR] Run {run.RunId} failed: {ex}");
             run.Result = new ApiRunResult
             {
-                OrchestratorStatus = ApiRunStatus.Failed,
+                OrchestratorStatus = RunConstants.StatusFailed,
                 ExitCode = 1,
                 Error = new OperationError("RUN-INTERNAL-ERROR", "An internal error occurred during execution.", ErrorKind.Critical, "API")
             };
@@ -342,7 +342,7 @@ public sealed class RunLifecycleManager
     {
         if (_runs.Count <= MaxRunHistory) return;
         var oldest = _runs.Values
-            .Where(r => r.Status != ApiRunStatus.Running)
+            .Where(r => r.Status != RunConstants.StatusRunning)
             .OrderBy(r => r.StartedUtc)
             .Take(_runs.Count - MaxRunHistory)
             .ToList();

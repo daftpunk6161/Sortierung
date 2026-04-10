@@ -63,6 +63,12 @@ public static class RunConstants
 
     // ── Run Status constants (match RunOutcome.ToStatusString()) ─────
 
+    /// <summary>Run is currently executing.</summary>
+    public const string StatusRunning = "running";
+
+    /// <summary>Run completed successfully (API lifecycle status).</summary>
+    public const string StatusCompleted = "completed";
+
     /// <summary>Run completed successfully.</summary>
     public const string StatusOk = "ok";
 
@@ -77,6 +83,18 @@ public static class RunConstants
 
     /// <summary>Run failed with fatal error.</summary>
     public const string StatusFailed = "failed";
+
+    /// <summary>
+    /// Canonical sort-decision names used across enrichment, sorting, and projections.
+    /// </summary>
+    public static class SortDecisions
+    {
+        public const string Sort = "Sort";
+        public const string Review = "Review";
+        public const string Blocked = "Blocked";
+        public const string Unknown = "Unknown";
+        public const string DatVerified = "DatVerified";
+    }
 
     /// <summary>
     /// Canonical audit action names used in CSV rows and rollback parsing.

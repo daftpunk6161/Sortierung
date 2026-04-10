@@ -13,11 +13,11 @@ public static class ErrorSummaryProjection
     private static readonly HashSet<string> KnownStatuses = new(StringComparer.OrdinalIgnoreCase)
     {
         RunConstants.StatusOk,
+        RunConstants.StatusCompleted,
         RunConstants.StatusCompletedWithErrors,
         RunConstants.StatusBlocked,
         RunConstants.StatusCancelled,
         RunConstants.StatusFailed,
-        "completed", // OperationResult.StatusCompleted — used by some flows
         "" // empty/null treated as ok
     };
 
@@ -42,7 +42,7 @@ public static class ErrorSummaryProjection
             if (!string.IsNullOrEmpty(result.Status) && !KnownStatuses.Contains(result.Status))
                 issues.Insert(0, new UiError("RUN-UNKNOWN", $"Unbekannter Run-Status: {result.Status}", UiErrorSeverity.Warning));
 
-            if (result.Status == "blocked")
+            if (result.Status == RunConstants.StatusBlocked)
                 issues.Insert(0, new UiError("RUN-BLOCKED", $"Preflight: {result.Preflight?.Reason}", UiErrorSeverity.Blocked));
 
             if (result.MoveResult is { FailCount: > 0 } mv)

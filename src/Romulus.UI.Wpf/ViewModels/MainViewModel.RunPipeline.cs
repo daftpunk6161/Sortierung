@@ -1177,7 +1177,7 @@ public sealed partial class MainViewModel
 
             LastAuditPath = auditPath;
             var runWasCancelled = ct.IsCancellationRequested ||
-                                  string.Equals(svcResult.Result.Status, "cancelled", StringComparison.OrdinalIgnoreCase);
+                                  string.Equals(svcResult.Result.Status, RunConstants.StatusCancelled, StringComparison.OrdinalIgnoreCase);
 
             if (runWasCancelled)
             {
@@ -1349,7 +1349,7 @@ public sealed partial class MainViewModel
         // A-21: Load DatAudit results into DatAuditViewModel
         DatAudit.LoadResult(result.DatAuditResult);
 
-        if (result.Status == "blocked")
+        if (result.Status == RunConstants.StatusBlocked)
         {
             AddLog(_loc.Format("Log.PreflightBlocked", result.Preflight?.Reason ?? ""), "ERROR");
         }

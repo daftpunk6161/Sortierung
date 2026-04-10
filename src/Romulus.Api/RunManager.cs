@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Romulus.Contracts;
 using Romulus.Contracts.Errors;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
@@ -134,12 +135,12 @@ public sealed class RunManager
         var projection = RunProjectionFactory.Create(result);
         var status = RunOutcomeExtensions.ParseRunOutcome(result.Status) switch
         {
-            RunOutcome.Ok => ApiRunStatus.Completed,
-            RunOutcome.CompletedWithErrors => ApiRunStatus.CompletedWithErrors,
-            RunOutcome.Cancelled => ApiRunStatus.Cancelled,
-            RunOutcome.Blocked => ApiRunStatus.Blocked,
-            RunOutcome.Failed => ApiRunStatus.Failed,
-            _ => result.ExitCode == 0 ? ApiRunStatus.Completed : ApiRunStatus.Failed
+            RunOutcome.Ok => RunConstants.StatusCompleted,
+            RunOutcome.CompletedWithErrors => RunConstants.StatusCompletedWithErrors,
+            RunOutcome.Cancelled => RunConstants.StatusCancelled,
+            RunOutcome.Blocked => RunConstants.StatusBlocked,
+            RunOutcome.Failed => RunConstants.StatusFailed,
+            _ => result.ExitCode == 0 ? RunConstants.StatusCompleted : RunConstants.StatusFailed
         };
 
         return new RunExecutionOutcome(
@@ -260,7 +261,7 @@ public sealed class RunRequest
 public sealed class RunRecord
 {
     private readonly object _lock = new();
-    private string _status = ApiRunStatus.Running;
+    private string _status = RunConstants.StatusRunning;
     private DateTime? _completedUtc;
     private ApiRunResult? _result;
     private string? _progressMessage;
@@ -374,7 +375,7 @@ public sealed class RunRecord
     public string RecoveryModel { get; init; } = "audit-rollback-only";
     public string RestartRecovery { get; init; } = "not-persisted";
     public bool ResumeSupported => false;
-    public bool CanRetry => Status != "running";
+    public bool CanRetry => Status != RunConstants.StatusRunning;
     public bool CanRollback
     {
         get { lock (_lock) return _canRollback; }

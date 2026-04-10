@@ -147,8 +147,8 @@ public sealed class ConsoleSorter
                     && !string.Equals(consoleKey, "UNKNOWN", StringComparison.OrdinalIgnoreCase)
                     && RxValidConsoleKey.IsMatch(consoleKey);
 
-                var isBlockedDecision = string.Equals(sortDecision, "Blocked", StringComparison.OrdinalIgnoreCase);
-                var isUnknownDecision = string.Equals(sortDecision, "Unknown", StringComparison.OrdinalIgnoreCase);
+                var isBlockedDecision = string.Equals(sortDecision, RunConstants.SortDecisions.Blocked, StringComparison.OrdinalIgnoreCase);
+                var isUnknownDecision = string.Equals(sortDecision, RunConstants.SortDecisions.Unknown, StringComparison.OrdinalIgnoreCase);
 
                 // Blocked/Unknown routing
                 if (isBlockedDecision || isUnknownDecision)
@@ -268,7 +268,7 @@ public sealed class ConsoleSorter
                 }
 
                 // Review files → _REVIEW/{ConsoleKey}/
-                if (string.Equals(sortDecision, "Review", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(sortDecision, RunConstants.SortDecisions.Review, StringComparison.OrdinalIgnoreCase))
                 {
                     var reviewConsoleKey = hasKnownConsole ? consoleKey : "UNKNOWN";
                     var reviewReason = ToSafeReasonSegment(sortReason, "review");
