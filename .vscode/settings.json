@@ -44,5 +44,8 @@
     "chat.useClaudeHooks": true,
     "chat.viewProgressBadge.enabled": true,
     "markdown.validate.enabled": false,
-    "codium.codeCompletion.enable": true
+    "codium.codeCompletion.enable": true,
+    "github-actions.workflows.pinned.workflows": [
+        "dynamic/copilot-pull-request-reviewer/copilot-pull-request-reviewer"
+    ]
 }

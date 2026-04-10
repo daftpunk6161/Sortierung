@@ -801,7 +801,8 @@ public sealed class HardRegressionInvariantTests : IDisposable
         }, "DryRun");
 
         Assert.NotNull(run);
-        await manager.WaitForCompletion(run!.RunId, timeout: TimeSpan.FromSeconds(10));
+        var waitResult = await manager.WaitForCompletion(run!.RunId, timeout: TimeSpan.FromSeconds(30));
+        Assert.Equal(RomCleanup.Api.RunWaitDisposition.Completed, waitResult.Disposition);
         var completed = manager.Get(run.RunId);
 
         Assert.NotNull(completed?.Result);

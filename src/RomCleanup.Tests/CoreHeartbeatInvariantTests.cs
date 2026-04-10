@@ -535,7 +535,10 @@ public class CoreHeartbeatInvariantTests : IDisposable
             audit,
             onProgress: msg =>
             {
-                if (msg.StartsWith("[Scan] Abgeschlossen", StringComparison.OrdinalIgnoreCase))
+                // Match scan-completion message across all locales (de: Abgeschlossen, en: Completed, fr: Termine)
+                if (msg.StartsWith("[Scan] Abgeschlossen", StringComparison.OrdinalIgnoreCase) ||
+                    msg.StartsWith("[Scan] Completed", StringComparison.OrdinalIgnoreCase) ||
+                    msg.StartsWith("[Scan] Termine", StringComparison.OrdinalIgnoreCase))
                     cts.Cancel();
             });
 
