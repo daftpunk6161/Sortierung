@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://romcleanup.local/ground-truth.schema.json",
-  "title": "RomCleanup Ground Truth Entry",
+  "$id": "https://romulus.local/ground-truth.schema.json",
+  "title": "Romulus Ground Truth Entry",
   "description": "Schema for a single JSONL ground-truth entry. Each line in a .jsonl file must validate against this schema.",
   "type": "object",
   "required": ["id", "source", "tags", "difficulty", "expected"],

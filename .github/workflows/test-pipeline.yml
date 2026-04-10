@@ -40,18 +40,18 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore
-        run: dotnet restore src/RomCleanup.sln
+        run: dotnet restore src/Romulus.sln
 
       - name: Build
-        run: dotnet build src/RomCleanup.sln --no-restore --configuration Release
+        run: dotnet build src/Romulus.sln --no-restore --configuration Release
 
       - name: Journey Matrix Gate
         run: |
-          dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --no-build --configuration Release --filter "FullyQualifiedName~ApiIntegrationTests|FullyQualifiedName~CliProgramTests|FullyQualifiedName~GuiViewModelTests|FullyQualifiedName~WpfNewTests|FullyQualifiedName~FeatureCommandServiceTests|FullyQualifiedName~RunServiceAndSettingsTests|FullyQualifiedName~RunManagerTests|FullyQualifiedName~RunManagerAdvancedTests|FullyQualifiedName~AuditCsvStoreTests|FullyQualifiedName~AuditSigningServiceTests|FullyQualifiedName~SettingsLoaderTests"
+          dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --configuration Release --filter "FullyQualifiedName~ApiIntegrationTests|FullyQualifiedName~CliProgramTests|FullyQualifiedName~GuiViewModelTests|FullyQualifiedName~WpfNewTests|FullyQualifiedName~FeatureCommandServiceTests|FullyQualifiedName~RunServiceAndSettingsTests|FullyQualifiedName~RunManagerTests|FullyQualifiedName~RunManagerAdvancedTests|FullyQualifiedName~AuditCsvStoreTests|FullyQualifiedName~AuditSigningServiceTests|FullyQualifiedName~SettingsLoaderTests"
 
       - name: Unit + Coverage Gate
         run: |
-          dotnet test src/RomCleanup.sln --no-build --configuration Release --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+          dotnet test src/Romulus.sln --no-build --configuration Release --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
           # Install and run coverage threshold check
           dotnet tool install --global dotnet-reportgenerator-globaltool 2>$null
           $coverageFiles = Get-ChildItem -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
@@ -70,8 +70,8 @@ jobs:
         with:
           name: test-results
           path: |
-            src/RomCleanup.Tests/TestResults/**/*.trx
-            src/RomCleanup.Tests/TestResults/**/coverage.cobertura.xml
+            src/Romulus.Tests/TestResults/**/*.trx
+            src/Romulus.Tests/TestResults/**/coverage.cobertura.xml
 
   governance:
     runs-on: windows-latest
@@ -87,19 +87,19 @@ jobs:
           dotnet-quality: 'ga'
 
       - name: Build (warnings as errors)
-        run: dotnet build src/RomCleanup.sln --configuration Release /p:TreatWarningsAsErrors=true
+        run: dotnet build src/Romulus.sln --configuration Release /p:TreatWarningsAsErrors=true
 
       - name: Verify dependency direction
         shell: pwsh
         run: |
           # Core darf nicht Infrastructure oder Entry Points referenzieren
-          $coreProj = Get-Content src/RomCleanup.Core/RomCleanup.Core.csproj -Raw
-          if ($coreProj -match 'RomCleanup\.Infrastructure|RomCleanup\.CLI|RomCleanup\.Api|RomCleanup\.UI\.Wpf') {
+          $coreProj = Get-Content src/Romulus.Core/Romulus.Core.csproj -Raw
+          if ($coreProj -match 'Romulus\.Infrastructure|Romulus\.CLI|Romulus\.Api|Romulus\.UI\.Wpf') {
             throw 'Core project must not reference Infrastructure or Entry Points'
           }
           # Contracts darf nichts anderes referenzieren
-          $contractsProj = Get-Content src/RomCleanup.Contracts/RomCleanup.Contracts.csproj -Raw
-          if ($contractsProj -match 'RomCleanup\.Core|RomCleanup\.Infrastructure|RomCleanup\.CLI|RomCleanup\.Api|RomCleanup\.UI\.Wpf') {
+          $contractsProj = Get-Content src/Romulus.Contracts/Romulus.Contracts.csproj -Raw
+          if ($contractsProj -match 'Romulus\.Core|Romulus\.Infrastructure|Romulus\.CLI|Romulus\.Api|Romulus\.UI\.Wpf') {
             throw 'Contracts project must not reference any other project'
           }
           Write-Host 'Dependency direction OK'
@@ -108,13 +108,13 @@ jobs:
         shell: pwsh
         run: |
           # Core .cs files must not use Infrastructure/CLI/Api/UI namespaces
-          $violations = Get-ChildItem -Recurse src/RomCleanup.Core -Filter *.cs |
-            Select-String -Pattern 'using\s+RomCleanup\.(Infrastructure|CLI|Api|UI)' |
+          $violations = Get-ChildItem -Recurse src/Romulus.Core -Filter *.cs |
+            Select-String -Pattern 'using\s+Romulus\.(Infrastructure|CLI|Api|UI)' |
             ForEach-Object { "$($_.Path):$($_.LineNumber): $($_.Line.Trim())" }
           if ($violations) { $violations; throw "Core has disallowed using-statements" }
           # Contracts .cs files must not use any other project namespace
-          $violations = Get-ChildItem -Recurse src/RomCleanup.Contracts -Filter *.cs |
-            Select-String -Pattern 'using\s+RomCleanup\.(Core|Infrastructure|CLI|Api|UI)' |
+          $violations = Get-ChildItem -Recurse src/Romulus.Contracts -Filter *.cs |
+            Select-String -Pattern 'using\s+Romulus\.(Core|Infrastructure|CLI|Api|UI)' |
             ForEach-Object { "$($_.Path):$($_.LineNumber): $($_.Line.Trim())" }
           if ($violations) { $violations; throw "Contracts has disallowed using-statements" }
           Write-Host 'Using-statement boundaries OK'
@@ -134,19 +134,19 @@ jobs:
           dotnet-quality: 'ga'
 
       - name: Restore & Build
-        run: dotnet build src/RomCleanup.sln --configuration Release
+        run: dotnet build src/Romulus.sln --configuration Release
 
       - name: WPF Accessibility & Automation Tests
         shell: pwsh
         run: |
-          dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --no-build --configuration Release --filter "FullyQualifiedName~Wpf|FullyQualifiedName~Theme|FullyQualifiedName~Accessibility" --logger "trx;LogFileName=wpf-test-results.trx"
+          dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --configuration Release --filter "FullyQualifiedName~Wpf|FullyQualifiedName~Theme|FullyQualifiedName~Accessibility" --logger "trx;LogFileName=wpf-test-results.trx"
 
       - name: Upload WPF test results
         if: always()
         uses: actions/upload-artifact@v6
         with:
           name: wpf-test-results
-          path: src/RomCleanup.Tests/TestResults/**/*.trx
+          path: src/Romulus.Tests/TestResults/**/*.trx
 
   sbom:
     runs-on: windows-latest
@@ -167,8 +167,8 @@ jobs:
         shell: pwsh
         run: |
           dotnet tool install --global Microsoft.Sbom.DotNetTool 2>$null
-          dotnet build src/RomCleanup.sln --configuration Release
-          sbom-tool generate -b src -bc src -pn RomCleanup -pv "${{ github.ref_name }}" -ps RomCleanupTeam -nsb https://github.com/${{ github.repository }}
+          dotnet build src/Romulus.sln --configuration Release
+          sbom-tool generate -b src -bc src -pn Romulus -pv "${{ github.ref_name }}" -ps RomulusTeam -nsb https://github.com/${{ github.repository }}
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v6
@@ -196,7 +196,7 @@ jobs:
         shell: pwsh
         run: |
           dotnet tool install --global dotnet-stryker 2>$null
-          dotnet stryker --project src/RomCleanup.Core/RomCleanup.Core.csproj --test-project src/RomCleanup.Tests/RomCleanup.Tests.csproj --reporter "html" --reporter "json" --threshold-high 80 --threshold-low 60 --threshold-break 40
+          dotnet stryker --project src/Romulus.Core/Romulus.Core.csproj --test-project src/Romulus.Tests/Romulus.Tests.csproj --reporter "html" --reporter "json" --threshold-high 80 --threshold-low 60 --threshold-break 40
 
       - name: Upload Mutation Report
         if: always()

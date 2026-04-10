@@ -236,7 +236,7 @@ public sealed record DatPhaseResult(
 Channel-neutrales Aggregat mit 44 numerischen Feldern. Wird von `RunProjectionFactory.Create(RunResult)` erzeugt. **Einzige Quelle** für KPI-Werte in allen Entry Points.
 
 ##### `DashboardProjection` → **Verschieben nach Infrastructure**
-Aktuell in `RomCleanup.UI.Wpf/Models/`. Muss nach `RomCleanup.Infrastructure/Orchestration/` oder als Contracts-Model, weil:
+Aktuell in `Romulus.UI.Wpf/Models/`. Muss nach `Romulus.Infrastructure/Orchestration/` oder als Contracts-Model, weil:
 - API-Dashboard (`DashboardDataBuilder`) baut parallel die gleichen Zahlen
 - CLI-Output braucht dieselben formatierten Werte
 - Architekturverletzung: Entry Point hängt an Infrastructure-Typen
@@ -594,7 +594,7 @@ public enum RunMode { DryRun, Execute, ConvertOnly }
 **Risiko:** Gering (nur Namespace-Änderung + using-Updates)
 
 1. `DashboardProjection.cs` nach `Infrastructure/Orchestration/` verschieben
-2. Namespace auf `RomCleanup.Infrastructure.Orchestration` ändern
+2. Namespace auf `Romulus.Infrastructure.Orchestration` ändern
 3. Using-Statements in WPF updaten
 4. API-`DashboardDataBuilder` kann jetzt `DashboardProjection.From()` nutzen statt eigene Berechnung
 
@@ -648,7 +648,7 @@ public enum RunMode { DryRun, Execute, ConvertOnly }
 **Risiko:** Gering
 
 1. `Microsoft.Extensions.DependencyInjection` hinzufügen
-2. `ServiceCollection` + `AddRomCleanupCore()` in CLI-Main aufrufen
+2. `ServiceCollection` + `AddRomulusCore()` in CLI-Main aufrufen
 3. Manuelle Objekt-Erzeugung eliminieren
 4. Test-Isolation verbessern
 

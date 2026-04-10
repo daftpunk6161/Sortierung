@@ -6,7 +6,7 @@ Ziel: Einen kontrollierten Produktpfad fuer den Vergleich und das sichere Zusamm
 
 ## Letztes Update (2026-04-01)
 
-- `R5-T01` ist abgeschlossen: kanalneutrale Compare-/Merge-Contracts liegen jetzt in `RomCleanup.Contracts`.
+- `R5-T01` ist abgeschlossen: kanalneutrale Compare-/Merge-Contracts liegen jetzt in `Romulus.Contracts`.
 - Der Modellraum baut direkt auf `CollectionIndexEntry` auf statt auf einem zweiten Compare-Candidate-Modell.
 - Diff- und Merge-Summaries sind zentral ableitbar, damit GUI/CLI/API spaeter nicht jeweils eigene Zaehlwege bauen.
 - `R5-T02` ist abgeschlossen: `CollectionCompareService` materialisiert explizite Quellen index-first mit Root-/Fingerprint-Guards und speist damit bestehende Analysis-/Export-Pfade.
@@ -30,8 +30,8 @@ Ziel: Das gemeinsame Fachmodell definieren, bevor GUI/CLI/API eigene Sichtmodell
 
 Betroffene Bereiche:
 - `docs/epics/C8-collection-diff-merge.md`
-- `src/RomCleanup.Contracts`
-- `src/RomCleanup.Contracts/Models`
+- `src/Romulus.Contracts`
+- `src/Romulus.Contracts/Models`
 
 Akzeptanz:
 - Compare- und Merge-Modelle sind versionierbar und kanalneutral
@@ -46,9 +46,9 @@ Abhaengigkeiten:
 Ziel: Den Compare-Pfad aus derselben Sammlungswahrheit speisen wie Analyse, Export und Completeness.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Index`
-- `src/RomCleanup.Infrastructure/Analysis`
-- `src/RomCleanup.Infrastructure/Orchestration`
+- `src/Romulus.Infrastructure/Index`
+- `src/Romulus.Infrastructure/Analysis`
+- `src/Romulus.Infrastructure/Orchestration`
 
 Akzeptanz:
 - Compare liest index-first und nur kontrolliert fallback-basiert
@@ -63,9 +63,9 @@ Abhaengigkeiten:
 Ziel: Unterschiede fachlich korrekt klassifizieren, statt nur Dateilisten zu vergleichen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Core`
-- `src/RomCleanup.Infrastructure/Analysis`
-- `src/RomCleanup.Tests`
+- `src/Romulus.Core`
+- `src/Romulus.Infrastructure/Analysis`
+- `src/Romulus.Tests`
 
 Akzeptanz:
 - `only-in-left/right`, `identical`, `different`, `preferred`, `review-required` sind abgedeckt
@@ -80,9 +80,9 @@ Abhaengigkeiten:
 Ziel: Aus dem Diff einen sicheren, nachvollziehbaren Merge-Plan ableiten.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Sorting`
-- `src/RomCleanup.Infrastructure/Orchestration`
-- `src/RomCleanup.Infrastructure/Safety`
+- `src/Romulus.Infrastructure/Sorting`
+- `src/Romulus.Infrastructure/Orchestration`
+- `src/Romulus.Infrastructure/Safety`
 
 Akzeptanz:
 - kein stilles Ueberschreiben
@@ -97,9 +97,9 @@ Abhaengigkeiten:
 Ziel: Den Merge nicht als Sonderweg, sondern ueber denselben Schutzvertrag wie andere mutierende Flows ausfuehren.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Audit`
-- `src/RomCleanup.Infrastructure/FileSystem`
-- `src/RomCleanup.Infrastructure/Orchestration`
+- `src/Romulus.Infrastructure/Audit`
+- `src/Romulus.Infrastructure/FileSystem`
+- `src/Romulus.Infrastructure/Orchestration`
 
 Akzeptanz:
 - Merge-Apply erzeugt Audit-Trail und Rollback-Daten
@@ -114,9 +114,9 @@ Abhaengigkeiten:
 Ziel: Die neue Funktion in allen Kanaelen ueber dieselben Modelle sichtbar machen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.UI.Wpf`
-- `src/RomCleanup.CLI`
-- `src/RomCleanup.Api`
+- `src/Romulus.UI.Wpf`
+- `src/Romulus.CLI`
+- `src/Romulus.Api`
 
 Akzeptanz:
 - GUI, CLI und API zeigen dieselben Diff-/Merge-Zahlen
@@ -132,9 +132,9 @@ Abhaengigkeiten:
 Ziel: Diff & Merge fuer reale NAS-/Backup-Sammlungen belastbar machen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Index`
-- `src/RomCleanup.Api`
-- `src/RomCleanup.Tests`
+- `src/Romulus.Infrastructure/Index`
+- `src/Romulus.Api`
+- `src/Romulus.Tests`
 
 Akzeptanz:
 - Compare-/Merge-Abfragen sind paginierbar
@@ -149,7 +149,7 @@ Abhaengigkeiten:
 Ziel: Den neuen Produktpfad release-faehig absichern.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Tests`
+- `src/Romulus.Tests`
 - `docs/architecture/TEST_STRATEGY.md`
 
 Akzeptanz:

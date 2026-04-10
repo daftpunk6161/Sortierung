@@ -739,7 +739,7 @@
   "Tool.SortTemplates.Desc": "Sorting templates",
   "Tool.PipelineEngine": "Pipeline Status",
   "Tool.PipelineEngine.Desc": "Show pipeline results",
-  "Tray.Minimized": "RomCleanup is running in the background.",
+  "Tray.Minimized": "Romulus is running in the background.",
   "Tray.RunProgress": "Run active: {0}",
   "Tray.RunComplete": "Run completed – {0} kept, {1} moved, {2} junk.",
   "Tool.RulePackSharing": "Rule Packs",

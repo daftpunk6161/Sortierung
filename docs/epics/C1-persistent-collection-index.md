@@ -50,7 +50,7 @@ HashCacheEntry {
 ### Interface
 
 ```csharp
-// In RomCleanup.Contracts
+// In Romulus.Contracts
 public interface ICollectionIndex
 {
     Task<CollectionEntry?> GetByPath(string path);
@@ -66,8 +66,8 @@ public interface ICollectionIndex
 
 ### Implementierung
 
-- `src/RomCleanup.Infrastructure/Index/LiteDbCollectionIndex.cs`
-- DB-Pfad: `%APPDATA%\RomCleanupRegionDedupe\collection.db`
+- `src/Romulus.Infrastructure/Index/LiteDbCollectionIndex.cs`
+- DB-Pfad: `%APPDATA%\Romulus\collection.db`
 - Automatisches Schema-Migration bei Version-Upgrades
 - Concurrency: LiteDB supports single-writer/multiple-reader
 

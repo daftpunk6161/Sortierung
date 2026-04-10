@@ -1,0 +1,168 @@
+<UserControl x:Class="Romulus.UI.Wpf.Views.ConfigRegionsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+  <!-- E2: Region Priority Ranker — ordered list with up/down, toggle, presets -->
+  <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
+    <StackPanel>
+
+      <!-- Header + Counter -->
+      <DockPanel Margin="0,0,0,12">
+        <TextBlock Text="Region-Priorität" Style="{StaticResource SectionHeader}" VerticalAlignment="Center"/>
+        <Border DockPanel.Dock="Right" HorizontalAlignment="Right" CornerRadius="10"
+                Background="{DynamicResource BrushAccentCyan}" Padding="10,3" VerticalAlignment="Center">
+          <TextBlock Text="{Binding EnabledRegionCount, StringFormat='{}{0} aktiv'}"
+                     FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+        </Border>
+      </DockPanel>
+
+      <TextBlock Text="Die Reihenfolge bestimmt die Priorität bei der Deduplizierung. Region 1 hat höchste Priorität."
+                 Style="{StaticResource CaptionText}" Margin="0,0,0,12" TextWrapping="Wrap"/>
+
+      <!-- Quick Presets -->
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <StackPanel>
+          <TextBlock Text="Schnellauswahl" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" Margin="{DynamicResource SpaceBottomXS}"/>
+          <WrapPanel>
+            <Button Content="🇪🇺 EU-Fokus" Margin="0,0,8,4" Padding="12,6" Command="{Binding RegionPresetEuFocusCommand}"
+                    ToolTip="EU + DE/FR/IT/ES/NL/SE/SCAN + World" AutomationProperties.Name="Preset EU-Fokus"/>
+            <Button Content="🇺🇸 US-Fokus" Margin="0,0,8,4" Padding="12,6" Command="{Binding RegionPresetUsFocusCommand}"
+                    ToolTip="US + World + EU" AutomationProperties.Name="Preset US-Fokus"/>
+            <Button Content="🌍 Multi-Region" Margin="0,0,8,4" Padding="12,6" Command="{Binding RegionPresetMultiRegionCommand}"
+                    ToolTip="EU + US + JP + World" AutomationProperties.Name="Preset Multi-Region"/>
+            <Button Content="Alle aktivieren" Margin="0,0,8,4" Padding="12,6" Command="{Binding RegionPresetAllCommand}"
+                    ToolTip="Alle 16 Regionen aktivieren" AutomationProperties.Name="Alle Regionen aktivieren"/>
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Region List -->
+      <Border Style="{StaticResource SectionCard}" Margin="{DynamicResource SpaceBottomMD}">
+        <StackPanel>
+          <TextBlock Text="Aktive Regionen (Reihenfolge = Priorität)" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrushTextMuted}" Margin="{DynamicResource SpaceBottomSM}"/>
+
+          <ItemsControl ItemsSource="{Binding RegionPriorities}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Margin="0,2" Padding="8,6" CornerRadius="6"
+                        BorderThickness="1" BorderBrush="{DynamicResource BrushBorder}">
+                  <Border.Style>
+                    <Style TargetType="Border">
+                      <Setter Property="Background" Value="{DynamicResource BrushSurface}"/>
+                      <Setter Property="Opacity" Value="1"/>
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                          <Setter Property="Opacity" Value="0.5"/>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="32"/>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Position Badge -->
+                    <Border Grid.Column="0" Width="24" Height="24" CornerRadius="12"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                      <Border.Style>
+                        <Style TargetType="Border">
+                          <Setter Property="Background" Value="{DynamicResource BrushAccentCyan}"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                              <Setter Property="Background" Value="{DynamicResource BrushTextMuted}"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Border.Style>
+                      <TextBlock Text="{Binding Position}" FontSize="11" FontWeight="Bold"
+                                 Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                <Setter Property="Text" Value="–"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                    </Border>
+
+                    <!-- Region Name -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0">
+                      <TextBlock FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource BrushTextPrimary}">
+                        <Run Text="{Binding Code, Mode=OneWay}"/>
+                        <Run Text=" — " Foreground="{DynamicResource BrushTextMuted}"/>
+                        <Run Text="{Binding DisplayName, Mode=OneWay}" Foreground="{DynamicResource BrushTextMuted}"/>
+                      </TextBlock>
+                      <TextBlock Text="{Binding Group, Mode=OneWay}" Style="{StaticResource CaptionText}" FontSize="10"/>
+                    </StackPanel>
+
+                    <!-- Up/Down Buttons -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
+                      <Button Content="▲" Padding="6,2" FontSize="10" Margin="0,0,2,0"
+                              Command="{Binding DataContext.MoveRegionUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}"
+                              ToolTip="Priorität erhöhen"
+                              AutomationProperties.Name="{Binding Code, StringFormat='Region {0} nach oben'}">
+                        <Button.Style>
+                          <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </Button.Style>
+                      </Button>
+                      <Button Content="▼" Padding="6,2" FontSize="10"
+                              Command="{Binding DataContext.MoveRegionDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}"
+                              ToolTip="Priorität senken"
+                              AutomationProperties.Name="{Binding Code, StringFormat='Region {0} nach unten'}">
+                        <Button.Style>
+                          <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </Button.Style>
+                      </Button>
+                    </StackPanel>
+
+                    <!-- Toggle Button -->
+                    <Button Grid.Column="3" Padding="8,4" Margin="4,0,0,0" VerticalAlignment="Center"
+                            Command="{Binding DataContext.ToggleRegionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding}"
+                            AutomationProperties.Name="{Binding Code, StringFormat='Region {0} umschalten'}">
+                      <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                          <Setter Property="Content" Value="Deaktivieren"/>
+                          <Setter Property="Foreground" Value="{DynamicResource BrushDanger}"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                              <Setter Property="Content" Value="Aktivieren"/>
+                              <Setter Property="Foreground" Value="{DynamicResource BrushSuccess}"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Button.Style>
+                    </Button>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

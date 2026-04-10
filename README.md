@@ -47,7 +47,7 @@
 ### GUI (WPF)
 
 ```bash
-dotnet run --project src/RomCleanup.UI.Wpf
+dotnet run --project src/Romulus.UI.Wpf
 ```
 
 1. **ROM-Ordner hinzufügen** — Drag & Drop oder Button.
@@ -59,10 +59,10 @@ dotnet run --project src/RomCleanup.UI.Wpf
 
 ```bash
 # DryRun — nur Vorschau
-dotnet run --project src/RomCleanup.CLI -- --roots "D:\Roms" --mode DryRun
+dotnet run --project src/Romulus.CLI -- --roots "D:\Roms" --mode DryRun
 
 # Move — Dateien verschieben
-dotnet run --project src/RomCleanup.CLI -- --roots "D:\Roms" --mode Move --regions EU,US
+dotnet run --project src/Romulus.CLI -- --roots "D:\Roms" --mode Move --regions EU,US
 ```
 
 **Exit Codes:** `0` = Erfolg, `1` = Fehler, `2` = Abgebrochen, `3` = Preflight fehlgeschlagen.
@@ -70,7 +70,7 @@ dotnet run --project src/RomCleanup.CLI -- --roots "D:\Roms" --mode Move --regio
 ### REST API
 
 ```bash
-dotnet run --project src/RomCleanup.Api
+dotnet run --project src/Romulus.Api
 ```
 
 API ist auf `127.0.0.1:7878` gebunden. Authentifizierung via `X-Api-Key`-Header (Wert aus Env-Variable `ROM_CLEANUP_API_KEY`).
@@ -112,11 +112,11 @@ curl -X POST http://127.0.0.1:7878/runs \
 
 ```
 src/
-├── RomCleanup.Contracts/        # Port-Interfaces, Models, Error-Contracts
+├── Romulus.Contracts/        # Port-Interfaces, Models, Error-Contracts
 │   ├── Errors/                  #   OperationError, ErrorKind, ErrorClassifier
 │   ├── Models/                  #   RomCandidate, DatIndex, Settings, DTOs
 │   └── Ports/                   #   IFileSystem, IAuditStore, IToolRunner, ...
-├── RomCleanup.Core/             # Pure Domain Logic (keine I/O-Deps)
+├── Romulus.Core/             # Pure Domain Logic (keine I/O-Deps)
 │   ├── Caching/                 #   LruCache<TKey,TValue>
 │   ├── Classification/          #   ConsoleDetector, FileClassifier, ExtensionNormalizer
 │   ├── Deduplication/           #   DeduplicationEngine (Winner-Selection)
@@ -125,7 +125,7 @@ src/
 │   ├── Rules/                   #   RuleEngine
 │   ├── Scoring/                 #   FormatScorer, VersionScorer
 │   └── SetParsing/              #   CueSetParser, GdiSetParser, CcdSetParser, M3uPlaylistParser
-├── RomCleanup.Infrastructure/   # I/O-Adapter & Services
+├── Romulus.Infrastructure/   # I/O-Adapter & Services
 │   ├── Analysis/                #   Collection-/DAT-/Integrity-Analyse
 │   ├── Audit/                   #   AuditCsvStore, AuditSigningService
 │   ├── Configuration/           #   SettingsLoader
@@ -146,14 +146,14 @@ src/
 │   ├── Time/                    #   SystemTimeProvider
 │   ├── Tools/                   #   ToolRunnerAdapter (Hash-Verifizierung)
 │   └── Version/                 #   VersionHelper
-├── RomCleanup.CLI/              # Headless Entry Point
-├── RomCleanup.Api/              # ASP.NET Core Minimal API (REST + SSE)
-├── RomCleanup.UI.Wpf/           # WPF GUI (MVVM, net10.0-windows)
+├── Romulus.CLI/              # Headless Entry Point
+├── Romulus.Api/              # ASP.NET Core Minimal API (REST + SSE)
+├── Romulus.UI.Wpf/           # WPF GUI (MVVM, net10.0-windows)
 │   ├── ViewModels/              #   MainViewModel (INotifyPropertyChanged)
 │   ├── Services/                #   ThemeService, DialogService, SettingsService
 │   ├── Converters/              #   WPF Value Converters
 │   └── Themes/                  #   ResourceDictionary (Dark + Neon Accent)
-└── RomCleanup.Tests/            # xUnit Tests (aktuell 6996 Tests)
+└── Romulus.Tests/            # xUnit Tests (aktuell 6996 Tests)
 
 docs/                            # Permanente Referenzdokumentation
 ├── architecture/                #   Technische Specs, Architektur, API, OpenAPI, Strategien
@@ -183,7 +183,7 @@ Clean Architecture (Ports & Adapters). Abhängigkeiten nur abwärts:
 ```
 ┌────────────────────────────────────────────────────────────┐
 │  Entry Points                                              │
-│  RomCleanup.CLI │ RomCleanup.Api │ RomCleanup.UI.Wpf       │
+│  Romulus.CLI │ Romulus.Api │ Romulus.UI.Wpf       │
 ├────────────────────────────────────────────────────────────┤
 │  Infrastructure (I/O-Adapter)                              │
 │  FileSystem │ Audit │ Dat │ Hashing │ Tools │ Conversion   │
@@ -206,23 +206,23 @@ Clean Architecture (Ports & Adapters). Abhängigkeiten nur abwärts:
 
 ```bash
 # Build
-dotnet build src/RomCleanup.sln
+dotnet build src/Romulus.sln
 
 # Alle Tests (aktuell 6996)
-dotnet test src/RomCleanup.sln
+dotnet test src/Romulus.sln
 
 # Einzelnes Testprojekt
-dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj
+dotnet test src/Romulus.Tests/Romulus.Tests.csproj
 
 # Mit Filter
-dotnet test src/RomCleanup.sln --filter "FullyQualifiedName~GameKey"
+dotnet test src/Romulus.sln --filter "FullyQualifiedName~GameKey"
 ```
 
 ---
 
 ## Konfiguration
 
-Settings: `%APPDATA%\RomCleanupRegionDedupe\settings.json`
+Settings: `%APPDATA%\Romulus\settings.json`
 
 ```jsonc
 {

@@ -143,7 +143,7 @@ public sealed class DatLocalInfo
 }
 ```
 
-Speicherort: `%APPDATA%\RomCleanupRegionDedupe\dat-catalog-state.json`
+Speicherort: `%APPDATA%\Romulus\dat-catalog-state.json`
 
 Begruendung:
 - Getrennt vom Master-Katalog (`dat-catalog.json`), der zum Repo gehoert
@@ -398,16 +398,16 @@ Refresh   → State invalidierten → Voller Rescan
 ## Betroffene Dateien (geplant)
 
 ### Neue Dateien
-- `src/RomCleanup.Contracts/Models/DatCatalogModels.cs`
-- `src/RomCleanup.Infrastructure/Dat/DatCatalogStateService.cs`
-- `src/RomCleanup.UI.Wpf/ViewModels/DatCatalogViewModel.cs`
-- `src/RomCleanup.UI.Wpf/Views/DatCatalogView.xaml` + `.xaml.cs`
+- `src/Romulus.Contracts/Models/DatCatalogModels.cs`
+- `src/Romulus.Infrastructure/Dat/DatCatalogStateService.cs`
+- `src/Romulus.UI.Wpf/ViewModels/DatCatalogViewModel.cs`
+- `src/Romulus.UI.Wpf/Views/DatCatalogView.xaml` + `.xaml.cs`
 
 ### Geaenderte Dateien
-- `src/RomCleanup.Infrastructure/Dat/DatSourceService.cs` (Progress-Support)
-- `src/RomCleanup.UI.Wpf/ViewModels/MainViewModel.cs` (Navigation)
-- `src/RomCleanup.UI.Wpf/Views/MainWindow.xaml` (Tab/Navigation-Eintrag)
+- `src/Romulus.Infrastructure/Dat/DatSourceService.cs` (Progress-Support)
+- `src/Romulus.UI.Wpf/ViewModels/MainViewModel.cs` (Navigation)
+- `src/Romulus.UI.Wpf/Views/MainWindow.xaml` (Tab/Navigation-Eintrag)
 
 ### Test-Dateien
-- `src/RomCleanup.Tests/DatCatalogStateServiceTests.cs`
-- `src/RomCleanup.Tests/DatCatalogViewModelTests.cs` (optional, ViewModel-Unit-Tests)
+- `src/Romulus.Tests/DatCatalogStateServiceTests.cs`
+- `src/Romulus.Tests/DatCatalogViewModelTests.cs` (optional, ViewModel-Unit-Tests)

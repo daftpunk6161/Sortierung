@@ -65,8 +65,8 @@ function Invoke-TestSlice {
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$solution = Join-Path $repoRoot 'src' 'RomCleanup.sln'
-$testProject = Join-Path $repoRoot 'src' 'RomCleanup.Tests' 'RomCleanup.Tests.csproj'
+$solution = Join-Path $repoRoot 'src' 'Romulus.sln'
+$testProject = Join-Path $repoRoot 'src' 'Romulus.Tests' 'Romulus.Tests.csproj'
 $coverageGateScript = Join-Path $repoRoot 'benchmark' 'tools' 'Invoke-CoverageGate.ps1'
 $manifestIntegrityScript = Join-Path $repoRoot 'benchmark' 'tools' 'Test-ManifestIntegrity.ps1'
 $headlessSmokeScript = Join-Path $repoRoot 'deploy' 'smoke' 'Invoke-HeadlessSmoke.ps1'

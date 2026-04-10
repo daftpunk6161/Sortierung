@@ -20,13 +20,13 @@ Die Matrix nutzt nur bestehende Build-, Test- und API-Pfade. Sie fuehrt keine ne
 
 | Bereich | Zweck | Befehl | Erwartung |
 |---|---|---|---|
-| Solution Build | Release-Binaries fuer alle Entry Points bauen | `dotnet build src/RomCleanup.sln --configuration Release -nologo -clp:ErrorsOnly` | Exit `0` |
-| Vollsuite | Vollstaendige Regressionen ueber alle Schichten | `dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --configuration Release --no-build --nologo` | Exit `0` |
+| Solution Build | Release-Binaries fuer alle Entry Points bauen | `dotnet build src/Romulus.sln --configuration Release -nologo -clp:ErrorsOnly` | Exit `0` |
+| Vollsuite | Vollstaendige Regressionen ueber alle Schichten | `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --configuration Release --no-build --nologo` | Exit `0` |
 | Manifest Integrity | `benchmark/manifest.json` gegen echte JSONL-Dateien pruefen | `pwsh -NoProfile -File benchmark/tools/Test-ManifestIntegrity.ps1` | Exit `0` |
 | Coverage Gate | Release-Basis fuer Ground-Truth-/Coverage-Schwellen validieren | `pwsh -NoProfile -File benchmark/tools/Invoke-CoverageGate.ps1 -NoBuild` | Exit `0` |
-| Reach Slice | Dashboard-/AllowedRoots-/OpenAPI-Reach-Vertrag gezielt pruefen | `dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~ApiReachIntegrationTests|FullyQualifiedName~OpenApiReachTests"` | Exit `0` |
-| Conversion Slice | Aktive Conversion-/Tooling-Invarianten gezielt pruefen | `dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~ConversionRegistrySchemaTests|FullyQualifiedName~ReachInvokerTests|FullyQualifiedName~ConversionExecutorHardeningTests|FullyQualifiedName~ToolRunnerAdapterTests"` | Exit `0` |
-| Accessibility Smoke | Strukturelle GUI-/A11y-Basics fuer die kritischen Flows pruefen | `dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~Phase8ThemeAccessibilityTests|FullyQualifiedName~WpfProductizationTests"` | Exit `0` |
+| Reach Slice | Dashboard-/AllowedRoots-/OpenAPI-Reach-Vertrag gezielt pruefen | `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~ApiReachIntegrationTests|FullyQualifiedName~OpenApiReachTests"` | Exit `0` |
+| Conversion Slice | Aktive Conversion-/Tooling-Invarianten gezielt pruefen | `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~ConversionRegistrySchemaTests|FullyQualifiedName~ReachInvokerTests|FullyQualifiedName~ConversionExecutorHardeningTests|FullyQualifiedName~ToolRunnerAdapterTests"` | Exit `0` |
+| Accessibility Smoke | Strukturelle GUI-/A11y-Basics fuer die kritischen Flows pruefen | `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~Phase8ThemeAccessibilityTests|FullyQualifiedName~WpfProductizationTests"` | Exit `0` |
 | Real Headless Smoke | Dokumentierten Headless-Betrieb praktisch gegen echte HTTP-Endpunkte pruefen | `pwsh -NoProfile -File deploy/smoke/Invoke-HeadlessSmoke.ps1 -Configuration Release -SkipBuild` | Exit `0` |
 
 ## Ein-Kommando-Variante

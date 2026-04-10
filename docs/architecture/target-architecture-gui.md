@@ -101,8 +101,8 @@ Jeder sichtbare Wert auf dem Dashboard stammt **ausschliesslich** aus einem typi
 
 ### 2.2 DashboardProjection (vorhanden — Ziel: bereinigt + nach Infrastructure verschoben)
 
-**Aktueller Stand:** Definiert in `RomCleanup.UI.Wpf/Models/DashboardProjection.cs`
-**Ziel:** Verschieben nach `RomCleanup.Infrastructure/Orchestration/DashboardProjection.cs`
+**Aktueller Stand:** Definiert in `Romulus.UI.Wpf/Models/DashboardProjection.cs`
+**Ziel:** Verschieben nach `Romulus.Infrastructure/Orchestration/DashboardProjection.cs`
 
 **Warum verschieben:**
 - Die API baut in `DashboardDataBuilder` exakt dieselben KPIs nochmal
@@ -605,12 +605,12 @@ public string DashWinners { get => Run.DashWinners; set => Run.DashWinners = val
 
 | # | Was | Wo | Problem | Fix |
 |---|-----|----|---------|-----|
-| 1 | `RunViewModel` Defaults `"0"` statt `"–"` | [RunViewModel.cs](src/RomCleanup.UI.Wpf/ViewModels/RunViewModel.cs#L208-L226) | Inkonsistent mit `ResetDashboardForNewRun()`. Frischer ViewModel zeigt "0" für Winners/Dupes/Junk/Games/DatHits — suggeriert "0 ROMs gefunden" statt "kein Run" | **Alle `= "0"` → `= "–"`** |
-| 2 | `MarkProvisional` + `MarkPlan` stacken | [DashboardProjection.cs](src/RomCleanup.UI.Wpf/Models/DashboardProjection.cs) | Cancelled DryRun → `"3 (vorläufig) (Plan)"` — doppelter Marker, verwirrend | **`ResultQuality`-Enum, mutually exclusive** |
-| 3 | `ShowMoveCompleteBanner` bleibt nach Cancel | [MainViewModel.RunPipeline.cs](src/RomCleanup.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs) `CompleteRun` | Cancel setzt Banner nicht auf false | **`CompleteRun(cancelled: true)` muss `ShowMoveCompleteBanner = false` setzen** |
-| 4 | Rollback setzt keinen `RunSummaryText` | [MainViewModel.RunPipeline.cs](src/RomCleanup.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs) `OnRollbackAsync` | Nach Rollback: RunSummaryText ist leer — User hat keinen Status | **`SetRunSummary(...)` in Rollback-Abschluss** |
-| 5 | Dashboard wird bei Re-Run nicht vor ApplyRunResult zurückgesetzt | [MainViewModel.RunPipeline.cs](src/RomCleanup.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs) | `OnRun()` setzt Reset, aber bei sehr schnellen Runs kann `ApplyRunResult` die alten Werte sehen | **`ResetDashboardForNewRun()` MUSS zu Beginn von `ExecuteRunAsync()` UND in `OnRun()` aufgerufen werden** |
-| 6 | Cancel ohne Kandidaten zeigt "0" statt "–" | [DashboardProjection.cs](src/RomCleanup.UI.Wpf/Models/DashboardProjection.cs) | `IsPartialCancelledOrFailed` prüft nur `hasCandidates` — bei 0 Kandidaten fällt Quality auf `Final` statt `Empty` | **Explizite `Empty`-Quality wenn `AllCandidates.Count == 0` und Status = cancelled/failed** |
+| 1 | `RunViewModel` Defaults `"0"` statt `"–"` | [RunViewModel.cs](src/Romulus.UI.Wpf/ViewModels/RunViewModel.cs#L208-L226) | Inkonsistent mit `ResetDashboardForNewRun()`. Frischer ViewModel zeigt "0" für Winners/Dupes/Junk/Games/DatHits — suggeriert "0 ROMs gefunden" statt "kein Run" | **Alle `= "0"` → `= "–"`** |
+| 2 | `MarkProvisional` + `MarkPlan` stacken | [DashboardProjection.cs](src/Romulus.UI.Wpf/Models/DashboardProjection.cs) | Cancelled DryRun → `"3 (vorläufig) (Plan)"` — doppelter Marker, verwirrend | **`ResultQuality`-Enum, mutually exclusive** |
+| 3 | `ShowMoveCompleteBanner` bleibt nach Cancel | [MainViewModel.RunPipeline.cs](src/Romulus.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs) `CompleteRun` | Cancel setzt Banner nicht auf false | **`CompleteRun(cancelled: true)` muss `ShowMoveCompleteBanner = false` setzen** |
+| 4 | Rollback setzt keinen `RunSummaryText` | [MainViewModel.RunPipeline.cs](src/Romulus.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs) `OnRollbackAsync` | Nach Rollback: RunSummaryText ist leer — User hat keinen Status | **`SetRunSummary(...)` in Rollback-Abschluss** |
+| 5 | Dashboard wird bei Re-Run nicht vor ApplyRunResult zurückgesetzt | [MainViewModel.RunPipeline.cs](src/Romulus.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs) | `OnRun()` setzt Reset, aber bei sehr schnellen Runs kann `ApplyRunResult` die alten Werte sehen | **`ResetDashboardForNewRun()` MUSS zu Beginn von `ExecuteRunAsync()` UND in `OnRun()` aufgerufen werden** |
+| 6 | Cancel ohne Kandidaten zeigt "0" statt "–" | [DashboardProjection.cs](src/Romulus.UI.Wpf/Models/DashboardProjection.cs) | `IsPartialCancelledOrFailed` prüft nur `hasCandidates` — bei 0 Kandidaten fällt Quality auf `Final` statt `Empty` | **Explizite `Empty`-Quality wenn `AllCandidates.Count == 0` und Status = cancelled/failed** |
 
 ### 5.2 Strukturelle Verbesserungen
 
@@ -647,7 +647,7 @@ public string DashWinners { get => Run.DashWinners; set => Run.DashWinners = val
 
 **Aufwand:** Trivial (5 Min)
 **Risiko:** Minimal
-**Dateien:** [RunViewModel.cs](src/RomCleanup.UI.Wpf/ViewModels/RunViewModel.cs)
+**Dateien:** [RunViewModel.cs](src/Romulus.UI.Wpf/ViewModels/RunViewModel.cs)
 
 ```csharp
 // VORHER:
@@ -669,7 +669,7 @@ private string _dashDatHits = "–";
 
 **Aufwand:** Trivial
 **Risiko:** Minimal
-**Datei:** [MainViewModel.RunPipeline.cs](src/RomCleanup.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs)
+**Datei:** [MainViewModel.RunPipeline.cs](src/Romulus.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs)
 
 In `CompleteRun()`: Im `cancelled`-Branch `ShowMoveCompleteBanner = false;` einfügen.
 
@@ -677,7 +677,7 @@ In `CompleteRun()`: Im `cancelled`-Branch `ShowMoveCompleteBanner = false;` einf
 
 **Aufwand:** Trivial
 **Risiko:** Minimal
-**Datei:** [MainViewModel.RunPipeline.cs](src/RomCleanup.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs)
+**Datei:** [MainViewModel.RunPipeline.cs](src/Romulus.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs)
 
 Im `OnRollbackAsync()` nach erfolgreichem Rollback:
 ```csharp

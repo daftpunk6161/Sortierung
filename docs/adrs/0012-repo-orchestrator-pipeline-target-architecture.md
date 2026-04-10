@@ -70,7 +70,7 @@
 ┌──────────────────────────────────────────────────────────────────────┐
 │  ZIEL                                                                │
 │                                                                      │
-│  SharedServiceRegistration.AddRomCleanupCore(services, config)       │
+│  SharedServiceRegistration.AddRomulusCore(services, config)       │
 │    └── Registriert alle Contracts/Core/Infrastructure-Services       │
 │    └── Entry Points registrieren NUR ihre eigene Shell               │
 │                                                                      │
@@ -113,13 +113,13 @@
 #### `SharedServiceRegistration` (neue statische Klasse in Infrastructure)
 
 ```csharp
-namespace RomCleanup.Infrastructure;
+namespace Romulus.Infrastructure;
 
 public static class SharedServiceRegistration
 {
-    public static IServiceCollection AddRomCleanupCore(
+    public static IServiceCollection AddRomulusCore(
         this IServiceCollection services,
-        RomCleanupConfig config)
+        RomulusConfig config)
     {
         // Contracts Ports
         services.AddSingleton<IFileSystem, FileSystemAdapter>();
@@ -160,7 +160,7 @@ public static class SharedServiceRegistration
 Eliminiert die 3-fache inline-Konstruktion:
 
 ```csharp
-namespace RomCleanup.Infrastructure.Orchestration;
+namespace Romulus.Infrastructure.Orchestration;
 
 public interface IRunOptionsSource
 {
@@ -574,7 +574,7 @@ Keine Big-Bang-Migration. Stattdessen werden neue Strukturen **parallel** eingef
 |---------|-----|--------|
 | A-1 | `IRunEnvironment` Interface + Adapter einführen | Gering: Typen-Swap |
 | A-2 | `RunOptionsFactory` + `IRunOptionsSource` einführen | Gering: Extract Method |
-| A-3 | `SharedServiceRegistration.AddRomCleanupCore()` einführen | Gering: DI-Refactor |
+| A-3 | `SharedServiceRegistration.AddRomulusCore()` einführen | Gering: DI-Refactor |
 | A-4 | Entry Points auf shared Registration umstellen | Mittel: 3 Dateien gleichzeitig |
 
 **Testmatrix A:** Alle 3 Entry Points produzieren identische `RunOptions` für gleiche Inputs.

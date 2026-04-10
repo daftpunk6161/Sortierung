@@ -1,0 +1,72 @@
+<UserControl x:Class="Romulus.UI.Wpf.Views.SystemAboutView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+  <!-- Extracted from SettingsView "System" section (Audit, Scheduler, MinimizeToTray, Config) -->
+  <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
+    <StackPanel>
+      <TextBlock Text="{Binding Loc[Settings.SectionAudit]}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="130"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="38"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="6"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Label Grid.Row="0" Grid.Column="0" Content="{Binding Loc[Settings.AuditRootLabel]}" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding AuditRoot, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" Margin="{DynamicResource SpaceRightXS}"
+                 AutomationProperties.Name="{Binding Loc[Settings.AuditRootName]}"/>
+        <Button Grid.Row="0" Grid.Column="2" Content="&#xE838;" FontFamily="Segoe MDL2 Assets" Width="34"
+                Command="{Binding BrowseFolderPathCommand}" CommandParameter="Audit"
+                AutomationProperties.Name="{Binding Loc[Settings.AuditRootBrowse]}"/>
+        <Label Grid.Row="2" Grid.Column="0" Content="{Binding Loc[Settings.Ps3DupesLabel]}" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Ps3DupesRoot, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" Margin="{DynamicResource SpaceRightXS}"
+                 AutomationProperties.Name="{Binding Loc[Settings.Ps3DupesName]}"/>
+        <Button Grid.Row="2" Grid.Column="2" Content="&#xE838;" FontFamily="Segoe MDL2 Assets" Width="34"
+                Command="{Binding BrowseFolderPathCommand}" CommandParameter="Ps3"
+                AutomationProperties.Name="{Binding Loc[Settings.Ps3DupesBrowse]}"/>
+      </Grid>
+
+      <!-- Scheduler -->
+      <TextBlock Text="{Binding Loc[Settings.SectionScheduler]}" Style="{StaticResource SectionHeader}" Margin="0,24,0,8"/>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="130"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="120"/>
+        </Grid.ColumnDefinitions>
+        <Label Grid.Column="0" Content="{Binding Loc[Settings.SchedulerLabel]}"/>
+        <ComboBox Grid.Column="1" SelectedValue="{Binding SchedulerIntervalMinutes}" SelectedValuePath="Tag" MinWidth="120"
+                  AutomationProperties.Name="{Binding Loc[Settings.SchedulerLabel]}">
+          <ComboBoxItem Tag="0" Content="{Binding Loc[Settings.SchedulerOff]}"/>
+          <ComboBoxItem Tag="30" Content="30 min"/>
+          <ComboBoxItem Tag="60" Content="1 h"/>
+          <ComboBoxItem Tag="240" Content="4 h"/>
+          <ComboBoxItem Tag="720" Content="12 h"/>
+          <ComboBoxItem Tag="1440" Content="24 h"/>
+        </ComboBox>
+        <Button Grid.Column="2" Content="{Binding Loc[Settings.SchedulerApply]}" Margin="8,0,0,0" MinHeight="30"
+                Command="{Binding FeatureCommands[SchedulerApply]}"
+                AutomationProperties.Name="{Binding Loc[Settings.SchedulerApply]}"/>
+      </Grid>
+
+      <!-- MinimizeToTray -->
+      <CheckBox Content="{Binding Loc[Settings.MinimizeToTray]}" IsChecked="{Binding MinimizeToTray}" Margin="0,12,0,0"
+                ToolTip="{Binding Loc[Settings.MinimizeToTrayTip]}"
+                AutomationProperties.Name="{Binding Loc[Settings.MinimizeToTray]}"/>
+
+      <!-- Config Export/Import -->
+      <TextBlock Text="{Binding Loc[Settings.SectionConfig]}" Style="{StaticResource SectionHeader}" Margin="0,24,0,8"/>
+      <WrapPanel>
+        <Button Content="{Binding Loc[Settings.BtnExportConfig]}" MinWidth="160" Padding="8,2" Margin="0,0,8,4" ToolTip="{Binding Loc[Settings.ExportConfigTip]}"
+                Command="{Binding FeatureCommands[ExportUnified]}" AutomationProperties.Name="{Binding Loc[Settings.ExportConfigTip]}"/>
+        <Button Content="{Binding Loc[Settings.BtnImportConfig]}" MinWidth="160" Padding="8,2" Margin="0,0,8,4"
+                Command="{Binding FeatureCommands[ConfigImport]}" AutomationProperties.Name="{Binding Loc[Settings.ImportConfigTip]}"/>
+      </WrapPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

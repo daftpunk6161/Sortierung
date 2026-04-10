@@ -13,12 +13,12 @@ Die ursprüngliche PowerShell-Codebasis litt unter zentralisierten Orchestrierun
 ## Entscheidung
 Clean Architecture (Ports & Adapters) als .NET Solution mit 7 Projekten:
 
-1. **Contracts** (`RomCleanup.Contracts`)
+1. **Contracts** (`Romulus.Contracts`)
    - Port-Interfaces (`IFileSystem`, `IAuditStore`, `IDatRepository`, `IToolRunner`, `IFormatConverter`, `IAppState`)
    - Models (Records/DTOs)
    - Error-Contracts (`OperationError`, `ErrorClassifier`)
 
-2. **Core** (`RomCleanup.Core`)
+2. **Core** (`Romulus.Core`)
    - Reine, deterministische Domain-Logik — keine I/O-Abhängigkeiten
    - `GameKeys/` — GameKeyNormalizer (LRU-Cache, Tag-Parsing, Region-Scoring)
    - `Regions/` — RegionDetector
@@ -29,7 +29,7 @@ Clean Architecture (Ports & Adapters) als .NET Solution mit 7 Projekten:
    - `Rules/` — RuleEngine
    - `Caching/` — LruCache<TKey,TValue>
 
-3. **Infrastructure** (`RomCleanup.Infrastructure`)
+3. **Infrastructure** (`Romulus.Infrastructure`)
    - `Orchestration/` — RunOrchestrator, ExecutionHelpers
    - `FileSystem/` — FileSystemAdapter (Path-Traversal-Schutz, Reparse-Blocking)
    - `Audit/` — AuditCsvStore, AuditSigningService
@@ -56,11 +56,11 @@ Clean Architecture (Ports & Adapters) als .NET Solution mit 7 Projekten:
    - `Version/` — VersionHelper
 
 4. **Entry Points**
-   - `RomCleanup.CLI` — Headless (Exit-Codes: 0/1/2/3)
-   - `RomCleanup.Api` — ASP.NET Core Minimal API (127.0.0.1, API-Key, Rate-Limiting, SSE)
-   - `RomCleanup.UI.Wpf` — WPF GUI (MVVM, Dark-Theme, net10.0-windows)
+   - `Romulus.CLI` — Headless (Exit-Codes: 0/1/2/3)
+   - `Romulus.Api` — ASP.NET Core Minimal API (127.0.0.1, API-Key, Rate-Limiting, SSE)
+   - `Romulus.UI.Wpf` — WPF GUI (MVVM, Dark-Theme, net10.0-windows)
 
-5. **Tests** (`RomCleanup.Tests`)
+5. **Tests** (`Romulus.Tests`)
    - 5200+ xUnit-Tests in 136 Testdateien
 
 ## Dependency-Richtung

@@ -3,7 +3,7 @@
     Runs a real headless API smoke against the built Romulus API.
 
 .DESCRIPTION
-    Starts the built RomCleanup.Api assembly with remote/headless safeguards enabled
+    Starts the built Romulus.Api assembly with remote/headless safeguards enabled
     and verifies the documented release-critical flows:
       - anonymous health and dashboard bootstrap
       - authenticated dashboard summary
@@ -106,12 +106,12 @@ function Wait-ForHealth {
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$apiProjectDir = Join-Path $repoRoot 'src' 'RomCleanup.Api'
-$apiProject = Join-Path $apiProjectDir 'RomCleanup.Api.csproj'
-$apiDll = Join-Path $apiProjectDir 'bin' $Configuration 'net10.0' 'RomCleanup.Api.dll'
+$apiProjectDir = Join-Path $repoRoot 'src' 'Romulus.Api'
+$apiProject = Join-Path $apiProjectDir 'Romulus.Api.csproj'
+$apiDll = Join-Path $apiProjectDir 'bin' $Configuration 'net10.0' 'Romulus.Api.dll'
 
 if (-not $SkipBuild -or -not (Test-Path $apiDll)) {
-    Write-Host "=== Building RomCleanup.Api ($Configuration) ===" -ForegroundColor Cyan
+    Write-Host "=== Building Romulus.Api ($Configuration) ===" -ForegroundColor Cyan
     & dotnet build $apiProject --configuration $Configuration -nologo -clp:ErrorsOnly
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet build failed for $apiProject"

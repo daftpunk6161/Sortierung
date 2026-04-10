@@ -1,4 +1,4 @@
-# Recognition Quality Benchmark – RomCleanup
+# Recognition Quality Benchmark – Romulus
 
 ---
 
@@ -8,7 +8,7 @@
 
 **Nein – nicht als einzelner Gesamtwert.**
 
-Ein einzelner „95 % Accuracy"-Wert ist für RomCleanup **irreführend, gefährlich und nicht belastbar**.
+Ein einzelner „95 % Accuracy"-Wert ist für Romulus **irreführend, gefährlich und nicht belastbar**.
 
 **Warum:**
 
@@ -22,7 +22,7 @@ Ein einzelner „95 % Accuracy"-Wert ist für RomCleanup **irreführend, gefähr
 
 ### Kurzfazit
 
-RomCleanup braucht kein „95 % overall". Es braucht:
+Romulus braucht kein „95 % overall". Es braucht:
 
 - **Pro-Ebene-Ziele** (System, Kategorie, DAT, Sorting)
 - **Pro-Klasse-Metriken** (je Console, je Dateityp)
@@ -540,7 +540,7 @@ ground-truth.jsonl wird:
 #### A) Benchmark Runner (`EvaluationRunner`)
 
 ```
-Klasse: RomCleanup.Tests/Benchmark/EvaluationRunner.cs
+Klasse: Romulus.Tests/Benchmark/EvaluationRunner.cs
 Methode: RunBenchmark(benchmarkDir, groundTruthPath, datRoot?) → EvaluationResult
 
 Ablauf:
@@ -589,7 +589,7 @@ Ablauf:
 #### C) Comparator (`GroundTruthComparator`)
 
 ```
-Klasse: RomCleanup.Tests/Benchmark/GroundTruthComparator.cs
+Klasse: Romulus.Tests/Benchmark/GroundTruthComparator.cs
 Methode: Compare(EvaluationRecord[], GroundTruth[]) → ComparisonResult
 
 Vergleich pro Ebene:
@@ -604,7 +604,7 @@ Vergleich pro Ebene:
 #### D) Report Generator (`BenchmarkHtmlReportWriter`)
 
 ```
-Klasse: RomCleanup.Tests/Benchmark/BenchmarkHtmlReportWriter.cs
+Klasse: Romulus.Tests/Benchmark/BenchmarkHtmlReportWriter.cs
 
 Outputs:
 1. benchmark-results.json         ← Maschinen-lesbar, für CI/CD

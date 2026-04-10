@@ -1,0 +1,28 @@
+<UserControl x:Class="Romulus.UI.Wpf.Views.RomulusLogoMark"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Width="256" Height="256">
+  <Viewbox Stretch="Uniform">
+    <Canvas Width="256" Height="256">
+      <Canvas.Resources>
+        <LinearGradientBrush x:Key="GlyphBrush" StartPoint="0,0" EndPoint="1,1">
+          <GradientStop Offset="0" Color="#6B21A8"/>
+          <GradientStop Offset="0.5" Color="#9333EA"/>
+          <GradientStop Offset="1" Color="#06B6D4"/>
+        </LinearGradientBrush>
+      </Canvas.Resources>
+
+      <Rectangle Width="256" Height="256" RadiusX="48" RadiusY="48" Fill="#0F0A1A"/>
+      <Rectangle Canvas.Left="4" Canvas.Top="4" Width="248" Height="248" RadiusX="44" RadiusY="44" Fill="Transparent" Stroke="{StaticResource GlyphBrush}" StrokeThickness="1.5" Opacity="0.35"/>
+
+      <Path Fill="{StaticResource GlyphBrush}" Data="M76,49 L76,199 L96,199 L96,136 L126,136 L160,199 L183,199 L150,132 C173,122 184,100 184,82 C184,60 166,49 136,49 Z M96,67 L132,67 C154,67 162,78 162,84 C162,94 154,110 132,110 L96,110 Z"/>
+      <Polygon Points="146,136 160,199 176,199 164,142" Fill="#06B6D4" Opacity="0.7"/>
+      <Polygon Points="150,144 162,192 170,192 160,148" Fill="#06B6D4" Opacity="0.4"/>
+
+      <Rectangle Canvas.Left="20" Canvas.Top="20" Width="6" Height="6" RadiusX="1" RadiusY="1" Fill="#06B6D4" Opacity="0.35"/>
+      <Rectangle Canvas.Left="230" Canvas.Top="20" Width="6" Height="6" RadiusX="1" RadiusY="1" Fill="#06B6D4" Opacity="0.35"/>
+      <Rectangle Canvas.Left="20" Canvas.Top="230" Width="6" Height="6" RadiusX="1" RadiusY="1" Fill="#9333EA" Opacity="0.25"/>
+      <Rectangle Canvas.Left="230" Canvas.Top="230" Width="6" Height="6" RadiusX="1" RadiusY="1" Fill="#9333EA" Opacity="0.25"/>
+    </Canvas>
+  </Viewbox>
+</UserControl>

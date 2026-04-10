@@ -2,8 +2,8 @@
 
 **Status:** Proposed  
 **Datum:** 2025-07-15  
-**Betrifft:** `src/RomCleanup.Api/` (Program.cs, RunManager.cs, neue Dateien)  
-**Spezifikation:** 18 RED-Tests in `src/RomCleanup.Tests/ApiRedPhaseTests.cs`  
+**Betrifft:** `src/Romulus.Api/` (Program.cs, RunManager.cs, neue Dateien)  
+**Spezifikation:** 18 RED-Tests in `src/Romulus.Tests/ApiRedPhaseTests.cs`  
 **Vorgänger:** ADR-0007 (Final Core Functions), ADR-0008 (CLI Target Architecture)
 
 ---

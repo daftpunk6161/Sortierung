@@ -30,7 +30,7 @@
 
 ### Kurzfazit
 
-> **RomCleanup braucht kein „95 % overall". Es braucht harte Fehlergrenzen (Wrong Match ≤ 0,5 %, Unsafe Sort ≤ 0,3 %), differenzierte Teilziele pro Systemklasse, und den Nachweis, dass UNKNOWN ehrlich statt falsch-sicher eingesetzt wird.**
+> **Romulus braucht kein „95 % overall". Es braucht harte Fehlergrenzen (Wrong Match ≤ 0,5 %, Unsafe Sort ≤ 0,3 %), differenzierte Teilziele pro Systemklasse, und den Nachweis, dass UNKNOWN ehrlich statt falsch-sicher eingesetzt wird.**
 
 Die einzige legitime kommunizierbare Aussage wäre:
 

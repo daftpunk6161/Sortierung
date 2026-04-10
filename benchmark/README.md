@@ -1,4 +1,4 @@
-# RomCleanup Benchmark
+# Romulus Benchmark
 
 Deterministisches Benchmark-System fuer Console-Detection, Sortier-Sicherheit und Regressions-Gates.
 
@@ -7,19 +7,19 @@ Deterministisches Benchmark-System fuer Console-Detection, Sortier-Sicherheit un
 1. Nur Benchmark-Tests ausfuehren:
 
 ```powershell
-dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --filter Category=Benchmark --nologo
+dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter Category=Benchmark --nologo
 ```
 
 2. Regressions-Gate gegen Baseline ausfuehren:
 
 ```powershell
-dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --filter Category=BenchmarkRegression --nologo
+dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter Category=BenchmarkRegression --nologo
 ```
 
 3. Performance-Benchmark (5.000 Dateien):
 
 ```powershell
-dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --filter Category=BenchmarkPerformance --nologo
+dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter Category=BenchmarkPerformance --nologo
 ```
 
 ## Struktur

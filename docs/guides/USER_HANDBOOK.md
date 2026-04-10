@@ -9,7 +9,7 @@
 ### GUI (WPF)
 
 ```bash
-dotnet run --project src/RomCleanup.UI.Wpf
+dotnet run --project src/Romulus.UI.Wpf
 ```
 
 1. Im Tab **Sortieren** ROM-Ordner hinzufügen
@@ -21,16 +21,16 @@ dotnet run --project src/RomCleanup.UI.Wpf
 
 ```bash
 # DryRun (nur Vorschau)
-dotnet run --project src/RomCleanup.CLI -- --roots "D:\Roms" --mode DryRun
+dotnet run --project src/Romulus.CLI -- --roots "D:\Roms" --mode DryRun
 
 # Move mit Region-Bevorzugung
-dotnet run --project src/RomCleanup.CLI -- --roots "D:\Roms" --mode Move --regions EU,US
+dotnet run --project src/Romulus.CLI -- --roots "D:\Roms" --mode Move --regions EU,US
 ```
 
 ### REST API
 
 ```bash
-dotnet run --project src/RomCleanup.Api
+dotnet run --project src/Romulus.Api
 ```
 
 API läuft auf `http://127.0.0.1:7878` (nur loopback).
@@ -70,7 +70,7 @@ Die WPF-GUI basiert auf MVVM (`MainViewModel.cs`) mit Dark-Theme und Neon-Accent
 
 ### Settings-Pfad
 
-`%APPDATA%\RomCleanupRegionDedupe\settings.json`
+`%APPDATA%\Romulus\settings.json`
 
 ```jsonc
 {
@@ -226,10 +226,10 @@ Weitere Details: siehe `docs/UNKNOWN_FAQ.md`
 
 ```bash
 # DryRun
-dotnet run --project src/RomCleanup.CLI -- --roots "D:\ROMs" --mode DryRun
+dotnet run --project src/Romulus.CLI -- --roots "D:\ROMs" --mode DryRun
 
 # Move mit Region-Bevorzugung
-dotnet run --project src/RomCleanup.CLI -- --roots "D:\ROMs" --mode Move --regions EU,US
+dotnet run --project src/Romulus.CLI -- --roots "D:\ROMs" --mode Move --regions EU,US
 ```
 
 Exit-Codes: `0` = Erfolg, `1` = Fehler, `2` = Abgebrochen, `3` = Preflight fehlgeschlagen.
@@ -239,7 +239,7 @@ Exit-Codes: `0` = Erfolg, `1` = Fehler, `2` = Abgebrochen, `3` = Preflight fehlg
 ```bash
 # Starten (API-Key via Umgebungsvariable)
 set ROM_CLEANUP_API_KEY=mein-key
-dotnet run --project src/RomCleanup.Api
+dotnet run --project src/Romulus.Api
 ```
 
 | Methode | Pfad | Zweck |

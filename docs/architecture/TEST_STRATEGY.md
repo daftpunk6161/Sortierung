@@ -1,7 +1,7 @@
 # Romulus – Test-Strategie
 
 **Stand:** 2026-04-01  
-**Framework:** xUnit (.NET 10, `src/RomCleanup.Tests/`)  
+**Framework:** xUnit (.NET 10, `src/Romulus.Tests/`)  
 **Grundsatz:** Kein Alibi-Test. Jeder Test hat eine **Failure-First-Anforderung** – er muss ohne den zu testenden Code rot werden.
 
 ---
@@ -21,7 +21,7 @@
 
 ## 2. Testdateien-Übersicht
 
-Alle Tests liegen in `src/RomCleanup.Tests/` (xUnit, 200+ Testdateien, inkl. Unterordner `Benchmark/` und `Conversion/`).
+Alle Tests liegen in `src/Romulus.Tests/` (xUnit, 200+ Testdateien, inkl. Unterordner `Benchmark/` und `Conversion/`).
 Die folgende Übersicht ist thematisch gruppiert; Datei- und Fallzahlen ändern sich regelmäßig.
 
 ### 2.0 Foundation-, Productization-, Reach- und Diff/Merge-Matrix 2026-04-01
@@ -305,16 +305,16 @@ Trigger: Push/PR auf `dev/**`, `.github/**`
 
 ```bash
 # Alle Tests
-dotnet test src/RomCleanup.sln
+dotnet test src/Romulus.sln
 
 # Einzelnes Testprojekt
-dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj
+dotnet test src/Romulus.Tests/Romulus.Tests.csproj
 
 # Mit Filter
-dotnet test src/RomCleanup.sln --filter "FullyQualifiedName~GameKey"
+dotnet test src/Romulus.sln --filter "FullyQualifiedName~GameKey"
 
 # Mit Coverage
-dotnet test src/RomCleanup.sln --collect:"XPlat Code Coverage"
+dotnet test src/Romulus.sln --collect:"XPlat Code Coverage"
 ```
 
 ### Release-Smokes

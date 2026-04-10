@@ -1,0 +1,156 @@
+<UserControl x:Class="Romulus.UI.Wpf.Views.SmartActionBar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+  <!-- ActionRail: Background shifts to DangerBg when inline Move confirm is visible -->
+  <Border BorderBrush="{DynamicResource BrushBorder}"
+          BorderThickness="0,1,0,0"
+      Padding="{DynamicResource PaddingBar}" MinHeight="{DynamicResource ActionRailHeight}">
+    <Border.Style>
+      <Style TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource BrushSurfaceAlt}"/>
+        <Style.Triggers>
+          <DataTrigger Binding="{Binding Shell.ShowMoveInlineConfirm}" Value="True">
+            <Setter Property="Background" Value="{DynamicResource BrushDangerBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BrushDanger}"/>
+          </DataTrigger>
+        </Style.Triggers>
+      </Style>
+    </Border.Style>
+    <Grid>
+      <!-- TASK-115: ProgressPanel — visible only during busy RunStates -->
+      <StackPanel x:Name="ProgressPanel" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center"
+                  Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+        <ProgressBar MinWidth="120" Width="200" Height="8" Maximum="100"
+                     Value="{Binding Progress}" Margin="{DynamicResource SpaceLeftSM}" VerticalAlignment="Center"
+                     AutomationProperties.Name="Fortschritt" AutomationProperties.LiveSetting="Polite"/>
+        <TextBlock Text="{Binding ProgressText}" Foreground="{DynamicResource BrushTextMuted}"
+                   VerticalAlignment="Center" FontSize="11" Margin="{DynamicResource SpaceLeftSM}"
+                   AutomationProperties.Name="Fortschrittstext" AutomationProperties.LiveSetting="Polite"/>
+      </StackPanel>
+
+      <ScrollViewer HorizontalScrollBarVisibility="Auto"
+            VerticalScrollBarVisibility="Disabled"
+            CanContentScroll="False"
+        VerticalAlignment="Center" HorizontalAlignment="Left">
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <!-- TASK-115: Run button — hidden when pipeline is busy -->
+        <Button Command="{Binding RunCommand}" Style="{StaticResource PrimaryButton}"
+          Width="140" MinHeight="52" Padding="6,2" Margin="{DynamicResource SpaceRightXS}"
+                ToolTip="{Binding Loc[Start.RunTip]}" AutomationProperties.Name="{Binding Loc[Start.RunButton]}"
+                AutomationProperties.AcceleratorKey="F5" TabIndex="1"
+                Visibility="{Binding IsIdle, Converter={StaticResource BoolToVis}}">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE768;" FontSize="20" HorizontalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Start.RunButton]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Button>
+
+        <!-- TASK-115: Cancel button — visible only when pipeline is running -->
+        <Button x:Name="CancelButton" Command="{Binding CancelCommand}"
+          Width="60" MinHeight="52" Padding="6,2" Margin="{DynamicResource SpaceRightXS}"
+                AutomationProperties.AcceleratorKey="Esc"
+                ToolTip="{Binding Loc[Start.CancelTip]}" AutomationProperties.Name="{Binding Loc[Start.CancelButton]}" TabIndex="2"
+                Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+          <Button.Style>
+            <Style TargetType="Button" BasedOn="{StaticResource DangerButton}"/>
+          </Button.Style>
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71A;" FontSize="20" HorizontalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Start.CancelButton]}" FontSize="11" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Button>
+
+        <Rectangle Width="1" Height="40" Fill="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="{DynamicResource SpaceDivider}"/>
+
+        <Button Command="{Binding ConvertOnlyCommand}"
+          Width="130" MinHeight="52" Padding="6,2" Margin="{DynamicResource SpaceRightXS}"
+                BorderBrush="{DynamicResource BrushSuccess}" Foreground="{DynamicResource BrushSuccess}"
+                Background="{DynamicResource BrushSuccessBg}" BorderThickness="2"
+                ToolTip="{Binding Loc[Start.ConvertOnlyTip]}" AutomationProperties.Name="{Binding Loc[Start.ConvertOnlyButton]}" TabIndex="3"
+                Visibility="{Binding IsIdle, Converter={StaticResource BoolToVis}}">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8AB;" FontSize="20" HorizontalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Start.ConvertOnlyButton]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Button>
+
+        <StackPanel Orientation="Horizontal" Visibility="{Binding ShowActionBarMoveButton, Converter={StaticResource BoolToVis}}">
+          <Button Command="{Binding RequestStartMoveCommand}"
+              Width="120" MinHeight="52" Padding="6,2" Margin="{DynamicResource SpaceRightXS}"
+                  BorderBrush="{DynamicResource BrushDanger}" Foreground="{DynamicResource BrushDanger}"
+                  Background="{DynamicResource BrushDangerBg}" BorderThickness="2"
+                  ToolTip="{Binding MoveApplyGateText}" AutomationProperties.Name="Move bestätigen anfordern" TabIndex="4"
+                  Visibility="{Binding Shell.ShowMoveInlineConfirm, Converter={StaticResource InverseBoolToVis}}">
+            <StackPanel HorizontalAlignment="Center">
+              <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="20" HorizontalAlignment="Center"/>
+              <TextBlock Text="{Binding Loc[Result.BtnCleanup]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+            </StackPanel>
+          </Button>
+
+          <StackPanel Orientation="Horizontal" Visibility="{Binding Shell.ShowMoveInlineConfirm, Converter={StaticResource BoolToVis}}">
+            <Button Command="{Binding StartMoveCommand}"
+              IsEnabled="{Binding CanExecuteInlineStartMove}"
+                  Width="140" MinHeight="52" Padding="6,2" Margin="{DynamicResource SpaceRightXS}"
+                    BorderBrush="{DynamicResource BrushDanger}" Foreground="{DynamicResource BrushDanger}"
+                    Background="{DynamicResource BrushDangerBg}" BorderThickness="2"
+                    ToolTip="{Binding MoveApplyGateText}" AutomationProperties.Name="Move jetzt ausführen" TabIndex="4">
+              <StackPanel HorizontalAlignment="Center">
+                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="20" HorizontalAlignment="Center"/>
+                <TextBlock Text="Jetzt ausführen" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+              </StackPanel>
+            </Button>
+            <Button Command="{Binding CancelStartMoveCommand}"
+                  Width="80" MinHeight="52" Padding="6,2" Margin="{DynamicResource SpaceRightXS}"
+                    ToolTip="Move abbrechen" AutomationProperties.Name="Move abbrechen" TabIndex="4">
+              <StackPanel HorizontalAlignment="Center">
+                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;" FontSize="18" HorizontalAlignment="Center"/>
+                <TextBlock Text="Abbruch" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </StackPanel>
+
+        <TextBlock Text="{Binding InlineMoveConfirmHint}" Style="{StaticResource CaptionText}"
+                   Foreground="{DynamicResource BrushWarning}" VerticalAlignment="Center" Margin="4,0"
+                   Visibility="{Binding Shell.ShowMoveInlineConfirm, Converter={StaticResource BoolToVis}}"/>
+
+        <Button Command="{Binding RollbackCommand}"
+          Width="110" MinHeight="52" Padding="6,2" Margin="{DynamicResource SpaceRightXS}"
+                BorderBrush="{DynamicResource BrushAccentPurple}" Foreground="{DynamicResource BrushAccentPurple}"
+                AutomationProperties.AcceleratorKey="Ctrl+Z"
+                Background="{DynamicResource BrushDangerBg}" BorderThickness="2"
+                ToolTip="{Binding Loc[Start.RollbackTip]}" AutomationProperties.Name="{Binding Loc[Start.RollbackButton]}" TabIndex="5"
+                Visibility="{Binding CanRollback, Converter={StaticResource BoolToVis}}">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE777;" FontSize="20" HorizontalAlignment="Center"/>
+            <TextBlock Text="{Binding Loc[Start.RollbackButton]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+          </StackPanel>
+        </Button>
+
+        <Rectangle Width="1" Height="40" Fill="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="{DynamicResource SpaceDivider}"/>
+
+        <!-- TASK-176: Config changed banner after DryRun -->
+        <Border Visibility="{Binding ShowConfigChangedBanner, Converter={StaticResource BoolToVis}}"
+                Background="{DynamicResource BrushDangerBg}" BorderBrush="{DynamicResource BrushDanger}"
+                BorderThickness="1" CornerRadius="4" Padding="8,4" Margin="4,0"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="{Binding Loc[Config.Changed.BannerLabel]}"
+                AutomationProperties.LiveSetting="Assertive">
+          <TextBlock Text="{Binding Loc[Config.Changed.MoveGate]}" Foreground="{DynamicResource BrushDanger}"
+                     FontSize="11" TextWrapping="Wrap" MaxWidth="340" VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- TASK-115: RunState status label -->
+        <TextBlock Text="{Binding RunStateDisplayText}" Foreground="{DynamicResource BrushTextMuted}"
+                   FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0"
+                   AutomationProperties.Name="RunState" AutomationProperties.LiveSetting="Polite"
+                   Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
+
+        <TextBlock Text="{Binding BusyHint}" Style="{StaticResource CaptionText}"
+                   VerticalAlignment="Center" Margin="4,0"/>
+      </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Border>
+</UserControl>

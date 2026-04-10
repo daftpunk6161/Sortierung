@@ -122,8 +122,8 @@ Diese Befunde sind in diesem Remediation-Lauf end-to-end behoben worden:
 - Schweregrad: `P1`
 - Impact: Kein Scoring-Bug, aber defekter physischer Vollzug fuer Multi-File-Sets.
 - Betroffene Dateien:
-  - `src/RomCleanup.Infrastructure/Sorting/ConsoleSorter.cs`
-  - `src/RomCleanup.Tests/SortingTests.cs`
+  - `src/Romulus.Infrastructure/Sorting/ConsoleSorter.cs`
+  - `src/Romulus.Tests/SortingTests.cs`
 - Ursache:
   - Review-/Junk-Wege gingen nur ueber den Primary-Move.
 - Fix:
@@ -138,9 +138,9 @@ Diese Befunde sind in diesem Remediation-Lauf end-to-end behoben worden:
 - Schweregrad: `P0`
 - Impact: Sonderpfad umging gemeinsame Semantik fuer Status, Audit und Report.
 - Betroffene Dateien:
-  - `src/RomCleanup.Infrastructure/Orchestration/RunOrchestrator.cs`
-  - `src/RomCleanup.Infrastructure/Orchestration/RunOrchestrator.ScanAndConvertSteps.cs`
-  - `src/RomCleanup.Infrastructure/Orchestration/RunOrchestrator.PreviewAndPipelineHelpers.cs`
+  - `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.cs`
+  - `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.ScanAndConvertSteps.cs`
+  - `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.PreviewAndPipelineHelpers.cs`
 - Fix:
   - `TryExecuteConvertOnlyPath(...)` fuehrt nur noch die Phase aus.
   - `FinalizeCompletedRun(...)` finalisiert nun alle erfolgreichen Execute-Pfade.
@@ -149,9 +149,9 @@ Diese Befunde sind in diesem Remediation-Lauf end-to-end behoben worden:
 - Schweregrad: `P0`
 - Impact: `Move`, `ConsoleSort` und `WinnerConversion` konnten mit alten Pfaden laufen.
 - Betroffene Dateien:
-  - `src/RomCleanup.Infrastructure/Orchestration/DatRenamePipelinePhase.cs`
-  - `src/RomCleanup.Infrastructure/Orchestration/PhasePlanning.cs`
-  - `src/RomCleanup.Infrastructure/Orchestration/RunOrchestrator.StandardPhaseSteps.cs`
+  - `src/Romulus.Infrastructure/Orchestration/DatRenamePipelinePhase.cs`
+  - `src/Romulus.Infrastructure/Orchestration/PhasePlanning.cs`
+  - `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.StandardPhaseSteps.cs`
 - Fix:
   - `PathMutation`-Erzeugung im Rename-Phase-Output.
   - Sofortige State-Rebase unmittelbar nach Rename.
@@ -162,11 +162,11 @@ Diese Befunde sind in diesem Remediation-Lauf end-to-end behoben worden:
 - Schweregrad: `P1`
 - Impact: Forensik und Rollback-Interpretation konnten auseinanderlaufen.
 - Betroffene Dateien:
-  - `src/RomCleanup.Contracts/Ports/IAuditStore.cs`
-  - `src/RomCleanup.Contracts/Models/ServiceModels.cs`
-  - `src/RomCleanup.Infrastructure/Audit/AuditCsvStore.cs`
-  - `src/RomCleanup.Infrastructure/Orchestration/ConversionPhaseHelper.cs`
-  - `src/RomCleanup.Infrastructure/Orchestration/PipelinePhaseHelpers.cs`
+  - `src/Romulus.Contracts/Ports/IAuditStore.cs`
+  - `src/Romulus.Contracts/Models/ServiceModels.cs`
+  - `src/Romulus.Infrastructure/Audit/AuditCsvStore.cs`
+  - `src/Romulus.Infrastructure/Orchestration/ConversionPhaseHelper.cs`
+  - `src/Romulus.Infrastructure/Orchestration/PipelinePhaseHelpers.cs`
 - Fix:
   - Batched append API.
   - Single-lock / single-flush / atomic replace fuer Erfolgs-Commits.
@@ -177,12 +177,12 @@ Diese Befunde sind in diesem Remediation-Lauf end-to-end behoben worden:
 - Schweregrad: `P1`
 - Impact: falsche Rollback-Freigaben und inkonsistente Teilstatuskommunikation.
 - Betroffene Dateien:
-  - `src/RomCleanup.Infrastructure/Audit/AuditRecoveryStateResolver.cs`
-  - `src/RomCleanup.Api/RunLifecycleManager.cs`
-  - `src/RomCleanup.Api/RunManager.cs`
-  - `src/RomCleanup.UI.Wpf/Services/IRunService.cs`
-  - `src/RomCleanup.UI.Wpf/Services/RunService.cs`
-  - `src/RomCleanup.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs`
+  - `src/Romulus.Infrastructure/Audit/AuditRecoveryStateResolver.cs`
+  - `src/Romulus.Api/RunLifecycleManager.cs`
+  - `src/Romulus.Api/RunManager.cs`
+  - `src/Romulus.UI.Wpf/Services/IRunService.cs`
+  - `src/Romulus.UI.Wpf/Services/RunService.cs`
+  - `src/Romulus.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs`
 - Fix:
   - Zentrale Recovery-Regel fuer `CanRollback` und `RecoveryState`.
 
@@ -190,9 +190,9 @@ Diese Befunde sind in diesem Remediation-Lauf end-to-end behoben worden:
 - Schweregrad: `P1`
 - Impact: fehlendes Pflichtartefakt bei nominal erfolgreich gemeldetem Run.
 - Betroffene Dateien:
-  - `src/RomCleanup.Infrastructure/Orchestration/RunOrchestrator.PreviewAndPipelineHelpers.cs`
-  - `src/RomCleanup.Tests/RunOrchestratorTests.cs`
-  - `src/RomCleanup.Tests/ReportParityTests.cs`
+  - `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.PreviewAndPipelineHelpers.cs`
+  - `src/Romulus.Tests/RunOrchestratorTests.cs`
+  - `src/Romulus.Tests/ReportParityTests.cs`
 - Fix:
   - harte Degradierung auf `completed_with_errors`, ExitCode `1`
 
@@ -202,10 +202,10 @@ Diese Befunde sind in diesem Remediation-Lauf end-to-end behoben worden:
 - Schweregrad: `P1`
 - Impact: Undo konnte in einem nicht verifizierten Zustand aktiv werden.
 - Betroffene Dateien:
-  - `src/RomCleanup.UI.Wpf/Services/IRunService.cs`
-  - `src/RomCleanup.UI.Wpf/Services/RunService.cs`
-  - `src/RomCleanup.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs`
-  - `src/RomCleanup.Tests/GuiViewModelTests.cs`
+  - `src/Romulus.UI.Wpf/Services/IRunService.cs`
+  - `src/Romulus.UI.Wpf/Services/RunService.cs`
+  - `src/Romulus.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs`
+  - `src/Romulus.Tests/GuiViewModelTests.cs`
 - Fix:
   - GUI nutzt jetzt dieselbe verifizierte Recovery-Wahrheit wie API.
 
@@ -215,9 +215,9 @@ Diese Befunde sind in diesem Remediation-Lauf end-to-end behoben worden:
 - Schweregrad: `P1`
 - Impact: API/Report/GUI konnten denselben Run unterschiedlich darstellen.
 - Betroffene Dateien:
-  - `src/RomCleanup.Infrastructure/Orchestration/RunArtifactProjection.cs`
-  - `src/RomCleanup.Api/Program.cs`
-  - `src/RomCleanup.Tests/RunArtifactProjectionTests.cs`
+  - `src/Romulus.Infrastructure/Orchestration/RunArtifactProjection.cs`
+  - `src/Romulus.Api/Program.cs`
+  - `src/Romulus.Tests/RunArtifactProjectionTests.cs`
 - Fix:
   - zentrale Projektion statt lokaler Nachrechnungen
 
@@ -227,8 +227,8 @@ Diese Befunde sind in diesem Remediation-Lauf end-to-end behoben worden:
 - Schweregrad: `P1/P2`
 - Impact: rooted ADS-Quellen wurden nicht explizit abgefangen.
 - Betroffene Dateien:
-  - `src/RomCleanup.Infrastructure/FileSystem/FileSystemAdapter.cs`
-  - `src/RomCleanup.Tests/FileSystemAdapterTests.cs`
+  - `src/Romulus.Infrastructure/FileSystem/FileSystemAdapter.cs`
+  - `src/Romulus.Tests/FileSystemAdapterTests.cs`
 - Fix:
   - gemeinsame ADS-Erkennung fuer Source und Destination
 
@@ -250,40 +250,40 @@ Diese Befunde sind in diesem Remediation-Lauf end-to-end behoben worden:
 
 ## 4. Wichtige geaenderte Dateien
 
-- `src/RomCleanup.Contracts/Models/RunExecutionModels.cs`
-- `src/RomCleanup.Contracts/Models/ServiceModels.cs`
-- `src/RomCleanup.Contracts/Ports/IAuditStore.cs`
-- `src/RomCleanup.Infrastructure/Audit/AuditCsvStore.cs`
-- `src/RomCleanup.Infrastructure/Audit/AuditRecoveryStateResolver.cs`
-- `src/RomCleanup.Infrastructure/FileSystem/FileSystemAdapter.cs`
-- `src/RomCleanup.Infrastructure/Orchestration/DatRenamePipelinePhase.cs`
-- `src/RomCleanup.Infrastructure/Orchestration/PhasePlanning.cs`
-- `src/RomCleanup.Infrastructure/Orchestration/PipelinePhaseHelpers.cs`
-- `src/RomCleanup.Infrastructure/Orchestration/ConversionPhaseHelper.cs`
-- `src/RomCleanup.Infrastructure/Orchestration/RunArtifactProjection.cs`
-- `src/RomCleanup.Infrastructure/Orchestration/RunOrchestrator.cs`
-- `src/RomCleanup.Infrastructure/Orchestration/RunOrchestrator.ScanAndConvertSteps.cs`
-- `src/RomCleanup.Infrastructure/Orchestration/RunOrchestrator.StandardPhaseSteps.cs`
-- `src/RomCleanup.Infrastructure/Orchestration/RunOrchestrator.PreviewAndPipelineHelpers.cs`
-- `src/RomCleanup.Infrastructure/Sorting/ConsoleSorter.cs`
-- `src/RomCleanup.Api/RunLifecycleManager.cs`
-- `src/RomCleanup.Api/RunManager.cs`
-- `src/RomCleanup.Api/Program.cs`
-- `src/RomCleanup.UI.Wpf/Services/IRunService.cs`
-- `src/RomCleanup.UI.Wpf/Services/RunService.cs`
-- `src/RomCleanup.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs`
+- `src/Romulus.Contracts/Models/RunExecutionModels.cs`
+- `src/Romulus.Contracts/Models/ServiceModels.cs`
+- `src/Romulus.Contracts/Ports/IAuditStore.cs`
+- `src/Romulus.Infrastructure/Audit/AuditCsvStore.cs`
+- `src/Romulus.Infrastructure/Audit/AuditRecoveryStateResolver.cs`
+- `src/Romulus.Infrastructure/FileSystem/FileSystemAdapter.cs`
+- `src/Romulus.Infrastructure/Orchestration/DatRenamePipelinePhase.cs`
+- `src/Romulus.Infrastructure/Orchestration/PhasePlanning.cs`
+- `src/Romulus.Infrastructure/Orchestration/PipelinePhaseHelpers.cs`
+- `src/Romulus.Infrastructure/Orchestration/ConversionPhaseHelper.cs`
+- `src/Romulus.Infrastructure/Orchestration/RunArtifactProjection.cs`
+- `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.cs`
+- `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.ScanAndConvertSteps.cs`
+- `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.StandardPhaseSteps.cs`
+- `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.PreviewAndPipelineHelpers.cs`
+- `src/Romulus.Infrastructure/Sorting/ConsoleSorter.cs`
+- `src/Romulus.Api/RunLifecycleManager.cs`
+- `src/Romulus.Api/RunManager.cs`
+- `src/Romulus.Api/Program.cs`
+- `src/Romulus.UI.Wpf/Services/IRunService.cs`
+- `src/Romulus.UI.Wpf/Services/RunService.cs`
+- `src/Romulus.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs`
 
 ## 5. Neue oder aktualisierte Regressionstests
 
-- `src/RomCleanup.Tests/RunOrchestratorTests.cs`
-- `src/RomCleanup.Tests/RunArtifactProjectionTests.cs`
-- `src/RomCleanup.Tests/RunManagerTests.cs`
-- `src/RomCleanup.Tests/GuiViewModelTests.cs`
-- `src/RomCleanup.Tests/ReportParityTests.cs`
-- `src/RomCleanup.Tests/SortingTests.cs`
-- `src/RomCleanup.Tests/FileSystemAdapterTests.cs`
-- `src/RomCleanup.Tests/AuditCsvStoreTests.cs`
-- `src/RomCleanup.Tests/DatRenameKpiPropagationTests.cs`
+- `src/Romulus.Tests/RunOrchestratorTests.cs`
+- `src/Romulus.Tests/RunArtifactProjectionTests.cs`
+- `src/Romulus.Tests/RunManagerTests.cs`
+- `src/Romulus.Tests/GuiViewModelTests.cs`
+- `src/Romulus.Tests/ReportParityTests.cs`
+- `src/Romulus.Tests/SortingTests.cs`
+- `src/Romulus.Tests/FileSystemAdapterTests.cs`
+- `src/Romulus.Tests/AuditCsvStoreTests.cs`
+- `src/Romulus.Tests/DatRenameKpiPropagationTests.cs`
 
 ## 6. Validation
 
@@ -291,12 +291,12 @@ Durchgefuehrte Verifikation:
 
 1. Gezielter Regressionslauf ueber die geaenderten Audit-, Recovery-, Sorting-, Projection- und Orchestrator-Bereiche.
 2. Erzwungener Rebuild des Testprojekts, um stale Test-Binaries auszuschliessen.
-3. Voller Testlauf ueber `RomCleanup.Tests`.
+3. Voller Testlauf ueber `Romulus.Tests`.
 
 Ergebnis:
 
-- `dotnet build src/RomCleanup.Tests/RomCleanup.Tests.csproj -t:Rebuild`
-- `dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --no-build`
+- `dotnet build src/Romulus.Tests/Romulus.Tests.csproj -t:Rebuild`
+- `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build`
 - Status: `7270 / 7270 Tests bestanden`
 
 Hinweis:

@@ -101,7 +101,7 @@ Die Conversion-Domaene ist fuer den Stabilization-Schnitt ueber folgende Pfade a
 Gezielter Smoke-Befehl:
 
 ```powershell
-dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj `
+dotnet test src/Romulus.Tests/Romulus.Tests.csproj `
   --configuration Release `
   --no-build `
   --filter "FullyQualifiedName~ConversionRegistrySchemaTests|FullyQualifiedName~ReachInvokerTests|FullyQualifiedName~ConversionExecutorHardeningTests|FullyQualifiedName~ToolRunnerAdapterTests"

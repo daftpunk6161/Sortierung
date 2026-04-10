@@ -4,7 +4,7 @@
 > **Datum:** 2026-03-18  
 > **Kontext:** FULL_TOOL_AUDIT_2026-03-18.md, CliRedPhaseTests.cs (11 Failing Tests), ADR-005 (Core-Zielarchitektur)  
 > **Scope:** CLI Entry Point — Program, Commands, Parser, Validation, Output, Exit Codes, Projection-Nutzung  
-> **Betroffene Datei (IST):** `src/RomCleanup.CLI/Program.cs` (~850 Zeilen, 14 Verantwortlichkeiten)
+> **Betroffene Datei (IST):** `src/Romulus.CLI/Program.cs` (~850 Zeilen, 14 Verantwortlichkeiten)
 
 ---
 
@@ -39,7 +39,7 @@ Program.cs (850 Zeilen)
 ### Soll-Zustand: 5 Verantwortlichkeiten, 4 Dateien
 
 ```
-src/RomCleanup.CLI/
+src/Romulus.CLI/
 ├── Program.cs              ← Entry Point: Main + Ctrl+C + top-level error handling
 ├── CliArgsParser.cs        ← Pure Parsing: string[] → CliParseResult (value object)
 ├── CliOptionsMapper.cs     ← CliParseResult + Settings → RunOptions
@@ -145,12 +145,12 @@ internal static class CliArgsParser
 internal static class CliOptionsMapper
 {
     /// <summary>
-    /// Vereint CliRunOptions + RomCleanupSettings zu einem fertigen RunOptions.
+    /// Vereint CliRunOptions + RomulusSettings zu einem fertigen RunOptions.
     /// Prüft Root-Existenz und System-Pfad-Blockade.
     /// Gibt (RunOptions?, CliParseResult) zurück — CliParseResult nur bei Fehler.
     /// </summary>
     internal static (RunOptions? Options, CliParseResult? Error)
-        Map(CliRunOptions raw, RomCleanupSettings settings);
+        Map(CliRunOptions raw, RomulusSettings settings);
 }
 ```
 
@@ -210,7 +210,7 @@ public sealed class RunEnvironmentBuilder
     /// ConsoleDetector, DatIndex, HashService, Converter, Logger.
     /// Identisch genutzt von CLI, API und WPF.
     /// </summary>
-    public RunEnvironment Build(RunOptions options, RomCleanupSettings settings,
+    public RunEnvironment Build(RunOptions options, RomulusSettings settings,
                                  Action<string>? onProgress = null);
 }
 ```
@@ -373,7 +373,7 @@ RunEnvironment
 
 ### Phase 4: `RunEnvironmentBuilder` (eliminiert Entry-Point-Code-Duplizierung)
 
-1. Neue Datei `src/RomCleanup.Infrastructure/Orchestration/RunEnvironmentBuilder.cs`.
+1. Neue Datei `src/Romulus.Infrastructure/Orchestration/RunEnvironmentBuilder.cs`.
 2. DAT-Setup, ConsoleDetector-Init, Converter-Init, Logger-Init wandern hierher.
 3. Rückbau in `RunManager.TryCreate()` (API) und `RunService.BuildOrchestrator()` (WPF) auf `RunEnvironmentBuilder.Build()`.
 4. **Erwartetes Ergebnis:** Drei Entry Points teilen exakt denselben Setup-Code. Änderungen an DAT-Konfiguration oder Tool-Initialisierung müssen nur noch an einer Stelle erfolgen.
@@ -436,7 +436,7 @@ internal static class Program
 
 | Was | Warum nicht |
 |-----|-------------|
-| Command-Pattern (`romcleanup scan`, `romcleanup convert`) | Aktuell nur ein Command. Einführen, wenn zweiter Command kommt. YAGNI. |
+| Command-Pattern (`romulus scan`, `romulus convert`) | Aktuell nur ein Command. Einführen, wenn zweiter Command kommt. YAGNI. |
 | Third-Party-Arg-Parser (System.CommandLine, Spectre.Console) | Aktuelle Flag-Menge (~20) ist mit hand-rolled Parser beherrschbar. Externe Abhängigkeit nicht gerechtfertigt. |
 | Streaming/Progress-Bar auf stderr | CLI ist headless/CI-optimiert. Progress-Zeilen reichen. |
 | JSON-Schema für CLI-Output | Erst relevant, wenn CI-Consumer das CLI-JSON maschinell verarbeiten. Dann als OpenAPI-Sidecar. |

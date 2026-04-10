@@ -33,10 +33,10 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Build
-        run: dotnet build src/RomCleanup.sln --configuration Release
+        run: dotnet build src/Romulus.sln --configuration Release
 
       - name: Test
-        run: dotnet test src/RomCleanup.sln --no-build --configuration Release
+        run: dotnet test src/Romulus.sln --no-build --configuration Release
 
       - name: Release smoke
         shell: pwsh
@@ -44,13 +44,13 @@ jobs:
           ./deploy/smoke/Invoke-ReleaseSmoke.ps1 -Configuration Release -SkipBuild -SkipFullTests
 
       - name: Publish CLI
-        run: dotnet publish src/RomCleanup.CLI/RomCleanup.CLI.csproj --configuration Release --output dist/cli
+        run: dotnet publish src/Romulus.CLI/Romulus.CLI.csproj --configuration Release --output dist/cli
 
       - name: Publish API
-        run: dotnet publish src/RomCleanup.Api/RomCleanup.Api.csproj --configuration Release --output dist/api
+        run: dotnet publish src/Romulus.Api/Romulus.Api.csproj --configuration Release --output dist/api
 
       - name: Publish WPF GUI
-        run: dotnet publish src/RomCleanup.UI.Wpf/RomCleanup.UI.Wpf.csproj --configuration Release --output dist/gui
+        run: dotnet publish src/Romulus.UI.Wpf/Romulus.UI.Wpf.csproj --configuration Release --output dist/gui
 
       - name: Create release archive
         shell: pwsh

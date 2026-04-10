@@ -5,7 +5,7 @@ Stand: 2026-03-11
 ## 1) API-Versionierung
 
 - Aktive Hauptversion: `v1`.
-- Implementierung: `src/RomCleanup.Api/Program.cs` (ASP.NET Core Minimal API).
+- Implementierung: `src/Romulus.Api/Program.cs` (ASP.NET Core Minimal API).
 - Kompatibilität:
   - Bestehende MVP-Routen bleiben kompatibel (`/health`, `/runs`, ...).
 - Breaking Changes:
@@ -15,7 +15,7 @@ Stand: 2026-03-11
 ## 2) OpenAPI-Contract Governance
 
 - Quelle: `docs/openapi.yaml`.
-- Embedded Spec: `src/RomCleanup.Api/OpenApiSpec.cs` (JSON, ausgeliefert unter `/openapi`).
+- Embedded Spec: `src/Romulus.Api/OpenApiSpec.cs` (JSON, ausgeliefert unter `/openapi`).
 - Beide Specs müssen synchron gehalten werden.
 
 ## 3) Config-Schema-Versionen & Migration

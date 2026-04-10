@@ -30,7 +30,7 @@
 
 ### 1.2 Warum breite Plattformabdeckung nicht verhandelbar ist
 
-RomCleanup erkennt **69 Systeme** über eine 8-stufige Detection-Cascade (FolderName → UniqueExt → AmbiguousExt → DiscHeader → ArchiveContent → CartridgeHeader → Serial → Keyword). Ein Schema, das nur Cartridge-ROMs und ISO-Discs modelliert, deckt bestenfalls 40% der realen Fehlermodi ab. Die kritischsten Verwechslungen passieren an den Rändern:
+Romulus erkennt **69 Systeme** über eine 8-stufige Detection-Cascade (FolderName → UniqueExt → AmbiguousExt → DiscHeader → ArchiveContent → CartridgeHeader → Serial → Keyword). Ein Schema, das nur Cartridge-ROMs und ISO-Discs modelliert, deckt bestenfalls 40% der realen Fehlermodi ab. Die kritischsten Verwechslungen passieren an den Rändern:
 
 - **Arcade vs. Neo Geo AES/MVS vs. Neo Geo CD** — gleiche IPs, verschiedene Plattformen
 - **GB vs. GBC** — CGB-Flag Dual-Mode ist binär ambig

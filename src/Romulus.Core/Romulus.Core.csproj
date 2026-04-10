@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Romulus.Core</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Romulus.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Romulus.Contracts\Romulus.Contracts.csproj" />
+  </ItemGroup>
+</Project>

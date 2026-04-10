@@ -463,7 +463,7 @@
   "Settings.GameKeyLabel": "GameKey :",
   "Settings.ExportConfigTip": "Exporter le profil ou la configuration compl├¿te",
   "Settings.ImportConfigTip": "Importer la configuration",
-  "Dialog.ErrorTitle": "RomCleanup ÔÇô Erreur",
+  "Dialog.ErrorTitle": "Romulus ÔÇô Erreur",
   "Dialog.UnexpectedError": "Une erreur inattendue s'est produite :",
   "Dialog.CrashLogSaved": "Les d├®tails ont ├®t├® enregistr├®s dans crash.log.",
   "Error.NoRoots": "Veuillez ajouter au moins un dossier ROM avant de d├®marrer.",
@@ -691,7 +691,7 @@
   "Tool.SortTemplates.Desc": "Mod├¿les de tri pr├®d├®finis",
   "Tool.PipelineEngine": "Statut pipeline",
   "Tool.PipelineEngine.Desc": "Afficher les résultats de la pipeline",
-  "Tray.Minimized": "RomCleanup fonctionne en arri├¿re-plan.",
+  "Tray.Minimized": "Romulus fonctionne en arri├¿re-plan.",
   "Tray.RunProgress": "Ex├®cution en cours : {0}",
   "Tray.RunComplete": "Ex├®cution termin├®e ÔÇô {0} conserv├®s, {1} d├®plac├®s, {2} junk.",
 

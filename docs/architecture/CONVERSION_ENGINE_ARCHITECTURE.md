@@ -39,7 +39,7 @@ Eine **graphbasierte, datengesteuerte Conversion-Engine**, die:
 | A-1 | **Graph-basiertes Routing** statt Dictionary-Lookup | Ermöglicht mehrstufige Ketten, alternative Pfade, Kosten-Optimierung |
 | A-2 | **Konfigurationsgesteuert** statt hardcodiert | consoles.json bekommt `conversionPolicy`, conversion-registry.json definiert alle Edges |
 | A-3 | **ConversionPlan als Zwischenprodukt** | Preview/DryRun kann den Plan zeigen, bevor Convert ausgeführt wird |
-| A-4 | **Vertrag-orientiert (Contracts first)** | Alle neuen Typen in `RomCleanup.Contracts`, Engine in `RomCleanup.Core`, Adapter in `RomCleanup.Infrastructure` |
+| A-4 | **Vertrag-orientiert (Contracts first)** | Alle neuen Typen in `Romulus.Contracts`, Engine in `Romulus.Core`, Adapter in `Romulus.Infrastructure` |
 | A-5 | **Rückwärtskompatibel** | Bestehende `IFormatConverter`-Schnittstelle bleibt erhalten, neue Engine implementiert sie intern |
 | A-6 | **Kein DI-Container-Lock-in** | Engine ist Constructor-Injectable, nicht framework-gekoppelt |
 

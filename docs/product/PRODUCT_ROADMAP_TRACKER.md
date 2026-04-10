@@ -162,7 +162,7 @@ Status: abgeschlossen am `2026-04-01`
 
 ### Letztes Update (2026-04-01)
 
-- Compare-/Merge-Contracts liegen zentral in `RomCleanup.Contracts`.
+- Compare-/Merge-Contracts liegen zentral in `Romulus.Contracts`.
 - `CollectionCompareService` und `CollectionMergeService` materialisieren linke/rechte/Target-Sichten index-first mit Root-/Fingerprint-Guards statt neuer Scanner-Schattenlogik.
 - Merge-Plan, Apply, Audit und Rollback laufen jetzt ueber denselben Safety-, Audit- und Rollback-Vertrag wie andere mutierende Produktpfade.
 - GUI, CLI und API sind auf dieselben Compare-/Merge-Modelle verdrahtet; OpenAPI und WPF-/CLI-/API-Regressionen sind ergaenzt.

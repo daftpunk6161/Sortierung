@@ -52,7 +52,7 @@ Shareable Settings-Profile mit Validierung, Import/Export und Versionierung.
    - Werte-Validierung gegen bekannte Enums/Ranges
 
 3. **ProfileStore** (`Infrastructure/Profiles/ProfileStore.cs`)
-   - Lokaler Speicher: `%APPDATA%\RomCleanupRegionDedupe\profiles\`
+   - Lokaler Speicher: `%APPDATA%\Romulus\profiles\`
    - Built-in Profiles: mitgeliefert in `data/profiles/`
    - Import von URL oder Datei
 

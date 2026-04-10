@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://romcleanup.local/schemas/settings.schema.json",
+  "$id": "https://romulus.local/schemas/settings.schema.json",
   "type": "object",
   "required": ["toolPaths", "dat", "general"],
   "properties": {

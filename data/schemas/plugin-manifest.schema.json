@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://romcleanup.local/schemas/plugin-manifest.schema.json",
+  "$id": "https://romulus.local/schemas/plugin-manifest.schema.json",
   "type": "object",
   "required": ["id", "schemaVersion", "version", "capabilities"],
   "properties": {

@@ -5,8 +5,8 @@
 **Scope**: Recognition, Classification, DAT-Matching, Sorting, Evidence-Pipeline
 
 **Validierung (Stand 2026-03-30):**
-- `dotnet build src/RomCleanup.sln` erfolgreich
-- `dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj` erfolgreich (6996/6996)
+- `dotnet build src/Romulus.sln` erfolgreich
+- `dotnet test src/Romulus.Tests/Romulus.Tests.csproj` erfolgreich (6996/6996)
 
 ---
 
@@ -381,7 +381,7 @@ Erweiterung der Console-Definition:
 
 ## 4. Konkrete Architekturänderungen
 
-### 4.1 Neue Models (in `RomCleanup.Contracts/Models/`)
+### 4.1 Neue Models (in `Romulus.Contracts/Models/`)
 
 #### `EvidenceTier.cs` (NEU)
 ```csharp
@@ -774,7 +774,7 @@ Die Entfernung der verbleibenden Legacy-Konstrukte erfolgt erst nach vollständi
 
 **Betroffene Dateien**:
 - `benchmark/` (Ground-Truth-Erweiterung)
-- `src/RomCleanup.Tests/Benchmark/` (neue Quality-Gate-Tests)
+- `src/Romulus.Tests/Benchmark/` (neue Quality-Gate-Tests)
 - `benchmark/gates.json` (neue Thresholds)
 
 **Risiken**:

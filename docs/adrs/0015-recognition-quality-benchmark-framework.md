@@ -8,7 +8,7 @@ Proposed
 
 ## Kontext
 
-RomCleanup trifft **destruktive Entscheidungen** (Move, Sort, Dedupe, Rename) auf Basis seiner Erkennungspipeline. Jede Fehlentscheidung ist ein potenzieller Datenverlust. Bisher existiert kein formal validiertes, durchgängig messbares Qualitätsmodell, das alle Erkennungsebenen isoliert bewertet und objektive Regressionserkennung ermöglicht.
+Romulus trifft **destruktive Entscheidungen** (Move, Sort, Dedupe, Rename) auf Basis seiner Erkennungspipeline. Jede Fehlentscheidung ist ein potenzieller Datenverlust. Bisher existiert kein formal validiertes, durchgängig messbares Qualitätsmodell, das alle Erkennungsebenen isoliert bewertet und objektive Regressionserkennung ermöglicht.
 
 Die Infrastruktur (8-stufige Detection Cascade gemäß ADR-0014, HypothesisResolver, 2.073 Ground-Truth-Einträge, Stub-Generatoren, CoverageGateTests, MetricsAggregator) ist bereits vorhanden. Was fehlt, ist die **verbindliche architektonische Entscheidung**, wie diese Infrastruktur als Release-Gate, Regressions-Schutz und Qualitätsnachweis verbindlich eingesetzt wird.
 
@@ -231,20 +231,20 @@ Verworfen: Referenz-Set prüft Happy Path. Real-World hat 30-50 % Chaos-Anteil. 
 | `benchmark/ground-truth/*.jsonl` (8 Dateien) | 2.073 Ground-Truth-Einträge | ✅ Vorhanden |
 | `benchmark/ground-truth/ground-truth.schema.json` | JSON-Schema-Validierung | ✅ Vorhanden |
 | `benchmark/manifest.json` | Datensatz-Metadaten | ✅ Vorhanden |
-| `src/RomCleanup.Tests/Benchmark/BenchmarkEvaluationRunner.cs` | Evaluation Runner | ✅ Vorhanden |
-| `src/RomCleanup.Tests/Benchmark/GroundTruthComparator.cs` | Verdikt-Vergleich | ✅ Vorhanden |
-| `src/RomCleanup.Tests/Benchmark/MetricsAggregator.cs` | Metrik-Berechnung | ✅ Vorhanden |
-| `src/RomCleanup.Tests/Benchmark/CoverageGateTests.cs` | Coverage-Gate-Tests | ✅ Vorhanden |
-| `src/RomCleanup.Tests/Benchmark/GoldenCoreBenchmarkTests.cs` | Golden-Core-Benchmark | ✅ Vorhanden |
+| `src/Romulus.Tests/Benchmark/BenchmarkEvaluationRunner.cs` | Evaluation Runner | ✅ Vorhanden |
+| `src/Romulus.Tests/Benchmark/GroundTruthComparator.cs` | Verdikt-Vergleich | ✅ Vorhanden |
+| `src/Romulus.Tests/Benchmark/MetricsAggregator.cs` | Metrik-Berechnung | ✅ Vorhanden |
+| `src/Romulus.Tests/Benchmark/CoverageGateTests.cs` | Coverage-Gate-Tests | ✅ Vorhanden |
+| `src/Romulus.Tests/Benchmark/GoldenCoreBenchmarkTests.cs` | Golden-Core-Benchmark | ✅ Vorhanden |
 
 ### Erweiterungen nötig
 | Datei | Zweck | Priorität |
 |-------|-------|-----------|
-| `src/RomCleanup.Tests/Benchmark/QualityGateTests.cs` | M4/M6/M7/M9a Hard-Fail-Gates | P0 |
-| `src/RomCleanup.Tests/Benchmark/BaselineRegressionGateTests.cs` | Baseline-Vergleich M15 | P1 |
-| `src/RomCleanup.Tests/Benchmark/ConfidenceCalibrationTests.cs` | M16 Calibration Error | P2 |
+| `src/Romulus.Tests/Benchmark/QualityGateTests.cs` | M4/M6/M7/M9a Hard-Fail-Gates | P0 |
+| `src/Romulus.Tests/Benchmark/BaselineRegressionGateTests.cs` | Baseline-Vergleich M15 | P1 |
+| `src/Romulus.Tests/Benchmark/ConfidenceCalibrationTests.cs` | M16 Calibration Error | P2 |
 | `benchmark/baselines/baseline-metrics.json` | Gespeicherte Referenz-Metriken | P1 |
-| `src/RomCleanup.Tests/Benchmark/BenchmarkHtmlReportWriter.cs` | HTML/JSON Report Output | P2 |
+| `src/Romulus.Tests/Benchmark/BenchmarkHtmlReportWriter.cs` | HTML/JSON Report Output | P2 |
 
 ## Konsequenzen
 

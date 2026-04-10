@@ -10,7 +10,7 @@ Der reproduzierbare, automatisierte Teil der Accessibility-Pruefung laeuft ueber
 Vor einem manuellen Spot-Check muss der strukturelle Accessibility-Gate grün sein:
 
 ```powershell
-dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj `
+dotnet test src/Romulus.Tests/Romulus.Tests.csproj `
   --configuration Release `
   --no-build `
   --filter "FullyQualifiedName~Phase8ThemeAccessibilityTests|FullyQualifiedName~WpfProductizationTests"

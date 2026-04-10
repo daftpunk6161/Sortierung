@@ -20,8 +20,8 @@ Detailplan:
 - [x] [`../archive/completed/plans/r1-t01-index-contract-technical-plan.md`](../archive/completed/plans/r1-t01-index-contract-technical-plan.md)
 
 Betroffene Bereiche:
-- `src/RomCleanup.Contracts`
-- `src/RomCleanup.Contracts/Models`
+- `src/Romulus.Contracts`
+- `src/Romulus.Contracts/Models`
 - `docs/epics/C1-persistent-collection-index.md`
 
 Akzeptanz:
@@ -37,9 +37,9 @@ Abhaengigkeiten:
 Ziel: Einen robusten persistenten Store mit sauberem Recovery-Pfad und deterministischem Verhalten bereitstellen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Index`
-- `src/RomCleanup.Infrastructure`
-- `%APPDATA%\\RomCleanupRegionDedupe\\`
+- `src/Romulus.Infrastructure/Index`
+- `src/Romulus.Infrastructure`
+- `%APPDATA%\\Romulus\\`
 
 Akzeptanz:
 - [x] Index kann initialisiert, gelesen, geschrieben und versioniert behandelt werden
@@ -60,11 +60,11 @@ Status:
 - [x] Stale-Entry-Cleanup fuer nicht mehr vorhandene Dateien wird nach vollstaendigen Scans gescopet nach Roots und Extensions ausgefuehrt
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Hashing`
-- `src/RomCleanup.Infrastructure/Orchestration`
-- `src/RomCleanup.Infrastructure/FileSystem`
-- `src/RomCleanup.Infrastructure/Index`
-- `src/RomCleanup.Contracts/Models`
+- `src/Romulus.Infrastructure/Hashing`
+- `src/Romulus.Infrastructure/Orchestration`
+- `src/Romulus.Infrastructure/FileSystem`
+- `src/Romulus.Infrastructure/Index`
+- `src/Romulus.Contracts/Models`
 
 Akzeptanz:
 - [x] Delta-Erkennung nutzt Pfad, Groesse und `LastModifiedUtc` deterministisch
@@ -85,9 +85,9 @@ Status:
 - [x] Trend-/Report-Konsumenten lesen dieselbe Snapshot-Historie statt separater Nebenfiles
 
 Betroffene Bereiche:
-- `src/RomCleanup.Contracts/Models`
-- `src/RomCleanup.Infrastructure/Orchestration`
-- `src/RomCleanup.Api`
+- `src/Romulus.Contracts/Models`
+- `src/Romulus.Infrastructure/Orchestration`
+- `src/Romulus.Api`
 
 Akzeptanz:
 - [x] Run-Historie wird pro Run geschrieben
@@ -110,10 +110,10 @@ Status:
 - [x] Export- und Konvertierungspfade leiten ihren Zustand jetzt kontrolliert aus Run oder Collection-Index mit explizitem Fallback ab
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Analysis`
-- `src/RomCleanup.CLI`
-- `src/RomCleanup.Api`
-- `src/RomCleanup.Infrastructure/Orchestration`
+- `src/Romulus.Infrastructure/Analysis`
+- `src/Romulus.CLI`
+- `src/Romulus.Api`
+- `src/Romulus.Infrastructure/Orchestration`
 
 Akzeptanz:
 - [x] Analyse und Completeness leiten ihre Daten aus Run-Ergebnissen oder Index ab, nicht aus Pfadheuristiken
@@ -134,10 +134,10 @@ Status:
 - [x] API-Review-Endpoints, CLI-Runs und WPF-Runs verwenden denselben persistierten Review-Zustand
 
 Betroffene Bereiche:
-- `src/RomCleanup.Contracts`
-- `src/RomCleanup.Infrastructure/Orchestration`
-- `src/RomCleanup.Api`
-- `src/RomCleanup.UI.Wpf`
+- `src/Romulus.Contracts`
+- `src/Romulus.Infrastructure/Orchestration`
+- `src/Romulus.Api`
+- `src/Romulus.UI.Wpf`
 
 Akzeptanz:
 - [x] Review-Entscheidungen sind persistiert und idempotent erneut anwendbar
@@ -157,10 +157,10 @@ Status:
 - [x] API- und CLI-Automation nutzen dieselben Watch-/Schedule-Dienste statt separater Lokallogik
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Watch`
-- `src/RomCleanup.UI.Wpf/Services`
-- `src/RomCleanup.Api`
-- `src/RomCleanup.CLI`
+- `src/Romulus.Infrastructure/Watch`
+- `src/Romulus.UI.Wpf/Services`
+- `src/Romulus.Api`
+- `src/Romulus.CLI`
 
 Akzeptanz:
 - [x] Watch-Folder und Schedule sind nicht mehr nur an WPF gebunden
@@ -180,10 +180,10 @@ Status:
 - [x] GUI, CLI und API verwenden dieselben Run-, Review- und Watch-Statusmodelle ohne lokale KPI-Neuberechnung
 
 Betroffene Bereiche:
-- `src/RomCleanup.Api`
-- `src/RomCleanup.CLI`
-- `src/RomCleanup.UI.Wpf`
-- `src/RomCleanup.Infrastructure/Orchestration`
+- `src/Romulus.Api`
+- `src/Romulus.CLI`
+- `src/Romulus.UI.Wpf`
+- `src/Romulus.Infrastructure/Orchestration`
 
 Akzeptanz:
 - [x] CLI, API und GUI nutzen denselben Service fuer Watch und Status
@@ -204,7 +204,7 @@ Status:
 - [x] Die Vollsuite laeuft gruen mit `7101/7101` Tests auf Stand `2026-04-01`
 
 Betroffene Bereiche:
-- `src/RomCleanup.Tests`
+- `src/Romulus.Tests`
 - `docs/architecture/TEST_STRATEGY.md`
 
 Akzeptanz:

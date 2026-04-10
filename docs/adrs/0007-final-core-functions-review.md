@@ -59,7 +59,7 @@
 
 **Schweregrad: HOCH** — Die REST API ist gegenüber CLI/WPF erheblich funktionsdegradiert.
 
-**[RunManager.cs](../src/RomCleanup.Api/RunManager.cs) Zeile 267-280:**
+**[RunManager.cs](../src/Romulus.Api/RunManager.cs) Zeile 267-280:**
 
 | Fehlend in API | CLI/WPF | Auswirkung |
 |----------------|---------|------------|
@@ -76,7 +76,7 @@
 
 ### 3.2 MITTEL: Domain-Logik-Leck in `EnrichmentPipelinePhase`
 
-`CalculateCompletenessScore()` in [EnrichmentPipelinePhase.cs](../src/RomCleanup.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs) trifft Scoring-Entscheidungen:
+`CalculateCompletenessScore()` in [EnrichmentPipelinePhase.cs](../src/Romulus.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs) trifft Scoring-Entscheidungen:
 - DAT-Match → +50
 - Vollständiges Set → +50, unvollständig → -50
 - Standalone-Datei → +25
@@ -87,14 +87,14 @@ Dies ist **Domain-Scoring-Logik** und gehört in `Core/Scoring/CompletenessScore
 
 ### 3.3 MITTEL: Domain-Config in `ZipSorter` und `FormatConverterAdapter`
 
-- [ZipSorter.cs](../src/RomCleanup.Infrastructure/Sorting/ZipSorter.cs): PS1/PS2-Extension-Sets (`{".ccd", ".sub", ".pbp"}`, `{".nrg", ".mdf", ".mds"}`) sind hardcoded statt aus `consoles.json` konfigurierbar.
-- [FormatConverterAdapter.cs](../src/RomCleanup.Infrastructure/Conversion/FormatConverterAdapter.cs): `BestFormats`-Dictionary (PS1→CHD, GC→RVZ etc.) ist hardcoded statt aus Datendateien geladen.
+- [ZipSorter.cs](../src/Romulus.Infrastructure/Sorting/ZipSorter.cs): PS1/PS2-Extension-Sets (`{".ccd", ".sub", ".pbp"}`, `{".nrg", ".mdf", ".mds"}`) sind hardcoded statt aus `consoles.json` konfigurierbar.
+- [FormatConverterAdapter.cs](../src/Romulus.Infrastructure/Conversion/FormatConverterAdapter.cs): `BestFormats`-Dictionary (PS1→CHD, GC→RVZ etc.) ist hardcoded statt aus Datendateien geladen.
 
 **Auswirkung:** Neue Konsolen erfordern Code-Änderungen statt JSON-Config.
 
 ### 3.4 MITTEL: `FolderDeduplicator.GetFolderBaseKey()` — Domain-Renormalisierung außerhalb Core
 
-[FolderDeduplicator.cs](../src/RomCleanup.Infrastructure/Deduplication/FolderDeduplicator.cs) enthält eine eigene Key-Normalisierung (Diakritika, Parens-Filterung, Versions-Suffixe), die ähnlich wie `GameKeyNormalizer` arbeitet, aber mit abweichender Logik. Sollte als `FolderKeyNormalizer` in `Core/GameKeys/` leben.
+[FolderDeduplicator.cs](../src/Romulus.Infrastructure/Deduplication/FolderDeduplicator.cs) enthält eine eigene Key-Normalisierung (Diakritika, Parens-Filterung, Versions-Suffixe), die ähnlich wie `GameKeyNormalizer` arbeitet, aber mit abweichender Logik. Sollte als `FolderKeyNormalizer` in `Core/GameKeys/` leben.
 
 ### 3.5 NIEDRIG: Toter Code (~280 Zeilen)
 

@@ -17,11 +17,11 @@
 
 ## 1. Executive Verdict
 
-### Warum ein realistisches Testset für RomCleanup unverzichtbar ist
+### Warum ein realistisches Testset für Romulus unverzichtbar ist
 
-RomCleanup trifft **destruktive Entscheidungen** über Dateien: verschieben, sortieren, deduplizieren, umbenennen. Eine falsche Konsolenzuordnung bedeutet nicht „Test rot" sondern **Datenverlust beim User**. Die gesamte Kette — von der Header-Erkennung über DAT-Abgleich bis zur Sort-Entscheidung — muss gegen ein Testset geprüft werden, das die reale Welt abbildet, nicht den Happy Path.
+Romulus trifft **destruktive Entscheidungen** über Dateien: verschieben, sortieren, deduplizieren, umbenennen. Eine falsche Konsolenzuordnung bedeutet nicht „Test rot" sondern **Datenverlust beim User**. Die gesamte Kette — von der Header-Erkennung über DAT-Abgleich bis zur Sort-Entscheidung — muss gegen ein Testset geprüft werden, das die reale Welt abbildet, nicht den Happy Path.
 
-**Was RomCleanup von typischer Software unterscheidet:**
+**Was Romulus von typischer Software unterscheidet:**
 - 69 verschiedene Erkennungsziele (Konsolen), nicht 5-10 Klassen
 - 8 kaskadierende Erkennungsmethoden (Folder → Extension → Header → Serial → DAT) mit Konfliktauflösung
 - Erkennungsfehler sind oft **leise** — kein Crash, sondern falsch sortierte Datei
@@ -756,7 +756,7 @@ CI Pipeline (pro PR):
 4. [Coverage]   CoverageGateTests: Strukturelle Mindest-Coverage
                 → FAIL = Datensatz zu klein für belastbare Messung
 5. [Quality]    QualityGateTests: M4 ≤0.5%, M6 ≤5%, M7 ≤0.3%, M9a ≤0.1%
-                → Informational (ROMCLEANUP_ENFORCE_QUALITY_GATES=true → Hard Fail)
+                → Informational (ROMULUS_ENFORCE_QUALITY_GATES=true → Hard Fail)
 6. [Regression] BaselineRegressionGateTests: vs latest-baseline.json
                 → FAIL wenn: Wrong Match Rate ↑ >0.1pp, Unsafe Sort Rate ↑ >0.1pp
                 → WARN wenn: M15 UNKNOWN→WRONG >2%
@@ -957,12 +957,12 @@ B5  Arcade-Depth             ← MAME-Nutzer abdecken
 - `benchmark/ground-truth/ground-truth.schema.json` — Schema
 - `benchmark/gates.json` — Coverage-Schwellen
 - `benchmark/manifest.json` — Metadaten
-- `src/RomCleanup.Tests/Benchmark/**/*.cs` — 63 Testdateien
+- `src/Romulus.Tests/Benchmark/**/*.cs` — 63 Testdateien
 
 ### Zu erstellen/erweitern
 - `benchmark/ground-truth/holdout-blind.jsonl` (oder externes Repo)
-- `src/RomCleanup.Tests/Benchmark/Generators/MultiFileSetGenerator.cs`
-- `src/RomCleanup.Tests/Benchmark/Generators/DirectoryGameGenerator.cs`
+- `src/Romulus.Tests/Benchmark/Generators/MultiFileSetGenerator.cs`
+- `src/Romulus.Tests/Benchmark/Generators/DirectoryGameGenerator.cs`
 - Schema-Erweiterung: `ground-truth.schema.json` v2.0
 
 ---

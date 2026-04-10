@@ -1,0 +1,343 @@
+<Window x:Class="Romulus.UI.Wpf.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+    xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+    xmlns:views="clr-namespace:Romulus.UI.Wpf.Views"
+    Title="Romulus"
+    Icon="pack://application:,,,/Assets/app.ico"
+    Width="1280" Height="860"
+    MinWidth="960" MinHeight="720"
+    WindowStartupLocation="CenterScreen"
+    FontFamily="Segoe UI" FontSize="13"
+    Background="{DynamicResource BrushBackground}" Foreground="{DynamicResource BrushTextPrimary}"
+    UseLayoutRounding="True"
+    SnapsToDevicePixels="True">
+
+
+  <Window.InputBindings>
+    <KeyBinding Key="F5" Command="{Binding RunCommand}"/>
+    <KeyBinding Key="Escape" Command="{Binding CancelCommand}"/>
+    <KeyBinding Key="R" Modifiers="Control" Command="{Binding OpenReportCommand}"/>
+    <KeyBinding Key="Z" Modifiers="Control" Command="{Binding RollbackCommand}"/>
+    <KeyBinding Key="O" Modifiers="Control" Command="{Binding AddRootCommand}"/>
+    <KeyBinding Key="L" Modifiers="Control" Command="{Binding ClearLogCommand}"/>
+    <KeyBinding Key="T" Modifiers="Control" Command="{Binding ThemeToggleCommand}"/>
+    <KeyBinding Key="G" Modifiers="Control" Command="{Binding GameKeyPreviewCommand}"/>
+    <KeyBinding Key="D1" Modifiers="Control" Command="{Binding PresetSafeDryRunCommand}"/>
+    <KeyBinding Key="D2" Modifiers="Control" Command="{Binding PresetFullSortCommand}"/>
+    <KeyBinding Key="D3" Modifiers="Control" Command="{Binding PresetConvertCommand}"/>
+    <KeyBinding Key="D" Modifiers="Control" Command="{Binding QuickPreviewCommand}"/>
+    <KeyBinding Key="M" Modifiers="Control" Command="{Binding StartMoveCommand}"/>
+    <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveSettingsCommand}"/>
+    <!-- GUI-063: Navigation history -->
+    <KeyBinding Key="Left" Modifiers="Control" Command="{Binding Shell.NavBackCommand}"/>
+    <KeyBinding Key="Right" Modifiers="Control" Command="{Binding Shell.NavForwardCommand}"/>
+    <!-- GUI-101: Shortcut cheatsheet -->
+    <KeyBinding Key="F1" Command="{Binding Shell.ToggleShortcutSheetCommand}"/>
+    <!-- Context Wing toggle -->
+    <KeyBinding Key="I" Modifiers="Control" Command="{Binding Shell.ToggleContextWingCommand}"/>
+    <!-- Command Palette (GUI-Phase4 4.1) -->
+    <KeyBinding Key="K" Modifiers="Control" Command="{Binding ToggleCommandPaletteCommand}"/>
+    <!-- Detail Drawer (GUI-Phase4 4.4) -->
+    <KeyBinding Key="J" Modifiers="Control" Command="{Binding Shell.ToggleDetailDrawerCommand}"/>
+  </Window.InputBindings>
+
+  <Window.Resources>
+    <ControlTemplate x:Key="TransparentOverlayDismissButtonTemplate" TargetType="Button">
+      <Border Background="Transparent"/>
+    </ControlTemplate>
+  </Window.Resources>
+
+  <Grid>
+    <!-- Logo-Watermark Hintergrund -->
+    <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+             Opacity="0.04" IsHitTestVisible="False" MaxWidth="360" MaxHeight="360">
+      <Canvas Width="256" Height="256">
+        <Path Data="M76,49 L76,199 L96,199 L96,136 L126,136 L160,199 L183,199 L150,132 C173,122 184,100 184,82 C184,60 166,49 136,49 Z M96,67 L132,67 C154,67 162,78 162,84 C162,94 154,110 132,110 L96,110 Z">
+          <Path.Fill>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+              <GradientStop Offset="0" Color="#6B21A8"/>
+              <GradientStop Offset="0.5" Color="#9333EA"/>
+              <GradientStop Offset="1" Color="#06B6D4"/>
+            </LinearGradientBrush>
+          </Path.Fill>
+        </Path>
+      </Canvas>
+    </Viewbox>
+
+    <!-- ═══ SHELL LAYOUT: 3-Row × 3-Column Command Center ═══════════════ -->
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/> <!-- Row 0: CommandBar -->
+        <RowDefinition Height="*"/>    <!-- Row 1: Main content -->
+        <RowDefinition Height="Auto"/> <!-- Row 2: Detail Drawer (collapsible) -->
+        <RowDefinition Height="Auto"/> <!-- Row 3: ActionRail -->
+      </Grid.RowDefinitions>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>  <!-- Col 0: NavigationRail -->
+        <ColumnDefinition Width="*"/>   <!-- Col 1: Content -->
+        <ColumnDefinition x:Name="contextColumn" Width="Auto"/> <!-- Col 2: ContextWing -->
+      </Grid.ColumnDefinitions>
+
+      <!-- ═══ ROW 0: COMMAND BAR (spans all columns) ══════════════════════ -->
+      <views:CommandBar Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                        AutomationProperties.Name="CommandBar"
+                        TabIndex="1"/>
+
+      <!-- ═══ ROW 1, COL 0: NAVIGATION RAIL ══════════════════════════════ -->
+      <views:NavigationRail Grid.Row="1" Grid.Column="0"
+                            AutomationProperties.Name="NavigationRail"
+                            TabIndex="50"/>
+
+      <!-- ═══ ROW 1, COL 1: SUB-TAB BAR + CONTENT AREA ══════════════════ -->
+      <Grid Grid.Row="1" Grid.Column="1">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>  <!-- Sub-tab navigation -->
+          <RowDefinition Height="*"/>   <!-- View content -->
+        </Grid.RowDefinitions>
+
+        <!-- Sub-Tab Bar -->
+        <views:SubTabBar Grid.Row="0" TabIndex="2"/>
+
+        <!-- Content: auto-switch to Progress during run -->
+        <Grid Grid.Row="1">
+          <views:ProgressView Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"
+                             TabIndex="3"/>
+
+          <!-- Normal screens (hidden during run) -->
+          <Grid Visibility="{Binding IsBusy, Converter={StaticResource InverseBoolToVis}}">
+
+            <!-- ── MissionControl ──────────────────────────────── -->
+            <views:StartView Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=MissionControl}"
+                             TabIndex="51"/>
+
+            <!-- ── Library (sub-tab-aware) ─────────────────────── -->
+            <Grid Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Library}"
+                  KeyboardNavigation.TabIndex="52">
+              <views:ResultView x:Name="resultView"
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Results}"/>
+              <views:DecisionsView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Decisions}"/>
+              <views:LibrarySafetyView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Safety}"/>
+              <views:DatAuditView DataContext="{Binding DatAudit}"
+                  Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=DatAudit}"/>
+            </Grid>
+
+            <!-- ── Config (sub-tab-aware) ──────────────────────── -->
+            <Grid Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Config}"
+                  KeyboardNavigation.TabIndex="53">
+              <views:ConfigRegionsView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Regions}"/>
+              <views:ConfigOptionsView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Options}"/>
+              <views:ConfigProfilesView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Profiles}"/>
+            </Grid>
+
+            <!-- ── Tools (sub-tab-aware) ───────────────────────── -->
+            <Grid Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}"
+                  KeyboardNavigation.TabIndex="54">
+              <views:ExternalToolsView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=ExternalTools}"/>
+              <views:ToolsView DataContext="{Binding Tools}"
+                  Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Features}"/>
+              <views:DatCatalogView DataContext="{Binding DatCatalog}"
+                  Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=DatManagement}"/>
+            </Grid>
+
+            <!-- ── System (sub-tab-aware) ──────────────────────── -->
+            <Grid Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=System}"
+                  KeyboardNavigation.TabIndex="55">
+              <views:SystemActivityView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=ActivityLog}"/>
+              <views:SystemAppearanceView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Appearance}"/>
+              <views:SystemAboutView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=About}"/>
+            </Grid>
+
+          </Grid>
+        </Grid>
+      </Grid>
+
+      <!-- ═══ ROW 1, COL 2: CONTEXT WING (Inspector Panel) ══════════════ -->
+      <views:ContextPanel Grid.Row="1" Grid.Column="2"
+                          TabIndex="4">
+        <views:ContextPanel.Style>
+          <Style TargetType="views:ContextPanel">
+            <Setter Property="Visibility" Value="Visible"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding Shell.ShowContextWing}" Value="False">
+                <Setter Property="Visibility" Value="Collapsed"/>
+              </DataTrigger>
+              <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                <Setter Property="Visibility" Value="Collapsed"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </views:ContextPanel.Style>
+      </views:ContextPanel>
+
+      <!-- ═══ ROW 2: DETAIL DRAWER (collapsible log stream, Ctrl+J) ════════ -->
+      <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+              Visibility="{Binding Shell.ShowDetailDrawer, Converter={StaticResource BoolToVis}}"
+              Background="{DynamicResource BrushSurfaceAlt}"
+              BorderBrush="{DynamicResource BrushBorder}"
+              BorderThickness="0,1,0,0"
+              MaxHeight="220"
+              Style="{StaticResource DrawerSlideDown}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <DockPanel Grid.Row="0" Margin="12,6,12,4">
+            <TextBlock Text="Log-Stream" FontWeight="SemiBold" FontSize="12"
+                       Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+              <Button Content="Leeren" Padding="8,2" FontSize="11"
+                      Command="{Binding ClearLogCommand}"
+                      Background="Transparent" BorderThickness="0"
+                      Foreground="{DynamicResource BrushTextMuted}"
+                      AutomationProperties.Name="Log leeren"/>
+              <Button Content="✕" Padding="6,2" FontSize="11"
+                      Command="{Binding Shell.ToggleDetailDrawerCommand}"
+                      Background="Transparent" BorderThickness="0"
+                      Foreground="{DynamicResource BrushTextMuted}"
+                      AutomationProperties.Name="Detail Drawer schließen"/>
+            </StackPanel>
+          </DockPanel>
+          <ListBox Grid.Row="1" ItemsSource="{Binding LogEntries}"
+                   BorderThickness="0" Background="Transparent"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   AutomationProperties.Name="Log-Stream">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock FontSize="11" FontFamily="Consolas" TextWrapping="NoWrap" Margin="12,1">
+                  <Run Text="{Binding Level, Mode=OneWay}" FontWeight="SemiBold"/>
+                  <Run Text=" "/>
+                  <Run Text="{Binding Text, Mode=OneWay}"/>
+                </TextBlock>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+
+      <!-- ═══ ROW 3: ACTION RAIL (spans all columns) ═════════════════════ -->
+      <views:SmartActionBar Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
+                            Visibility="{Binding ShowSmartActionBar, Converter={StaticResource BoolToVis}}"
+                            TabIndex="56"/>
+
+      <!-- ═══ TOAST / NOTIFICATION OVERLAY ════════════════════════════════ -->
+      <ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Shell.Notifications}"
+                    VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                    Margin="0,0,16,16" IsHitTestVisible="True"
+                    AutomationProperties.LiveSetting="Assertive">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Margin="0,4" Padding="14,10" CornerRadius="{DynamicResource RadiusMD}"
+                    MinWidth="280" MaxWidth="420"
+                    AutomationProperties.Name="{Binding Message}">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Setter Property="Background" Value="{DynamicResource BrushSuccessBg}"/>
+                  <Setter Property="BorderBrush" Value="{DynamicResource BrushSuccess}"/>
+                  <Setter Property="BorderThickness" Value="1"/>
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Type}" Value="Warning">
+                      <Setter Property="Background" Value="{DynamicResource BrushWarningBg}"/>
+                      <Setter Property="BorderBrush" Value="{DynamicResource BrushWarning}"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Type}" Value="Error">
+                      <Setter Property="Background" Value="{DynamicResource BrushDangerBg}"/>
+                      <Setter Property="BorderBrush" Value="{DynamicResource BrushDanger}"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12"
+                         Foreground="{DynamicResource BrushTextPrimary}"/>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- ═══ FIRST-RUN-WIZARD OVERLAY ════════════════════════════════════ -->
+      <views:WizardView Grid.Row="0" Grid.RowSpan="4" Grid.Column="0" Grid.ColumnSpan="3"
+                        Visibility="{Binding Shell.ShowFirstRunWizard, Converter={StaticResource BoolToVis}}"
+                        AutomationProperties.Name="{Binding Loc[Wizard.Title]}"/>
+
+      <!-- ═══ SHORTCUT CHEATSHEET OVERLAY ═════════════════════════════════ -->
+      <Border Grid.Row="0" Grid.RowSpan="4" Grid.Column="0" Grid.ColumnSpan="3"
+              Background="{DynamicResource BrushScrimOverlay}" IsHitTestVisible="True"
+              Visibility="{Binding Shell.ShowShortcutSheet, Converter={StaticResource BoolToVis}}"
+              Style="{StaticResource OverlayFadeIn}">
+        <Grid>
+          <Button Command="{Binding Shell.ToggleShortcutSheetCommand}"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  Padding="0"
+                  Focusable="False"
+                  AutomationProperties.Name="{Binding Loc[Shortcuts.Close]}"
+                  Template="{StaticResource TransparentOverlayDismissButtonTemplate}"/>
+
+          <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushAccentCyan}"
+                  BorderThickness="2" CornerRadius="16" Padding="32,24"
+                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                  MinWidth="480" MaxWidth="640"
+                  AutomationProperties.Name="{Binding Loc[Shortcuts.Title]}">
+            <StackPanel>
+              <DockPanel Margin="0,0,0,16">
+                <TextBlock Text="{Binding Loc[Shortcuts.Title]}" FontSize="20" FontWeight="Bold"
+                           Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                <Button DockPanel.Dock="Right" Content="✕" Padding="8,4"
+                        Command="{Binding Shell.ToggleShortcutSheetCommand}" HorizontalAlignment="Right"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="{DynamicResource BrushTextMuted}"
+                        AutomationProperties.Name="{Binding Loc[Shortcuts.Close]}"/>
+              </DockPanel>
+              <UniformGrid Columns="2">
+                <StackPanel Margin="0,0,16,0">
+                  <TextBlock Text="{Binding Loc[Shortcuts.SectionRun]}" FontWeight="SemiBold"
+                             Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,0,8"/>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="F5: Preview starten"><Run FontWeight="Bold" Text="F5"/><Run Text="  Preview starten"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+M: Move ausführen"><Run FontWeight="Bold" Text="Ctrl+M"/><Run Text="  Move ausführen (nur nach Vorschau)"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+D: Quick Preview"><Run FontWeight="Bold" Text="Ctrl+D"/><Run Text="  Quick Preview"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Esc: Abbrechen"><Run FontWeight="Bold" Text="Esc"/><Run Text="  Abbrechen"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+Z: Rollback"><Run FontWeight="Bold" Text="Ctrl+Z"/><Run Text="  Rollback"/></TextBlock>
+                  <TextBlock Text="{Binding Loc[Shortcuts.SectionNav]}" FontWeight="SemiBold"
+                             Foreground="{DynamicResource BrushAccentCyan}" Margin="0,12,0,8"/>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+Links: Zurück"><Run FontWeight="Bold" Text="Ctrl+←"/><Run Text="  Zurück"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+Rechts: Vorwärts"><Run FontWeight="Bold" Text="Ctrl+→"/><Run Text="  Vorwärts"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+I: Inspector ein/aus"><Run FontWeight="Bold" Text="Ctrl+I"/><Run Text="  Inspector ein/aus"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+K: Command Palette"><Run FontWeight="Bold" Text="Ctrl+K"/><Run Text="  Command Palette"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+J: Log-Drawer ein/aus"><Run FontWeight="Bold" Text="Ctrl+J"/><Run Text="  Log-Drawer ein/aus"/></TextBlock>
+                </StackPanel>
+                <StackPanel>
+                  <TextBlock Text="{Binding Loc[Shortcuts.SectionTools]}" FontWeight="SemiBold"
+                             Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,0,8"/>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+O: Ordner hinzufügen"><Run FontWeight="Bold" Text="Ctrl+O"/><Run Text="  Ordner hinzufügen"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+R: Report öffnen"><Run FontWeight="Bold" Text="Ctrl+R"/><Run Text="  Report öffnen"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+G: GameKey-Preview"><Run FontWeight="Bold" Text="Ctrl+G"/><Run Text="  GameKey-Preview"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+S: Settings speichern"><Run FontWeight="Bold" Text="Ctrl+S"/><Run Text="  Settings speichern"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+T: Theme wechseln"><Run FontWeight="Bold" Text="Ctrl+T"/><Run Text="  Theme wechseln"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="Ctrl+L: Log leeren"><Run FontWeight="Bold" Text="Ctrl+L"/><Run Text="  Log leeren"/></TextBlock>
+                  <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2" AutomationProperties.Name="F1: Diese Hilfe"><Run FontWeight="Bold" Text="F1"/><Run Text="  Diese Hilfe"/></TextBlock>
+                </StackPanel>
+              </UniformGrid>
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+
+      <!-- ═══ COMMAND PALETTE OVERLAY (Ctrl+K) ════════════════════════════ -->
+      <views:CommandPaletteView Grid.Row="0" Grid.RowSpan="4" Grid.Column="0" Grid.ColumnSpan="3"
+              Visibility="{Binding CommandPalette.IsOpen, Converter={StaticResource BoolToVis}}"
+              AutomationProperties.Name="Command Palette"/>
+    </Grid>
+  </Grid>
+</Window>

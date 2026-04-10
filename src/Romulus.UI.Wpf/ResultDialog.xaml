@@ -1,0 +1,74 @@
+<Window x:Class="Romulus.UI.Wpf.ResultDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Ergebnis"
+    Width="680" Height="480"
+    MinWidth="400" MinHeight="300"
+    WindowStartupLocation="CenterOwner"
+    ShowInTaskbar="False"
+    WindowStyle="SingleBorderWindow"
+    ResizeMode="CanResizeWithGrip"
+    FontFamily="Segoe UI" FontSize="13"
+    Background="{DynamicResource BrushBackground}"
+    Foreground="{DynamicResource BrushTextPrimary}"
+    UseLayoutRounding="True">
+
+  <Window.InputBindings>
+    <KeyBinding Key="Escape" Command="Close"/>
+  </Window.InputBindings>
+
+  <Window.CommandBindings>
+    <CommandBinding Command="Close" Executed="OnClose"/>
+  </Window.CommandBindings>
+
+  <Grid Margin="16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Title -->
+    <TextBlock x:Name="txtTitle" Grid.Row="0" FontSize="16" FontWeight="SemiBold"
+               Foreground="{DynamicResource BrushAccentCyan}" Margin="0,0,0,12"/>
+
+    <!-- Content area: TextBox for plain text, DataGrid for tabular data -->
+    <TabControl x:Name="tabContent" Grid.Row="1" BorderThickness="0"
+                Background="Transparent">
+      <TabItem x:Name="tabText" Header="Text" Visibility="Collapsed">
+        <TextBox x:Name="txtContent" IsReadOnly="True" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                 FontFamily="Consolas" FontSize="11"
+                 Background="{DynamicResource BrushSurface}"
+                 Foreground="{DynamicResource BrushTextPrimary}"
+                 BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                 Padding="8" AcceptsReturn="True"/>
+      </TabItem>
+      <TabItem x:Name="tabTable" Header="Tabelle" Visibility="Collapsed">
+        <DataGrid x:Name="gridContent" AutoGenerateColumns="True" IsReadOnly="True"
+                  CanUserSortColumns="True" CanUserReorderColumns="True"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                  Background="{DynamicResource BrushSurface}"
+                  Foreground="{DynamicResource BrushTextPrimary}"
+                  BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                  RowBackground="{DynamicResource BrushSurface}"
+                  AlternatingRowBackground="{DynamicResource BrushSurfaceAlt}"/>
+      </TabItem>
+    </TabControl>
+
+    <!-- Action buttons -->
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <Button x:Name="btnCopy" Content="📋 Kopieren" Width="120" Margin="0,0,8,0"
+              ToolTip="Inhalt in die Zwischenablage kopieren"
+              AutomationProperties.Name="Ergebnis kopieren"
+              Click="OnCopy"/>
+      <Button x:Name="btnExport" Content="💾 Exportieren" Width="120" Margin="0,0,8,0"
+              ToolTip="Inhalt als Datei speichern"
+              AutomationProperties.Name="Ergebnis exportieren"
+              Click="OnExport"/>
+      <Button Content="Schließen" Width="100" IsCancel="True"
+              AutomationProperties.Name="Dialog schließen"
+              Click="OnClose"/>
+    </StackPanel>
+  </Grid>
+</Window>

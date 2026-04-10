@@ -107,10 +107,10 @@ Drei separate Baulogiken mit folgenden Divergenzen:
 **Zielzustand:**
 
 ```csharp
-// In RomCleanup.Contracts oder RomCleanup.Infrastructure
+// In Romulus.Contracts oder Romulus.Infrastructure
 public static class RunOptionsBuilder
 {
-    public static RunOptions Build(RunOptionsRequest request, RomCleanupSettings? settings = null)
+    public static RunOptions Build(RunOptionsRequest request, RomulusSettings? settings = null)
     {
         // EINZIGE Stelle für: ConvertFormat-Normalisierung, Extension-Defaults,
         // Region-Merge, AuditPath-Generierung, Null-Guards
@@ -147,7 +147,7 @@ Identische RunOptions (Feld-für-Feld Vergleich)
 | **Score-Snapshots** | `FormatScorer.Get*()`, `VersionScorer.*` | 100+ (Extension, Name)-Paare | Exakter Score |
 | **Classification-Snapshots** | `FileClassifier.Analyze()` | 200+ Dateinamen | Exakte Category |
 
-**Format:** JSON-Datei pro Scope unter `src/RomCleanup.Tests/Snapshots/`:
+**Format:** JSON-Datei pro Scope unter `src/Romulus.Tests/Snapshots/`:
 
 ```json
 // Snapshots/gamekey-snapshots.json
@@ -246,7 +246,7 @@ public void Execute_WithNullDependencies_NeverThrowsNPE(
 
 **Maßnahme:**
 
-Gemeinsame Test-Infrastructure in `src/RomCleanup.Tests/TestFixtures/`:
+Gemeinsame Test-Infrastructure in `src/Romulus.Tests/TestFixtures/`:
 
 ```
 TestFixtures/
@@ -283,18 +283,18 @@ TestFixtures/
 ### 4.3 Core File-I/O — Bereinigung
 
 **Betroffene Dateien:**
-- `src/RomCleanup.Core/SetParsing/CueSetParser.cs`
-- `src/RomCleanup.Core/SetParsing/GdiSetParser.cs`
-- `src/RomCleanup.Core/SetParsing/CcdSetParser.cs`
-- `src/RomCleanup.Core/SetParsing/M3uPlaylistParser.cs`
-- `src/RomCleanup.Core/SetParsing/MdsSetParser.cs`
+- `src/Romulus.Core/SetParsing/CueSetParser.cs`
+- `src/Romulus.Core/SetParsing/GdiSetParser.cs`
+- `src/Romulus.Core/SetParsing/CcdSetParser.cs`
+- `src/Romulus.Core/SetParsing/M3uPlaylistParser.cs`
+- `src/Romulus.Core/SetParsing/MdsSetParser.cs`
 
 **Ist-Zustand:** Direkter Zugriff auf `File.Exists()`, `File.ReadLines()`, `Path.GetFullPath()`.
 
 **Maßnahme:**
 
 ```csharp
-// NEU in RomCleanup.Contracts/Ports/IFileReader.cs
+// NEU in Romulus.Contracts/Ports/IFileReader.cs
 public interface IFileReader
 {
     bool FileExists(string path);
@@ -373,7 +373,7 @@ Folgende Invarianten **müssen** durch Tests abgesichert sein. Jede Verletzung i
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - run: dotnet test src/RomCleanup.Tests --filter "Category=Snapshot" --nologo
+      - run: dotnet test src/Romulus.Tests --filter "Category=Snapshot" --nologo
         # Schlägt fehl wenn Snapshot-Files geändert aber nicht committed
 
   invariant-check:
@@ -381,7 +381,7 @@ Folgende Invarianten **müssen** durch Tests abgesichert sein. Jede Verletzung i
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - run: dotnet test src/RomCleanup.Tests --filter "Category=Invariant" --nologo
+      - run: dotnet test src/Romulus.Tests --filter "Category=Invariant" --nologo
         # Alle INV-01 bis INV-12 müssen grün sein
 ```
 

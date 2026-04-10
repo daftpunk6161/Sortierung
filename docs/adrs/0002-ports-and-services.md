@@ -12,7 +12,7 @@ Direkte Kopplung zwischen UI und Kernlogik erschwert Tests und Austauschbarkeit.
 
 ## Umsetzung (C#)
 
-Port-Interfaces in `src/RomCleanup.Contracts/Ports/`:
+Port-Interfaces in `src/Romulus.Contracts/Ports/`:
 
 | Interface | Verantwortung |
 |-----------|---------------|
@@ -23,7 +23,7 @@ Port-Interfaces in `src/RomCleanup.Contracts/Ports/`:
 | `IFormatConverter` | Formatkonvertierung |
 | `IAppState` | Anwendungszustand (Undo/Redo, Watch) |
 
-Implementierungen in `src/RomCleanup.Infrastructure/`:
+Implementierungen in `src/Romulus.Infrastructure/`:
 - `FileSystemAdapter`, `ToolRunnerAdapter`, `DatRepositoryAdapter`
 - `AuditCsvStore`, `FormatConverterAdapter`, `AppStateStore`
 

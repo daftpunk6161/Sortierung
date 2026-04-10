@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <datafile>
-  <header><name>RomCleanup Test DAT - Hash Collisions</name></header>
+  <header><name>Romulus Test DAT - Hash Collisions</name></header>
   <game name="Collision NES"><rom name="collision.nes" size="40976" crc="50000001" sha1="ffffffff00000000ffffffff00000000ffffffff" /></game>
   <game name="Collision SNES"><rom name="collision.sfc" size="1048576" crc="50000002" sha1="ffffffff00000000ffffffff00000000ffffffff" /></game>
   <game name="Collision PS1"><rom name="collision.bin" size="734003200" crc="50000003" sha1="ffffffff00000000ffffffff00000000ffffffff" /></game>

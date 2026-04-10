@@ -20,8 +20,8 @@ Ziel: Die Guided-Workflow-Szenarien fachlich so definieren, dass sie direkt auf 
 
 Betroffene Bereiche:
 - `docs/epics/C3-guided-workflows.md`
-- `src/RomCleanup.Contracts`
-- `src/RomCleanup.UI.Wpf`
+- `src/Romulus.Contracts`
+- `src/Romulus.UI.Wpf`
 
 Akzeptanz:
 - Quick Clean, Full Audit, DAT Verification, Format Optimization und New Collection Setup sind fachlich definiert
@@ -38,9 +38,9 @@ Status: Abgeschlossen (Update 2026-04-01)
 Ziel: Einen gefuehrten Einstieg bereitstellen, der die bestehende Pipeline wiederverwendet statt neu zu berechnen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.UI.Wpf/ViewModels`
-- `src/RomCleanup.UI.Wpf/Views`
-- `src/RomCleanup.UI.Wpf`
+- `src/Romulus.UI.Wpf/ViewModels`
+- `src/Romulus.UI.Wpf/Views`
+- `src/Romulus.UI.Wpf`
 
 Akzeptanz:
 - Wizard-Schritte, Ruecknavigation und Cancel-Verhalten sind robust
@@ -57,9 +57,9 @@ Status: Abgeschlossen (Update 2026-04-01)
 Ziel: KPI-, Summary- und Decision-Anzeigen fuer beide Modi aus derselben Quelle beziehen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Orchestration`
-- `src/RomCleanup.UI.Wpf/ViewModels`
-- `src/RomCleanup.Api`
+- `src/Romulus.Infrastructure/Orchestration`
+- `src/Romulus.UI.Wpf/ViewModels`
+- `src/Romulus.Api`
 
 Akzeptanz:
 - Wizard und Expertenmodus zeigen dieselben KPIs fuer denselben Run
@@ -76,9 +76,9 @@ Status: Abgeschlossen (Update 2026-04-01)
 Ziel: Exportdaten nur einmal fachlich ableiten und fuer alle Frontend-Exporter wiederverwenden.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Contracts`
-- `src/RomCleanup.Infrastructure/Export`
-- `src/RomCleanup.Infrastructure/Analysis`
+- `src/Romulus.Contracts`
+- `src/Romulus.Infrastructure/Export`
+- `src/Romulus.Infrastructure/Analysis`
 
 Akzeptanz:
 - `ExportableGame` oder aequivalentes Modell ist zentral definiert
@@ -95,9 +95,9 @@ Status: Abgeschlossen (Update 2026-04-01)
 Ziel: Die ersten zwei priorisierten Frontend-Ziele stabil und reproduzierbar bedienen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Export`
-- `src/RomCleanup.CLI`
-- `src/RomCleanup.Api`
+- `src/Romulus.Infrastructure/Export`
+- `src/Romulus.CLI`
+- `src/Romulus.Api`
 
 Akzeptanz:
 - RetroArch-Export ist vollstaendig ueber den gemeinsamen Exportpfad angebunden
@@ -114,9 +114,9 @@ Status: Abgeschlossen (Update 2026-04-01)
 Ziel: Das Export-Framework auf die restlichen priorisierten Frontends erweitern.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Export`
-- `src/RomCleanup.CLI`
-- `src/RomCleanup.Api`
+- `src/Romulus.Infrastructure/Export`
+- `src/Romulus.CLI`
+- `src/Romulus.Api`
 
 Akzeptanz:
 - EmulationStation und Playnite sind ueber denselben Exportvertrag angebunden
@@ -133,8 +133,8 @@ Status: Abgeschlossen (Update 2026-04-01)
 Ziel: Einstellungen als versionierbare, importierbare und sichere Profile nutzbar machen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Profiles`
-- `src/RomCleanup.Contracts`
+- `src/Romulus.Infrastructure/Profiles`
+- `src/Romulus.Contracts`
 - `data/`
 
 Akzeptanz:
@@ -152,10 +152,10 @@ Status: Abgeschlossen (Update 2026-04-01)
 Ziel: Dasselbe Profilmodell in allen Kanaelen nutzbar machen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.UI.Wpf`
-- `src/RomCleanup.CLI`
-- `src/RomCleanup.Api`
-- `src/RomCleanup.Infrastructure/Profiles`
+- `src/Romulus.UI.Wpf`
+- `src/Romulus.CLI`
+- `src/Romulus.Api`
+- `src/Romulus.Infrastructure/Profiles`
 
 Akzeptanz:
 - Profile koennen importiert, ausgewaehlt und fuer Runs verwendet werden
@@ -172,10 +172,10 @@ Status: Abgeschlossen (Update 2026-04-01)
 Ziel: Historische Aenderungen, Sammlungsentwicklung und Speicherwirkung sichtbar machen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Infrastructure/Reporting`
-- `src/RomCleanup.Infrastructure/Analysis`
-- `src/RomCleanup.Api`
-- `src/RomCleanup.UI.Wpf`
+- `src/Romulus.Infrastructure/Reporting`
+- `src/Romulus.Infrastructure/Analysis`
+- `src/Romulus.Api`
+- `src/Romulus.UI.Wpf`
 
 Akzeptanz:
 - Zwei Runs lassen sich fachlich vergleichen
@@ -206,7 +206,7 @@ Aktueller Fortschritt:
 - Vollsuite (`dotnet test`) ist gruen: `7133/7133` erfolgreich
 
 Betroffene Bereiche:
-- `src/RomCleanup.Tests`
+- `src/Romulus.Tests`
 - `docs/architecture/TEST_STRATEGY.md`
 
 Akzeptanz:

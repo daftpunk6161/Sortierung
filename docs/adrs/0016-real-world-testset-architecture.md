@@ -8,7 +8,7 @@ Proposed
 
 ## Kontext
 
-RomCleanup besitzt bereits ein Benchmark-Framework (ADR-015) mit 2.073 Ground-Truth-Einträgen, 16 Stub-Generatoren, einem 7-Ebenen-Qualitätsmodell und CI-fähiger Evaluationspipeline. Die bisherigen Designdokumente (TESTSET_DESIGN.md, GROUND_TRUTH_SCHEMA.md) definieren Schema, Dataset-Klassen und Pflichtfälle auf konzeptioneller Ebene.
+Romulus besitzt bereits ein Benchmark-Framework (ADR-015) mit 2.073 Ground-Truth-Einträgen, 16 Stub-Generatoren, einem 7-Ebenen-Qualitätsmodell und CI-fähiger Evaluationspipeline. Die bisherigen Designdokumente (TESTSET_DESIGN.md, GROUND_TRUTH_SCHEMA.md) definieren Schema, Dataset-Klassen und Pflichtfälle auf konzeptioneller Ebene.
 
 Was fehlt, ist die **architektonische Entscheidung**, wie das Testset als **langfristig belastbares, Anti-Overfitting-gesichertes, versioniertes Real-World-Testsystem** betrieben wird – insbesondere:
 

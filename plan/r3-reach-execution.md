@@ -18,7 +18,7 @@ Ziel: Vor UI-Implementierung klar definieren, welche API-Contracts, Auth- und De
 
 Betroffene Bereiche:
 - `docs/epics/C7-web-dashboard.md`
-- `src/RomCleanup.Api`
+- `src/Romulus.Api`
 - `docs/architecture/openapi.yaml`
 
 Akzeptanz:
@@ -39,8 +39,8 @@ Stand:
 Ziel: Ein minimales, deploybares Frontend bereitstellen, das ohne zweiten Produkt-Stack auskommt.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Api`
-- `src/RomCleanup.Api/wwwroot` oder aequivalenter Static-File-Bereich
+- `src/Romulus.Api`
+- `src/Romulus.Api/wwwroot` oder aequivalenter Static-File-Bereich
 
 Akzeptanz:
 - Dashboard-Shell ist ohne Node-Zwang buildbar
@@ -51,7 +51,7 @@ Abhaengigkeiten:
 - R3-T01
 
 Stand:
-- Embedded Static Files unter `src/RomCleanup.Api/wwwroot/dashboard`
+- Embedded Static Files unter `src/Romulus.Api/wwwroot/dashboard`
 - anonymer Bootstrap via `/dashboard/bootstrap`
 - API-Key-Connect-Flow, Run-Liste, DAT-Status und Detail-Panels ohne zweiten Frontend-Stack
 
@@ -60,7 +60,7 @@ Stand:
 Ziel: Runs im Browser starten, beobachten und auswerten koennen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Api`
+- `src/Romulus.Api`
 - Dashboard-Frontend
 
 Akzeptanz:
@@ -81,7 +81,7 @@ Stand:
 Ziel: Die wichtigsten operativen Oberflaechen fuer Headless-Nutzung verfuegbar machen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Api`
+- `src/Romulus.Api`
 - Dashboard-Frontend
 
 Akzeptanz:
@@ -126,8 +126,8 @@ Stand:
 Ziel: Den sicheren Betrieb ausserhalb von Loopback-Only sauber absichern.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Api`
-- `src/RomCleanup.Infrastructure/Safety`
+- `src/Romulus.Api`
+- `src/Romulus.Infrastructure/Safety`
 
 Akzeptanz:
 - Nicht-Loopback-Betrieb ist explizit konfigurationspflichtig und abgesichert
@@ -148,7 +148,7 @@ Ziel: Vor jeder Format-Erweiterung die Sicherheits-, Verifikations- und Tool-Ver
 
 Betroffene Bereiche:
 - `docs/epics/C4-ecm-nkit-format-support.md`
-- `src/RomCleanup.Infrastructure/Conversion`
+- `src/Romulus.Infrastructure/Conversion`
 - `data/tool-hashes.json`
 - `data/conversion-registry.json`
 
@@ -170,10 +170,10 @@ Stand:
 Ziel: Nur kontrollierte, nachvollziehbare Erweiterungen in die Conversion-Pipeline aufnehmen.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Core/Conversion`
-- `src/RomCleanup.Infrastructure/Conversion`
-- `src/RomCleanup.Infrastructure/Orchestration`
-- `src/RomCleanup.Infrastructure/Audit`
+- `src/Romulus.Core/Conversion`
+- `src/Romulus.Infrastructure/Conversion`
+- `src/Romulus.Infrastructure/Orchestration`
+- `src/Romulus.Infrastructure/Audit`
 
 Akzeptanz:
 - Neue Conversion-Pfade laufen durch Preview, Review, Execute, Verify und Rollback
@@ -193,7 +193,7 @@ Stand:
 Ziel: Die Reichweiten-Erweiterung gegen Deployment-, Security- und Datenintegritaetsfehler absichern.
 
 Betroffene Bereiche:
-- `src/RomCleanup.Tests`
+- `src/Romulus.Tests`
 - `docs/architecture/TEST_STRATEGY.md`
 
 Akzeptanz:

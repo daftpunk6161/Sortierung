@@ -16,7 +16,7 @@ Docker-kompatibel fuer NAS-Deployment.
 
 **Embedded Static Files**
 - Vanilla HTML/CSS/JS oder Preact/Alpine.js
-- Statische Dateien unter `src/RomCleanup.Api/wwwroot/dashboard`
+- Statische Dateien unter `src/Romulus.Api/wwwroot/dashboard`
 - Kein separater Build-Step, kein Node.js noetig
 - Dashboard nutzt nur bestehende API-Endpunkte plus:
   - `GET /dashboard/bootstrap`

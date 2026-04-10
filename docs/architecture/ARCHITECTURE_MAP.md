@@ -11,7 +11,7 @@ Referenzen: ADR 0002 (Ports/Services), ADR 0004 (Clean Architecture)
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        ENTRY POINTS                                │
-│  RomCleanup.CLI         RomCleanup.Api         RomCleanup.UI.Wpf   │
+│  Romulus.CLI         Romulus.Api         Romulus.UI.Wpf   │
 │  (headless)             (REST + SSE)           (WPF/MVVM)          │
 └──────────┬──────────────────┬────────────────┬──────────────────────┘
            │                  │                │
@@ -64,7 +64,7 @@ Referenzen: ADR 0002 (Ports/Services), ADR 0004 (Clean Architecture)
 │                                                                     │
 │  Ports/             IFileSystem, IAuditStore, IDatRepository,      │
 │                     IToolRunner, IFormatConverter, IAppState        │
-│  Models/            RomCandidate, RomCleanupSettings, DatIndex,    │
+│  Models/            RomCandidate, RomulusSettings, DatIndex,    │
 │                     ConversionModels, SortingModels, RuleModels,   │
 │                     EventBusModels, PipelineModels,                 │
 │                     QuarantineModels, AdvancedModels, ...          │
@@ -84,20 +84,20 @@ Entry Points → Infrastructure → Core → Contracts (nie umgekehrt)
 
 ```
 src/
-├── RomCleanup.Contracts/      ← Port-Interfaces, Models, Error-Contracts
-├── RomCleanup.Core/           ← Pure Domain Logic (keine I/O-Deps)
-├── RomCleanup.Infrastructure/ ← I/O-Adapter & Services
-├── RomCleanup.CLI/            ← Headless Entry Point
-├── RomCleanup.Api/            ← ASP.NET Core Minimal API
-├── RomCleanup.UI.Wpf/         ← WPF GUI (MVVM, net10.0-windows)
-└── RomCleanup.Tests/          ← xUnit Tests (aktuell 7047 Tests, 200+ Testdateien)
+├── Romulus.Contracts/      ← Port-Interfaces, Models, Error-Contracts
+├── Romulus.Core/           ← Pure Domain Logic (keine I/O-Deps)
+├── Romulus.Infrastructure/ ← I/O-Adapter & Services
+├── Romulus.CLI/            ← Headless Entry Point
+├── Romulus.Api/            ← ASP.NET Core Minimal API
+├── Romulus.UI.Wpf/         ← WPF GUI (MVVM, net10.0-windows)
+└── Romulus.Tests/          ← xUnit Tests (aktuell 7047 Tests, 200+ Testdateien)
 ```
 
 ---
 
 ## 3 — Modul-Verantwortlichkeiten
 
-### 3.1 Contracts (`RomCleanup.Contracts`)
+### 3.1 Contracts (`Romulus.Contracts`)
 
 | Datei | Verantwortung |
 |---|---|
@@ -111,7 +111,7 @@ src/
 | `Errors/OperationError.cs` | Strukturierte Fehlerobjekte |
 | `Errors/ErrorClassifier.cs` | Fehler-Kategorisierung (Transient/Recoverable/Critical) |
 
-### 3.2 Core (`RomCleanup.Core`)
+### 3.2 Core (`Romulus.Core`)
 
 | Datei | Verantwortung | Abhängigkeiten |
 |---|---|---|
@@ -131,7 +131,7 @@ src/
 | `Rules/RuleEngine.cs` | Konfigurierbare Klassifikationsregeln | Contracts |
 | `Caching/LruCache.cs` | Thread-safe LRU-Cache, O(1) Ops | — |
 
-### 3.3 Infrastructure (`RomCleanup.Infrastructure`)
+### 3.3 Infrastructure (`Romulus.Infrastructure`)
 
 | Verzeichnis | Klasse(n) | Verantwortung |
 |---|---|---|
@@ -161,17 +161,17 @@ src/
 
 | Projekt | Verantwortung |
 |---|---|
-| `RomCleanup.CLI/Program.cs` | Headless CLI (Args-Parsing, RunOrchestrator-Wiring, Exit-Codes 0/1/2/3) |
-| `RomCleanup.Api/Program.cs` | ASP.NET Core Minimal API (127.0.0.1, API-Key, CORS, Rate-Limiting) |
-| `RomCleanup.Api/RunManager.cs` | Run-Lifecycle (Create, Execute, Cancel, SSE-Stream) |
-| `RomCleanup.Api/RateLimiter.cs` | Sliding-Window Rate-Limiting (120 req/min) |
-| `RomCleanup.Api/OpenApiSpec.cs` | OpenAPI-Konfiguration und Transformer fuer die generierte Laufzeit-Spec |
-| `RomCleanup.UI.Wpf/MainWindow.xaml` | WPF-Hauptfenster (TabControl, Dashboard, Timeline) |
-| `RomCleanup.UI.Wpf/ViewModels/MainViewModel.cs` | MVVM-ViewModel (INotifyPropertyChanged, Commands) |
-| `RomCleanup.UI.Wpf/Services/ThemeService.cs` | Dark/Light-Theme-Verwaltung |
-| `RomCleanup.UI.Wpf/Services/DialogService.cs` | Dialoge |
-| `RomCleanup.UI.Wpf/Services/SettingsService.cs` | Settings-Verwaltung |
-| `RomCleanup.UI.Wpf/Services/RunService.cs` | WPF-Run-Ausführung und Orchestrator-Integration |
+| `Romulus.CLI/Program.cs` | Headless CLI (Args-Parsing, RunOrchestrator-Wiring, Exit-Codes 0/1/2/3) |
+| `Romulus.Api/Program.cs` | ASP.NET Core Minimal API (127.0.0.1, API-Key, CORS, Rate-Limiting) |
+| `Romulus.Api/RunManager.cs` | Run-Lifecycle (Create, Execute, Cancel, SSE-Stream) |
+| `Romulus.Api/RateLimiter.cs` | Sliding-Window Rate-Limiting (120 req/min) |
+| `Romulus.Api/OpenApiSpec.cs` | OpenAPI-Konfiguration und Transformer fuer die generierte Laufzeit-Spec |
+| `Romulus.UI.Wpf/MainWindow.xaml` | WPF-Hauptfenster (TabControl, Dashboard, Timeline) |
+| `Romulus.UI.Wpf/ViewModels/MainViewModel.cs` | MVVM-ViewModel (INotifyPropertyChanged, Commands) |
+| `Romulus.UI.Wpf/Services/ThemeService.cs` | Dark/Light-Theme-Verwaltung |
+| `Romulus.UI.Wpf/Services/DialogService.cs` | Dialoge |
+| `Romulus.UI.Wpf/Services/SettingsService.cs` | Settings-Verwaltung |
+| `Romulus.UI.Wpf/Services/RunService.cs` | WPF-Run-Ausführung und Orchestrator-Integration |
 
 ---
 
@@ -190,7 +190,7 @@ src/
 
 | Regel | Beschreibung |
 |---|---|
-| **NO-IO-IN-CORE** | `RomCleanup.Core` darf keine I/O-Operationen enthalten (kein System.IO, kein Process) |
+| **NO-IO-IN-CORE** | `Romulus.Core` darf keine I/O-Operationen enthalten (kein System.IO, kein Process) |
 | **NO-REVERSE-DEPS** | Core darf Infrastructure nicht referenzieren |
 | **NO-CROSSENTRY** | Entry Points dürfen sich nicht gegenseitig referenzieren |
 
@@ -212,6 +212,6 @@ src/
 
 ## 6 — Tests
 
-Aktuell 7047 xUnit-Tests in 200+ Testdateien (`src/RomCleanup.Tests/`).
+Aktuell 7047 xUnit-Tests in 200+ Testdateien (`src/Romulus.Tests/`).
 
 Detaillierte Teststrategie: siehe `TEST_STRATEGY.md`.

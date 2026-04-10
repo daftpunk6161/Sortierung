@@ -602,7 +602,7 @@ RunOptions
 
 ## 4. Schichtentrennung
 
-### Core (`RomCleanup.Core`) — Pure Domain Logic
+### Core (`Romulus.Core`) — Pure Domain Logic
 
 **Gehört hierhin:**
 - `FileClassifier` (Category-Erkennung)
@@ -625,7 +625,7 @@ RunOptions
 4. ❌ Kein Zugriff auf Infrastructure- oder Entry-Point-Namespaces
 5. ✅ Jede public Methode ist deterministisch: gleiche Inputs → gleiche Outputs
 
-### Contracts (`RomCleanup.Contracts`) — Shared Types
+### Contracts (`Romulus.Contracts`) — Shared Types
 
 **Gehört hierhin:**
 - `RomCandidate` (sealed record)
@@ -645,7 +645,7 @@ RunOptions
 1. ❌ Keine Implementierungen (nur Interfaces + Records/Enums)
 2. ❌ Keine Abhängigkeiten auf Core, Infrastructure oder Entry Points
 
-### Infrastructure (`RomCleanup.Infrastructure`) — I/O + Orchestration
+### Infrastructure (`Romulus.Infrastructure`) — I/O + Orchestration
 
 **Gehört hierhin:**
 - `RunOrchestrator` (Phase-Komposition, KEINE Fachlogik)

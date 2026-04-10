@@ -473,7 +473,7 @@ Die folgenden Komponenten sind **Entry-Point-neutral** und werden von allen drei
 │  ProjectionFactory     ← leitet KPIs ab (Core)       │
 │  RollbackService       ← Undo                        │
 │  SettingsLoader        ← User-Settings laden/sichern │
-│  SharedServiceRegistration.AddRomCleanupCore()       │
+│  SharedServiceRegistration.AddRomulusCore()       │
 │    ← DI-Registrierung aller Services                 │
 └─────────────────────────────────────────────────────┘
 ```
@@ -630,7 +630,7 @@ Identisch zur Standard-Pipeline, aber:
 
 ## 4. Schichtentrennung
 
-### 4.1 Core (`RomCleanup.Core`) – Pure Domain Logic
+### 4.1 Core (`Romulus.Core`) – Pure Domain Logic
 
 **Gehört hierhin:**
 
@@ -661,7 +661,7 @@ Identisch zur Standard-Pipeline, aber:
 4. Kein Zugriff auf Infrastructure- oder Entry-Point-Namespaces
 5. Jede public Methode ist deterministisch: gleiche Inputs → gleiche Outputs
 
-### 4.2 Contracts (`RomCleanup.Contracts`) – Shared Types
+### 4.2 Contracts (`Romulus.Contracts`) – Shared Types
 
 **Gehört hierhin:**
 - Alle Result-Records (RomCandidate, DedupeResult, RunResult, RunProjection, MovePhaseResult, ConvertPhaseResult, ScanPhaseResult, ConsoleSortResult, …)
@@ -673,7 +673,7 @@ Identisch zur Standard-Pipeline, aber:
 1. Keine Implementierungen (nur Interfaces + Records/Enums)
 2. Keine Abhängigkeit auf Core, Infrastructure oder Entry Points
 
-### 4.3 Infrastructure (`RomCleanup.Infrastructure`) – I/O + Orchestration
+### 4.3 Infrastructure (`Romulus.Infrastructure`) – I/O + Orchestration
 
 **Gehört hierhin:**
 
@@ -705,7 +705,7 @@ Identisch zur Standard-Pipeline, aber:
 
 **Gehört hierhin:**
 - Argument-Parsing / Request-Deserialization
-- DI-Wiring (`SharedServiceRegistration.AddRomCleanupCore()` + eigene Shell-Services)
+- DI-Wiring (`SharedServiceRegistration.AddRomulusCore()` + eigene Shell-Services)
 - `RunOrchestrator.Execute()` aufrufen
 - `RunProjection` lesen und darstellen
 - UI/UX-spezifische Concerns (Progress-Bar, SSE-Stream, Dashboard-Binding)
@@ -770,7 +770,7 @@ Keine Big-Bang-Migration. Neue Strukturen werden parallel eingeführt, alte schr
 |---|---|---|---|
 | A-1 | `IRunEnvironment` Interface + `RunEnvironmentFactory` | Gering | Nichts |
 | A-2 | `RunOptionsFactory` + `IRunOptionsSource`-Interface | Gering | Nichts |
-| A-3 | `SharedServiceRegistration.AddRomCleanupCore()` erweitern | Gering | Nichts |
+| A-3 | `SharedServiceRegistration.AddRomulusCore()` erweitern | Gering | Nichts |
 | A-4 | Entry Points auf shared Registration umstellen | Mittel | A-1…A-3 |
 
 **Validierung:** Alle 3 Entry Points produzieren identische `RunOptions` für gleiche Inputs.

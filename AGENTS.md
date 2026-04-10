@@ -27,7 +27,7 @@ Aktive Entwicklung erfolgt ausschliesslich in `src/`.
 
 Der Produktname ist **Romulus**.
 
-Der bestehende Code, die Projekte, Namespaces, Pfade, Settings und Dateinamen koennen weiterhin den Legacy-Namen **RomCleanup** tragen.
+Der bestehende Code, die Projekte, Namespaces, Pfade, Settings und Dateinamen koennen weiterhin den Legacy-Namen **Romulus** tragen.
 Bei allen Aenderungen muss immer die **tatsaechliche bestehende Repo-Struktur** respektiert werden.
 
 Wichtig:
@@ -120,7 +120,7 @@ Nie umgekehrt.
 - **CLI / API / GUI**: Entry Points, Komposition, Benutzerinteraktion
 
 ### Pflichtregeln
-- Keine I/O-Logik in `RomCleanup.Core`
+- Keine I/O-Logik in `Romulus.Core`
 - Keine Businesslogik in WPF Code-Behind
 - MVVM in der GUI einhalten
 - Services per Constructor Injection
@@ -367,30 +367,30 @@ Wenn Code erzeugt wird, liefere vollstaendige, zusammenhaengende Aenderungen sta
 - `data/ui-lookups.json`
 
 ### User Settings
-- `%APPDATA%\\RomCleanupRegionDedupe\\settings.json`
+- `%APPDATA%\\Romulus\\settings.json`
 
 ### Wichtige Entry Points
-- `src/RomCleanup.CLI`
-- `src/RomCleanup.Api`
-- `src/RomCleanup.UI.Wpf`
+- `src/Romulus.CLI`
+- `src/Romulus.Api`
+- `src/Romulus.UI.Wpf`
 
 ### Wichtige Kernbereiche
-- `RomCleanup.Contracts`
-- `RomCleanup.Core/GameKeys`
-- `RomCleanup.Core/Regions`
-- `RomCleanup.Core/Scoring`
-- `RomCleanup.Core/Deduplication`
-- `RomCleanup.Core/Classification`
-- `RomCleanup.Core/Conversion`
-- `RomCleanup.Infrastructure/Orchestration`
-- `RomCleanup.Infrastructure/FileSystem`
-- `RomCleanup.Infrastructure/Tools`
-- `RomCleanup.Infrastructure/Reporting`
-- `RomCleanup.Infrastructure/Dat`
-- `RomCleanup.Infrastructure/Conversion`
-- `RomCleanup.Infrastructure/Hashing`
-- `RomCleanup.Infrastructure/Safety`
-- `RomCleanup.Infrastructure/Sorting`
+- `Romulus.Contracts`
+- `Romulus.Core/GameKeys`
+- `Romulus.Core/Regions`
+- `Romulus.Core/Scoring`
+- `Romulus.Core/Deduplication`
+- `Romulus.Core/Classification`
+- `Romulus.Core/Conversion`
+- `Romulus.Infrastructure/Orchestration`
+- `Romulus.Infrastructure/FileSystem`
+- `Romulus.Infrastructure/Tools`
+- `Romulus.Infrastructure/Reporting`
+- `Romulus.Infrastructure/Dat`
+- `Romulus.Infrastructure/Conversion`
+- `Romulus.Infrastructure/Hashing`
+- `Romulus.Infrastructure/Safety`
+- `Romulus.Infrastructure/Sorting`
 
 ---
 

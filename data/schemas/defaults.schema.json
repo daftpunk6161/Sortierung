@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://romcleanup.local/schemas/defaults.schema.json",
+  "$id": "https://romulus.local/schemas/defaults.schema.json",
   "type": "object",
   "properties": {
     "mode": { "type": "string", "enum": ["DryRun", "Move"] },

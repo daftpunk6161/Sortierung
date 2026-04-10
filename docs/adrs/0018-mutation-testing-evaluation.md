@@ -18,7 +18,7 @@ Mutation Testing identifiziert schwache Tests, indem es kleine Codeänderungen (
 | CI-Job | `mutation` in `test-pipeline.yml` vorhanden |
 | Trigger | `workflow_dispatch` only (manuell) |
 | Gate-Modus | `continue-on-error: true` (Reporting only) |
-| Scope | `RomCleanup.Core` |
+| Scope | `Romulus.Core` |
 | Thresholds | high=80%, low=60%, break=40% |
 | MutationKillTests.cs | Handgeschriebene Tests vorhanden |
 | Reporter | HTML + JSON (Artifact-Upload) |
@@ -29,7 +29,7 @@ Mutation Testing identifiziert schwache Tests, indem es kleine Codeänderungen (
 
 ### Begründung
 
-1. **Laufzeit**: Stryker.NET gegen `RomCleanup.Core` (5700+ Tests) dauert ~15-30 Minuten. Als PR-Gate inakzeptabel.
+1. **Laufzeit**: Stryker.NET gegen `Romulus.Core` (5700+ Tests) dauert ~15-30 Minuten. Als PR-Gate inakzeptabel.
 2. **False Positives**: Equivalent Mutants (semantisch identische Änderungen) erzeugen Rauschen, insbesondere bei Score-Berechnungen mit Grenzwerten.
 3. **Handgeschriebene Kill-Tests effektiver**: `MutationKillTests.cs` deckt gezielt die kritischen Mutation-Bereiche ab (DeduplicationEngine, GameKeyNormalizer, RegionDetector, Scoring). Diese Tests sind deterministisch und schnell.
 4. **Kosten/Nutzen**: Der marginale Qualitätsgewinn eines Mutation-Score-Gates rechtfertigt nicht die CI-Zeit und Wartungskosten.
@@ -67,5 +67,5 @@ Mutation Testing identifiziert schwache Tests, indem es kleine Codeänderungen (
 
 - [Stryker.NET Docs](https://stryker-mutator.io/docs/stryker-net/introduction/)
 - `.github/workflows/test-pipeline.yml` → Job `mutation`
-- `src/RomCleanup.Tests/MutationKillTests.cs`
+- `src/Romulus.Tests/MutationKillTests.cs`
 - `docs/architecture/TEST_STRATEGY.md` → §5 CI-Pipeline

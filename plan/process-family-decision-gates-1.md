@@ -34,7 +34,7 @@ Dieser Plan definiert eine schrittweise, deterministische Kalibrierung der Famil
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-001 | In [benchmark/gates.json](../benchmark/gates.json) aktuelle Baseline-Werte dokumentieren und Comment-Note zur Ratchet-Strategie ergaenzen. |  |  |
-| TASK-002 | In [src/RomCleanup.Tests/Benchmark/FamilyDecisionGateTests.cs](../src/RomCleanup.Tests/Benchmark/FamilyDecisionGateTests.cs) zusaetzliche Ausgabe fuer DatVerified-Zaehler, Totals und Rate je Family standardisieren. |  |  |
+| TASK-002 | In [src/Romulus.Tests/Benchmark/FamilyDecisionGateTests.cs](../src/Romulus.Tests/Benchmark/FamilyDecisionGateTests.cs) zusaetzliche Ausgabe fuer DatVerified-Zaehler, Totals und Rate je Family standardisieren. |  |  |
 | TASK-003 | Einen reproduzierbaren Testlauf mit `dotnet test --filter FullyQualifiedName~FamilyDecisionGateTests` ausfuehren und Ausgabe in `benchmark/reports/` als Referenz ablegen. |  |  |
 
 ### Implementation Phase 2
@@ -45,7 +45,7 @@ Dieser Plan definiert eine schrittweise, deterministische Kalibrierung der Famil
 |------|-------------|-----------|------|
 | TASK-004 | Pro Family eine Defizitliste erzeugen: Samples mit erwarteter DAT-Abdeckung aber ohne DatVerified klassifizieren (Arcade, ComputerTOSEC, Hybrid priorisiert). |  |  |
 | TASK-005 | Benchmark-Datensaetze in [benchmark/ground-truth/](../benchmark/ground-truth/) und [benchmark/dats/](../benchmark/dats/) gezielt ergaenzen, sodass pro Family mindestens 20 eindeutig DAT-verifizierbare Referenzen vorliegen. |  |  |
-| TASK-006 | Name-only/Hash-Policy-Differenzen gegen [src/RomCleanup.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs](../src/RomCleanup.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs) und Family-Strategien in [src/RomCleanup.Infrastructure/Dat/](../src/RomCleanup.Infrastructure/Dat/) validieren und nur bei nachweisbarem Fehlmapping anpassen. |  |  |
+| TASK-006 | Name-only/Hash-Policy-Differenzen gegen [src/Romulus.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs](../src/Romulus.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs) und Family-Strategien in [src/Romulus.Infrastructure/Dat/](../src/Romulus.Infrastructure/Dat/) validieren und nur bei nachweisbarem Fehlmapping anpassen. |  |  |
 
 ### Implementation Phase 3
 
@@ -64,7 +64,7 @@ Dieser Plan definiert eine schrittweise, deterministische Kalibrierung der Famil
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-010 | CI-Pipeline um Family-Gate-Auswertung erweitern (harte Fehlermeldung inkl. Family, Ist/Soll-Wert, Delta). |  |  |
-| TASK-011 | Regressionstests fuer Family-Konflikte und DAT-Policies finalisieren: [src/RomCleanup.Tests/EnrichmentFamilyIntegrationTests.cs](../src/RomCleanup.Tests/EnrichmentFamilyIntegrationTests.cs), [src/RomCleanup.Tests/FamilyDatStrategyTests.cs](../src/RomCleanup.Tests/FamilyDatStrategyTests.cs), [src/RomCleanup.Tests/FamilyPipelineSelectorTests.cs](../src/RomCleanup.Tests/FamilyPipelineSelectorTests.cs). |  |  |
+| TASK-011 | Regressionstests fuer Family-Konflikte und DAT-Policies finalisieren: [src/Romulus.Tests/EnrichmentFamilyIntegrationTests.cs](../src/Romulus.Tests/EnrichmentFamilyIntegrationTests.cs), [src/Romulus.Tests/FamilyDatStrategyTests.cs](../src/Romulus.Tests/FamilyDatStrategyTests.cs), [src/Romulus.Tests/FamilyPipelineSelectorTests.cs](../src/Romulus.Tests/FamilyPipelineSelectorTests.cs). |  |  |
 | TASK-012 | Ergebnisbericht in [docs/audits/](../docs/audits/) erstellen: erreichte Schwellen, Restdefizite, naechste Ratchet-Stufe. |  |  |
 
 ## 3. Alternatives
@@ -76,24 +76,24 @@ Dieser Plan definiert eine schrittweise, deterministische Kalibrierung der Famil
 ## 4. Dependencies
 
 - **DEP-001**: Benchmark-Datensaetze in [benchmark/ground-truth/](../benchmark/ground-truth/) muessen konsistent gepflegt sein.
-- **DEP-002**: Family-Gate-Test in [src/RomCleanup.Tests/Benchmark/FamilyDecisionGateTests.cs](../src/RomCleanup.Tests/Benchmark/FamilyDecisionGateTests.cs) muss stabil reproduzierbar laufen.
-- **DEP-003**: DAT-Policy-Implementierungen in [src/RomCleanup.Infrastructure/Dat/](../src/RomCleanup.Infrastructure/Dat/) bleiben Single Source of Truth.
+- **DEP-002**: Family-Gate-Test in [src/Romulus.Tests/Benchmark/FamilyDecisionGateTests.cs](../src/Romulus.Tests/Benchmark/FamilyDecisionGateTests.cs) muss stabil reproduzierbar laufen.
+- **DEP-003**: DAT-Policy-Implementierungen in [src/Romulus.Infrastructure/Dat/](../src/Romulus.Infrastructure/Dat/) bleiben Single Source of Truth.
 
 ## 5. Files
 
 - **FILE-001**: [benchmark/gates.json](../benchmark/gates.json) – Family-Grenzwerte und Ratchet-Stufen.
-- **FILE-002**: [src/RomCleanup.Tests/Benchmark/FamilyDecisionGateTests.cs](../src/RomCleanup.Tests/Benchmark/FamilyDecisionGateTests.cs) – Gate-Auswertung je Family.
-- **FILE-003**: [src/RomCleanup.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs](../src/RomCleanup.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs) – DAT-/Detector-Interaktion fuer DatVerified-Pfade.
-- **FILE-004**: [src/RomCleanup.Infrastructure/Dat/FamilyDatStrategyResolver.cs](../src/RomCleanup.Infrastructure/Dat/FamilyDatStrategyResolver.cs) – Family-Policy-Resolution.
-- **FILE-005**: [src/RomCleanup.Tests/EnrichmentFamilyIntegrationTests.cs](../src/RomCleanup.Tests/EnrichmentFamilyIntegrationTests.cs) – End-to-End-Absicherung Family-Konflikte.
+- **FILE-002**: [src/Romulus.Tests/Benchmark/FamilyDecisionGateTests.cs](../src/Romulus.Tests/Benchmark/FamilyDecisionGateTests.cs) – Gate-Auswertung je Family.
+- **FILE-003**: [src/Romulus.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs](../src/Romulus.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs) – DAT-/Detector-Interaktion fuer DatVerified-Pfade.
+- **FILE-004**: [src/Romulus.Infrastructure/Dat/FamilyDatStrategyResolver.cs](../src/Romulus.Infrastructure/Dat/FamilyDatStrategyResolver.cs) – Family-Policy-Resolution.
+- **FILE-005**: [src/Romulus.Tests/EnrichmentFamilyIntegrationTests.cs](../src/Romulus.Tests/EnrichmentFamilyIntegrationTests.cs) – End-to-End-Absicherung Family-Konflikte.
 
 ## 6. Testing
 
-- **TEST-001**: `dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --filter FullyQualifiedName~FamilyDecisionGateTests.FamilyDecisionGates_MeetThresholdsFromGatesJson`
-- **TEST-002**: `dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --filter FullyQualifiedName~EnrichmentFamilyIntegrationTests`
-- **TEST-003**: `dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --filter FullyQualifiedName~FamilyDatStrategyTests`
-- **TEST-004**: `dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --filter FullyQualifiedName~FamilyPipelineSelectorTests`
-- **TEST-005**: `dotnet build src/RomCleanup.sln`
+- **TEST-001**: `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter FullyQualifiedName~FamilyDecisionGateTests.FamilyDecisionGates_MeetThresholdsFromGatesJson`
+- **TEST-002**: `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter FullyQualifiedName~EnrichmentFamilyIntegrationTests`
+- **TEST-003**: `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter FullyQualifiedName~FamilyDatStrategyTests`
+- **TEST-004**: `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter FullyQualifiedName~FamilyPipelineSelectorTests`
+- **TEST-005**: `dotnet build src/Romulus.sln`
 
 ## 7. Risks & Assumptions
 

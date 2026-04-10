@@ -43,7 +43,7 @@ function Get-SafeProp($obj, [string]$prop) {
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$testProj = Join-Path $repoRoot 'src' 'RomCleanup.Tests' 'RomCleanup.Tests.csproj'
+$testProj = Join-Path $repoRoot 'src' 'Romulus.Tests' 'Romulus.Tests.csproj'
 $gtDir = Join-Path $repoRoot 'benchmark' 'ground-truth'
 $gatesPath = Join-Path $repoRoot 'benchmark' 'gates.json'
 $defaultOutput = if ($OutputPath) { $OutputPath } else { Join-Path $repoRoot 'benchmark' 'manifest.json' }

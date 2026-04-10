@@ -90,7 +90,7 @@ Das ViewModel ist ein **dünner Dispatcher**: es nimmt Commands entgegen, delegi
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────────────┐
-│ Infrastructure (RomCleanup.Infrastructure)                          │
+│ Infrastructure (Romulus.Infrastructure)                          │
 │  RunOrchestrator, FileSystemAdapter, AuditCsvStore, ...            │
 └─────────────────────────────────────────────────────────────────────┘
 ```

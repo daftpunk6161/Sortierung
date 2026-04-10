@@ -12,7 +12,7 @@
 
 ### Warum ein realistisches Testset für dieses Tool unverzichtbar ist
 
-RomCleanup trifft **destruktive, nicht-trivial-umkehrbare Entscheidungen**: Dateien werden verschoben, sortiert, dedupliziert, konvertiert und potenziell umbenannt. Die Erkennungspipeline durchläuft 8 Stufen (FolderName → UniqueExt → AmbiguousExt → DiscHeader → ArchiveContent → CartridgeHeader → SerialNumber → FilenameKeyword), und jede falsche Entscheidung auf einer dieser Stufen kann zu Datenverlust führen.
+Romulus trifft **destruktive, nicht-trivial-umkehrbare Entscheidungen**: Dateien werden verschoben, sortiert, dedupliziert, konvertiert und potenziell umbenannt. Die Erkennungspipeline durchläuft 8 Stufen (FolderName → UniqueExt → AmbiguousExt → DiscHeader → ArchiveContent → CartridgeHeader → SerialNumber → FilenameKeyword), und jede falsche Entscheidung auf einer dieser Stufen kann zu Datenverlust führen.
 
 **Das aktuelle Problem:** Das Projekt hat 5.200+ Unit-Tests (136 Dateien) und 2.073 Ground-Truth-Einträge – aber:
 

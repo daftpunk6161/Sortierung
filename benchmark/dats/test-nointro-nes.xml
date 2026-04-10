@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <datafile>
-  <header><name>RomCleanup Test DAT - No-Intro NES</name></header>
+  <header><name>Romulus Test DAT - No-Intro NES</name></header>
   <game name="Super Mario Bros (USA)"><rom name="Super Mario Bros (USA).nes" size="40976" crc="00000001" sha1="1111111111111111111111111111111111111111" /></game>
   <game name="Legend of Zelda (USA)"><rom name="Legend of Zelda (USA).nes" size="131088" crc="00000002" sha1="2222222222222222222222222222222222222222" /></game>
   <game name="Metroid (USA)"><rom name="Metroid (USA).nes" size="262160" crc="00000003" sha1="3333333333333333333333333333333333333333" /></game>

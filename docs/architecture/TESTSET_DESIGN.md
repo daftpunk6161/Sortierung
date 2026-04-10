@@ -1,4 +1,4 @@
-# Real-World Testset Design – RomCleanup
+# Real-World Testset Design – Romulus
 
 ---
 
@@ -6,7 +6,7 @@
 
 ### Warum ein realistisches Testset unverzichtbar ist
 
-RomCleanup trifft **destruktive Entscheidungen** auf Basis von Erkennung: Dateien werden verschoben, sortiert, dedupliziert, umbenannt. Jede falsche Erkennung ist ein potenzieller Datenverlust. Die aktuellen 2.700+ Unit-Tests prüfen Codepfade, aber **nicht die Erkennungsqualität in realistischen Szenarien**. Es gibt:
+Romulus trifft **destruktive Entscheidungen** auf Basis von Erkennung: Dateien werden verschoben, sortiert, dedupliziert, umbenannt. Jede falsche Erkennung ist ein potenzieller Datenverlust. Die aktuellen 2.700+ Unit-Tests prüfen Codepfade, aber **nicht die Erkennungsqualität in realistischen Szenarien**. Es gibt:
 
 - **Keine Confusion Matrices**, die zeigen, welche Systeme verwechselt werden
 - **Keinen Benchmark-Datensatz**, der realistische ROM-Sammlungen abbildet

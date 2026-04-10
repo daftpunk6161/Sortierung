@@ -29,7 +29,7 @@ Ziel: Eine kleine, wiederholbare Release-Matrix fuer die wichtigsten End-to-End-
 Betroffene Bereiche:
 - `docs/guides`
 - `docs/architecture`
-- `src/RomCleanup.Tests`
+- `src/Romulus.Tests`
 
 Akzeptanz:
 - Kritische Flows pro Kanal sind als Smoke-Matrix dokumentiert
@@ -46,7 +46,7 @@ Ziel: Den Reach-Stack gegen reale Betriebsfaelle statt nur gegen Testhosts absic
 Betroffene Bereiche:
 - `deploy/docker`
 - `docs/guides/HEADLESS_DEPLOYMENT.md`
-- `src/RomCleanup.Api`
+- `src/Romulus.Api`
 
 Akzeptanz:
 - Headless-Smokes pruefen AllowedRoots, API-Key, PublicBaseUrl und Reverse-Proxy-Nutzung
@@ -62,8 +62,8 @@ Ziel: Die verbleibenden produktionsrelevanten Conversion-Kanten geordnet abbauen
 
 Betroffene Bereiche:
 - `docs/architecture/CONVERSION_DOMAIN_AUDIT.md`
-- `src/RomCleanup.Infrastructure/Conversion`
-- `src/RomCleanup.Tests/Conversion`
+- `src/Romulus.Infrastructure/Conversion`
+- `src/Romulus.Tests/Conversion`
 
 Akzeptanz:
 - aktive, nicht rein historische Auditpunkte sind triagiert
@@ -80,7 +80,7 @@ Ziel: Die Erkennungs- und Benchmark-Basis vor weiterem Feature-Bau bewusst refre
 Betroffene Bereiche:
 - `docs/architecture/DATASET_AUDIT_PROCESS.md`
 - `docs/guides/BENCHMARK_AUDIT_GOVERNANCE.md`
-- Benchmark-/Testset-Bereiche unter `src/RomCleanup.Tests`
+- Benchmark-/Testset-Bereiche unter `src/Romulus.Tests`
 
 Akzeptanz:
 - aktueller Audit-Lauf ist dokumentiert
@@ -96,7 +96,7 @@ Ziel: Die produktisierten GUI-Flows ueber reproduzierbare Accessibility-Smokes a
 
 Betroffene Bereiche:
 - `docs/ux/narrator-testplan.md`
-- `src/RomCleanup.UI.Wpf`
+- `src/Romulus.UI.Wpf`
 
 Akzeptanz:
 - strukturelle A11y-Smokes fuer kritische Flows sind automatisiert reproduzierbar

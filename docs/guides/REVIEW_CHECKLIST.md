@@ -14,7 +14,7 @@
 
 ### 2 Struktur & Architektur
 - [ ] Dependency-Richtung eingehalten: Entry Points → Infrastructure → Core → Contracts (nie umgekehrt)
-- [ ] Core-Logik ist pure (keine I/O-Abhängigkeiten in `RomCleanup.Core`)
+- [ ] Core-Logik ist pure (keine I/O-Abhängigkeiten in `Romulus.Core`)
 - [ ] Neue Services über Konstruktor-Injection, Interfaces aus `Contracts/Ports/`
 - [ ] Datenstrukturen als C# records oder Modelle in `Contracts/Models/`
 
@@ -25,7 +25,7 @@
 
 ### 4 Tests
 - [ ] xUnit-Tests für neue/geänderte Klassen vorhanden
-- [ ] `dotnet test src/RomCleanup.sln` grün
+- [ ] `dotnet test src/Romulus.sln` grün
 - [ ] Testbenennung: `<Klasse>Tests.cs`
 - [ ] Kein Alibi-Test (`Assert.True(true)` etc.)
 
@@ -54,8 +54,8 @@
 
 | Gate | Tool | Automatisiert? |
 |------|------|----------------|
-| Build | `dotnet build src/RomCleanup.sln` | ✅ CI |
-| Unit-Tests | `dotnet test src/RomCleanup.sln` | ✅ CI |
+| Build | `dotnet build src/Romulus.sln` | ✅ CI |
+| Unit-Tests | `dotnet test src/Romulus.sln` | ✅ CI |
 | Coverage ≥ 50% | CI Coverage-Gate | ✅ CI |
 | Naming-Policy | Manuell (Review) | ❌ Nein |
 

@@ -6,7 +6,7 @@ Diese Anleitung beschreibt den produktionsnahen Betrieb der API inklusive eingeb
 
 ## Zielbild
 
-- Ein einzelner `RomCleanup.Api`-Prozess liefert API und Dashboard aus derselben Binary.
+- Ein einzelner `Romulus.Api`-Prozess liefert API und Dashboard aus derselben Binary.
 - Das Dashboard nutzt ausschliesslich bestehende API-Endpunkte plus die Read-Modelle `/dashboard/bootstrap` und `/dashboard/summary`.
 - Nicht-Loopback-Betrieb ist nur mit expliziter Remote-Freigabe, HTTPS-`PublicBaseUrl`, API-Key und `AllowedRoots` erlaubt.
 
@@ -47,7 +47,7 @@ Der Beispiel-Compose-Stack setzt absichtlich diese Defaults:
 - Host-Port nur auf `127.0.0.1:7878`
 - ROM-Quelle read-only
 - eigener persistenter Volume fuer `collection.db`
-- eigener persistenter Volume fuer Profile/Settings unter `RomCleanupRegionDedupe`
+- eigener persistenter Volume fuer Profile/Settings unter `Romulus`
 - read-only Container-Filesystem plus `tmpfs` fuer temporaere Artefakte
 
 ## Reverse Proxy / HTTPS
@@ -63,8 +63,8 @@ Empfohlene Host-Pfade:
 
 - ROMs: `/srv/romulus/roms`
 - Exporte/Reports: `/srv/romulus/exports`
-- Index: Docker-Volume `romulus_index` -> `/app/.romcleanup`
-- Profile/Settings: Docker-Volume `romulus_profiles` -> `/root/.config/RomCleanupRegionDedupe`
+- Index: Docker-Volume `romulus_index` -> `/app/.romulus`
+- Profile/Settings: Docker-Volume `romulus_profiles` -> `/root/.config/Romulus`
 
 Wichtig:
 

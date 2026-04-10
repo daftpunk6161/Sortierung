@@ -71,7 +71,7 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
 - [x] R3-T01 Dashboard-Architektur und Sicherheitsrahmen festziehen
   Headless-Remote-Modus erzwingt HTTPS-`PublicBaseUrl`, API-Key und `AllowedRoots`; Dashboard bleibt API-only.
 - [x] R3-T02 Embedded Dashboard Shell und Auth-Bootstrap umsetzen
-  Statische Dashboard-Shell wird direkt aus `RomCleanup.Api` ausgeliefert und nutzt nur bestehende API-Pfade plus `bootstrap/summary`.
+  Statische Dashboard-Shell wird direkt aus `Romulus.Api` ausgeliefert und nutzt nur bestehende API-Pfade plus `bootstrap/summary`.
 - [x] R3-T03 Run-Management und Live-Progress ueber API anbinden
   Browser-Run-Start, Status, Cancel und SSE-Live-Progress laufen ueber dieselbe Run-Wahrheit wie CLI und GUI.
 - [x] R3-T04 DAT-Status, Review-Queue und Completeness im Dashboard bereitstellen
@@ -99,7 +99,7 @@ Die Detailarbeit wird in den verlinkten Release-Plaenen verfolgt.
 - [x] R4-T06 Release-Check, Changelog-Hygiene und offene Produktkanten sauber schneiden
   R4 ist repo-seitig geschlossen; naechster aktive Block ist `R5 Collection Diff & Merge`.
 - [x] R5-T01 Compare-Vertrag, Diff-Zustaende und Merge-Plan-Modell festziehen
-  `CollectionCompareRequest`, `CollectionDiffEntry`, `CollectionMergePlan` und ihre Summary-/Decision-Modelle liegen jetzt zentral in `RomCleanup.Contracts`.
+  `CollectionCompareRequest`, `CollectionDiffEntry`, `CollectionMergePlan` und ihre Summary-/Decision-Modelle liegen jetzt zentral in `Romulus.Contracts`.
 - [x] R5-T02 Source-Scope-Materialisierung auf Collection Index und Candidate-Resolver setzen
   `CollectionCompareService` materialisiert explizite Quellen index-first mit Root-/Fingerprint-Guards und haengt den bestehenden Analysis-/Export-Pfad daran.
 - [x] R5-T03 Diff-Engine auf Basis vorhandener Hash-, Candidate- und Winner-Regeln bauen

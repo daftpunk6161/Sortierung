@@ -1,0 +1,240 @@
+<UserControl x:Class="Romulus.UI.Wpf.Views.WizardView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+>
+
+  <!-- GUI-081: 3-Step First-Run Wizard overlay -->
+  <Border Background="#E0181825" IsHitTestVisible="True">
+    <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushAccentCyan}"
+            BorderThickness="2" CornerRadius="16" Padding="40,32"
+            HorizontalAlignment="Center" VerticalAlignment="Center"
+            MinWidth="520" MaxWidth="640" MinHeight="360">
+      <Border.Style>
+        <Style TargetType="Border">
+          <Setter Property="Effect">
+            <Setter.Value>
+              <DropShadowEffect BlurRadius="40" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+            </Setter.Value>
+          </Setter>
+          <!-- GUI-098: Suppress glow when ReduceMotion is active -->
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding Shell.ReduceMotion}" Value="True">
+              <Setter Property="Effect" Value="{x:Null}"/>
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </Border.Style>
+
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Step indicator -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,24">
+          <!-- GUI-084: AutomationProperties for wizard steps -->
+          <Ellipse Width="28" Height="28" StrokeThickness="2" Margin="0,0,8,0"
+                   Stroke="{DynamicResource BrushAccentCyan}"
+                   Fill="{DynamicResource BrushAccentCyan}"
+                   AutomationProperties.Name="{Binding Loc[Wizard.Step1Label]}"/>
+          <TextBlock Text="{Binding Loc[Wizard.Step1Short]}" FontWeight="SemiBold" VerticalAlignment="Center"
+                     Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,16,0"/>
+
+          <Border Width="40" Height="2" Background="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+
+          <Ellipse Width="28" Height="28" StrokeThickness="2" Margin="0,0,8,0"
+                   AutomationProperties.Name="{Binding Loc[Wizard.Step2Label]}">
+            <Ellipse.Style>
+              <Style TargetType="Ellipse">
+                <Setter Property="Stroke" Value="{DynamicResource BrushBorder}"/>
+                <Setter Property="Fill" Value="Transparent"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Shell.WizardStep}" Value="1">
+                    <Setter Property="Stroke" Value="{DynamicResource BrushAccentCyan}"/>
+                    <Setter Property="Fill" Value="{DynamicResource BrushAccentCyan}"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding Shell.WizardStep}" Value="2">
+                    <Setter Property="Stroke" Value="{DynamicResource BrushAccentCyan}"/>
+                    <Setter Property="Fill" Value="{DynamicResource BrushAccentCyan}"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Ellipse.Style>
+          </Ellipse>
+          <TextBlock Text="{Binding Loc[Wizard.Step2Short]}" FontWeight="SemiBold" VerticalAlignment="Center"
+                     Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,16,0"/>
+
+          <Border Width="40" Height="2" Background="{DynamicResource BrushBorder}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+
+          <Ellipse Width="28" Height="28" StrokeThickness="2" Margin="0,0,8,0"
+                   AutomationProperties.Name="{Binding Loc[Wizard.Step3Label]}">
+            <Ellipse.Style>
+              <Style TargetType="Ellipse">
+                <Setter Property="Stroke" Value="{DynamicResource BrushBorder}"/>
+                <Setter Property="Fill" Value="Transparent"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Shell.WizardStep}" Value="2">
+                    <Setter Property="Stroke" Value="{DynamicResource BrushAccentCyan}"/>
+                    <Setter Property="Fill" Value="{DynamicResource BrushAccentCyan}"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Ellipse.Style>
+          </Ellipse>
+          <TextBlock Text="{Binding Loc[Wizard.Step3Short]}" FontWeight="SemiBold" VerticalAlignment="Center"
+                     Foreground="{DynamicResource BrushTextMuted}"/>
+        </StackPanel>
+
+        <!-- Step Content -->
+        <Grid Grid.Row="1">
+
+          <!-- Step 0: Choose ROM directories -->
+          <StackPanel Visibility="{Binding Shell.WizardStepIs0, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="{Binding Loc[Wizard.Step1Title]}" FontSize="22" FontWeight="Bold"
+                       Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center"
+                       Margin="0,0,0,8"/>
+            <TextBlock Text="{Binding Loc[Wizard.Step1Desc]}" Style="{StaticResource CaptionText}"
+                       HorizontalAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,20"/>
+            <Button Command="{Binding AddRootCommand}" MinWidth="200" Height="44" FontSize="14"
+                    HorizontalAlignment="Center" Cursor="Hand"
+                    AutomationProperties.Name="{Binding Loc[Wizard.AddFolder]}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="18"
+                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding Loc[Wizard.AddFolder]}" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Button>
+            <TextBlock Text="{Binding Roots.Count, StringFormat='{}{0} Ordner ausgewählt'}"
+                       Style="{StaticResource CaptionText}" HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                <TextBlock Text="Analyse laeuft..."
+                     Style="{StaticResource CaptionText}"
+                     HorizontalAlignment="Center"
+                     Margin="0,8,0,0"
+                     Visibility="{Binding WizardAnalysisInProgress, Converter={StaticResource BoolToVis}}"/>
+                <TextBlock Text="{Binding WizardAnalysisSummary}"
+                     Style="{StaticResource CaptionText}"
+                     HorizontalAlignment="Center"
+                     Margin="0,8,0,0"
+                     MaxWidth="460"
+                     TextWrapping="Wrap"
+                     TextAlignment="Center"/>
+
+            <Border Background="{DynamicResource BrushCard}"
+                    BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                    CornerRadius="8" Padding="16,12" Margin="0,20,0,0">
+              <StackPanel>
+                <TextBlock Text="Workflow" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <ComboBox ItemsSource="{Binding AvailableWorkflows}"
+                          SelectedValuePath="Id"
+                          DisplayMemberPath="Name"
+                          SelectedValue="{Binding SelectedWorkflowScenarioId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="{Binding SelectedWorkflowDescription}" Style="{StaticResource CaptionText}"
+                           Margin="0,8,0,0" TextWrapping="Wrap"/>
+                <TextBlock Text="Profil" FontWeight="SemiBold" Margin="0,12,0,6"/>
+                <ComboBox ItemsSource="{Binding AvailableRunProfiles}"
+                          SelectedValuePath="Id"
+                          DisplayMemberPath="Name"
+                          SelectedValue="{Binding SelectedRunProfileId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="{Binding SelectedRunProfileDescription}" Style="{StaticResource CaptionText}"
+                           Margin="0,8,0,0" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+
+          <!-- Step 1: Choose Region -->
+          <StackPanel Visibility="{Binding Shell.WizardStepIs1, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="{Binding Loc[Wizard.Step2Title]}" FontSize="22" FontWeight="Bold"
+                       Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center"
+                       Margin="0,0,0,8"/>
+            <TextBlock Text="{Binding Loc[Wizard.Step2Desc]}" Style="{StaticResource CaptionText}"
+                       HorizontalAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,20"/>
+            <!-- GUI-082: Locale-based region recommendation shown (multi-select) -->
+            <StackPanel HorizontalAlignment="Center">
+              <CheckBox Content="Europe (EU)" Padding="12,6" Margin="0,4"
+                        IsChecked="{Binding PreferEU}" FontSize="14"
+                        AutomationProperties.Name="Region Europa bevorzugen"/>
+              <CheckBox Content="USA (US)" Padding="12,6" Margin="0,4"
+                        IsChecked="{Binding PreferUS}" FontSize="14"
+                        AutomationProperties.Name="Region USA bevorzugen"/>
+              <CheckBox Content="Japan (JP)" Padding="12,6" Margin="0,4"
+                        IsChecked="{Binding PreferJP}" FontSize="14"
+                        AutomationProperties.Name="Region Japan bevorzugen"/>
+              <CheckBox Content="World" Padding="12,6" Margin="0,4"
+                        IsChecked="{Binding PreferWORLD}" FontSize="14"
+                        AutomationProperties.Name="Region World bevorzugen"/>
+            </StackPanel>
+          </StackPanel>
+
+          <!-- Step 2: Ready (Preview) -->
+          <StackPanel Visibility="{Binding Shell.WizardStepIs2, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="{Binding Loc[Wizard.Step3Title]}" FontSize="22" FontWeight="Bold"
+                       Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center"
+                       Margin="0,0,0,8"/>
+            <!-- GUI-083: Trust building hint -->
+            <Border Background="{DynamicResource BrushSuccessBg}" BorderBrush="{DynamicResource BrushSuccess}"
+                    BorderThickness="1" CornerRadius="8" Padding="16,12" Margin="0,0,0,16"
+                    HorizontalAlignment="Center">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="20"
+                           Foreground="{DynamicResource BrushSuccess}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding Loc[Wizard.TrustHint]}" FontSize="14"
+                           Foreground="{DynamicResource BrushSuccess}" TextWrapping="Wrap" MaxWidth="400"/>
+              </StackPanel>
+            </Border>
+            <TextBlock Style="{StaticResource CaptionText}" HorizontalAlignment="Center" TextWrapping="Wrap"
+                       Margin="0,0,0,12" MaxWidth="400" TextAlignment="Center">
+              <TextBlock.Text>
+                <MultiBinding StringFormat="{}{0} Ordner · Region: {1}">
+                  <Binding Path="Roots.Count"/>
+                  <Binding Path="Shell.WizardRegionSummary"/>
+                </MultiBinding>
+              </TextBlock.Text>
+            </TextBlock>
+            <TextBlock Text="{Binding RunConfigurationSelectionSummary}"
+                       Style="{StaticResource CaptionText}"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       MaxWidth="420"
+                       TextAlignment="Center"/>
+            <TextBlock Text="{Binding WizardRecommendationSummary}"
+                       Style="{StaticResource CaptionText}"
+                       HorizontalAlignment="Center"
+                       Margin="0,8,0,0"
+                       TextWrapping="Wrap"
+                       MaxWidth="420"
+                       TextAlignment="Center"/>
+          </StackPanel>
+        </Grid>
+
+        <!-- Navigation buttons -->
+        <Grid Grid.Row="2" Margin="0,24,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+
+          <Button Grid.Column="0" Content="{Binding Loc[Wizard.Skip]}" Padding="12,6" MinHeight="44" Cursor="Hand"
+                  Command="{Binding Shell.WizardSkipCommand}" Foreground="{DynamicResource BrushTextMuted}"
+                  Background="Transparent" BorderThickness="0"
+                  AutomationProperties.Name="{Binding Loc[Wizard.Skip]}"/>
+
+          <StackPanel Grid.Column="2" Orientation="Horizontal">
+            <Button Content="{Binding Loc[Wizard.Back]}" Padding="16,8" MinHeight="44" Margin="0,0,8,0" Cursor="Hand"
+                    Command="{Binding Shell.WizardBackCommand}"
+                    AutomationProperties.Name="{Binding Loc[Wizard.Back]}"/>
+            <Button Padding="16,8" MinHeight="44" Cursor="Hand" FontWeight="Bold"
+                    Command="{Binding Shell.WizardNextCommand}"
+                    IsEnabled="{Binding CanAdvanceWizard}"
+                    Background="{DynamicResource BrushAccentCyan}" Foreground="{DynamicResource BrushBackground}"
+                    AutomationProperties.Name="{Binding Loc[Wizard.Next]}">
+              <TextBlock Text="{Binding Shell.WizardNextLabel}"/>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Grid>
+    </Border>
+  </Border>
+</UserControl>

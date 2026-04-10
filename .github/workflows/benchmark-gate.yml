@@ -54,15 +54,15 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Build
-        run: dotnet build src/RomCleanup.Tests/RomCleanup.Tests.csproj --configuration Release --nologo
+        run: dotnet build src/Romulus.Tests/Romulus.Tests.csproj --configuration Release --nologo
 
       - name: Coverage Gate Tests
         run: |
-          dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --no-build --configuration Release --nologo --filter "Category=CoverageGate" --logger "trx;LogFileName=coverage-gate.trx"
+          dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --configuration Release --nologo --filter "Category=CoverageGate" --logger "trx;LogFileName=coverage-gate.trx"
 
       - name: Quality Gate Tests (informational)
         run: |
-          dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --no-build --configuration Release --nologo --filter "Category=QualityGate" --logger "trx;LogFileName=quality-gate.trx"
+          dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --configuration Release --nologo --filter "Category=QualityGate" --logger "trx;LogFileName=quality-gate.trx"
 
       - name: Upload gate results
         if: always()
@@ -70,7 +70,7 @@ jobs:
         with:
           name: benchmark-gate-results
           path: |
-            src/RomCleanup.Tests/TestResults/**/*.trx
+            src/Romulus.Tests/TestResults/**/*.trx
           retention-days: 14
 
   # ── Nightly: Full benchmark evaluation ──
@@ -97,15 +97,15 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Build
-        run: dotnet build src/RomCleanup.Tests/RomCleanup.Tests.csproj --configuration Release --nologo
+        run: dotnet build src/Romulus.Tests/Romulus.Tests.csproj --configuration Release --nologo
 
       - name: Full Benchmark Suite
         env:
-          ROMCLEANUP_ENFORCE_QUALITY_GATES: ${{ github.event.inputs.enforce_gates == 'true' && 'true' || 'false' }}
-          ROMCLEANUP_UPDATE_BASELINE: ${{ github.event.inputs.update_baseline == 'true' && 'true' || 'false' }}
-          ROMCLEANUP_BASELINE_REASON: ${{ github.event.inputs.baseline_reason || format('Nightly {0}', github.run_id) }}
+          ROMULUS_ENFORCE_QUALITY_GATES: ${{ github.event.inputs.enforce_gates == 'true' && 'true' || 'false' }}
+          ROMULUS_UPDATE_BASELINE: ${{ github.event.inputs.update_baseline == 'true' && 'true' || 'false' }}
+          ROMULUS_BASELINE_REASON: ${{ github.event.inputs.baseline_reason || format('Nightly {0}', github.run_id) }}
         run: |
-          dotnet test src/RomCleanup.Tests/RomCleanup.Tests.csproj --no-build --configuration Release --nologo --filter "Category=Benchmark|Category=BenchmarkRegression|Category=QualityGate|Category=CoverageGate" --logger "trx;LogFileName=benchmark-full.trx"
+          dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --configuration Release --nologo --filter "Category=Benchmark|Category=BenchmarkRegression|Category=QualityGate|Category=CoverageGate" --logger "trx;LogFileName=benchmark-full.trx"
 
       - name: Upload benchmark artifacts
         if: always()
@@ -114,7 +114,7 @@ jobs:
           name: benchmark-reports
           path: |
             benchmark/reports/**
-            src/RomCleanup.Tests/TestResults/**/*.trx
+            src/Romulus.Tests/TestResults/**/*.trx
           retention-days: 90
 
       - name: Upload HTML dashboard

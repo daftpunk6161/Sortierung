@@ -1,7 +1,7 @@
 # Tool Surfacing And Maturity Audit
 
 Date: 2026-04-02
-Scope: `src/RomCleanup.UI.Wpf`
+Scope: `src/Romulus.UI.Wpf`
 Goal: make useful tools visible in the main workflow, prevent half-finished features from presenting as production-ready, and verify that every catalog entry has a real command path.
 
 ## 1. Release position
@@ -130,14 +130,14 @@ Goal: make useful tools visible in the main workflow, prevent half-finished feat
 ## 5. Verification basis
 
 - Registration coverage:
-  - `src/RomCleanup.Tests/FeatureCommandServiceTests.cs`
+  - `src/Romulus.Tests/FeatureCommandServiceTests.cs`
 - Command execution coverage:
-  - `src/RomCleanup.Tests/FeatureCommandServiceTests.cs`
-  - `src/RomCleanup.Tests/FcsExecutionAndSettingsTests.cs`
+  - `src/Romulus.Tests/FeatureCommandServiceTests.cs`
+  - `src/Romulus.Tests/FcsExecutionAndSettingsTests.cs`
 - UI surfacing coverage:
-  - `src/RomCleanup.Tests/WpfNewTests.cs`
-  - `src/RomCleanup.Tests/WpfProductizationTests.cs`
-  - `src/RomCleanup.Tests/GuiViewModelTests.cs`
+  - `src/Romulus.Tests/WpfNewTests.cs`
+  - `src/Romulus.Tests/WpfProductizationTests.cs`
+  - `src/Romulus.Tests/GuiViewModelTests.cs`
 
 ## 6. Implemented safeguards
 

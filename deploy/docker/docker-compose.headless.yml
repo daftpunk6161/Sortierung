@@ -22,8 +22,8 @@ services:
     ports:
       - "127.0.0.1:7878:7878"
     volumes:
-      - romulus_index:/app/.romcleanup
-      - romulus_profiles:/root/.config/RomCleanupRegionDedupe
+      - romulus_index:/app/.romulus
+      - romulus_profiles:/root/.config/Romulus
       - type: bind
         source: /srv/romulus/roms
         target: /srv/romulus/roms

@@ -37,7 +37,7 @@ Nie umkehren.
 - keine geschaeftslogische Sonderberechnung
 
 ## Pflichtregeln
-- Keine I/O-Logik in `RomCleanup.Core`
+- Keine I/O-Logik in `Romulus.Core`
 - Keine Businesslogik in WPF Code-Behind
 - Services per Constructor Injection
 - Zeit, Prozesse, Dateisystem und externe Tools hinter testbaren Abstraktionen

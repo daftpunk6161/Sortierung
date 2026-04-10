@@ -27,7 +27,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$testProj = Join-Path $repoRoot 'src' 'RomCleanup.Tests' 'RomCleanup.Tests.csproj'
+$testProj = Join-Path $repoRoot 'src' 'Romulus.Tests' 'Romulus.Tests.csproj'
 
 if (-not (Test-Path $testProj)) {
     Write-Error "Test project not found: $testProj"

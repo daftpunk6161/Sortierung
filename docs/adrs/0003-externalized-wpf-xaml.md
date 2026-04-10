@@ -7,7 +7,7 @@ Superseded (2026-03-11)
 > In der PowerShell-Version war XAML als String in Skript-Dateien eingebettet.
 > Dieses ADR entschied, XAML in externe `.xaml`-Dateien auszulagern.
 >
-> In der C#-Lösung (`src/RomCleanup.UI.Wpf/`) ist XAML nativ Teil des
+> In der C#-Lösung (`src/Romulus.UI.Wpf/`) ist XAML nativ Teil des
 > Build-Prozesses — es gibt keine Inline-Strings mehr. Das Problem existiert nicht.
 
 ## Kontext (historisch)
@@ -18,6 +18,6 @@ Inline-XAML in Skriptdateien war fehleranfällig und schwer wartbar.
 - Theme-Ressourcen liegen in `dev/modules/wpf/Theme.Resources.xaml`.
 
 ## Aktueller Stand (C#)
-- `src/RomCleanup.UI.Wpf/MainWindow.xaml` — Hauptfenster
-- `src/RomCleanup.UI.Wpf/App.xaml` — Application-Root
-- `src/RomCleanup.UI.Wpf/Themes/` — ResourceDictionaries (Dark + Neon Accent)
+- `src/Romulus.UI.Wpf/MainWindow.xaml` — Hauptfenster
+- `src/Romulus.UI.Wpf/App.xaml` — Application-Root
+- `src/Romulus.UI.Wpf/Themes/` — ResourceDictionaries (Dark + Neon Accent)

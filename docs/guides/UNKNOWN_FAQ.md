@@ -1,6 +1,6 @@
 # Warum werden Dateien als UNBEKANNT eingestuft? (FAQ)
 
-> Implementierung: `src/RomCleanup.Core/Classification/ConsoleDetector.cs`
+> Implementierung: `src/Romulus.Core/Classification/ConsoleDetector.cs`
 
 ## 1. Keine DAT-Dateien konfiguriert
 
