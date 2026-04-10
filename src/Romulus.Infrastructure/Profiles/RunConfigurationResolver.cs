@@ -1,4 +1,5 @@
 using Romulus.Contracts.Models;
+using Romulus.Contracts;
 using Romulus.Infrastructure.Workflow;
 
 namespace Romulus.Infrastructure.Profiles;
@@ -60,7 +61,9 @@ public sealed class RunConfigurationResolver
             return null;
 
         return WorkflowScenarioCatalog.TryGet(workflowScenarioId)
-            ?? throw new InvalidOperationException($"Workflow '{workflowScenarioId}' was not found.");
+            ?? throw new ConfigurationValidationException(
+                ConfigurationErrorCode.WorkflowNotFound,
+                $"Workflow '{workflowScenarioId}' was not found.");
     }
 
     private async ValueTask<RunProfileDocument?> ResolveProfileAsync(
@@ -80,7 +83,9 @@ public sealed class RunConfigurationResolver
             return null;
 
         return await _profileService.TryGetAsync(effectiveProfileId, ct).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Profile '{effectiveProfileId}' was not found.");
+            ?? throw new ConfigurationValidationException(
+                ConfigurationErrorCode.ProfileNotFound,
+                $"Profile '{effectiveProfileId}' was not found.");
     }
 
     private static T? ResolveValue<T>(T? explicitValue, bool isExplicit, T? profileValue, T? workflowValue)

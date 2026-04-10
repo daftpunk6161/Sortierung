@@ -708,86 +708,37 @@ public partial class Program
         return meta;
     }
 
-    internal static (string Code, string Message) MapRunConfigurationError(string message)
+    internal static (string Code, string Message) MapConfigurationError(ConfigurationValidationException ex, string prefix)
     {
-        if (message.Contains("protected system path", StringComparison.OrdinalIgnoreCase))
-            return (SecurityErrorCodes.SystemDirectory, message);
+        ArgumentNullException.ThrowIfNull(ex);
+        var normalizedPrefix = string.IsNullOrWhiteSpace(prefix)
+            ? "RUN"
+            : prefix.Trim().ToUpperInvariant();
 
-        if (message.Contains("drive root", StringComparison.OrdinalIgnoreCase))
-            return (SecurityErrorCodes.DriveRoot, message);
-
-        if (message.Contains("UNC path", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains(" is invalid:", StringComparison.OrdinalIgnoreCase))
+        var code = ex.Code switch
         {
-            return (SecurityErrorCodes.InvalidPath, message);
-        }
+            ConfigurationErrorCode.ProtectedSystemPath => SecurityErrorCodes.SystemDirectory,
+            ConfigurationErrorCode.DriveRoot => SecurityErrorCodes.DriveRoot,
+            ConfigurationErrorCode.UncPath => SecurityErrorCodes.InvalidPath,
+            ConfigurationErrorCode.InvalidPath => SecurityErrorCodes.InvalidPath,
+            ConfigurationErrorCode.PathTraversal => SecurityErrorCodes.InvalidPath,
+            ConfigurationErrorCode.ReparsePoint => SecurityErrorCodes.InvalidPath,
+            ConfigurationErrorCode.AccessDenied => SecurityErrorCodes.InvalidPath,
+            ConfigurationErrorCode.InvalidRegion => $"{normalizedPrefix}-INVALID-REGION",
+            ConfigurationErrorCode.InvalidExtension => $"{normalizedPrefix}-INVALID-EXTENSION",
+            ConfigurationErrorCode.InvalidHashType => $"{normalizedPrefix}-INVALID-HASH-TYPE",
+            ConfigurationErrorCode.InvalidConvertFormat => $"{normalizedPrefix}-INVALID-CONVERT-FORMAT",
+            ConfigurationErrorCode.InvalidConflictPolicy => $"{normalizedPrefix}-INVALID-CONFLICT-POLICY",
+            ConfigurationErrorCode.InvalidMode => $"{normalizedPrefix}-INVALID-MODE",
+            ConfigurationErrorCode.InvalidConsole => $"{normalizedPrefix}-INVALID-CONSOLE",
+            ConfigurationErrorCode.MissingDatRoot => $"{normalizedPrefix}-MISSING-DAT-ROOT",
+            ConfigurationErrorCode.MissingTrashRoot => $"{normalizedPrefix}-MISSING-TRASH-ROOT",
+            ConfigurationErrorCode.WorkflowNotFound => $"{normalizedPrefix}-WORKFLOW-NOT-FOUND",
+            ConfigurationErrorCode.ProfileNotFound => $"{normalizedPrefix}-PROFILE-NOT-FOUND",
+            _ => $"{normalizedPrefix}-INVALID-CONFIG"
+        };
 
-        if (message.Contains("Invalid region", StringComparison.OrdinalIgnoreCase))
-            return ("RUN-INVALID-REGION", message);
-
-        if (message.Contains("Invalid extension", StringComparison.OrdinalIgnoreCase))
-            return ("RUN-INVALID-EXTENSION", message);
-
-        if (message.Contains("Invalid hashType", StringComparison.OrdinalIgnoreCase))
-            return ("RUN-INVALID-HASH-TYPE", message);
-
-        if (message.Contains("Invalid convertFormat", StringComparison.OrdinalIgnoreCase))
-            return ("RUN-INVALID-CONVERT-FORMAT", message);
-
-        if (message.Contains("Invalid conflictPolicy", StringComparison.OrdinalIgnoreCase))
-            return ("RUN-INVALID-CONFLICT-POLICY", message);
-
-        if (message.Contains("Invalid mode", StringComparison.OrdinalIgnoreCase))
-            return ("RUN-INVALID-MODE", message);
-
-        if (message.Contains("Workflow '", StringComparison.OrdinalIgnoreCase))
-            return ("RUN-WORKFLOW-NOT-FOUND", message);
-
-        if (message.Contains("Profile '", StringComparison.OrdinalIgnoreCase))
-            return ("RUN-PROFILE-NOT-FOUND", message);
-
-        return ("RUN-INVALID-CONFIG", message);
-    }
-
-    internal static (string Code, string Message) MapWatchConfigurationError(string message)
-    {
-        if (message.Contains("protected system path", StringComparison.OrdinalIgnoreCase))
-            return (SecurityErrorCodes.SystemDirectory, message);
-
-        if (message.Contains("drive root", StringComparison.OrdinalIgnoreCase))
-            return (SecurityErrorCodes.DriveRoot, message);
-
-        if (message.Contains("UNC path", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains(" is invalid:", StringComparison.OrdinalIgnoreCase))
-        {
-            return (SecurityErrorCodes.InvalidPath, message);
-        }
-
-        if (message.Contains("Invalid region", StringComparison.OrdinalIgnoreCase))
-            return ("WATCH-INVALID-REGION", message);
-
-        if (message.Contains("Invalid extension", StringComparison.OrdinalIgnoreCase))
-            return ("WATCH-INVALID-EXTENSION", message);
-
-        if (message.Contains("Invalid hashType", StringComparison.OrdinalIgnoreCase))
-            return ("WATCH-INVALID-HASH-TYPE", message);
-
-        if (message.Contains("Invalid convertFormat", StringComparison.OrdinalIgnoreCase))
-            return ("WATCH-INVALID-CONVERT-FORMAT", message);
-
-        if (message.Contains("Invalid conflictPolicy", StringComparison.OrdinalIgnoreCase))
-            return ("WATCH-INVALID-CONFLICT-POLICY", message);
-
-        if (message.Contains("Invalid mode", StringComparison.OrdinalIgnoreCase))
-            return ("WATCH-INVALID-MODE", message);
-
-        if (message.Contains("Workflow '", StringComparison.OrdinalIgnoreCase))
-            return ("WATCH-WORKFLOW-NOT-FOUND", message);
-
-        if (message.Contains("Profile '", StringComparison.OrdinalIgnoreCase))
-            return ("WATCH-PROFILE-NOT-FOUND", message);
-
-        return ("WATCH-INVALID-CONFIG", message);
+        return (code, ex.Message);
     }
 }
 

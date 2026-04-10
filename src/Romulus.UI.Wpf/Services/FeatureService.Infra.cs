@@ -64,6 +64,26 @@ public static partial class FeatureService
         }
     }
 
+    internal static string GetLocalizedString(string key, string fallback)
+    {
+        var locale = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        var localized = LoadLocale(locale);
+        if (localized.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
+            return value;
+
+        var germanFallback = LoadLocale("de");
+        if (germanFallback.TryGetValue(key, out var germanValue) && !string.IsNullOrWhiteSpace(germanValue))
+            return germanValue;
+
+        return fallback;
+    }
+
+    internal static string GetLocalizedFormat(string key, string fallback, params object[] args)
+    {
+        var template = GetLocalizedString(key, fallback);
+        return string.Format(CultureInfo.CurrentCulture, template, args);
+    }
+
 
     /// <summary>Resolve the data/ subdirectory, probing from BaseDirectory upward (max 5 levels).</summary>
     internal static string? ResolveDataDirectory(string? subFolder = null)

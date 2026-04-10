@@ -16,6 +16,7 @@ using Romulus.Infrastructure.Hashing;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Logging;
 using Romulus.Infrastructure.Tools;
+using IO = Romulus.Infrastructure.IO;
 
 namespace Romulus.Infrastructure.Orchestration;
 
@@ -134,6 +135,11 @@ public sealed class RunEnvironmentBuilder
         string dataDir, Action<string>? onWarning = null,
         string? collectionDatabasePath = null)
     {
+        var setParserIo = new IO.SetParserIo();
+        Romulus.Core.SetParsing.SetParserIo.Use(setParserIo);
+        var classificationIo = new IO.ClassificationIo();
+        Romulus.Core.Classification.ClassificationIo.Use(classificationIo);
+
         var fs = new FileSystemAdapter();
         var audit = new AuditCsvStore(fs, onWarning ?? (_ => { }),
             AuditSecurityPaths.GetDefaultSigningKeyPath());

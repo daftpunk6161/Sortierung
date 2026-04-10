@@ -1056,6 +1056,22 @@
   "Dialog.Rollback.Preview": "{0}\n\nPrevious metrics: Keep {1}, Duplicates {2}, Junk {3}.\nTo restore: {4} files\nBackup folder: {5}\nWarning: Files changed since the run may be overwritten.\nUndo the last run now?",
   "Result.Summary.RollbackDone": "Rollback completed: {0} restored, {1} missing, {2} collisions, {3} errors.",
 
+  "Cmd.HardlinkMode.Title": "Hardlink Mode",
+  "Cmd.HardlinkMode.NtfsAvailable": "Available",
+  "Cmd.HardlinkMode.NtfsUnavailable": "Not available",
+  "Cmd.HardlinkMode.Body": "Hardlink mode\n\n{0}\n\nNTFS support: {1}\n\nHardlinks share storage at file-system level.\nBoth paths point to the same data with no extra storage required.",
+  "Cmd.IntegrityMonitor.Title": "Integrity Monitor",
+  "Cmd.IntegrityMonitor.Prompt": "Create or verify integrity baseline?\n\nYES = Create new baseline\nNO = Verify against baseline",
+  "Cmd.IntegrityMonitor.CreateBaselineStart": "Creating integrity baseline…",
+  "Cmd.IntegrityMonitor.CheckStart": "Checking integrity…",
+  "Cmd.IntegrityMonitor.CheckTitle": "Integrity Check",
+  "Cmd.IntegrityMonitor.CheckResult": "Result:\n\nIntact: {0}\nChanged: {1}\nMissing: {2}\nBit-rot risk: {3}",
+  "Cmd.IntegrityMonitor.BitRotYes": "⚠ YES",
+  "Cmd.IntegrityMonitor.BitRotNo": "No",
+  "Cmd.IntegrityMonitor.Error": "Integrity error: {0}",
+  "Cmd.CustomDat.Description": "Custom DAT entries",
+  "Cmd.RuleEngine.DefaultHelp": "Custom Rules\n\nCreate rules with conditions and actions:\n\nConditions: Region, Format, Size, Name, Console, DAT status\nOperators: eq, neq, contains, gt, lt, regex\nActions: junk, keep, quarantine\n\nRules are evaluated by priority (higher = first).\nThe first matching rule wins.\n\nNo rules.json found.\nConfiguration in data/rules.json",
+
   "Progress.PerfPhase": "Phase: {0}",
   "Progress.PerfFile": "File: {0}"
 }

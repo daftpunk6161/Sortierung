@@ -111,7 +111,12 @@ public sealed partial class FeatureCommandService
             catch (IOException) { /* drive info unavailable — show as not available */ }
             catch (UnauthorizedAccessException) { /* no access to drive info */ }
         }
-        _dialog.ShowText("Hardlink-Modus", $"Hardlink-Modus\n\n{estimate}\n\nNTFS-Unterstützung: {(isNtfs ? "Verfügbar" : "Nicht verfügbar")}\n\nHardlinks teilen den Speicherplatz auf Dateisystemebene.\nBeide Pfade zeigen auf dieselben Daten – kein zusätzlicher Speicher.");
+        var ntfsStatus = isNtfs
+            ? _vm.Loc["Cmd.HardlinkMode.NtfsAvailable"]
+            : _vm.Loc["Cmd.HardlinkMode.NtfsUnavailable"];
+        _dialog.ShowText(
+            _vm.Loc["Cmd.HardlinkMode.Title"],
+            _vm.Loc.Format("Cmd.HardlinkMode.Body", estimate, ntfsStatus));
     }
 
     // ═══ WINDOW-LEVEL COMMANDS (require IWindowHost) ════════════════════

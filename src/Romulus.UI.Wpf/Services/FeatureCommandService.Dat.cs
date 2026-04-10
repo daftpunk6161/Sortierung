@@ -321,10 +321,11 @@ public sealed partial class FeatureCommandService
                 }
                 else
                 {
+                    var customDatDescription = System.Security.SecurityElement.Escape(_vm.Loc["Cmd.CustomDat.Description"]);
                     var fullXml = "<?xml version=\"1.0\"?>\n" +
                                   "<!DOCTYPE datafile SYSTEM \"http://www.logiqx.com/Dats/datafile.dtd\">\n" +
                                   "<datafile>\n  <header>\n    <name>Custom DAT</name>\n" +
-                                  "    <description>Benutzerdefinierte DAT-Einträge</description>\n  </header>\n" +
+                                  $"    <description>{customDatDescription}</description>\n  </header>\n" +
                                   xmlEntry + "\n</datafile>";
                     File.WriteAllText(safeCustomDatPath, fullXml);
                 }

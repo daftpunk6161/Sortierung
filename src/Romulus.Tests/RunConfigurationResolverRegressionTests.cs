@@ -97,7 +97,7 @@ public sealed class RunConfigurationResolverRegressionTests : IDisposable
     }
 
     [Fact]
-    public async Task RunConfigurationResolver_UnknownWorkflow_ThrowsInvalidOperationException()
+    public async Task RunConfigurationResolver_UnknownWorkflow_ThrowsConfigurationValidationException()
     {
         var draft = new RunConfigurationDraft
         {
@@ -105,9 +105,10 @@ public sealed class RunConfigurationResolverRegressionTests : IDisposable
             WorkflowScenarioId = "workflow-does-not-exist"
         };
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        var ex = await Assert.ThrowsAsync<ConfigurationValidationException>(async () =>
             await _resolver.ResolveAsync(draft, new RunConfigurationExplicitness()));
 
+        Assert.Equal(ConfigurationErrorCode.WorkflowNotFound, ex.Code);
         Assert.Contains("was not found", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 

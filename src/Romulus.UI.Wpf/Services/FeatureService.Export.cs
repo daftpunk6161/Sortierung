@@ -138,15 +138,17 @@ public static partial class FeatureService
 
         if (!File.Exists(rulesPath))
         {
-            return "Benutzerdefinierte Regeln\n\n" +
-                "Erstelle Regeln mit Bedingungen und Aktionen:\n\n" +
-                "Bedingungen: Region, Format, Größe, Name, Konsole, DAT-Status\n" +
-                "Operatoren: eq, neq, contains, gt, lt, regex\n" +
-                "Aktionen: junk, keep, quarantine\n\n" +
-                "Regeln werden nach Priorität (höher = zuerst) ausgewertet.\n" +
-                "Die erste passende Regel gewinnt.\n\n" +
-                "Keine rules.json gefunden.\n" +
-                "Konfiguration in data/rules.json";
+            return GetLocalizedString(
+                "Cmd.RuleEngine.DefaultHelp",
+                "Custom Rules\n\n" +
+                "Create rules with conditions and actions:\n\n" +
+                "Conditions: Region, Format, Size, Name, Console, DAT status\n" +
+                "Operators: eq, neq, contains, gt, lt, regex\n" +
+                "Actions: junk, keep, quarantine\n\n" +
+                "Rules are evaluated by priority (higher = first).\n" +
+                "The first matching rule wins.\n\n" +
+                "No rules.json found.\n" +
+                "Configuration in data/rules.json");
         }
 
         var json = File.ReadAllText(rulesPath);

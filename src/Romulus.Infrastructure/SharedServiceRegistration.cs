@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Romulus.Contracts.Ports;
+using IO = Romulus.Infrastructure.IO;
 using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.FileSystem;
@@ -19,6 +20,18 @@ public static class SharedServiceRegistration
 
         services.AddSingleton(new CollectionIndexPathOptions());
         services.AddSingleton(new RunProfilePathOptions());
+        services.AddSingleton<ISetParserIo>(sp =>
+        {
+            var io = new IO.SetParserIo();
+            Romulus.Core.SetParsing.SetParserIo.Use(io);
+            return io;
+        });
+        services.AddSingleton<IClassificationIo>(sp =>
+        {
+            var io = new IO.ClassificationIo();
+            Romulus.Core.Classification.ClassificationIo.Use(io);
+            return io;
+        });
         services.AddSingleton<IFileSystem, FileSystemAdapter>();
         services.AddSingleton<IAuditStore>(sp =>
             new AuditCsvStore(

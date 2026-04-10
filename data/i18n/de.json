@@ -1057,6 +1057,22 @@
   "Dialog.Rollback.Preview": "{0}\n\nBisherige Kennzahlen: Behalten {1}, Duplikate {2}, Junk {3}.\nWiederherzustellen: {4} Dateien\nBackup-Ordner: {5}\nAchtung: Dateien mit zwischenzeitlichen Änderungen können überschrieben werden.\nLetzten Lauf jetzt rückgängig machen?",
   "Result.Summary.RollbackDone": "Rollback abgeschlossen: {0} wiederhergestellt, {1} fehlend, {2} Kollisionen, {3} Fehler.",
 
+  "Cmd.HardlinkMode.Title": "Hardlink-Modus",
+  "Cmd.HardlinkMode.NtfsAvailable": "Verfügbar",
+  "Cmd.HardlinkMode.NtfsUnavailable": "Nicht verfügbar",
+  "Cmd.HardlinkMode.Body": "Hardlink-Modus\n\n{0}\n\nNTFS-Unterstützung: {1}\n\nHardlinks teilen den Speicherplatz auf Dateisystemebene.\nBeide Pfade zeigen auf dieselben Daten – kein zusätzlicher Speicher.",
+  "Cmd.IntegrityMonitor.Title": "Integritäts-Monitor",
+  "Cmd.IntegrityMonitor.Prompt": "Integritäts-Baseline erstellen oder prüfen?\n\nJA = Neue Baseline erstellen\nNEIN = Gegen Baseline prüfen",
+  "Cmd.IntegrityMonitor.CreateBaselineStart": "Erstelle Integritäts-Baseline…",
+  "Cmd.IntegrityMonitor.CheckStart": "Prüfe Integrität…",
+  "Cmd.IntegrityMonitor.CheckTitle": "Integritäts-Check",
+  "Cmd.IntegrityMonitor.CheckResult": "Ergebnis:\n\nIntakt: {0}\nGeändert: {1}\nFehlend: {2}\nBit-Rot-Risiko: {3}",
+  "Cmd.IntegrityMonitor.BitRotYes": "⚠ JA",
+  "Cmd.IntegrityMonitor.BitRotNo": "Nein",
+  "Cmd.IntegrityMonitor.Error": "Integritäts-Fehler: {0}",
+  "Cmd.CustomDat.Description": "Benutzerdefinierte DAT-Einträge",
+  "Cmd.RuleEngine.DefaultHelp": "Benutzerdefinierte Regeln\n\nErstelle Regeln mit Bedingungen und Aktionen:\n\nBedingungen: Region, Format, Größe, Name, Konsole, DAT-Status\nOperatoren: eq, neq, contains, gt, lt, regex\nAktionen: junk, keep, quarantine\n\nRegeln werden nach Priorität (höher = zuerst) ausgewertet.\nDie erste passende Regel gewinnt.\n\nKeine rules.json gefunden.\nKonfiguration in data/rules.json",
+
   "Progress.PerfPhase": "Phase: {0}",
   "Progress.PerfFile": "Datei: {0}"
 }

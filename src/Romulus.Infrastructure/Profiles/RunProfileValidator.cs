@@ -49,20 +49,33 @@ public static partial class RunProfileValidator
     }
 
     public static IReadOnlyList<string> ValidateSettings(RunProfileSettings settings)
+        => ValidateSettingsDetailed(settings)
+            .Select(static issue => issue.Message)
+            .ToArray();
+
+    internal static IReadOnlyList<ConfigurationValidationIssue> ValidateSettingsDetailed(RunProfileSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        var errors = new List<string>();
+        var errors = new List<ConfigurationValidationIssue>();
 
         if (settings.PreferRegions is { Length: > 0 })
         {
             if (settings.PreferRegions.Length > RunConstants.MaxPreferRegions)
-                errors.Add($"preferRegions may contain at most {RunConstants.MaxPreferRegions} items.");
+            {
+                errors.Add(new ConfigurationValidationIssue(
+                    ConfigurationErrorCode.InvalidRegion,
+                    $"preferRegions may contain at most {RunConstants.MaxPreferRegions} items."));
+            }
 
             foreach (var region in settings.PreferRegions)
             {
                 if (string.IsNullOrWhiteSpace(region) || region.Length > 10 || region.Any(ch => !(char.IsLetterOrDigit(ch) || ch == '-')))
-                    errors.Add($"Invalid region '{region}'.");
+                {
+                    errors.Add(new ConfigurationValidationIssue(
+                        ConfigurationErrorCode.InvalidRegion,
+                        $"Invalid region '{region}'."));
+                }
             }
         }
 
@@ -72,7 +85,9 @@ public static partial class RunProfileValidator
             {
                 if (string.IsNullOrWhiteSpace(extension))
                 {
-                    errors.Add("extensions must not contain empty values.");
+                    errors.Add(new ConfigurationValidationIssue(
+                        ConfigurationErrorCode.InvalidExtension,
+                        "extensions must not contain empty values."));
                     continue;
                 }
 
@@ -81,64 +96,113 @@ public static partial class RunProfileValidator
                     normalized = "." + normalized;
 
                 if (normalized.Length < 2 || normalized.Length > 20 || !normalized.Skip(1).All(char.IsLetterOrDigit))
-                    errors.Add($"Invalid extension '{extension}'.");
+                {
+                    errors.Add(new ConfigurationValidationIssue(
+                        ConfigurationErrorCode.InvalidExtension,
+                        $"Invalid extension '{extension}'."));
+                }
             }
         }
 
         if (!string.IsNullOrWhiteSpace(settings.HashType) && !AllowedHashTypes.Contains(settings.HashType))
-            errors.Add($"Invalid hashType '{settings.HashType}'.");
+        {
+            errors.Add(new ConfigurationValidationIssue(
+                ConfigurationErrorCode.InvalidHashType,
+                $"Invalid hashType '{settings.HashType}'."));
+        }
 
         if (!string.IsNullOrWhiteSpace(settings.ConvertFormat) && !AllowedConvertFormats.Contains(settings.ConvertFormat))
-            errors.Add($"Invalid convertFormat '{settings.ConvertFormat}'.");
+        {
+            errors.Add(new ConfigurationValidationIssue(
+                ConfigurationErrorCode.InvalidConvertFormat,
+                $"Invalid convertFormat '{settings.ConvertFormat}'."));
+        }
 
         if (!string.IsNullOrWhiteSpace(settings.ConflictPolicy) && !RunConstants.ValidConflictPolicies.Contains(settings.ConflictPolicy))
-            errors.Add($"Invalid conflictPolicy '{settings.ConflictPolicy}'.");
+        {
+            errors.Add(new ConfigurationValidationIssue(
+                ConfigurationErrorCode.InvalidConflictPolicy,
+                $"Invalid conflictPolicy '{settings.ConflictPolicy}'."));
+        }
 
         if (!string.IsNullOrWhiteSpace(settings.Mode) &&
             !string.Equals(settings.Mode, RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(settings.Mode, RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase))
         {
-            errors.Add($"Invalid mode '{settings.Mode}'.");
+            errors.Add(new ConfigurationValidationIssue(
+                ConfigurationErrorCode.InvalidMode,
+                $"Invalid mode '{settings.Mode}'."));
         }
 
         if (settings.EnableDatAudit == true && settings.EnableDat == false)
-            errors.Add("enableDatAudit requires enableDat=true.");
+        {
+            errors.Add(new ConfigurationValidationIssue(
+                ConfigurationErrorCode.Unknown,
+                "enableDatAudit requires enableDat=true."));
+        }
 
         if (settings.EnableDatRename == true && settings.EnableDat == false)
-            errors.Add("enableDatRename requires enableDat=true.");
+        {
+            errors.Add(new ConfigurationValidationIssue(
+                ConfigurationErrorCode.Unknown,
+                "enableDatRename requires enableDat=true."));
+        }
 
         if (settings.OnlyGames != true && settings.KeepUnknownWhenOnlyGames == false)
-            errors.Add("keepUnknownWhenOnlyGames=false requires onlyGames=true.");
+        {
+            errors.Add(new ConfigurationValidationIssue(
+                ConfigurationErrorCode.Unknown,
+                "keepUnknownWhenOnlyGames=false requires onlyGames=true."));
+        }
 
-        var datRootError = ValidateOptionalSafePath(settings.DatRoot, "datRoot");
+        var datRootError = ValidateOptionalSafePathDetailed(settings.DatRoot, "datRoot");
         if (datRootError is not null)
-            errors.Add(datRootError);
+            errors.Add(datRootError.Value);
 
-        var trashRootError = ValidateOptionalSafePath(settings.TrashRoot, "trashRoot");
+        var trashRootError = ValidateOptionalSafePathDetailed(settings.TrashRoot, "trashRoot");
         if (trashRootError is not null)
-            errors.Add(trashRootError);
+            errors.Add(trashRootError.Value);
 
         return errors;
     }
 
     public static string? ValidateOptionalSafePath(string? path, string label)
+        => ValidateOptionalSafePathDetailed(path, label)?.Message;
+
+    internal static ConfigurationValidationIssue? ValidateOptionalSafePathDetailed(string? path, string label)
     {
         if (string.IsNullOrWhiteSpace(path))
             return null;
 
         var trimmed = path.Trim();
         if (trimmed.StartsWith("\\\\", StringComparison.Ordinal))
-            return $"{label} must not be a UNC path.";
+        {
+            return new ConfigurationValidationIssue(
+                ConfigurationErrorCode.UncPath,
+                $"{label} must not be a UNC path.");
+        }
 
         var normalized = SafetyValidator.NormalizePath(trimmed);
         if (normalized is null)
-            return $"{label} is invalid.";
+        {
+            return new ConfigurationValidationIssue(
+                ConfigurationErrorCode.InvalidPath,
+                $"{label} is invalid.");
+        }
 
         if (SafetyValidator.IsProtectedSystemPath(normalized))
-            return $"{label} points to a protected system path.";
+        {
+            return new ConfigurationValidationIssue(
+                ConfigurationErrorCode.ProtectedSystemPath,
+                $"{label} points to a protected system path.");
+        }
 
         if (SafetyValidator.IsDriveRoot(normalized))
-            return $"{label} must not point to a drive root.";
+        {
+            return new ConfigurationValidationIssue(
+                ConfigurationErrorCode.DriveRoot,
+                $"{label} must not point to a drive root.");
+        }
 
         try
         {
@@ -146,13 +210,27 @@ public static partial class RunProfileValidator
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("reparse-point", StringComparison.OrdinalIgnoreCase))
         {
-            return $"{label} must not target a reparse point.";
+            return new ConfigurationValidationIssue(
+                ConfigurationErrorCode.ReparsePoint,
+                $"{label} must not target a reparse point.");
         }
         catch (InvalidOperationException ex)
         {
-            return $"{label} is invalid: {ex.Message}";
+            var code = ex.InnerException is UnauthorizedAccessException
+                ? ConfigurationErrorCode.AccessDenied
+                : ex.Message.Contains("traversal", StringComparison.OrdinalIgnoreCase)
+                    ? ConfigurationErrorCode.PathTraversal
+                    : ConfigurationErrorCode.InvalidPath;
+
+            return new ConfigurationValidationIssue(
+                code,
+                $"{label} is invalid: {ex.Message}");
         }
 
         return null;
     }
+
+    internal readonly record struct ConfigurationValidationIssue(
+        ConfigurationErrorCode Code,
+        string Message);
 }

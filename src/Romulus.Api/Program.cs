@@ -695,10 +695,14 @@ app.MapPost("/runs", async (
             ctx.RequestAborted);
         request = resolvedRunRequest.Request;
     }
+    catch (ConfigurationValidationException ex)
+    {
+        var (code, message) = MapConfigurationError(ex, "RUN");
+        return ApiError(400, code, message);
+    }
     catch (InvalidOperationException ex)
     {
-        var (code, message) = MapRunConfigurationError(ex.Message);
-        return ApiError(400, code, message);
+        return ApiError(400, "RUN-INVALID-CONFIG", ex.Message);
     }
 
     if (request.Roots is null || request.Roots.Length == 0)
@@ -1233,10 +1237,14 @@ app.MapPost("/watch/start", async (
             ctx.RequestAborted);
         request = resolvedWatchRequest.Request;
     }
+    catch (ConfigurationValidationException ex)
+    {
+        var (code, message) = MapConfigurationError(ex, "WATCH");
+        return ApiError(400, code, message);
+    }
     catch (InvalidOperationException ex)
     {
-        var (code, message) = MapWatchConfigurationError(ex.Message);
-        return ApiError(400, code, message);
+        return ApiError(400, "WATCH-INVALID-CONFIG", ex.Message);
     }
 
     if (request.Roots is null || request.Roots.Length == 0)

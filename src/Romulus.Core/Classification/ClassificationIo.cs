@@ -1,22 +1,18 @@
 using System.IO.Compression;
+using Romulus.Contracts.Ports;
 
 namespace Romulus.Core.Classification;
 
 /// <summary>
 /// Abstracts I/O for classification detectors so Core stays testable.
-/// Defaults to System.IO; tests can override via <see cref="Configure"/>.
+/// Runtime defaults are provided by Infrastructure via <see cref="Use"/>.
+/// Tests can override per execution context via <see cref="Configure"/>.
 /// Uses AsyncLocal so overrides are scoped to the calling execution context
 /// and never leak across parallel test threads.
 /// </summary>
-internal static class ClassificationIo
+public static class ClassificationIo
 {
-    // ── Immutable defaults (shared, thread-safe) ─────────────────────
-    private static readonly Func<string, bool> DefaultFileExists = File.Exists;
-    private static readonly Func<string, Stream> DefaultOpenRead = path =>
-        new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-    private static readonly Func<string, long> DefaultFileLength = path => new FileInfo(path).Length;
-    private static readonly Func<string, FileAttributes> DefaultGetAttributes = File.GetAttributes;
-    private static readonly Func<string, ZipArchive> DefaultOpenZipRead = ZipFile.OpenRead;
+    private static IClassificationIo _default = CreateDefaultAdapter();
 
     // ── Per-context overrides (test isolation) ───────────────────────
     private static readonly AsyncLocal<Func<string, bool>?> FileExistsOverride = new();
@@ -25,11 +21,17 @@ internal static class ClassificationIo
     private static readonly AsyncLocal<Func<string, FileAttributes>?> GetAttributesOverride = new();
     private static readonly AsyncLocal<Func<string, ZipArchive>?> OpenZipReadOverride = new();
 
-    public static bool FileExists(string path) => (FileExistsOverride.Value ?? DefaultFileExists)(path);
-    public static Stream OpenRead(string path) => (OpenReadOverride.Value ?? DefaultOpenRead)(path);
-    public static long FileLength(string path) => (FileLengthOverride.Value ?? DefaultFileLength)(path);
-    public static FileAttributes GetAttributes(string path) => (GetAttributesOverride.Value ?? DefaultGetAttributes)(path);
-    public static ZipArchive OpenZipRead(string path) => (OpenZipReadOverride.Value ?? DefaultOpenZipRead)(path);
+    public static void Use(IClassificationIo io)
+    {
+        ArgumentNullException.ThrowIfNull(io);
+        _default = io;
+    }
+
+    public static bool FileExists(string path) => (FileExistsOverride.Value ?? _default.FileExists)(path);
+    public static Stream OpenRead(string path) => (OpenReadOverride.Value ?? _default.OpenRead)(path);
+    public static long FileLength(string path) => (FileLengthOverride.Value ?? _default.FileLength)(path);
+    public static FileAttributes GetAttributes(string path) => (GetAttributesOverride.Value ?? _default.GetAttributes)(path);
+    public static ZipArchive OpenZipRead(string path) => (OpenZipReadOverride.Value ?? _default.OpenZipRead)(path);
 
     /// <summary>
     /// Replace I/O delegates for the current execution context only.
@@ -50,7 +52,7 @@ internal static class ClassificationIo
     }
 
     /// <summary>
-    /// Reset to default System.IO delegates for the current execution context.
+    /// Reset delegate overrides for the current execution context.
     /// </summary>
     public static void ResetDefaults()
     {
@@ -59,5 +61,41 @@ internal static class ClassificationIo
         FileLengthOverride.Value = null;
         GetAttributesOverride.Value = null;
         OpenZipReadOverride.Value = null;
+    }
+
+    private sealed class UnconfiguredClassificationIo : IClassificationIo
+    {
+        private const string Message = "Classification I/O is not configured. Register IClassificationIo from Infrastructure before invoking detector logic.";
+
+        public bool FileExists(string path)
+            => throw new InvalidOperationException(Message);
+
+        public Stream OpenRead(string path)
+            => throw new InvalidOperationException(Message);
+
+        public long FileLength(string path)
+            => throw new InvalidOperationException(Message);
+
+        public FileAttributes GetAttributes(string path)
+            => throw new InvalidOperationException(Message);
+
+        public ZipArchive OpenZipRead(string path)
+            => throw new InvalidOperationException(Message);
+    }
+
+    private static IClassificationIo CreateDefaultAdapter()
+    {
+        try
+        {
+            var adapterType = Type.GetType("Romulus.Infrastructure.IO.ClassificationIo, Romulus.Infrastructure", throwOnError: false);
+            if (adapterType is not null && Activator.CreateInstance(adapterType) is IClassificationIo adapter)
+                return adapter;
+        }
+        catch
+        {
+            // Fall back to explicit configuration path.
+        }
+
+        return new UnconfiguredClassificationIo();
     }
 }

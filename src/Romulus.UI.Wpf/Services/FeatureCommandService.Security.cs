@@ -110,10 +110,12 @@ public sealed partial class FeatureCommandService
     {
         if (_vm.LastCandidates.Count == 0)
         { _vm.AddLog("Erst einen Lauf starten.", "WARN"); return; }
-        var createBaseline = _dialog.Confirm("Integritäts-Baseline erstellen oder prüfen?\n\nJA = Neue Baseline erstellen\nNEIN = Gegen Baseline prüfen", "Integritäts-Monitor");
+        var createBaseline = _dialog.Confirm(
+            _vm.Loc["Cmd.IntegrityMonitor.Prompt"],
+            _vm.Loc["Cmd.IntegrityMonitor.Title"]);
         if (createBaseline)
         {
-            _vm.AddLog("Erstelle Integritäts-Baseline…", "INFO");
+            _vm.AddLog(_vm.Loc["Cmd.IntegrityMonitor.CreateBaselineStart"], "INFO");
             var paths = _vm.LastCandidates.Select(c => c.MainPath).ToList();
             var progress = new Progress<string>(msg => _vm.ProgressText = msg);
             try
@@ -125,16 +127,23 @@ public sealed partial class FeatureCommandService
         }
         else
         {
-            _vm.AddLog("Prüfe Integrität…", "INFO");
+            _vm.AddLog(_vm.Loc["Cmd.IntegrityMonitor.CheckStart"], "INFO");
             var progress = new Progress<string>(msg => _vm.ProgressText = msg);
             try
             {
                 var check = await FeatureService.CheckIntegrity(progress);
-                _dialog.ShowText("Integritäts-Check", $"Ergebnis:\n\n" +
-                    $"Intakt: {check.Intact.Count}\nGeändert: {check.Changed.Count}\nFehlend: {check.Missing.Count}\n" +
-                    $"Bit-Rot-Risiko: {(check.BitRotRisk ? "⚠ JA" : "Nein")}");
+                _dialog.ShowText(
+                    _vm.Loc["Cmd.IntegrityMonitor.CheckTitle"],
+                    _vm.Loc.Format(
+                        "Cmd.IntegrityMonitor.CheckResult",
+                        check.Intact.Count,
+                        check.Changed.Count,
+                        check.Missing.Count,
+                        check.BitRotRisk
+                            ? _vm.Loc["Cmd.IntegrityMonitor.BitRotYes"]
+                            : _vm.Loc["Cmd.IntegrityMonitor.BitRotNo"]));
             }
-            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-INTEGRITY", $"Integritäts-Fehler: {ex.Message}"); }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-INTEGRITY", _vm.Loc.Format("Cmd.IntegrityMonitor.Error", ex.Message)); }
         }
     }
 

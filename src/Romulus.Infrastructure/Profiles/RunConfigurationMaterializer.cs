@@ -70,9 +70,13 @@ public sealed class RunConfigurationMaterializer
             Mode = draft.Mode
         };
 
-        var errors = RunProfileValidator.ValidateSettings(validationSource);
+        var errors = RunProfileValidator.ValidateSettingsDetailed(validationSource);
         if (errors.Count > 0)
-            throw new InvalidOperationException(string.Join(" ", errors));
+        {
+            throw new ConfigurationValidationException(
+                errors[0].Code,
+                string.Join(" ", errors.Select(static issue => issue.Message)));
+        }
     }
 
     private static RunConfigurationDraft BuildEffectiveDraft(
@@ -177,7 +181,8 @@ public sealed class RunConfigurationMaterializer
                 return validPolicy;
         }
 
-        throw new InvalidOperationException(
+        throw new ConfigurationValidationException(
+            ConfigurationErrorCode.InvalidConflictPolicy,
             $"Invalid conflictPolicy '{conflictPolicy}'. Valid values: {string.Join(", ", RunConstants.ValidConflictPolicies.OrderBy(static value => value, StringComparer.OrdinalIgnoreCase))}.");
     }
 

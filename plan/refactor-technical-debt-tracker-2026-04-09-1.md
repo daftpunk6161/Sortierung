@@ -54,11 +54,11 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-008 | **TD-011 – Define error codes**: Erstelle `enum ConfigurationErrorCode` in `src/Romulus.Contracts/` mit Werten: `ProtectedSystemPath`, `DriveRoot`, `UncPath`, `InvalidRegion`, `InvalidConsole`, `MissingDatRoot`, `MissingTrashRoot`, `InvalidPath`, `PathTraversal`, `ReparsePoint`, `AccessDenied`, `Unknown`. | [ ] | |
-| TASK-009 | **TD-011 – Typed exception**: Erstelle `ConfigurationValidationException : Exception` in Contracts mit `ConfigurationErrorCode Code` Property. | [ ] | |
-| TASK-010 | **TD-011 – Throw typed exceptions**: Passe Safety/Infrastructure-Layer an, um `ConfigurationValidationException` mit passendem Code zu werfen statt generischer Messages. Betrifft: `SafetyValidator`, `RunEnvironmentBuilder`, Konsolen-Validierung. | [ ] | |
-| TASK-011 | **TD-010 + TD-011 – Unified error mapper**: Ersetze `MapRunConfigurationError()` und `MapWatchConfigurationError()` (src/Romulus.Api/ProgramHelpers.cs:509-585) durch eine einzelne Methode `MapConfigurationError(ConfigurationValidationException ex, string prefix)` die auf `ex.Code` switched statt auf `message.Contains()`. | [ ] | |
-| TASK-012 | **Tests**: Unit-Tests für jeden `ConfigurationErrorCode` → korrekter API-Fehlercode. Regression-Test: bestehende API-Error-Responses unverändert. | [ ] | |
+| TASK-008 | **TD-011 – Define error codes**: Erstelle `enum ConfigurationErrorCode` in `src/Romulus.Contracts/` mit Werten: `ProtectedSystemPath`, `DriveRoot`, `UncPath`, `InvalidRegion`, `InvalidConsole`, `MissingDatRoot`, `MissingTrashRoot`, `InvalidPath`, `PathTraversal`, `ReparsePoint`, `AccessDenied`, `Unknown`. | [x] | 2026-04-10 |
+| TASK-009 | **TD-011 – Typed exception**: Erstelle `ConfigurationValidationException : Exception` in Contracts mit `ConfigurationErrorCode Code` Property. | [x] | 2026-04-10 |
+| TASK-010 | **TD-011 – Throw typed exceptions**: Passe Safety/Infrastructure-Layer an, um `ConfigurationValidationException` mit passendem Code zu werfen statt generischer Messages. Betrifft: `SafetyValidator`, `RunEnvironmentBuilder`, Konsolen-Validierung. | [x] | 2026-04-10 |
+| TASK-011 | **TD-010 + TD-011 – Unified error mapper**: Ersetze `MapRunConfigurationError()` und `MapWatchConfigurationError()` (src/Romulus.Api/ProgramHelpers.cs:509-585) durch eine einzelne Methode `MapConfigurationError(ConfigurationValidationException ex, string prefix)` die auf `ex.Code` switched statt auf `message.Contains()`. | [x] | 2026-04-10 |
+| TASK-012 | **Tests**: Unit-Tests für jeden `ConfigurationErrorCode` → korrekter API-Fehlercode. Regression-Test: bestehende API-Error-Responses unverändert. | [x] | 2026-04-10 |
 
 ### Phase 6 – Core I/O Violation + i18n Hygiene (TD-012 + TD-013)
 
@@ -67,11 +67,11 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-013 | **TD-012 – Move I/O facades to Infrastructure**: Verschiebe `SetParserIo` und `ClassificationIo` (static delegates) von `src/Romulus.Core/` nach `src/Romulus.Infrastructure/IO/`. Core-Klassen (DiscHeaderDetector, CartridgeHeaderDetector, Set-Parser) erhalten I/O-Delegates per Constructor-Injection statt statische Defaults. | [ ] | |
-| TASK-014 | **TD-012 – Update DI registration**: SharedServiceRegistration muss I/O-Delegates an Core-Classifier/Parser injizieren. | [ ] | |
-| TASK-015 | **TD-012 – Verify zero System.IO in Core**: `grep -rn 'System.IO\|File\.\|FileStream\|FileInfo\|ZipFile' src/Romulus.Core/` → nur Namespace-Imports ohne direkte Aufrufe. | [ ] | |
+| TASK-014 | **TD-012 – Update DI registration**: SharedServiceRegistration muss I/O-Delegates an Core-Classifier/Parser injizieren. | [x] | 2026-04-10 |
+| TASK-015 | **TD-012 – Verify zero System.IO in Core**: `grep -rn 'System.IO\|File\.\|FileStream\|FileInfo\|ZipFile' src/Romulus.Core/` → nur Namespace-Imports ohne direkte Aufrufe. | [x] | 2026-04-10 |
 | TASK-016 | **TD-013 – Lokalisierbare Keys WPF**: Erstelle i18n-Keys in `data/i18n/de.json` und `data/i18n/en.json` für alle 30+ hardcoded deutschen Strings aus `FeatureCommandService.Infra.cs`, `FeatureCommandService.Security.cs`, `FeatureService.Export.cs`, `FeatureCommandService.Dat.cs`, `FeatureCommandService.Workflow.cs`. | [ ] | |
 | TASK-017 | **TD-013 – Replace hardcoded strings**: Ersetze alle Hardcoded-Strings in `FeatureCommandService*.cs` durch `_vm.Loc["key"]` Aufrufe. | [ ] | |
-| TASK-018 | **Verification**: `grep -rn '"Hardlink\|"Verfügbar\|"Speicherplatz\|"Integritäts\|"Benutzerdefinierte\|"Erstelle Regeln' src/Romulus.UI.Wpf/Services/` → Zero hits. | [ ] | |
+| TASK-018 | **Verification**: `grep -rn '"Hardlink\|"Verfügbar\|"Speicherplatz\|"Integritäts\|"Benutzerdefinierte\|"Erstelle Regeln' src/Romulus.UI.Wpf/Services/` → Zero hits. | [x] | 2026-04-10 |
 
 ### Phase 7 – Conversion Pipeline Cleanup (TD-014 + TD-022)
 
