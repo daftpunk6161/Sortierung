@@ -53,6 +53,33 @@ public sealed class DolphinToolInvokerTests : IDisposable
     }
 
     [Fact]
+    public void Invoke_UsesConfiguredCompressionArguments()
+    {
+        var sourcePath = Path.Combine(_root, "game-config.iso");
+        File.WriteAllText(sourcePath, "iso");
+
+        var runner = new TestToolRunner(new Dictionary<string, string?> { ["dolphintool"] = _toolPath });
+        runner.Enqueue(new ToolResult(0, "ok", true));
+
+        var sut = new DolphinToolInvoker(runner);
+        var capability = Cap("dolphintool", ".rvz", "convert") with
+        {
+            CompressionAlgorithm = "lzma2",
+            CompressionLevel = 8,
+            BlockSize = 262144
+        };
+
+        var result = sut.Invoke(sourcePath, Path.Combine(_root, "game-config.rvz"), capability);
+
+        Assert.True(result.Success);
+        var args = runner.LastArguments!;
+
+        Assert.Equal("lzma2", args[Array.IndexOf(args, "-c") + 1]);
+        Assert.Equal("8", args[Array.IndexOf(args, "-l") + 1]);
+        Assert.Equal("262144", args[Array.IndexOf(args, "-b") + 1]);
+    }
+
+    [Fact]
     public void Invoke_InvalidCommand_ReturnsInvalidCommand()
     {
         var sourcePath = Path.Combine(_root, "game.iso");

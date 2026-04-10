@@ -163,6 +163,42 @@ public sealed class PreviewExecuteParityTests : IDisposable
         Assert.Equal(dry.ConsoleSortResult.Blocked, execute.ConsoleSortResult.Blocked);
     }
 
+    [Fact]
+    public void DryRunAndMoveMode_KeepConversionEstimateParity()
+    {
+        var dryRoot = Path.Combine(_tempDir, "dry-convert");
+        var moveRoot = Path.Combine(_tempDir, "move-convert");
+        Directory.CreateDirectory(dryRoot);
+        Directory.CreateDirectory(moveRoot);
+
+        File.WriteAllText(Path.Combine(dryRoot, "Alpha.iso"), "a");
+        File.WriteAllText(Path.Combine(moveRoot, "Alpha.iso"), "a");
+
+        var fs = new FileSystemAdapter();
+        var converter = new NoOpFormatConverter();
+
+        var dry = new RunOrchestrator(fs, new NullAuditStore(), converter: converter).Execute(new RunOptions
+        {
+            Roots = new[] { dryRoot },
+            Mode = "DryRun",
+            Extensions = new[] { ".iso" },
+            ConvertFormat = "rvz"
+        });
+
+        var execute = new RunOrchestrator(fs, new NullAuditStore(), converter: converter).Execute(new RunOptions
+        {
+            Roots = new[] { moveRoot },
+            Mode = "Move",
+            Extensions = new[] { ".iso" },
+            ConvertFormat = "rvz"
+        });
+
+        Assert.Equal(dry.ConvertedCount, execute.ConvertedCount);
+        Assert.Equal(dry.ConvertSkippedCount, execute.ConvertSkippedCount);
+        Assert.Equal(dry.ConvertBlockedCount, execute.ConvertBlockedCount);
+        Assert.Equal(dry.ConvertErrorCount, execute.ConvertErrorCount);
+    }
+
     private static void SeedDataset(string root)
     {
         File.WriteAllText(Path.Combine(root, "Mega Game (US).zip"), "us");
@@ -176,6 +212,17 @@ public sealed class PreviewExecuteParityTests : IDisposable
         [
             new ConsoleInfo("NES", "Nintendo", false, [".nes"], Array.Empty<string>(), ["NES"])
         ]);
+    }
+
+    private sealed class NoOpFormatConverter : IFormatConverter
+    {
+        public ConversionTarget? GetTargetFormat(string consoleKey, string sourceExtension)
+            => new ConversionTarget(sourceExtension, "noop", "noop");
+
+        public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
+            => new(sourcePath, sourcePath, ConversionOutcome.Skipped, "noop");
+
+        public bool Verify(string targetPath, ConversionTarget target) => true;
     }
 
     private sealed class NullAuditStore : IAuditStore

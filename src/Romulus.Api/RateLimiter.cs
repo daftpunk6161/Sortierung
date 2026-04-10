@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using Romulus.Contracts.Ports;
+using Romulus.Infrastructure.Time;
 
 namespace Romulus.Api;
 
@@ -10,20 +12,23 @@ public sealed class RateLimiter
 {
     private readonly int _maxRequests;
     private readonly TimeSpan _window;
+    private readonly ITimeProvider _timeProvider;
     private readonly ConcurrentDictionary<string, ClientBucket> _buckets = new();
-    private long _lastEvictionTicks = DateTime.UtcNow.Ticks;
+    private long _lastEvictionTicks;
 
-    public RateLimiter(int maxRequestsPerWindow, TimeSpan window)
+    public RateLimiter(int maxRequestsPerWindow, TimeSpan window, ITimeProvider? timeProvider = null)
     {
         _maxRequests = maxRequestsPerWindow;
         _window = window;
+        _timeProvider = timeProvider ?? new SystemTimeProvider();
+        _lastEvictionTicks = _timeProvider.UtcNow.UtcTicks;
     }
 
     public bool TryAcquire(string clientId)
     {
         if (_maxRequests <= 0) return true; // disabled
 
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.UtcNow;
         var bucket = _buckets.GetOrAdd(clientId, _ => new ClientBucket(now));
 
         lock (bucket)
@@ -56,7 +61,7 @@ public sealed class RateLimiter
         return true;
     }
 
-    private void EvictStaleBuckets(DateTime now)
+    private void EvictStaleBuckets(DateTimeOffset now)
     {
         foreach (var (key, bucket) in _buckets)
         {
@@ -68,10 +73,10 @@ public sealed class RateLimiter
 
     private sealed class ClientBucket
     {
-        public DateTime WindowStart;
+        public DateTimeOffset WindowStart;
         public int Count;
 
-        public ClientBucket(DateTime start)
+        public ClientBucket(DateTimeOffset start)
         {
             WindowStart = start;
             Count = 0;

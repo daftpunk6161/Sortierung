@@ -69,8 +69,8 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 | TASK-013 | **TD-012 – Move I/O facades to Infrastructure**: Verschiebe `SetParserIo` und `ClassificationIo` (static delegates) von `src/Romulus.Core/` nach `src/Romulus.Infrastructure/IO/`. Core-Klassen (DiscHeaderDetector, CartridgeHeaderDetector, Set-Parser) erhalten I/O-Delegates per Constructor-Injection statt statische Defaults. | [ ] | |
 | TASK-014 | **TD-012 – Update DI registration**: SharedServiceRegistration muss I/O-Delegates an Core-Classifier/Parser injizieren. | [x] | 2026-04-10 |
 | TASK-015 | **TD-012 – Verify zero System.IO in Core**: `grep -rn 'System.IO\|File\.\|FileStream\|FileInfo\|ZipFile' src/Romulus.Core/` → nur Namespace-Imports ohne direkte Aufrufe. | [x] | 2026-04-10 |
-| TASK-016 | **TD-013 – Lokalisierbare Keys WPF**: Erstelle i18n-Keys in `data/i18n/de.json` und `data/i18n/en.json` für alle 30+ hardcoded deutschen Strings aus `FeatureCommandService.Infra.cs`, `FeatureCommandService.Security.cs`, `FeatureService.Export.cs`, `FeatureCommandService.Dat.cs`, `FeatureCommandService.Workflow.cs`. | [ ] | |
-| TASK-017 | **TD-013 – Replace hardcoded strings**: Ersetze alle Hardcoded-Strings in `FeatureCommandService*.cs` durch `_vm.Loc["key"]` Aufrufe. | [ ] | |
+| TASK-016 | **TD-013 – Lokalisierbare Keys WPF**: Erstelle i18n-Keys in `data/i18n/de.json` und `data/i18n/en.json` für alle 30+ hardcoded deutschen Strings aus `FeatureCommandService.Infra.cs`, `FeatureCommandService.Security.cs`, `FeatureService.Export.cs`, `FeatureCommandService.Dat.cs`, `FeatureCommandService.Workflow.cs`. | [x] | 2026-04-10 |
+| TASK-017 | **TD-013 – Replace hardcoded strings**: Ersetze alle Hardcoded-Strings in `FeatureCommandService*.cs` durch `_vm.Loc["key"]` Aufrufe. | [x] | 2026-04-10 |
 | TASK-018 | **Verification**: `grep -rn '"Hardlink\|"Verfügbar\|"Speicherplatz\|"Integritäts\|"Benutzerdefinierte\|"Erstelle Regeln' src/Romulus.UI.Wpf/Services/` → Zero hits. | [x] | 2026-04-10 |
 
 ### Phase 7 – Conversion Pipeline Cleanup (TD-014 + TD-022)
@@ -79,9 +79,9 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-019 | **TD-014 – Extract shared RVZ magic check**: Erstelle statische Methode `RvzFormatHelper.VerifyMagicBytes(string path)` in `src/Romulus.Infrastructure/Conversion/`. Entferne duplizierte Implementierungen in `ToolInvokerAdapter.cs:185-198` und `DolphinToolInvoker.cs:92-103`; beide delegieren an Helper. | [ ] | |
-| TASK-020 | **TD-022 – Configurable compression params**: Erweitere `data/conversion-registry.json` um `compressionAlgorithm`, `compressionLevel`, `blockSize` pro Format. Passe `ToolInvokerAdapter.cs:133-142` und `DolphinToolInvoker.cs:50` an, Werte aus Registry zu lesen statt hardcoded. | [ ] | |
-| TASK-021 | **Tests**: Unit-Test für RVZ magic check (gültig/ungültig/leer). Test für Compression-Parameter aus Registry. | [ ] | |
+| TASK-019 | **TD-014 – Extract shared RVZ magic check**: Erstelle statische Methode `RvzFormatHelper.VerifyMagicBytes(string path)` in `src/Romulus.Infrastructure/Conversion/`. Entferne duplizierte Implementierungen in `ToolInvokerAdapter.cs:185-198` und `DolphinToolInvoker.cs:92-103`; beide delegieren an Helper. | [x] | 2026-04-10 |
+| TASK-020 | **TD-022 – Configurable compression params**: Erweitere `data/conversion-registry.json` um `compressionAlgorithm`, `compressionLevel`, `blockSize` pro Format. Passe `ToolInvokerAdapter.cs:133-142` und `DolphinToolInvoker.cs:50` an, Werte aus Registry zu lesen statt hardcoded. | [x] | 2026-04-10 |
+| TASK-021 | **Tests**: Unit-Test für RVZ magic check (gültig/ungültig/leer). Test für Compression-Parameter aus Registry. | [x] | 2026-04-10 |
 
 ### Phase 8 – Async/Time/HTTP Modernisierung (TD-016 + TD-017 + TD-018 + TD-019)
 
@@ -89,12 +89,12 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-022 | **TD-016 – Convert remaining sync-over-async**: CLI: `Program.cs:277,747,855` → async Äquivalente oder dokumentierte Rechtfertigung. `CliOptionsMapper.cs:38,60` → async oder Kommentar. API: `Program.cs:1916` (Shutdown) → CancellationToken-basiert. `RunManager.cs:126` → async. Jede Stelle die blockierend bleibt, erhält `// SYNC-JUSTIFIED:` Kommentar mit Begründung. | [ ] | |
-| TASK-023 | **TD-017 – Introduce TimeProvider**: Definiere `ITimeProvider` Interface in Contracts (oder nutze .NET 8+ `TimeProvider`). Erstelle `SystemTimeProvider : TimeProvider` in Infrastructure. Registriere in DI. | [ ] | |
-| TASK-024 | **TD-017 – Replace DateTime.UtcNow**: Ersetze alle 30+ `DateTime.UtcNow` Aufrufe in `RunLifecycleManager.cs` (7x), `RateLimiter.cs` (2x), `RunManager.cs` (3x), `Program.cs` (10+x), `MainViewModel.RunPipeline.cs` (4x) durch `_timeProvider.GetUtcNow()`. | [ ] | |
-| TASK-025 | **TD-018 – IHttpClientFactory**: Ändere `DatSourceService` Constructor (src/Romulus.Infrastructure/Dat/DatSourceService.cs:38): statt `new HttpClient()` → `HttpClient` per Constructor-Injection. Registriere `IHttpClientFactory` in DI (`services.AddHttpClient<DatSourceService>()`). | [ ] | |
-| TASK-026 | **TD-019 – Replace Thread.Sleep**: Ersetze `Thread.Sleep` in `ProfileService.cs:36,40` und `SettingsFileAccess.cs:39` durch `await Task.Delay()`. Stelle sicher, dass Aufrufer async sind (ggf. async cascade). | [ ] | |
-| TASK-027 | **Tests**: TimeProvider-kontrollierte Tests für Zeitabhängige Logik. DatSourceService Test mit injiziertem HttpClient. | [ ] | |
+| TASK-022 | **TD-016 – Convert remaining sync-over-async**: CLI: `Program.cs:277,747,855` → async Äquivalente oder dokumentierte Rechtfertigung. `CliOptionsMapper.cs:38,60` → async oder Kommentar. API: `Program.cs:1916` (Shutdown) → CancellationToken-basiert. `RunManager.cs:126` → async. Jede Stelle die blockierend bleibt, erhält `// SYNC-JUSTIFIED:` Kommentar mit Begründung. | [x] | 2026-04-10 |
+| TASK-023 | **TD-017 – Introduce TimeProvider**: Definiere `ITimeProvider` Interface in Contracts (oder nutze .NET 8+ `TimeProvider`). Erstelle `SystemTimeProvider : TimeProvider` in Infrastructure. Registriere in DI. | [x] | 2026-04-10 |
+| TASK-024 | **TD-017 – Replace DateTime.UtcNow**: Ersetze alle 30+ `DateTime.UtcNow` Aufrufe in `RunLifecycleManager.cs` (7x), `RateLimiter.cs` (2x), `RunManager.cs` (3x), `Program.cs` (10+x), `MainViewModel.RunPipeline.cs` (4x) durch `_timeProvider.GetUtcNow()`. | [x] | 2026-04-10 |
+| TASK-025 | **TD-018 – IHttpClientFactory**: Ändere `DatSourceService` Constructor (src/Romulus.Infrastructure/Dat/DatSourceService.cs:38): statt `new HttpClient()` → `HttpClient` per Constructor-Injection. Registriere `IHttpClientFactory` in DI (`services.AddHttpClient<DatSourceService>()`). | [x] | 2026-04-10 |
+| TASK-026 | **TD-019 – Replace Thread.Sleep**: Ersetze `Thread.Sleep` in `ProfileService.cs:36,40` und `SettingsFileAccess.cs:39` durch `await Task.Delay()`. Stelle sicher, dass Aufrufer async sind (ggf. async cascade). | [x] | 2026-04-10 |
+| TASK-027 | **Tests**: TimeProvider-kontrollierte Tests für Zeitabhängige Logik. DatSourceService Test mit injiziertem HttpClient. | [x] | 2026-04-10 |
 
 ### Phase 9 – Minor Hardening (TD-020 + TD-021 + TD-023)
 
@@ -102,10 +102,10 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-028 | **TD-020 – Add logging to empty catches**: Füge strukturiertes Logging (oder dokumentierten `// SUPPRESSED:` Kommentar) zu leeren `catch(IOException)` Blöcken hinzu: `DiscHeaderDetector.cs:74,99`, `CartridgeHeaderDetector.cs:64,202`, `ConsoleDetector.cs:550`, `FolderDeduplicator.cs:67`, `ConversionExecutor.cs:415,422`, `DatCatalogViewModel.cs:210,367`. Pro Stelle: mindestens `logger.LogDebug(ex, "...")` oder expliziter Kommentar warum Suppression korrekt ist. | [ ] | |
-| TASK-029 | **TD-021 – Remove hardcoded C:\tools\conversion**: Ersetze `C:\tools\conversion` in `ToolRunnerAdapter.cs:20` durch relativen Pfad (z.B. `tools/conversion`) oder Settings-basierten Default aus `defaults.json`. | [ ] | |
-| TASK-030 | **TD-023 – CLI Help stale-days constant**: Ersetze hardcoded `"365"` in `CliOutputWriter.cs:185` durch `$"{DatCatalogStateService.StaleThresholdDays}"`. | [ ] | |
-| TASK-031 | **Verification**: Grep für `C:\\tools` → Zero hits. Grep für leere catch → alle haben Log oder Kommentar. | [ ] | |
+| TASK-028 | **TD-020 – Add logging to empty catches**: Füge strukturiertes Logging (oder dokumentierten `// SUPPRESSED:` Kommentar) zu leeren `catch(IOException)` Blöcken hinzu: `DiscHeaderDetector.cs:74,99`, `CartridgeHeaderDetector.cs:64,202`, `ConsoleDetector.cs:550`, `FolderDeduplicator.cs:67`, `ConversionExecutor.cs:415,422`, `DatCatalogViewModel.cs:210,367`. Pro Stelle: mindestens `logger.LogDebug(ex, "...")` oder expliziter Kommentar warum Suppression korrekt ist. | [x] | 2026-04-10 |
+| TASK-029 | **TD-021 – Remove hardcoded C:\tools\conversion**: Ersetze `C:\tools\conversion` in `ToolRunnerAdapter.cs:20` durch relativen Pfad (z.B. `tools/conversion`) oder Settings-basierten Default aus `defaults.json`. | [x] | 2026-04-10 |
+| TASK-030 | **TD-023 – CLI Help stale-days constant**: Ersetze hardcoded `"365"` in `CliOutputWriter.cs:185` durch `$"{DatCatalogStateService.StaleThresholdDays}"`. | [x] | 2026-04-10 |
+| TASK-031 | **Verification**: Grep für `C:\\tools` → Zero hits. Grep für leere catch → alle haben Log oder Kommentar. | [x] | 2026-04-10 |
 
 ### Phase 10 – P3 Hygiene Round 2 (TD-024 + TD-025 + TD-026 + TD-027)
 
@@ -113,10 +113,10 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-032 | **TD-024 – SHA1 documentation**: Dokumentiere in `FileHashService.cs:210` warum SHA1 Standard ist (DAT/No-Intro Kompatibilität). Für neue nicht-DAT-Pfade: Default auf SHA256 setzen oder klar als SHA1-obligatorisch kommentieren. | [ ] | |
-| TASK-033 | **TD-025 – Conversion preview/execute parity test**: Füge `DryRunAndMoveMode_KeepConversionEstimateParity()` Test in `PreviewExecuteParityTests.cs` hinzu. Assertiere dass ConvertedCount zwischen DryRun und Move identisch ist. | [ ] | |
-| TASK-034 | **TD-026 – Console key cross-validation**: Füge Startup-Validierung in `ConversionRegistryLoader.cs:127,191` hinzu: alle `applicableConsoles` Keys müssen in `consoles.json` vorhanden sein. Klarer Fehler bei ungültigem Key. | [ ] | |
-| TASK-035 | **TD-027 – IReadOnlyDictionary**: Ändere `AppStateStore.Get()` Return-Type zu `IReadOnlyDictionary<string, object>`. Prüfe Kompilierung aller Aufrufer. | [ ] | |
+| TASK-032 | **TD-024 – SHA1 documentation**: Dokumentiere in `FileHashService.cs:210` warum SHA1 Standard ist (DAT/No-Intro Kompatibilität). Für neue nicht-DAT-Pfade: Default auf SHA256 setzen oder klar als SHA1-obligatorisch kommentieren. | [x] | 2026-04-10 |
+| TASK-033 | **TD-025 – Conversion preview/execute parity test**: Füge `DryRunAndMoveMode_KeepConversionEstimateParity()` Test in `PreviewExecuteParityTests.cs` hinzu. Assertiere dass ConvertedCount zwischen DryRun und Move identisch ist. | [x] | 2026-04-10 |
+| TASK-034 | **TD-026 – Console key cross-validation**: Füge Startup-Validierung in `ConversionRegistryLoader.cs:127,191` hinzu: alle `applicableConsoles` Keys müssen in `consoles.json` vorhanden sein. Klarer Fehler bei ungültigem Key. | [x] | 2026-04-10 |
+| TASK-035 | **TD-027 – IReadOnlyDictionary**: Ändere `AppStateStore.Get()` Return-Type zu `IReadOnlyDictionary<string, object>`. Prüfe Kompilierung aller Aufrufer. | [x] | 2026-04-10 |
 
 ### Phase 11 – Critical Security + Race Condition (TD-028 + TD-032 + TD-033)
 

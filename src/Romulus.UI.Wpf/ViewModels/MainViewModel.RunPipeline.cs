@@ -171,7 +171,7 @@ public sealed partial class MainViewModel
     public bool ShowActionBarMoveButton => ShowStartMoveButton && ShowSmartActionBar;
 
     public bool CanExecuteInlineStartMove =>
-        Shell.ShowMoveInlineConfirm && DateTime.UtcNow >= _inlineMoveUnlockAtUtc;
+        Shell.ShowMoveInlineConfirm && _timeProvider.UtcNow.UtcDateTime >= _inlineMoveUnlockAtUtc;
 
     public string InlineMoveConfirmHint =>
         !Shell.ShowMoveInlineConfirm
@@ -1130,7 +1130,7 @@ public sealed partial class MainViewModel
                 string lastProgressPhaseKey = string.Empty;
                 return _runService.BuildOrchestrator(this, msg =>
                 {
-                    var now = DateTime.UtcNow;
+                    var now = _timeProvider.UtcNow.UtcDateTime;
                     if (!ShouldDispatchProgressMessage(msg, now, lastProgressUpdate, lastProgressPhaseKey))
                         return;
 

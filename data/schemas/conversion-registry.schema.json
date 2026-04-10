@@ -35,6 +35,9 @@
             "additionalProperties": false
           },
           "command": { "type": "string" },
+          "compressionAlgorithm": { "type": ["string", "null"] },
+          "compressionLevel": { "type": ["integer", "null"], "minimum": 0, "maximum": 22 },
+          "blockSize": { "type": ["integer", "null"], "minimum": 32768, "maximum": 1048576 },
           "applicableConsoles": {
             "type": ["array", "null"],
             "items": { "type": "string" }

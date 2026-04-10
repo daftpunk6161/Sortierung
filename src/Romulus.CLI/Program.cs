@@ -18,6 +18,7 @@ using Romulus.Infrastructure.Paths;
 using Romulus.Infrastructure.Profiles;
 using Romulus.Infrastructure.Review;
 using Romulus.Infrastructure.Safety;
+using Romulus.Infrastructure.Time;
 using Romulus.Infrastructure.Watch;
 using Romulus.Infrastructure.Workflow;
 
@@ -35,6 +36,7 @@ internal static partial class Program
     private static readonly AsyncLocal<TextWriter?> StderrOverride = new();
     private static readonly AsyncLocal<bool> ConsoleOverrideEnabled = new();
     private static readonly AsyncLocal<bool?> NonInteractiveOverride = new();
+    private static readonly ITimeProvider TimeProvider = new SystemTimeProvider();
 
     private static async Task<int> Main(string[] args)
     {
@@ -260,9 +262,9 @@ internal static partial class Program
                 enrichmentFingerprint: env.EnrichmentFingerprint,
                 reviewDecisionService: reviewDecisionService);
 
-            var runStartedUtc = DateTime.UtcNow;
+            var runStartedUtc = TimeProvider.UtcNow.UtcDateTime;
             var result = orchestrator.Execute(runOptions, cts.Token);
-            var runCompletedUtc = DateTime.UtcNow;
+            var runCompletedUtc = TimeProvider.UtcNow.UtcDateTime;
             var projection = RunProjectionFactory.Create(result);
 
             try
@@ -274,6 +276,8 @@ internal static partial class Program
                     result,
                     runStartedUtc,
                     runCompletedUtc,
+                    // SYNC-JUSTIFIED: CLI run pipeline is synchronous here; snapshot write must complete
+                    // before process exit to preserve deterministic history artifacts.
                     SafeErrorWriteLine).GetAwaiter().GetResult();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -359,7 +363,8 @@ internal static partial class Program
         int downloaded = 0;
         int failed = 0;
 
-        using (var datService = new DatSourceService(datRoot))
+        using (var datHttpClient = DatSourceService.CreateConfiguredHttpClient())
+        using (var datService = new DatSourceService(datRoot, datHttpClient))
         {
             // Download only URL-based catalog entries. nointro-pack entries are imported from local folders.
             var downloadEntries = catalog
@@ -564,6 +569,7 @@ internal static partial class Program
     }
 
     internal static int HistoryForTests(CliRunOptions opts, ICollectionIndex collectionIndex)
+        // SYNC-JUSTIFIED: test-only compatibility wrapper for existing sync test call sites.
         => WriteHistoryAsync(collectionIndex, opts).GetAwaiter().GetResult();
 
     private static async Task<int> WriteHistoryAsync(ICollectionIndex collectionIndex, CliRunOptions opts)
@@ -672,6 +678,7 @@ internal static partial class Program
     }
 
     internal static int DiffForTests(CliRunOptions opts, ICollectionIndex collectionIndex, IFileSystem fileSystem)
+        // SYNC-JUSTIFIED: test-only compatibility wrapper for existing sync test call sites.
         => WriteCollectionDiffAsync(opts, collectionIndex, fileSystem).GetAwaiter().GetResult();
 
     private static async Task<int> WriteCollectionDiffAsync(CliRunOptions opts, ICollectionIndex collectionIndex, IFileSystem fileSystem)
@@ -717,6 +724,7 @@ internal static partial class Program
     }
 
     internal static int MergeForTests(CliRunOptions opts, ICollectionIndex collectionIndex, IFileSystem fileSystem, IAuditStore auditStore)
+        // SYNC-JUSTIFIED: test-only compatibility wrapper for existing sync test call sites.
         => WriteCollectionMergeAsync(opts, collectionIndex, fileSystem, auditStore).GetAwaiter().GetResult();
 
     private static async Task<int> WriteCollectionMergeAsync(CliRunOptions opts, ICollectionIndex collectionIndex, IFileSystem fileSystem, IAuditStore auditStore)

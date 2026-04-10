@@ -6,9 +6,9 @@ namespace Romulus.Contracts.Ports;
 /// </summary>
 public interface IAppState
 {
-    IDictionary<string, object?> Get();
+    IReadOnlyDictionary<string, object?> Get();
     void Set(IDictionary<string, object?> patch, string reason = "update");
-    IDisposable Watch(Action<IDictionary<string, object?>> handler);
+    IDisposable Watch(Action<IReadOnlyDictionary<string, object?>> handler);
     bool Undo();
     bool Redo();
     T? GetValue<T>(string key, T? defaultValue = default);

@@ -9,6 +9,7 @@ using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Profiles;
 using Romulus.Infrastructure.Review;
+using Romulus.Infrastructure.Time;
 
 namespace Romulus.Infrastructure;
 
@@ -33,6 +34,7 @@ public static class SharedServiceRegistration
             return io;
         });
         services.AddSingleton<IFileSystem, FileSystemAdapter>();
+        services.AddSingleton<ITimeProvider, SystemTimeProvider>();
         services.AddSingleton<IAuditStore>(sp =>
             new AuditCsvStore(
                 sp.GetRequiredService<IFileSystem>(),

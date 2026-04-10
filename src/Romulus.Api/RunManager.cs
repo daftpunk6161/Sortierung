@@ -7,6 +7,7 @@ using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Review;
+using Romulus.Infrastructure.Time;
 
 namespace Romulus.Api;
 
@@ -21,6 +22,7 @@ public sealed class RunManager
     private readonly IRunEnvironmentFactory _runEnvironmentFactory;
     private readonly PersistedReviewDecisionService? _reviewDecisionService;
     private readonly string? _collectionDatabasePath;
+    private readonly ITimeProvider _timeProvider;
 
     public RunManager(
         IFileSystem fs,
@@ -29,13 +31,15 @@ public sealed class RunManager
         IRunOptionsFactory? runOptionsFactory = null,
         IRunEnvironmentFactory? runEnvironmentFactory = null,
         PersistedReviewDecisionService? reviewDecisionService = null,
-        CollectionIndexPathOptions? collectionIndexPathOptions = null)
+        CollectionIndexPathOptions? collectionIndexPathOptions = null,
+        ITimeProvider? timeProvider = null)
     {
         _runOptionsFactory = runOptionsFactory ?? new RunOptionsFactory();
         _runEnvironmentFactory = runEnvironmentFactory ?? new RunEnvironmentFactory();
         _reviewDecisionService = reviewDecisionService;
         _collectionDatabasePath = collectionIndexPathOptions?.DatabasePath;
-        _lifecycle = new RunLifecycleManager(fs, audit, executor ?? ExecuteWithOrchestrator);
+        _timeProvider = timeProvider ?? new SystemTimeProvider();
+        _lifecycle = new RunLifecycleManager(fs, audit, executor ?? ExecuteWithOrchestrator, _timeProvider);
     }
 
     internal RunLifecycleManager Lifecycle => _lifecycle;
@@ -100,9 +104,9 @@ public sealed class RunManager
             enrichmentFingerprint: env.EnrichmentFingerprint,
             reviewDecisionService: _reviewDecisionService);
 
-        var runStartedUtc = DateTime.UtcNow;
+        var runStartedUtc = _timeProvider.UtcNow.UtcDateTime;
         var result = orchestrator.Execute(options, ct);
-        var runCompletedUtc = DateTime.UtcNow;
+        var runCompletedUtc = _timeProvider.UtcNow.UtcDateTime;
 
         try
         {
@@ -124,6 +128,8 @@ public sealed class RunManager
                     run.ProgressMessage = msg;
                     run.ProgressPercent = ProgressEstimator.EstimateFromMessage(msg);
                 },
+                // SYNC-JUSTIFIED: Run execution callback is synchronous by contract in lifecycle manager.
+                // Persisting snapshot inline keeps run completion and persisted state deterministic.
                 CancellationToken.None).GetAwaiter().GetResult();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -316,6 +322,8 @@ public sealed class RunRecord
         get { lock (_lock) return _completedUtc; }
         set { lock (_lock) _completedUtc = value; }
     }
+    [JsonIgnore]
+    internal Func<DateTimeOffset> UtcNowProvider { get; init; } = static () => DateTimeOffset.UtcNow;
     public ApiRunResult? Result
     {
         get { lock (_lock) return _result; }
@@ -363,7 +371,7 @@ public sealed class RunRecord
             if (completed.HasValue)
                 return (long)Math.Max(0, (completed.Value - started).TotalMilliseconds);
 
-            return (long)Math.Max(0, (DateTime.UtcNow - started).TotalMilliseconds);
+            return (long)Math.Max(0, (UtcNowProvider().UtcDateTime - started).TotalMilliseconds);
         }
     }
     public int ProgressPercent { get; set; }

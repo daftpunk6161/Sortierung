@@ -46,18 +46,6 @@ internal sealed class DolphinToolConverter
     public static bool Verify(string targetPath)
     {
         // DolphinTool does not have a verify command.
-        // Verify by checking file existence, non-zero size, and RVZ magic bytes.
-        var info = new FileInfo(targetPath);
-        if (!info.Exists || info.Length < 4) return false;
-        try
-        {
-            using var fs = File.OpenRead(targetPath);
-            Span<byte> magic = stackalloc byte[4];
-            if (fs.ReadAtLeast(magic, 4, throwOnEndOfStream: false) < 4) return false;
-            // RVZ magic: "RVZ\x01"
-            return magic[0] == 'R' && magic[1] == 'V' && magic[2] == 'Z' && magic[3] == 0x01;
-        }
-        catch (IOException) { return false; }
-        catch (UnauthorizedAccessException) { return false; }
+        return RvzFormatHelper.VerifyMagicBytes(targetPath);
     }
 }

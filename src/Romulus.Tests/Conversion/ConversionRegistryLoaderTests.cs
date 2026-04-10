@@ -150,6 +150,43 @@ public sealed class ConversionRegistryLoaderTests
         Assert.Contains(".rvz", alternatives);
     }
 
+        [Fact]
+        public void Constructor_ParsesOptionalCompressionSettings()
+        {
+                using var fixture = new LoaderFixture();
+                fixture.WriteRegistryWithRawJson(
+                        """
+                        {
+                            "schemaVersion": "conversion-registry-v1",
+                            "capabilities": [
+                                {
+                                    "sourceExtension": ".iso",
+                                    "targetExtension": ".rvz",
+                                    "tool": { "toolName": "dolphintool" },
+                                    "command": "convert",
+                                    "compressionAlgorithm": "zstd",
+                                    "compressionLevel": 7,
+                                    "blockSize": 262144,
+                                    "applicableConsoles": ["GC"],
+                                    "resultIntegrity": "Lossless",
+                                    "lossless": true,
+                                    "cost": 0,
+                                    "verification": "RvzMagicByte",
+                                    "condition": "None"
+                                }
+                            ]
+                        }
+                        """);
+                fixture.WriteConsoles([("GC", "Auto", ".rvz", Array.Empty<string>())]);
+
+                var loader = new ConversionRegistryLoader(fixture.RegistryPath, fixture.ConsolesPath);
+                var capability = Assert.Single(loader.GetCapabilities());
+
+                Assert.Equal("zstd", capability.CompressionAlgorithm);
+                Assert.Equal(7, capability.CompressionLevel);
+                Assert.Equal(262144, capability.BlockSize);
+        }
+
     private static object Cap(string source, string target, IReadOnlyList<string> consoles)
     {
         return new

@@ -18,10 +18,10 @@ public sealed partial class FeatureCommandService
     private void FilterBuilder()
     {
         if (_vm.LastCandidates.Count == 0)
-        { _vm.AddLog("Erst einen Lauf starten.", "WARN"); return; }
+        { _vm.AddLog(_vm.Loc["Cmd.RunRequired"], "WARN"); return; }
         var input = _dialog.ShowInputBox(
-            "Filter-Ausdruck eingeben (Feld=Wert, Feld>Wert, Feld<Wert):\n\nBeispiele:\n  region=US\n  category=JUNK\n  sizemb>100\n  extension=.chd\n  datmatch=true",
-            "Filter-Builder", "region=US");
+            _vm.Loc["Cmd.FilterBuilder.ExpressionPrompt"],
+            _vm.Loc["Cmd.FilterBuilder.Title"], "region=US");
         if (string.IsNullOrWhiteSpace(input)) return;
 
         string field, op, value;
@@ -30,7 +30,7 @@ public sealed partial class FeatureCommandService
         else if (input.Contains('>')) { var p = input.Split('>', 2); field = p[0].Trim().ToLowerInvariant(); op = ">"; value = p[1].Trim(); }
         else if (input.Contains('<')) { var p = input.Split('<', 2); field = p[0].Trim().ToLowerInvariant(); op = "<"; value = p[1].Trim(); }
         else if (input.Contains('=')) { var p = input.Split('=', 2); field = p[0].Trim().ToLowerInvariant(); op = "="; value = p[1].Trim(); }
-        else { _vm.AddLog($"Ungültiger Filter-Ausdruck: {input}", "WARN"); return; }
+        else { _vm.AddLog(_vm.Loc.Format("Cmd.FilterBuilder.InvalidExpression", input), "WARN"); return; }
 
         var filtered = _vm.LastCandidates.Where(c =>
         {
@@ -51,26 +51,29 @@ public sealed partial class FeatureCommandService
         }).ToList();
 
         var sb = new StringBuilder();
-        sb.AppendLine($"Filter-Builder: {field} {op} {value}");
+        sb.AppendLine(_vm.Loc.Format("Cmd.FilterBuilder.Header", field, op, value));
         sb.AppendLine(new string('═', 50));
-        sb.AppendLine($"\n  Gesamt: {_vm.LastCandidates.Count}");
-        sb.AppendLine($"  Gefiltert: {filtered.Count}\n");
+        sb.AppendLine(_vm.Loc.Format("Cmd.FilterBuilder.Total", _vm.LastCandidates.Count));
+        sb.AppendLine(_vm.Loc.Format("Cmd.FilterBuilder.Filtered", filtered.Count));
+        sb.AppendLine();
         foreach (var r in filtered.Take(50))
             sb.AppendLine($"  {Path.GetFileName(r.MainPath),-45} [{r.Region}] {r.Extension} {r.Category} {FeatureService.FormatSize(r.SizeBytes)}");
         if (filtered.Count > 50)
-            sb.AppendLine($"\n  … und {filtered.Count - 50} weitere");
-        _dialog.ShowText("Filter-Builder", sb.ToString());
+            sb.AppendLine(_vm.Loc.Format("Cmd.FilterBuilder.More", filtered.Count - 50));
+        _dialog.ShowText(_vm.Loc["Cmd.FilterBuilder.Title"], sb.ToString());
     }
 
     private void SortTemplates()
     {
         var templates = FeatureService.GetSortTemplates();
         var sb = new StringBuilder();
-        sb.AppendLine("Sortierungs-Vorlagen\n");
+        sb.AppendLine(_vm.Loc["Cmd.SortTemplates.Title"]);
+        sb.AppendLine();
         foreach (var (name, pattern) in templates)
             sb.AppendLine($"  {name,-20} → {pattern}");
-        sb.AppendLine("\n  Legende: {console} = Konsolenname, {filename} = Dateiname");
-        _dialog.ShowText("Sort-Templates", sb.ToString());
+        sb.AppendLine();
+        sb.AppendLine(_vm.Loc["Cmd.SortTemplates.Legend"]);
+        _dialog.ShowText(_vm.Loc["Cmd.SortTemplates.Title"], sb.ToString());
     }
 
     private void PipelineEngine()
@@ -94,35 +97,31 @@ public sealed partial class FeatureCommandService
             else sb.AppendLine($"  {"Konvertierung",-20} {"Übersprungen",-15}");
             if (_vm.LastRunResult.MoveResult is { } mv) sb.AppendLine($"  {"Move",-20} {(mv.FailCount > 0 ? "WARNUNG" : "OK"),-15} {mv.MoveCount} verschoben, {mv.FailCount} Fehler");
             else sb.AppendLine($"  {"Move",-20} {"DryRun",-15} keine Änderungen");
-            _dialog.ShowText("Pipeline-Engine", sb.ToString());
+            _dialog.ShowText(_vm.Loc["Cmd.PipelineEngine.Title"], sb.ToString());
         }
         else
         {
-            _dialog.ShowText("Pipeline-Engine", "Pipeline-Engine\n\nBedingte Multi-Step-Pipelines:\n\n" +
-                "  1. Scan → Dateien erfassen\n  2. Dedupe → Duplikate erkennen\n  3. Sort → Nach Konsole sortieren\n" +
-                "  4. Convert → Formate konvertieren\n  5. Verify → Konvertierung prüfen\n\n" +
-                "Jeder Schritt kann übersprungen werden.\nDryRun-aware: Kein Schreibzugriff im DryRun-Modus.\n\n" +
-                "Starte einen Lauf, um Pipeline-Ergebnisse zu sehen.");
+            _dialog.ShowText(_vm.Loc["Cmd.PipelineEngine.Title"], _vm.Loc["Cmd.PipelineEngine.EmptyDescription"]);
         }
     }
 
     private void RulePackSharing()
     {
-        var doExport = _dialog.Confirm("Regel-Pakete\n\nJA = Exportieren (rules.json speichern)\nNEIN = Importieren (rules.json laden)", "Regel-Pakete");
+        var doExport = _dialog.Confirm(_vm.Loc["Cmd.RulePackSharing.ModePrompt"], _vm.Loc["Cmd.RulePackSharing.Title"]);
         var dataDir = FeatureService.ResolveDataDirectory() ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
         var rulesPath = Path.Combine(dataDir, "rules.json");
         if (doExport)
         {
             if (!File.Exists(rulesPath))
-            { _dialog.Info("Keine rules.json zum Exportieren gefunden.\n\nErstelle zuerst Regeln in data/rules.json.", "Export"); return; }
-            var savePath = _dialog.SaveFile("Regeln exportieren", "JSON (*.json)|*.json", "rules-export.json");
+            { _dialog.Info(_vm.Loc["Cmd.RulePackSharing.ExportNotFound"], _vm.Loc["Cmd.RulePackSharing.ExportTitle"]); return; }
+            var savePath = _dialog.SaveFile(_vm.Loc["Cmd.RulePackSharing.ExportTitle"], _vm.Loc["Cmd.RulePackSharing.JsonFilter"], "rules-export.json");
             if (!TryResolveSafeOutputPath(savePath, "Regel-Export", out var safeSavePath)) return;
-            try { File.Copy(rulesPath, safeSavePath, overwrite: true); _vm.AddLog($"Regeln exportiert: {safeSavePath}", "INFO"); }
-            catch (Exception ex) { LogError("IO-EXPORT", $"Export fehlgeschlagen: {ex.Message}"); }
+            try { File.Copy(rulesPath, safeSavePath, overwrite: true); _vm.AddLog(_vm.Loc.Format("Cmd.RulePackSharing.ExportDone", safeSavePath), "INFO"); }
+            catch (Exception ex) { LogError("IO-EXPORT", _vm.Loc.Format("Cmd.RulePackSharing.ExportFailed", ex.Message)); }
         }
         else
         {
-            var importPath = _dialog.BrowseFile("Regel-Paket importieren", "JSON (*.json)|*.json");
+            var importPath = _dialog.BrowseFile(_vm.Loc["Cmd.RulePackSharing.ImportTitle"], _vm.Loc["Cmd.RulePackSharing.JsonFilter"]);
             if (importPath is null) return;
             try
             {
@@ -133,28 +132,28 @@ public sealed partial class FeatureCommandService
                     return;
 
                 File.Copy(importPath, safeRulesPath, overwrite: true);
-                _vm.AddLog($"Regeln importiert: {Path.GetFileName(importPath)} nach {safeRulesPath}", "INFO");
+                _vm.AddLog(_vm.Loc.Format("Cmd.RulePackSharing.ImportDone", Path.GetFileName(importPath), safeRulesPath), "INFO");
             }
-            catch (JsonException) { LogError("GUI-IMPORT", "Import fehlgeschlagen: Ungültiges JSON-Format.", "JSON-Datei prüfen"); }
-            catch (Exception ex) { LogError("GUI-IMPORT", $"Import fehlgeschlagen: {ex.Message}"); }
+            catch (JsonException) { LogError("GUI-IMPORT", _vm.Loc["Cmd.RulePackSharing.ImportInvalidJson"], _vm.Loc["Cmd.RulePackSharing.ImportJsonHint"]); }
+            catch (Exception ex) { LogError("GUI-IMPORT", _vm.Loc.Format("Cmd.RulePackSharing.ImportFailed", ex.Message)); }
         }
     }
 
     private void ArcadeMergeSplit()
     {
-        var datPath = _dialog.BrowseFile("MAME/FBNEO DAT wählen", "DAT (*.dat;*.xml)|*.dat;*.xml");
+        var datPath = _dialog.BrowseFile(_vm.Loc["Cmd.ArcadeMergeSplit.BrowseDatTitle"], _vm.Loc["Cmd.ArcadeMergeSplit.DatFilter"]);
         if (datPath is null) return;
-        _vm.AddLog($"Arcade Merge/Split: Analysiere {Path.GetFileName(datPath)}…", "INFO");
+        _vm.AddLog(_vm.Loc.Format("Cmd.ArcadeMergeSplit.Analyzing", Path.GetFileName(datPath)), "INFO");
         try
         {
             var report = FeatureService.BuildArcadeMergeSplitReport(datPath);
-            _dialog.ShowText("Arcade Merge/Split", report);
-            _vm.AddLog("Arcade-Analyse abgeschlossen.", "INFO");
+            _dialog.ShowText(_vm.Loc["Cmd.ArcadeMergeSplit.Title"], report);
+            _vm.AddLog(_vm.Loc["Cmd.ArcadeMergeSplit.Done"], "INFO");
         }
         catch (Exception ex)
         {
-            LogError("GUI-ARCADE", $"Arcade Merge/Split Fehler: {ex.Message}");
-            _dialog.Error($"Fehler beim Parsen der DAT:\n\n{ex.Message}", "Arcade Merge/Split");
+            LogError("GUI-ARCADE", _vm.Loc.Format("Cmd.ArcadeMergeSplit.Error", ex.Message));
+            _dialog.Error(_vm.Loc.Format("Cmd.ArcadeMergeSplit.ParseErrorDialog", ex.Message), _vm.Loc["Cmd.ArcadeMergeSplit.Title"]);
         }
     }
 

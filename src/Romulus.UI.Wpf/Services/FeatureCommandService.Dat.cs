@@ -19,22 +19,22 @@ public sealed partial class FeatureCommandService
     private async Task DatAutoUpdateAsync()
     {
         if (_datUpdateRunning)
-        { _vm.AddLog("DAT-Update läuft bereits.", "WARN"); return; }
+        { _vm.AddLog(_vm.Loc["Cmd.DatAutoUpdate.AlreadyRunning"], "WARN"); return; }
         _datUpdateRunning = true;
         try
         {
         if (string.IsNullOrWhiteSpace(_vm.DatRoot))
-        { _vm.AddLog("DAT-Root nicht konfiguriert.", "WARN"); return; }
+        { _vm.AddLog(_vm.Loc["Cmd.DatAutoUpdate.DatRootNotConfigured"], "WARN"); return; }
         if (!Directory.Exists(_vm.DatRoot))
-        { _vm.AddLog($"DAT-Root existiert nicht: {_vm.DatRoot}", "ERROR"); return; }
-        _vm.AddLog("DAT Auto-Update: Prüfe lokale DAT-Dateien…", "INFO");
+        { _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.DatRootMissing", _vm.DatRoot), "ERROR"); return; }
+        _vm.AddLog(_vm.Loc["Cmd.DatAutoUpdate.CheckingLocalDats"], "INFO");
 
         // ── Katalog laden (via DatSourceService) ───────────────────────
         var dataDir = FeatureService.ResolveDataDirectory() ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
         var catalogPath = Path.Combine(dataDir, "dat-catalog.json");
         var catalog = Infrastructure.Dat.DatSourceService.LoadCatalog(catalogPath);
         if (catalog.Count == 0)
-        { _vm.AddLog("DAT-Katalog leer oder nicht gefunden.", "WARN"); return; }
+        { _vm.AddLog(_vm.Loc["Cmd.DatAutoUpdate.EmptyCatalog"], "WARN"); return; }
 
         // ── Lokale DATs scannen (ein Durchlauf) ────────────────────────
         var localDats = Directory.GetFiles(_vm.DatRoot, "*.*", SearchOption.AllDirectories)
@@ -85,7 +85,7 @@ public sealed partial class FeatureCommandService
                 toDownload.Add((entry.Id, entry.Url, Path.GetFileName(staleFile), entry.Format, entry.Group));
         }
 
-        _vm.AddLog($"DAT-Status: {localDats.Count} DATs, {staleDats.Count} veraltet, {missing.Count} fehlend", "INFO");
+        _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.Status", localDats.Count, staleDats.Count, missing.Count), "INFO");
 
         // ── Dialog bauen ───────────────────────────────────────────────
         var sb = new StringBuilder();
@@ -153,7 +153,7 @@ public sealed partial class FeatureCommandService
             // ── Auto-Downloads ─────────────────────────────────────────
             if (toDownload.Count > 0)
             {
-                _vm.AddLog($"DAT-Download: {toDownload.Count} Dateien…", "INFO");
+                _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.DownloadStart", toDownload.Count), "INFO");
                 using var datService = new Infrastructure.Dat.DatSourceService(_vm.DatRoot);
                 int success = 0, failed = 0;
                 var failedIds = new List<string>();
@@ -162,30 +162,30 @@ public sealed partial class FeatureCommandService
                 var byGroup = toDownload.GroupBy(t => t.Group).OrderBy(g => g.Key);
                 foreach (var group in byGroup)
                 {
-                    _vm.AddLog($"── {group.Key} ({group.Count()} DATs) ──", "INFO");
+                    _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.GroupHeader", group.Key, group.Count()), "INFO");
                     foreach (var (id, url, fileName, format, _) in group)
                     {
-                        _vm.AddLog($"  [{success + failed + 1}/{toDownload.Count}] {id}…", "DEBUG");
+                        _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.ItemProgress", success + failed + 1, toDownload.Count, id), "DEBUG");
                         try
                         {
                             var result = await datService.DownloadDatByFormatAsync(url, fileName, format);
                             if (result is not null)
                             {
                                 success++;
-                                _vm.AddLog($"  ✓ {id}", "INFO");
+                                _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.ItemSuccess", id), "INFO");
                             }
                             else
                             {
                                 failed++;
                                 failedIds.Add(id);
-                                _vm.AddLog($"  ✗ {id}: Download fehlgeschlagen", "WARN");
+                                _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.ItemFailed", id), "WARN");
                             }
                         }
                         catch (InvalidOperationException ex) when (ex.Message.Contains("HTML"))
                         {
                             failed++;
                             failedIds.Add(id);
-                            _vm.AddLog($"  ✗ {id}: Quelle erfordert manuellen Download (Login-Seite erhalten)", "WARN");
+                            _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.ItemManualRequired", id), "WARN");
                         }
                         catch (Exception ex)
                         {
@@ -196,32 +196,32 @@ public sealed partial class FeatureCommandService
                     }
                 }
 
-                _vm.AddLog($"DAT-Download: {success} erfolgreich, {failed} fehlgeschlagen", success > 0 ? "INFO" : "WARN");
+                _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.DownloadResult", success, failed), success > 0 ? "INFO" : "WARN");
                 if (failedIds.Count > 0 && failedIds.Count <= 10)
-                    _vm.AddLog($"  Fehlgeschlagen: {string.Join(", ", failedIds)}", "WARN");
+                    _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.FailedList", string.Join(", ", failedIds)), "WARN");
             }
 
             // ── No-Intro Pack-Import ───────────────────────────────────
             if (noIntroMissing.Count > 0)
             {
-                var packDir = _dialog.BrowseFolder("No-Intro DAT-Pack Ordner auswählen (enthält .dat/.xml Dateien)");
+                var packDir = _dialog.BrowseFolder(_vm.Loc["Cmd.DatAutoUpdate.NoIntroBrowseTitle"]);
                 if (!string.IsNullOrWhiteSpace(packDir) && Directory.Exists(packDir))
                 {
                     using var datService = new Infrastructure.Dat.DatSourceService(_vm.DatRoot);
                     var imported = datService.ImportLocalDatPacks(packDir, catalog);
-                    _vm.AddLog($"No-Intro Pack-Import: {imported} DATs importiert aus {packDir}", imported > 0 ? "INFO" : "WARN");
+                    _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.NoIntroImportResult", imported, packDir), imported > 0 ? "INFO" : "WARN");
                 }
             }
 
             // ── Redump lokaler Import ──────────────────────────────────
             if (redumpMissing.Count > 0)
             {
-                var redumpDir = _dialog.BrowseFolder("Redump DAT-Ordner auswählen (enthält .dat/.xml Dateien von redump.org)");
+                var redumpDir = _dialog.BrowseFolder(_vm.Loc["Cmd.DatAutoUpdate.RedumpBrowseTitle"]);
                 if (!string.IsNullOrWhiteSpace(redumpDir) && Directory.Exists(redumpDir))
                 {
                     using var datService = new Infrastructure.Dat.DatSourceService(_vm.DatRoot);
                     var imported = datService.ImportLocalDatPacks(redumpDir, catalog);
-                    _vm.AddLog($"Redump Import: {imported} DATs importiert aus {redumpDir}", imported > 0 ? "INFO" : "WARN");
+                    _vm.AddLog(_vm.Loc.Format("Cmd.DatAutoUpdate.RedumpImportResult", imported, redumpDir), imported > 0 ? "INFO" : "WARN");
                 }
             }
         }
@@ -231,7 +231,7 @@ public sealed partial class FeatureCommandService
         }
         else
         {
-            _dialog.Info($"Alle {catalog.Count} Katalog-DATs vorhanden.", "DAT Auto-Update");
+            _dialog.Info(_vm.Loc.Format("Cmd.DatAutoUpdate.AllPresent", catalog.Count), _vm.Loc["Cmd.DatAutoUpdate.Title"]);
         }
         }
         finally { _datUpdateRunning = false; }
@@ -239,11 +239,11 @@ public sealed partial class FeatureCommandService
 
     private void DatDiffViewer()
     {
-        var fileA = _dialog.BrowseFile("Alte DAT-Datei wählen", "DAT (*.dat;*.xml)|*.dat;*.xml");
+        var fileA = _dialog.BrowseFile(_vm.Loc["Cmd.DatDiffViewer.OldDatTitle"], _vm.Loc["Cmd.DatDiffViewer.Filter"]);
         if (fileA is null) return;
-        var fileB = _dialog.BrowseFile("Neue DAT-Datei wählen", "DAT (*.dat;*.xml)|*.dat;*.xml");
+        var fileB = _dialog.BrowseFile(_vm.Loc["Cmd.DatDiffViewer.NewDatTitle"], _vm.Loc["Cmd.DatDiffViewer.Filter"]);
         if (fileB is null) return;
-        _vm.AddLog($"DAT-Diff: {Path.GetFileName(fileA)} vs. {Path.GetFileName(fileB)}", "INFO");
+        _vm.AddLog(_vm.Loc.Format("Cmd.DatDiffViewer.StartLog", Path.GetFileName(fileA), Path.GetFileName(fileB)), "INFO");
         try
         {
             var diff = FeatureService.CompareDatFiles(fileA, fileB);
@@ -268,29 +268,29 @@ public sealed partial class FeatureCommandService
                 foreach (var name in diff.Removed.Take(30)) sb.AppendLine($"    - {name}");
                 if (diff.Removed.Count > 30) sb.AppendLine($"    … und {diff.Removed.Count - 30} weitere");
             }
-            _dialog.ShowText("DAT-Diff-Viewer", sb.ToString());
+            _dialog.ShowText(_vm.Loc["Cmd.DatDiffViewer.Title"], sb.ToString());
         }
         catch (Exception ex)
         {
-            LogError("DAT-DIFF", $"DAT-Diff Fehler: {ex.Message}");
-            _dialog.ShowText("DAT-Diff-Viewer", $"Fehler beim Parsen der DAT-Dateien:\n\n{ex.Message}\n\nStelle sicher, dass beide Dateien gültiges Logiqx-XML enthalten.");
+            LogError("DAT-DIFF", _vm.Loc.Format("Cmd.DatDiffViewer.Error", ex.Message));
+            _dialog.ShowText(_vm.Loc["Cmd.DatDiffViewer.Title"], _vm.Loc.Format("Cmd.DatDiffViewer.ParseError", ex.Message));
         }
     }
 
     private void CustomDatEditor()
     {
-        var gameName = _dialog.ShowInputBox("Spielname eingeben:", "Custom-DAT-Editor", "");
+        var gameName = _dialog.ShowInputBox(_vm.Loc["Cmd.CustomDatEditor.GameNamePrompt"], _vm.Loc["Cmd.CustomDatEditor.Title"], string.Empty);
         if (string.IsNullOrWhiteSpace(gameName)) return;
-        var romName = _dialog.ShowInputBox("ROM-Dateiname eingeben:", "Custom-DAT-Editor", $"{gameName}.zip");
+        var romName = _dialog.ShowInputBox(_vm.Loc["Cmd.CustomDatEditor.RomNamePrompt"], _vm.Loc["Cmd.CustomDatEditor.Title"], $"{gameName}.zip");
         if (string.IsNullOrWhiteSpace(romName)) return;
-        var crc32 = _dialog.ShowInputBox("CRC32-Hash eingeben (hex):", "Custom-DAT-Editor", "00000000");
+        var crc32 = _dialog.ShowInputBox(_vm.Loc["Cmd.CustomDatEditor.CrcPrompt"], _vm.Loc["Cmd.CustomDatEditor.Title"], "00000000");
         if (string.IsNullOrWhiteSpace(crc32)) return;
         if (!Regex.IsMatch(crc32, @"^[0-9A-Fa-f]{8}$", RegexOptions.None, TimeSpan.FromMilliseconds(200)))
-        { _vm.AddLog($"Ungültiger CRC32-Hash: '{crc32}' — erwartet: 8 Hex-Zeichen.", "WARN"); return; }
-        var sha1 = _dialog.ShowInputBox("SHA1-Hash eingeben (hex):", "Custom-DAT-Editor", "");
+        { _vm.AddLog(_vm.Loc.Format("Cmd.CustomDatEditor.InvalidCrc", crc32), "WARN"); return; }
+        var sha1 = _dialog.ShowInputBox(_vm.Loc["Cmd.CustomDatEditor.Sha1Prompt"], _vm.Loc["Cmd.CustomDatEditor.Title"], string.Empty);
         if (string.IsNullOrWhiteSpace(sha1)) sha1 = "";
         if (sha1.Length > 0 && !Regex.IsMatch(sha1, @"^[0-9A-Fa-f]{40}$", RegexOptions.None, TimeSpan.FromMilliseconds(200)))
-        { _vm.AddLog($"Ungültiger SHA1-Hash: '{sha1}' — erwartet: 40 Hex-Zeichen.", "WARN"); return; }
+        { _vm.AddLog(_vm.Loc.Format("Cmd.CustomDatEditor.InvalidSha1", sha1), "WARN"); return; }
 
         var xmlEntry = $"  <game name=\"{System.Security.SecurityElement.Escape(gameName)}\">\n" +
                        $"    <description>{System.Security.SecurityElement.Escape(gameName)}</description>\n" +
@@ -329,24 +329,24 @@ public sealed partial class FeatureCommandService
                                   xmlEntry + "\n</datafile>";
                     File.WriteAllText(safeCustomDatPath, fullXml);
                 }
-                _vm.AddLog($"Custom-DAT-Eintrag gespeichert: {safeCustomDatPath}", "INFO");
+                _vm.AddLog(_vm.Loc.Format("Cmd.CustomDatEditor.EntrySaved", safeCustomDatPath), "INFO");
             }
-            catch (Exception ex) { LogError("DAT-CUSTOM", $"Custom-DAT Fehler: {ex.Message}"); }
+            catch (Exception ex) { LogError("DAT-CUSTOM", _vm.Loc.Format("Cmd.CustomDatEditor.Error", ex.Message)); }
         }
         else
-            _vm.AddLog("DatRoot nicht gesetzt – Eintrag wird nur angezeigt.", "WARN");
-        _dialog.ShowText("Custom-DAT-Editor", $"Generierter Logiqx-XML-Eintrag:\n\n{xmlEntry}");
+            _vm.AddLog(_vm.Loc["Cmd.CustomDatEditor.DatRootMissing"], "WARN");
+        _dialog.ShowText(_vm.Loc["Cmd.CustomDatEditor.Title"], _vm.Loc.Format("Cmd.CustomDatEditor.GeneratedXml", xmlEntry));
     }
 
     private void HashDatabaseExport()
     {
         if (_vm.LastCandidates.Count == 0)
-        { _vm.AddLog("Keine Daten für Hash-Export.", "WARN"); return; }
-        var path = _dialog.SaveFile("Hash-Datenbank exportieren", "JSON (*.json)|*.json", "hash-database.json");
+        { _vm.AddLog(_vm.Loc["Cmd.HashDatabaseExport.NoData"], "WARN"); return; }
+        var path = _dialog.SaveFile(_vm.Loc["Cmd.HashDatabaseExport.Title"], _vm.Loc["Cmd.HashDatabaseExport.Filter"], "hash-database.json");
         if (!TryResolveSafeOutputPath(path, "Hash-Datenbank-Export", out var safePath)) return;
         var entries = _vm.LastCandidates.Select(c => new { c.MainPath, c.GameKey, c.Extension, c.Region, c.DatMatch, c.SizeBytes }).ToList();
         File.WriteAllText(safePath, JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true }));
-        _vm.AddLog($"Hash-Datenbank exportiert: {safePath} ({entries.Count} Einträge)", "INFO");
+        _vm.AddLog(_vm.Loc.Format("Cmd.HashDatabaseExport.Done", safePath, entries.Count), "INFO");
     }
 
 }

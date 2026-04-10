@@ -393,7 +393,7 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
         }
         catch (IOException)
         {
-            // Best effort cleanup only.
+            // SUPPRESSED: best-effort cleanup only; conversion result has already been finalized.
         }
     }
 
@@ -412,14 +412,14 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
         if (File.Exists(plan.SourcePath))
         {
             try { sourceBytes = new FileInfo(plan.SourcePath).Length; }
-            catch (IOException) { }
+            catch (IOException) { /* SUPPRESSED: telemetry only; source size is optional for reporting */ }
             catch (UnauthorizedAccessException) { }
         }
 
         if (!string.IsNullOrWhiteSpace(targetPath) && File.Exists(targetPath))
         {
             try { targetBytes = new FileInfo(targetPath).Length; }
-            catch (IOException) { }
+            catch (IOException) { /* SUPPRESSED: telemetry only; target size is optional for reporting */ }
             catch (UnauthorizedAccessException) { }
         }
 

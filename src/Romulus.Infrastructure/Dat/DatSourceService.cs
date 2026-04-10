@@ -14,6 +14,9 @@ namespace Romulus.Infrastructure.Dat;
 /// </summary>
 public sealed class DatSourceService : IDisposable
 {
+    internal const string HttpClientName = "Romulus.DatSourceService";
+    private static readonly Lazy<HttpClient> SharedHttpClient = new(CreateConfiguredHttpClient);
+
     private readonly HttpClient _http;
     private readonly IToolRunner? _tools;
     private readonly string _datRoot;
@@ -24,21 +27,25 @@ public sealed class DatSourceService : IDisposable
     /// <summary>Maximum catalog file size to load (100 MB).</summary>
     private const long MaxCatalogFileSizeBytes = 100 * 1024 * 1024;
 
-    public DatSourceService(string datRoot, IToolRunner? tools = null, HttpClient? httpClient = null)
+    public DatSourceService(string datRoot, HttpClient httpClient, IToolRunner? tools = null)
     {
         _datRoot = datRoot ?? throw new ArgumentNullException(nameof(datRoot));
+        _http = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _tools = tools;
-        if (httpClient is not null)
-        {
-            _http = httpClient;
-        }
-        else
-        {
-            var handler = new HttpClientHandler { AllowAutoRedirect = true };
-            _http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(60) };
-            _http.DefaultRequestHeaders.UserAgent.ParseAdd("Romulus/2.0 (DAT-Updater)");
-            _http.DefaultRequestHeaders.Accept.ParseAdd("application/zip, application/octet-stream, application/xml, text/xml, */*");
-        }
+    }
+
+    public DatSourceService(string datRoot, IToolRunner? tools = null, HttpClient? httpClient = null)
+        : this(datRoot, httpClient ?? SharedHttpClient.Value, tools)
+    {
+    }
+
+    public static HttpClient CreateConfiguredHttpClient()
+    {
+        var handler = new HttpClientHandler { AllowAutoRedirect = true };
+        var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(60) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Romulus/2.0 (DAT-Updater)");
+        client.DefaultRequestHeaders.Accept.ParseAdd("application/zip, application/octet-stream, application/xml, text/xml, */*");
+        return client;
     }
 
     /// <summary>Validates that a URL uses HTTPS scheme. Returns false for http/file/ftp/etc.</summary>
@@ -449,7 +456,7 @@ public sealed class DatSourceService : IDisposable
 
     public void Dispose()
     {
-        _http.Dispose();
+        // Intentionally no-op: HttpClient lifetime is managed by caller or shared singleton.
     }
 }
 

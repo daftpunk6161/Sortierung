@@ -17,7 +17,11 @@ public sealed class ToolRunnerAdapter : IToolRunner
 {
     internal const string ConversionToolsRootOverrideEnvVar = "ROMULUS_CONVERSION_TOOLS_ROOT";
     internal const int MaxToolOutputBytes = 100 * 1024 * 1024;
-    private const string DefaultConversionToolsRoot = @"C:\tools\conversion";
+    private static readonly string DefaultConversionToolsRoot = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Romulus",
+        "tools",
+        "conversion");
 
     // Suppress Windows modal error dialogs (e.g. "Nicht unterstützte 16 Bit-Anwendung")
     // when Process.Start encounters an invalid PE file.

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
+using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Orchestration;
 
@@ -128,6 +129,7 @@ internal static class CliOutputWriter
     internal static void WriteUsage(TextWriter stdout)
     {
         var defaultPreferRegions = string.Join(",", RunConstants.DefaultPreferRegions);
+        var datStaleThresholdDays = DatCatalogStateService.StaleThresholdDays;
 
         stdout.WriteLine($@"Romulus — Your Collection, Perfected.
 
@@ -182,7 +184,7 @@ Run Options:
   --import-packs-from    Import local No-Intro DAT packs from folder (optional)
   --force-dat-update     Re-download DATs even if target id.dat already exists
   --smart-dat-update     Update only missing and stale id.dat files
-  --dat-stale-days       Stale threshold in days for --smart-dat-update (default: 365)
+    --dat-stale-days       Stale threshold in days for --smart-dat-update (default: {datStaleThresholdDays})
   --convertformat        Convert winners to optimal format (CHD/RVZ/ZIP)
   --convertonly          Convert all candidates only (skip dedupe/move)
   --approve-reviews      Reuse persisted review approvals during the run

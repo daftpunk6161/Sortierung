@@ -16,6 +16,7 @@ using Romulus.Infrastructure.Watch;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
 using Romulus.Infrastructure.Profiles;
+using Romulus.Infrastructure.Time;
 using Romulus.UI.Wpf.Models;
 using Romulus.UI.Wpf.Services;
 using ConflictPolicy = Romulus.UI.Wpf.Models.ConflictPolicy;
@@ -35,6 +36,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     private readonly ISettingsService _settings;
     private readonly IRunService _runService;
     private readonly ILocalizationService _loc;
+    private readonly ITimeProvider _timeProvider;
     private readonly SynchronizationContext? _syncContext;
     private readonly WatchService _watchService = new();
     private readonly ScheduleService _scheduleService = new();
@@ -72,13 +74,15 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         IRunService? runService = null,
         ILocalizationService? loc = null,
         RunProfileService? runProfileService = null,
-        RunConfigurationMaterializer? runConfigurationMaterializer = null)
+        RunConfigurationMaterializer? runConfigurationMaterializer = null,
+        ITimeProvider? timeProvider = null)
     {
         _theme = theme;
         _dialog = dialog;
         _settings = settings ?? new SettingsService();
         _runService = runService ?? new RunService();
         _loc = loc ?? new LocalizationService();
+        _timeProvider = timeProvider ?? new SystemTimeProvider();
         _syncContext = SynchronizationContext.Current;
 
         // ── Child ViewModels (GUI-021) ────────────────────────────────
@@ -205,7 +209,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     private void ArmInlineMoveConfirmDebounce()
     {
         Shell.ShowMoveInlineConfirm = true;
-        _inlineMoveUnlockAtUtc = DateTime.UtcNow.Add(InlineMoveConfirmDebounceDelay);
+        _inlineMoveUnlockAtUtc = _timeProvider.UtcNow.UtcDateTime.Add(InlineMoveConfirmDebounceDelay);
         var token = Interlocked.Increment(ref _inlineMoveConfirmDebounceToken);
 
         OnPropertyChanged(nameof(CanExecuteInlineStartMove));

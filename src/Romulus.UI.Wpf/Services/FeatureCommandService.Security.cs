@@ -50,33 +50,33 @@ public sealed partial class FeatureCommandService
     private void PatchPipeline()
     {
         var sourcePath = _dialog.BrowseFile(
-            "Quell-ROM fuer Patch waehlen",
-            "ROM-Dateien (*.zip;*.7z;*.chd;*.iso;*.bin;*.cue;*.nes;*.sfc;*.gba;*.gb;*.gbc;*.n64;*.z64;*.v64)|*.zip;*.7z;*.chd;*.iso;*.bin;*.cue;*.nes;*.sfc;*.gba;*.gb;*.gbc;*.n64;*.z64;*.v64|Alle Dateien (*.*)|*.*");
+            _vm.Loc["Cmd.PatchPipeline.SourceFileTitle"],
+            _vm.Loc["Cmd.PatchPipeline.SourceFileFilter"]);
         if (sourcePath is null)
             return;
 
         var patchPath = _dialog.BrowseFile(
-            "Patch-Datei waehlen",
-            "Patch-Dateien (*.ips;*.bps;*.ups;*.xdelta;*.xdelta3;*.vcdiff)|*.ips;*.bps;*.ups;*.xdelta;*.xdelta3;*.vcdiff|Alle Dateien (*.*)|*.*");
+            _vm.Loc["Cmd.PatchPipeline.PatchFileTitle"],
+            _vm.Loc["Cmd.PatchPipeline.PatchFileFilter"]);
         if (patchPath is null)
             return;
 
         var patchFormat = ResolvePatchFormatForDialog(patchPath);
         if (patchFormat is null)
         {
-            LogWarning("PATCH-FORMAT", "Patch-Format nicht erkannt. Unterstuetzt: IPS, BPS, UPS, xdelta.");
+            LogWarning("PATCH-FORMAT", _vm.Loc["Cmd.PatchPipeline.UnsupportedPatchFormat"]);
             return;
         }
 
         var sourceExtension = Path.GetExtension(sourcePath);
         var defaultName = Path.GetFileNameWithoutExtension(sourcePath) + ".patched" + sourceExtension;
         var outputPath = _dialog.SaveFile(
-            "Patch-Ausgabe speichern",
+            _vm.Loc["Cmd.PatchPipeline.OutputFileTitle"],
             string.IsNullOrWhiteSpace(sourceExtension)
-                ? "Alle Dateien (*.*)|*.*"
-                : $"ROM (*{sourceExtension})|*{sourceExtension}|Alle Dateien (*.*)|*.*",
+                ? _vm.Loc["Cmd.PatchPipeline.AllFilesFilter"]
+                : _vm.Loc.Format("Cmd.PatchPipeline.OutputFileFilter", sourceExtension),
             defaultName);
-        if (!TryResolveSafeOutputPath(outputPath, "Patch-Pipeline", out var safeOutputPath))
+        if (!TryResolveSafeOutputPath(outputPath, _vm.Loc["Cmd.PatchPipeline.Title"], out var safeOutputPath))
             return;
 
         try
@@ -88,28 +88,36 @@ public sealed partial class FeatureCommandService
                 toolRunner: new ToolRunnerAdapter());
 
             var toolLine = string.IsNullOrWhiteSpace(result.ToolPath)
-                ? "Tool: intern"
-                : $"Tool: {result.ToolPath}";
+                ? _vm.Loc["Cmd.PatchPipeline.ToolInternal"]
+                : _vm.Loc.Format("Cmd.PatchPipeline.ToolPath", result.ToolPath);
             _dialog.ShowText(
-                "Patch-Pipeline",
-                $"Format: {result.Format}\nQuelle: {result.SourcePath}\nPatch: {result.PatchPath}\nZiel: {result.OutputPath}\nGroesse: {FeatureService.FormatSize(result.OutputSizeBytes)}\nSHA256: {result.OutputSha256}\n{toolLine}");
-            _vm.AddLog($"Patch angewendet ({result.Format}): {Path.GetFileName(result.PatchPath)} -> {result.OutputPath}", "INFO");
+                _vm.Loc["Cmd.PatchPipeline.Title"],
+                _vm.Loc.Format(
+                    "Cmd.PatchPipeline.Result",
+                    result.Format,
+                    result.SourcePath,
+                    result.PatchPath,
+                    result.OutputPath,
+                    FeatureService.FormatSize(result.OutputSizeBytes),
+                    result.OutputSha256,
+                    toolLine));
+            _vm.AddLog(_vm.Loc.Format("Cmd.PatchPipeline.Applied", result.Format, Path.GetFileName(result.PatchPath), result.OutputPath), "INFO");
         }
         catch (InvalidOperationException ex)
         {
-            LogWarning("PATCH-APPLY", $"Patch konnte nicht angewendet werden: {ex.Message}");
-            _dialog.Error($"Patch konnte nicht angewendet werden:\n\n{ex.Message}", "Patch-Pipeline");
+            LogWarning("PATCH-APPLY", _vm.Loc.Format("Cmd.PatchPipeline.ApplyFailed", ex.Message));
+            _dialog.Error(_vm.Loc.Format("Cmd.PatchPipeline.ApplyFailedDialog", ex.Message), _vm.Loc["Cmd.PatchPipeline.Title"]);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            LogError("PATCH-APPLY", $"Patch-Pipeline fehlgeschlagen: {ex.Message}");
+            LogError("PATCH-APPLY", _vm.Loc.Format("Cmd.PatchPipeline.ExecutionFailed", ex.Message));
         }
     }
 
     private async Task IntegrityMonitorAsync()
     {
         if (_vm.LastCandidates.Count == 0)
-        { _vm.AddLog("Erst einen Lauf starten.", "WARN"); return; }
+        { _vm.AddLog(_vm.Loc["Cmd.RunRequired"], "WARN"); return; }
         var createBaseline = _dialog.Confirm(
             _vm.Loc["Cmd.IntegrityMonitor.Prompt"],
             _vm.Loc["Cmd.IntegrityMonitor.Title"]);
@@ -121,9 +129,9 @@ public sealed partial class FeatureCommandService
             try
             {
                 var baseline = await FeatureService.CreateBaseline(paths, progress);
-                _vm.AddLog($"Baseline erstellt: {baseline.Count} Dateien", "INFO");
+                _vm.AddLog(_vm.Loc.Format("Cmd.IntegrityMonitor.BaselineCreated", baseline.Count), "INFO");
             }
-            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-BASELINE", $"Baseline-Fehler: {ex.Message}"); }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-BASELINE", _vm.Loc.Format("Cmd.IntegrityMonitor.BaselineError", ex.Message)); }
         }
         else
         {
@@ -149,49 +157,51 @@ public sealed partial class FeatureCommandService
 
     private void BackupManager()
     {
-        var backupRoot = _dialog.BrowseFolder("Backup-Zielordner wählen");
+        var backupRoot = _dialog.BrowseFolder(_vm.Loc["Cmd.BackupManager.TargetFolderTitle"]);
         if (backupRoot is null) return;
         if (_vm.LastCandidates.Count == 0)
-        { _vm.AddLog("Keine Dateien für Backup.", "WARN"); return; }
+        { _vm.AddLog(_vm.Loc["Cmd.BackupManager.NoFiles"], "WARN"); return; }
         var winners = _vm.LastDedupeGroups.Select(g => g.Winner.MainPath).ToList();
-        if (!_dialog.Confirm($"{winners.Count} Winner-Dateien sichern nach:\n{backupRoot}", "Backup bestätigen")) return;
+        if (!_dialog.Confirm(_vm.Loc.Format("Cmd.BackupManager.Confirm", winners.Count, backupRoot), _vm.Loc["Cmd.BackupManager.ConfirmTitle"])) return;
         try
         {
             var sessionDir = FeatureService.CreateBackup(winners, backupRoot, "winners");
-            _vm.AddLog($"Backup erstellt: {sessionDir} ({winners.Count} Dateien)", "INFO");
+            _vm.AddLog(_vm.Loc.Format("Cmd.BackupManager.Created", sessionDir, winners.Count), "INFO");
         }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-BACKUP", $"Backup-Fehler: {ex.Message}"); }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-BACKUP", _vm.Loc.Format("Cmd.BackupManager.Error", ex.Message)); }
     }
 
     private void Quarantine()
     {
         if (_vm.LastCandidates.Count == 0)
-        { _vm.AddLog("Erst einen Lauf starten.", "WARN"); return; }
+        { _vm.AddLog(_vm.Loc["Cmd.RunRequired"], "WARN"); return; }
         var quarantined = _vm.LastCandidates.Where(c =>
             c.Category == FileCategory.Junk || (!c.DatMatch && c.Region == "UNKNOWN")).ToList();
         var sb = new StringBuilder();
-        sb.AppendLine($"Quarantäne-Kandidaten: {quarantined.Count}\n");
-        sb.AppendLine("Kriterien: Junk-Kategorie ODER (kein DAT-Match + Unbekannte Region)\n");
+        sb.AppendLine(_vm.Loc.Format("Cmd.Quarantine.Candidates", quarantined.Count));
+        sb.AppendLine();
+        sb.AppendLine(_vm.Loc["Cmd.Quarantine.Criteria"]);
+        sb.AppendLine();
         foreach (var q in quarantined.Take(30))
             sb.AppendLine($"  {Path.GetFileName(q.MainPath),-50} [{FeatureService.ToCategoryLabel(q.Category)}] {q.Region}");
         if (quarantined.Count > 30)
-            sb.AppendLine($"\n  … und {quarantined.Count - 30} weitere");
-        _dialog.ShowText("Quarantäne", sb.ToString());
+            sb.AppendLine(_vm.Loc.Format("Cmd.Quarantine.More", quarantined.Count - 30));
+        _dialog.ShowText(_vm.Loc["Cmd.Quarantine.Title"], sb.ToString());
     }
 
     private void RuleEngine()
     {
         var mode = _dialog.YesNoCancel(
-            "Regel-Engine\n\nJA = Regel-Report anzeigen\nNEIN = Custom Junk Rules bearbeiten\nABBRECHEN = Nichts tun",
-            "Regel-Engine");
+            _vm.Loc["Cmd.RuleEngine.ModePrompt"],
+            _vm.Loc["Cmd.RuleEngine.Title"]);
 
         if (mode == ConfirmResult.Cancel)
             return;
 
         if (mode == ConfirmResult.Yes)
         {
-            try { _dialog.ShowText("Regel-Engine", FeatureService.BuildRuleEngineReport()); }
-            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or JsonException) { LogError("SEC-RULES", $"Fehler beim Laden der Regeln: {ex.Message}"); }
+            try { _dialog.ShowText(_vm.Loc["Cmd.RuleEngine.Title"], FeatureService.BuildRuleEngineReport()); }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or JsonException) { LogError("SEC-RULES", _vm.Loc.Format("Cmd.RuleEngine.LoadError", ex.Message)); }
             return;
         }
 
@@ -208,14 +218,8 @@ public sealed partial class FeatureCommandService
                 Directory.CreateDirectory(rulesDirectory);
 
             var editorText = _dialog.ShowMultilineInputBox(
-                "Custom Junk Rules als JSON bearbeiten.\n\n"
-                + $"Datei: {rulesPath}\n"
-                + "Felder: name, region, extension, path\n"
-                + "Operatoren: contains, equals, regex\n"
-                + "Logic: AND oder OR\n"
-                + "Aktion: SetCategoryJunk\n\n"
-                + "Leer lassen oder abbrechen = keine Aenderung.",
-                "Custom Junk Rules Editor",
+                _vm.Loc.Format("Cmd.CustomJunkRules.EditorPrompt", rulesPath),
+                _vm.Loc["Cmd.CustomJunkRules.EditorTitle"],
                 LoadCustomJunkRulesEditorContent(rulesPath));
 
             if (string.IsNullOrWhiteSpace(editorText))
@@ -223,21 +227,21 @@ public sealed partial class FeatureCommandService
 
             if (!TryNormalizeCustomJunkRules(editorText, out var normalizedDocument, out var preview, out var validationError))
             {
-                _dialog.Error($"Regeln konnten nicht gespeichert werden:\n\n{validationError}", "Custom Junk Rules Editor");
+                _dialog.Error(_vm.Loc.Format("Cmd.CustomJunkRules.SaveValidationError", validationError), _vm.Loc["Cmd.CustomJunkRules.EditorTitle"]);
                 return;
             }
 
-            _dialog.ShowText("Custom Junk Rules Vorschau", preview);
-            if (!_dialog.Confirm("Regeln aus der Vorschau speichern?", "Custom Junk Rules Editor"))
+            _dialog.ShowText(_vm.Loc["Cmd.CustomJunkRules.PreviewTitle"], preview);
+            if (!_dialog.Confirm(_vm.Loc["Cmd.CustomJunkRules.ConfirmSave"], _vm.Loc["Cmd.CustomJunkRules.EditorTitle"]))
                 return;
 
             var normalizedJson = JsonSerializer.Serialize(normalizedDocument, CustomJunkRulesWriteOptions);
             File.WriteAllText(rulesPath, normalizedJson, Encoding.UTF8);
-            _vm.AddLog($"Custom Junk Rules gespeichert: {rulesPath} ({normalizedDocument.Rules.Count} Regeln)", "INFO");
+            _vm.AddLog(_vm.Loc.Format("Cmd.CustomJunkRules.Saved", rulesPath, normalizedDocument.Rules.Count), "INFO");
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or ArgumentException or JsonException)
         {
-            LogError("SEC-CUSTOM-RULES", $"Custom Junk Rules Editor fehlgeschlagen: {ex.Message}");
+            LogError("SEC-CUSTOM-RULES", _vm.Loc.Format("Cmd.CustomJunkRules.EditorError", ex.Message));
         }
     }
 
@@ -503,12 +507,12 @@ public sealed partial class FeatureCommandService
 
     private void HeaderRepair()
     {
-        var path = _dialog.BrowseFile("ROM für Header-Reparatur wählen",
-            "ROMs (*.nes;*.sfc;*.smc)|*.nes;*.sfc;*.smc|Alle (*.*)|*.*");
+        var path = _dialog.BrowseFile(_vm.Loc["Cmd.HeaderRepair.BrowseFileTitle"],
+            _vm.Loc["Cmd.HeaderRepair.BrowseFileFilter"]);
         if (path is null) return;
         path = Path.GetFullPath(path);
         var header = FeatureService.AnalyzeHeader(path);
-        if (header is null) { _vm.AddLog("Header nicht lesbar.", "ERROR"); return; }
+        if (header is null) { _vm.AddLog(_vm.Loc["Cmd.HeaderRepair.HeaderUnreadable"], "ERROR"); return; }
 
         if (header.Platform == "NES")
         {
@@ -516,7 +520,7 @@ public sealed partial class FeatureCommandService
             {
                 var headerBuf = new byte[16];
                 using (var hfs = File.OpenRead(path))
-                { if (hfs.Read(headerBuf, 0, 16) < 16) { _vm.AddLog("NES-Header: Datei zu klein.", "ERROR"); return; } }
+                { if (hfs.Read(headerBuf, 0, 16) < 16) { _vm.AddLog(_vm.Loc["Cmd.HeaderRepair.NesFileTooSmall"], "ERROR"); return; } }
                 bool hasDirtyBytes = (headerBuf[12] != 0 || headerBuf[13] != 0 || headerBuf[14] != 0 || headerBuf[15] != 0);
                 if (hasDirtyBytes)
                 {
@@ -528,26 +532,26 @@ public sealed partial class FeatureCommandService
                     {
                         var backupPath = path + $".{DateTime.UtcNow:yyyyMMddHHmmss}.bak";
                         File.Copy(path, backupPath, overwrite: false);
-                        _vm.AddLog($"Backup erstellt: {backupPath}", "INFO");
+                        _vm.AddLog(_vm.Loc.Format("Cmd.HeaderRepair.BackupCreated", backupPath), "INFO");
                         try
                         {
                             using var patchFs = File.OpenWrite(path);
                             patchFs.Seek(12, SeekOrigin.Begin);
                             patchFs.Write(new byte[4], 0, 4);
-                            _vm.AddLog("NES-Header repariert: Bytes 12-15 genullt.", "INFO");
+                            _vm.AddLog(_vm.Loc["Cmd.HeaderRepair.NesFixed"], "INFO");
                         }
                         catch
                         {
                             File.Copy(backupPath, path, overwrite: true);
-                            _vm.AddLog("Reparatur fehlgeschlagen — Backup wiederhergestellt.", "ERROR");
+                            _vm.AddLog(_vm.Loc["Cmd.HeaderRepair.RestoreFromBackupFailedFix"], "ERROR");
                             throw;
                         }
                     }
                 }
                 else
-                    _dialog.Info($"NES-Header ist sauber. Keine Reparatur nötig.\n\n{header.Details}", "Header-Reparatur");
+                    _dialog.Info(_vm.Loc.Format("Cmd.HeaderRepair.NesNoFixNeeded", header.Details), _vm.Loc["Cmd.HeaderRepair.Title"]);
             }
-            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-HEADER", $"Header-Reparatur fehlgeschlagen: {ex.Message}"); }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-HEADER", _vm.Loc.Format("Cmd.HeaderRepair.Error", ex.Message)); }
             return;
         }
 
@@ -567,30 +571,30 @@ public sealed partial class FeatureCommandService
                     {
                         var backupPath = path + $".{DateTime.UtcNow:yyyyMMddHHmmss}.bak";
                         File.Copy(path, backupPath, overwrite: false);
-                        _vm.AddLog($"Backup erstellt: {backupPath}", "INFO");
+                        _vm.AddLog(_vm.Loc.Format("Cmd.HeaderRepair.BackupCreated", backupPath), "INFO");
                         try
                         {
                             var data = File.ReadAllBytes(path);
                             var trimmed = data[512..];
                             File.WriteAllBytes(path, trimmed);
-                            _vm.AddLog($"SNES Copier-Header entfernt: {fileInfo.Length} → {trimmed.Length} Bytes.", "INFO");
+                            _vm.AddLog(_vm.Loc.Format("Cmd.HeaderRepair.SnesHeaderRemoved", fileInfo.Length, trimmed.Length), "INFO");
                         }
                         catch
                         {
                             File.Copy(backupPath, path, overwrite: true);
-                            _vm.AddLog("Reparatur fehlgeschlagen — Backup wiederhergestellt.", "ERROR");
+                            _vm.AddLog(_vm.Loc["Cmd.HeaderRepair.RestoreFromBackupFailedFix"], "ERROR");
                             throw;
                         }
                     }
                 }
                 else
-                    _dialog.Info($"SNES-ROM hat keinen Copier-Header. Keine Reparatur nötig.\n\n{header.Details}", "Header-Reparatur");
+                    _dialog.Info(_vm.Loc.Format("Cmd.HeaderRepair.SnesNoFixNeeded", header.Details), _vm.Loc["Cmd.HeaderRepair.Title"]);
             }
-            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-HEADER", $"Header-Reparatur fehlgeschlagen: {ex.Message}"); }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException) { LogError("SEC-HEADER", _vm.Loc.Format("Cmd.HeaderRepair.Error", ex.Message)); }
             return;
         }
 
-        _dialog.ShowText("Header-Reparatur", $"Datei: {Path.GetFileName(path)}\n\nPlattform: {header.Platform}\nFormat: {header.Format}\n{header.Details}\n\nAutomatische Reparatur ist nur für NES und SNES verfügbar.");
+        _dialog.ShowText(_vm.Loc["Cmd.HeaderRepair.Title"], _vm.Loc.Format("Cmd.HeaderRepair.GenericInfo", Path.GetFileName(path), header.Platform, header.Format, header.Details));
     }
 
     private static string? ResolvePatchFormatForDialog(string patchPath)

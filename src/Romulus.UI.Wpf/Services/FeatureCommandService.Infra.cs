@@ -34,14 +34,14 @@ public sealed partial class FeatureCommandService
                 sb.AppendLine();
                 sb.AppendLine(RunHistoryTrendService.FormatTrendReport(
                     trends,
-                    "Run Trends",
-                    "Keine Run-Historie verfuegbar.",
-                    "Aktuell",
-                    "Delta Dateien",
-                    "Delta Duplikate",
-                    "Historie",
-                    "Dateien",
-                    "Qualitaet"));
+                    _vm.Loc["Cmd.StorageTiering.TrendsTitle"],
+                    _vm.Loc["Cmd.StorageTiering.NoHistory"],
+                    _vm.Loc["Cmd.StorageTiering.Current"],
+                    _vm.Loc["Cmd.StorageTiering.DeltaFiles"],
+                    _vm.Loc["Cmd.StorageTiering.DeltaDuplicates"],
+                    _vm.Loc["Cmd.StorageTiering.History"],
+                    _vm.Loc["Cmd.StorageTiering.Files"],
+                    _vm.Loc["Cmd.StorageTiering.Quality"]));
 
                 if (_vm.LastCandidates.Count > 0)
                 {
@@ -49,15 +49,15 @@ public sealed partial class FeatureCommandService
                     sb.AppendLine(FeatureService.AnalyzeStorageTiers(_vm.LastCandidates));
                 }
 
-                _dialog.ShowText("Storage-Tiering", sb.ToString());
+                _dialog.ShowText(_vm.Loc["Cmd.StorageTiering.Title"], sb.ToString());
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
-                LogWarning("GUI-HISTORY", $"Run-Historie nicht verfuegbar: {ex.Message}");
+                LogWarning("GUI-HISTORY", _vm.Loc.Format("Cmd.StorageTiering.NoHistoryWarning", ex.Message));
                 var sb = new StringBuilder();
-                sb.AppendLine("Storage-Tiering");
+                sb.AppendLine(_vm.Loc["Cmd.StorageTiering.Title"]);
                 sb.AppendLine();
-                sb.AppendLine("Run-Historie nicht verfuegbar.");
+                sb.AppendLine(_vm.Loc["Cmd.StorageTiering.NoHistory"]);
 
                 if (_vm.LastCandidates.Count > 0)
                 {
@@ -65,7 +65,7 @@ public sealed partial class FeatureCommandService
                     sb.AppendLine(FeatureService.AnalyzeStorageTiers(_vm.LastCandidates));
                 }
 
-                _dialog.ShowText("Storage-Tiering", sb.ToString());
+                _dialog.ShowText(_vm.Loc["Cmd.StorageTiering.Title"], sb.ToString());
             }
         }
     }
@@ -73,8 +73,8 @@ public sealed partial class FeatureCommandService
     private void NasOptimization()
     {
         if (_vm.Roots.Count == 0)
-        { _vm.AddLog("Keine Roots konfiguriert.", "WARN"); return; }
-        _dialog.ShowText("NAS-Optimierung", FeatureService.GetNasInfo(_vm.Roots.ToList()));
+        { _vm.AddLog(_vm.Loc["Cmd.NasOptimization.NoRoots"], "WARN"); return; }
+        _dialog.ShowText(_vm.Loc["Cmd.NasOptimization.Title"], FeatureService.GetNasInfo(_vm.Roots.ToList()));
     }
 
     private void PortableMode()
@@ -82,22 +82,27 @@ public sealed partial class FeatureCommandService
         var isPortable = FeatureService.IsPortableMode();
         var resolvedSettingsDir = AppStoragePathResolver.ResolveRoamingAppDirectory();
         var sb = new StringBuilder();
-        sb.AppendLine("Portable-Modus\n");
-        sb.AppendLine($"  Aktueller Modus: {(isPortable ? "PORTABEL" : "Standard (AppData)")}");
-        sb.AppendLine($"  Programm-Verzeichnis: {AppContext.BaseDirectory}");
-        if (isPortable) sb.AppendLine($"  Settings-Ordner: {resolvedSettingsDir}");
+        sb.AppendLine(_vm.Loc["Cmd.PortableMode.Title"]);
+        sb.AppendLine();
+        var modeLabel = isPortable
+            ? _vm.Loc["Cmd.PortableMode.ModePortable"]
+            : _vm.Loc["Cmd.PortableMode.ModeStandard"];
+        sb.AppendLine(_vm.Loc.Format("Cmd.PortableMode.ModeLine", modeLabel));
+        sb.AppendLine(_vm.Loc.Format("Cmd.PortableMode.ProgramDirLine", AppContext.BaseDirectory));
+        if (isPortable) sb.AppendLine(_vm.Loc.Format("Cmd.PortableMode.SettingsDirLine", resolvedSettingsDir));
         else
         {
-            sb.AppendLine($"  Settings-Ordner: {resolvedSettingsDir}");
-            sb.AppendLine("\n  Tipp: Erstelle '.portable' im Programmverzeichnis für Portable-Modus.");
+            sb.AppendLine(_vm.Loc.Format("Cmd.PortableMode.SettingsDirLine", resolvedSettingsDir));
+            sb.AppendLine();
+            sb.AppendLine(_vm.Loc["Cmd.PortableMode.PortableHint"]);
         }
-        _dialog.ShowText("Portable-Modus", sb.ToString());
+        _dialog.ShowText(_vm.Loc["Cmd.PortableMode.Title"], sb.ToString());
     }
 
     private void HardlinkMode()
     {
         if (_vm.LastDedupeGroups.Count == 0)
-        { _vm.AddLog("Erst einen Lauf starten.", "WARN"); return; }
+        { _vm.AddLog(_vm.Loc["Cmd.RunRequired"], "WARN"); return; }
         var estimate = FeatureService.GetHardlinkEstimate(_vm.LastDedupeGroups);
         var firstRoot = _vm.LastDedupeGroups.FirstOrDefault()?.Winner.MainPath;
         var isNtfs = false;
@@ -123,13 +128,13 @@ public sealed partial class FeatureCommandService
 
     private void CommandPalette()
     {
-        var input = _dialog.ShowInputBox("Befehl suchen:", "Command-Palette", "");
+        var input = _dialog.ShowInputBox(_vm.Loc["Cmd.CommandPalette.SearchPrompt"], _vm.Loc["Cmd.CommandPalette.Title"], string.Empty);
         if (string.IsNullOrWhiteSpace(input)) return;
         var results = FeatureService.SearchCommands(input, _vm.FeatureCommands);
         if (results.Count == 0)
-        { _vm.AddLog($"Kein Befehl gefunden für: {input}", "WARN"); return; }
+        { _vm.AddLog(_vm.Loc.Format("Cmd.CommandPalette.NotFound", input), "WARN"); return; }
 
-        _dialog.ShowText("Command-Palette", FeatureService.BuildCommandPaletteReport(input, results));
+        _dialog.ShowText(_vm.Loc["Cmd.CommandPalette.Title"], FeatureService.BuildCommandPaletteReport(input, results));
         if (results[0].score == 0) ExecuteCommand(results[0].key);
     }
 
@@ -153,7 +158,7 @@ public sealed partial class FeatureCommandService
             case "theme": _vm.ThemeToggleCommand.Execute(null); break;
             case "clear-log": _vm.ClearLogCommand.Execute(null); break;
             case "settings": _windowHost?.SelectTab(3); break;
-            default: _vm.AddLog($"Unbekannter Befehl: {key}", "WARN"); break;
+            default: _vm.AddLog(_vm.Loc.Format("Cmd.CommandPalette.UnknownCommand", key), "WARN"); break;
         }
     }
 
@@ -162,7 +167,7 @@ public sealed partial class FeatureCommandService
         var apiProject = FeatureService.FindApiProjectPath();
         if (apiProject is not null)
         {
-            if (_dialog.Confirm("REST API starten und Browser öffnen?\n\nhttp://127.0.0.1:5000", "API-Server"))
+            if (_dialog.Confirm(_vm.Loc["Cmd.ApiServer.StartPrompt"], _vm.Loc["Cmd.ApiServer.Title"]))
             {
                 _windowHost?.StartApiProcess(apiProject);
                 return;
@@ -170,9 +175,7 @@ public sealed partial class FeatureCommandService
         }
         else
         {
-            _dialog.ShowText("API-Server", "API-Server\n\n  API-Projekt nicht gefunden.\n\n" +
-                "  Zum manuellen Start:\n    dotnet run --project src/Romulus.Api\n\n" +
-                "  Dann im Browser öffnen:\n    http://127.0.0.1:5000");
+            _dialog.ShowText(_vm.Loc["Cmd.ApiServer.Title"], _vm.Loc["Cmd.ApiServer.NotFoundMessage"]);
         }
     }
 
@@ -183,21 +186,22 @@ public sealed partial class FeatureCommandService
         var currentSize = _windowHost.FontSize;
 
         var input = _dialog.ShowInputBox(
-            $"Barrierefreiheit\n\n" +
-            $"High-Contrast: {(isHC ? "AKTIV" : "Inaktiv")}\n" +
-            $"Aktuelle Schriftgröße: {currentSize}\n\n" +
-            "Neue Schriftgröße eingeben (10-24):",
-            "Barrierefreiheit", currentSize.ToString("0"));
+            _vm.Loc.Format(
+                "Cmd.Accessibility.Prompt",
+                isHC ? _vm.Loc["Cmd.Accessibility.HighContrastActive"] : _vm.Loc["Cmd.Accessibility.HighContrastInactive"],
+                currentSize),
+            _vm.Loc["Cmd.Accessibility.Title"],
+            currentSize.ToString("0"));
         if (string.IsNullOrWhiteSpace(input)) return;
 
         if (double.TryParse(input, System.Globalization.CultureInfo.InvariantCulture, out var newSize) && newSize >= 10 && newSize <= 24)
         {
             _windowHost.FontSize = newSize;
-            _vm.AddLog($"Schriftgröße geändert: {newSize}", "INFO");
+            _vm.AddLog(_vm.Loc.Format("Cmd.Accessibility.FontSizeChanged", newSize), "INFO");
         }
         else
         {
-            _vm.AddLog($"Ungültige Schriftgröße: {input} (erlaubt: 10-24)", "WARN");
+            _vm.AddLog(_vm.Loc.Format("Cmd.Accessibility.InvalidFontSize", input), "WARN");
         }
     }
 }

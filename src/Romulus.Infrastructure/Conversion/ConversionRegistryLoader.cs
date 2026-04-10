@@ -116,6 +116,9 @@ public sealed class ConversionRegistryLoader : IConversionRegistry
                 "targetExtension",
                 "tool",
                 "command",
+                "compressionAlgorithm",
+                "compressionLevel",
+                "blockSize",
                 "applicableConsoles",
                 "requiredSourceIntegrity",
                 "resultIntegrity",
@@ -155,6 +158,9 @@ public sealed class ConversionRegistryLoader : IConversionRegistry
             TargetExtension = targetExtension,
             Tool = tool,
             Command = ReadRequiredString(item, "command"),
+            CompressionAlgorithm = ReadOptionalString(item, "compressionAlgorithm"),
+            CompressionLevel = ReadOptionalInt(item, "compressionLevel"),
+            BlockSize = ReadOptionalInt(item, "blockSize"),
             ApplicableConsoles = applicableConsoles,
             RequiredSourceIntegrity = requiredSourceIntegrity,
             ResultIntegrity = resultIntegrity,
@@ -290,6 +296,19 @@ public sealed class ConversionRegistryLoader : IConversionRegistry
         }
 
         return values;
+    }
+
+    private static int? ReadOptionalInt(JsonElement item, string propertyName)
+    {
+        if (!item.TryGetProperty(propertyName, out var value))
+            return null;
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number => value.GetInt32(),
+            JsonValueKind.Null => null,
+            _ => throw new InvalidOperationException($"Property '{propertyName}' must be integer or null.")
+        };
     }
 
     private static TEnum ParseRequiredEnum<TEnum>(string value)

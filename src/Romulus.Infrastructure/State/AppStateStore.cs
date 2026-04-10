@@ -12,11 +12,11 @@ public sealed class AppStateStore : IAppState
     private readonly Dictionary<string, object?> _state = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Dictionary<string, object?>> _undoStack = new();
     private readonly List<Dictionary<string, object?>> _redoStack = new();
-    private readonly List<Action<IDictionary<string, object?>>> _watchers = new();
+    private readonly List<Action<IReadOnlyDictionary<string, object?>>> _watchers = new();
     private readonly object _lock = new();
     private volatile bool _cancelRequested;
 
-    public IDictionary<string, object?> Get()
+    public IReadOnlyDictionary<string, object?> Get()
     {
         lock (_lock)
         {
@@ -41,7 +41,7 @@ public sealed class AppStateStore : IAppState
         NotifyWatchers();
     }
 
-    public IDisposable Watch(Action<IDictionary<string, object?>> handler)
+    public IDisposable Watch(Action<IReadOnlyDictionary<string, object?>> handler)
     {
         lock (_lock)
         {
@@ -124,8 +124,8 @@ public sealed class AppStateStore : IAppState
 
     private void NotifyWatchers()
     {
-        Action<IDictionary<string, object?>>[] snapshot;
-        IDictionary<string, object?> state;
+        Action<IReadOnlyDictionary<string, object?>>[] snapshot;
+        IReadOnlyDictionary<string, object?> state;
 
         lock (_lock)
         {
@@ -143,9 +143,9 @@ public sealed class AppStateStore : IAppState
     private sealed class WatcherDisposable : IDisposable
     {
         private readonly AppStateStore _store;
-        private readonly Action<IDictionary<string, object?>> _handler;
+        private readonly Action<IReadOnlyDictionary<string, object?>> _handler;
 
-        public WatcherDisposable(AppStateStore store, Action<IDictionary<string, object?>> handler)
+        public WatcherDisposable(AppStateStore store, Action<IReadOnlyDictionary<string, object?>> handler)
         {
             _store = store;
             _handler = handler;

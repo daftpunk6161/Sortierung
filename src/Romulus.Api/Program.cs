@@ -36,6 +36,12 @@ var bindAddress = headlessOptions.BindAddress;
 builder.WebHost.UseUrls($"http://{bindAddress}:{port}");
 
 builder.Services.AddRomulusCore();
+builder.Services.AddHttpClient(DatSourceService.HttpClientName, client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(60);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Romulus/2.0 (DAT-Updater)");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/zip, application/octet-stream, application/xml, text/xml, */*");
+});
 builder.Services.AddSingleton(headlessOptions);
 builder.Services.AddSingleton(new AllowedRootPathPolicy(headlessOptions.AllowedRoots));
 builder.Services.AddSingleton<RunManager>();
@@ -45,6 +51,7 @@ builder.Services.AddSingleton<ApiAutomationService>();
 builder.Services.AddOpenApi(OpenApiSpec.DocumentName, OpenApiSpec.Configure);
 
 var app = builder.Build();
+var timeProvider = app.Services.GetRequiredService<ITimeProvider>();
 
 // --- Middleware ---
 var apiKeys = ParseApiKeys(configuredApiKey);
@@ -172,9 +179,9 @@ app.Use(async (ctx, next) =>
         ? storedCorrelationId?.ToString() ?? Guid.NewGuid().ToString("N")[..16]
         : ctx.Request.Headers["X-Correlation-ID"].FirstOrDefault() ?? Guid.NewGuid().ToString("N")[..16];
 
-    var start = DateTime.UtcNow;
+    var start = timeProvider.UtcNow.UtcDateTime;
     await next();
-    var elapsed = (DateTime.UtcNow - start).TotalMilliseconds;
+    var elapsed = (timeProvider.UtcNow.UtcDateTime - start).TotalMilliseconds;
     var method = ctx.Request.Method;
     var path = ctx.Request.Path;
     var status = ctx.Response.StatusCode;
@@ -187,7 +194,7 @@ app.MapGet("/healthz", () => Results.Ok(new
 {
     status = "ok",
     serverRunning = true,
-    utc = DateTime.UtcNow.ToString("o"),
+    utc = timeProvider.UtcNow.ToString("o"),
     version = ApiVersion
 }))
     .WithSummary("Unauthenticated local liveness probe");
@@ -200,7 +207,7 @@ app.MapGet("/health", (RunLifecycleManager mgr) =>
         status = "ok",
         serverRunning = true,
         hasActiveRun = activeRun is not null,
-        utc = DateTime.UtcNow.ToString("o"),
+        utc = timeProvider.UtcNow.ToString("o"),
         version = ApiVersion
     });
 })
@@ -1362,16 +1369,16 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunLife
     var writer = ctx.Response.Body;
     var encoding = Encoding.UTF8;
 
-    await WriteSseEvent(writer, encoding, "ready", new { runId, utc = DateTime.UtcNow.ToString("o") });
+    await WriteSseEvent(writer, encoding, "ready", new { runId, utc = timeProvider.UtcNow.ToString("o") });
 
     var timeout = TimeSpan.FromSeconds(sseTimeoutSeconds);
-    var start = DateTime.UtcNow;
+    var start = timeProvider.UtcNow.UtcDateTime;
     string? lastStateJson = null;
-    var lastHeartbeat = DateTime.UtcNow;
+    var lastHeartbeat = timeProvider.UtcNow.UtcDateTime;
 
     try
     {
-        while (DateTime.UtcNow - start < timeout)
+        while (timeProvider.UtcNow.UtcDateTime - start < timeout)
         {
             if (ctx.RequestAborted.IsCancellationRequested)
                 break;
@@ -1398,7 +1405,7 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunLife
             if (!string.Equals(stateJson, lastStateJson, StringComparison.Ordinal))
             {
                 lastStateJson = stateJson;
-                lastHeartbeat = DateTime.UtcNow;
+                lastHeartbeat = timeProvider.UtcNow.UtcDateTime;
                 if (current.Status != RunConstants.StatusRunning)
                 {
                     var terminalEvent = current.Status switch
@@ -1413,18 +1420,18 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunLife
                 }
                 await WriteSseEvent(writer, encoding, "status", current.ToDto());
             }
-            else if ((DateTime.UtcNow - lastHeartbeat).TotalSeconds >= sseHeartbeatSeconds)
+            else if ((timeProvider.UtcNow.UtcDateTime - lastHeartbeat).TotalSeconds >= sseHeartbeatSeconds)
             {
                 // V2-H05: SSE heartbeat to prevent proxy/browser timeouts
                 await writer.WriteAsync(encoding.GetBytes(":\n\n"));
                 await writer.FlushAsync();
-                lastHeartbeat = DateTime.UtcNow;
+                lastHeartbeat = timeProvider.UtcNow.UtcDateTime;
             }
 
             await Task.Delay(250, ctx.RequestAborted).ContinueWith(_ => { });
         }
 
-        if (DateTime.UtcNow - start >= timeout)
+        if (timeProvider.UtcNow.UtcDateTime - start >= timeout)
         {
             await WriteSseEvent(writer, encoding, "timeout", new { runId, seconds = sseTimeoutSeconds });
         }
@@ -1445,7 +1452,7 @@ app.MapGet("/dats/status", async (AllowedRootPathPolicy allowedRootPolicy, Cance
     Results.Ok(await DashboardDataBuilder.BuildDatStatusAsync(allowedRootPolicy, ct)))
     .Produces<DashboardDatStatusResponse>(StatusCodes.Status200OK);
 
-app.MapPost("/dats/update", async (HttpContext ctx, AllowedRootPathPolicy allowedRootPolicy) =>
+app.MapPost("/dats/update", async (HttpContext ctx, AllowedRootPathPolicy allowedRootPolicy, IHttpClientFactory httpClientFactory) =>
 {
     var dataDir = RunEnvironmentBuilder.TryResolveDataDir()
         ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
@@ -1507,7 +1514,7 @@ app.MapPost("/dats/update", async (HttpContext ctx, AllowedRootPathPolicy allowe
     int downloaded = 0, skipped = 0, failed = 0;
     var errors = new List<string>();
 
-    using var datService = new DatSourceService(datRoot);
+    using var datService = new DatSourceService(datRoot, httpClientFactory.CreateClient(DatSourceService.HttpClientName));
     foreach (var entry in catalog.Where(e => !string.IsNullOrWhiteSpace(e.Url) && !string.Equals(e.Format, "nointro-pack", StringComparison.OrdinalIgnoreCase)))
     {
         var fileName = entry.Id + ".dat";
@@ -1740,6 +1747,8 @@ app.MapPost("/runs/{runId}/fixdat", (
 app.Lifetime.ApplicationStopping.Register(() =>
 {
     var mgr = app.Services.GetRequiredService<RunLifecycleManager>();
+    // SYNC-JUSTIFIED: ApplicationStopping callback is synchronous; blocking here ensures
+    // active run cancellation and recovery metadata complete before host teardown.
     mgr.ShutdownAsync().GetAwaiter().GetResult();
 });
 

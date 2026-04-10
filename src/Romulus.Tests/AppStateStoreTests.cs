@@ -91,7 +91,7 @@ public class AppStateStoreTests
     [Fact]
     public void Watch_NotifiesOnChange()
     {
-        var notifications = new List<IDictionary<string, object?>>();
+        var notifications = new List<IReadOnlyDictionary<string, object?>>();
         using var _ = _store.Watch(state => notifications.Add(state));
 
         _store.SetValue("key", "val");

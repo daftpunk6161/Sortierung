@@ -280,7 +280,7 @@ public sealed partial class MainViewModel
         {
             _progressPhaseKey = phaseKey;
             _progressPhaseEventCount = 0;
-            _progressPhaseStartedUtc = DateTime.UtcNow;
+            _progressPhaseStartedUtc = _timeProvider.UtcNow.UtcDateTime;
         }
 
         _progressPhaseEventCount++;
@@ -296,7 +296,7 @@ public sealed partial class MainViewModel
 
         var elapsedSeconds = _progressPhaseStartedUtc == DateTime.MinValue
             ? 0
-            : (DateTime.UtcNow - _progressPhaseStartedUtc).TotalSeconds;
+            : (_timeProvider.UtcNow.UtcDateTime - _progressPhaseStartedUtc).TotalSeconds;
 
         // Grow conservatively when no explicit x/y progress is available.
         var eventFactor = Math.Min(1d, _progressPhaseEventCount / 120d);

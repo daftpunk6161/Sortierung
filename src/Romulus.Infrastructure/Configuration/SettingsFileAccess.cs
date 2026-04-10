@@ -12,6 +12,13 @@ public static class SettingsFileAccess
     private const int InitialDelayMs = 25;
 
     public static string? TryReadAllText(string path, int maxAttempts = DefaultMaxAttempts)
+        // SYNC-JUSTIFIED: configuration load is consumed by synchronous startup paths.
+        => TryReadAllTextAsync(path, maxAttempts).GetAwaiter().GetResult();
+
+    public static async Task<string?> TryReadAllTextAsync(
+        string path,
+        int maxAttempts = DefaultMaxAttempts,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             return null;
@@ -36,7 +43,7 @@ public static class SettingsFileAccess
                 if (attempt == maxAttempts)
                     return null;
 
-                Thread.Sleep(delayMs);
+                await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
                 delayMs *= 2;
             }
         }

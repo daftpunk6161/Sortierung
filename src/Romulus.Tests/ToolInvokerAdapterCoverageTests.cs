@@ -229,6 +229,41 @@ public sealed class ToolInvokerAdapterCoverageTests : IDisposable
     }
 
     [Fact]
+    public void Invoke_DolphinTool_UsesConfiguredCompressionParameters()
+    {
+        var source = CreateFile("game-config.iso", 100);
+        var target = Path.Combine(_tempDir, "game-config.rvz");
+
+        var runner = new FakeToolRunner();
+        runner.RegisterTool("dolphintool", source);
+        runner.NextResult = new ToolResult(0, "ok", true);
+
+        var adapter = new ToolInvokerAdapter(runner);
+        var cap = MakeCapability("dolphintool", "convert") with
+        {
+            CompressionAlgorithm = "lzma2",
+            CompressionLevel = 9,
+            BlockSize = 262144
+        };
+
+        var result = adapter.Invoke(source, target, cap);
+
+        Assert.True(result.Success);
+        var args = runner.LastArgs!;
+
+        var algorithmIndex = Array.IndexOf(args, "-c");
+        var levelIndex = Array.IndexOf(args, "-l");
+        var blockIndex = Array.IndexOf(args, "-b");
+
+        Assert.True(algorithmIndex >= 0);
+        Assert.True(levelIndex >= 0);
+        Assert.True(blockIndex >= 0);
+        Assert.Equal("lzma2", args[algorithmIndex + 1]);
+        Assert.Equal("9", args[levelIndex + 1]);
+        Assert.Equal("262144", args[blockIndex + 1]);
+    }
+
+    [Fact]
     public void Invoke_7z_BuildsCompressArgs()
     {
         var source = CreateFile("game.rom", 100);

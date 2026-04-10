@@ -61,7 +61,7 @@ public sealed class CartridgeHeaderDetector
         {
             result = ScanHeader(path);
         }
-        catch (IOException) { }
+        catch (IOException) { /* SUPPRESSED: best-effort header probe; locked files remain undecided instead of failing run */ }
         catch (UnauthorizedAccessException) { }
 
         _cache.Set(normalizedPath, result);
@@ -199,7 +199,7 @@ public sealed class CartridgeHeaderDetector
                 }
             }
         }
-        catch (IOException) { }
+        catch (IOException) { /* SUPPRESSED: best-effort SNES header probe; unreadable files stay unknown */ }
         catch (UnauthorizedAccessException) { }
 
         return null;

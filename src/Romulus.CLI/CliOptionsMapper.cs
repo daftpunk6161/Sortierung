@@ -31,6 +31,8 @@ internal static class CliOptionsMapper
             var materializer = new RunConfigurationMaterializer(
                 new RunConfigurationResolver(profileService),
                 new RunOptionsFactory());
+            // SYNC-JUSTIFIED: mapper contract is synchronous; materialization must finish
+            // before command dispatch continues in the same execution flow.
             var materialized = materializer.MaterializeAsync(
                 CreateDraft(cli),
                 CreateExplicitness(cli),
@@ -51,6 +53,8 @@ internal static class CliOptionsMapper
 
             var runOptions = (auditPath == materialized.Options.AuditPath && cli.ReportPath == materialized.Options.ReportPath)
                 ? materialized.Options
+                // SYNC-JUSTIFIED: second materialization reuses computed overlays and preserves
+                // deterministic option shaping for sync CLI call paths.
                 : materializer.MaterializeAsync(
                     CreateDraft(cli),
                     CreateExplicitness(cli),

@@ -32,6 +32,15 @@ public sealed record ConversionCapability
     /// <summary>Tool command verb (e.g. createcd, convert).</summary>
     public required string Command { get; init; }
 
+    /// <summary>Optional RVZ compression algorithm (e.g. zstd).</summary>
+    public string? CompressionAlgorithm { get; init; }
+
+    /// <summary>Optional RVZ compression level.</summary>
+    public int? CompressionLevel { get; init; }
+
+    /// <summary>Optional RVZ block size in bytes.</summary>
+    public int? BlockSize { get; init; }
+
     /// <summary>Optional whitelist of applicable console keys.</summary>
     public IReadOnlySet<string>? ApplicableConsoles { get; init; }
 

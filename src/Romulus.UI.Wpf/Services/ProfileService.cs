@@ -18,6 +18,10 @@ public sealed class ProfileService
 
     /// <summary>Delete the saved profile. Returns true if deleted.</summary>
     public static bool Delete()
+        // SYNC-JUSTIFIED: legacy synchronous call sites (commands/tests) still depend on bool return.
+        => DeleteAsync(CancellationToken.None).GetAwaiter().GetResult();
+
+    public static async Task<bool> DeleteAsync(CancellationToken cancellationToken = default)
     {
         if (!File.Exists(SettingsPath)) return false;
 
@@ -33,11 +37,11 @@ public sealed class ProfileService
             }
             catch (IOException) when (attempt < maxAttempts)
             {
-                Thread.Sleep(25 * attempt);
+                await Task.Delay(25 * attempt, cancellationToken).ConfigureAwait(false);
             }
             catch (UnauthorizedAccessException) when (attempt < maxAttempts)
             {
-                Thread.Sleep(25 * attempt);
+                await Task.Delay(25 * attempt, cancellationToken).ConfigureAwait(false);
             }
         }
 

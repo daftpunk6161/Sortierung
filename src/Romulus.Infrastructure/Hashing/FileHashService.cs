@@ -206,7 +206,10 @@ public sealed class FileHashService : IDisposable
         {
             "SHA256" => (HashAlgorithm)SHA256.Create(),
             "MD5" => MD5.Create(),
-            _ => SHA1.Create() // SHA1 default
+            // SHA1 remains the default for DAT/No-Intro/Redump interoperability:
+            // those ecosystems publish canonical SHA1 sets and parity checks rely on it.
+            // Callers that do not require DAT parity should explicitly request SHA256.
+            _ => SHA1.Create()
         };
 
         var bytes = algo.ComputeHash(stream);

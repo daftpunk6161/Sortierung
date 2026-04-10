@@ -7,6 +7,7 @@ using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Paths;
+using Romulus.Infrastructure.Time;
 
 namespace Romulus.Api;
 
@@ -24,15 +25,18 @@ public sealed class RunLifecycleManager
     private Task? _activeTask;
     private readonly IFileSystem _fs;
     private readonly IAuditStore _audit;
+    private readonly ITimeProvider _timeProvider;
     private readonly Func<RunRecord, IFileSystem, IAuditStore, CancellationToken, RunExecutionOutcome> _executor;
 
     public RunLifecycleManager(
         IFileSystem fs,
         IAuditStore audit,
-        Func<RunRecord, IFileSystem, IAuditStore, CancellationToken, RunExecutionOutcome> executor)
+        Func<RunRecord, IFileSystem, IAuditStore, CancellationToken, RunExecutionOutcome> executor,
+        ITimeProvider? timeProvider = null)
     {
         _fs = fs;
         _audit = audit;
+        _timeProvider = timeProvider ?? new SystemTimeProvider();
         _executor = executor;
     }
 
@@ -129,10 +133,11 @@ public sealed class RunLifecycleManager
                 ConflictPolicy = normalizedConflictPolicy,
                 TrashRoot = string.IsNullOrWhiteSpace(request.TrashRoot) ? null : request.TrashRoot.Trim(),
                 Extensions = normalizedExtensions,
-                StartedUtc = DateTime.UtcNow,
+                StartedUtc = _timeProvider.UtcNow.UtcDateTime,
                 IdempotencyKey = idempotencyKey,
                 RequestFingerprint = requestFingerprint,
-                RecoveryState = "in-progress"
+                RecoveryState = "in-progress",
+                UtcNowProvider = () => _timeProvider.UtcNow
             };
 
             if (!string.IsNullOrWhiteSpace(ownerClientId))
@@ -176,7 +181,7 @@ public sealed class RunLifecycleManager
         if (run.Status == RunConstants.StatusRunning)
         {
             run.CancellationRequested = true;
-            run.CancelledAtUtc = DateTime.UtcNow;
+            run.CancelledAtUtc = _timeProvider.UtcNow.UtcDateTime;
 
             // F01 hardening: cancel and dispose are synchronized on RunRecord.
             var cancellationAccepted = run.TryCancelExecution();
@@ -295,7 +300,7 @@ public sealed class RunLifecycleManager
         }
         catch (OperationCanceledException)
         {
-            var elapsedMs = (long)Math.Max(0, (DateTime.UtcNow - run.StartedUtc).TotalMilliseconds);
+            var elapsedMs = (long)Math.Max(0, (_timeProvider.UtcNow.UtcDateTime - run.StartedUtc).TotalMilliseconds);
             run.Status = RunConstants.StatusCancelled;
             run.Result = new ApiRunResult
             {
@@ -322,7 +327,7 @@ public sealed class RunLifecycleManager
         {
             run.AuditPath = File.Exists(auditPath) ? auditPath : run.AuditPath;
             run.ReportPath = File.Exists(reportPath) ? reportPath : run.ReportPath;
-            run.CompletedUtc = DateTime.UtcNow;
+            run.CompletedUtc = _timeProvider.UtcNow.UtcDateTime;
             UpdateRecoveryState(run);
             run.SignalCompletion();
             run.DisposeCancellationSource();
@@ -376,7 +381,7 @@ public sealed class RunLifecycleManager
             _audit.WriteMetadataSidecar(auditPath, new Dictionary<string, object>
             {
                 ["Status"] = "emergency-shutdown",
-                ["ShutdownUtc"] = DateTime.UtcNow.ToString("o")
+                ["ShutdownUtc"] = _timeProvider.UtcNow.ToString("o")
             });
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

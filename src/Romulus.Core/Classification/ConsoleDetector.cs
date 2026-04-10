@@ -547,7 +547,7 @@ public sealed class ConsoleDetector
             return bestEntry.ConsoleKey;
         }
         catch (InvalidDataException) { /* corrupt/not-a-zip */ }
-        catch (IOException) { }
+        catch (IOException) { /* SUPPRESSED: archive content inspection is optional; I/O errors degrade to unknown detection */ }
         catch (UnauthorizedAccessException) { }
 
         return null;

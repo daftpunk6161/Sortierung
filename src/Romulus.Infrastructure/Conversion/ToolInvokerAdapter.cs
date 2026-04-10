@@ -132,15 +132,7 @@ public sealed class ToolInvokerAdapter(IToolRunner tools) : IToolInvoker
 
         if (toolName == "dolphintool")
         {
-            return [
-                command,
-                "-i", sourcePath,
-                "-o", targetPath,
-                "-f", "rvz",
-                "-c", "zstd",
-                "-l", "5",
-                "-b", "131072"
-            ];
+            return RvzFormatHelper.BuildDolphinRvzArguments(command, sourcePath, targetPath, capability);
         }
 
         if (toolName == "7z")
@@ -184,22 +176,6 @@ public sealed class ToolInvokerAdapter(IToolRunner tools) : IToolInvoker
 
     private static bool VerifyRvz(string targetPath)
     {
-        var info = new FileInfo(targetPath);
-        if (!info.Exists || info.Length < 4)
-            return false;
-
-        try
-        {
-            using var fs = File.OpenRead(targetPath);
-            Span<byte> magic = stackalloc byte[4];
-            if (fs.ReadAtLeast(magic, 4, throwOnEndOfStream: false) < 4)
-                return false;
-
-            return magic[0] == 'R' && magic[1] == 'V' && magic[2] == 'Z' && magic[3] == 0x01;
-        }
-        catch (IOException)
-        {
-            return false;
-        }
+        return RvzFormatHelper.VerifyMagicBytes(targetPath);
     }
 }

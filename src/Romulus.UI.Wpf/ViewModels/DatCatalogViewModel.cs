@@ -185,7 +185,8 @@ public sealed partial class DatCatalogViewModel : ObservableObject
         int success = 0, failed = 0;
         try
         {
-            using var datService = new DatSourceService(datRoot);
+            using var datHttpClient = DatSourceService.CreateConfiguredHttpClient();
+            using var datService = new DatSourceService(datRoot, datHttpClient);
             for (int i = 0; i < autoEntries.Count; i++)
             {
                 var entry = autoEntries[i];
@@ -207,7 +208,7 @@ public sealed partial class DatCatalogViewModel : ObservableObject
                         entry.LocalPath = result;
                         // Clean up .bak after successful download
                         try { var bak = result + ".bak"; if (File.Exists(bak)) File.Delete(bak); }
-                        catch (IOException) { }
+                        catch (IOException) { /* SUPPRESSED: stale backup cleanup is non-critical post-download hygiene */ }
                         _addLog($"  ✓ {entry.Id}", "INFO");
                     }
                     else
@@ -342,7 +343,8 @@ public sealed partial class DatCatalogViewModel : ObservableObject
 
         try
         {
-            using var datService = new DatSourceService(datRoot);
+            using var datHttpClient = DatSourceService.CreateConfiguredHttpClient();
+            using var datService = new DatSourceService(datRoot, datHttpClient);
             for (int i = 0; i < selected.Count; i++)
             {
                 var entry = selected[i];
@@ -364,7 +366,7 @@ public sealed partial class DatCatalogViewModel : ObservableObject
                         entry.IsSelected = false;
                         // Clean up .bak after successful download
                         try { var bak = result + ".bak"; if (File.Exists(bak)) File.Delete(bak); }
-                        catch (IOException) { }
+                        catch (IOException) { /* SUPPRESSED: stale backup cleanup is non-critical post-download hygiene */ }
                     }
                     else { failed++; }
                 }
@@ -401,7 +403,8 @@ public sealed partial class DatCatalogViewModel : ObservableObject
             int imported = 0;
             await Task.Run(() =>
             {
-                using var datService = new DatSourceService(datRoot);
+                using var datHttpClient = DatSourceService.CreateConfiguredHttpClient();
+                using var datService = new DatSourceService(datRoot, datHttpClient);
 
                 // Filter catalog entries by group/format if requested
                 var filteredCatalog = _catalog.AsEnumerable();

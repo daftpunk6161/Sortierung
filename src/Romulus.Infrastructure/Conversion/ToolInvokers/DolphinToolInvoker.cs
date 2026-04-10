@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
+using Romulus.Infrastructure.Conversion;
 
 namespace Romulus.Infrastructure.Conversion.ToolInvokers;
 
@@ -42,16 +43,7 @@ public sealed class DolphinToolInvoker(IToolRunner tools) : IToolInvoker
         if (constraintError is not null)
             return ToolInvokerSupport.ConstraintFailure(constraintError);
 
-        var args = new[]
-        {
-            commandToken,
-            "-i", sourcePath,
-            "-o", targetPath,
-            "-f", "rvz",
-            "-c", "zstd",
-            "-l", "5",
-            "-b", "131072"
-        };
+        var args = RvzFormatHelper.BuildDolphinRvzArguments(commandToken, sourcePath, targetPath, capability);
 
         var watch = Stopwatch.StartNew();
         var result = _tools.InvokeProcess(
@@ -90,20 +82,8 @@ public sealed class DolphinToolInvoker(IToolRunner tools) : IToolInvoker
         }
 
         // Fallback: RVZ magic byte check when dolphintool is not available.
-        try
-        {
-            using var fs = File.OpenRead(targetPath);
-            Span<byte> magic = stackalloc byte[4];
-            if (fs.ReadAtLeast(magic, 4, throwOnEndOfStream: false) < 4)
-                return VerificationStatus.VerifyFailed;
-
-            return magic[0] == 'R' && magic[1] == 'V' && magic[2] == 'Z' && magic[3] == 0x01
-                ? VerificationStatus.Verified
-                : VerificationStatus.VerifyFailed;
-        }
-        catch (IOException)
-        {
-            return VerificationStatus.VerifyFailed;
-        }
+        return RvzFormatHelper.VerifyMagicBytes(targetPath)
+            ? VerificationStatus.Verified
+            : VerificationStatus.VerifyFailed;
     }
 }
