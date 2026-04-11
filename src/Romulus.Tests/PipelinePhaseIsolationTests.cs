@@ -171,8 +171,8 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
         Assert.Single(emitted);
         Assert.Contains(
             progress,
-            message => message.Contains("WARNING: Scan incomplete:", StringComparison.Ordinal)
-                       && message.Contains("2 directories inaccessible", StringComparison.Ordinal));
+            message => message.Contains("WARNING: Scan unvollstaendig:", StringComparison.Ordinal)
+                       && message.Contains("2 Verzeichnis", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -560,9 +560,9 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
             CreateContext(options, new TestFileSystem(), new TrackingAuditStore(), progressMessages.Add),
             CancellationToken.None);
 
-        Assert.Contains(progressMessages, message => message.Contains("[Convert] Fortschritt: 1/3", StringComparison.Ordinal));
-        Assert.Contains(progressMessages, message => message.Contains("[Convert] Fortschritt: 2/3", StringComparison.Ordinal));
-        Assert.Contains(progressMessages, message => message.Contains("[Convert] Fortschritt: 3/3", StringComparison.Ordinal));
+        Assert.Contains(progressMessages, message => message.Contains("[Convert] Progress: 1/3", StringComparison.Ordinal));
+        Assert.Contains(progressMessages, message => message.Contains("[Convert] Progress: 2/3", StringComparison.Ordinal));
+        Assert.Contains(progressMessages, message => message.Contains("[Convert] Progress: 3/3", StringComparison.Ordinal));
     }
 
     [Fact]

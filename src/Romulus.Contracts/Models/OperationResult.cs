@@ -53,7 +53,7 @@ public static class RunOutcomeExtensions
 public sealed class OperationResult
 {
     // ── Operation-level status constants ─────────────────────────────
-    public const string StatusCompleted = "completed";
+    public const string StatusCompleted = RunConstants.StatusCompleted;
     public const string StatusSkipped = "skipped";
     public const string StatusError = "error";
     public const string StatusContinue = "continue";

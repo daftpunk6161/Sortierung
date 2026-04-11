@@ -1,3 +1,5 @@
+using Romulus.Contracts.Ports;
+
 namespace Romulus.Core.SetParsing;
 
 /// <summary>
@@ -15,23 +17,25 @@ public static class CueSetParser
     /// Returns all file paths referenced in a CUE sheet (resolved relative to the CUE directory).
     /// Only includes files that exist on disk.
     /// </summary>
-    public static IReadOnlyList<string> GetRelatedFiles(string cuePath)
+    public static IReadOnlyList<string> GetRelatedFiles(string cuePath, ISetParserIo? io = null)
     {
-        return ParseReferencedPaths(cuePath, existingOnly: true);
+        var parserIo = SetParserIoResolver.Resolve(io);
+        return ParseReferencedPaths(cuePath, existingOnly: true, parserIo);
     }
 
     /// <summary>
     /// Returns referenced files that do NOT exist on disk.
     /// </summary>
-    public static IReadOnlyList<string> GetMissingFiles(string cuePath)
+    public static IReadOnlyList<string> GetMissingFiles(string cuePath, ISetParserIo? io = null)
     {
-        return ParseReferencedPaths(cuePath, existingOnly: false)
-            .Where(f => !SetParserIo.Exists(f)).ToList();
+        var parserIo = SetParserIoResolver.Resolve(io);
+        return ParseReferencedPaths(cuePath, existingOnly: false, parserIo)
+            .Where(f => !parserIo.Exists(f)).ToList();
     }
 
-    private static IReadOnlyList<string> ParseReferencedPaths(string cuePath, bool existingOnly)
+    private static IReadOnlyList<string> ParseReferencedPaths(string cuePath, bool existingOnly, ISetParserIo io)
     {
-        if (string.IsNullOrWhiteSpace(cuePath) || !SetParserIo.Exists(cuePath))
+        if (string.IsNullOrWhiteSpace(cuePath) || !io.Exists(cuePath))
             return Array.Empty<string>();
 
         var dir = Path.GetDirectoryName(Path.GetFullPath(cuePath)) ?? "";
@@ -43,7 +47,7 @@ public static class CueSetParser
         var normalizedDir = dir.TrimEnd(Path.DirectorySeparatorChar)
                             + Path.DirectorySeparatorChar;
 
-        foreach (var line in SetParserIo.ReadLines(cuePath))
+        foreach (var line in io.ReadLines(cuePath))
         {
             var match = RxCueEntry.Match(line);
             if (!match.Success) continue;
@@ -57,7 +61,7 @@ public static class CueSetParser
             if (!fullPath.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            if (seen.Add(fullPath) && (!existingOnly || SetParserIo.Exists(fullPath)))
+            if (seen.Add(fullPath) && (!existingOnly || io.Exists(fullPath)))
                 result.Add(fullPath);
         }
 

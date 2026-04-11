@@ -1,5 +1,6 @@
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
+using Romulus.Contracts;
 
 namespace Romulus.Infrastructure.Safety;
 
@@ -152,14 +153,14 @@ public sealed class SafetyValidator
             if (normalized is null)
             {
                 blockers.Add($"Invalid root path: {root}");
-                pathChecks.Add(new PathCheckEntry { Path = root, Status = "blocked", Reason = "Invalid path" });
+                pathChecks.Add(new PathCheckEntry { Path = root, Status = RunConstants.StatusBlocked, Reason = "Invalid path" });
                 continue;
             }
 
             if (!Directory.Exists(normalized))
             {
                 blockers.Add($"Root directory does not exist: {normalized}");
-                pathChecks.Add(new PathCheckEntry { Path = normalized, Status = "blocked", Reason = "Does not exist" });
+                pathChecks.Add(new PathCheckEntry { Path = normalized, Status = RunConstants.StatusBlocked, Reason = "Does not exist" });
                 continue;
             }
 
@@ -167,7 +168,7 @@ public sealed class SafetyValidator
             if (Path.GetPathRoot(normalized) == normalized)
             {
                 blockers.Add($"Root is a drive root (dangerous): {normalized}");
-                pathChecks.Add(new PathCheckEntry { Path = normalized, Status = "blocked", Reason = "Drive root" });
+                pathChecks.Add(new PathCheckEntry { Path = normalized, Status = RunConstants.StatusBlocked, Reason = "Drive root" });
                 continue;
             }
 
@@ -181,11 +182,11 @@ public sealed class SafetyValidator
             if (protectedMatch is not null)
             {
                 blockers.Add($"Root is inside protected path '{protectedMatch}': {normalized}");
-                pathChecks.Add(new PathCheckEntry { Path = normalized, Status = "blocked", Reason = $"Inside protected: {protectedMatch}" });
+                pathChecks.Add(new PathCheckEntry { Path = normalized, Status = RunConstants.StatusBlocked, Reason = $"Inside protected: {protectedMatch}" });
                 continue;
             }
 
-            pathChecks.Add(new PathCheckEntry { Path = normalized, Status = "ok" });
+            pathChecks.Add(new PathCheckEntry { Path = normalized, Status = RunConstants.StatusOk });
         }
 
         // Check extensions
@@ -234,7 +235,7 @@ public sealed class SafetyValidator
             }
         }
 
-        var status = blockers.Count > 0 ? "blocked" : "ok";
+        var status = blockers.Count > 0 ? RunConstants.StatusBlocked : RunConstants.StatusOk;
 
         return new SandboxValidationResult
         {

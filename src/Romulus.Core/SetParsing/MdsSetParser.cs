@@ -1,3 +1,5 @@
+using Romulus.Contracts.Ports;
+
 namespace Romulus.Core.SetParsing;
 
 /// <summary>
@@ -6,20 +8,22 @@ namespace Romulus.Core.SetParsing;
 /// </summary>
 public static class MdsSetParser
 {
-    public static IReadOnlyList<string> GetRelatedFiles(string mdsPath)
+    public static IReadOnlyList<string> GetRelatedFiles(string mdsPath, ISetParserIo? io = null)
     {
-        if (string.IsNullOrWhiteSpace(mdsPath) || !SetParserIo.Exists(mdsPath))
+        var parserIo = SetParserIoResolver.Resolve(io);
+        if (string.IsNullOrWhiteSpace(mdsPath) || !parserIo.Exists(mdsPath))
             return Array.Empty<string>();
 
         var dir = Path.GetDirectoryName(mdsPath) ?? "";
         var baseName = Path.GetFileNameWithoutExtension(mdsPath);
         var mdfPath = Path.GetFullPath(Path.Combine(dir, baseName + ".mdf"));
 
-        return SetParserIo.Exists(mdfPath) ? new[] { mdfPath } : Array.Empty<string>();
+        return parserIo.Exists(mdfPath) ? new[] { mdfPath } : Array.Empty<string>();
     }
 
-    public static IReadOnlyList<string> GetMissingFiles(string mdsPath)
+    public static IReadOnlyList<string> GetMissingFiles(string mdsPath, ISetParserIo? io = null)
     {
+        var parserIo = SetParserIoResolver.Resolve(io);
         if (string.IsNullOrWhiteSpace(mdsPath))
             return Array.Empty<string>();
 
@@ -27,6 +31,6 @@ public static class MdsSetParser
         var baseName = Path.GetFileNameWithoutExtension(mdsPath);
         var mdfPath = Path.Combine(dir, baseName + ".mdf");
 
-        return !SetParserIo.Exists(mdfPath) ? new[] { mdfPath } : Array.Empty<string>();
+        return !parserIo.Exists(mdfPath) ? new[] { mdfPath } : Array.Empty<string>();
     }
 }

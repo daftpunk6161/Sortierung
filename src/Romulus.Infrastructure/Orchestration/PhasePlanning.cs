@@ -22,7 +22,7 @@ public sealed class PhaseStepResult
     public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
 
     public static PhaseStepResult Ok(int itemCount = 0, object? typedResult = null)
-        => new() { Status = "ok", ItemCount = itemCount, TypedResult = typedResult };
+        => new() { Status = RunConstants.StatusOk, ItemCount = itemCount, TypedResult = typedResult };
 
     public static PhaseStepResult Skipped(object? typedResult = null)
         => new() { Status = "skipped", ItemCount = 0, TypedResult = typedResult };

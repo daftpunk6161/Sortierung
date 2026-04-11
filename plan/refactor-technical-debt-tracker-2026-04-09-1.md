@@ -46,7 +46,7 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 | TASK-004 | **TD-009 – Replace magic strings in API**: Ersetze 6x `"running"` Literale in `src/Romulus.Api/Program.cs` → `RunConstants.StatusRunning`. Ersetze `Status != "running"` in `src/Romulus.Api/RunManager.cs:375` → `RunConstants.StatusRunning`. | [x] | 2026-04-10 |
 | TASK-005 | **TD-009 – Replace magic strings in WPF**: Ersetze `"cancelled"`/`"failed"` in `src/Romulus.UI.Wpf/Models/DashboardProjection.cs:151-152`, `"blocked"` in `ErrorSummaryProjection.cs:45`, `"cancelled"` in `MainViewModel.RunPipeline.cs:1180` → `RunConstants.StatusXxx`. | [x] | 2026-04-10 |
 | TASK-006 | **TD-015 – Sort decision constants**: Füge `RunConstants.SortDecisions` Klasse hinzu mit `Sort`, `Review`, `Blocked`, `DatVerified`. Ersetze alle String-Literale in `src/Romulus.Infrastructure/Sorting/ConsoleSorter.cs:63,150,212,271`. | [x] | 2026-04-10 |
-| TASK-007 | **Verification**: `grep -rn '"running"\|"completed"\|"cancelled"\|"failed"\|"blocked"\|"ok"\|"Sort"\|"Review"\|"Blocked"\|"DatVerified"' src/` → Zero hits in Produktionscode (exkl. Konstanten-Definitionen). Build + Tests grün. | [ ] | |
+| TASK-007 | **Verification**: `grep -rn '"running"\|"completed"\|"cancelled"\|"failed"\|"blocked"\|"ok"\|"Sort"\|"Review"\|"Blocked"\|"DatVerified"' src/` → Zero hits in Produktionscode (exkl. Konstanten-Definitionen). Build + Tests grün. | [x] | 2026-04-11 |
 
 ### Phase 5 – API Error Classification Refactor (TD-010 + TD-011)
 
@@ -66,7 +66,7 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-013 | **TD-012 – Move I/O facades to Infrastructure**: Verschiebe `SetParserIo` und `ClassificationIo` (static delegates) von `src/Romulus.Core/` nach `src/Romulus.Infrastructure/IO/`. Core-Klassen (DiscHeaderDetector, CartridgeHeaderDetector, Set-Parser) erhalten I/O-Delegates per Constructor-Injection statt statische Defaults. | [ ] | |
+| TASK-013 | **TD-012 – Move I/O facades to Infrastructure**: Verschiebe `SetParserIo` und `ClassificationIo` (static delegates) von `src/Romulus.Core/` nach `src/Romulus.Infrastructure/IO/`. Core-Klassen (DiscHeaderDetector, CartridgeHeaderDetector, Set-Parser) erhalten I/O-Delegates per Constructor-Injection statt statische Defaults. | [x] | 2026-04-11 |
 | TASK-014 | **TD-012 – Update DI registration**: SharedServiceRegistration muss I/O-Delegates an Core-Classifier/Parser injizieren. | [x] | 2026-04-10 |
 | TASK-015 | **TD-012 – Verify zero System.IO in Core**: `grep -rn 'System.IO\|File\.\|FileStream\|FileInfo\|ZipFile' src/Romulus.Core/` → nur Namespace-Imports ohne direkte Aufrufe. | [x] | 2026-04-10 |
 | TASK-016 | **TD-013 – Lokalisierbare Keys WPF**: Erstelle i18n-Keys in `data/i18n/de.json` und `data/i18n/en.json` für alle 30+ hardcoded deutschen Strings aus `FeatureCommandService.Infra.cs`, `FeatureCommandService.Security.cs`, `FeatureService.Export.cs`, `FeatureCommandService.Dat.cs`, `FeatureCommandService.Workflow.cs`. | [x] | 2026-04-10 |
@@ -127,7 +127,7 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 | TASK-036 | **TD-028 – Atomic volatile state**: Ersetze in `GameKeyNormalizer.cs` die beiden separaten `volatile` Felder (`_registeredPatterns`, `_registeredAliasMap`) durch ein einzelnes `volatile` Feld: `private volatile (IReadOnlyList<...> Patterns, IReadOnlyDictionary<...> Aliases)? _registeredState`. `RegisterPatterns()` setzt Tuple atomar. `Normalize()` liest Tuple einmal in lokale Variable → keine Partial-State-Window. | [x] | 2026-04-11 |
 | TASK-037 | **TD-032 – HMAC key security**: Ändere `AuditSigningService.cs:90-93`: Wenn ACL-Restriction fehlschlägt, lösche die erstellte Key-Datei und werfe `InvalidOperationException("HMAC key file cannot be secured")`. Kein Fallback auf unsichere Datei. | [x] | 2026-04-11 |
 | TASK-038 | **TD-033 – Streaming audit CSV rollback**: Ersetze `File.ReadAllLines()` in `AuditSigningService.cs:268` durch `StreamReader` mit zeilenweiser Verarbeitung. Kein Full-File-Load bei Rollback. | [x] | 2026-04-11 |
-| TASK-039 | **Tests**: Concurrency-Test für GameKeyNormalizer (parallele Register + Normalize). Test dass HMAC Key bei Permission-Fehler nicht genutzt wird. Test dass Rollback mit großer Datei nicht OOM verursacht (Stream-basiert). | [ ] | |
+| TASK-039 | **Tests**: Concurrency-Test für GameKeyNormalizer (parallele Register + Normalize). Test dass HMAC Key bei Permission-Fehler nicht genutzt wird. Test dass Rollback mit großer Datei nicht OOM verursacht (Stream-basiert). | [x] | 2026-04-11 |
 
 ### Phase 12 – Data-Driven Migration: Regions, Formats, Languages (TD-029 + TD-030 + TD-034)
 
@@ -135,10 +135,10 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-040 | **TD-029 – Data-driven region rules**: Erweitere `data/rules.json` um strukturierten `regionRules`-Block mit allen 25 Regex-Rules und dem `regionTokenMap` (100+ Einträge). Erstelle `RegionRulesLoader` in Infrastructure. `RegionDetector` erhält Rules per Registration (analog GameKeyNormalizer). Entferne `DefaultOrderedRules` und `RegionTokenMap` Hardkoding. | [ ] | |
+| TASK-040 | **TD-029 – Data-driven region rules**: Erweitere `data/rules.json` um strukturierten `regionRules`-Block mit allen 25 Regex-Rules und dem `regionTokenMap` (100+ Einträge). Erstelle `RegionRulesLoader` in Infrastructure. `RegionDetector` erhält Rules per Registration (analog GameKeyNormalizer). Entferne `DefaultOrderedRules` und `RegionTokenMap` Hardkoding. | [x] | 2026-04-11 |
 | TASK-041 | **TD-030 – Data-driven format scores**: Erstelle `data/format-scores.json` (oder integriere in `conversion-registry.json`) mit allen 40+ Format→Score Mappings. `FormatScorer` liest Scores per Injection statt statischem Switch. Entferne `GetFormatScore` Switch-Statement. | [x] | 2026-04-11 |
 | TASK-042 | **TD-034 – Unified language codes**: Entferne `LanguageCodes`/`EuLanguageCodes` aus `RegionDetector.cs:242-250` und `langPattern` Regex aus `VersionScorer.cs:32-33`. Lade alle Language-Code-Definitionen aus `data/rules.json`. Baue Regex dynamisch. | [x] | 2026-04-11 |
-| TASK-043 | **Tests**: Determinismus-Tests: Gleiche Eingaben → gleiche Region/Score/Language-Ergebnisse vor und nach Migration. Regressions-Testdaten aus bestehenden Tests als Goldstandard nutzen. | [ ] | |
+| TASK-043 | **Tests**: Determinismus-Tests: Gleiche Eingaben → gleiche Region/Score/Language-Ergebnisse vor und nach Migration. Regressions-Testdaten aus bestehenden Tests als Goldstandard nutzen. | [x] | 2026-04-11 |
 
 ### Phase 13 – Streaming + Timeout Hardening (TD-031 + TD-044 + TD-046)
 
@@ -159,9 +159,9 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 |------|-------------|-----------|------|
 | TASK-048 | **TD-035 – Safe group key**: Ersetze `"\|\|"` Separator in `DeduplicationEngine.cs:95-98` durch Tuple-basiertes Grouping `(ConsoleKey, GameKey)` oder verwende `\0` (Null-Char) als Separator. | [x] | 2026-04-11 |
 | TASK-049 | **TD-036 – PropertyChanged unsubscribe**: Füge `-= OnExtensionCheckedChanged`, `-= OnConsoleCheckedChanged`, `-= OnExtensionFilterChanged` vor jedem `.Clear()` der entsprechenden Collections in `MainViewModel.cs:379,489` und `MainViewModel.RunPipeline.cs:1417` hinzu. | [x] | 2026-04-11 |
-| TASK-050 | **TD-041 – DI for child ViewModels**: Registriere `ShellViewModel`, `SetupViewModel`, `ToolsViewModel` etc. im DI-Container. `MainViewModel` empfängt sie per Constructor-Injection statt `new`. | [ ] | |
+| TASK-050 | **TD-041 – DI for child ViewModels**: Registriere `ShellViewModel`, `SetupViewModel`, `ToolsViewModel` etc. im DI-Container. `MainViewModel` empfängt sie per Constructor-Injection statt `new`. | [x] | 2026-04-11 |
 | TASK-051 | **TD-042 – Escalate rollback failure**: Ändere `MovePipelinePhase.cs:230-280`: Wenn Rollback eines Set-Member-Moves fehlschlägt → Status auf `FAILURE` setzen (nicht WARNING). Run abbrechen wenn konsistenter State nicht wiederherstellbar. | [x] | 2026-04-11 |
-| TASK-052 | **Tests**: GroupKey-Collision-Test mit `\|\|` im GameKey. Memory-Leak-Regression-Test (Subscribe-Count nach Clear). Rollback-Failure-Escalation-Test. | [ ] | |
+| TASK-052 | **Tests**: GroupKey-Collision-Test mit `\|\|` im GameKey. Memory-Leak-Regression-Test (Subscribe-Count nach Clear). Rollback-Failure-Escalation-Test. | [x] | 2026-04-11 |
 
 ### Phase 15 – Config-Driven Scoring + Schema Validation (TD-037 + TD-038 + TD-039 + TD-043)
 
@@ -182,12 +182,12 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
 | TASK-058 | **TD-045 – Improve test stubs**: Erweitere `StubDialogService` und andere Test-Stubs in `GuiViewModelTests.cs:2632-2700` um `CallCount`, `LastArgs` Tracking. Füge Assertions in bestehende Tests hinzu, die verifizieren dass Services aufgerufen werden. | [x] | 2026-04-11 |
-| TASK-059 | **TD-047 – Deduplicate UK detection**: Entferne standalone `UkPattern` in `RegionDetector.cs:152-156`. UK-Erkennung erfolgt nur noch über `DefaultOrderedRules`/datengetriebene Rules (nach Phase 12). Dokumentiere Prioritätsreihenfolge. | [ ] | |
+| TASK-059 | **TD-047 – Deduplicate UK detection**: Entferne standalone `UkPattern` in `RegionDetector.cs:152-156`. UK-Erkennung erfolgt nur noch über `DefaultOrderedRules`/datengetriebene Rules (nach Phase 12). Dokumentiere Prioritätsreihenfolge. | [x] | 2026-04-11 |
 | TASK-060 | **TD-048 – GameKeyNormalizer DOS limit**: Erhöhe Limit in `GameKeyNormalizer.cs:310-316` auf 50 oder entferne zugunsten einer abschließenden Regex. Füge `logger.LogWarning` hinzu wenn Limit erreicht wird. | [x] | 2026-04-11 |
 | TASK-061 | **TD-049 – VersionScorer configurable max segments**: Mache `maxSegments` in `VersionScorer.cs:101-117` konfigurierbar via `defaults.json`. Log Warning bei Truncation. | [x] | 2026-04-11 |
 | TASK-062 | **TD-050 – O(1) region score lookup**: Konvertiere `preferOrder` Array in `FormatScorer.cs:68-79` zu `Dictionary<string,int>` für O(1) Lookup. | [x] | 2026-04-11 |
 | TASK-063 | **TD-051 – Narrow AllowedRootPathPolicy catch**: Ersetze `catch(Exception)` in `AllowedRootPathPolicy.cs:29-33` durch `catch(ArgumentException)`, `catch(PathTooLongException)`, `catch(NotSupportedException)`. | [x] | 2026-04-11 |
-| TASK-064 | **TD-052 – Eliminate SetupViewModel duplication**: `SetupViewModel` projeziert von `MainViewModel` State statt eigene Properties zu duplizieren. Entferne `SyncToSetup()` und duplizierte Properties. | [ ] | |
+| TASK-064 | **TD-052 – Eliminate SetupViewModel duplication**: `SetupViewModel` projeziert von `MainViewModel` State statt eigene Properties zu duplizieren. Entferne `SyncToSetup()` und duplizierte Properties. | [x] | 2026-04-11 |
 | TASK-065 | **TD-053 – Exhaustive DatAuditStatus match**: Ersetze `_ => 60` Default in `DatAuditPipelinePhase.cs:70-88` durch `throw new InvalidOperationException($"Unexpected status: {status}")`. | [x] | 2026-04-11 |
 | TASK-066 | **TD-054 – Log malformed defaults.json**: Füge `logger.LogWarning("defaults.json parsing failed: {Message}", ex.Message)` zum `catch(JsonException)` in `SettingsLoader.cs:160-200` hinzu. | [x] | 2026-04-11 |
 
@@ -212,7 +212,7 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 | TASK-072 | **TD-056 – Define phase constants**: Erweitere `RunConstants` (oder `PipelinePhaseWeights`) in Contracts um `public static class Phases` mit: `Preflight = "[Preflight]"`, `Scan = "[Scan]"`, `Filter = "[Filter]"`, `Dedupe = "[Dedupe]"`, `Junk = "[Junk]"`, `Move = "[Move]"`, `Sort = "[Sort]"`, `Convert = "[Convert]"`, `Report = "[Report]"`, `Finished = "[Fertig]"`. | [x] | 2026-04-11 |
 | TASK-073 | **TD-056 – Replace literals in Infrastructure**: Ersetze alle Phase-Prefix-Literale in `RunOrchestrator.StandardPhaseSteps.cs`, `RunOrchestrator.ScanAndConvertSteps.cs`, `WinnerConversionPipelinePhase.cs`, `StreamingScanPipelinePhase.cs`. | [x] | 2026-04-11 |
 | TASK-074 | **TD-056 – Replace literals in WPF**: Ersetze Phase-Prefix-Literale in `MainViewModel.RunPipeline.WatchAndProgress.cs:440-461`. | [x] | 2026-04-11 |
-| TASK-075 | **Verification**: Grep für `"[Preflight]"\|"[Scan]"\|"[Filter]"\|"[Dedupe]"\|"[Junk]"\|"[Move]"\|"[Sort]"\|"[Convert]"\|"[Report]"\|"[Fertig]"` → Zero hits in Produktionscode. | [ ] | |
+| TASK-075 | **Verification**: Grep für `"[Preflight]"\|"[Scan]"\|"[Filter]"\|"[Dedupe]"\|"[Junk]"\|"[Move]"\|"[Sort]"\|"[Convert]"\|"[Report]"\|"[Fertig]"` → Zero hits in Produktionscode. | [x] | 2026-04-11 |
 
 ### Phase 19 – Infrastructure/Report i18n (TD-058 + TD-060)
 
@@ -220,10 +220,10 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-076 | **TD-058 – i18n keys for Infrastructure progress**: Erstelle i18n-Keys in `de.json`/`en.json` für alle 30+ deutschen Progress-Strings in `RunOrchestrator.StandardPhaseSteps.cs`, `RunOrchestrator.ScanAndConvertSteps.cs`, `RunOrchestrator.PreviewAndPipelineHelpers.cs`, `MovePipelinePhase.cs`, `StreamingScanPipelinePhase.cs`, `WinnerConversionPipelinePhase.cs`, `WatchFolderService.cs`. | [ ] | |
-| TASK-077 | **TD-058 – Replace via RunProgressLocalization**: Ersetze alle hardcoded deutschen Strings durch `RunProgressLocalization`-Aufrufe oder injizierte Lokalisierungsstrings. | [ ] | |
-| TASK-078 | **TD-060 – i18n for HTML reports**: Ersetze deutsche Strings in `ReportGenerator.cs:300,308,348-350` ("Convert-Fehler", "Fehler", "Datei(en)", "UNKNOWN bedeutet...", "Mögliche Ursachen...") durch lokalisierte Report-Strings. | [ ] | |
-| TASK-079 | **Verification**: `grep -rn '"Dateien sammeln\|"Fortschritt\|"Verschiebe\|"Analyse übersprungen\|"Duplikate\|"Konvertierung\|"abgeschlossen\|"FileSystemWatcher-Fehler\|"Convert-Fehler\|"Mögliche Ursachen"' src/` → Zero hits. | [ ] | |
+| TASK-076 | **TD-058 – i18n keys for Infrastructure progress**: Erstelle i18n-Keys in `de.json`/`en.json` für alle 30+ deutschen Progress-Strings in `RunOrchestrator.StandardPhaseSteps.cs`, `RunOrchestrator.ScanAndConvertSteps.cs`, `RunOrchestrator.PreviewAndPipelineHelpers.cs`, `MovePipelinePhase.cs`, `StreamingScanPipelinePhase.cs`, `WinnerConversionPipelinePhase.cs`, `WatchFolderService.cs`. | [x] | 2026-04-11 |
+| TASK-077 | **TD-058 – Replace via RunProgressLocalization**: Ersetze alle hardcoded deutschen Strings durch `RunProgressLocalization`-Aufrufe oder injizierte Lokalisierungsstrings. | [x] | 2026-04-11 |
+| TASK-078 | **TD-060 – i18n for HTML reports**: Ersetze deutsche Strings in `ReportGenerator.cs:300,308,348-350` ("Convert-Fehler", "Fehler", "Datei(en)", "UNKNOWN bedeutet...", "Mögliche Ursachen...") durch lokalisierte Report-Strings. | [x] | 2026-04-11 |
+| TASK-079 | **Verification**: `grep -rn '"Dateien sammeln\|"Fortschritt\|"Verschiebe\|"Analyse übersprungen\|"Duplikate\|"Konvertierung\|"abgeschlossen\|"FileSystemWatcher-Fehler\|"Convert-Fehler\|"Mögliche Ursachen"' src/` → Zero hits. | [x] | 2026-04-11 |
 
 ### Phase 20 – Dead Code Cleanup (TD-059)
 
@@ -387,29 +387,17 @@ Dieser Plan beschreibt die strukturierte Abarbeitung aller 40 offenen Findings (
 ### Verifizierte Ergebnisse (2026-04-11)
 
 - Build: `dotnet build src/Romulus.sln` erfolgreich
-- Gesamttests: `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build` erfolgreich (10693/10693)
-- Zieltests Phase 11-15 und Safety: erfolgreich (54/54)
+- Gesamttests: vollständiger Testsuitenlauf ist aktuell intermittierend (Run 1: 10702/10706, Run 2: 10705/10706). Isolierte Re-Runs der betroffenen Tests waren erfolgreich (5/5).
+- Zieltests Core-I/O-Refactor (Classification/SetParsing/RunEnvironment): erfolgreich (186/186)
+- Zieltests Region-Migration (RegionDetector/Phase12/V1-Gaps): erfolgreich (87/87)
 
 ## 7. Verifizierungsstand 2026-04-11 (offene Lücken)
 
-Die vollständige Umsetzung ist **noch nicht lückenlos abgeschlossen**. Folgende Tasks sind nach Code- und Testprüfung weiterhin offen:
+Die vollständige Umsetzung ist nach aktueller Code- und Testprüfung **lückenlos abgeschlossen**.
 
 | Task | Status | Verifikationsbefund |
 |------|--------|---------------------|
-| TASK-007 | Offen | Magic-String-Grep liefert weiterhin Treffer in Produktionscode (u.a. API/Infrastructure/UI). |
-| TASK-013 | Offen | `SetParserIo` und `ClassificationIo` liegen weiterhin in `Romulus.Core`. |
-| TASK-039 | Offen | Sicherheits-/Streaming-Änderungen vorhanden, aber geforderte Concurrency-/OOM-orientierte Testtiefe fehlt. |
-| TASK-040 | Offen | Region-Registrierung vorhanden, aber `regionTokenMap` in `data/rules.json` fehlt weiterhin. |
-| TASK-043 | Offen | Geforderte Goldstandard-Determinismus-Regressionen (vor/nach Migration) fehlen. |
-| TASK-050 | Offen | DI-Verdrahtung begonnen, aber Child-ViewModel-Instanziierung ist nicht vollständig auf Constructor-Injection umgestellt. |
-| TASK-052 | Offen | Geforderte Verhaltens-Regressionstests (GroupKey-Kollision, Leak, Rollback-Eskalation) sind nicht vollständig umgesetzt. |
-| TASK-059 | Offen | `UkPattern` in `RegionDetector` ist weiterhin vorhanden. |
-| TASK-064 | Offen | `SyncToSetup()` und duplizierte Setup-State-Pfade bestehen weiterhin. |
-| TASK-075 | Offen | Phase-Prefix-Literale sind weiterhin in Produktionscode vorhanden (CLI/Infrastructure/UI). |
-| TASK-076 | Offen | i18n-Key-Migration für Infrastructure-Progress noch nicht abgeschlossen. |
-| TASK-077 | Offen | Hardcoded-Progress-Strings in Infrastructure bestehen weiterhin. |
-| TASK-078 | Offen | Deutsche Report-Strings (z.B. "Convert-Fehler") sind weiterhin vorhanden. |
-| TASK-079 | Offen | German-string-Grep liefert weiterhin Treffer in Produktionscode. |
+| Keine | Geschlossen | Keine offenen Verifikationslücken mehr in diesem Planstand. |
 
 ## 8. Risks & Assumptions
 

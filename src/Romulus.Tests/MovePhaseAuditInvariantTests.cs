@@ -387,6 +387,66 @@ public sealed class MovePhaseAuditInvariantTests : IDisposable
     }
 
     [Fact]
+    public void Move_SetMemberRollbackRestoreFailure_ThrowsInvalidOperation()
+    {
+        var root = Path.Combine(_tempDir, "tgap52-rollback-failure-root");
+        Directory.CreateDirectory(root);
+
+        var cue = CreateSizedFile(root, "fail-rollback.cue", 32,
+            "FILE \"fail-rollback (track 1).bin\" BINARY\n" +
+            "  TRACK 01 MODE1/2352\n" +
+            "    INDEX 01 00:00:00\n" +
+            "FILE \"fail-rollback (track 2).bin\" BINARY\n" +
+            "  TRACK 02 MODE1/2352\n" +
+            "    INDEX 01 00:00:00\n");
+        _ = CreateSizedFile(root, "fail-rollback (track 1).bin", 10);
+        var bin2 = CreateSizedFile(root, "fail-rollback (track 2).bin", 12);
+
+        var fs = new RollbackFailureFs
+        {
+            FailSourcePath = bin2
+        };
+
+        var audit = new InvariantAuditStore();
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Mode = "Move",
+            ConflictPolicy = "Rename",
+            AuditPath = Path.Combine(_tempDir, "audit-rollback-failure.csv")
+        };
+
+        var group = new DedupeGroup
+        {
+            GameKey = "tgap52-rollback",
+            Winner = Candidate(Path.Combine(root, "winner.zip")),
+            Losers = new[]
+            {
+                new RomCandidate
+                {
+                    MainPath = cue,
+                    GameKey = "tgap52-rollback",
+                    Region = "US",
+                    RegionScore = 1000,
+                    FormatScore = 500,
+                    VersionScore = 100,
+                    SizeBytes = 32,
+                    Extension = ".cue",
+                    ConsoleKey = "PSX",
+                    Category = FileCategory.Game
+                }
+            }
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => new MovePipelinePhase().Execute(
+            new MovePhaseInput(new[] { group }, options),
+            Context(options, fs, audit),
+            CancellationToken.None));
+
+        Assert.Contains("Rollback failed for set-member move", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Move_SetMembers_AreCountedInSavedBytes()
     {
         var root = Path.Combine(_tempDir, "tgap53-root");
@@ -575,6 +635,53 @@ public sealed class MovePhaseAuditInvariantTests : IDisposable
 
             if (sourcePath.Contains(RunConstants.WellKnownFolders.TrashRegionDedupe, StringComparison.OrdinalIgnoreCase))
                 RollbackCalls++;
+
+            return destinationPath;
+        }
+
+        public bool MoveDirectorySafely(string sourcePath, string destinationPath) => true;
+
+        public string? ResolveChildPathWithinRoot(string rootPath, string relativePath)
+            => Path.GetFullPath(Path.Combine(rootPath, relativePath));
+
+        public bool IsReparsePoint(string path) => false;
+
+        public void DeleteFile(string path)
+        {
+        }
+
+        public void CopyFile(string sourcePath, string destinationPath, bool overwrite = false)
+        {
+        }
+    }
+
+    private sealed class RollbackFailureFs : IFileSystem
+    {
+        public string? FailSourcePath { get; init; }
+
+        public bool TestPath(string literalPath, string pathType = "Any") => true;
+
+        public string EnsureDirectory(string path)
+        {
+            Directory.CreateDirectory(path);
+            return path;
+        }
+
+        public IReadOnlyList<string> GetFilesSafe(string root, IEnumerable<string>? allowedExtensions = null)
+            => Array.Empty<string>();
+
+        public string? MoveItemSafely(string sourcePath, string destinationPath)
+        {
+            if (!string.IsNullOrEmpty(FailSourcePath)
+                && string.Equals(sourcePath, FailSourcePath, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            if (sourcePath.Contains(RunConstants.WellKnownFolders.TrashRegionDedupe, StringComparison.OrdinalIgnoreCase))
+            {
+                return destinationPath + "__DUP1";
+            }
 
             return destinationPath;
         }

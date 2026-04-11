@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Romulus.Contracts;
+using Romulus.Contracts.Ports;
 using Romulus.Core.Caching;
 using Romulus.Core.SetParsing;
 using Romulus.Contracts.Models;
@@ -25,6 +26,7 @@ public sealed class ConsoleDetector
     private readonly DiscHeaderDetector? _discHeaderDetector;
     private readonly CartridgeHeaderDetector? _cartridgeHeaderDetector;
     private readonly Func<string, IReadOnlyList<string>>? _archiveEntryProvider;
+    private readonly IClassificationIo _classificationIo;
     private long _keywordRegexTimeoutCount;
 
     // V2-H11: Folder-level detection cache — avoids re-scanning path segments per file
@@ -35,8 +37,10 @@ public sealed class ConsoleDetector
         IReadOnlyList<ConsoleInfo> consoles,
         DiscHeaderDetector? discHeaderDetector = null,
         Func<string, IReadOnlyList<string>>? archiveEntryProvider = null,
-        CartridgeHeaderDetector? cartridgeHeaderDetector = null)
+        CartridgeHeaderDetector? cartridgeHeaderDetector = null,
+        IClassificationIo? classificationIo = null)
     {
+        _classificationIo = ClassificationIoResolver.Resolve(classificationIo);
         _discHeaderDetector = discHeaderDetector;
         _archiveEntryProvider = archiveEntryProvider;
         _cartridgeHeaderDetector = cartridgeHeaderDetector;
@@ -146,7 +150,8 @@ public sealed class ConsoleDetector
         string jsonContent,
         DiscHeaderDetector? discHeaderDetector = null,
         Func<string, IReadOnlyList<string>>? archiveEntryProvider = null,
-        CartridgeHeaderDetector? cartridgeHeaderDetector = null)
+        CartridgeHeaderDetector? cartridgeHeaderDetector = null,
+        IClassificationIo? classificationIo = null)
     {
         using var doc = JsonDocument.Parse(jsonContent);
         var consoles = new List<ConsoleInfo>();
@@ -191,7 +196,7 @@ public sealed class ConsoleDetector
             }
         }
 
-        return new ConsoleDetector(consoles, discHeaderDetector, archiveEntryProvider, cartridgeHeaderDetector);
+        return new ConsoleDetector(consoles, discHeaderDetector, archiveEntryProvider, cartridgeHeaderDetector, classificationIo);
     }
 
     /// <summary>
@@ -480,14 +485,14 @@ public sealed class ConsoleDetector
         return DiscFormats.IsPsxHeaderDowngradeSensitiveExtension(discExt);
     }
 
-    private static bool IsClearlyInvalidFile(string filePath)
+    private bool IsClearlyInvalidFile(string filePath)
     {
-        if (string.IsNullOrWhiteSpace(filePath) || !ClassificationIo.FileExists(filePath))
+        if (string.IsNullOrWhiteSpace(filePath) || !_classificationIo.FileExists(filePath))
             return false;
 
         try
         {
-            return ClassificationIo.FileLength(filePath) == 0;
+            return _classificationIo.FileLength(filePath) == 0;
         }
         catch (IOException)
         {
@@ -529,7 +534,7 @@ public sealed class ConsoleDetector
     {
         try
         {
-            using var archive = ClassificationIo.OpenZipRead(filePath);
+            using var archive = _classificationIo.OpenZipRead(filePath);
             ArchiveEntryDetectionCandidate? bestEntry = null;
             foreach (var entry in archive.Entries)
             {

@@ -1,3 +1,5 @@
+using Romulus.Contracts.Ports;
+
 namespace Romulus.Core.SetParsing;
 
 /// <summary>
@@ -10,27 +12,29 @@ public static class GdiSetParser
     /// Returns all track file paths referenced in a GDI file.
     /// Only includes files that exist on disk.
     /// </summary>
-    public static IReadOnlyList<string> GetRelatedFiles(string gdiPath)
+    public static IReadOnlyList<string> GetRelatedFiles(string gdiPath, ISetParserIo? io = null)
     {
-        return ParseReferencedPaths(gdiPath, existingOnly: true);
+        var parserIo = SetParserIoResolver.Resolve(io);
+        return ParseReferencedPaths(gdiPath, existingOnly: true, parserIo);
     }
 
-    public static IReadOnlyList<string> GetMissingFiles(string gdiPath)
+    public static IReadOnlyList<string> GetMissingFiles(string gdiPath, ISetParserIo? io = null)
     {
-        return ParseReferencedPaths(gdiPath, existingOnly: false)
-            .Where(f => !SetParserIo.Exists(f)).ToList();
+        var parserIo = SetParserIoResolver.Resolve(io);
+        return ParseReferencedPaths(gdiPath, existingOnly: false, parserIo)
+            .Where(f => !parserIo.Exists(f)).ToList();
     }
 
-    private static IReadOnlyList<string> ParseReferencedPaths(string gdiPath, bool existingOnly)
+    private static IReadOnlyList<string> ParseReferencedPaths(string gdiPath, bool existingOnly, ISetParserIo io)
     {
-        if (string.IsNullOrWhiteSpace(gdiPath) || !SetParserIo.Exists(gdiPath))
+        if (string.IsNullOrWhiteSpace(gdiPath) || !io.Exists(gdiPath))
             return Array.Empty<string>();
 
         var dir = Path.GetDirectoryName(Path.GetFullPath(gdiPath)) ?? "";
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var line in SetParserIo.ReadLines(gdiPath))
+        foreach (var line in io.ReadLines(gdiPath))
         {
             var trimmed = line.Trim();
             if (string.IsNullOrEmpty(trimmed)) continue;
@@ -74,7 +78,7 @@ public static class GdiSetParser
             if (!fullPath.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            if (seen.Add(fullPath) && (!existingOnly || SetParserIo.Exists(fullPath)))
+            if (seen.Add(fullPath) && (!existingOnly || io.Exists(fullPath)))
                 result.Add(fullPath);
         }
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Romulus.Contracts;
 
 namespace Romulus.Contracts.Models;
 
@@ -21,7 +22,7 @@ public sealed class SafetyProfile
 /// </summary>
 public sealed class SandboxValidationResult
 {
-    public string Status { get; init; } = "ok"; // ok, blocked
+    public string Status { get; init; } = RunConstants.StatusOk;
     public int BlockerCount { get; init; }
     public int WarningCount { get; init; }
     public int RootCount { get; init; }

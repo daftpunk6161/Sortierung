@@ -1,4 +1,5 @@
 using Romulus.Core.Caching;
+using Romulus.Contracts.Ports;
 
 namespace Romulus.Core.Classification;
 
@@ -36,9 +37,11 @@ public sealed class CartridgeHeaderDetector
     private static ReadOnlySpan<byte> LynxMagic => [0x4C, 0x59, 0x4E, 0x58];
 
     private readonly LruCache<string, string?> _cache;
+    private readonly IClassificationIo _classificationIo;
 
-    public CartridgeHeaderDetector(int cacheSize = 8192)
+    public CartridgeHeaderDetector(int cacheSize = 8192, IClassificationIo? classificationIo = null)
     {
+        _classificationIo = ClassificationIoResolver.Resolve(classificationIo);
         _cache = new LruCache<string, string?>(cacheSize, StringComparer.OrdinalIgnoreCase);
     }
 
@@ -49,7 +52,7 @@ public sealed class CartridgeHeaderDetector
     /// </summary>
     public string? Detect(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || !ClassificationIo.FileExists(path))
+        if (string.IsNullOrWhiteSpace(path) || !_classificationIo.FileExists(path))
             return null;
 
         var normalizedPath = Path.GetFullPath(path);
@@ -68,13 +71,13 @@ public sealed class CartridgeHeaderDetector
         return result;
     }
 
-    private static string? ScanHeader(string path)
+    private string? ScanHeader(string path)
     {
         // Read first 512 bytes — enough for all cartridge header checks
         Span<byte> buffer = stackalloc byte[512];
         int bytesRead;
 
-        using (var fs = ClassificationIo.OpenRead(path))
+        using (var fs = _classificationIo.OpenRead(path))
         {
             bytesRead = fs.Read(buffer);
         }
@@ -142,17 +145,17 @@ public sealed class CartridgeHeaderDetector
         return ScanSnesHeader(path);
     }
 
-    private static string? ScanSnesHeader(string path)
+    private string? ScanSnesHeader(string path)
     {
         // SNES ROMs can be 256KB–6MB; internal header at 0x7FC0 (LoROM) or 0xFFC0 (HiROM)
         // Some ROMs have a 512-byte copier header, shifting offsets by 512
         try
         {
-            var fileSize = ClassificationIo.FileLength(path);
+            var fileSize = _classificationIo.FileLength(path);
             if (fileSize < 0x8000) // Too small for SNES
                 return null;
 
-            using var fs = ClassificationIo.OpenRead(path);
+            using var fs = _classificationIo.OpenRead(path);
             Span<byte> titleBuf = stackalloc byte[21];
             Span<byte> checksumBuf = stackalloc byte[4];
             Span<byte> mapModeBuf = stackalloc byte[1];

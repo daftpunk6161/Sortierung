@@ -26,18 +26,8 @@ public static class SharedServiceRegistration
 
         services.AddSingleton(new CollectionIndexPathOptions());
         services.AddSingleton(new RunProfilePathOptions());
-        services.AddSingleton<ISetParserIo>(sp =>
-        {
-            var io = new IO.SetParserIo();
-            Romulus.Core.SetParsing.SetParserIo.Use(io);
-            return io;
-        });
-        services.AddSingleton<IClassificationIo>(sp =>
-        {
-            var io = new IO.ClassificationIo();
-            Romulus.Core.Classification.ClassificationIo.Use(io);
-            return io;
-        });
+        services.AddSingleton<ISetParserIo, IO.SetParserIo>();
+        services.AddSingleton<IClassificationIo, IO.ClassificationIo>();
         services.AddSingleton<IFileSystem, FileSystemAdapter>();
         services.AddSingleton<ITimeProvider, SystemTimeProvider>();
         services.AddSingleton<IAuditStore>(sp =>

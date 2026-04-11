@@ -6,31 +6,28 @@ namespace Romulus.Tests;
 /// <summary>
 /// Unit tests for CartridgeHeaderDetector covering binary header parsing
 /// for NES, N64, GBA, Genesis/MD, GB/GBC, Lynx, Atari 7800, and SNES.
-/// Uses ClassificationIo.Configure() to inject in-memory streams.
+/// Uses constructor-injected TestClassificationIo for deterministic I/O.
 /// </summary>
-public sealed class CartridgeHeaderDetectorCoverageTests : IDisposable
+public sealed class CartridgeHeaderDetectorCoverageTests
 {
-    private readonly CartridgeHeaderDetector _detector = new();
+    private readonly TestClassificationIo _io;
+    private readonly CartridgeHeaderDetector _detector;
 
     public CartridgeHeaderDetectorCoverageTests()
     {
-        // Override I/O to prevent real disk access
-        ClassificationIo.Configure(
-            fileExists: _ => true,
-            openRead: path => throw new InvalidOperationException("No stream configured for " + path),
-            fileLength: _ => 0);
-    }
-
-    public void Dispose()
-    {
-        ClassificationIo.ResetDefaults();
+        _io = new TestClassificationIo
+        {
+            FileExistsFunc = _ => true,
+            OpenReadFunc = path => throw new InvalidOperationException("No stream configured for " + path),
+            FileLengthFunc = _ => 0
+        };
+        _detector = new CartridgeHeaderDetector(classificationIo: _io);
     }
 
     private void ConfigureStream(byte[] data)
     {
-        ClassificationIo.Configure(
-            openRead: _ => new MemoryStream(data),
-            fileLength: _ => data.Length);
+        _io.OpenReadFunc = _ => new MemoryStream(data);
+        _io.FileLengthFunc = _ => data.Length;
     }
 
     // ═══ NES (iNES header) ═══════════════════════════════════════════
@@ -214,9 +211,8 @@ public sealed class CartridgeHeaderDetectorCoverageTests : IDisposable
         data[0x7FDE] = 0x00; data[0x7FDF] = 0xFF; // checksum = 0xFF00
         // 0x00FF ^ 0xFF00 = 0xFFFF ✓
 
-        ClassificationIo.Configure(
-            openRead: _ => new MemoryStream(data),
-            fileLength: _ => data.Length);
+        _io.OpenReadFunc = _ => new MemoryStream(data);
+        _io.FileLengthFunc = _ => data.Length;
 
         Assert.Equal("SNES", _detector.Detect("test.sfc"));
     }
@@ -233,7 +229,7 @@ public sealed class CartridgeHeaderDetectorCoverageTests : IDisposable
     [Fact]
     public void Detect_FileDoesNotExist_ReturnsNull()
     {
-        ClassificationIo.Configure(fileExists: _ => false);
+        _io.FileExistsFunc = _ => false;
         Assert.Null(_detector.Detect("nonexistent.nes"));
     }
 
@@ -250,9 +246,8 @@ public sealed class CartridgeHeaderDetectorCoverageTests : IDisposable
         var data = new byte[512]; // all zeros, no known header
         ConfigureStream(data);
         // Also need to handle SNES path (ScanSnesHeader needs fileLength)
-        ClassificationIo.Configure(
-            openRead: _ => new MemoryStream(data),
-            fileLength: _ => data.Length);
+        _io.OpenReadFunc = _ => new MemoryStream(data);
+        _io.FileLengthFunc = _ => data.Length;
 
         Assert.Null(_detector.Detect("unknown.bin"));
     }
@@ -260,9 +255,8 @@ public sealed class CartridgeHeaderDetectorCoverageTests : IDisposable
     [Fact]
     public void Detect_IoException_ReturnsNull()
     {
-        ClassificationIo.Configure(
-            openRead: _ => throw new IOException("disk error"),
-            fileLength: _ => 512);
+        _io.OpenReadFunc = _ => throw new IOException("disk error");
+        _io.FileLengthFunc = _ => 512;
 
         Assert.Null(_detector.Detect("error.nes"));
     }
@@ -273,9 +267,8 @@ public sealed class CartridgeHeaderDetectorCoverageTests : IDisposable
         var data = new byte[512];
         data[0] = 0x4E; data[1] = 0x45; data[2] = 0x53; data[3] = 0x1A; // NES
         int callCount = 0;
-        ClassificationIo.Configure(
-            openRead: _ => { callCount++; return new MemoryStream(data); },
-            fileLength: _ => data.Length);
+        _io.OpenReadFunc = _ => { callCount++; return new MemoryStream(data); };
+        _io.FileLengthFunc = _ => data.Length;
 
         var first = _detector.Detect("cached.nes");
         var second = _detector.Detect("cached.nes");

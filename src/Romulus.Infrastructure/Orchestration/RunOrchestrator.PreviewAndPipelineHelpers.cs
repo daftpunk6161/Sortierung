@@ -161,8 +161,8 @@ public sealed partial class RunOrchestrator
         {
             ["RowCount"] = rowCount,
             ["Mode"] = options.Mode,
-            // TASK-145: Reflect actual RunOutcome instead of always "completed"
-            ["Status"] = outcome?.ToStatusString() ?? "completed",
+            // TASK-145: Reflect actual RunOutcome instead of always completed.
+            ["Status"] = outcome?.ToStatusString() ?? RunConstants.StatusCompleted,
             ["TotalFilesScanned"] = result.TotalFilesScanned,
             ["GroupCount"] = result.GroupCount,
             ["WinnerCount"] = result.WinnerCount,

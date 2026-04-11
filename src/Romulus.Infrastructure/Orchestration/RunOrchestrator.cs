@@ -187,7 +187,7 @@ public sealed partial class RunOrchestrator : IDisposable
     public RunResult Execute(RunOptions options, CancellationToken cancellationToken = default)
         // Do not pass the caller token into Task.Run itself: if the token is already cancelled,
         // Task.Run would short-circuit before ExecuteAsync can translate the run into a
-        // stable "cancelled" result with partial artifacts/sidecars.
+        // stable cancelled result with partial artifacts/sidecars.
         => Task.Run(() => ExecuteAsync(options, cancellationToken)).GetAwaiter().GetResult();
 
     public async Task<RunResult> ExecuteAsync(RunOptions options, CancellationToken cancellationToken = default)

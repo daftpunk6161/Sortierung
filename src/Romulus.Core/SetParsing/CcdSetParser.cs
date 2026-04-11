@@ -1,3 +1,5 @@
+using Romulus.Contracts.Ports;
+
 namespace Romulus.Core.SetParsing;
 
 /// <summary>
@@ -8,9 +10,10 @@ public static class CcdSetParser
 {
     private static readonly string[] CompanionExts = { ".img", ".sub" };
 
-    public static IReadOnlyList<string> GetRelatedFiles(string ccdPath)
+    public static IReadOnlyList<string> GetRelatedFiles(string ccdPath, ISetParserIo? io = null)
     {
-        if (string.IsNullOrWhiteSpace(ccdPath) || !SetParserIo.Exists(ccdPath))
+        var parserIo = SetParserIoResolver.Resolve(io);
+        if (string.IsNullOrWhiteSpace(ccdPath) || !parserIo.Exists(ccdPath))
             return Array.Empty<string>();
 
         var dir = Path.GetDirectoryName(ccdPath) ?? "";
@@ -20,15 +23,16 @@ public static class CcdSetParser
         foreach (var ext in CompanionExts)
         {
             var companion = Path.Combine(dir, baseName + ext);
-            if (SetParserIo.Exists(companion))
+            if (parserIo.Exists(companion))
                 result.Add(Path.GetFullPath(companion));
         }
 
         return result;
     }
 
-    public static IReadOnlyList<string> GetMissingFiles(string ccdPath)
+    public static IReadOnlyList<string> GetMissingFiles(string ccdPath, ISetParserIo? io = null)
     {
+        var parserIo = SetParserIoResolver.Resolve(io);
         if (string.IsNullOrWhiteSpace(ccdPath))
             return Array.Empty<string>();
 
@@ -39,7 +43,7 @@ public static class CcdSetParser
         foreach (var ext in CompanionExts)
         {
             var companion = Path.Combine(dir, baseName + ext);
-            if (!SetParserIo.Exists(companion))
+            if (!parserIo.Exists(companion))
                 result.Add(Path.GetFullPath(companion));
         }
 

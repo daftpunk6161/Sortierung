@@ -122,7 +122,7 @@ public sealed class ConversionPhaseHelperCoverageBoostTests : IDisposable
 
         // Progress messages should be emitted (workItemCount <= 50 → interval=1 → every item)
         Assert.True(messages.Count > 0);
-        Assert.Contains(messages, m => m.Contains("[Convert] Fortschritt:"));
+        Assert.Contains(messages, m => m.Contains("[Convert] Progress:"));
     }
 
     [Fact]

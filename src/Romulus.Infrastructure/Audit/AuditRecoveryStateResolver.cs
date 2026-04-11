@@ -1,4 +1,5 @@
 using Romulus.Contracts.Ports;
+using Romulus.Contracts;
 
 namespace Romulus.Infrastructure.Audit;
 
@@ -30,14 +31,14 @@ public static class AuditRecoveryStateResolver
         var normalizedStatus = status?.Trim().ToLowerInvariant() ?? string.Empty;
         return normalizedStatus switch
         {
-            "running" => "in-progress",
-            "completed" when canRollback => "rollback-available",
-            "completed" => "not-required",
-            "completed_with_errors" when canRollback => "partial-rollback-available",
-            "completed_with_errors" => "manual-cleanup-may-be-required",
-            "cancelled" when canRollback => "partial-rollback-available",
-            "failed" when canRollback => "partial-rollback-available",
-            "cancelled" or "failed" => "manual-cleanup-may-be-required",
+            RunConstants.StatusRunning => "in-progress",
+            RunConstants.StatusCompleted when canRollback => "rollback-available",
+            RunConstants.StatusCompleted => "not-required",
+            RunConstants.StatusCompletedWithErrors when canRollback => "partial-rollback-available",
+            RunConstants.StatusCompletedWithErrors => "manual-cleanup-may-be-required",
+            RunConstants.StatusCancelled when canRollback => "partial-rollback-available",
+            RunConstants.StatusFailed when canRollback => "partial-rollback-available",
+            RunConstants.StatusCancelled or RunConstants.StatusFailed => "manual-cleanup-may-be-required",
             _ => "unknown"
         };
     }

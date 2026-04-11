@@ -1,3 +1,7 @@
+using System.Reflection;
+using Romulus.Contracts.Models;
+using Romulus.Core.Deduplication;
+using Romulus.UI.Wpf.ViewModels;
 using Xunit;
 
 namespace Romulus.Tests;
@@ -60,6 +64,75 @@ public sealed class Phase14RedTests
         var source = File.ReadAllText(sourcePath);
         Assert.DoesNotContain("WARNING: Set-member rollback incomplete", source, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void TD052_Deduplicate_GameKeysContainingPipePipe_DoNotCollide()
+    {
+        var first = Candidate("rom-a.bin", consoleKey: "A", gameKey: "B||C", regionScore: 900);
+        var second = Candidate("rom-b.bin", consoleKey: "A||B", gameKey: "C", regionScore: 950);
+
+        var groups = DeduplicationEngine.Deduplicate([first, second]);
+
+        Assert.Equal(2, groups.Count);
+        Assert.Contains(groups, g => g.Winner.MainPath == "rom-a.bin");
+        Assert.Contains(groups, g => g.Winner.MainPath == "rom-b.bin");
+    }
+
+    [Fact]
+    public void TD052_MainViewModel_ReinitializeExtensionFilters_DetachesOldHandlers()
+    {
+        var vm = new MainViewModel();
+        var oldItem = vm.ExtensionFilters[0];
+
+        var changed = new List<string>();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(MainViewModel.SelectedExtensionCount) or nameof(MainViewModel.ExtensionCountDisplay))
+                changed.Add(e.PropertyName!);
+        };
+
+        var initMethod = typeof(MainViewModel).GetMethod("InitExtensionFilters", BindingFlags.Instance | BindingFlags.NonPublic)
+                         ?? throw new InvalidOperationException("InitExtensionFilters not found.");
+        initMethod.Invoke(vm, null);
+
+        changed.Clear();
+        oldItem.IsChecked = !oldItem.IsChecked;
+
+        Assert.Empty(changed);
+    }
+
+    [Fact]
+    public void TD052_MainViewModel_ReinitializeConsoleFilters_DetachesOldHandlers()
+    {
+        var vm = new MainViewModel();
+        var oldItem = vm.ConsoleFilters[0];
+
+        var changed = new List<string>();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(MainViewModel.SelectedConsoleCount) or nameof(MainViewModel.ConsoleCountDisplay))
+                changed.Add(e.PropertyName!);
+        };
+
+        var initMethod = typeof(MainViewModel).GetMethod("InitConsoleFilters", BindingFlags.Instance | BindingFlags.NonPublic)
+                         ?? throw new InvalidOperationException("InitConsoleFilters not found.");
+        initMethod.Invoke(vm, null);
+
+        changed.Clear();
+        oldItem.IsChecked = !oldItem.IsChecked;
+
+        Assert.Empty(changed);
+    }
+
+    private static RomCandidate Candidate(string path, string consoleKey, string gameKey, int regionScore)
+        => new()
+        {
+            MainPath = path,
+            ConsoleKey = consoleKey,
+            GameKey = gameKey,
+            RegionScore = regionScore,
+            Category = FileCategory.Game
+        };
 
     private static string ResolveRepoFile(params string[] segments)
     {

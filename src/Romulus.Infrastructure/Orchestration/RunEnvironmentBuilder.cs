@@ -135,10 +135,7 @@ public sealed class RunEnvironmentBuilder
         string dataDir, Action<string>? onWarning = null,
         string? collectionDatabasePath = null)
     {
-        var setParserIo = new IO.SetParserIo();
-        Romulus.Core.SetParsing.SetParserIo.Use(setParserIo);
         var classificationIo = new IO.ClassificationIo();
-        Romulus.Core.Classification.ClassificationIo.Use(classificationIo);
 
         var fs = new FileSystemAdapter();
         var audit = new AuditCsvStore(fs, onWarning ?? (_ => { }),
@@ -195,8 +192,8 @@ public sealed class RunEnvironmentBuilder
 
         // ConsoleDetector
         ConsoleDetector? consoleDetector = null;
-        var discHeaderDetector = new DiscHeaderDetector();
-        var cartridgeHeaderDetector = new CartridgeHeaderDetector();
+        var discHeaderDetector = new DiscHeaderDetector(classificationIo: classificationIo);
+        var cartridgeHeaderDetector = new CartridgeHeaderDetector(classificationIo: classificationIo);
         if (File.Exists(consolesJsonPath))
         {
             var consolesJson = File.ReadAllText(consolesJsonPath);
@@ -204,7 +201,8 @@ public sealed class RunEnvironmentBuilder
                 consolesJson,
                 discHeaderDetector,
                 archiveEntryProvider: archiveHashService.GetArchiveEntryNames,
-                cartridgeHeaderDetector: cartridgeHeaderDetector);
+            cartridgeHeaderDetector: cartridgeHeaderDetector,
+            classificationIo: classificationIo);
         }
         else if (runOptions.SortConsole || runOptions.EnableDat)
         {

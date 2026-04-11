@@ -124,7 +124,7 @@ public sealed class ReportGeneratorHtmlCoverageTests
 
         Assert.Contains("42", html);
         Assert.Contains("Spiele (KEEP)", html);
-        Assert.Contains("Duplikate", html);
+        Assert.Contains("Doppeldateien", html);
         Assert.Contains("Junk", html);
         Assert.Contains("BIOS", html);
         Assert.Contains("Health", html);
@@ -142,7 +142,7 @@ public sealed class ReportGeneratorHtmlCoverageTests
 
         Assert.Contains("Konvertiert", html);
         Assert.Contains("12", html);
-        Assert.Contains("Convert-Fehler", html);
+        Assert.Contains("Convert Errors", html);
         Assert.Contains("Convert-Skip", html);
         Assert.Contains("Convert-Blocked", html);
         Assert.Contains("Convert-Review", html);
@@ -182,7 +182,7 @@ public sealed class ReportGeneratorHtmlCoverageTests
         Assert.Contains("Sort-Review", html);
         Assert.Contains("Sort-Blocked", html);
         Assert.Contains("Sort-Unknown", html);
-        Assert.Contains("Fehler", html);
+        Assert.Contains("Errors", html);
     }
 
     [Fact]
@@ -250,7 +250,7 @@ public sealed class ReportGeneratorHtmlCoverageTests
 
         Assert.Contains("UNKNOWN", html);
         Assert.Contains("unknown-info", html);
-        Assert.Contains("Klassifizierung UNKNOWN", html);
+        Assert.Contains("UNKNOWN classification", html);
     }
 
     [Fact]

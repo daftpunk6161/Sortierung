@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Text;
 using System.Text.RegularExpressions;
 using Romulus.Contracts;
+using Romulus.Contracts.Ports;
 using Romulus.Core.Caching;
 
 namespace Romulus.Core.Classification;
@@ -47,9 +48,11 @@ public sealed class DiscHeaderDetector
 
     private readonly LruCache<string, string?> _isoCache;
     private readonly LruCache<string, string?> _chdCache;
+    private readonly IClassificationIo _classificationIo;
 
-    public DiscHeaderDetector(int isoCacheSize = 4096, int chdCacheSize = 2048)
+    public DiscHeaderDetector(int isoCacheSize = 4096, int chdCacheSize = 2048, IClassificationIo? classificationIo = null)
     {
+        _classificationIo = ClassificationIoResolver.Resolve(classificationIo);
         _isoCache = new LruCache<string, string?>(isoCacheSize, StringComparer.OrdinalIgnoreCase);
         _chdCache = new LruCache<string, string?>(chdCacheSize, StringComparer.OrdinalIgnoreCase);
     }
@@ -60,7 +63,7 @@ public sealed class DiscHeaderDetector
     /// </summary>
     public string? DetectFromDiscImage(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || !ClassificationIo.FileExists(path))
+        if (string.IsNullOrWhiteSpace(path) || !_classificationIo.FileExists(path))
             return null;
 
         var normalizedPath = Path.GetFullPath(path);
@@ -85,7 +88,7 @@ public sealed class DiscHeaderDetector
     /// </summary>
     public string? DetectFromChd(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || !ClassificationIo.FileExists(path))
+        if (string.IsNullOrWhiteSpace(path) || !_classificationIo.FileExists(path))
             return null;
 
         var normalizedPath = Path.GetFullPath(path);
@@ -120,7 +123,7 @@ public sealed class DiscHeaderDetector
             // Skip reparse points (symlinks/junctions) — security rule
             try
             {
-                var attrs = ClassificationIo.GetAttributes(path);
+                var attrs = _classificationIo.GetAttributes(path);
                 if ((attrs & FileAttributes.ReparsePoint) != 0)
                 {
                     results[path] = null;
@@ -200,9 +203,9 @@ public sealed class DiscHeaderDetector
 
     // --- Private scanning methods ---
 
-    private static string? ScanDiscImage(string path)
+    private string? ScanDiscImage(string path)
     {
-        using var fs = ClassificationIo.OpenRead(path);
+        using var fs = _classificationIo.OpenRead(path);
         if (fs.Length < 32)
             return null;
 
@@ -345,9 +348,9 @@ public sealed class DiscHeaderDetector
         return null;
     }
 
-    private static string? ScanChdMetadata(string path)
+    private string? ScanChdMetadata(string path)
     {
-        using var fs = ClassificationIo.OpenRead(path);
+        using var fs = _classificationIo.OpenRead(path);
         if (fs.Length < 8)
             return null;
 

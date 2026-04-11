@@ -1,3 +1,5 @@
+using Romulus.Contracts.Ports;
+
 namespace Romulus.Core.SetParsing;
 
 /// <summary>
@@ -13,35 +15,37 @@ public static class M3uPlaylistParser
     /// Returns all file paths referenced in an M3U playlist (recursive).
     /// Only includes files that exist on disk.
     /// </summary>
-    public static IReadOnlyList<string> GetRelatedFiles(string m3uPath)
+    public static IReadOnlyList<string> GetRelatedFiles(string m3uPath, ISetParserIo? io = null)
     {
-        if (string.IsNullOrWhiteSpace(m3uPath) || !SetParserIo.Exists(m3uPath))
+        var parserIo = SetParserIoResolver.Resolve(io);
+        if (string.IsNullOrWhiteSpace(m3uPath) || !parserIo.Exists(m3uPath))
             return Array.Empty<string>();
 
         var result = new List<string>();
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        ResolveRecursive(m3uPath, result, visited, 0, existingOnly: true);
+        ResolveRecursive(m3uPath, result, visited, 0, existingOnly: true, parserIo);
 
         return result;
     }
 
-    public static IReadOnlyList<string> GetMissingFiles(string m3uPath)
+    public static IReadOnlyList<string> GetMissingFiles(string m3uPath, ISetParserIo? io = null)
     {
-        if (string.IsNullOrWhiteSpace(m3uPath) || !SetParserIo.Exists(m3uPath))
+        var parserIo = SetParserIoResolver.Resolve(io);
+        if (string.IsNullOrWhiteSpace(m3uPath) || !parserIo.Exists(m3uPath))
             return Array.Empty<string>();
 
         var result = new List<string>();
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        ResolveRecursive(m3uPath, result, visited, 0, existingOnly: false);
+        ResolveRecursive(m3uPath, result, visited, 0, existingOnly: false, parserIo);
 
-        return result.Where(f => !SetParserIo.Exists(f)).ToList();
+        return result.Where(f => !parserIo.Exists(f)).ToList();
     }
 
     private static void ResolveRecursive(
         string m3uPath, List<string> result,
-        HashSet<string> visited, int depth, bool existingOnly)
+        HashSet<string> visited, int depth, bool existingOnly, ISetParserIo io)
     {
         if (depth >= MaxDepth)
         {
@@ -52,11 +56,11 @@ public static class M3uPlaylistParser
 
         var normalizedPath = Path.GetFullPath(m3uPath);
         if (!visited.Add(normalizedPath)) return; // circular reference guard
-        if (!SetParserIo.Exists(normalizedPath)) return;
+        if (!io.Exists(normalizedPath)) return;
 
         var dir = Path.GetDirectoryName(normalizedPath) ?? "";
 
-        foreach (var rawLine in SetParserIo.ReadLines(normalizedPath))
+        foreach (var rawLine in io.ReadLines(normalizedPath))
         {
             var line = rawLine.Trim();
             if (string.IsNullOrEmpty(line) || line.StartsWith("#"))
@@ -76,11 +80,11 @@ public static class M3uPlaylistParser
             if (refPath.EndsWith(".m3u", StringComparison.OrdinalIgnoreCase) ||
                 refPath.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase))
             {
-                ResolveRecursive(refPath, result, visited, depth + 1, existingOnly);
+                ResolveRecursive(refPath, result, visited, depth + 1, existingOnly, io);
                 continue;
             }
 
-            if (!visited.Contains(refPath) && (!existingOnly || SetParserIo.Exists(refPath)))
+            if (!visited.Contains(refPath) && (!existingOnly || io.Exists(refPath)))
             {
                 visited.Add(refPath);
                 result.Add(refPath);

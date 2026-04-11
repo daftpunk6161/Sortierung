@@ -192,7 +192,7 @@ app.Use(async (ctx, next) =>
 
 app.MapGet("/healthz", () => Results.Ok(new
 {
-    status = "ok",
+    status = RunConstants.StatusOk,
     serverRunning = true,
     utc = timeProvider.UtcNow.ToString("o"),
     version = ApiVersion
@@ -204,7 +204,7 @@ app.MapGet("/health", (RunLifecycleManager mgr) =>
     var activeRun = mgr.GetActive();
     return Results.Ok(new
     {
-        status = "ok",
+        status = RunConstants.StatusOk,
         serverRunning = true,
         hasActiveRun = activeRun is not null,
         utc = timeProvider.UtcNow.ToString("o"),

@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Globalization;
 using Romulus.Contracts;
 using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Safety;
@@ -41,7 +42,7 @@ public sealed record ReportEntry
 public sealed record ReportSummary
 {
     public string Mode { get; init; } = "DryRun";
-    public string RunStatus { get; init; } = "ok";
+    public string RunStatus { get; init; } = RunConstants.StatusOk;
     public DateTime Timestamp { get; init; } = DateTime.UtcNow;
     public int TotalFiles { get; init; }
     public int Candidates { get; init; }
@@ -264,7 +265,7 @@ tr:hover { background: rgba(137,180,250,0.05); }
         sb.AppendLine("<div class=\"cards\">");
         AppendCard(sb, "", $"{s.HealthScore}%", "Health");
         AppendCard(sb, "keep", s.KeepCount.ToString(), "Spiele (KEEP)");
-        AppendCard(sb, "move", s.MoveCount.ToString(), "Duplikate");
+        AppendCard(sb, "move", s.MoveCount.ToString(), ReportText("Summary.Duplicates", "Duplicates"));
         AppendCard(sb, "junk", s.JunkCount.ToString(), "Junk");
         AppendCard(sb, "bios", s.BiosCount.ToString(), "BIOS");
         AppendCard(sb, "", s.GamesCount.ToString(), "Games");
@@ -297,7 +298,7 @@ tr:hover { background: rgba(137,180,250,0.05); }
         if (s.ConvertSavedBytes != 0)
             AppendCard(sb, "", FormatSize(s.ConvertSavedBytes), "Convert-Gespart");
         if (s.ConvertErrorCount > 0)
-            AppendCard(sb, "junk", s.ConvertErrorCount.ToString(), "Convert-Fehler");
+            AppendCard(sb, "junk", s.ConvertErrorCount.ToString(), ReportText("Summary.ConvertErrors", "Convert Errors"));
         if (s.ConsoleSortReviewed > 0)
             AppendCard(sb, "", s.ConsoleSortReviewed.ToString(), "Sort-Review");
         if (s.ConsoleSortBlocked > 0)
@@ -305,7 +306,7 @@ tr:hover { background: rgba(137,180,250,0.05); }
         if (s.ConsoleSortUnknown > 0)
             AppendCard(sb, "", s.ConsoleSortUnknown.ToString(), "Sort-Unknown");
         if (s.ErrorCount > 0)
-            AppendCard(sb, "junk", s.ErrorCount.ToString(), "Fehler");
+            AppendCard(sb, "junk", s.ErrorCount.ToString(), ReportText("Summary.Errors", "Errors"));
         AppendCard(sb, "", s.RunStatus, "Status");
         AppendCard(sb, "", FormatSize(s.SavedBytes), "Gespart");
         AppendCard(sb, "", s.TotalFiles.ToString(), "Gescannt");
@@ -345,10 +346,10 @@ tr:hover { background: rgba(137,180,250,0.05); }
         if (unknownCount > 0)
         {
             sb.AppendLine($"<div class=\"unknown-info\" style=\"background:var(--surface-1);border-left:4px solid var(--yellow);padding:12px 16px;margin:0 0 16px 0;border-radius:6px\">");
-            sb.AppendLine($"<strong>&#9432; {unknownCount} Datei(en) mit Klassifizierung UNKNOWN</strong><br>");
-            sb.AppendLine("UNKNOWN bedeutet, dass die Datei keiner bekannten Konsole oder Kategorie zugeordnet werden konnte. ");
-            sb.AppendLine("M\u00f6gliche Ursachen: nicht standardkonformer Dateiname, unbekanntes Format oder fehlende DAT-Abdeckung. ");
-            sb.AppendLine("Empfehlung: Dateiname pr\u00fcfen, DAT-Verzeichnis aktualisieren oder Datei manuell zuordnen.");
+            sb.AppendLine($"<strong>&#9432; {Enc(ReportText("Unknown.BannerTitle", "{0} entry(ies) with UNKNOWN classification", unknownCount))}</strong><br>");
+            sb.AppendLine(Enc(ReportText("Unknown.Explain", "UNKNOWN means the file could not be assigned to a known console or category.")) + " ");
+            sb.AppendLine(Enc(ReportText("Unknown.Causes", "Hints: non-standard file name, unknown format, or missing DAT coverage.")) + " ");
+            sb.AppendLine(Enc(ReportText("Unknown.Recommendation", "Recommendation: check file name, refresh DAT directory, or assign manually.")));
             sb.AppendLine("</div>");
         }
 
@@ -435,6 +436,76 @@ tr:hover { background: rgba(137,180,250,0.05); }
 
     private static string FormatSize(long bytes)
         => Formatting.FormatSize(bytes);
+
+    private static readonly IReadOnlyDictionary<string, string> ReportTextDe = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["Summary.Duplicates"] = "Doppeldateien",
+        ["Summary.ConvertErrors"] = "Convert Errors",
+        ["Summary.Errors"] = "Errors",
+        ["Unknown.BannerTitle"] = "{0} entry(ies) with UNKNOWN classification",
+        ["Unknown.Explain"] = "UNKNOWN means the file could not be assigned to a known console or category.",
+        ["Unknown.Causes"] = "Hints: non-standard file name, unknown format, or missing DAT coverage.",
+        ["Unknown.Recommendation"] = "Recommendation: check file name, refresh DAT directory, or assign manually."
+    };
+
+    private static readonly IReadOnlyDictionary<string, string> ReportTextEn = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["Summary.Duplicates"] = "Duplicates",
+        ["Summary.ConvertErrors"] = "Convert Errors",
+        ["Summary.Errors"] = "Errors",
+        ["Unknown.BannerTitle"] = "{0} entry(ies) with UNKNOWN classification",
+        ["Unknown.Explain"] = "UNKNOWN means the file could not be assigned to a known console or category.",
+        ["Unknown.Causes"] = "Hints: non-standard file name, unknown format, or missing DAT coverage.",
+        ["Unknown.Recommendation"] = "Recommendation: check file name, refresh DAT directory, or assign manually."
+    };
+
+    private static readonly IReadOnlyDictionary<string, string> ReportTextFr = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["Summary.Duplicates"] = "Doublons",
+        ["Summary.ConvertErrors"] = "Erreurs conversion",
+        ["Summary.Errors"] = "Erreurs",
+        ["Unknown.BannerTitle"] = "{0} entree(s) avec classification UNKNOWN",
+        ["Unknown.Explain"] = "UNKNOWN signifie que le fichier ne peut pas etre associe a une console ou categorie connue.",
+        ["Unknown.Causes"] = "Indices: nom non standard, format inconnu ou couverture DAT manquante.",
+        ["Unknown.Recommendation"] = "Recommendation: verifier le nom, actualiser le dossier DAT ou affecter manuellement."
+    };
+
+    private static string ReportText(string key, string fallback, params object[] args)
+    {
+        var template = ResolveReportText(key, fallback);
+        if (args.Length == 0)
+            return template;
+
+        try
+        {
+            return string.Format(CultureInfo.CurrentCulture, template, args);
+        }
+        catch (FormatException)
+        {
+            return template;
+        }
+    }
+
+    private static string ResolveReportText(string key, string fallback)
+    {
+        var locale = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        if (locale.Equals("en", StringComparison.OrdinalIgnoreCase)
+            && ReportTextEn.TryGetValue(key, out var enValue))
+        {
+            return enValue;
+        }
+
+        if (locale.Equals("fr", StringComparison.OrdinalIgnoreCase)
+            && ReportTextFr.TryGetValue(key, out var frValue))
+        {
+            return frValue;
+        }
+
+        if (ReportTextDe.TryGetValue(key, out var deValue))
+            return deValue;
+
+        return fallback;
+    }
 }
 
 /// <summary>

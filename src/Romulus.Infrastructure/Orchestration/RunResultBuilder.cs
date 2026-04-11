@@ -1,4 +1,5 @@
 using Romulus.Contracts.Models;
+using Romulus.Contracts;
 using Romulus.Infrastructure.Metrics;
 using Romulus.Infrastructure.Sorting;
 
@@ -9,7 +10,7 @@ namespace Romulus.Infrastructure.Orchestration;
 /// </summary>
 public sealed class RunResultBuilder
 {
-    public string Status { get; set; } = "ok";
+    public string Status { get; set; } = RunConstants.StatusOk;
     public int ExitCode { get; set; }
     public OperationResult? Preflight { get; set; }
     public int TotalFilesScanned { get; set; }

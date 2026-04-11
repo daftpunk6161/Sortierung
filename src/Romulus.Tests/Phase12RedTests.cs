@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Romulus.Core.Regions;
+using Romulus.Core.Scoring;
 using Xunit;
 
 namespace Romulus.Tests;
@@ -51,6 +53,59 @@ public sealed class Phase12RedTests
 
         Assert.True(root.TryGetProperty("euLanguageCodes", out var euLanguageCodes), "rules.json missing 'euLanguageCodes'.");
         Assert.Equal(JsonValueKind.Array, euLanguageCodes.ValueKind);
+    }
+
+    [Fact]
+    public void TD043_GoldStandardVectors_ForRegionFormatAndVersionScoring_StayDeterministic()
+    {
+        // Goldstandard vectors are intentionally taken from established expectations
+        // in RegionDetectorTests, FormatScorerTests and VersionScorerTests.
+        var regionVectors = new[]
+        {
+            (Input: "Game (Europe)", Expected: "EU"),
+            (Input: "Game (USA)", Expected: "US"),
+            (Input: "Game (Japan)", Expected: "JP"),
+            (Input: "Game (USA, Asia)", Expected: "WORLD"),
+            (Input: "Game (UK)", Expected: "EU"),
+            (Input: "Random Game Name", Expected: "UNKNOWN")
+        };
+
+        var formatVectors = new[]
+        {
+            (Extension: ".chd", SetType: (string?)null, Expected: 850),
+            (Extension: ".iso", SetType: (string?)null, Expected: 700),
+            (Extension: ".zip", SetType: (string?)null, Expected: 500),
+            (Extension: ".rar", SetType: (string?)null, Expected: 400),
+            (Extension: ".xyz123", SetType: (string?)null, Expected: 300),
+            (Extension: ".bin", SetType: "M3USET", Expected: 900)
+        };
+
+        var versionVectors = new[]
+        {
+            (Input: "Game [!]", Expected: 500L),
+            (Input: "Game (Rev B)", Expected: 20L),
+            (Input: "Game (v1.2.3)", Expected: 1_002_003L),
+            (Input: "Game (en,de)", Expected: 85L)
+        };
+
+        var versionScorer = new VersionScorer();
+        for (var run = 0; run < 50; run++)
+        {
+            foreach (var vector in regionVectors)
+            {
+                Assert.Equal(vector.Expected, RegionDetector.GetRegionTag(vector.Input));
+            }
+
+            foreach (var vector in formatVectors)
+            {
+                Assert.Equal(vector.Expected, FormatScorer.GetFormatScore(vector.Extension, vector.SetType));
+            }
+
+            foreach (var vector in versionVectors)
+            {
+                Assert.Equal(vector.Expected, versionScorer.GetVersionScore(vector.Input));
+            }
+        }
     }
 
     private static string ResolveDataFile(string fileName)

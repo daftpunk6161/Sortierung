@@ -31,7 +31,7 @@ public sealed class Phase13RedTests
         Assert.True(File.Exists(sourcePath), $"Missing source file: {sourcePath}");
 
         var source = File.ReadAllText(sourcePath);
-        Assert.Contains("Scan incomplete:", source, StringComparison.Ordinal);
+        Assert.Contains("Scan.IncompleteWarning", source, StringComparison.Ordinal);
     }
 
     private static string ResolveRepoFile(params string[] segments)

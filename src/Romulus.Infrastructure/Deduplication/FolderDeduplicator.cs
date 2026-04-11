@@ -187,7 +187,7 @@ public sealed class FolderDeduplicator
             }
         }
 
-        _log?.Invoke($"PS3 Dedupe: {total} gescannt, {dupes} Duplikate, {moved} verschoben, {skipped} übersprungen");
+        _log?.Invoke($"PS3 Dedupe: scanned={total}, duplicateFolders={dupes}, moved={moved}, skipped={skipped}");
         return new Ps3FolderDedupeResult { Total = total, Dupes = dupes, Moved = moved, Skipped = skipped };
     }
 

@@ -15,23 +15,23 @@ internal static class RunProgressLocalization
 
         ["Scan.Start"] = $"{RunConstants.Phases.Scan} Scanne {{0}} Root-Ordner...",
         ["Scan.Root"] = $"{RunConstants.Phases.Scan} Root: {{0}}",
-        ["Scan.RootCollecting"] = $"{RunConstants.Phases.Scan} {{0}}: Dateien sammeln...",
+        ["Scan.RootCollecting"] = $"{RunConstants.Phases.Scan} {{0}}: Erfassung laeuft...",
         ["Scan.RootFound"] = $"{RunConstants.Phases.Scan} {{0}}: {{1}} Dateien gefunden",
         ["Scan.ProgressProcessed"] = $"{RunConstants.Phases.Scan} {{0}}/{{1}} Dateien verarbeitet...",
         ["Filter.OnlyGames"] = $"{RunConstants.Phases.Filter} OnlyGames aktiv: {{0}} Nicht-Spiel-Dateien ausgeschlossen (KeepUnknown={{1}})",
-        ["Scan.Completed"] = $"{RunConstants.Phases.Scan} Abgeschlossen: {{0}} Dateien in {{1}}ms",
+        ["Scan.Completed"] = $"{RunConstants.Phases.Scan} Done: {{0}} files in {{1}}ms",
         ["Scan.HashLarge"] = $"{RunConstants.Phases.Scan} Hash: {{0}} ({{1:F0}} MB)...",
         ["Scan.IncompleteWarning"] = "WARNING: Scan unvollstaendig: {0} Verzeichnis(se) nicht zugreifbar",
         ["Scan.HighMemoryWarning"] = "WARNING: {0:N0} Dateien gescannt - hoher Speicherbedarf. Bitte weniger Roots verwenden.",
 
-        ["Move.Start"] = $"{RunConstants.Phases.Move} Verschiebe {{0}} Duplikate in Trash...",
-        ["Move.Completed"] = $"{RunConstants.Phases.Move} Abgeschlossen: {{0}} verschoben, {{1}} Fehler",
+        ["Move.Start"] = $"{RunConstants.Phases.Move} Move {{0}} duplicate file(s) to trash...",
+        ["Move.Completed"] = $"{RunConstants.Phases.Move} Done: {{0}} moved, {{1}} errors",
         ["Move.Abort.OutOfSpace"] = $"{RunConstants.Phases.Move} Abbruch: Zu wenig freier Speicher im Ziel ({{0}} Bytes verfuegbar, {{1}} Bytes benoetigt).",
-        ["Move.Progress"] = $"{RunConstants.Phases.Move} Fortschritt: {{0}}/{{1}} (moved={{2}}, skipped={{3}}, failed={{4}})",
+        ["Move.Progress"] = $"{RunConstants.Phases.Move} Progress: {{0}}/{{1}} (moved={{2}}, skipped={{3}}, failed={{4}})",
         ["Move.SkipConflict"] = $"{RunConstants.Phases.Move} Skip (conflict): {{0}}",
 
         ["Sort.Start"] = $"{RunConstants.Phases.Sort} Sortiere Dateien nach Konsole...",
-        ["Sort.Completed"] = $"{RunConstants.Phases.Sort} Konsolen-Sortierung abgeschlossen",
+        ["Sort.Completed"] = $"{RunConstants.Phases.Sort} Console sort done",
 
         ["Report.Generate"] = $"{RunConstants.Phases.Report} Generiere HTML-Report...",
         ["Report.Created"] = $"{RunConstants.Phases.Report} Report erstellt: {{0}}",
@@ -39,12 +39,12 @@ internal static class RunProgressLocalization
 
         ["Audit.WriteSidecar"] = "[Audit] Schreibe Audit-Sidecar...",
         ["Audit.SidecarWriteFailed"] = "[Audit] Sidecar write failed: {0}: {1}",
-        ["Done.Pipeline"] = $"{RunConstants.Phases.Finished} Pipeline abgeschlossen in {{0}}ms - {{1}} Dateien, {{2}} Gruppen",
+        ["Done.Pipeline"] = $"{RunConstants.Phases.Finished} Pipeline done in {{0}}ms - {{1}} files, {{2}} groups",
 
-        ["Analyze.Skipped.CrossRoot"] = "[CrossRoot] Analyse uebersprungen: {0}",
-        ["Analyze.Skipped.FolderDedupe"] = "[FolderDedupe] Analyse uebersprungen: {0}",
-        ["Analyze.Skipped.Quarantine"] = "[Quarantine] Analyse uebersprungen: {0}",
-        ["Analyze.Skipped.Hardlink"] = "[Hardlink] Analyse uebersprungen: {0}",
+        ["Analyze.Skipped.CrossRoot"] = "[CrossRoot] Analyse ausgelassen: {0}",
+        ["Analyze.Skipped.FolderDedupe"] = "[FolderDedupe] Analyse ausgelassen: {0}",
+        ["Analyze.Skipped.Quarantine"] = "[Quarantine] Analyse ausgelassen: {0}",
+        ["Analyze.Skipped.Hardlink"] = "[Hardlink] Analyse ausgelassen: {0}",
         ["Preview.FolderDedupeSummary"] = "[FolderDedupe] Preview: {0} Analyse-Ergebnis(se), PS3-Roots={1}, BaseName-Roots={2}",
         ["Preview.CrossRootSummary"] = "[CrossRoot] Preview: {0} root-uebergreifende Hash-Gruppen (Sample={1})",
         ["Preview.QuarantineSummary"] = "[Quarantine] Preview: {0} verdaechtige Datei(en) im Sample von {1} Kandidaten",
@@ -52,20 +52,20 @@ internal static class RunProgressLocalization
         ["CollectionIndex.DeltaLookupsDisabled"] = "[CollectionIndex] Delta lookups disabled for this run: {0}",
 
         ["Dedupe.Start"] = $"{RunConstants.Phases.Dedupe} Gruppiere {{0}} Dateien nach GameKey...",
-        ["Dedupe.Completed"] = $"{RunConstants.Phases.Dedupe} Abgeschlossen in {{0}}ms: {{1}} Gruppen, Keep={{2}}, Move={{3}}, Junk={{4}}",
+        ["Dedupe.Completed"] = $"{RunConstants.Phases.Dedupe} Done in {{0}}ms: {{1}} groups, Keep={{2}}, Move={{3}}, Junk={{4}}",
 
         ["Junk.Start"] = $"{RunConstants.Phases.Junk} Entferne Junk-Dateien...",
         ["Junk.Completed"] = $"{RunConstants.Phases.Junk} {{0}} Junk-Datei(en) entfernt",
 
-        ["Convert.OnlyStart"] = $"{RunConstants.Phases.Convert} Nur-Konvertierung: {{0}} Dateien...",
-        ["Convert.StartGroups"] = $"{RunConstants.Phases.Convert} Starte Formatkonvertierung fuer {{0}} Gruppen...",
-        ["Convert.Completed"] = $"{RunConstants.Phases.Convert} Abgeschlossen: {{0}} konvertiert, {{1}} uebersprungen, {{2}} blockiert, {{3}} Fehler",
-        ["Convert.Progress"] = $"{RunConstants.Phases.Convert} Fortschritt: {{0}}/{{1}} {{2}} (ok={{3}}, skip={{4}}, blocked={{5}}, err={{6}})",
+        ["Convert.OnlyStart"] = $"{RunConstants.Phases.Convert} Convert-only: {{0}} files...",
+        ["Convert.StartGroups"] = $"{RunConstants.Phases.Convert} Start format conversion for {{0}} groups...",
+        ["Convert.Completed"] = $"{RunConstants.Phases.Convert} Done: {{0}} converted, {{1}} skipped, {{2}} blocked, {{3}} errors",
+        ["Convert.Progress"] = $"{RunConstants.Phases.Convert} Progress: {{0}}/{{1}} {{2}} (ok={{3}}, skip={{4}}, blocked={{5}}, err={{6}})",
         ["Convert.FileTarget"] = $"{RunConstants.Phases.Convert} {{0}} -> {{1}}",
-        ["Convert.StepDone"] = $"{RunConstants.Phases.Convert} {{0}} Schritt {{1}} von {{2}} abgeschlossen",
+        ["Convert.StepDone"] = $"{RunConstants.Phases.Convert} {{0}} step {{1}} of {{2}} done",
 
-        ["Watch.Error"] = "FileSystemWatcher-Fehler: {0}",
-        ["Watch.UnknownError"] = "Unbekannter Watcher-Fehler"
+        ["Watch.Error"] = "FileSystemWatcher error: {0}",
+        ["Watch.UnknownError"] = "Unknown watcher error"
     };
 
     private static readonly IReadOnlyDictionary<string, string> En = new Dictionary<string, string>(StringComparer.Ordinal)

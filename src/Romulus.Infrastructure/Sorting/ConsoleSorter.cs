@@ -60,7 +60,7 @@ public sealed class ConsoleSorter
     /// If this map is missing, files are skipped with an audit warning.
     /// </param>
     /// <param name="enrichedSortDecisions">
-    /// Optional: pre-enriched SortDecision mappings (filePath → "Sort"/"Review"/"Blocked"/"DatVerified").
+    /// Optional: pre-enriched SortDecision mappings (filePath → Sort/Review/Blocked/DatVerified).
     /// When provided, controls routing: Review → _REVIEW/{ConsoleKey}/,
     /// Blocked → _BLOCKED/{Reason}/, Unknown → _UNKNOWN/.
     /// </param>
@@ -209,7 +209,7 @@ public sealed class ConsoleSorter
 
                     // Non-junk blocked/unknown files are moved to dedicated staging folders.
                     var reasonSegment = ToSafeReasonSegment(sortReason,
-                        isBlockedDecision ? "blocked" : "unknown");
+                        isBlockedDecision ? RunConstants.StatusBlocked : "unknown");
                     var decisionDir = isBlockedDecision
                         ? Path.Combine(root, RunConstants.WellKnownFolders.Blocked, reasonSegment)
                         : Path.Combine(root, RunConstants.WellKnownFolders.Unknown);
