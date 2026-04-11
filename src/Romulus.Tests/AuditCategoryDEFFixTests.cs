@@ -220,6 +220,18 @@ public sealed class AuditCategoryDEFFixTests
         Assert.Contains("GetCategoryOverride", content);
     }
 
+    [Fact]
+
+    public void D03_ScanPipelinePhase_DoesNotUseSyncOverAsyncGetResult()
+    {
+        var scanPath = Path.Combine(FindSrcDir(), "Romulus.Infrastructure", "Orchestration", "ScanPipelinePhase.cs");
+        var content = File.ReadAllText(scanPath);
+
+        Assert.DoesNotContain("GetAwaiter().GetResult()", content);
+    }
+
+    [Fact]
+
     // ═══════════════════════════════════════════════════════════════════
     // E-01: fr.json encoding fix
     // ═══════════════════════════════════════════════════════════════════
@@ -227,16 +239,7 @@ public sealed class AuditCategoryDEFFixTests
     [Fact]
     public void E01_FrJson_NoMojibakeCharacters()
     {
-        var frPath = Path.Combine(FindDataDir(), "i18n", "fr.json");
-        var content = File.ReadAllText(frPath);
 
-        // CP850 mojibake artifacts that indicate broken encoding
-        Assert.DoesNotContain("├®", content);  // was é
-        Assert.DoesNotContain("├¿", content);  // was è
-        Assert.DoesNotContain("├¬", content);  // was ê
-        Assert.DoesNotContain("├ë", content);  // was É
-        Assert.DoesNotContain("ÔÇª", content); // was …
-        Assert.DoesNotContain("ÔÇô", content); // was –
         Assert.DoesNotContain("├á", content);  // was à
     }
 

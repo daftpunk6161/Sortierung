@@ -362,9 +362,10 @@ internal static partial class Program
         int skippedExisting = 0;
         int downloaded = 0;
         int failed = 0;
+        var strictSidecarValidation = settings?.Dat?.StrictSidecarValidation ?? false;
 
         using (var datHttpClient = DatSourceService.CreateConfiguredHttpClient())
-        using (var datService = new DatSourceService(datRoot, datHttpClient))
+        using (var datService = new DatSourceService(datRoot, datHttpClient, strictSidecarValidation: strictSidecarValidation))
         {
             // Download only URL-based catalog entries. nointro-pack entries are imported from local folders.
             var downloadEntries = catalog

@@ -12,6 +12,7 @@ using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Metrics;
 using Romulus.Infrastructure.Orchestration;
+using Romulus.Tests.TestFixtures;
 using Romulus.UI.Wpf.Models;
 using Romulus.UI.Wpf.Services;
 using Romulus.UI.Wpf.ViewModels;
@@ -263,7 +264,7 @@ public sealed class Issue9InvariantRegressionRedPhaseTests : IDisposable
     }
 
     [Fact]
-    public void Should_BuildEquivalentRunOptionsAcrossEntryPoints_When_SameIntentGiven_Issue9_INV12_P01()
+    public async Task Should_BuildEquivalentRunOptionsAcrossEntryPoints_When_SameIntentGiven_Issue9_INV12_P01()
     {
         var root = Path.Combine(_tempDir, "roots");
         var datRoot = Path.Combine(_tempDir, "dat");
@@ -332,7 +333,7 @@ public sealed class Issue9InvariantRegressionRedPhaseTests : IDisposable
         vm.ConflictPolicy = ConflictPolicy.Rename;
         vm.TrashRoot = trashRoot;
 
-        var (_, wpfRunOptions, _, _) = new RunService().BuildOrchestrator(vm);
+        var (_, wpfRunOptions, _, _) = await new RunService().BuildOrchestratorAsync(vm);
 
         var cliFingerprint = ToFingerprint(cliRunOptions!);
         var apiFingerprint = ToFingerprint(api);
@@ -840,16 +841,6 @@ public sealed class Issue9InvariantRegressionRedPhaseTests : IDisposable
         public void AppendAuditRow(string auditCsvPath, string rootPath, string oldPath, string newPath, string action, string category = "", string hash = "", string reason = "")
         {
         }
-    }
-
-    private sealed class StubThemeService : IThemeService
-    {
-        public AppTheme Current => AppTheme.Dark;
-        public bool IsDark => true;
-        public IReadOnlyList<AppTheme> AvailableThemes => [AppTheme.Dark];
-        public void ApplyTheme(AppTheme theme) { }
-        public void ApplyTheme(bool dark) { }
-        public void Toggle() { }
     }
 
     private sealed class StubDialogService : IDialogService

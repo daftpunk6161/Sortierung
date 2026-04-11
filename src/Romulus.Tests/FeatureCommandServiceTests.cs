@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Paths;
+using Romulus.Tests.TestFixtures;
 using Romulus.UI.Wpf.Models;
 using Romulus.UI.Wpf.Services;
 using Romulus.UI.Wpf.ViewModels;
@@ -1384,25 +1385,6 @@ public sealed class FeatureCommandServiceTests : IDisposable
         public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
         public bool ConfirmConversionReview(string title, string summary, IReadOnlyList<Romulus.Contracts.Models.ConversionReviewEntry> entries) => ConfirmResult;
         public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => true;
-    }
-
-    private sealed class StubSettingsService : ISettingsService
-    {
-        public string? LastAuditPath => null;
-        public string LastTheme => "Dark";
-        public SettingsDto? Load() => new();
-        public void LoadInto(MainViewModel vm) { }
-        public bool SaveFrom(MainViewModel vm, string? lastAuditPath = null) => true;
-    }
-
-    private sealed class StubThemeService : IThemeService
-    {
-        public AppTheme Current => AppTheme.Dark;
-        public bool IsDark => true;
-        public IReadOnlyList<AppTheme> AvailableThemes => [AppTheme.Dark];
-        public void ApplyTheme(AppTheme theme) { }
-        public void ApplyTheme(bool dark) { }
-        public void Toggle() { }
     }
 
     private sealed class StubWindowHost : IWindowHost

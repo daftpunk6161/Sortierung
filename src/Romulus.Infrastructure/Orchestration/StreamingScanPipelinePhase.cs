@@ -24,6 +24,18 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
         IReadOnlyCollection<string> extensions,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        foreach (var candidate in EnumerateFiles(roots, extensions, cancellationToken))
+        {
+            yield return candidate;
+
+        }
+    }
+
+    public IEnumerable<ScannedFileEntry> EnumerateFiles(
+        IReadOnlyList<string> roots,
+        IReadOnlyCollection<string> extensions,
+        CancellationToken cancellationToken = default)
+    {
         var effectiveExtensions = ExpandSetMemberExtensions(extensions);
         var candidates = new List<ScannedFileEntry>();
         var seenCandidatePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -92,7 +104,6 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
                 continue;
 
             yield return candidate;
-            await Task.Yield();
         }
     }
 

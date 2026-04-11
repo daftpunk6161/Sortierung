@@ -109,21 +109,21 @@ public static class CollectionExportService
         sb.AppendLine($"{labels.FileName}{delimiter}{labels.Console}{delimiter}{labels.Region}{delimiter}{labels.Format}{delimiter}{labels.SizeMb}{delimiter}{labels.Category}{delimiter}{labels.DatStatus}{delimiter}{labels.Path}");
         foreach (var c in candidates)
         {
-            sb.Append(AuditCsvParser.SanitizeCsvField(Path.GetFileName(c.MainPath), delimiter));
+            sb.Append(AuditCsvParser.SanitizeSpreadsheetCsvField(Path.GetFileName(c.MainPath), delimiter));
             sb.Append(delimiter);
-            sb.Append(AuditCsvParser.SanitizeCsvField(CollectionAnalysisService.ResolveConsoleLabel(c), delimiter));
+            sb.Append(AuditCsvParser.SanitizeSpreadsheetCsvField(CollectionAnalysisService.ResolveConsoleLabel(c), delimiter));
             sb.Append(delimiter);
-            sb.Append(AuditCsvParser.SanitizeCsvField(c.Region, delimiter));
+            sb.Append(AuditCsvParser.SanitizeSpreadsheetCsvField(c.Region, delimiter));
             sb.Append(delimiter);
-            sb.Append(AuditCsvParser.SanitizeCsvField(c.Extension, delimiter));
+            sb.Append(AuditCsvParser.SanitizeSpreadsheetCsvField(c.Extension, delimiter));
             sb.Append(delimiter);
             sb.Append((c.SizeBytes / 1048576.0).ToString("F2", CultureInfo.InvariantCulture));
             sb.Append(delimiter);
-            sb.Append(AuditCsvParser.SanitizeCsvField(CollectionAnalysisService.ToCategoryLabel(c.Category), delimiter));
+            sb.Append(AuditCsvParser.SanitizeSpreadsheetCsvField(CollectionAnalysisService.ToCategoryLabel(c.Category), delimiter));
             sb.Append(delimiter);
-            sb.Append(c.DatMatch ? "Verified" : "Unverified");
+            sb.Append(AuditCsvParser.SanitizeSpreadsheetCsvField(c.DatMatch ? "Verified" : "Unverified", delimiter));
             sb.Append(delimiter);
-            sb.AppendLine(AuditCsvParser.SanitizeCsvField(c.MainPath, delimiter));
+            sb.AppendLine(AuditCsvParser.SanitizeSpreadsheetCsvField(c.MainPath, delimiter));
         }
         return sb.ToString();
     }

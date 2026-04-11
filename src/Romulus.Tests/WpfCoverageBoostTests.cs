@@ -5,6 +5,7 @@ using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Analysis;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Reporting;
+using Romulus.Tests.TestFixtures;
 using Romulus.UI.Wpf.Services;
 using Romulus.UI.Wpf.ViewModels;
 using Xunit;
@@ -493,6 +494,30 @@ public sealed class WpfCoverageBoostTests : IDisposable
         Assert.Contains(",", csv);
     }
 
+    [Fact]
+    public void ExportCollectionCsv_FormulaLikeFileName_IsSpreadsheetSafe()
+    {
+        var candidates = new[]
+        {
+            new RomCandidate
+            {
+                MainPath = "=cmd.sfc",
+                GameKey = "Game",
+                Region = "EU",
+                Extension = ".sfc",
+                SizeBytes = 1024,
+                Category = FileCategory.Game,
+                ConsoleKey = "SNES"
+            }
+        };
+
+        var csv = FeatureService.ExportCollectionCsv(candidates, ',');
+        var rows = csv.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries);
+        Assert.True(rows.Length >= 2);
+        var firstField = rows[1].Split(',')[0];
+        Assert.Equal("'=cmd.sfc", firstField);
+    }
+
     // ═══ EXPORT: ExportExcelXml ═════════════════════════════════════════
 
     [Fact]
@@ -972,16 +997,6 @@ public sealed class WpfCoverageBoostTests : IDisposable
     private static MainViewModel CreateTestVM()
     {
         return new MainViewModel(new StubThemeService(), new StubDialogService());
-    }
-
-    private sealed class StubThemeService : IThemeService
-    {
-        public AppTheme Current => AppTheme.Dark;
-        public bool IsDark => true;
-        public IReadOnlyList<AppTheme> AvailableThemes => [AppTheme.Dark];
-        public void ApplyTheme(AppTheme theme) { }
-        public void ApplyTheme(bool dark) { }
-        public void Toggle() { }
     }
 
     private sealed class StubDialogService : IDialogService

@@ -70,6 +70,9 @@ public sealed class DatSettings
 
     [JsonPropertyName("datFallback")]
     public bool DatFallback { get; set; } = true;
+
+    [JsonPropertyName("strictSidecarValidation")]
+    public bool StrictSidecarValidation { get; set; }
 }
 
 public static class RomulusSettingsValidator

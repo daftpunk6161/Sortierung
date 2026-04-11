@@ -8,6 +8,7 @@ using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Reporting;
+using Romulus.Tests.TestFixtures;
 using Romulus.UI.Wpf.Models;
 using Romulus.UI.Wpf.Services;
 using Romulus.UI.Wpf.ViewModels;
@@ -79,8 +80,8 @@ public sealed class KpiChannelParityBacklogTests : IDisposable
         vm.PreferWORLD = true;
 
         var runService = new RunService();
-        var (orchestrator, options, auditPath, reportPath) = runService.BuildOrchestrator(vm);
-        var wpfExecution = runService.ExecuteRun(orchestrator, options, auditPath, reportPath, CancellationToken.None);
+        var (orchestrator, options, auditPath, reportPath) = await runService.BuildOrchestratorAsync(vm);
+        var wpfExecution = await runService.ExecuteRunAsync(orchestrator, options, auditPath, reportPath, CancellationToken.None);
         var projection = RunProjectionFactory.Create(wpfExecution.Result);
         var reportSummary = RunReportWriter.BuildSummary(wpfExecution.Result, "DryRun");
 
@@ -238,16 +239,6 @@ public sealed class KpiChannelParityBacklogTests : IDisposable
 
     private static MainViewModel CreateViewModel()
         => new(new StubThemeService(), new StubDialogService());
-
-    private sealed class StubThemeService : IThemeService
-    {
-        public AppTheme Current => AppTheme.Dark;
-        public bool IsDark => true;
-        public IReadOnlyList<AppTheme> AvailableThemes => [AppTheme.Dark];
-        public void ApplyTheme(AppTheme theme) { }
-        public void ApplyTheme(bool dark) { }
-        public void Toggle() { }
-    }
 
     private sealed class StubDialogService : IDialogService
     {

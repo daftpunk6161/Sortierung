@@ -906,14 +906,14 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
 
         var gate = new object();
         var lastInvoke = 0L; // Stopwatch ticks of last forwarded call
-        const long ThrottleIntervalTicks = 200 * TimeSpan.TicksPerMillisecond; // 200ms
+        var throttleIntervalTicks = Math.Max(1L, (Stopwatch.Frequency * 200L) / 1000L); // 200ms in Stopwatch ticks
 
         return message =>
         {
             var now = Stopwatch.GetTimestamp();
             lock (gate)
             {
-                if (now - lastInvoke < ThrottleIntervalTicks)
+                if (now - lastInvoke < throttleIntervalTicks)
                     return;
                 lastInvoke = now;
                 onProgress(message);

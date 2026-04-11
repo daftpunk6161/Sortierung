@@ -211,6 +211,36 @@ public sealed class ConversionExecutorHardeningTests
     }
 
     [Fact]
+    public void Execute_SingleStepPromotionRace_DoesNotDeleteExistingFinalOutput_WhenPromoteFails()
+    {
+        var source = CreateTempFile(".iso");
+        var sourceDir = Path.GetDirectoryName(source)!;
+        var baseName = Path.GetFileNameWithoutExtension(source);
+        var stagedPath = Path.Combine(sourceDir, $"{baseName}.tmp.final.step1.chd");
+        var finalPath = Path.Combine(sourceDir, $"{baseName}.chd");
+
+        try
+        {
+            var plan = BuildPlan(source);
+            var executor = new ConversionExecutor([new FinalPathRaceInvoker()], allowReviewRequiredPlans: true);
+
+            var result = executor.Execute(plan);
+
+            Assert.Equal(ConversionOutcome.Error, result.Outcome);
+            Assert.Equal("staged-output-promote-failed", result.Reason);
+            Assert.False(File.Exists(stagedPath));
+            Assert.True(File.Exists(finalPath));
+            Assert.Equal("race-final", File.ReadAllText(finalPath));
+        }
+        finally
+        {
+            if (File.Exists(source)) File.Delete(source);
+            if (File.Exists(stagedPath)) File.Delete(stagedPath);
+            if (File.Exists(finalPath)) File.Delete(finalPath);
+        }
+    }
+
+    [Fact]
     public void Execute_SingleStepVerifyFail_CleansOutput()
     {
         var source = CreateTempFile(".iso");
@@ -590,6 +620,24 @@ public sealed class ConversionExecutorHardeningTests
         public ToolInvocationResult Invoke(string sourcePath, string targetPath, ConversionCapability capability, CancellationToken cancellationToken = default)
         {
             using var _ = File.Create(targetPath);
+            return new ToolInvocationResult(true, targetPath, 0, "ok", null, 1, VerificationStatus.NotAttempted);
+        }
+
+        public VerificationStatus Verify(string targetPath, ConversionCapability capability)
+            => VerificationStatus.Verified;
+    }
+
+    private sealed class FinalPathRaceInvoker : IToolInvoker
+    {
+        public bool CanHandle(ConversionCapability capability) => true;
+
+        public ToolInvocationResult Invoke(string sourcePath, string targetPath, ConversionCapability capability, CancellationToken cancellationToken = default)
+        {
+            File.Copy(sourcePath, targetPath, overwrite: false);
+
+            var finalPath = targetPath.Replace(".tmp.final.step1", string.Empty, StringComparison.OrdinalIgnoreCase);
+            File.WriteAllText(finalPath, "race-final");
+
             return new ToolInvocationResult(true, targetPath, 0, "ok", null, 1, VerificationStatus.NotAttempted);
         }
 

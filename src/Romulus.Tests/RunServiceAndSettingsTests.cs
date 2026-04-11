@@ -2,6 +2,7 @@ using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Configuration;
 using Romulus.Infrastructure.Paths;
+using Romulus.Tests.TestFixtures;
 using Romulus.UI.Wpf.Models;
 using Romulus.UI.Wpf.Services;
 using Romulus.UI.Wpf.ViewModels;
@@ -91,7 +92,7 @@ public sealed class RunServiceAndSettingsTests : IDisposable
     }
 
     [Fact]
-    public void RunService_BuildOrchestrator_MultiRoot_OrderInvariantArtifactDirectories()
+    public async Task RunService_BuildOrchestrator_MultiRoot_OrderInvariantArtifactDirectories()
     {
         var rootA = Path.Combine(_tempDir, "ConsoleA");
         var rootB = Path.Combine(_tempDir, "ConsoleB");
@@ -109,8 +110,8 @@ public sealed class RunServiceAndSettingsTests : IDisposable
         secondVm.DryRun = false;
 
         var runService = new RunService();
-        var (_, firstOptions, firstAuditPath, firstReportPath) = runService.BuildOrchestrator(firstVm);
-        var (_, secondOptions, secondAuditPath, secondReportPath) = runService.BuildOrchestrator(secondVm);
+        var (_, firstOptions, firstAuditPath, firstReportPath) = await runService.BuildOrchestratorAsync(firstVm);
+        var (_, secondOptions, secondAuditPath, secondReportPath) = await runService.BuildOrchestratorAsync(secondVm);
 
         Assert.Equal(Path.GetDirectoryName(firstAuditPath), Path.GetDirectoryName(secondAuditPath));
         Assert.Equal(Path.GetDirectoryName(firstReportPath), Path.GetDirectoryName(secondReportPath));
@@ -424,16 +425,6 @@ public sealed class RunServiceAndSettingsTests : IDisposable
         }
 
         return new string(chars);
-    }
-
-    private sealed class StubThemeService : IThemeService
-    {
-        public AppTheme Current => AppTheme.Dark;
-        public bool IsDark => true;
-        public IReadOnlyList<AppTheme> AvailableThemes => [AppTheme.Dark];
-        public void ApplyTheme(AppTheme theme) { }
-        public void ApplyTheme(bool dark) { }
-        public void Toggle() { }
     }
 
     private sealed class StubDialogService : IDialogService

@@ -1798,7 +1798,7 @@ public class GuiViewModelTests
     }
 
     [Fact]
-    public void RunService_BuildOrchestrator_MapsDatRenameFlags_FromViewModel_Issue9()
+    public async Task RunService_BuildOrchestrator_MapsDatRenameFlags_FromViewModel_Issue9()
     {
         var root = Path.Combine(Path.GetTempPath(), $"gui_datrename_root_{Guid.NewGuid():N}");
         var datRoot = Path.Combine(Path.GetTempPath(), $"gui_datrename_dat_{Guid.NewGuid():N}");
@@ -1812,7 +1812,7 @@ public class GuiViewModelTests
             vm.UseDat = true;
             vm.EnableDatRename = true;
 
-            var (_, options, _, _) = new RunService().BuildOrchestrator(vm);
+            var (_, options, _, _) = await new RunService().BuildOrchestratorAsync(vm);
 
             Assert.True(options.EnableDat);
             Assert.True(options.EnableDatAudit);

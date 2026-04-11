@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Dat;
+using Romulus.Infrastructure.Orchestration;
 using Romulus.UI.Wpf.Services;
 
 namespace Romulus.UI.Wpf.ViewModels;
@@ -186,7 +187,8 @@ public sealed partial class DatCatalogViewModel : ObservableObject
         try
         {
             using var datHttpClient = DatSourceService.CreateConfiguredHttpClient();
-            using var datService = new DatSourceService(datRoot, datHttpClient);
+            var strictSidecarValidation = ResolveStrictDatSidecarValidation();
+            using var datService = new DatSourceService(datRoot, datHttpClient, strictSidecarValidation: strictSidecarValidation);
             for (int i = 0; i < autoEntries.Count; i++)
             {
                 var entry = autoEntries[i];
@@ -344,7 +346,8 @@ public sealed partial class DatCatalogViewModel : ObservableObject
         try
         {
             using var datHttpClient = DatSourceService.CreateConfiguredHttpClient();
-            using var datService = new DatSourceService(datRoot, datHttpClient);
+            var strictSidecarValidation = ResolveStrictDatSidecarValidation();
+            using var datService = new DatSourceService(datRoot, datHttpClient, strictSidecarValidation: strictSidecarValidation);
             for (int i = 0; i < selected.Count; i++)
             {
                 var entry = selected[i];
@@ -404,7 +407,8 @@ public sealed partial class DatCatalogViewModel : ObservableObject
             await Task.Run(() =>
             {
                 using var datHttpClient = DatSourceService.CreateConfiguredHttpClient();
-                using var datService = new DatSourceService(datRoot, datHttpClient);
+                var strictSidecarValidation = ResolveStrictDatSidecarValidation();
+                using var datService = new DatSourceService(datRoot, datHttpClient, strictSidecarValidation: strictSidecarValidation);
 
                 // Filter catalog entries by group/format if requested
                 var filteredCatalog = _catalog.AsEnumerable();
@@ -490,6 +494,14 @@ public sealed partial class DatCatalogViewModel : ObservableObject
         StaleCount = Entries.Count(e => e.Status == DatInstallStatus.Stale);
         AutoCount = Entries.Count(e => e.DownloadStrategy == DatDownloadStrategy.Auto);
         OnPropertyChanged(nameof(HasData));
+    }
+
+    private static bool ResolveStrictDatSidecarValidation()
+    {
+        var dataDir = FeatureService.ResolveDataDirectory()
+            ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
+        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+        return settings.Dat.StrictSidecarValidation;
     }
 
     private bool ApplyFilter(object obj)

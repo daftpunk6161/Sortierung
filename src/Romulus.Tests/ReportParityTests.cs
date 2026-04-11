@@ -5,6 +5,7 @@ using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.FileSystem;
+using Romulus.Tests.TestFixtures;
 using Romulus.UI.Wpf.Models;
 using Romulus.UI.Wpf.Services;
 using Romulus.UI.Wpf.ViewModels;
@@ -67,8 +68,8 @@ public sealed class ReportParityTests : IDisposable
         vm.PreferWORLD = true;
 
         var runService = new RunService();
-        var (orchestrator, options, auditPath, reportPath) = runService.BuildOrchestrator(vm);
-        var wpfExecution = runService.ExecuteRun(orchestrator, options, auditPath, reportPath, CancellationToken.None);
+        var (orchestrator, options, auditPath, reportPath) = await runService.BuildOrchestratorAsync(vm);
+        var wpfExecution = await runService.ExecuteRunAsync(orchestrator, options, auditPath, reportPath, CancellationToken.None);
 
         var manager = new RunManager(new FileSystemAdapter(), new AuditCsvStore());
         var apiRun = manager.TryCreate(new RunRequest
@@ -127,8 +128,8 @@ public sealed class ReportParityTests : IDisposable
         vm.PreferWORLD = true;
 
         var runService = new RunService();
-        var (orchestrator, options, auditPath, reportPath) = runService.BuildOrchestrator(vm);
-        var wpfExecution = runService.ExecuteRun(orchestrator, options, auditPath, reportPath, CancellationToken.None);
+        var (orchestrator, options, auditPath, reportPath) = await runService.BuildOrchestratorAsync(vm);
+        var wpfExecution = await runService.ExecuteRunAsync(orchestrator, options, auditPath, reportPath, CancellationToken.None);
         var projection = Romulus.Infrastructure.Orchestration.RunProjectionFactory.Create(wpfExecution.Result);
 
         var cliOptions = new CliRunOptions
@@ -218,8 +219,8 @@ public sealed class ReportParityTests : IDisposable
         vm.PreferWORLD = false;
 
         var runService = new RunService();
-        var (orchestrator, options, auditPath, reportPath) = runService.BuildOrchestrator(vm);
-        var wpfExecution = runService.ExecuteRun(orchestrator, options, auditPath, reportPath, CancellationToken.None);
+        var (orchestrator, options, auditPath, reportPath) = await runService.BuildOrchestratorAsync(vm);
+        var wpfExecution = await runService.ExecuteRunAsync(orchestrator, options, auditPath, reportPath, CancellationToken.None);
 
         var manager = new RunManager(new FileSystemAdapter(), new AuditCsvStore());
         var apiRun = manager.TryCreate(new RunRequest
@@ -399,16 +400,6 @@ public sealed class ReportParityTests : IDisposable
 
     private static MainViewModel CreateViewModel()
         => new(new StubThemeService(), new StubDialogService());
-
-    private sealed class StubThemeService : IThemeService
-    {
-        public AppTheme Current => AppTheme.Dark;
-        public bool IsDark => true;
-        public IReadOnlyList<AppTheme> AvailableThemes => [AppTheme.Dark];
-        public void ApplyTheme(AppTheme theme) { }
-        public void ApplyTheme(bool dark) { }
-        public void Toggle() { }
-    }
 
     private sealed class StubDialogService : IDialogService
     {

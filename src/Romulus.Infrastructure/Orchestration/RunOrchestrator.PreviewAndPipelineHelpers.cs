@@ -369,48 +369,37 @@ public sealed partial class RunOrchestrator
         var scannedFilesByPath = new Dictionary<string, ScannedFileEntry>(StringComparer.OrdinalIgnoreCase);
         var changedBatch = new List<ScannedFileEntry>(deltaBatchSize);
         var currentHashType = CollectionIndexCandidateMapper.NormalizeHashType(context.Options.HashType);
-        var scanCompleted = true;
         var indexLookupsEnabled = true;
 
-        try
+        await foreach (var scannedFile in scannedFiles.WithCancellation(cancellationToken))
         {
-            await foreach (var scannedFile in scannedFiles.WithCancellation(cancellationToken))
+            scannedFilesByPath[scannedFile.Path] = scannedFile;
+
+            CollectionIndexEntry? persistedEntry = null;
+            if (indexLookupsEnabled)
             {
-                scannedFilesByPath[scannedFile.Path] = scannedFile;
-
-                CollectionIndexEntry? persistedEntry = null;
-                if (indexLookupsEnabled)
-                {
-                    var lookup = await TryGetReusableCollectionIndexEntryAsync(scannedFile, currentHashType, cancellationToken);
-                    persistedEntry = lookup.Entry;
-                    indexLookupsEnabled = !lookup.DisableLookups;
-                }
-
-                if (persistedEntry is not null)
-                {
-                    FlushChangedBatch(changedBatch, candidates, context, cancellationToken);
-                    candidates.Add(CollectionIndexCandidateMapper.ToCandidate(persistedEntry));
-                    continue;
-                }
-
-                changedBatch.Add(scannedFile);
-                if (changedBatch.Count >= deltaBatchSize)
-                    FlushChangedBatch(changedBatch, candidates, context, cancellationToken);
+                var lookup = await TryGetReusableCollectionIndexEntryAsync(scannedFile, currentHashType, cancellationToken).ConfigureAwait(false);
+                persistedEntry = lookup.Entry;
+                indexLookupsEnabled = !lookup.DisableLookups;
             }
-        }
-        catch (OperationCanceledException)
-        {
-            scanCompleted = false;
+
+            if (persistedEntry is not null)
+            {
+                FlushChangedBatch(changedBatch, candidates, context, cancellationToken);
+                candidates.Add(CollectionIndexCandidateMapper.ToCandidate(persistedEntry));
+                continue;
+            }
+
+            changedBatch.Add(scannedFile);
+            if (changedBatch.Count >= deltaBatchSize)
+                FlushChangedBatch(changedBatch, candidates, context, cancellationToken);
         }
 
         if (changedBatch.Count > 0)
-        {
-            var flushToken = scanCompleted ? cancellationToken : CancellationToken.None;
-            FlushChangedBatch(changedBatch, candidates, context, flushToken);
-        }
+            FlushChangedBatch(changedBatch, candidates, context, cancellationToken);
 
-        if (scanCompleted && !cancellationToken.IsCancellationRequested)
-            await PersistCandidatesToCollectionIndexAsync(candidates, scannedFilesByPath, context.Options, currentHashType, cancellationToken);
+        if (!cancellationToken.IsCancellationRequested)
+            await PersistCandidatesToCollectionIndexAsync(candidates, scannedFilesByPath, context.Options, currentHashType, cancellationToken).ConfigureAwait(false);
 
         return candidates;
     }
@@ -427,39 +416,41 @@ public sealed partial class RunOrchestrator
             cancellationToken);
 
         var candidates = new List<RomCandidate>();
-        try
-        {
-            await foreach (var candidate in enrichedStream.WithCancellation(cancellationToken))
-                candidates.Add(candidate);
-        }
-        catch (OperationCanceledException)
-        {
-            // Scan cancelled mid-way; return whatever was collected.
-            // The caller checks cancellationToken.IsCancellationRequested to detect early exit.
-        }
+        await foreach (var candidate in enrichedStream.WithCancellation(cancellationToken))
+            candidates.Add(candidate);
 
         return candidates;
     }
 
-    private (CollectionIndexEntry? Entry, bool DisableLookups) TryGetReusableCollectionIndexEntry(
+    private Task<(CollectionIndexEntry? Entry, bool DisableLookups)> TryGetReusableCollectionIndexEntryAsync(
         ScannedFileEntry scannedFile,
         string hashType,
         CancellationToken cancellationToken)
     {
         if (_collectionIndex is null || string.IsNullOrWhiteSpace(_enrichmentFingerprint))
-            return (null, false);
+            return Task.FromResult<(CollectionIndexEntry? Entry, bool DisableLookups)>((null, false));
 
+        return TryGetReusableCollectionIndexEntryCoreAsync(scannedFile, hashType, cancellationToken);
+    }
+
+    private async Task<(CollectionIndexEntry? Entry, bool DisableLookups)> TryGetReusableCollectionIndexEntryCoreAsync(
+        ScannedFileEntry scannedFile,
+        string hashType,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            var entry = _collectionIndex.TryGetByPathAsync(scannedFile.Path, cancellationToken)
-                .GetAwaiter()
-                .GetResult();
+            var entry = await _collectionIndex!.TryGetByPathAsync(scannedFile.Path, cancellationToken).ConfigureAwait(false);
             if (entry is null)
                 return (null, false);
 
-            return CollectionIndexCandidateMapper.CanReuseCandidate(entry, scannedFile, hashType, _enrichmentFingerprint)
+            return CollectionIndexCandidateMapper.CanReuseCandidate(entry, scannedFile, hashType, _enrichmentFingerprint!)
                 ? (entry, false)
                 : (null, false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
@@ -467,12 +458,6 @@ public sealed partial class RunOrchestrator
             return (null, true);
         }
     }
-
-    private Task<(CollectionIndexEntry? Entry, bool DisableLookups)> TryGetReusableCollectionIndexEntryAsync(
-        ScannedFileEntry scannedFile,
-        string hashType,
-        CancellationToken cancellationToken)
-        => Task.FromResult(TryGetReusableCollectionIndexEntry(scannedFile, hashType, cancellationToken));
 
     private void FlushChangedBatch(
         List<ScannedFileEntry> changedBatch,
@@ -495,14 +480,7 @@ public sealed partial class RunOrchestrator
         var enrichmentPhase = new EnrichmentPipelinePhase();
         var input = new EnrichmentPhaseInput(files, _consoleDetector, _hashService, _archiveHashService, _datIndex, _headerlessHasher, _knownBiosHashes, _familyDatStrategyResolver, _familyPipelineSelector);
 
-        try
-        {
-            return enrichmentPhase.Execute(input, context, cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return enrichmentPhase.Execute(input, context, CancellationToken.None);
-        }
+        return enrichmentPhase.Execute(input, context, cancellationToken);
     }
 
     private async Task PersistCandidatesToCollectionIndexAsync(

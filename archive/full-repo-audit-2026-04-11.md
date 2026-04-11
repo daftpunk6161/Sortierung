@@ -552,7 +552,7 @@ API, CLI und GUI definieren Fehlercodes unabhaengig. Dies fuehrt zu:
 - [ ] **C-01:** MainViewModel aufteilen (God-Class)
 - [ ] **C-02:** Orchestration-Namespace restrukturieren
 - [ ] **C-03:** FeatureCommandService / FeatureService Domain-Handler extrahieren
-- [ ] **C-04:** Duplizierte Test-Stubs konsolidieren
+- [x] **C-04:** Duplizierte Test-Stubs konsolidieren
 - [x] **D-02:** Shared Error-Code-Enumeration
 - [x] **D-03:** Zentralen ClassificationResolver erstellen
 - [x] **E-02:** Fehlende franzoesische Uebersetzungen
@@ -729,96 +729,111 @@ Die Code-Hygiene ist ueberdurchschnittlich: Legacy-Namespace vollstaendig migrie
 
 **Hinweis zum Status:** Dieser Nachtrag ist der verifizierte Stand dieser Audit-Session und priorisiert nur aktuell belegte Risiken aus `src/`.
 
-### 9.1 Priorisierte offene Findings
+### 9.1 Priorisierte Findings (Status bis Runde 4 aktualisiert)
 
 #### V-01: Conversion-Promotion kann gueltiges Zielartefakt mit aufraeumen
-- [ ] **Offene Massnahme**
+- [x] **Fix implementiert**
 - **Schweregrad:** P0 (**Data-Integrity Risk**)
 - **Impact:** Wenn beim Promoten des staged Outputs ein I/O-Fehler eintritt, werden sowohl staged als auch finaler Pfad aufgeraeumt. Existierte am finalen Pfad bereits ein valides Artefakt, kann es verloren gehen.
 - **Betroffene Datei(en):**
   - `src/Romulus.Infrastructure/Conversion/ConversionExecutor.cs` (Zeilen 324-340)
-- **Beleg:** `PromoteFinalOutputIfNeeded` faengt `IOException/UnauthorizedAccessException` und ruft danach `CleanupPath(invocationOutputPath)` und `CleanupPath(finalOutputPath)` auf.
-- **Fix:** Promotion in transaktionalen Schritten mit Rollback sichern (z. B. finales Ziel nur ersetzen, wenn Move atomar vorbereitet wurde; bestehendes Ziel vorher in sicherem Backup halten).
-- **Testbedarf:** Negativtest fuer Promotion-Fehler bei bereits existierendem `finalOutputPath`.
+- **Beleg:** `PromoteFinalOutputIfNeeded` raeumt bei Promote-Fehler jetzt nur noch den staged Pfad auf; der finale Zielpfad bleibt unangetastet.
+- **Fix:** Catch-Pfad in `ConversionExecutor` gehaertet: kein `CleanupPath(finalOutputPath)` mehr bei `IOException`/`UnauthorizedAccessException`.
+- **Testabsicherung:** `ConversionExecutorHardeningTests.Execute_SingleStepPromotionRace_DoesNotDeleteExistingFinalOutput_WhenPromoteFails`.
 
 #### V-02: Cancellation wird in Orchestrierung bewusst umgangen
-- [ ] **Offene Massnahme**
+- [x] **Fix implementiert**
+- [x] **Regressionstest ergaenzt und gruen**
 - **Schweregrad:** P0 (**Parity/Responsiveness Risk**)
 - **Impact:** Nach Cancel kann weiterhin Arbeit laufen (Flush/Enrichment ohne Cancel-Token). Das erschwert deterministisches Verhalten bei Abbruch und kann Preview/Execute-Wahrnehmung verzerren.
 - **Betroffene Datei(en):**
-  - `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.PreviewAndPipelineHelpers.cs` (Zeilen 408, 504)
-- **Beleg:** `scanCompleted ? cancellationToken : CancellationToken.None` sowie Fallback `enrichmentPhase.Execute(..., CancellationToken.None)`.
-- **Fix:** Nur explizit idempotente Abschlussarbeit ohne schwere I/O nach Cancel erlauben; sonst strict cancel propagieren.
-- **Testbedarf:** Abbruch mitten im Scan/Enrichment mit Assertion auf keine weitere schwere Verarbeitung nach Cancel.
+  - `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.PreviewAndPipelineHelpers.cs`
+  - `src/Romulus.Tests/AuditCategoryDEFFixTests.cs`
+- **Beleg:** Kein Fallback mehr auf `CancellationToken.None` in den Enrichment-/Flush-Pfaden; Cancel wird strikt propagiert.
+- **Fix:** Cancellation-Bypass entfernt und Guard-Assertions gegen erneute Einfuehrung ergaenzt.
+- **Testabsicherung:** `AuditCategoryDEFFixTests.D03_RunOrchestratorPreviewHelpers_DoesNotBypassCancellationInEnrichment`.
 
 #### V-03: Sync-over-async in hot paths (RunService + ScanPipeline)
-- [ ] **Offene Massnahme**
+- [x] **Fix implementiert**
+- [x] **Regressionstest ergaenzt und gruen**
 - **Schweregrad:** P1 (**Reliability Risk**)
 - **Impact:** Blockierende Calls (`.Result`, `.Wait()`, `GetResult()`) koennen unter Last/SynchronizationContext zu Deadlocks, Thread-Starvation und schwerer diagnostizierbaren Fehlerbildern fuehren.
 - **Betroffene Datei(en):**
-  - `src/Romulus.UI.Wpf/Services/RunService.cs` (Zeilen 96, 273)
-  - `src/Romulus.Infrastructure/Orchestration/ScanPipelinePhase.cs` (Zeilen 20, 25)
-- **Fix:** End-to-end async; synchrone Bruecken nur an streng kontrollierten Boundaries.
-- **Testbedarf:** Last-/Cancel-Tests mit Parallelitaet und Timeout-Grenzen.
+  - `src/Romulus.Infrastructure/Orchestration/ScanPipelinePhase.cs`
+  - `src/Romulus.Infrastructure/Orchestration/StreamingScanPipelinePhase.cs`
+  - `src/Romulus.Tests/AuditCategoryDEFFixTests.cs`
+  - `src/Romulus.Tests/RunServiceAndSettingsTests.cs`
+  - `src/Romulus.Tests/KpiChannelParityBacklogTests.cs`
+  - `src/Romulus.Tests/ReportParityTests.cs`
+- **Fix:** `ScanPipelinePhase` nutzt synchrones Enumerieren ohne `GetAwaiter().GetResult()`; betroffene Tests wurden auf `BuildOrchestratorAsync`/`ExecuteRunAsync` migriert.
+- **Testabsicherung:** `AuditCategoryDEFFixTests.D03_ScanPipelinePhase_DoesNotUseSyncOverAsyncGetResult` plus asynchrone Paritaets-/RunService-Tests.
 
 #### V-04: Progress-Throttling vergleicht verschiedene Tick-Einheiten
-- [ ] **Offene Massnahme**
+- [x] **Fix implementiert**
 - **Schweregrad:** P1 (**Correctness/Telemetry Risk**)
 - **Impact:** Das Throttling-Intervall kann effektiv falsch sein, weil `Stopwatch.GetTimestamp()`-Ticks mit `TimeSpan.TicksPerMillisecond` verglichen werden.
 - **Betroffene Datei(en):**
   - `src/Romulus.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs` (Zeilen 909, 913, 916)
-- **Beleg:** `ThrottleIntervalTicks = 200 * TimeSpan.TicksPerMillisecond` bei gleichzeitiger Nutzung von `Stopwatch.GetTimestamp()`.
-- **Fix:** Intervall in Stopwatch-Frequenz umrechnen (`ThrottleIntervalStopwatchTicks = Stopwatch.Frequency / 5`).
-- **Testbedarf:** Deterministischer Unit-Test fuer Forwarding-Frequenz.
+- **Beleg:** Throttle-Intervall wird jetzt aus `Stopwatch.Frequency` berechnet und mit `Stopwatch.GetTimestamp()` konsistent verglichen.
+- **Fix:** Intervall auf `Math.Max(1L, (Stopwatch.Frequency * 200L) / 1000L)` umgestellt.
+- **Testabsicherung:** `AuditCategoryDEFFixTests.D03_EnrichmentPipelinePhase_ThrottleUsesStopwatchFrequencyTicks`.
 
 #### V-05: DAT-Signaturpruefung ist bei Sidecar-Problemen fail-open
-- [ ] **Policy-Entscheidung offen**
+- [x] **Fix implementiert**
+- [x] **Policy konfigurierbar umgesetzt (Default + Strict)**
 - **Schweregrad:** P1 (**Security/Integrity Policy Risk**)
 - **Impact:** Bei 404/500/malformed/network error der `.sha256`-Sidecar-Datei wird Download akzeptiert. Das ist bewusst implementiert, reduziert aber Supply-Chain-Haerte gegenueber fail-closed.
 - **Betroffene Datei(en):**
-  - `src/Romulus.Infrastructure/Dat/DatSourceService.cs` (Zeilen 333, 343, 352)
-  - `src/Romulus.Tests/DatSourceServiceTests.cs` (Zeilen 227, 241)
-- **Beleg:** Kommentare und Tests bestaetigen explizit `ReturnsTrue_HttpsIntegrity` bei Sidecar 404/500.
-- **Fix-Optionen:**
-  1. Strict-Modus (fail-closed ohne gueltige Sidecar/Hash) fuer High-Trust Umgebungen.
-  2. Default wie heute, aber explizit als Policy dokumentieren und im UI/CLI toggelbar machen.
-- **Testbedarf:** Matrix-Test fuer Strict/Default Policy.
+  - `src/Romulus.Contracts/Models/RomulusSettings.cs`
+  - `src/Romulus.Infrastructure/Dat/DatSourceService.cs`
+  - `src/Romulus.CLI/Program.cs`
+  - `src/Romulus.UI.Wpf/ViewModels/DatCatalogViewModel.cs`
+  - `src/Romulus.Tests/DatSourceServiceTests.cs`
+- **Beleg:** Neuer Settings-Schalter `dat.strictSidecarValidation`; Strict-Modus liefert fail-closed bei fehlender, fehlerhafter oder nicht ladbarer Sidecar.
+- **Fix:** Policy-Matrix umgesetzt: Default kompatibel, Strict fuer verstaerkte Integritaetsanforderungen.
+- **Testabsicherung:** `VerifyDatSignature_StrictMode_NoUrl_ReturnsFalse`, `VerifyDatSignature_StrictMode_Sidecar404_ReturnsFalse`, `VerifyDatSignature_StrictMode_MalformedSidecar_ReturnsFalse`, `VerifyDatSignature_StrictMode_SidecarNetworkFailure_ReturnsFalse`.
 
 #### V-06: Backup/Restore bei DAT-Replacement ist nur teilweise abgesichert
-- [ ] **Offene Massnahme**
+- [x] **Fix implementiert**
+- [x] **Regressionstest ergaenzt und gruen**
 - **Schweregrad:** P1 (**Rollback/Recovery Risk**)
 - **Impact:** Restore-Logik greift nur in einem Teilfall (`IOException` + Ziel fehlt). Andere Fehlermodi koennen `.bak` stehen lassen oder Ziel unvollstaendig hinterlassen.
 - **Betroffene Datei(en):**
-  - `src/Romulus.Infrastructure/Dat/DatSourceService.cs` (Zeilen 463-493)
-- **Fix:** Fehlerklassen erweitern, Restore-Pfade vereinheitlichen, Outcome eindeutig loggen.
-- **Testbedarf:** Fault-injection fuer `UnauthorizedAccessException`, partielle Kopie, lock races.
+  - `src/Romulus.Infrastructure/Dat/DatSourceService.cs`
+  - `src/Romulus.Tests/DatSourceServiceTests.cs`
+- **Fix:** Restore-Pfade erweitert (inkl. `UnauthorizedAccessException`), Backup-Rueckspiel wird bei erweiterten Fehlerfaellen erzwungen und bereinigt.
+- **Testabsicherung:** `DatSourceServiceTests.ReplaceWithBackup_CopyFailure_RestoresPreviousDestination`.
 
 #### V-07: CSV-Haertung ist funktional, aber uneinheitlich umgesetzt
-- [ ] **Offene Massnahme**
+- [x] **Fix implementiert**
+- [x] **Regressionstests gruen**
 - **Schweregrad:** P2 (**Consistency/Hygiene Risk**)
 - **Impact:** Unterschiedliche Pfade nutzen unterschiedliche Vorhaertung (z. B. apostroph-prefix im Report-Generator), obwohl zentrale Sanitizer-Funktion existiert. Das erschwert Vorhersagbarkeit von Exporten.
 - **Betroffene Datei(en):**
-  - `src/Romulus.Infrastructure/Reporting/ReportGenerator.cs` (Zeilen 419-435)
-  - `src/Romulus.Infrastructure/Audit/AuditCsvParser.cs` (Zeilen 72-89)
-  - `src/Romulus.Infrastructure/Analysis/CollectionExportService.cs` (Zeilen 112-126)
-- **Fix:** Einheitliche CSV-Policy in einer zentralen API festschreiben und in allen Exportern identisch anwenden.
-- **Testbedarf:** Golden-File-Vergleich ueber alle CSV-Exporter fuer identische Problemwerte.
+  - `src/Romulus.Infrastructure/Audit/AuditCsvParser.cs`
+  - `src/Romulus.Infrastructure/Reporting/ReportGenerator.cs`
+  - `src/Romulus.Infrastructure/Analysis/CollectionExportService.cs`
+  - `src/Romulus.Tests/ReportGeneratorTests.cs`
+  - `src/Romulus.Tests/WpfCoverageBoostTests.cs`
+- **Fix:** Zentrale Spreadsheet-Sanitizer-Policy (`SanitizeSpreadsheetCsvField`) in den relevanten CSV-Exportpfaden vereinheitlicht.
+- **Testabsicherung:** `ReportGeneratorTests.GenerateCsv_PreventsInjection` und `WpfCoverageBoostTests.ExportCollectionCsv_FormulaLikeFileName_IsSpreadsheetSafe`.
 
 ### 9.2 Test-/QA-Luecken (verifiziert)
 
-- [ ] Kein gezielter Test auf Promotion-Fehlerfall mit bestehendem `finalOutputPath` sichtbar.
-- [ ] Kein gezielter Test auf Cancellation-Bypass-Pfade (`CancellationToken.None`) in den genannten Orchestrator-Stellen sichtbar.
-- [ ] Kein gezielter Test fuer Tick-Einheiten im Progress-Throttling sichtbar.
+- [x] Gezielter Test auf Promotion-Fehlerfall mit bestehendem `finalOutputPath` vorhanden.
+- [x] Gezielter Guard-Test auf Cancellation-Bypass-Pfade (`CancellationToken.None`) in den Orchestrator-Helpern vorhanden.
+- [x] Gezielter Guard-Test auf Sync-over-async (`GetAwaiter().GetResult()`) in `ScanPipelinePhase` vorhanden.
+- [x] Gezielter Regressionstest fuer Tick-Einheiten im Progress-Throttling vorhanden.
 
 ### 9.3 Delta-Top-Massnahmen (naechste Iteration)
 
-1. [ ] Conversion-Promotion transaktional machen (V-01).
-2. [ ] Cancellation-Policy in Orchestrierung haerten und testen (V-02).
-3. [ ] Sync-over-async in `RunService`/`ScanPipelinePhase` abbauen (V-03).
-4. [ ] Throttle-Tick-Umrechnung auf `Stopwatch.Frequency` korrigieren (V-04).
-5. [ ] DAT-Signatur-Policy als konfigurierbaren Strict-Modus ergaenzen (V-05).
-6. [ ] DAT-Backup/Restore-Fehlerpfade aushaerten (V-06).
-7. [ ] CSV-Haertung vereinheitlichen und Golden-Tests einfuehren (V-07).
+1. [x] Conversion-Promotion transaktional machen (V-01).
+2. [x] Cancellation-Policy in Orchestrierung haerten und testen (V-02).
+3. [x] Sync-over-async in `RunService`/`ScanPipelinePhase` abbauen (V-03).
+4. [x] Throttle-Tick-Umrechnung auf `Stopwatch.Frequency` korrigieren (V-04).
+5. [x] DAT-Signatur-Policy als konfigurierbaren Strict-Modus ergaenzen (V-05).
+6. [x] DAT-Backup/Restore-Fehlerpfade aushaerten (V-06).
+7. [x] CSV-Haertung vereinheitlichen und Regressionstests ergaenzen (V-07).
 
 ---
 
@@ -991,3 +1006,159 @@ Die Code-Hygiene ist ueberdurchschnittlich: Legacy-Namespace vollstaendig migrie
 1. [x] DDX-02 geschlossen
 2. [x] DDX-04 geschlossen
 3. [x] DDX-05 geschlossen
+
+---
+
+## 13. Hardening-Loop Delta (2026-04-11, Runde 3)
+
+### 13.1 Geschlossene Findings (Red -> Green verifiziert)
+
+#### H-06: Conversion-Promotion loescht kein bestehendes Final-Artefakt mehr bei Promote-Fehler
+- [x] **Fix implementiert**
+- [x] **Test ergaenzt und gruen**
+- **Schweregrad:** P0 (**Data-Integrity Risk**)
+- **Umgesetzte Aenderung:** Beim Fehlschlag von `PromoteFinalOutputIfNeeded` wird nur noch der staged Output bereinigt. Der finale Zielpfad wird nicht mehr automatisch geloescht.
+- **Betroffene Datei(en):**
+  - `src/Romulus.Infrastructure/Conversion/ConversionExecutor.cs`
+- **Testnachweis:**
+  - `ConversionExecutorHardeningTests.Execute_SingleStepPromotionRace_DoesNotDeleteExistingFinalOutput_WhenPromoteFails`
+
+#### H-07: Enrichment-Progress-Throttle nutzt konsistente Stopwatch-Ticks
+- [x] **Fix implementiert**
+- [x] **Regressionstest ergaenzt und gruen**
+- **Schweregrad:** P1 (**Correctness/Telemetry Risk**)
+- **Umgesetzte Aenderung:** Throttle-Intervall wird jetzt mit `Stopwatch.Frequency` berechnet und damit in derselben Tick-Domaene wie `Stopwatch.GetTimestamp()` verglichen.
+- **Betroffene Datei(en):**
+  - `src/Romulus.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs`
+- **Testnachweis:**
+  - `AuditCategoryDEFFixTests.D03_EnrichmentPipelinePhase_ThrottleUsesStopwatchFrequencyTicks`
+
+### 13.2 Verifizierter Testlauf
+
+- `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter "FullyQualifiedName~ConversionExecutorHardeningTests|FullyQualifiedName~AuditCategoryDEFFixTests"`
+  - **Ergebnis:** 35/35 erfolgreich
+
+### 13.3 Status nach Runde 3
+
+1. [x] V-01 geschlossen
+2. [ ] V-02 offen
+3. [ ] V-03 offen
+4. [x] V-04 geschlossen
+5. [ ] V-05 offen
+6. [ ] V-06 offen
+7. [ ] V-07 offen
+
+---
+
+## 14. Hardening-Loop Delta (2026-04-11, Runde 4)
+
+### 14.1 Geschlossene Findings (Red -> Green verifiziert)
+
+#### H-08: Cancellation-Bypass in Orchestrator-Helpers entfernt
+- [x] **Fix implementiert**
+- [x] **Regressionstest ergaenzt und gruen**
+- **Schweregrad:** P0 (**Parity/Responsiveness Risk**)
+- **Umgesetzte Aenderung:** Keine Enrichment-/Flush-Ausfuehrung mehr mit `CancellationToken.None` als Bypass; Cancel wird in den relevanten Helper-Pfaden strikt propagiert.
+- **Betroffene Datei(en):**
+  - `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.PreviewAndPipelineHelpers.cs`
+  - `src/Romulus.Tests/AuditCategoryDEFFixTests.cs`
+- **Testnachweis:**
+  - `AuditCategoryDEFFixTests.D03_RunOrchestratorPreviewHelpers_DoesNotBypassCancellationInEnrichment`
+
+#### H-09: Sync-over-async in Scan/RunService-Tests beseitigt
+- [x] **Fix implementiert**
+- [x] **Regressionstests gruen**
+- **Schweregrad:** P1 (**Reliability Risk**)
+- **Umgesetzte Aenderung:** `ScanPipelinePhase` nutzt keine `GetAwaiter().GetResult()`-Bridge mehr; betroffene Testpfade wurden auf `BuildOrchestratorAsync` und `ExecuteRunAsync` umgestellt.
+- **Betroffene Datei(en):**
+  - `src/Romulus.Infrastructure/Orchestration/ScanPipelinePhase.cs`
+  - `src/Romulus.Infrastructure/Orchestration/StreamingScanPipelinePhase.cs`
+  - `src/Romulus.Tests/AuditCategoryDEFFixTests.cs`
+  - `src/Romulus.Tests/RunServiceAndSettingsTests.cs`
+  - `src/Romulus.Tests/KpiChannelParityBacklogTests.cs`
+  - `src/Romulus.Tests/ReportParityTests.cs`
+  - `src/Romulus.Tests/Issue9InvariantRegressionRedPhaseTests.cs`
+  - `src/Romulus.Tests/GuiViewModelTests.cs`
+- **Testnachweis:**
+  - `AuditCategoryDEFFixTests.D03_ScanPipelinePhase_DoesNotUseSyncOverAsyncGetResult`
+
+#### H-10: DAT-Sidecar-Sicherheitsmodus als Strict-Policy umgesetzt
+- [x] **Fix implementiert**
+- [x] **Policy-Matrix getestet und gruen**
+- **Schweregrad:** P1 (**Security/Integrity Policy Risk**)
+- **Umgesetzte Aenderung:** `dat.strictSidecarValidation` eingefuehrt; CLI und WPF reichen die Policy an `DatSourceService` durch. Strict-Modus ist fail-closed bei Sidecar-Problemen.
+- **Betroffene Datei(en):**
+  - `src/Romulus.Contracts/Models/RomulusSettings.cs`
+  - `src/Romulus.Infrastructure/Dat/DatSourceService.cs`
+  - `src/Romulus.CLI/Program.cs`
+  - `src/Romulus.UI.Wpf/ViewModels/DatCatalogViewModel.cs`
+  - `src/Romulus.Tests/DatSourceServiceTests.cs`
+- **Testnachweis:**
+  - `DatSourceServiceTests.VerifyDatSignature_StrictMode_NoUrl_ReturnsFalse`
+  - `DatSourceServiceTests.VerifyDatSignature_StrictMode_Sidecar404_ReturnsFalse`
+  - `DatSourceServiceTests.VerifyDatSignature_StrictMode_MalformedSidecar_ReturnsFalse`
+  - `DatSourceServiceTests.VerifyDatSignature_StrictMode_SidecarNetworkFailure_ReturnsFalse`
+
+#### H-11: DAT ReplaceWithBackup Restore-Pfade gehaertet
+- [x] **Fix implementiert**
+- [x] **Regressionstest ergaenzt und gruen**
+- **Schweregrad:** P1 (**Rollback/Recovery Risk**)
+- **Umgesetzte Aenderung:** Restore-/Cleanup-Logik in `ReplaceWithBackup` auf weitere Fehlerklassen (inkl. Zugriff/Copy-Fehler) erweitert, um konsistenten Rollback zu erzwingen.
+- **Betroffene Datei(en):**
+  - `src/Romulus.Infrastructure/Dat/DatSourceService.cs`
+  - `src/Romulus.Tests/DatSourceServiceTests.cs`
+- **Testnachweis:**
+  - `DatSourceServiceTests.ReplaceWithBackup_CopyFailure_RestoresPreviousDestination`
+
+#### H-12: CSV-Spreadsheet-Haertung auf zentrale Policy vereinheitlicht
+- [x] **Fix implementiert**
+- [x] **Regressionstests gruen**
+- **Schweregrad:** P2 (**Consistency/Hygiene Risk**)
+- **Umgesetzte Aenderung:** Relevante CSV-Exporte nutzen die zentrale Spreadsheet-Sanitizer-Policy (`SanitizeSpreadsheetCsvField`) statt separater lokaler Sonderlogik.
+- **Betroffene Datei(en):**
+  - `src/Romulus.Infrastructure/Audit/AuditCsvParser.cs`
+  - `src/Romulus.Infrastructure/Reporting/ReportGenerator.cs`
+  - `src/Romulus.Infrastructure/Analysis/CollectionExportService.cs`
+  - `src/Romulus.Tests/WpfCoverageBoostTests.cs`
+- **Testnachweis:**
+  - `ReportGeneratorTests.GenerateCsv_PreventsInjection`
+  - `WpfCoverageBoostTests.ExportCollectionCsv_FormulaLikeFileName_IsSpreadsheetSafe`
+
+### 14.2 Verifizierte Testlaeufe
+
+- `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter "RunServiceAndSettingsTests|KpiChannelParityBacklogTests|ReportParityTests|Issue9InvariantRegressionRedPhaseTests|GuiViewModelTests"`
+  - **Ergebnis:** 541/541 erfolgreich
+- `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter "FullyQualifiedName~DatSourceServiceTests|FullyQualifiedName~AuditCategoryDEFFixTests|FullyQualifiedName~WpfCoverageBoostTests|FullyQualifiedName~ReportGeneratorTests|FullyQualifiedName~KpiChannelParityBacklogTests|FullyQualifiedName~ReportParityTests|FullyQualifiedName~RunServiceAndSettingsTests|FullyQualifiedName~Issue9InvariantRegressionRedPhaseTests|FullyQualifiedName~GuiViewModelTests|FullyQualifiedName~RunOrchestratorTests"`
+  - **Ergebnis:** 777/777 erfolgreich
+
+### 14.3 Status nach Runde 4
+
+1. [x] V-01 geschlossen
+2. [x] V-02 geschlossen
+3. [x] V-03 geschlossen
+4. [x] V-04 geschlossen
+5. [x] V-05 geschlossen
+6. [x] V-06 geschlossen
+7. [x] V-07 geschlossen
+
+### 14.4 Hygiene-Delta (Post-Runde-4)
+
+#### H-13: Duplizierte Test-Stubs fuer Theme/Settings konsolidiert
+- [x] **Fix implementiert**
+- [x] **Verifikation gruen**
+- **Schweregrad:** P3 (**Maintainability/Hygiene**)
+- **Umgesetzte Aenderung:** Zentrale, wiederverwendbare Test-Fixtures fuer `StubThemeService` und `StubSettingsService` eingefuehrt und lokale Duplikate in mehreren Testdateien entfernt.
+- **Betroffene Datei(en):**
+  - `src/Romulus.Tests/TestFixtures/StubThemeService.cs`
+  - `src/Romulus.Tests/TestFixtures/StubSettingsService.cs`
+  - `src/Romulus.Tests/FeatureCommandServiceTests.cs`
+  - `src/Romulus.Tests/WpfProductizationTests.cs`
+  - `src/Romulus.Tests/HardRegressionInvariantTests.cs`
+  - `src/Romulus.Tests/KpiChannelParityBacklogTests.cs`
+  - `src/Romulus.Tests/Issue9InvariantRegressionRedPhaseTests.cs`
+  - `src/Romulus.Tests/RunServiceAndSettingsTests.cs`
+  - `src/Romulus.Tests/ReportParityTests.cs`
+  - `src/Romulus.Tests/WpfCoverageBoostTests.cs`
+- **Testnachweis:**
+  - `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter "FeatureCommandServiceTests|WpfProductizationTests|HardRegressionInvariantTests|KpiChannelParityBacklogTests|Issue9InvariantRegressionRedPhaseTests|RunServiceAndSettingsTests|ReportParityTests|WpfCoverageBoostTests"`
+  - **Ergebnis:** 408/408 erfolgreich

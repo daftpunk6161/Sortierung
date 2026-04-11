@@ -6,6 +6,7 @@ using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Profiles;
+using Romulus.Tests.TestFixtures;
 using Romulus.UI.Wpf.Models;
 using Romulus.UI.Wpf.Services;
 using Romulus.UI.Wpf.ViewModels;
@@ -457,22 +458,4 @@ public sealed class WpfProductizationTests : IDisposable
         public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => true;
     }
 
-    private sealed class StubSettingsService : ISettingsService
-    {
-        public string? LastAuditPath => null;
-        public string LastTheme => "Dark";
-        public SettingsDto? Load() => new();
-        public void LoadInto(MainViewModel vm) { }
-        public bool SaveFrom(MainViewModel vm, string? lastAuditPath = null) => true;
-    }
-
-    private sealed class StubThemeService : IThemeService
-    {
-        public AppTheme Current => AppTheme.Dark;
-        public bool IsDark => true;
-        public IReadOnlyList<AppTheme> AvailableThemes => [AppTheme.Dark];
-        public void ApplyTheme(AppTheme theme) { }
-        public void ApplyTheme(bool dark) { }
-        public void Toggle() { }
-    }
 }

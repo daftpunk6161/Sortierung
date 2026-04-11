@@ -5,6 +5,7 @@ using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Reporting;
+using Romulus.Tests.TestFixtures;
 using Romulus.UI.Wpf.Services;
 using Romulus.UI.Wpf.Models;
 using Romulus.UI.Wpf.ViewModels;
@@ -1062,16 +1063,6 @@ public sealed class HardRegressionInvariantTests : IDisposable
         public ConversionResult Convert(string src, ConversionTarget target, CancellationToken ct = default)
             => new(src, null, ConversionOutcome.Skipped, "Not a disc format");
         public bool Verify(string targetPath, ConversionTarget target) => true;
-    }
-
-    private sealed class StubThemeService : IThemeService
-    {
-        public AppTheme Current => AppTheme.Dark;
-        public bool IsDark => true;
-        public IReadOnlyList<AppTheme> AvailableThemes => [AppTheme.Dark];
-        public void ApplyTheme(AppTheme theme) { }
-        public void ApplyTheme(bool dark) { }
-        public void Toggle() { }
     }
 
     private sealed class StubDialogService : IDialogService

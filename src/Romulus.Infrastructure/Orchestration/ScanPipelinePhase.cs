@@ -10,20 +10,10 @@ public sealed class ScanPipelinePhase : IPipelinePhase<RunOptions, List<ScannedF
 
     public List<ScannedFileEntry> Execute(RunOptions input, PipelineContext context, CancellationToken cancellationToken)
     {
-        var streaming = new StreamingScanPipelinePhase(context)
-            .EnumerateFilesAsync(input.Roots, input.Extensions, cancellationToken);
-
-        var scannedFiles = new List<ScannedFileEntry>();
-        var enumerator = streaming.GetAsyncEnumerator(cancellationToken);
-        try
-        {
-            while (enumerator.MoveNextAsync().AsTask().GetAwaiter().GetResult())
-                scannedFiles.Add(enumerator.Current);
-        }
-        finally
-        {
-            enumerator.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        }
+        var streaming = new StreamingScanPipelinePhase(context);
+        var scannedFiles = streaming
+            .EnumerateFiles(input.Roots, input.Extensions, cancellationToken)
+            .ToList();
 
         // Deterministic ordering: sort by normalized path so root-order permutation
         // does not affect enumeration order (fixes Scan_RootOrderPermutation test).

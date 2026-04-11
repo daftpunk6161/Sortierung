@@ -3,6 +3,7 @@ using Xunit;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 
 namespace Romulus.Tests;
 
@@ -62,7 +63,7 @@ public class DatSourceServiceTests : IDisposable
         File.WriteAllText(path, "data");
 
         using var svc = new DatSourceService(_tempDir);
-        // No expected hash, empty URL → allow (HTTPS provides integrity)
+        // No expected hash, empty URL -> allow (HTTPS provides integrity)
         Assert.True(await svc.VerifyDatSignatureAsync(path, "", null));
     }
 
@@ -105,7 +106,7 @@ public class DatSourceServiceTests : IDisposable
         var result = await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat", null, cts.Token);
         sw.Stop();
 
-        // Sidecar fetch cancelled → allow (HTTPS provides integrity)
+        // Sidecar fetch cancelled -> allow (HTTPS provides integrity)
         Assert.True(result);
         Assert.True(sw.Elapsed < TimeSpan.FromSeconds(2), "Cancellation was not observed promptly");
     }
@@ -233,7 +234,7 @@ public class DatSourceServiceTests : IDisposable
         using var httpClient = new HttpClient(handler);
         using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
 
-        // Missing sidecar → allow (HTTPS already provides integrity)
+        // Missing sidecar -> allow (HTTPS already provides integrity)
         Assert.True(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
     }
 
@@ -247,8 +248,57 @@ public class DatSourceServiceTests : IDisposable
         using var httpClient = new HttpClient(handler);
         using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
 
-        // Sidecar endpoint error → allow (HTTPS provides integrity)
+        // Sidecar endpoint error -> allow (HTTPS provides integrity)
         Assert.True(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
+    }
+
+    [Fact]
+    public async Task VerifyDatSignature_StrictMode_NoUrl_ReturnsFalse()
+    {
+        var path = Path.Combine(_tempDir, "strict-no-url.dat");
+        File.WriteAllText(path, "strict");
+
+        using var svc = new DatSourceService(_tempDir, strictSidecarValidation: true);
+        Assert.False(await svc.VerifyDatSignatureAsync(path, "", null));
+    }
+
+    [Fact]
+    public async Task VerifyDatSignature_StrictMode_Sidecar404_ReturnsFalse()
+    {
+        var path = Path.Combine(_tempDir, "strict-404.dat");
+        File.WriteAllText(path, "strict-404");
+
+        var handler = new FixedStatusHandler(HttpStatusCode.NotFound);
+        using var httpClient = new HttpClient(handler);
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient, strictSidecarValidation: true);
+
+        Assert.False(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
+    }
+
+    [Fact]
+    public async Task VerifyDatSignature_StrictMode_MalformedSidecar_ReturnsFalse()
+    {
+        var path = Path.Combine(_tempDir, "strict-malformed.dat");
+        File.WriteAllText(path, "strict-malformed");
+
+        var handler = new MalformedSidecarHandler();
+        using var httpClient = new HttpClient(handler);
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient, strictSidecarValidation: true);
+
+        Assert.False(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
+    }
+
+    [Fact]
+    public async Task VerifyDatSignature_StrictMode_SidecarNetworkFailure_ReturnsFalse()
+    {
+        var path = Path.Combine(_tempDir, "strict-network.dat");
+        File.WriteAllText(path, "strict-network");
+
+        var handler = new ThrowingHttpHandler();
+        using var httpClient = new HttpClient(handler);
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient, strictSidecarValidation: true);
+
+        Assert.False(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
     }
 
     [Fact]
@@ -290,7 +340,7 @@ public class DatSourceServiceTests : IDisposable
         }
     }
 
-    // ═══ Path-Traversal Tests ═══════════════════════════════════════════
+    // === Path-Traversal Tests ==========================================
 
     [Theory]
     [InlineData("../escape.dat")]
@@ -370,7 +420,7 @@ public class DatSourceServiceTests : IDisposable
         }
     }
 
-    // ═══ DownloadDatByFormatAsync (zip-dat) Tests ═══════════════════════
+    // === DownloadDatByFormatAsync (zip-dat) Tests =======================
 
     [Fact]
     public async Task DownloadDatByFormatAsync_ZipDat_ExtractsDatFromZip()
@@ -516,6 +566,25 @@ public class DatSourceServiceTests : IDisposable
         Assert.Null(result);
     }
 
+    [Fact]
+    public void ReplaceWithBackup_CopyFailure_RestoresPreviousDestination()
+    {
+        var destinationPath = Path.Combine(_tempDir, "replace-target.dat");
+        File.WriteAllText(destinationPath, "original-content");
+
+        var sourceDirectory = Path.Combine(_tempDir, "source-directory");
+        Directory.CreateDirectory(sourceDirectory);
+
+        var method = typeof(DatSourceService).GetMethod("ReplaceWithBackup", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var exception = Assert.Throws<TargetInvocationException>(() => method!.Invoke(null, new object[] { sourceDirectory, destinationPath }));
+        Assert.NotNull(exception.InnerException);
+        Assert.True(exception.InnerException is IOException or UnauthorizedAccessException);
+        Assert.True(File.Exists(destinationPath));
+        Assert.Equal("original-content", File.ReadAllText(destinationPath));
+    }
+
     private static byte[] CreateZipWithDat(string entryName, string content, string? overrideName = null)
     {
         using var ms = new MemoryStream();
@@ -543,12 +612,12 @@ public class DatSourceServiceTests : IDisposable
         return ms.ToArray();
     }
 
-    // ═══ Content-Type / Login-Page Detection Tests ════════════════════
+    // === Content-Type / Login-Page Detection Tests ======================
 
     [Fact]
     public async Task DownloadDatAsync_TextPlain_Succeeds_GitHubRawUrl()
     {
-        // GitHub raw URLs serve .dat files as text/plain — must NOT be rejected
+        // GitHub raw URLs serve .dat files as text/plain -- must NOT be rejected
         var content = "<?xml version=\"1.0\"?><datafile/>";
         var handler = new ContentTypeHandler(content, "text/plain");
         using var httpClient = new HttpClient(handler);
@@ -611,6 +680,29 @@ public class DatSourceServiceTests : IDisposable
             resp.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mediaType);
             return Task.FromResult(resp);
         }
+    }
+
+    private sealed class MalformedSidecarHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var uri = request.RequestUri?.ToString() ?? string.Empty;
+            if (uri.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("not-a-valid-sha256")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+    }
+
+    private sealed class ThrowingHttpHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => throw new HttpRequestException("network down");
     }
 
     private sealed class ByteContentHandler(byte[] content) : HttpMessageHandler

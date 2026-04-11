@@ -419,20 +419,12 @@ tr:hover { background: rgba(137,180,250,0.05); }
     private static string CsvSafe(string value)
     {
         if (string.IsNullOrEmpty(value)) return "\"\"";
-        var valueForCsv = HasDangerousFormulaPrefix(value)
-            ? "'" + value
-            : value;
-
-        var sanitized = AuditCsvParser.SanitizeCsvField(valueForCsv);
+        var sanitized = AuditCsvParser.SanitizeSpreadsheetCsvField(value);
         // Ensure quoted for CSV consistency
         if (!sanitized.StartsWith('"'))
             return "\"" + sanitized.Replace("\"", "\"\"") + "\"";
         return sanitized;
     }
-
-    private static bool HasDangerousFormulaPrefix(string value)
-        => !string.IsNullOrEmpty(value)
-            && value[0] is '=' or '+' or '-' or '@';
 
     private static string FormatSize(long bytes)
         => Formatting.FormatSize(bytes);

@@ -66,6 +66,29 @@ public static class AuditCsvParser
         => SanitizeCsvField(value, ',');
 
     /// <summary>
+    /// Apply spreadsheet-safe CSV sanitization with a consistent formula-injection policy.
+    /// Dangerous leading spreadsheet operators are prefixed before RFC-4180 sanitization.
+    /// </summary>
+    public static string SanitizeSpreadsheetCsvField(string value)
+        => SanitizeSpreadsheetCsvField(value, ',');
+
+    /// <summary>
+    /// Apply spreadsheet-safe CSV sanitization with a consistent formula-injection policy.
+    /// Dangerous leading spreadsheet operators are prefixed before RFC-4180 sanitization.
+    /// </summary>
+    public static string SanitizeSpreadsheetCsvField(string value, char delimiter)
+    {
+        if (string.IsNullOrEmpty(value))
+            return SanitizeCsvField(value, delimiter);
+
+        var valueForCsv = HasDangerousSpreadsheetPrefix(value)
+            ? "'" + value
+            : value;
+
+        return SanitizeCsvField(valueForCsv, delimiter);
+    }
+
+    /// <summary>
     /// Sanitize a delimited text field to prevent CSV injection (OWASP).
     /// Dangerous formula-like prefixes are always emitted as RFC-4180 quoted fields.
     /// </summary>
@@ -101,4 +124,8 @@ public static class AuditCsvParser
         }
         return true;
     }
+
+    private static bool HasDangerousSpreadsheetPrefix(string value)
+        => !string.IsNullOrEmpty(value)
+            && value[0] is '=' or '+' or '-' or '@';
 }

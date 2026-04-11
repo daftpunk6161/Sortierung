@@ -20,6 +20,7 @@ public sealed class DatSourceService : IDisposable
     private readonly HttpClient _http;
     private readonly IToolRunner? _tools;
     private readonly string _datRoot;
+    private readonly bool _strictSidecarValidation;
 
     /// <summary>Maximum allowed download size (50 MB).</summary>
     private const long MaxDownloadBytes = 50 * 1024 * 1024;
@@ -27,15 +28,16 @@ public sealed class DatSourceService : IDisposable
     /// <summary>Maximum catalog file size to load (100 MB).</summary>
     private const long MaxCatalogFileSizeBytes = 100 * 1024 * 1024;
 
-    public DatSourceService(string datRoot, HttpClient httpClient, IToolRunner? tools = null)
+    public DatSourceService(string datRoot, HttpClient httpClient, IToolRunner? tools = null, bool strictSidecarValidation = false)
     {
         _datRoot = datRoot ?? throw new ArgumentNullException(nameof(datRoot));
         _http = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _tools = tools;
+        _strictSidecarValidation = strictSidecarValidation;
     }
 
-    public DatSourceService(string datRoot, IToolRunner? tools = null)
-        : this(datRoot, SharedHttpClient.Value, tools)
+    public DatSourceService(string datRoot, IToolRunner? tools = null, bool strictSidecarValidation = false)
+        : this(datRoot, SharedHttpClient.Value, tools, strictSidecarValidation)
     {
     }
 
@@ -304,7 +306,8 @@ public sealed class DatSourceService : IDisposable
     /// Verify a downloaded DAT file against SHA256 hash.
     /// If expectedSha256 is provided, checks against it (fail-closed).
     /// Otherwise tries to download {url}.sha256 sidecar.
-    /// If no sidecar exists, allows the download since HTTPS provides integrity.
+    /// If no sidecar exists, allows the download since HTTPS provides integrity
+    /// unless strict sidecar validation is enabled.
     /// </summary>
     public async Task<bool> VerifyDatSignatureAsync(string localPath, string sourceUrl,
         string? expectedSha256 = null, CancellationToken ct = default)
@@ -322,7 +325,7 @@ public sealed class DatSourceService : IDisposable
         // Try .sha256 sidecar URL — but allow if sidecar is unavailable
         // HTTPS already provides transport-level integrity
         if (string.IsNullOrWhiteSpace(sourceUrl))
-            return true; // No source URL, no sidecar possible — allow (HTTPS integrity)
+            return !_strictSidecarValidation;
 
         try
         {
@@ -330,17 +333,17 @@ public sealed class DatSourceService : IDisposable
             using var request = new HttpRequestMessage(HttpMethod.Get, shaUrl);
             using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!response.IsSuccessStatusCode)
-                return true; // Sidecar unavailable — allow (HTTPS provides integrity)
+                return !_strictSidecarValidation;
 
             var shaText = await response.Content.ReadAsStringAsync(ct);
 
             if (string.IsNullOrWhiteSpace(shaText))
-                return true; // Empty sidecar — allow
+                return !_strictSidecarValidation;
 
             // Extract 64-char hex hash from response
             var match = Regex.Match(shaText, @"(?i)\b([a-f0-9]{64})\b", RegexOptions.None, TimeSpan.FromMilliseconds(500));
             if (!match.Success)
-                return true; // Sidecar malformed — allow
+                return !_strictSidecarValidation;
 
             // Sidecar found and parseable — verify against it (fail-closed)
             var expected = match.Groups[1].Value;
@@ -349,7 +352,7 @@ public sealed class DatSourceService : IDisposable
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
         {
-            return true; // Network error checking sidecar — allow (HTTPS integrity)
+            return !_strictSidecarValidation;
         }
     }
 
@@ -487,13 +490,57 @@ public sealed class DatSourceService : IDisposable
         catch (IOException)
         {
             // Restore previous file if replacement fails mid-flight.
-            if (hadExistingTarget && File.Exists(backupPath) && !File.Exists(destinationPath))
+            if (hadExistingTarget && File.Exists(backupPath))
             {
-                try { File.Move(backupPath, destinationPath, overwrite: true); }
-                catch (IOException) { /* best-effort restore — file may be locked */ }
+                TryDeletePath(destinationPath);
+                TryRestoreFromBackup(backupPath, destinationPath);
             }
 
             throw;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Restore previous file if replacement fails mid-flight.
+            if (hadExistingTarget && File.Exists(backupPath))
+            {
+                TryDeletePath(destinationPath);
+                TryRestoreFromBackup(backupPath, destinationPath);
+            }
+
+            throw;
+        }
+    }
+
+    private static void TryDeletePath(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch (IOException)
+        {
+            // SUPPRESSED: best-effort restore cleanup.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // SUPPRESSED: best-effort restore cleanup.
+        }
+    }
+
+    private static void TryRestoreFromBackup(string backupPath, string destinationPath)
+    {
+        try
+        {
+            File.Move(backupPath, destinationPath, overwrite: true);
+        }
+        catch (IOException)
+        {
+            // SUPPRESSED: best-effort restore — backup may stay for manual recovery.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // SUPPRESSED: best-effort restore — backup may stay for manual recovery.
         }
     }
 
