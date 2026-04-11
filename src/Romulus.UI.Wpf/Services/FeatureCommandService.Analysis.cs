@@ -92,7 +92,8 @@ public sealed partial class FeatureCommandService
 
     private async Task CompletenessAsync()
     {
-        if (!TryCreateCurrentRunEnvironment(out var materialized, out var environment) || materialized is null || environment is null)
+        var (success, materialized, environment) = await TryCreateCurrentRunEnvironmentAsync();
+        if (!success || materialized is null || environment is null)
             return;
 
         using (environment)
@@ -146,9 +147,10 @@ public sealed partial class FeatureCommandService
         }
     }
 
-    private void DryRunCompare()
+    private async Task DryRunCompareAsync()
     {
-        if (!TryLoadSnapshots(10, out var snapshots, out var collectionIndex) || collectionIndex is null)
+        var (success, snapshots, collectionIndex) = await TryLoadSnapshotsAsync(10);
+        if (!success || collectionIndex is null)
             return;
 
         using (collectionIndex)
@@ -163,14 +165,14 @@ public sealed partial class FeatureCommandService
             var defaultValue = $"{snapshots[0].RunId} {snapshots[1].RunId}";
             var input = _dialog.ShowInputBox(prompt, "Run-Vergleich", defaultValue);
             var pair = ResolveComparisonPair(input, snapshots);
-            var comparison = RunHistoryInsightsService.CompareAsync(collectionIndex, pair[0], pair[1]).GetAwaiter().GetResult();
+            var comparison = await RunHistoryInsightsService.CompareAsync(collectionIndex, pair[0], pair[1]);
             if (comparison is null)
             {
                 _vm.AddLog("Die ausgewaehlten Runs konnten nicht verglichen werden.", "WARN");
                 return;
             }
 
-            var insights = RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, 30).GetAwaiter().GetResult();
+            var insights = await RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, 30);
             var report = new StringBuilder();
             report.AppendLine("Time-Travel Vergleich");
             report.AppendLine(new string('=', 50));

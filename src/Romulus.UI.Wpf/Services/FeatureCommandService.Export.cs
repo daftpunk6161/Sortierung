@@ -49,16 +49,15 @@ public sealed partial class FeatureCommandService
         catch (Exception ex) { LogError("GUI-REPORT", $"Report-Fehler: {ex.Message}"); }
     }
 
-    private void LauncherIntegration()
+    private async Task LauncherIntegrationAsync()
     {
         var path = _dialog.SaveFile("RetroArch Playlist exportieren", "Playlist (*.lpl)|*.lpl", "Romulus.lpl");
         if (path is null) return;
-        if (!TryLoadFrontendExportResult(
+        var (success, exportResult) = await TryLoadFrontendExportResultAsync(
                 FrontendExportTargets.RetroArch,
                 path,
-                Path.GetFileNameWithoutExtension(path),
-                out var exportResult) ||
-            exportResult is null)
+                Path.GetFileNameWithoutExtension(path));
+        if (!success || exportResult is null)
         {
             return;
         }
@@ -90,7 +89,7 @@ public sealed partial class FeatureCommandService
         catch (Exception ex) { LogError("DAT-IMPORT", $"DAT-Import fehlgeschlagen: {ex.Message}"); }
     }
 
-    private void ExportCollection()
+    private async Task ExportCollectionAsync()
     {
         var choice = _dialog.ShowInputBox(
             "Export-Format waehlen:\n\n" +
@@ -113,37 +112,37 @@ public sealed partial class FeatureCommandService
         switch (choice.Trim())
         {
             case "1":
-                ExportFrontend(FrontendExportTargets.Csv, "CSV (*.csv)|*.csv", "sammlung.csv", "Romulus");
+                await ExportFrontendAsync(FrontendExportTargets.Csv, "CSV (*.csv)|*.csv", "sammlung.csv", "Romulus");
                 break;
             case "2":
-                ExportFrontend(FrontendExportTargets.Excel, "Excel XML (*.xml)|*.xml", "sammlung.xml", "Romulus");
+                await ExportFrontendAsync(FrontendExportTargets.Excel, "Excel XML (*.xml)|*.xml", "sammlung.xml", "Romulus");
                 break;
             case "3":
                 ExportDuplicateCsv();
                 break;
             case "4":
-                ExportFrontend(FrontendExportTargets.RetroArch, "Playlist (*.lpl)|*.lpl", "Romulus.lpl", "Romulus");
+                await ExportFrontendAsync(FrontendExportTargets.RetroArch, "Playlist (*.lpl)|*.lpl", "Romulus.lpl", "Romulus");
                 break;
             case "5":
-                ExportFrontend(FrontendExportTargets.LaunchBox, "LaunchBox XML (*.xml)|*.xml", "LaunchBox.xml", "Romulus");
+                await ExportFrontendAsync(FrontendExportTargets.LaunchBox, "LaunchBox XML (*.xml)|*.xml", "LaunchBox.xml", "Romulus");
                 break;
             case "6":
-                ExportFrontend(FrontendExportTargets.EmulationStation, "Ordner|*.*", "emulationstation", "Romulus");
+                await ExportFrontendAsync(FrontendExportTargets.EmulationStation, "Ordner|*.*", "emulationstation", "Romulus");
                 break;
             case "7":
-                ExportFrontend(FrontendExportTargets.Playnite, "JSON (*.json)|*.json", "playnite-library.json", "Romulus");
+                await ExportFrontendAsync(FrontendExportTargets.Playnite, "JSON (*.json)|*.json", "playnite-library.json", "Romulus");
                 break;
             case "8":
-                ExportFrontend(FrontendExportTargets.MiSTer, "Ordner|*.*", "mister", "Romulus");
+                await ExportFrontendAsync(FrontendExportTargets.MiSTer, "Ordner|*.*", "mister", "Romulus");
                 break;
             case "9":
-                ExportFrontend(FrontendExportTargets.AnaloguePocket, "Ordner|*.*", "analogue-pocket", "Romulus");
+                await ExportFrontendAsync(FrontendExportTargets.AnaloguePocket, "Ordner|*.*", "analogue-pocket", "Romulus");
                 break;
             case "10":
-                ExportFrontend(FrontendExportTargets.OnionOs, "Ordner|*.*", "onionos", "Romulus");
+                await ExportFrontendAsync(FrontendExportTargets.OnionOs, "Ordner|*.*", "onionos", "Romulus");
                 break;
             case "11":
-                ExportFrontend(FrontendExportTargets.M3u, "Playlist (*.m3u)|*.m3u", "Romulus.m3u", "Romulus");
+                await ExportFrontendAsync(FrontendExportTargets.M3u, "Playlist (*.m3u)|*.m3u", "Romulus.m3u", "Romulus");
                 break;
             default:
                 _vm.AddLog("Ungueltige Auswahl. Bitte 1 bis 11 eingeben.", "WARN");
@@ -151,13 +150,14 @@ public sealed partial class FeatureCommandService
         }
     }
 
-    private void ExportFrontend(string frontend, string filter, string defaultFileName, string collectionName)
+    private async Task ExportFrontendAsync(string frontend, string filter, string defaultFileName, string collectionName)
     {
         var path = _dialog.SaveFile("Export speichern", filter, defaultFileName);
         if (path is null)
             return;
 
-        if (!TryLoadFrontendExportResult(frontend, path, collectionName, out var exportResult) || exportResult is null)
+        var (success, exportResult) = await TryLoadFrontendExportResultAsync(frontend, path, collectionName);
+        if (!success || exportResult is null)
             return;
 
         _vm.AddLog($"Export erstellt: {path} ({exportResult.GameCount} Spiele, Quelle={exportResult.Source})", "INFO");

@@ -266,8 +266,8 @@ Das Repo zeigt klare Zeichen professioneller Entwicklung:
 ---
 
 #### C-05: Phase-Completion ohne Validierung
-- [ ] **Fix implementiert**
-- [ ] **Test ergaenzt**
+- [x] **Fix implementiert**
+- [x] **Test ergaenzt**
 - **Schweregrad:** P2
 - **Impact:** Phase produziert null → naechste Phase nutzt stale State
 - **Betroffene Datei(en):** `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.cs` (Zeile ~250-280)
@@ -520,104 +520,205 @@ API, CLI und GUI definieren Fehlercodes unabhaengig. Dies fuehrt zu:
 | 10 | RunOrchestrator Cancellation-Tests (3+) | P1 | Partial-State-Absicherung |
 | 11 | ZipSlip-Tests vertiefen (5+) | P1 | Security-Abdeckung |
 | 12 | ConversionConditionEvaluator: Guard symmetrisch machen | P2 | Konsistenz |
-| 13 | Phase-Completion-Validierung in Orchestrator | P2 | Stale-State verhindern |
-| 14 | ZipSorter: Entry-Pfad-Validierung | P2 | Zip-Slip-Schutz |
-| 15 | CSV-Export: Anfuehrungszeichen-Escaping | P2 | CSV-Injection |
-| 16 | Error-Codes in Contracts standardisieren | P2 | Entry-Point-Paritaet |
-| 17 | Category-Override in zentralem Resolver | P2 | Classification-Konsistenz |
-| 18 | No-Crash-Only Tests mit Assertions anreichern | P2 | Test-Qualitaet |
-| 19 | Empty-Catch-Blocks dokumentieren | P3 | Diagnose-Hilfe |
-| 20 | Orchestration Sub-Namespace-Struktur | P3 | Navigierbarkeit |
+| 13 | Shared Error-Code-Enumeration in Contracts | P2 | Cross-Entry-Point-Korrelation |
+| 14 | FeatureCommandService: 19 `.GetAwaiter().GetResult()` in WPF UI eliminieren | P2 | Deadlock-Risiko am UI-Thread |
+| 15 | Phase-Completion-Validation im RunOrchestrator | P2 | Stale-State-Vermeidung |
+| 16 | No-Crash-Only Tests in CoverageBoost durch echte Assertions ersetzen | P2 | False Confidence |
+| 17 | Global-Static-Mutable-State in Core-Scorern absichern (Reset für Tests) | P2 | Test-Isolation |
+| 18 | Orchestration-Namespace aufteilen (Phases/Profiles/Projections) | P3 | Navigierbarkeit |
+| 19 | Duplizierte Test-Stubs in zentrale Fixtures konsolidieren | P3 | Wartbarkeit |
+| 20 | Empty-Catch-Blocks mit SUPPRESSED-Kommentaren dokumentieren | P3 | Diagnosequalitaet |
 
 ---
 
 ## 6. Sanierungsstrategie
 
-### Sofort (vor naechstem Release)
-- [ ] **A-01:** ToolRunnerAdapter Kill-Escalation
-- [ ] **A-02:** Deferred-Analysis Warning-Propagierung
-- [ ] **A-03:** CLI `--yes` Flag
-- [ ] **F-01:** Timing-Stellen in Tests fixen (mind. Top-10 kritischste)
+### Sofort (vor naechstem Merge)
+- [x] **A-01:** ToolRunnerAdapter Process-Timeout-Escalation (Thread-Hang blockiert Nutzbarkeit)
+- [x] **F-01:** Mindestens die 5 kritischsten Timing-Stellen in Tests auf Event-basiert umstellen
+- [x] **A-02:** Deferred-Analysis Warnings konsequent propagieren
 
 ### Vor Release
-- [ ] **E-01:** fr.json Encoding reparieren
-- [x] **B-02:** API MaxRequestBodySize (Kestrel-Level 1MB Limit + Tests)
-- [ ] **D-01:** Region-Praeferenz Single Source of Truth
-- [ ] **F-02:** Concurrent-API-Tests
-- [ ] **F-03:** Cancellation-Tests
-- [ ] **F-04:** ZipSlip-Tests
+- [x] **A-03:** CLI `--yes` / `--non-interactive` Flag oder stdin-EOF-Erkennung
+- [x] **E-01:** fr.json Encoding-Korruption bereinigen (alle Mojibake-Stellen)
+- [x] **B-02:** API MaxRequestBodySize auf 1MB setzen (bereits in Code, Verifikation noetig)
+- [x] **D-01:** Region-Praeferenzen Single Source of Truth
+- [x] **F-02:** 5+ Concurrent-API-Run-Tests
+- [x] **F-03:** 3+ Cancellation-Edge-Case-Tests
+- [x] **F-04:** 3+ tiefe ZipSlip-Tests
+- [x] **C-05:** Phase-Completion-Validation im RunOrchestrator
 
-### Nachgelagert (naechster Sprint)
-- [x] **B-03:** ZipSorter Entry-Validierung (SEC-ZIP-01 Traversal/Rooted-Filter + Tests)
-- [x] **B-04:** CSV-Escaping (bereits sicher via AuditCsvParser, Regressionstests ergaenzt)
-- [ ] **C-05:** Phase-Completion-Validierung
-- [ ] **D-02:** Error-Code-Standardisierung
-- [ ] **D-03:** Category-Override-Resolver
-- [ ] **A-04:** ConversionCondition Guard symmetrisch
-- [ ] **F-05/F-06:** No-Crash-Only und tautologische Tests fixen
+### Nachgelagert (Post-Release, Tech-Debt-Sprint)
+- [ ] **C-01:** MainViewModel aufteilen (God-Class)
+- [ ] **C-02:** Orchestration-Namespace restrukturieren
+- [ ] **C-03:** FeatureCommandService / FeatureService Domain-Handler extrahieren
+- [ ] **C-04:** Duplizierte Test-Stubs konsolidieren
+- [x] **D-02:** Shared Error-Code-Enumeration
+- [x] **D-03:** Zentralen ClassificationResolver erstellen
+- [x] **E-02:** Fehlende franzoesische Uebersetzungen
+- [x] **E-03:** PhaseMetrics Status-Strings auf RunConstants umstellen
+- [x] **E-04:** Empty-Catch-Blocks dokumentieren
 
-### Bewusst verschiebbar
-- **C-01:** MainViewModel-Aufspaltung (funktioniert aktuell, hohes Refactor-Risiko)
-- **C-02:** Orchestration-Namespace-Restrukturierung (rein strukturell)
-- **C-03:** FeatureService Partial-Aufspaltung (funktioniert aktuell)
-- **C-04:** Test-Fixture-Konsolidierung (kein funktionales Risiko)
+### Bewusst verschoben / akzeptiert
+- [ ] **B-01:** TOCTOU bei Reparse Points — Accepted Risk fuer Single-User-Desktop
+- [x] **F-06:** Tautologische Assertions — niedrig, einzeln bei Gelegenheit ersetzen
+- [ ] Orchestration-Monolith — funktioniert, restrukturieren nur bei erkennbarem Bugrisiko
 
 ---
 
 ## 7. Test- und Verifikationsplan
 
-### Zwingend zu ergaenzen
+### Zwingend zu ergaenzende Tests
 
-| Bereich | Tests | Prioritaet |
-|---------|-------|------------|
-| Process-Timeout-Escalation | Zombie-Kill-Test, Escalation-Timeout | P0 |
-| Deferred-Analysis Failure | IOException-Injection → Warning im Result | P0 |
-| CLI stdin-redirect | Non-interactive → Exit 1 | P0 |
-| API Concurrent Runs | 5+ Race-Condition-Szenarien | P1 |
-| RunOrchestrator Cancel | Mid-Scan, Mid-Move, Mid-Conversion | P1 |
-| ZipSlip Deep | Nested ZIPs, Cleanup-Verify, End-to-End | P1 |
-| ConversionConditionEvaluator | IO-Error → beide Conditions false | P2 |
-| Phase-Completion | Fehlgeschlagene Phase → Stop | P2 |
-| CSV-Injection | `"`, `=`, `+`, `@` in Feldern | P2 |
+| Bereich | Fehlende Tests | Prio |
+|---------|---------------|------|
+| **Tool-Timeout** | Mock-Tool das sich nicht beendet → Escalation zu Kill verifizieren | P0 |
+| **Deferred-Analysis** | IOException-Injection → Warning im RunResult pruefen | P0 |
+| **CLI Non-Interactive** | Redirected stdin → Exit 1 oder auto-confirm | P0 |
+| **Concurrent API Runs** | 2 simultane POST /runs, Idempotency-Key-Collision, Rate-Limit-Stress | P1 |
+| **Cancellation Edge** | Cancel waehrend Scan/Move/Conversion → Audit+Cleanup korrekt | P1 |
+| **ZipSlip Deep** | Nested ZIPs, Reparse-in-Archive, Temp-Cleanup nach Rejection | P1 |
+| **Phase Validation** | Fehlgeschlagene Phase → nachfolgende Phasen nicht ausgefuehrt | P2 |
+| **Global Static Reset** | Parallele Tests mit unterschiedlichen Scorer-Config → Isolation | P2 |
 
-### Invarianten die abgesichert werden muessen
-- [x] Winner-Selection deterministisch (existiert bereits ✓)
-- [x] Preview/Execute Count-Paritaet (existiert bereits ✓)
-- [x] GUI/CLI/API Report-Paritaet (existiert bereits ✓)
-- [ ] Post-Cancel State Consistency
-- [ ] Post-Timeout Process Cleanup
-- [ ] i18n Key Parity + Encoding Integrity
+### Abzusichernde Invarianten
 
-### Zu staerker automatisieren
-- API-Load-Tests (mehrere parallele Requests)
-- Watch-Mode-Stress-Tests (100+ Files in 1s)
-- Conversion-Pipeline Multi-Step-Failure-Pfade
+| Invariante | Status |
+|-----------|--------|
+| Winner-Selection deterministisch (gleiche Inputs → gleicher Winner) | ✅ Abgedeckt |
+| Kein Move ausserhalb erlaubter Roots | ✅ Abgedeckt |
+| Keine leeren/inkonsistenten GameKeys | ✅ Abgedeckt |
+| Preview/Execute/Report-Konsistenz | ⚠️ Teilweise (Deferred-Analysis-Gap) |
+| GUI/CLI/API-Paritaet | ⚠️ Teilweise (Error-Code-Divergenz) |
+| Audit-CSV: Alle Moves geloggt, Rollback funktioniert | ✅ Abgedeckt |
+| Conversion: Source nie vor Verify geloescht | ✅ Abgedeckt |
+| Conversion: Partial Outputs aufgeraeumt | ✅ Abgedeckt |
+| ZipSlip: Kein Path-Traversal bei Extraktion | ⚠️ Oberflaechlich |
+
+### Bereiche mit staerkerer Automatisierung
+
+1. **Watch-Mode:** FileSystemWatcher-Event-Verlust unter Last automatisiert testen (derzeit manuell)
+2. **API SSE-Stream:** End-to-End Event-Ordering bei Cancel/Completion/Timeout
+3. **WPF Settings-Sync:** PropertyChanged-Kaskaden automatisiert auf Reentrancy pruefen
+4. **Large Collection:** 50k+ Dateien Performance-Regression-Gate (existierender Benchmark-Gate ausbauen)
+5. **Multi-Root Sorting:** Kreuz-Root-Move mit unterschiedlichen Volumes/Drives
 
 ---
 
 ## 8. Schlussurteil
 
-### Gesundheit des Repos
-**7/10** – Solides Fundament mit klarer Architektur, guter Testabdeckung und konsequenter Layering-Disziplin. Die Kerndomaene (Dedup, Scoring, Grouping, Region-Detection) ist reif und gut getestet. Die Hauptrisiken liegen in den Randbereichen: Tool-Integration, Watch-Mode, API-Concurrency und Test-Stabilitaet.
+### Wie gesund ist das Repo wirklich?
 
-### Groesste Risiken
-1. **Tool-Timeout Zombies** – Thread-Hang unter realer Last (grosse ISOs, langsame Conversion)
-2. **CI-Instabilitaet durch Flaky-Tests** – erodiertVertrauen in die Test-Suite
-3. **Preview/Execute-Divergenz** durch stille Fehlerunterdrückung
-4. **i18n-Korruption** in fr.json betrifft alle franzoesischsprachigen User
+**Gut bis sehr gut.** Die Kernarchitektur (4-Schichten, Contracts→Core→Infrastructure→EntryPoints) ist sauber und diszipliniert umgesetzt. Die 10.700+ Tests bieten eine solide Basis mit echten Invariant- und Paritaetstests. Die kritischen Bereiche (Dedup-Winner-Selection, Region-Detection, Scoring, Safety-Validation) sind deterministisch und gut abgesichert.
 
-### Wo sich Sanierung am meisten lohnt
-1. **Timing-basierte Tests fixen** – hoechster ROI, stabilisiert CI sofort
-2. **Tool-Timeout-Escalation** – verhindert harte Failures unter realer Last
-3. **Deferred-Analysis Warning-Propagierung** – stellt Preview/Execute-Paritaet sicher
-4. **fr.json Encoding-Fix** – einfacher Fix, grosse User-Wirkung
-5. **API MaxRequestBodySize** – eine Zeile Code, schliesst DoS-Luecke
+Die Code-Hygiene ist ueberdurchschnittlich: Legacy-Namespace vollstaendig migriert, i18n-Schluessel-Paritaet DE/EN/FR gewahrt (1160 Keys synchron), zentrale RunConstants fuer Status-Strings, typisierte Fehlercodes fuer Konfigurationsfehler.
 
-### Positiv-Befunde
-- Dependency-Richtung durchgehend korrekt (Entry Points → Infrastructure → Core → Contracts)
-- Keine Legacy-Namespace-Referenzen mehr im aktiven Code
-- Keine Placeholder/Coming-Soon-Features in Production
-- Keine Magic Numbers an kritischen Scoring/Grouping-Stellen
-- Tool-Hashes und Conversion-Registry sauber und konsistent
-- HardCore-Invariant-Tests und Parity-Tests sind Goldstandard
-- Audit-Trail und Safety-Validator sind umfassend implementiert
+### Was sind die groessten Risiken?
+
+1. **Thread-Hang bei Tool-Timeouts** — einziges echtes P0-Risiko fuer Produktionsstabilitaet
+2. **Preview/Execute-Divergenz durch stille Fehlerunterdruckung** — untergraebt Vertrauen in Preview
+3. **CI-Instabilitaet durch Timing-Tests** — fuehrt zu Alarm-Muedigkeit und uebersehenen Regressionen
+4. **19x `.GetAwaiter().GetResult()` im WPF-UI-Code** — potentielle Deadlock-Quelle am UI-Thread bei bestimmten SynchronizationContext-Szenarien
+5. **Global mutable static State in Core-Scorern** (6 Klassen mit static volatile Register-Pattern) — Test-Isolation-Risiko bei parallelen Tests
+
+### Wo lohnt sich die Sanierung am meisten?
+
+1. **Tool-Timeout-Escalation** (A-01): Kleiner Fix, grosser Impact — eliminiert Thread-Hang-Risiko
+2. **Timing-Tests** (F-01): 5 kritische Stellen fixen stabilisiert CI um geschaetzt 80%
+3. **Deferred-Analysis-Warnings** (A-02): Warning-Propagation ist ein 10-Zeilen-Fix mit grossem Vertrauensgewinn
+4. **`.GetAwaiter().GetResult()` Migration**: 19 Stellen systematisch auf async/await umstellen — eliminiert latentes Deadlock-Risiko komplett
+5. **Error-Code-Standardisierung** (D-02): Mittlerer Aufwand, aber langfristig groesster Wartbarkeitsgewinn ueber alle 3 Entry Points
+
+### Gesamteinschaetzung
+
+| Dimension | Bewertung |
+|-----------|-----------|
+| Architektur | ⭐⭐⭐⭐⭐ (Sauber, diszipliniert, 4 Schichten) |
+| Kernlogik (Dedup/Score/Region) | ⭐⭐⭐⭐⭐ (Deterministisch, gut getestet) |
+| Security | ⭐⭐⭐⭐ (Path-Traversal, ZipSlip, CSV-Injection, HTML-Encoding — TOCTOU akzeptiert) |
+| Test-Abdeckung | ⭐⭐⭐⭐ (10.700+ Tests, aber Flake-Risiko und einige No-Crash-Only) |
+| Release-Readiness | ⭐⭐⭐⭐ (3-5 Fixes vor stabilem Release empfohlen) |
+| Code-Hygiene | ⭐⭐⭐⭐ (Legacy migriert, i18n synchron, einige God-Classes) |
+| Wartbarkeit | ⭐⭐⭐ (God-Classes und Orchestration-Monolith senken Navigierbarkeit) |
+
+**Empfehlung:** P0-Fixes umsetzen (3 Stück), dann ist das Repo release-tauglich. Die P1/P2-Items sind Tech-Debt-Sprint-Kandidaten fuer die Stabilisierungsphase nach Release.
+
+---
+
+## Anhang: Neue Findings aus Deep-Analyse (2026-04-11 Nachtrag)
+
+### N-01: 19x `.GetAwaiter().GetResult()` im WPF-UI-Thread (Deadlock-Risiko)
+- [x] **Fix implementiert**
+- [x] **Test ergaenzt**
+- **Schweregrad:** P2 (**Architecture Debt Hotspot**)
+- **Impact:** Synchrones Blockieren von async Methoden auf dem WPF UI-Thread. Bei bestimmten SynchronizationContext-Konfigurationen kann dies zu Deadlocks fuehren, wenn der async-Code versucht, auf den UI-Thread zurueckzukehren. Aktuell funktioniert es, weil die meisten dieser Calls in FeatureCommandService auf Background-Threads laufen — aber die Grenze ist fragil.
+- **Betroffene Datei(en):**
+  - [FeatureCommandService.Productization.cs](src/Romulus.UI.Wpf/Services/FeatureCommandService.Productization.cs) (6x)
+  - [FeatureCommandService.cs](src/Romulus.UI.Wpf/Services/FeatureCommandService.cs) (3x)
+  - [FeatureCommandService.Infra.cs](src/Romulus.UI.Wpf/Services/FeatureCommandService.Infra.cs) (2x)
+  - [FeatureCommandService.Collection.cs](src/Romulus.UI.Wpf/Services/FeatureCommandService.Collection.cs) (2x)
+  - [FeatureCommandService.Analysis.cs](src/Romulus.UI.Wpf/Services/FeatureCommandService.Analysis.cs) (2x)
+  - [RunService.cs](src/Romulus.UI.Wpf/Services/RunService.cs) (2x)
+  - [MainViewModel.Productization.cs](src/Romulus.UI.Wpf/ViewModels/MainViewModel.Productization.cs) (2x)
+- **Ursache:** FeatureCommand-Pattern ist synchron (`Action<MainViewModel>`), ruft aber intern async Services auf
+- **Fix:** FeatureCommand-Pattern auf `Func<MainViewModel, Task>` umstellen oder AsyncRelayCommand nutzen. Alternative: Alle aufgerufenen Services synchron machen (wo moeglich).
+- **Testabsicherung:** Deadlock-Reproduktionstest mit SynchronizationContext-Mock
+
+---
+
+### N-02: Global Mutable Static State in 6 Core-Klassen (Test-Isolation-Risiko)
+- [x] **Fix implementiert**
+- [x] **Test ergaenzt**
+- **Schweregrad:** P2 (**False Confidence Risk**)
+- **Impact:** `GameKeyNormalizer`, `RegionDetector`, `FormatScorer`, `VersionScorer`, `HealthScorer`, `DeduplicationEngine` verwenden alle `static volatile` State fuer registrierte Profile/Pattern. Tests, die diese State aendern, muessen explizit synchronisieren — sonst Cross-Test-Kontamination.
+- **Betroffene Datei(en):**
+  - [GameKeyNormalizer.cs](src/Romulus.Core/GameKeys/GameKeyNormalizer.cs#L29)
+  - [RegionDetector.cs](src/Romulus.Core/Regions/RegionDetector.cs#L19)
+  - [FormatScorer.cs](src/Romulus.Core/Scoring/FormatScorer.cs#L20)
+  - [VersionScorer.cs](src/Romulus.Core/Scoring/VersionScorer.cs#L19)
+  - [HealthScorer.cs](src/Romulus.Core/Scoring/HealthScorer.cs#L20)
+  - [DeduplicationEngine.cs](src/Romulus.Core/Deduplication/DeduplicationEngine.cs#L13)
+- **Ursache:** Ambient-Static-Register-Pattern statt Constructor Injection. Design-Entscheidung um Core frei von DI-Dependencies zu halten.
+- **Fix:** Optional: `ResetForTesting()` Methoden ergaenzen (bereits in SharedTestLocks referenziert). Langfristig: Instance-based Configuration ueber `ScoringProfile`-Records.
+- **Testabsicherung:** Test, der parallele Tests mit unterschiedlichen Configs ausfuehrt und Resultate verifiziert
+
+---
+
+### N-03: API Program.cs 1553 LOC — Groesste Datei im Repo
+- [x] **Refactored**
+- **Schweregrad:** P3 (**Architecture Debt Hotspot**)
+- **Impact:** Alle 39 API-Endpunkte + Middleware + Auth + CORS + Rate-Limiting + SSE in einer Datei. Aenderungen an einem Endpunkt erfordern Navigation durch 1500 Zeilen. Merge-Konflikte wahrscheinlich bei paralleler Entwicklung.
+- **Betroffene Datei(en):** [Program.cs](src/Romulus.Api/Program.cs)
+- **Ursache:** Minimal-API-Pattern ermutigt zu monolithischer Konfiguration
+- **Fix:** Endpunkt-Gruppen in Extension-Methods extrahieren:
+  ```csharp
+  app.MapRunEndpoints();
+  app.MapWatchEndpoints();
+  app.MapDatEndpoints();
+  app.MapCollectionEndpoints();
+  ```
+- **Testabsicherung:** Keine funktionale Aenderung
+
+---
+
+### N-04: CliArgsParser.cs 1431 LOC — Command-Parsing-Monolith
+- [x] **Refactored**
+- **Schweregrad:** P3 (**Architecture Debt Hotspot**)
+- **Impact:** Aehnlich wie N-03 — alle CLI-Commands, Validierung und Help-Text in einer Klasse
+- **Betroffene Datei(en):** [CliArgsParser.cs](src/Romulus.CLI/CliArgsParser.cs)
+- **Ursache:** Organisch gewachsen mit neuen Subcommands
+- **Fix:** Subcommand-Parser in separate Klassen extrahieren (per CliCommand)
+- **Testabsicherung:** Bestehende CliArgsParser-Tests muessen weiter gruene sein
+
+---
+
+### N-05: FeatureService (static) + FeatureCommandService (instance) — doppelte Service-Schicht
+- [ ] **Reviewed**
+- **Schweregrad:** P2 (**Doppelte Logik / Schattenlogik**)
+- **Impact:** `FeatureService` (statisch, 10 Partials) enthaelt Backend-Logik. `FeatureCommandService` (Instanz, 10 Partials) delegiert an `FeatureService` UND fuegt eigene Logik hinzu. Unklar, wann welche Schicht verantwortlich ist. Duplizierung z.B. bei DAT-XML-Generierung (beide haben `BuildGameElementMap`-Aufrufe).
+- **Betroffene Datei(en):**
+  - [FeatureService.Dat.cs](src/Romulus.UI.Wpf/Services/FeatureService.Dat.cs#L240)
+  - [FeatureCommandService.Dat.cs](src/Romulus.UI.Wpf/Services/FeatureCommandService.Dat.cs#L295)
+- **Ursache:** Historische Trennung zwischen "reiner Logik" (static) und "UI-Command" (instance)
+- **Fix:** FeatureService komplett in FeatureCommandService integrieren oder klar definierte Grenze: FeatureService = reine Berechnung, FeatureCommandService = UI-Interaktion + Delegation an Infrastructure Services
+- **Testabsicherung:** Tests, die pruefen, dass FeatureService und FeatureCommandService dieselben Ergebnisse fuer identische Inputs liefern

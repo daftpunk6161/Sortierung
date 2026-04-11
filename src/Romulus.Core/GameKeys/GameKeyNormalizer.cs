@@ -37,6 +37,18 @@ public static class GameKeyNormalizer
     /// Registers the default tag patterns and alias map (typically loaded from rules.json).
     /// Call once at application startup from Infrastructure.
     /// </summary>
+    /// <summary>
+    /// Resets all registered state. For test isolation only – never call in production.
+    /// </summary>
+    internal static void ResetForTesting()
+    {
+        lock (_registrationLock)
+        {
+            _registeredState = null;
+            _patternFactory = null;
+        }
+    }
+
     public static void RegisterDefaultPatterns(
         IReadOnlyList<System.Text.RegularExpressions.Regex> tagPatterns,
         IReadOnlyDictionary<string, string> alwaysAliasMap)

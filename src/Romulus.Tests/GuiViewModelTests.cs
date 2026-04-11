@@ -2807,6 +2807,10 @@ public class GuiViewModelTests
             return (orchestrator, options, _auditPath, _reportPath);
         }
 
+        public Task<(RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)>
+            BuildOrchestratorAsync(MainViewModel vm, Action<string>? onProgress = null)
+            => Task.FromResult(BuildOrchestrator(vm, onProgress));
+
         public RunService.RunServiceResult ExecuteRun(
             RunOrchestrator orchestrator,
             RunOptions options,
@@ -2822,6 +2826,14 @@ public class GuiViewModelTests
                 ReportPath = reportPath
             };
         }
+
+        public Task<RunService.RunServiceResult> ExecuteRunAsync(
+            RunOrchestrator orchestrator,
+            RunOptions options,
+            string? auditPath,
+            string? reportPath,
+            CancellationToken ct)
+            => Task.FromResult(ExecuteRun(orchestrator, options, auditPath, reportPath, ct));
 
         public string GetSiblingDirectory(string rootPath, string siblingName)
             => Path.Combine(Path.GetDirectoryName(rootPath) ?? rootPath, siblingName);
@@ -2854,6 +2866,10 @@ public class GuiViewModelTests
             return (orchestrator, options, null, null);
         }
 
+        public Task<(RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)>
+            BuildOrchestratorAsync(MainViewModel vm, Action<string>? onProgress = null)
+            => Task.FromResult(BuildOrchestrator(vm, onProgress));
+
         public RunService.RunServiceResult ExecuteRun(
             RunOrchestrator orchestrator,
             RunOptions options,
@@ -2868,6 +2884,14 @@ public class GuiViewModelTests
                 ReportPath = reportPath
             };
         }
+
+        public Task<RunService.RunServiceResult> ExecuteRunAsync(
+            RunOrchestrator orchestrator,
+            RunOptions options,
+            string? auditPath,
+            string? reportPath,
+            CancellationToken ct)
+            => Task.FromResult(ExecuteRun(orchestrator, options, auditPath, reportPath, ct));
 
         public string GetSiblingDirectory(string rootPath, string siblingName)
             => Path.Combine(Path.GetDirectoryName(rootPath) ?? rootPath, siblingName);

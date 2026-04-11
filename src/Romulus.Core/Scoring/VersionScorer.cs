@@ -47,6 +47,20 @@ public sealed class VersionScorer
     {
     }
 
+    /// <summary>
+    /// Resets all registered state. For test isolation only – never call in production.
+    /// </summary>
+    internal static void ResetForTesting()
+    {
+        lock (Sync)
+        {
+            _registeredLangPattern = null;
+            _registeredMaxVersionSegments = null;
+            _langPatternFactory = null;
+            _maxVersionSegmentsFactory = null;
+        }
+    }
+
     public static void RegisterDefaultLanguagePattern(string langPattern)
     {
         if (string.IsNullOrWhiteSpace(langPattern))

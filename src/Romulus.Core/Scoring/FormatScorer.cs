@@ -141,6 +141,22 @@ public static class FormatScorer
     private static readonly IReadOnlySet<string> FallbackDiscExtensions =
         new HashSet<string>(DiscFormats.AllDiscExtensions, StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Resets all registered state. For test isolation only – never call in production.
+    /// </summary>
+    internal static void ResetForTesting()
+    {
+        lock (Sync)
+        {
+            _registeredState = null;
+            _scoreFactory = null;
+        }
+        lock (RegionScoreCacheSync)
+        {
+            RegionScoreCache.Clear();
+        }
+    }
+
     public static void RegisterScoreFactory(Func<(
         IReadOnlyDictionary<string, int> FormatScores,
         IReadOnlyDictionary<string, int> SetTypeScores,

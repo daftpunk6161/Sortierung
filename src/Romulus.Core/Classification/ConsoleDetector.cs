@@ -89,7 +89,7 @@ public sealed class ConsoleDetector
                 {
                     kwPatterns.Add((new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase, SafeRegex.ShortTimeout), c.Key));
                 }
-                catch (ArgumentException) { /* skip malformed patterns */ }
+                catch (ArgumentException) { /* SUPPRESSED: skip malformed keyword regex patterns from consoles.json */ }
             }
         }
 
@@ -552,7 +552,7 @@ public sealed class ConsoleDetector
 
             return bestEntry.ConsoleKey;
         }
-        catch (InvalidDataException) { /* corrupt/not-a-zip */ }
+        catch (InvalidDataException) { /* SUPPRESSED: corrupt or non-zip archive; detection degrades to unknown */ }
         catch (IOException) { /* SUPPRESSED: archive content inspection is optional; I/O errors degrade to unknown detection */ }
         catch (UnauthorizedAccessException) { /* SUPPRESSED: access-denied on archive; detection degrades to unknown */ }
 

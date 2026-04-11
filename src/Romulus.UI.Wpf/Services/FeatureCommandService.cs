@@ -166,13 +166,13 @@ public sealed partial class FeatureCommandService
 
         // ── Functional buttons ──────────────────────────────────────────
         cmds[FeatureCommandKeys.ExportLog] = new RelayCommand(ExportLog);
-        cmds[FeatureCommandKeys.ProfileSave] = new RelayCommand(ProfileSave);
-        cmds[FeatureCommandKeys.ProfileLoad] = new RelayCommand(ProfileLoad);
-        cmds[FeatureCommandKeys.ProfileDelete] = new RelayCommand(ProfileDelete);
-        cmds[FeatureCommandKeys.ProfileImport] = new RelayCommand(ProfileImport);
-        cmds[FeatureCommandKeys.ProfileShare] = new RelayCommand(ProfileShare);
+        cmds[FeatureCommandKeys.ProfileSave] = new AsyncRelayCommand(ProfileSaveAsync);
+        cmds[FeatureCommandKeys.ProfileLoad] = new AsyncRelayCommand(ProfileLoadAsync);
+        cmds[FeatureCommandKeys.ProfileDelete] = new AsyncRelayCommand(ProfileDeleteAsync);
+        cmds[FeatureCommandKeys.ProfileImport] = new AsyncRelayCommand(ProfileImportAsync);
+        cmds[FeatureCommandKeys.ProfileShare] = new AsyncRelayCommand(ProfileShareAsync);
         cmds[FeatureCommandKeys.CliCommandCopy] = new RelayCommand(CliCommandCopy);
-        cmds[FeatureCommandKeys.ConfigDiff] = new RelayCommand(ConfigDiff);
+        cmds[FeatureCommandKeys.ConfigDiff] = new AsyncRelayCommand(ConfigDiffAsync);
         cmds[FeatureCommandKeys.ExportUnified] = new RelayCommand(ExportUnified);
         cmds[FeatureCommandKeys.ConfigImport] = new RelayCommand(ConfigImport);
         cmds[FeatureCommandKeys.AutoFindTools] = new AsyncRelayCommand(AutoFindToolsAsync);
@@ -180,7 +180,7 @@ public sealed partial class FeatureCommandService
         // ── Konfiguration tab misc ──────────────────────────────────────
         cmds[FeatureCommandKeys.HealthScore] = new RelayCommand(HealthScore);
         cmds[FeatureCommandKeys.DuplicateAnalysis] = new RelayCommand(DuplicateAnalysis);
-        cmds[FeatureCommandKeys.ExportCollection] = new RelayCommand(ExportCollection);
+        cmds[FeatureCommandKeys.ExportCollection] = new AsyncRelayCommand(ExportCollectionAsync);
         var rollbackHistoryBack = new RelayCommand(RollbackHistoryBack);
         var rollbackHistoryForward = new RelayCommand(RollbackHistoryForward);
         cmds[FeatureCommandKeys.RollbackQuick] = _vm.RollbackCommand;
@@ -198,7 +198,7 @@ public sealed partial class FeatureCommandService
         cmds[FeatureCommandKeys.MissingRom] = new RelayCommand(MissingRom);
         cmds[FeatureCommandKeys.HeaderAnalysis] = new RelayCommand(HeaderAnalysis);
         cmds[FeatureCommandKeys.Completeness] = new AsyncRelayCommand(CompletenessAsync);
-        cmds[FeatureCommandKeys.DryRunCompare] = new RelayCommand(DryRunCompare);
+        cmds[FeatureCommandKeys.DryRunCompare] = new AsyncRelayCommand(DryRunCompareAsync);
 
 
         // ── Konvertierung & Hashing ─────────────────────────────────────
@@ -217,7 +217,7 @@ public sealed partial class FeatureCommandService
         cmds[FeatureCommandKeys.CollectionManager] = new RelayCommand(CollectionManager);
         cmds[FeatureCommandKeys.CloneListViewer] = new RelayCommand(CloneListViewer);
         cmds[FeatureCommandKeys.VirtualFolderPreview] = new RelayCommand(VirtualFolderPreview);
-        cmds[FeatureCommandKeys.CollectionMerge] = new RelayCommand(CollectionMerge);
+        cmds[FeatureCommandKeys.CollectionMerge] = new AsyncRelayCommand(CollectionMergeAsync);
 
         // ── Sicherheit & Integrität ─────────────────────────────────────
         cmds[FeatureCommandKeys.IntegrityMonitor] = new AsyncRelayCommand(IntegrityMonitorAsync);
@@ -237,11 +237,11 @@ public sealed partial class FeatureCommandService
 
         // ── Export & Integration ────────────────────────────────────────
         cmds[FeatureCommandKeys.HtmlReport] = new RelayCommand(HtmlReport);
-        cmds[FeatureCommandKeys.LauncherIntegration] = new RelayCommand(LauncherIntegration);
+        cmds[FeatureCommandKeys.LauncherIntegration] = new AsyncRelayCommand(LauncherIntegrationAsync);
         cmds[FeatureCommandKeys.DatImport] = new RelayCommand(DatImport);
 
         // ── Infrastruktur & Deployment ──────────────────────────────────
-        cmds[FeatureCommandKeys.StorageTiering] = new RelayCommand(StorageTiering);
+        cmds[FeatureCommandKeys.StorageTiering] = new AsyncRelayCommand(StorageTieringAsync);
         cmds[FeatureCommandKeys.NasOptimization] = new RelayCommand(NasOptimization);
         cmds[FeatureCommandKeys.PortableMode] = new RelayCommand(PortableMode);
         cmds[FeatureCommandKeys.HardlinkMode] = new RelayCommand(HardlinkMode);
@@ -272,7 +272,7 @@ public sealed partial class FeatureCommandService
         { LogError("IO-EXPORT", _vm.Loc.Format("Cmd.ExportFailed", ex.Message)); }
     }
 
-    private void ProfileDelete()
+    private async Task ProfileDeleteAsync()
     {
         if (string.IsNullOrWhiteSpace(_vm.SelectedRunProfileId))
         {
@@ -285,14 +285,14 @@ public sealed partial class FeatureCommandService
 
         try
         {
-            var deleted = _vm.RunProfileService.DeleteAsync(_vm.SelectedRunProfileId).GetAwaiter().GetResult();
+            var deleted = await _vm.RunProfileService.DeleteAsync(_vm.SelectedRunProfileId);
             if (!deleted)
             {
                 _vm.AddLog(_vm.Loc["Cmd.ProfileNotFound"], "WARN");
                 return;
             }
 
-            _vm.RefreshRunConfigurationCatalogs();
+            await _vm.RefreshRunConfigurationCatalogsAsync();
             _vm.RestoreRunConfigurationSelection(_vm.SelectedWorkflowScenarioId, null);
             _vm.AddLog(_vm.Loc["Cmd.ProfileDeleted"], "INFO");
         }
@@ -302,15 +302,15 @@ public sealed partial class FeatureCommandService
         }
     }
 
-    private void ProfileSave()
+    private async Task ProfileSaveAsync()
     {
         if (!TryPromptProfileDocument(out var document) || document is null)
             return;
 
         try
         {
-            var saved = _vm.RunProfileService.SaveAsync(document).GetAwaiter().GetResult();
-            _vm.RefreshRunConfigurationCatalogs();
+            var saved = await _vm.RunProfileService.SaveAsync(document);
+            await _vm.RefreshRunConfigurationCatalogsAsync();
             _vm.RestoreRunConfigurationSelection(_vm.SelectedWorkflowScenarioId, saved.Id);
             _vm.ProfileName = saved.Name;
             _vm.AddLog($"Profil gespeichert: {saved.Name} ({saved.Id})", "INFO");
@@ -321,23 +321,24 @@ public sealed partial class FeatureCommandService
         }
     }
 
-    private void ProfileLoad()
+    private async Task ProfileLoadAsync()
     {
-        if (!TryCreateSelectedMaterializedRunConfiguration(out var materialized) || materialized is null)
+        var (success, materialized) = await TryCreateSelectedMaterializedRunConfigurationAsync();
+        if (!success || materialized is null)
             return;
 
         _vm.ApplyMaterializedRunConfiguration(materialized);
         _vm.AddLog($"Workflow/Profil geladen: {materialized.Workflow?.Name ?? "kein Workflow"} | {materialized.Profile?.Name ?? "kein Profil"}", "INFO");
     }
 
-    private void ProfileImport()
+    private async Task ProfileImportAsync()
     {
         var path = _dialog.BrowseFile(_vm.Loc["Cmd.ProfileImportTitle"], _vm.Loc["Cmd.FilterJson"]);
         if (path is null) return;
         try
         {
-            var imported = _vm.RunProfileService.ImportAsync(path).GetAwaiter().GetResult();
-            _vm.RefreshRunConfigurationCatalogs();
+            var imported = await _vm.RunProfileService.ImportAsync(path);
+            await _vm.RefreshRunConfigurationCatalogsAsync();
             _vm.RestoreRunConfigurationSelection(_vm.SelectedWorkflowScenarioId, imported.Id);
             _vm.ProfileName = imported.Name;
             _vm.AddLog(_vm.Loc.Format("Cmd.ProfileImported", Path.GetFileName(path)), "INFO");
@@ -348,9 +349,9 @@ public sealed partial class FeatureCommandService
     }
 
     /// <summary>GUI-107: Copy current profile as JSON to clipboard for sharing.</summary>
-    private void ProfileShare()
+    private async Task ProfileShareAsync()
     {
-        var selected = TryGetSelectedProfileDocument();
+        var selected = await TryGetSelectedProfileDocumentAsync();
         var document = selected ?? _vm.BuildCurrentRunProfileDocument(
             NormalizeProfileId(string.IsNullOrWhiteSpace(_vm.ProfileName) ? "custom-profile" : _vm.ProfileName),
             string.IsNullOrWhiteSpace(_vm.ProfileName) ? "Custom Profile" : _vm.ProfileName,
@@ -406,12 +407,13 @@ public sealed partial class FeatureCommandService
         TryCopyToClipboard(command, _vm.Loc["Cmd.CliCommandCopied"]);
     }
 
-    private void ConfigDiff()
+    private async Task ConfigDiffAsync()
     {
         var current = _vm.GetCurrentRunConfigurationMap();
         IReadOnlyDictionary<string, string>? comparison = null;
 
-        if (TryCreateSelectedMaterializedRunConfiguration(out var materialized) && materialized is not null)
+        var (success, materialized) = await TryCreateSelectedMaterializedRunConfigurationAsync();
+        if (success && materialized is not null)
             comparison = MainViewModel.BuildRunConfigurationMap(materialized.EffectiveDraft);
         else
             comparison = ProfileService.LoadSavedConfigFlat();

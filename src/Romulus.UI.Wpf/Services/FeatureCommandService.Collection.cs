@@ -47,7 +47,7 @@ public sealed partial class FeatureCommandService
         _dialog.ShowText("Virtuelle Ordner", FeatureService.BuildVirtualFolderPreview(_vm.LastCandidates));
     }
 
-    private void CollectionMerge()
+    private async Task CollectionMergeAsync()
     {
         var leftRoot = _dialog.BrowseFolder("Linke Sammlung waehlen");
         if (string.IsNullOrWhiteSpace(leftRoot))
@@ -76,7 +76,7 @@ public sealed partial class FeatureCommandService
 
         using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), msg => _vm.AddLog(msg, "INFO"));
         var fileSystem = new FileSystemAdapter();
-        var build = CollectionMergeService.BuildPlanAsync(collectionIndex, fileSystem, mergeRequest).GetAwaiter().GetResult();
+        var build = await CollectionMergeService.BuildPlanAsync(collectionIndex, fileSystem, mergeRequest);
         if (!build.CanUse || build.Plan is null)
         {
             _vm.AddLog($"[CollectionMerge] Nicht verfuegbar: {build.Reason}", "WARN");
@@ -97,7 +97,7 @@ public sealed partial class FeatureCommandService
         }
 
         var auditStore = new AuditCsvStore(fileSystem, msg => _vm.AddLog(msg, "INFO"));
-        var applyResult = CollectionMergeService.ApplyAsync(
+        var applyResult = await CollectionMergeService.ApplyAsync(
             collectionIndex,
             fileSystem,
             auditStore,
@@ -105,7 +105,7 @@ public sealed partial class FeatureCommandService
             {
                 MergeRequest = mergeRequest,
                 AuditPath = CollectionMergeService.CreateDefaultAuditPath(targetRoot)
-            }).GetAwaiter().GetResult();
+            });
 
         if (!string.IsNullOrWhiteSpace(applyResult.BlockedReason))
         {

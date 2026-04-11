@@ -51,6 +51,18 @@ public static class RegionDetector
             System.Text.RegularExpressions.RegexOptions.Compiled,
             RegexTimeout);
 
+    /// <summary>
+    /// Resets all registered state. For test isolation only – never call in production.
+    /// </summary>
+    internal static void ResetForTesting()
+    {
+        lock (RegistrationSync)
+        {
+            _registeredConfig = null;
+            _registrationFactory = null;
+        }
+    }
+
     public static void RegisterRuleFactory(Func<(
         IReadOnlyList<RegionRule> OrderedRules,
         IReadOnlyList<RegionRule> TwoLetterRules,

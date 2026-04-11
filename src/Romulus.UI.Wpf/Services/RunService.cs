@@ -93,7 +93,7 @@ public sealed class RunService : IRunService
             vm.BuildCurrentRunConfigurationExplicitness(),
             settings,
             auditPath: auditPath,
-            reportPath: reportPath).GetAwaiter().GetResult();
+            reportPath: reportPath).AsTask().Result;
         var runOptions = materialized.Options;
         vm.RestoreRunConfigurationSelection(materialized.Workflow?.Id, materialized.EffectiveProfileId);
 
@@ -126,6 +126,122 @@ public sealed class RunService : IRunService
         return (orchestrator, runOptions, auditPath, reportPath);
     }
 
+    /// <inheritdoc/>
+    public async Task<(RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)>
+        BuildOrchestratorAsync(MainViewModel vm, Action<string>? onProgress = null)
+    {
+        _appState.SetValue("run.build.startedUtc", DateTime.UtcNow);
+        _appState.SetValue("run.mode", vm.DryRun ? RunConstants.ModeDryRun : RunConstants.ModeMove);
+        onProgress?.Invoke("[Init] Initialisiere Infrastruktur…");
+
+        string? auditPath = null;
+        if ((!vm.DryRun || vm.ConvertOnly) && vm.Roots.Count > 0)
+        {
+            var auditDir = !string.IsNullOrWhiteSpace(vm.AuditRoot)
+                ? vm.AuditRoot
+                : ArtifactPathResolver.GetArtifactDirectory(vm.Roots, AppIdentity.ArtifactDirectories.AuditLogs);
+            auditDir = Path.GetFullPath(auditDir);
+            auditPath = Path.Combine(auditDir, $"audit-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv");
+        }
+
+        string? reportPath = null;
+        if (vm.Roots.Count > 0)
+        {
+            var reportDir = ArtifactPathResolver.GetArtifactDirectory(vm.Roots, AppIdentity.ArtifactDirectories.Reports);
+            reportDir = Path.GetFullPath(reportDir);
+            Directory.CreateDirectory(reportDir);
+            reportPath = Path.Combine(reportDir, $"report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.html");
+        }
+
+        var dataDir = FeatureService.ResolveDataDirectory()
+                      ?? RunEnvironmentBuilder.ResolveDataDir();
+        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+        var materialized = await _runConfigurationMaterializer.MaterializeAsync(
+            vm.BuildCurrentRunConfigurationDraft(),
+            vm.BuildCurrentRunConfigurationExplicitness(),
+            settings,
+            auditPath: auditPath,
+            reportPath: reportPath).ConfigureAwait(false);
+        var runOptions = materialized.Options;
+        vm.RestoreRunConfigurationSelection(materialized.Workflow?.Id, materialized.EffectiveProfileId);
+
+        onProgress?.Invoke($"[Init] Konfiguration: Modus={runOptions.Mode}, {runOptions.Extensions.Count} Extension(s), {runOptions.Roots.Count} Root(s)");
+        if (!string.IsNullOrWhiteSpace(materialized.Workflow?.Name) || !string.IsNullOrWhiteSpace(materialized.Profile?.Name))
+            onProgress?.Invoke($"[Init] Workflow/Profil: {materialized.Workflow?.Name ?? "kein Workflow"} | {materialized.Profile?.Name ?? "kein Profil"}");
+        onProgress?.Invoke($"[Init] Datenverzeichnis: {dataDir}");
+
+        var env = _runEnvironmentFactory.Create(runOptions, onProgress);
+        var reviewDecisionService = ReviewDecisionServiceFactory.TryCreate(onProgress);
+        var orchestrator = new RunOrchestrator(
+            env.FileSystem, env.AuditStore, env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex, onProgress,
+            archiveHashService: env.ArchiveHashService,
+            knownBiosHashes: env.KnownBiosHashes,
+            collectionIndex: env.CollectionIndex,
+            enrichmentFingerprint: env.EnrichmentFingerprint,
+            reviewDecisionService: reviewDecisionService);
+
+        _appState.SetValue("run.build.completedUtc", DateTime.UtcNow);
+        _appState.SetValue("run.auditPath", auditPath);
+        _appState.SetValue("run.reportPath", reportPath);
+        _appState.SetValue("run.workflowScenarioId", materialized.Workflow?.Id ?? string.Empty);
+        _appState.SetValue("run.profileId", materialized.EffectiveProfileId ?? string.Empty);
+
+        return (orchestrator, runOptions, auditPath, reportPath);
+    }
+
+    /// <inheritdoc/>
+    public async Task<RunServiceResult> ExecuteRunAsync(
+        RunOrchestrator orchestrator,
+        RunOptions options,
+        string? auditPath,
+        string? reportPath,
+        CancellationToken ct)
+    {
+        _appState.SetValue("run.execute.startedUtc", DateTime.UtcNow);
+        _appState.SetValue("run.execute.cancelRequested", ct.IsCancellationRequested);
+        var runStartedUtc = DateTime.UtcNow;
+
+        try
+        {
+            var result = orchestrator.Execute(options, ct);
+            var runCompletedUtc = DateTime.UtcNow;
+
+            try
+            {
+                using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath());
+                await CollectionRunSnapshotWriter.TryPersistAsync(
+                    collectionIndex,
+                    options,
+                    result,
+                    runStartedUtc,
+                    runCompletedUtc).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                _appState.SetValue("run.execute.indexPersistWarning", ex.Message);
+            }
+
+            var effectiveReportPath = ReportPathResolver.Resolve(result.ReportPath, reportPath);
+
+            _appState.SetValue("run.execute.completedUtc", DateTime.UtcNow);
+            _appState.SetValue("run.execute.status", result.Status);
+            _appState.SetValue("run.execute.exitCode", result.ExitCode);
+            _appState.SetValue("run.execute.durationMs", result.DurationMs);
+            _appState.SetValue("run.execute.reportPath", effectiveReportPath);
+
+            return new RunServiceResult
+            {
+                Result = result,
+                AuditPath = auditPath,
+                ReportPath = effectiveReportPath
+            };
+        }
+        finally
+        {
+            orchestrator.Dispose();
+        }
+    }
+
     /// <summary>
     /// Execute the pipeline.
     /// Must be called on a background thread.
@@ -154,7 +270,7 @@ public sealed class RunService : IRunService
                     options,
                     result,
                     runStartedUtc,
-                    runCompletedUtc).GetAwaiter().GetResult();
+                    runCompletedUtc).Wait();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
             {

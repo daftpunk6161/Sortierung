@@ -23,6 +23,18 @@ public static class DeduplicationEngine
             [nameof(FileCategory.Unknown)] = 1
         };
 
+    /// <summary>
+    /// Resets all registered state. For test isolation only – never call in production.
+    /// </summary>
+    internal static void ResetForTesting()
+    {
+        lock (CategoryRankSync)
+        {
+            _registeredCategoryRanks = null;
+            _categoryRankFactory = null;
+        }
+    }
+
     public static void RegisterCategoryRankFactory(Func<IReadOnlyDictionary<string, int>> factory)
     {
         ArgumentNullException.ThrowIfNull(factory);

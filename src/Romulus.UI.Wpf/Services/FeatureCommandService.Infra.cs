@@ -17,17 +17,18 @@ public sealed partial class FeatureCommandService
 {
     // ═══ INFRASTRUKTUR & DEPLOYMENT ═════════════════════════════════════
 
-    private void StorageTiering()
+    private async Task StorageTieringAsync()
     {
-        if (!TryLoadSnapshots(30, out var snapshots, out var collectionIndex) || collectionIndex is null)
+        var (success, snapshots, collectionIndex) = await TryLoadSnapshotsAsync(30);
+        if (!success || collectionIndex is null)
             return;
 
         using (collectionIndex)
         {
             try
             {
-                var insights = RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, 30).GetAwaiter().GetResult();
-                var trends = RunHistoryTrendService.LoadTrendHistoryAsync(collectionIndex, 30).GetAwaiter().GetResult();
+                var insights = await RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, 30);
+                var trends = await RunHistoryTrendService.LoadTrendHistoryAsync(collectionIndex, 30);
 
                 var sb = new StringBuilder();
                 sb.AppendLine(RunHistoryInsightsService.FormatStorageInsightReport(insights));

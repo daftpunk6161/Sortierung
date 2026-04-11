@@ -203,7 +203,7 @@ public sealed class CartridgeHeaderDetector
             }
         }
         catch (IOException) { /* SUPPRESSED: best-effort SNES header probe; unreadable files stay unknown */ }
-        catch (UnauthorizedAccessException) { }
+        catch (UnauthorizedAccessException) { /* SUPPRESSED: access-denied on SNES header probe; file stays unknown */ }
 
         return null;
     }

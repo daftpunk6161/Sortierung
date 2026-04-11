@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Text.Json;
 using Romulus.Infrastructure.Paths;
 using Romulus.Infrastructure.Safety;
@@ -18,8 +19,30 @@ public sealed class ProfileService
 
     /// <summary>Delete the saved profile. Returns true if deleted.</summary>
     public static bool Delete()
-        // SYNC-JUSTIFIED: legacy synchronous call sites (commands/tests) still depend on bool return.
-        => DeleteAsync(CancellationToken.None).GetAwaiter().GetResult();
+    {
+        if (!File.Exists(SettingsPath))
+            return false;
+
+        const int maxAttempts = 4;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                File.Delete(SettingsPath);
+                return true;
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(25 * attempt);
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(25 * attempt);
+            }
+        }
+
+        return !File.Exists(SettingsPath);
+    }
 
     public static async Task<bool> DeleteAsync(CancellationToken cancellationToken = default)
     {

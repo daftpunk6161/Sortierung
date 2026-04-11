@@ -18,35 +18,33 @@ public sealed partial class FeatureCommandService
         WriteIndented = true
     };
 
-    private bool TryCreateCurrentMaterializedRunConfiguration(out MaterializedRunConfiguration? materialized)
+    private async Task<(bool Success, MaterializedRunConfiguration? Materialized)> TryCreateCurrentMaterializedRunConfigurationAsync()
     {
         try
         {
             var dataDir = FeatureService.ResolveDataDirectory()
                           ?? RunEnvironmentBuilder.ResolveDataDir();
             var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
-            materialized = _vm.RunConfigurationMaterializer.MaterializeAsync(
+            var materialized = await _vm.RunConfigurationMaterializer.MaterializeAsync(
                 _vm.BuildCurrentRunConfigurationDraft(),
                 _vm.BuildCurrentRunConfigurationExplicitness(),
-                settings).GetAwaiter().GetResult();
-            return true;
+                settings);
+            return (true, materialized);
         }
         catch (InvalidOperationException ex)
         {
-            materialized = null;
             LogWarning("GUI-CONFIG", $"Run-Konfiguration ungueltig: {ex.Message}");
-            return false;
+            return (false, null);
         }
     }
 
-    private bool TryCreateSelectedMaterializedRunConfiguration(out MaterializedRunConfiguration? materialized)
+    private async Task<(bool Success, MaterializedRunConfiguration? Materialized)> TryCreateSelectedMaterializedRunConfigurationAsync()
     {
         if (string.IsNullOrWhiteSpace(_vm.SelectedWorkflowScenarioId) &&
             string.IsNullOrWhiteSpace(_vm.SelectedRunProfileId))
         {
-            materialized = null;
             LogWarning("GUI-PROFILE", "Kein Workflow oder Profil ausgewaehlt.");
-            return false;
+            return (false, null);
         }
 
         try
@@ -62,38 +60,35 @@ public sealed partial class FeatureCommandService
                 ProfileId = _vm.SelectedRunProfileId
             };
 
-            materialized = _vm.RunConfigurationMaterializer.MaterializeAsync(
+            var materialized = await _vm.RunConfigurationMaterializer.MaterializeAsync(
                 selectionDraft,
                 new RunConfigurationExplicitness(),
                 settings,
-                baselineDraft: baselineDraft).GetAwaiter().GetResult();
-            return true;
+                baselineDraft: baselineDraft);
+            return (true, materialized);
         }
         catch (InvalidOperationException ex)
         {
-            materialized = null;
             LogWarning("GUI-PROFILE", $"Auswahl konnte nicht materialisiert werden: {ex.Message}");
-            return false;
+            return (false, null);
         }
     }
 
-    private bool TryCreateCurrentRunEnvironment(
-        out MaterializedRunConfiguration? materialized,
-        out IRunEnvironment? environment)
+    private async Task<(bool Success, MaterializedRunConfiguration? Materialized, IRunEnvironment? Environment)> TryCreateCurrentRunEnvironmentAsync()
     {
-        environment = null;
-        if (!TryCreateCurrentMaterializedRunConfiguration(out materialized) || materialized is null)
-            return false;
+        var (success, materialized) = await TryCreateCurrentMaterializedRunConfigurationAsync();
+        if (!success || materialized is null)
+            return (false, null, null);
 
         try
         {
-            environment = new RunEnvironmentFactory().Create(materialized.Options);
-            return true;
+            var environment = new RunEnvironmentFactory().Create(materialized.Options);
+            return (true, materialized, environment);
         }
         catch (InvalidOperationException ex)
         {
             LogWarning("GUI-ENV", $"Run-Umgebung konnte nicht erstellt werden: {ex.Message}");
-            return false;
+            return (false, null, null);
         }
     }
 
@@ -112,14 +107,14 @@ public sealed partial class FeatureCommandService
         }
     }
 
-    private RunProfileDocument? TryGetSelectedProfileDocument()
+    private async Task<RunProfileDocument?> TryGetSelectedProfileDocumentAsync()
     {
         if (string.IsNullOrWhiteSpace(_vm.SelectedRunProfileId))
             return null;
 
         try
         {
-            return _vm.RunProfileService.TryGetAsync(_vm.SelectedRunProfileId).GetAwaiter().GetResult();
+            return await _vm.RunProfileService.TryGetAsync(_vm.SelectedRunProfileId);
         }
         catch (InvalidOperationException ex)
         {
@@ -176,26 +171,18 @@ public sealed partial class FeatureCommandService
         return normalized.Length <= 64 ? normalized : normalized[..64];
     }
 
-    private bool TryLoadSnapshots(
-        int limit,
-        out IReadOnlyList<CollectionRunSnapshot> snapshots,
-        out LiteDbCollectionIndex? collectionIndex)
+    private async Task<(bool Success, IReadOnlyList<CollectionRunSnapshot> Snapshots, LiteDbCollectionIndex? CollectionIndex)> TryLoadSnapshotsAsync(int limit)
     {
-        snapshots = Array.Empty<CollectionRunSnapshot>();
-        collectionIndex = null;
-
         try
         {
-            collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath());
-            snapshots = collectionIndex.ListRunSnapshotsAsync(limit).GetAwaiter().GetResult();
-            return true;
+            var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath());
+            var snapshots = await collectionIndex.ListRunSnapshotsAsync(limit);
+            return (true, snapshots, collectionIndex);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            collectionIndex?.Dispose();
             LogWarning("GUI-HISTORY", $"Run-Historie nicht verfuegbar: {ex.Message}");
-            collectionIndex = null;
-            return false;
+            return (false, Array.Empty<CollectionRunSnapshot>(), null);
         }
     }
 
@@ -230,22 +217,20 @@ public sealed partial class FeatureCommandService
         return parts.Length == 2 ? parts : [snapshots[0].RunId, snapshots[1].RunId];
     }
 
-    private bool TryLoadFrontendExportResult(
+    private async Task<(bool Success, FrontendExportResult? Result)> TryLoadFrontendExportResultAsync(
         string frontend,
         string outputPath,
-        string defaultCollectionName,
-        out FrontendExportResult? result)
+        string defaultCollectionName)
     {
-        result = null;
-
-        if (!TryCreateCurrentRunEnvironment(out var materialized, out var environment) || materialized is null || environment is null)
-            return false;
+        var (success, materialized, environment) = await TryCreateCurrentRunEnvironmentAsync();
+        if (!success || materialized is null || environment is null)
+            return (false, null);
 
         using (environment)
         {
             try
             {
-                result = FrontendExportService.ExportAsync(
+                var result = await FrontendExportService.ExportAsync(
                     new FrontendExportRequest(
                         frontend,
                         outputPath,
@@ -255,13 +240,13 @@ public sealed partial class FeatureCommandService
                     environment.FileSystem,
                     environment.CollectionIndex,
                     environment.EnrichmentFingerprint,
-                    runCandidates: _vm.LastCandidates.Count > 0 ? _vm.LastCandidates.ToArray() : null).GetAwaiter().GetResult();
-                return true;
+                    runCandidates: _vm.LastCandidates.Count > 0 ? _vm.LastCandidates.ToArray() : null);
+                return (true, result);
             }
             catch (InvalidOperationException ex)
             {
                 LogWarning("GUI-EXPORT", $"Export konnte nicht erstellt werden: {ex.Message}");
-                return false;
+                return (false, null);
             }
         }
     }

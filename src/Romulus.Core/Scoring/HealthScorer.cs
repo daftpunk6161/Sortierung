@@ -31,6 +31,18 @@ public static class HealthScorer
         ErrorPenaltyCap: 20.0,
         ErrorPenaltyPerError: 2.0);
 
+    /// <summary>
+    /// Resets all registered state. For test isolation only – never call in production.
+    /// </summary>
+    internal static void ResetForTesting()
+    {
+        lock (Sync)
+        {
+            _registeredWeights = null;
+            _weightsFactory = null;
+        }
+    }
+
     public static void RegisterWeightFactory(Func<HealthScoreWeights> factory)
     {
         ArgumentNullException.ThrowIfNull(factory);

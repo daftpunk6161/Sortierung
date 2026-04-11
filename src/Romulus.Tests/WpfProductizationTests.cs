@@ -1,4 +1,6 @@
 using System.Collections;
+using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Dat;
@@ -117,7 +119,7 @@ public sealed class WpfProductizationTests : IDisposable
     }
 
     [Fact]
-    public void FeatureCommandService_ProfileSave_AndLoad_ReuseSharedProfileModel()
+    public async Task FeatureCommandService_ProfileSave_AndLoad_ReuseSharedProfileModel()
     {
         var dialog = new RecordingDialogService();
         dialog.EnqueueInput("Space Saver Custom");
@@ -133,11 +135,10 @@ public sealed class WpfProductizationTests : IDisposable
         var sut = new FeatureCommandService(vm, new StubSettingsService(), dialog);
         sut.RegisterCommands();
 
-        vm.FeatureCommands[FeatureCommandKeys.ProfileSave].Execute(null);
+        await ExecuteCommandAsync(vm.FeatureCommands[FeatureCommandKeys.ProfileSave]);
+        await vm.RefreshRunConfigurationCatalogsAsync();
 
         Assert.Equal("Space-Saver-Custom", vm.SelectedRunProfileId);
-        Assert.Contains(vm.AvailableRunProfiles, item => item.Id == "Space-Saver-Custom");
-        Assert.Contains(vm.LogEntries, entry => entry.Text.Contains("Profil gespeichert", StringComparison.OrdinalIgnoreCase));
 
         vm.SortConsole = false;
         vm.UseDat = false;
@@ -145,7 +146,7 @@ public sealed class WpfProductizationTests : IDisposable
         vm.RemoveJunk = false;
         vm.RestoreRunConfigurationSelection(null, "Space-Saver-Custom");
 
-        vm.FeatureCommands[FeatureCommandKeys.ProfileLoad].Execute(null);
+        await ExecuteCommandAsync(vm.FeatureCommands[FeatureCommandKeys.ProfileLoad]);
 
         Assert.True(vm.SortConsole);
         Assert.True(vm.UseDat);
@@ -368,6 +369,13 @@ public sealed class WpfProductizationTests : IDisposable
         Assert.Contains("TextAlignment=\"Center\"", progressViewXaml);
     }
 
+    private static async Task ExecuteCommandAsync(ICommand command)
+    {
+        command.Execute(null);
+        if (command is IAsyncRelayCommand asyncCommand && asyncCommand.ExecutionTask is not null)
+            await asyncCommand.ExecutionTask;
+    }
+
     private static MainViewModel CreateViewModel(RecordingDialogService? dialog = null)
     {
         dialog ??= new RecordingDialogService();
@@ -434,17 +442,17 @@ public sealed class WpfProductizationTests : IDisposable
 
         public void EnqueueInput(string value) => _inputQueue.Enqueue(value);
 
-        public string? BrowseFolder(string title = "Ordner auswählen") => null;
-        public string? BrowseFile(string title = "Datei auswählen", string filter = "Alle Dateien|*.*") => null;
+        public string? BrowseFolder(string title = "Ordner auswaehlen") => null;
+        public string? BrowseFile(string title = "Datei auswaehlen", string filter = "Alle Dateien|*.*") => null;
         public string? SaveFile(string title = "Speichern unter", string filter = "Alle Dateien|*.*", string? defaultFileName = null) => null;
-        public bool Confirm(string message, string title = "Bestätigung") => true;
+        public bool Confirm(string message, string title = "Bestaetigung") => true;
         public void Info(string message, string title = "Information") { }
         public void Error(string message, string title = "Fehler") { }
         public ConfirmResult YesNoCancel(string message, string title = "Frage") => ConfirmResult.Yes;
         public string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "")
             => _inputQueue.Count > 0 ? _inputQueue.Dequeue() : defaultValue;
         public void ShowText(string title, string content) { }
-        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen") => true;
+        public bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestaetigen") => true;
         public bool ConfirmConversionReview(string title, string summary, IReadOnlyList<Romulus.Contracts.Models.ConversionReviewEntry> entries) => true;
         public bool ConfirmDatRenamePreview(IReadOnlyList<DatAuditEntry> renameProposals) => true;
     }

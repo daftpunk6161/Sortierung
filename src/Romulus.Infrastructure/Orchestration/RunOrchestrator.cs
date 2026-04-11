@@ -415,7 +415,16 @@ public sealed partial class RunOrchestrator : IDisposable
         {
             cancellationToken.ThrowIfCancellationRequested();
             _onProgress?.Invoke($"[Plan] Phase: {phase.Name}");
-            phase.Execute(pipelineState, cancellationToken);
+            var stepResult = phase.Execute(pipelineState, cancellationToken);
+
+            foreach (var warning in stepResult.Warnings)
+                _onProgress?.Invoke($"[WARN] {phase.Name}: {warning}");
+
+            if (string.Equals(stepResult.Status, Contracts.RunConstants.StatusFailed, StringComparison.OrdinalIgnoreCase))
+            {
+                _onProgress?.Invoke($"[Plan] Phase '{phase.Name}' failed – aborting remaining phases.");
+                break;
+            }
         }
     }
 

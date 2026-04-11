@@ -1124,11 +1124,11 @@ public sealed partial class MainViewModel
             _runLogStartIndex = LogEntries.Count;
             AddLog(_loc["Log.Initializing"], "INFO");
 
-            var (orchestrator, runOptions, auditPath, reportPath) = await Task.Run(() =>
+            var (orchestrator, runOptions, auditPath, reportPath) = await Task.Run(async () =>
             {
                 DateTime lastProgressUpdate = DateTime.MinValue;
                 string lastProgressPhaseKey = string.Empty;
-                return _runService.BuildOrchestrator(this, msg =>
+                return await _runService.BuildOrchestratorAsync(this, msg =>
                 {
                     var now = _timeProvider.UtcNow.UtcDateTime;
                     if (!ShouldDispatchProgressMessage(msg, now, lastProgressUpdate, lastProgressPhaseKey))
@@ -1145,7 +1145,7 @@ public sealed partial class MainViewModel
                     }
 
                     _syncContext.Post(_ => ApplyProgressMessage(msg), null);
-                });
+                }).ConfigureAwait(false);
             }, ct);
             ConfigureRunProgressPlan(runOptions);
 
@@ -1173,7 +1173,7 @@ public sealed partial class MainViewModel
             }
 
             var svcResult = await Task.Run(
-                () => _runService.ExecuteRun(orchestrator, runOptions, auditPath, reportPath, ct), ct);
+                async () => await _runService.ExecuteRunAsync(orchestrator, runOptions, auditPath, reportPath, ct).ConfigureAwait(false), ct);
 
             LastAuditPath = auditPath;
             var runWasCancelled = ct.IsCancellationRequested ||

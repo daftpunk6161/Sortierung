@@ -123,7 +123,36 @@ public sealed partial class MainViewModel
     {
         try
         {
-            var profiles = _runProfileService.ListAsync().GetAwaiter().GetResult();
+            var profiles = _runProfileService.ListAsync().AsTask().Result;
+            AvailableRunProfiles.Clear();
+            foreach (var profile in profiles)
+                AvailableRunProfiles.Add(profile);
+
+            AvailableWorkflows.Clear();
+            foreach (var workflow in WorkflowScenarioCatalog.List()
+                         .OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                AvailableWorkflows.Add(workflow);
+            }
+
+            OnRunConfigurationSelectionMetadataChanged();
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or JsonException)
+        {
+            AddLog($"[Profiles] Katalog konnte nicht geladen werden: {ex.Message}", "WARN");
+        }
+    }
+
+    internal Task RefreshRunConfigurationCatalogsAsync()
+    {
+        return RefreshRunConfigurationCatalogsCoreAsync();
+    }
+
+    private async Task RefreshRunConfigurationCatalogsCoreAsync()
+    {
+        try
+        {
+            var profiles = await _runProfileService.ListAsync();
             AvailableRunProfiles.Clear();
             foreach (var profile in profiles)
                 AvailableRunProfiles.Add(profile);
@@ -327,7 +356,7 @@ public sealed partial class MainViewModel
                 selectionDraft,
                 new RunConfigurationExplicitness(),
                 settings,
-                baselineDraft: baselineDraft).GetAwaiter().GetResult();
+                baselineDraft: baselineDraft).AsTask().Result;
 
             ApplyMaterializedRunConfiguration(materialized);
         }
@@ -340,6 +369,12 @@ public sealed partial class MainViewModel
         {
             _applyingRunConfigurationSelection = false;
         }
+    }
+
+    internal Task ApplySelectedRunConfigurationAsync()
+    {
+        ApplySelectedRunConfiguration();
+        return Task.CompletedTask;
     }
 
     internal void ApplyMaterializedRunConfiguration(MaterializedRunConfiguration materialized)
