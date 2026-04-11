@@ -69,6 +69,14 @@ public static class RunConstants
     /// <summary>Run completed successfully (API lifecycle status).</summary>
     public const string StatusCompleted = "completed";
 
+    // ── Phase Metric Status constants (title-case, used by PhaseMetricsCollector) ──
+
+    /// <summary>Phase is currently executing.</summary>
+    public const string PhaseStatusRunning = "Running";
+
+    /// <summary>Phase completed successfully.</summary>
+    public const string PhaseStatusCompleted = "Completed";
+
     /// <summary>Run completed successfully.</summary>
     public const string StatusOk = "ok";
 

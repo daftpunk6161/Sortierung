@@ -476,6 +476,8 @@ public sealed class AuditComplianceTests : IDisposable
         var vm = new MainViewModel();
         Assert.NotNull(vm.ConsoleFilters);
         Assert.True(vm.ConsoleFilters.Count > 0, "ConsoleFilters must be populated");
+        // Verify at least one well-known console filter exists
+        Assert.Contains(vm.ConsoleFilters, f => f.DisplayName is not null && f.DisplayName.Length > 0);
 
         // Toggle a filter and verify state changes
         var first = vm.ConsoleFilters[0];

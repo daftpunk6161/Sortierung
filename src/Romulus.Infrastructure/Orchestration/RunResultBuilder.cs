@@ -50,6 +50,7 @@ public sealed class RunResultBuilder
     public IReadOnlyList<RomCandidate> AllCandidates { get; set; } = Array.Empty<RomCandidate>();
     public IReadOnlyList<DedupeGroup> DedupeGroups { get; set; } = Array.Empty<DedupeGroup>();
     public PhaseMetricsResult? PhaseMetrics { get; set; }
+    public List<string> Warnings { get; } = new();
 
     public RunResult Build()
     {
@@ -94,7 +95,8 @@ public sealed class RunResultBuilder
         ReportPath = ReportPath,
         AllCandidates = AllCandidates,
         DedupeGroups = DedupeGroups,
-        PhaseMetrics = PhaseMetrics
+        PhaseMetrics = PhaseMetrics,
+        Warnings = Warnings.Count > 0 ? Warnings.ToArray() : Array.Empty<string>()
         };
 
         // Defensive invariant check keeps report/output channels aligned.

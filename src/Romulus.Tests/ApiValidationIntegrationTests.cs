@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Xunit;
+using Romulus.Contracts.Errors;
 
 namespace Romulus.Tests;
 
@@ -43,7 +44,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.GetAsync("/runs?offset=-5");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-INVALID-OFFSET", body);
+        Assert.Contains(ApiErrorCodes.RunInvalidOffset, body);
     }
 
     [Fact]
@@ -54,7 +55,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.GetAsync("/runs?offset=abc");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-INVALID-OFFSET", body);
+        Assert.Contains(ApiErrorCodes.RunInvalidOffset, body);
     }
 
     [Fact]
@@ -65,7 +66,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.GetAsync("/runs?limit=5000");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-INVALID-LIMIT", body);
+        Assert.Contains(ApiErrorCodes.RunInvalidLimit, body);
     }
 
     [Fact]
@@ -76,7 +77,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.GetAsync("/runs?limit=0");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-INVALID-LIMIT", body);
+        Assert.Contains(ApiErrorCodes.RunInvalidLimit, body);
     }
 
     [Fact]
@@ -98,7 +99,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.GetAsync("/runs/history?offset=abc");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-INVALID-OFFSET", body);
+        Assert.Contains(ApiErrorCodes.RunInvalidOffset, body);
     }
 
     [Fact]
@@ -109,7 +110,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.GetAsync("/runs/history?limit=9999");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-INVALID-LIMIT", body);
+        Assert.Contains(ApiErrorCodes.RunInvalidLimit, body);
     }
 
     [Fact]
@@ -158,7 +159,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.GetAsync("/profiles/nonexistent-profile-id");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("PROFILE-NOT-FOUND", body);
+        Assert.Contains(ApiErrorCodes.ProfileNotFound, body);
     }
 
     [Fact]
@@ -169,7 +170,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.DeleteAsync("/profiles/nonexistent-profile-id");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("PROFILE-NOT-FOUND", body);
+        Assert.Contains(ApiErrorCodes.ProfileNotFound, body);
     }
 
     [Fact]
@@ -180,7 +181,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.DeleteAsync("/profiles/default");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("PROFILE-DELETE-BLOCKED", body);
+        Assert.Contains(ApiErrorCodes.ProfileDeleteBlocked, body);
     }
 
     // ──────────────── /workflows ────────────────
@@ -193,7 +194,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.GetAsync("/workflows/nonexistent-workflow");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("WORKFLOW-NOT-FOUND", body);
+        Assert.Contains(ApiErrorCodes.WorkflowNotFound, body);
     }
 
     [Fact]
@@ -204,7 +205,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.GetAsync("/workflows?id=nonexistent");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("WORKFLOW-NOT-FOUND", body);
+        Assert.Contains(ApiErrorCodes.WorkflowNotFound, body);
     }
 
     // ──────────────── POST /runs validation ────────────────
@@ -218,7 +219,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.PostAsync("/runs", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-INVALID-CONTENT-TYPE", body);
+        Assert.Contains(ApiErrorCodes.RunInvalidContentType, body);
     }
 
     [Fact]
@@ -230,7 +231,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.PostAsync("/runs", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-INVALID-JSON", body);
+        Assert.Contains(ApiErrorCodes.RunInvalidJson, body);
     }
 
     [Fact]
@@ -242,7 +243,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.PostAsync("/runs", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-ROOTS-REQUIRED", body);
+        Assert.Contains(ApiErrorCodes.RunRootsRequired, body);
     }
 
     [Fact]
@@ -255,7 +256,7 @@ public sealed class ApiValidationIntegrationTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
         // Empty root gets filtered or caught → RUN-ROOT-EMPTY or RUN-ROOTS-REQUIRED
-        Assert.True(body.Contains("RUN-ROOT-EMPTY") || body.Contains("RUN-ROOTS-REQUIRED"), $"Expected root error, got: {body}");
+        Assert.True(body.Contains(ApiErrorCodes.RunRootEmpty) || body.Contains(ApiErrorCodes.RunRootsRequired), $"Expected root error, got: {body}");
     }
 
     [Fact]
@@ -267,7 +268,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.PostAsync("/runs", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("IO-ROOT-NOT-FOUND", body);
+        Assert.Contains(ApiErrorCodes.IoRootNotFound, body);
     }
 
     [Fact]
@@ -281,7 +282,7 @@ public sealed class ApiValidationIntegrationTests
             var response = await client.PostAsync("/runs", content);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
-            Assert.Contains("RUN-INVALID-MODE", body);
+            Assert.Contains(ApiErrorCodes.RunInvalidMode, body);
         }
         finally { SafeDeleteDirectory(root); }
     }
@@ -298,7 +299,7 @@ public sealed class ApiValidationIntegrationTests
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
             // Materializer or inline validation catches invalid region
-            Assert.True(body.Contains("RUN-INVALID-REGION") || body.Contains("RUN-INVALID-CONFIG"), $"Expected region error, got: {body}");
+            Assert.True(body.Contains(ApiErrorCodes.RunInvalidRegion) || body.Contains(ApiErrorCodes.RunInvalidConfig), $"Expected region error, got: {body}");
         }
         finally { SafeDeleteDirectory(root); }
     }
@@ -316,7 +317,7 @@ public sealed class ApiValidationIntegrationTests
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
             // Materializer or inline check catches too many regions
-            Assert.True(body.Contains("RUN-TOO-MANY-REGIONS") || body.Contains("RUN-INVALID-CONFIG") || body.Contains("region", StringComparison.OrdinalIgnoreCase), $"Expected region error, got: {body}");
+            Assert.True(body.Contains(ApiErrorCodes.RunTooManyRegions) || body.Contains(ApiErrorCodes.RunInvalidConfig) || body.Contains("region", StringComparison.OrdinalIgnoreCase), $"Expected region error, got: {body}");
         }
         finally { SafeDeleteDirectory(root); }
     }
@@ -332,7 +333,7 @@ public sealed class ApiValidationIntegrationTests
             var response = await client.PostAsync("/runs", content);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
-            Assert.True(body.Contains("RUN-INVALID-HASH-TYPE") || body.Contains("RUN-INVALID-CONFIG"), $"Expected hash type error, got: {body}");
+            Assert.True(body.Contains(ApiErrorCodes.RunInvalidHashType) || body.Contains(ApiErrorCodes.RunInvalidConfig), $"Expected hash type error, got: {body}");
         }
         finally { SafeDeleteDirectory(root); }
     }
@@ -348,7 +349,7 @@ public sealed class ApiValidationIntegrationTests
             var response = await client.PostAsync("/runs", content);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
-            Assert.True(body.Contains("RUN-INVALID-EXTENSION") || body.Contains("RUN-INVALID-CONFIG"), $"Expected extension error, got: {body}");
+            Assert.True(body.Contains(ApiErrorCodes.RunInvalidExtension) || body.Contains(ApiErrorCodes.RunInvalidConfig), $"Expected extension error, got: {body}");
         }
         finally { SafeDeleteDirectory(root); }
     }
@@ -365,7 +366,7 @@ public sealed class ApiValidationIntegrationTests
             var response = await client.PostAsync("/runs", content);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
-            Assert.Contains("RUN-INVALID-IDEMPOTENCY-KEY", body);
+            Assert.Contains(ApiErrorCodes.RunInvalidIdempotencyKey, body);
         }
         finally { SafeDeleteDirectory(root); }
     }
@@ -393,7 +394,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.GetAsync("/runs/compare?runId=&compareToRunId=");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-COMPARE-IDS-REQUIRED", body);
+        Assert.Contains(ApiErrorCodes.RunCompareIdsRequired, body);
     }
 
     [Fact]
@@ -404,7 +405,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.GetAsync("/runs/compare?runId=fake123&compareToRunId=fake456");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-COMPARE-NOT-FOUND", body);
+        Assert.Contains(ApiErrorCodes.RunCompareNotFound, body);
     }
 
     // ──────────────── /runs/trends ────────────────
@@ -434,7 +435,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.PostAsync("/collections/compare", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("COLLECTION-COMPARE-INVALID-LIMIT", body);
+        Assert.Contains(ApiErrorCodes.CollectionCompareInvalidLimit, body);
     }
 
     [Fact]
@@ -465,7 +466,7 @@ public sealed class ApiValidationIntegrationTests
         var response = await client.PostAsync("/collections/merge/rollback", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("COLLECTION-MERGE-ROLLBACK-AUDIT-REQUIRED", body);
+        Assert.Contains(ApiErrorCodes.CollectionMergeRollbackAuditRequired, body);
     }
 
     [Fact]
@@ -581,7 +582,7 @@ public sealed class ApiValidationIntegrationTests
             var response = await client.PostAsync("/runs", content);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
-            Assert.Contains("RUN-INVALID-EXTENSION", body);
+            Assert.Contains(ApiErrorCodes.RunInvalidExtension, body);
         }
         finally { SafeDeleteDirectory(root); }
     }

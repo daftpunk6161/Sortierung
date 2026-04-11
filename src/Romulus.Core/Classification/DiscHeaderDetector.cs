@@ -76,7 +76,7 @@ public sealed class DiscHeaderDetector
             result = ScanDiscImage(path);
         }
         catch (IOException) { /* SUPPRESSED: best-effort header read; transient file locks must not fail detection pipeline */ }
-        catch (UnauthorizedAccessException) { }
+        catch (UnauthorizedAccessException) { /* SUPPRESSED: access-denied treated same as locked file; detection degrades gracefully */ }
 
         _isoCache.Set(normalizedPath, result);
         return result;
@@ -101,7 +101,7 @@ public sealed class DiscHeaderDetector
             result = ScanChdMetadata(path);
         }
         catch (IOException) { /* SUPPRESSED: best-effort metadata read; inaccessible CHDs are treated as unknown */ }
-        catch (UnauthorizedAccessException) { }
+        catch (UnauthorizedAccessException) { /* SUPPRESSED: access-denied treated same as inaccessible; CHD remains unknown */ }
 
         _chdCache.Set(normalizedPath, result);
         return result;

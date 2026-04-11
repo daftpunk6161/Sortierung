@@ -4,7 +4,7 @@
     "locale": "en",
     "version": "1.0"
   },
-  "App.Title": "omulus",
+  "App.Title": "Romulus",
   "App.TrayRunning": "Romulus is running in the background",
   "Status.Ready": "Ready",
   "Status.Running": "Running…",

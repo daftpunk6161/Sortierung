@@ -368,7 +368,8 @@ public sealed class ApiCoverageBoostTests : IDisposable
 
         Assert.NotNull(result);
         Assert.NotNull(result.Consoles);
-        Assert.True(result.WithinAllowedRoots || !result.WithinAllowedRoots); // always has a value
+        // AllowedRootPathPolicy(null) = no enforced roots → always within allowed
+        Assert.True(result.WithinAllowedRoots);
     }
 
     [Fact]

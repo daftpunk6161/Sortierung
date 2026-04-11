@@ -34,6 +34,10 @@ headlessOptions.Validate(configuredApiKey, builder.Environment.IsDevelopment());
 var port = headlessOptions.Port;
 var bindAddress = headlessOptions.BindAddress;
 builder.WebHost.UseUrls($"http://{bindAddress}:{port}");
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 1_048_576; // SEC-BODY-01: 1 MB hard limit at transport level
+});
 
 builder.Services.AddRomulusCore();
 builder.Services.AddHttpClient(DatSourceService.HttpClientName, client =>
@@ -145,7 +149,7 @@ app.Use(async (ctx, next) =>
     var rawClientId = ctx.Request.Headers["X-Client-Id"].FirstOrDefault();
     if (!string.IsNullOrWhiteSpace(rawClientId) && SanitizeClientBindingId(rawClientId) is null)
     {
-        await WriteApiError(ctx, 400, "AUTH-INVALID-CLIENT-ID", "Invalid X-Client-Id. Use max 64 chars from [A-Za-z0-9-_.].", ErrorKind.Critical);
+        await WriteApiError(ctx, 400, ApiErrorCodes.AuthInvalidClientId, "Invalid X-Client-Id. Use max 64 chars from [A-Za-z0-9-_.].", ErrorKind.Critical);
         return;
     }
     var clientBindingId = SanitizeClientBindingId(rawClientId) ?? clientIp;
@@ -155,7 +159,7 @@ app.Use(async (ctx, next) =>
     var providedKey = ctx.Request.Headers["X-Api-Key"].FirstOrDefault();
     if (!FixedTimeEqualsAny(apiKeys, providedKey))
     {
-        await WriteApiError(ctx, 401, "AUTH-UNAUTHORIZED", "Unauthorized", ErrorKind.Critical);
+        await WriteApiError(ctx, 401, ApiErrorCodes.AuthUnauthorized, "Unauthorized", ErrorKind.Critical);
         return;
     }
 
@@ -164,7 +168,7 @@ app.Use(async (ctx, next) =>
     if (!rateLimiter.TryAcquire(rateLimitBucket))
     {
         ctx.Response.Headers["Retry-After"] = Math.Max(1, (int)Math.Ceiling(rateLimitWindow.TotalSeconds)).ToString();
-        await WriteApiError(ctx, 429, "RUN-RATE-LIMIT", "Too many requests.", ErrorKind.Transient);
+        await WriteApiError(ctx, 429, ApiErrorCodes.RunRateLimit, "Too many requests.", ErrorKind.Transient);
         return;
     }
 
@@ -251,14 +255,14 @@ app.MapGet("/runs", (HttpContext ctx, string? offset, string? limit, RunLifecycl
     if (!string.IsNullOrWhiteSpace(offset))
     {
         if (!int.TryParse(offset, out parsedOffset) || parsedOffset < 0)
-            return ApiError(400, "RUN-INVALID-OFFSET", "offset must be a non-negative integer.");
+            return ApiError(400, ApiErrorCodes.RunInvalidOffset, "offset must be a non-negative integer.");
     }
 
     int? parsedLimit = null;
     if (!string.IsNullOrWhiteSpace(limit))
     {
         if (!int.TryParse(limit, out var limitValue) || limitValue < 1 || limitValue > 1000)
-            return ApiError(400, "RUN-INVALID-LIMIT", "limit must be an integer between 1 and 1000.");
+            return ApiError(400, ApiErrorCodes.RunInvalidLimit, "limit must be an integer between 1 and 1000.");
         parsedLimit = limitValue;
     }
 
@@ -279,14 +283,14 @@ app.MapGet("/runs/history", async (string? offset, string? limit, Romulus.Contra
     if (!string.IsNullOrWhiteSpace(offset))
     {
         if (!int.TryParse(offset, out parsedOffset) || parsedOffset < 0)
-            return ApiError(400, "RUN-INVALID-OFFSET", "offset must be a non-negative integer.");
+            return ApiError(400, ApiErrorCodes.RunInvalidOffset, "offset must be a non-negative integer.");
     }
 
     int? parsedLimit = null;
     if (!string.IsNullOrWhiteSpace(limit))
     {
         if (!int.TryParse(limit, out var limitValue) || limitValue < 1 || limitValue > 1000)
-            return ApiError(400, "RUN-INVALID-LIMIT", "limit must be an integer between 1 and 1000.");
+            return ApiError(400, ApiErrorCodes.RunInvalidLimit, "limit must be an integer between 1 and 1000.");
         parsedLimit = limitValue;
     }
 
@@ -314,7 +318,7 @@ app.MapGet("/profiles/{id}", async (string id, RunProfileService profileService,
 {
     var profile = await profileService.TryGetAsync(id, ct);
     return profile is null
-        ? ApiError(404, "PROFILE-NOT-FOUND", $"Profile '{id}' was not found.")
+        ? ApiError(404, ApiErrorCodes.ProfileNotFound, $"Profile '{id}' was not found.")
         : Results.Ok(profile);
 })
     .WithSummary("Get a specific run profile")
@@ -334,7 +338,7 @@ app.MapPut("/profiles/{id}", async (string id, RunProfileDocument profile, RunPr
     }
     catch (InvalidOperationException ex)
     {
-        return ApiError(400, "PROFILE-INVALID", ex.Message);
+        return ApiError(400, ApiErrorCodes.ProfileInvalid, ex.Message);
     }
 })
     .WithSummary("Create or update a user-defined run profile")
@@ -347,11 +351,11 @@ app.MapDelete("/profiles/{id}", async (string id, RunProfileService profileServi
         var deleted = await profileService.DeleteAsync(id, ct);
         return deleted
             ? Results.Ok(new { deleted = true, id })
-            : ApiError(404, "PROFILE-NOT-FOUND", $"Profile '{id}' was not found.");
+            : ApiError(404, ApiErrorCodes.ProfileNotFound, $"Profile '{id}' was not found.");
     }
     catch (InvalidOperationException ex)
     {
-        return ApiError(400, "PROFILE-DELETE-BLOCKED", ex.Message);
+        return ApiError(400, ApiErrorCodes.ProfileDeleteBlocked, ex.Message);
     }
 })
     .WithSummary("Delete a user-defined run profile")
@@ -365,7 +369,7 @@ app.MapGet("/workflows", (string? id) =>
 
     var workflow = WorkflowScenarioCatalog.TryGet(id);
     return workflow is null
-        ? ApiError(404, "WORKFLOW-NOT-FOUND", $"Workflow '{id}' was not found.")
+        ? ApiError(404, ApiErrorCodes.WorkflowNotFound, $"Workflow '{id}' was not found.")
         : Results.Ok(workflow);
 })
     .WithSummary("List guided workflow scenarios or fetch one by id")
@@ -376,7 +380,7 @@ app.MapGet("/workflows/{id}", (string id) =>
 {
     var workflow = WorkflowScenarioCatalog.TryGet(id);
     return workflow is null
-        ? ApiError(404, "WORKFLOW-NOT-FOUND", $"Workflow '{id}' was not found.")
+        ? ApiError(404, ApiErrorCodes.WorkflowNotFound, $"Workflow '{id}' was not found.")
         : Results.Ok(workflow);
 })
     .WithSummary("Get a guided workflow scenario")
@@ -385,11 +389,11 @@ app.MapGet("/workflows/{id}", (string id) =>
 app.MapGet("/runs/compare", async (string runId, string compareToRunId, ICollectionIndex collectionIndex, CancellationToken ct) =>
 {
     if (string.IsNullOrWhiteSpace(runId) || string.IsNullOrWhiteSpace(compareToRunId))
-        return ApiError(400, "RUN-COMPARE-IDS-REQUIRED", "runId and compareToRunId are required.");
+        return ApiError(400, ApiErrorCodes.RunCompareIdsRequired, "runId and compareToRunId are required.");
 
     var comparison = await RunHistoryInsightsService.CompareAsync(collectionIndex, runId, compareToRunId, ct);
     return comparison is null
-        ? ApiError(404, "RUN-COMPARE-NOT-FOUND", "One or both run snapshots were not found.")
+        ? ApiError(404, ApiErrorCodes.RunCompareNotFound, "One or both run snapshots were not found.")
         : Results.Ok(comparison);
 })
     .WithSummary("Compare two persisted run snapshots")
@@ -418,7 +422,7 @@ app.MapPost("/collections/compare", async (
 
     var request = requestRead.Value!;
     if (request.Limit < 1 || request.Limit > 5000)
-        return ApiError(400, "COLLECTION-COMPARE-INVALID-LIMIT", "limit must be an integer between 1 and 5000.");
+        return ApiError(400, ApiErrorCodes.CollectionCompareInvalidLimit, "limit must be an integer between 1 and 5000.");
 
     var leftValidation = ValidateCollectionScopeSecurity(request.Left, "left", allowedRootPolicy, requireExistingRoots: true);
     if (leftValidation is not null)
@@ -430,7 +434,7 @@ app.MapPost("/collections/compare", async (
 
     var build = await CollectionCompareService.CompareAsync(collectionIndex, fileSystem, request, ct);
     return !build.CanUse || build.Result is null
-        ? ApiError(409, "COLLECTION-COMPARE-NOT-READY", build.Reason ?? "Collection compare unavailable.")
+        ? ApiError(409, ApiErrorCodes.CollectionCompareNotReady, build.Reason ?? "Collection compare unavailable.")
         : Results.Ok(build.Result);
 })
     .WithSummary("Compare two persisted collection scopes")
@@ -457,7 +461,7 @@ app.MapPost("/collections/merge", async (
 
     var build = await CollectionMergeService.BuildPlanAsync(collectionIndex, fileSystem, request, ct);
     return !build.CanUse || build.Plan is null
-        ? ApiError(409, "COLLECTION-MERGE-NOT-READY", build.Reason ?? "Collection merge unavailable.")
+        ? ApiError(409, ApiErrorCodes.CollectionMergeNotReady, build.Reason ?? "Collection merge unavailable.")
         : Results.Ok(build.Plan);
 })
     .WithSummary("Build a deterministic merge plan for two collection scopes")
@@ -492,7 +496,7 @@ app.MapPost("/collections/merge/apply", async (
 
     var result = await CollectionMergeService.ApplyAsync(collectionIndex, fileSystem, auditStore, request, ct);
     return !string.IsNullOrWhiteSpace(result.BlockedReason)
-        ? ApiError(409, "COLLECTION-MERGE-APPLY-NOT-READY", result.BlockedReason)
+        ? ApiError(409, ApiErrorCodes.CollectionMergeApplyNotReady, result.BlockedReason)
         : Results.Ok(result);
 })
     .WithSummary("Apply a previously previewable collection merge with audit and rollback metadata")
@@ -513,7 +517,7 @@ app.MapPost("/collections/merge/rollback", async (
 
     var request = requestRead.Value!;
     if (string.IsNullOrWhiteSpace(request.AuditPath))
-        return ApiError(400, "COLLECTION-MERGE-ROLLBACK-AUDIT-REQUIRED", "auditPath is required.");
+        return ApiError(400, ApiErrorCodes.CollectionMergeRollbackAuditRequired, "auditPath is required.");
 
     var auditPathError = ValidatePathSecurity(request.AuditPath.Trim(), "auditPath", allowedRootPolicy);
     if (auditPathError is not null)
@@ -521,11 +525,11 @@ app.MapPost("/collections/merge/rollback", async (
 
     var auditPath = Path.GetFullPath(request.AuditPath.Trim());
     if (!File.Exists(auditPath))
-        return ApiError(404, "COLLECTION-MERGE-ROLLBACK-AUDIT-NOT-FOUND", $"Audit file not found: {auditPath}");
+        return ApiError(404, ApiErrorCodes.CollectionMergeRollbackAuditNotFound, $"Audit file not found: {auditPath}");
 
     var rootSet = AuditRollbackRootResolver.Resolve(auditPath);
     if (rootSet.RestoreRoots.Count == 0 || rootSet.CurrentRoots.Count == 0)
-        return ApiError(400, "COLLECTION-MERGE-ROLLBACK-ROOTS-UNAVAILABLE", "Rollback roots could not be resolved from audit metadata.");
+        return ApiError(400, ApiErrorCodes.CollectionMergeRollbackRootsUnavailable, "Rollback roots could not be resolved from audit metadata.");
 
     if (allowedRootPolicy.IsEnforced
         && (!rootSet.RestoreRoots.All(allowedRootPolicy.IsPathAllowed)
@@ -560,10 +564,10 @@ app.MapPost("/export/frontend", async (
     var request = requestRead.Value;
 
     if (request is null || string.IsNullOrWhiteSpace(request.Frontend))
-        return ApiError(400, "EXPORT-FRONTEND-REQUIRED", "frontend is required.");
+        return ApiError(400, ApiErrorCodes.ExportFrontendRequired, "frontend is required.");
 
     if (string.IsNullOrWhiteSpace(request.OutputPath))
-        return ApiError(400, "EXPORT-OUTPUT-REQUIRED", "outputPath is required.");
+        return ApiError(400, ApiErrorCodes.ExportOutputRequired, "outputPath is required.");
 
     var outputPathError = ValidatePathSecurity(request.OutputPath.Trim(), "outputPath", allowedRootPolicy);
     if (outputPathError is not null)
@@ -574,17 +578,17 @@ app.MapPost("/export/frontend", async (
     {
         run = mgr.Get(request.RunId);
         if (run is null)
-            return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: request.RunId);
+            return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: request.RunId);
 
         if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
-            return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: request.RunId);
+            return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: request.RunId);
     }
 
     var roots = request.Roots?.Where(static root => !string.IsNullOrWhiteSpace(root)).ToArray()
         ?? run?.Roots
         ?? Array.Empty<string>();
     if (roots.Length == 0)
-        return ApiError(400, "EXPORT-ROOTS-REQUIRED", "roots[] or runId is required.");
+        return ApiError(400, ApiErrorCodes.ExportRootsRequired, "roots[] or runId is required.");
 
     var extensions = request.Extensions?.Where(static ext => !string.IsNullOrWhiteSpace(ext)).ToArray()
         ?? run?.Extensions
@@ -597,7 +601,7 @@ app.MapPost("/export/frontend", async (
             return pathError;
 
         if (!Directory.Exists(root))
-            return ApiError(400, "IO-ROOT-NOT-FOUND", $"Root not found: {root}");
+            return ApiError(400, ApiErrorCodes.IoRootNotFound, $"Root not found: {root}");
     }
 
     var runOptions = new RunOptions
@@ -634,7 +638,7 @@ app.MapPost("/export/frontend", async (
     }
     catch (InvalidOperationException ex)
     {
-        return ApiError(409, "EXPORT-NOT-READY", ex.Message);
+        return ApiError(409, ApiErrorCodes.ExportNotReady, ex.Message);
     }
 })
     .WithSummary("Export collection data to frontend-specific artifacts")
@@ -655,12 +659,12 @@ app.MapPost("/runs", async (
     // Validate Content-Type
     var contentType = ctx.Request.ContentType;
     if (contentType is null || !contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
-        return ApiError(400, "RUN-INVALID-CONTENT-TYPE", "Content-Type must be application/json.");
+        return ApiError(400, ApiErrorCodes.RunInvalidContentType, "Content-Type must be application/json.");
 
     // Read and validate body (max 1MB)
     ctx.Request.EnableBuffering();
     if (ctx.Request.ContentLength is > 1_048_576)
-        return ApiError(400, "RUN-BODY-TOO-LARGE", "Request body too large (max 1MB).", ErrorKind.Transient);
+        return ApiError(400, ApiErrorCodes.RunBodyTooLarge, "Request body too large (max 1MB).", ErrorKind.Transient);
 
     string body;
     using (var reader = new StreamReader(ctx.Request.Body, Encoding.UTF8, leaveOpen: true))
@@ -669,7 +673,7 @@ app.MapPost("/runs", async (
         var buffer = new char[1_048_577];
         var charsRead = await reader.ReadBlockAsync(buffer, 0, buffer.Length);
         if (charsRead > 1_048_576)
-            return ApiError(400, "RUN-BODY-TOO-LARGE", "Request body too large (max 1MB).", ErrorKind.Transient);
+            return ApiError(400, ApiErrorCodes.RunBodyTooLarge, "Request body too large (max 1MB).", ErrorKind.Transient);
         body = new string(buffer, 0, charsRead);
     }
 
@@ -681,11 +685,11 @@ app.MapPost("/runs", async (
     }
     catch (JsonException)
     {
-        return ApiError(400, "RUN-INVALID-JSON", "Invalid JSON.");
+        return ApiError(400, ApiErrorCodes.RunInvalidJson, "Invalid JSON.");
     }
 
     if (request is null)
-        return ApiError(400, "RUN-INVALID-JSON", "Invalid JSON.");
+        return ApiError(400, ApiErrorCodes.RunInvalidJson, "Invalid JSON.");
 
     ApiResolvedRunConfiguration resolvedRunRequest;
     try
@@ -709,19 +713,19 @@ app.MapPost("/runs", async (
     }
     catch (InvalidOperationException ex)
     {
-        return ApiError(400, "RUN-INVALID-CONFIG", ex.Message);
+        return ApiError(400, ApiErrorCodes.RunInvalidConfig, ex.Message);
     }
 
     if (request.Roots is null || request.Roots.Length == 0)
-        return ApiError(400, "RUN-ROOTS-REQUIRED", "roots[] is required.");
+        return ApiError(400, ApiErrorCodes.RunRootsRequired, "roots[] is required.");
 
     // Validate roots
     foreach (var root in request.Roots)
     {
         if (string.IsNullOrWhiteSpace(root))
-            return ApiError(400, "RUN-ROOT-EMPTY", "Empty root path.");
+            return ApiError(400, ApiErrorCodes.RunRootEmpty, "Empty root path.");
         if (!Directory.Exists(root))
-            return ApiError(400, "IO-ROOT-NOT-FOUND", $"Root not found: {root}");
+            return ApiError(400, ApiErrorCodes.IoRootNotFound, $"Root not found: {root}");
 
         var pathError = ValidateRootSecurity(root, allowedRootPolicy);
         if (pathError is not null)
@@ -731,7 +735,7 @@ app.MapPost("/runs", async (
     var mode = request.Mode ?? "DryRun";
     if (!mode.Equals("DryRun", StringComparison.OrdinalIgnoreCase) &&
         !mode.Equals("Move", StringComparison.OrdinalIgnoreCase))
-        return ApiError(400, "RUN-INVALID-MODE", "mode must be DryRun or Move.");
+        return ApiError(400, ApiErrorCodes.RunInvalidMode, "mode must be DryRun or Move.");
 
     // Normalize to canonical casing
     mode = mode.Equals("Move", StringComparison.OrdinalIgnoreCase) ? "Move" : "DryRun";
@@ -742,7 +746,7 @@ app.MapPost("/runs", async (
         if (idempotencyKey.Length > 128 ||
             !idempotencyKey.All(c => char.IsLetterOrDigit(c) || c is '-' or '_' or '.'))
         {
-            return ApiError(400, "RUN-INVALID-IDEMPOTENCY-KEY", "Invalid X-Idempotency-Key. Use max 128 chars from [A-Za-z0-9-_.].");
+            return ApiError(400, ApiErrorCodes.RunInvalidIdempotencyKey, "Invalid X-Idempotency-Key. Use max 128 chars from [A-Za-z0-9-_.].");
         }
     }
 
@@ -751,13 +755,13 @@ app.MapPost("/runs", async (
     {
         // SEC-API-01: Limit array length to prevent abuse
         if (request.PreferRegions.Length > Romulus.Contracts.RunConstants.MaxPreferRegions)
-            return ApiError(400, "RUN-TOO-MANY-REGIONS", $"PreferRegions must contain at most {Romulus.Contracts.RunConstants.MaxPreferRegions} entries.");
+            return ApiError(400, ApiErrorCodes.RunTooManyRegions, $"PreferRegions must contain at most {Romulus.Contracts.RunConstants.MaxPreferRegions} entries.");
 
         foreach (var region in request.PreferRegions)
         {
             if (string.IsNullOrWhiteSpace(region) || region.Length > 10 ||
                 !region.All(c => char.IsLetterOrDigit(c) || c == '-'))
-                return ApiError(400, "RUN-INVALID-REGION", $"Invalid region: '{region}'. Only alphanumeric and '-' allowed.");
+                return ApiError(400, ApiErrorCodes.RunInvalidRegion, $"Invalid region: '{region}'. Only alphanumeric and '-' allowed.");
         }
     }
 
@@ -766,7 +770,7 @@ app.MapPost("/runs", async (
     {
         var hashType = request.HashType.Trim().ToUpperInvariant();
         if (hashType is not "SHA1" and not "SHA256" and not "MD5")
-            return ApiError(400, "RUN-INVALID-HASH-TYPE", "hashType must be one of: SHA1, SHA256, MD5.");
+            return ApiError(400, ApiErrorCodes.RunInvalidHashType, "hashType must be one of: SHA1, SHA256, MD5.");
     }
 
     // Validate extensions
@@ -775,7 +779,7 @@ app.MapPost("/runs", async (
         foreach (var extension in request.Extensions)
         {
             if (string.IsNullOrWhiteSpace(extension))
-                return ApiError(400, "RUN-INVALID-EXTENSION", "extensions must not contain empty values.");
+                return ApiError(400, ApiErrorCodes.RunInvalidExtension, "extensions must not contain empty values.");
 
             var normalized = extension.Trim();
             if (!normalized.StartsWith('.'))
@@ -784,7 +788,7 @@ app.MapPost("/runs", async (
             if (normalized.Length < 2 || normalized.Length > 20 ||
                 !normalized.Skip(1).All(ch => char.IsLetterOrDigit(ch)))
             {
-                return ApiError(400, "RUN-INVALID-EXTENSION", $"Invalid extension '{extension}'. Use alphanumeric values like .chd, .iso, .zip.");
+                return ApiError(400, ApiErrorCodes.RunInvalidExtension, $"Invalid extension '{extension}'. Use alphanumeric values like .chd, .iso, .zip.");
             }
         }
     }
@@ -800,7 +804,7 @@ app.MapPost("/runs", async (
         else if (normalizedPolicy.Equals("overwrite", StringComparison.OrdinalIgnoreCase))
             request.ConflictPolicy = "Overwrite";
         else
-            return ApiError(400, "RUN-INVALID-CONFLICT-POLICY", "conflictPolicy must be one of: Rename, Skip, Overwrite.");
+            return ApiError(400, ApiErrorCodes.RunInvalidConflictPolicy, "conflictPolicy must be one of: Rename, Skip, Overwrite.");
     }
 
     // SEC: Validate TrashRoot — same safety rules as Roots
@@ -822,12 +826,12 @@ app.MapPost("/runs", async (
     {
         var fmt = request.ConvertFormat.Trim().ToLowerInvariant();
         if (fmt is not "auto" and not "chd" and not "rvz" and not "zip" and not "7z")
-            return ApiError(400, "RUN-INVALID-CONVERT-FORMAT", "convertFormat must be one of: auto, chd, rvz, zip, 7z.");
+            return ApiError(400, ApiErrorCodes.RunInvalidConvertFormat, "convertFormat must be one of: auto, chd, rvz, zip, 7z.");
     }
 
     // OnlyGames policy guard
     if (!request.OnlyGames && !request.KeepUnknownWhenOnlyGames)
-        return ApiError(400, "RUN-INVALID-UNKNOWN-POLICY", "keepUnknownWhenOnlyGames can only be set when onlyGames is true.");
+        return ApiError(400, ApiErrorCodes.RunInvalidUnknownPolicy, "keepUnknownWhenOnlyGames can only be set when onlyGames is true.");
 
     var waitSync = !string.IsNullOrWhiteSpace(wait) &&
         !string.Equals(wait, "false", StringComparison.OrdinalIgnoreCase);
@@ -836,7 +840,7 @@ app.MapPost("/runs", async (
     if (!string.IsNullOrWhiteSpace(waitTimeoutMsQuery))
     {
         if (!int.TryParse(waitTimeoutMsQuery, out var parsedWaitTimeoutMs) || parsedWaitTimeoutMs < 1 || parsedWaitTimeoutMs > 1_800_000)
-            return ApiError(400, "RUN-INVALID-WAIT-TIMEOUT", "waitTimeoutMs must be an integer between 1 and 1800000.");
+            return ApiError(400, ApiErrorCodes.RunInvalidWaitTimeout, "waitTimeoutMs must be an integer between 1 and 1800000.");
         waitTimeoutMs = parsedWaitTimeoutMs;
     }
 
@@ -845,20 +849,20 @@ app.MapPost("/runs", async (
     if (create.Disposition == RunCreateDisposition.ActiveConflict)
     {
         if (create.Run is not null && !CanAccessRun(create.Run, ownerClientId))
-            return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: create.Run.RunId);
-        return ApiError(409, "RUN-ACTIVE-CONFLICT", create.Error ?? "Another run is already active.", runId: create.Run?.RunId, meta: CreateMeta(("activeRun", create.Run is null ? null : create.Run.ToDto())));
+            return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: create.Run.RunId);
+        return ApiError(409, ApiErrorCodes.RunActiveConflict, create.Error ?? "Another run is already active.", runId: create.Run?.RunId, meta: CreateMeta(("activeRun", create.Run is null ? null : create.Run.ToDto())));
     }
 
     if (create.Disposition == RunCreateDisposition.IdempotencyConflict)
     {
         if (create.Run is not null && !CanAccessRun(create.Run, ownerClientId))
-            return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: create.Run.RunId);
-        return ApiError(409, "RUN-IDEMPOTENCY-CONFLICT", create.Error ?? "Idempotency key reuse with different payload is not allowed.", runId: create.Run?.RunId, meta: CreateMeta(("run", create.Run is null ? null : create.Run.ToDto())));
+            return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: create.Run.RunId);
+        return ApiError(409, ApiErrorCodes.RunIdempotencyConflict, create.Error ?? "Idempotency key reuse with different payload is not allowed.", runId: create.Run?.RunId, meta: CreateMeta(("run", create.Run is null ? null : create.Run.ToDto())));
     }
 
     var run = create.Run!;
     if (!CanAccessRun(run, ownerClientId))
-        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: run.RunId);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: run.RunId);
 
     if (waitSync)
     {
@@ -906,13 +910,13 @@ app.MapPost("/runs", async (
 app.MapGet("/runs/{runId}", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
 {
     if (!Guid.TryParse(runId, out _))
-        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+        return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
     var run = mgr.Get(runId);
     if (run is null)
-        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+        return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
 
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
-        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
     return Results.Ok(new { run = run.ToDto() });
 })
@@ -925,14 +929,14 @@ app.MapGet("/runs/{runId}", (string runId, HttpContext ctx, RunLifecycleManager 
 app.MapGet("/runs/{runId}/result", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
 {
     if (!Guid.TryParse(runId, out _))
-        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+        return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
     var run = mgr.Get(runId);
     if (run is null)
-        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+        return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
-        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
     if (run.Status == RunConstants.StatusRunning)
-        return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
+        return ApiError(409, ApiErrorCodes.RunInProgress, "Run still in progress.", runId: runId);
     return Results.Ok(new { run = run.ToDto(), result = run.Result });
 })
     .WithSummary("Get completed run result")
@@ -945,15 +949,15 @@ app.MapGet("/runs/{runId}/result", (string runId, HttpContext ctx, RunLifecycleM
 app.MapGet("/runs/{runId}/report", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
 {
     if (!Guid.TryParse(runId, out _))
-        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+        return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
 
     var run = mgr.Get(runId);
     if (run is null)
-        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+        return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
-        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
     if (run.Status == RunConstants.StatusRunning)
-        return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
+        return ApiError(409, ApiErrorCodes.RunInProgress, "Run still in progress.", runId: runId);
 
     return CreateArtifactDownloadResult(
         run.ReportPath,
@@ -973,15 +977,15 @@ app.MapGet("/runs/{runId}/report", (string runId, HttpContext ctx, RunLifecycleM
 app.MapGet("/runs/{runId}/audit", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
 {
     if (!Guid.TryParse(runId, out _))
-        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+        return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
 
     var run = mgr.Get(runId);
     if (run is null)
-        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+        return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
-        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
     if (run.Status == RunConstants.StatusRunning)
-        return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
+        return ApiError(409, ApiErrorCodes.RunInProgress, "Run still in progress.", runId: runId);
 
     return CreateArtifactDownloadResult(
         run.AuditPath,
@@ -1001,16 +1005,16 @@ app.MapGet("/runs/{runId}/audit", (string runId, HttpContext ctx, RunLifecycleMa
 app.MapPost("/runs/{runId}/cancel", (string runId, HttpContext ctx, RunLifecycleManager mgr) =>
 {
     if (!Guid.TryParse(runId, out _))
-        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+        return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
     var current = mgr.Get(runId);
     if (current is null)
-        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+        return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
     if (!CanAccessRun(current, GetClientBindingId(ctx, trustForwardedFor)))
-        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
     var cancel = mgr.Cancel(runId);
     if (cancel.Disposition == RunCancelDisposition.NotFound)
-        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+        return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
     var updated = mgr.Get(runId);
     return Results.Ok(new
     {
@@ -1029,20 +1033,20 @@ app.MapPost("/runs/{runId}/cancel", (string runId, HttpContext ctx, RunLifecycle
 app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, string? dryRun, RunLifecycleManager mgr, AllowedRootPathPolicy allowedRootPolicy) =>
 {
     if (!Guid.TryParse(runId, out _))
-        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+        return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
 
     var run = mgr.Get(runId);
     if (run is null)
-        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+        return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
 
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
-        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
     if (run.Status == RunConstants.StatusRunning)
-        return ApiError(409, "RUN-IN-PROGRESS", "Rollback is only available for completed runs.", runId: runId);
+        return ApiError(409, ApiErrorCodes.RunInProgress, "Rollback is only available for completed runs.", runId: runId);
 
     if (string.IsNullOrWhiteSpace(run.AuditPath) || !File.Exists(run.AuditPath))
-        return ApiError(409, "RUN-ROLLBACK-NOT-AVAILABLE", "No audit artifact available for rollback.", runId: runId);
+        return ApiError(409, ApiErrorCodes.RunRollbackNotAvailable, "No audit artifact available for rollback.", runId: runId);
 
     // SEC-ROLLBACK-01: Default to dry-run to prevent accidental data changes.
     // Safety sequence: DryRun → Summary → Bestätigung → Apply (Projektregeln §4)
@@ -1085,27 +1089,27 @@ app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, string? dr
 app.MapGet("/runs/{runId}/reviews", async (string runId, HttpContext ctx, string? offset, string? limit, RunLifecycleManager mgr, PersistedReviewDecisionService reviewDecisionService, CancellationToken ct) =>
 {
     if (!Guid.TryParse(runId, out _))
-        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+        return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
 
     var run = mgr.Get(runId);
     if (run is null)
-        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+        return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
 
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
-        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
     var parsedOffset = 0;
     if (!string.IsNullOrWhiteSpace(offset))
     {
         if (!int.TryParse(offset, out parsedOffset) || parsedOffset < 0)
-            return ApiError(400, "RUN-INVALID-REVIEW-OFFSET", "offset must be a non-negative integer.");
+            return ApiError(400, ApiErrorCodes.RunInvalidReviewOffset, "offset must be a non-negative integer.");
     }
 
     int? parsedLimit = null;
     if (!string.IsNullOrWhiteSpace(limit))
     {
         if (!int.TryParse(limit, out var limitValue) || limitValue < 1 || limitValue > 1000)
-            return ApiError(400, "RUN-INVALID-REVIEW-LIMIT", "limit must be an integer between 1 and 1000.");
+            return ApiError(400, ApiErrorCodes.RunInvalidReviewLimit, "limit must be an integer between 1 and 1000.");
         parsedLimit = limitValue;
     }
 
@@ -1121,18 +1125,18 @@ app.MapGet("/runs/{runId}/reviews", async (string runId, HttpContext ctx, string
 app.MapPost("/runs/{runId}/reviews/approve", async (string runId, HttpContext ctx, RunLifecycleManager mgr, PersistedReviewDecisionService reviewDecisionService, CancellationToken ct) =>
 {
     if (!Guid.TryParse(runId, out _))
-        return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+        return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
 
     var run = mgr.Get(runId);
     if (run is null)
-        return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+        return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
 
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
-        return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
     // SEC-API-04: Reject oversized request bodies to prevent memory exhaustion
     if (ctx.Request.ContentLength is > 1_048_576)
-        return ApiError(400, "RUN-PAYLOAD-TOO-LARGE", "Request body exceeds 1 MB limit.");
+        return ApiError(400, ApiErrorCodes.RunPayloadTooLarge, "Request body exceeds 1 MB limit.");
 
     ApiReviewApprovalRequest request;
     try
@@ -1141,12 +1145,12 @@ app.MapPost("/runs/{runId}/reviews/approve", async (string runId, HttpContext ct
     }
     catch (JsonException)
     {
-        return ApiError(400, "RUN-INVALID-JSON", "Invalid JSON.");
+        return ApiError(400, ApiErrorCodes.RunInvalidJson, "Invalid JSON.");
     }
 
     // SEC-API-05: Limit Paths array size to prevent quadratic complexity
     if (request.Paths is { Length: > 10_000 })
-        return ApiError(400, "RUN-TOO-MANY-PATHS", "Paths array exceeds 10,000 entries.");
+        return ApiError(400, ApiErrorCodes.RunTooManyPaths, "Paths array exceeds 10,000 entries.");
 
     // Use HashSet for O(1) lookup instead of O(n) Contains on array
     var pathFilter = request.Paths is { Length: > 0 }
@@ -1208,7 +1212,7 @@ app.MapPost("/watch/start", async (
 {
     var requesterClientId = GetClientBindingId(ctx, trustForwardedFor);
     if (!automation.CanAccess(requesterClientId))
-        return ApiError(403, "AUTH-FORBIDDEN", "Automation belongs to a different client.", ErrorKind.Critical);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Automation belongs to a different client.", ErrorKind.Critical);
 
     RunRequest? request;
     string watchBody;
@@ -1223,11 +1227,11 @@ app.MapPost("/watch/start", async (
     }
     catch (JsonException)
     {
-        return ApiError(400, "WATCH-INVALID-JSON", "Invalid JSON.");
+        return ApiError(400, ApiErrorCodes.WatchInvalidJson, "Invalid JSON.");
     }
 
     if (request is null)
-        return ApiError(400, "WATCH-INVALID-JSON", "Invalid JSON.");
+        return ApiError(400, ApiErrorCodes.WatchInvalidJson, "Invalid JSON.");
 
     ApiResolvedRunConfiguration resolvedWatchRequest;
     try
@@ -1251,57 +1255,57 @@ app.MapPost("/watch/start", async (
     }
     catch (InvalidOperationException ex)
     {
-        return ApiError(400, "WATCH-INVALID-CONFIG", ex.Message);
+        return ApiError(400, ApiErrorCodes.WatchInvalidConfig, ex.Message);
     }
 
     if (request.Roots is null || request.Roots.Length == 0)
-        return ApiError(400, "WATCH-ROOTS-REQUIRED", "roots[] is required.");
+        return ApiError(400, ApiErrorCodes.WatchRootsRequired, "roots[] is required.");
 
     var parsedDebounceSeconds = 5;
     if (!string.IsNullOrWhiteSpace(debounceSeconds)
         && (!int.TryParse(debounceSeconds, out parsedDebounceSeconds) || parsedDebounceSeconds < 1 || parsedDebounceSeconds > 300))
     {
-        return ApiError(400, "WATCH-INVALID-DEBOUNCE", "debounceSeconds must be an integer between 1 and 300.");
+        return ApiError(400, ApiErrorCodes.WatchInvalidDebounce, "debounceSeconds must be an integer between 1 and 300.");
     }
 
     int? parsedIntervalMinutes = null;
     if (!string.IsNullOrWhiteSpace(intervalMinutes))
     {
         if (!int.TryParse(intervalMinutes, out var intervalValue) || intervalValue < 1 || intervalValue > 10080)
-            return ApiError(400, "WATCH-INVALID-INTERVAL", "intervalMinutes must be an integer between 1 and 10080.");
+            return ApiError(400, ApiErrorCodes.WatchInvalidInterval, "intervalMinutes must be an integer between 1 and 10080.");
 
         parsedIntervalMinutes = intervalValue;
     }
 
     if (parsedIntervalMinutes is null && string.IsNullOrWhiteSpace(cron))
-        return ApiError(400, "WATCH-SCHEDULE-REQUIRED", "Specify either intervalMinutes or cron.");
+        return ApiError(400, ApiErrorCodes.WatchScheduleRequired, "Specify either intervalMinutes or cron.");
 
     if (!string.IsNullOrWhiteSpace(cron) && !Romulus.Infrastructure.Watch.CronScheduleEvaluator.TestCronMatch(cron.Trim(), DateTime.Now.AddMinutes(1)))
     {
         // best-effort sanity gate: reject obviously invalid cron syntax without introducing parser shadow logic
         var cronFields = cron.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (cronFields.Length != 5)
-            return ApiError(400, "WATCH-INVALID-CRON", "cron must contain exactly five fields.");
+            return ApiError(400, ApiErrorCodes.WatchInvalidCron, "cron must contain exactly five fields.");
     }
 
     foreach (var root in request.Roots)
     {
         if (string.IsNullOrWhiteSpace(root))
-            return ApiError(400, "WATCH-ROOT-EMPTY", "Empty root path.");
+            return ApiError(400, ApiErrorCodes.WatchRootEmpty, "Empty root path.");
 
         var pathError = ValidatePathSecurity(root, "roots", allowedRootPolicy);
         if (pathError is not null)
             return pathError;
 
         if (!Directory.Exists(root))
-            return ApiError(400, "IO-ROOT-NOT-FOUND", $"Root not found: {root}");
+            return ApiError(400, ApiErrorCodes.IoRootNotFound, $"Root not found: {root}");
     }
 
     var mode = request.Mode ?? RunConstants.ModeDryRun;
     if (!mode.Equals(RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase)
         && !mode.Equals(RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase))
     {
-        return ApiError(400, "WATCH-INVALID-MODE", "mode must be DryRun or Move.");
+        return ApiError(400, ApiErrorCodes.WatchInvalidMode, "mode must be DryRun or Move.");
     }
 
     mode = mode.Equals(RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase)
@@ -1325,7 +1329,7 @@ app.MapPost("/watch/start", async (
 app.MapPost("/watch/stop", (HttpContext ctx, ApiAutomationService automation) =>
 {
     if (!automation.CanAccess(GetClientBindingId(ctx, trustForwardedFor)))
-        return ApiError(403, "AUTH-FORBIDDEN", "Automation belongs to a different client.", ErrorKind.Critical);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Automation belongs to a different client.", ErrorKind.Critical);
 
     return Results.Ok(automation.Stop());
 })
@@ -1336,7 +1340,7 @@ app.MapPost("/watch/stop", (HttpContext ctx, ApiAutomationService automation) =>
 app.MapGet("/watch/status", (HttpContext ctx, ApiAutomationService automation) =>
 {
     if (!automation.CanAccess(GetClientBindingId(ctx, trustForwardedFor)))
-        return ApiError(403, "AUTH-FORBIDDEN", "Automation belongs to a different client.", ErrorKind.Critical);
+        return ApiError(403, ApiErrorCodes.AuthForbidden, "Automation belongs to a different client.", ErrorKind.Critical);
 
     return Results.Ok(automation.GetStatus());
 })
@@ -1348,18 +1352,18 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunLife
 {
     if (!Guid.TryParse(runId, out _))
     {
-        await WriteApiError(ctx, 400, "RUN-INVALID-ID", "Invalid run ID format.");
+        await WriteApiError(ctx, 400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
         return;
     }
     var run = mgr.Get(runId);
     if (run is null)
     {
-        await WriteApiError(ctx, 404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+        await WriteApiError(ctx, 404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
         return;
     }
     if (!CanAccessRun(run, GetClientBindingId(ctx, trustForwardedFor)))
     {
-        await WriteApiError(ctx, 403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+        await WriteApiError(ctx, 403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
         return;
     }
 
@@ -1386,7 +1390,7 @@ app.MapGet("/runs/{runId}/stream", async (string runId, HttpContext ctx, RunLife
             var current = mgr.Get(runId);
             if (current is null)
             {
-                await WriteSseEvent(writer, encoding, "error", CreateErrorResponse("RUN-NOT-FOUND", "Run not found.", ErrorKind.Recoverable, runId));
+                await WriteSseEvent(writer, encoding, "error", CreateErrorResponse(ApiErrorCodes.RunNotFound, "Run not found.", ErrorKind.Recoverable, runId));
                 break;
             }
 
@@ -1460,7 +1464,7 @@ app.MapPost("/dats/update", async (HttpContext ctx, AllowedRootPathPolicy allowe
     var datRoot = settings.Dat?.DatRoot;
 
     if (string.IsNullOrWhiteSpace(datRoot))
-        return ApiError(400, "DAT-ROOT-NOT-CONFIGURED", "DatRoot is not configured in settings.");
+        return ApiError(400, ApiErrorCodes.DatRootNotConfigured, "DatRoot is not configured in settings.");
 
     var datRootError = ValidatePathSecurity(datRoot, "datRoot", allowedRootPolicy);
     if (datRootError is not null)
@@ -1471,7 +1475,7 @@ app.MapPost("/dats/update", async (HttpContext ctx, AllowedRootPathPolicy allowe
         try { Directory.CreateDirectory(datRoot); }
         catch (Exception ex)
         {
-            return ApiError(500, "DAT-ROOT-CREATE-FAILED", $"Cannot create DatRoot: {ex.Message}");
+            return ApiError(500, ApiErrorCodes.DatRootCreateFailed, $"Cannot create DatRoot: {ex.Message}");
         }
     }
 
@@ -1492,24 +1496,24 @@ app.MapPost("/dats/update", async (HttpContext ctx, AllowedRootPathPolicy allowe
         }
         catch (JsonException)
         {
-            return ApiError(400, "DAT-INVALID-JSON", "Invalid JSON body.");
+            return ApiError(400, ApiErrorCodes.DatInvalidJson, "Invalid JSON body.");
         }
     }
 
     var catalogPath = Path.Combine(dataDir, "dat-catalog.json");
     if (!File.Exists(catalogPath))
-        return ApiError(404, "DAT-CATALOG-NOT-FOUND", "dat-catalog.json not found.");
+        return ApiError(404, ApiErrorCodes.DatCatalogNotFound, "dat-catalog.json not found.");
 
     List<DatCatalogEntry> catalog;
     try { catalog = DatSourceService.LoadCatalog(catalogPath); }
     catch (Exception ex)
     {
         app.Logger.LogWarning(ex, "Failed to load DAT catalog from {CatalogPath}", catalogPath);
-        return ApiError(500, "DAT-CATALOG-LOAD-ERROR", "Failed to load DAT catalog.");
+        return ApiError(500, ApiErrorCodes.DatCatalogLoadError, "Failed to load DAT catalog.");
     }
 
     if (catalog.Count == 0)
-        return ApiError(400, "DAT-CATALOG-EMPTY", "dat-catalog.json contains no entries.");
+        return ApiError(400, ApiErrorCodes.DatCatalogEmpty, "dat-catalog.json contains no entries.");
 
     int downloaded = 0, skipped = 0, failed = 0;
     var errors = new List<string>();
@@ -1563,10 +1567,10 @@ app.MapPost("/dats/import", async (HttpContext ctx, AllowedRootPathPolicy allowe
     var datRoot = settings.Dat?.DatRoot;
 
     if (string.IsNullOrWhiteSpace(datRoot))
-        return ApiError(400, "DAT-ROOT-NOT-CONFIGURED", "DatRoot is not configured in settings.");
+        return ApiError(400, ApiErrorCodes.DatRootNotConfigured, "DatRoot is not configured in settings.");
 
     if (!Directory.Exists(datRoot))
-        return ApiError(400, "DAT-ROOT-NOT-FOUND", $"DatRoot does not exist: {datRoot}");
+        return ApiError(400, ApiErrorCodes.DatRootNotFound, $"DatRoot does not exist: {datRoot}");
 
     var datRootError = ValidatePathSecurity(datRoot, "datRoot", allowedRootPolicy);
     if (datRootError is not null)
@@ -1574,7 +1578,7 @@ app.MapPost("/dats/import", async (HttpContext ctx, AllowedRootPathPolicy allowe
 
     // Read body
     if (ctx.Request.ContentLength is > 1_048_576)
-        return ApiError(400, "DAT-BODY-TOO-LARGE", "Request body too large (max 1MB).");
+        return ApiError(400, ApiErrorCodes.DatBodyTooLarge, "Request body too large (max 1MB).");
 
     string body;
     try
@@ -1584,7 +1588,7 @@ app.MapPost("/dats/import", async (HttpContext ctx, AllowedRootPathPolicy allowe
     }
     catch (IOException)
     {
-        return ApiError(400, "DAT-READ-ERROR", "Failed to read request body.");
+        return ApiError(400, ApiErrorCodes.DatReadError, "Failed to read request body.");
     }
 
     string? sourcePath;
@@ -1596,11 +1600,11 @@ app.MapPost("/dats/import", async (HttpContext ctx, AllowedRootPathPolicy allowe
     }
     catch (JsonException)
     {
-        return ApiError(400, "DAT-INVALID-JSON", "Invalid JSON body.");
+        return ApiError(400, ApiErrorCodes.DatInvalidJson, "Invalid JSON body.");
     }
 
     if (string.IsNullOrWhiteSpace(sourcePath))
-        return ApiError(400, "DAT-PATH-REQUIRED", "\"path\" is required in the request body.");
+        return ApiError(400, ApiErrorCodes.DatPathRequired, "\"path\" is required in the request body.");
 
     // Security: validate source path
     var pathError = ValidatePathSecurity(sourcePath.Trim(), "path", allowedRootPolicy);
@@ -1609,11 +1613,11 @@ app.MapPost("/dats/import", async (HttpContext ctx, AllowedRootPathPolicy allowe
     sourcePath = Path.GetFullPath(sourcePath.Trim());
 
     if (!File.Exists(sourcePath))
-        return ApiError(404, "DAT-SOURCE-NOT-FOUND", $"Source file not found: {sourcePath}");
+        return ApiError(404, ApiErrorCodes.DatSourceNotFound, $"Source file not found: {sourcePath}");
 
     var ext = Path.GetExtension(sourcePath).ToLowerInvariant();
     if (ext is not ".dat" and not ".xml")
-        return ApiError(400, "DAT-INVALID-FORMAT", "Only .dat and .xml files can be imported.");
+        return ApiError(400, ApiErrorCodes.DatInvalidFormat, "Only .dat and .xml files can be imported.");
 
     try
     {
@@ -1628,11 +1632,11 @@ app.MapPost("/dats/import", async (HttpContext ctx, AllowedRootPathPolicy allowe
     }
     catch (InvalidOperationException ex)
     {
-        return ApiError(400, "DAT-IMPORT-BLOCKED", ex.Message, ErrorKind.Critical);
+        return ApiError(400, ApiErrorCodes.DatImportBlocked, ex.Message, ErrorKind.Critical);
     }
     catch (IOException ex)
     {
-        return ApiError(500, "DAT-IMPORT-IO-ERROR", $"Import failed: {ex.Message}");
+        return ApiError(500, ApiErrorCodes.DatImportIoError, $"Import failed: {ex.Message}");
     }
 });
 

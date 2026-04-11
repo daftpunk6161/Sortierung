@@ -65,7 +65,7 @@ public sealed class CartridgeHeaderDetector
             result = ScanHeader(path);
         }
         catch (IOException) { /* SUPPRESSED: best-effort header probe; locked files remain undecided instead of failing run */ }
-        catch (UnauthorizedAccessException) { }
+        catch (UnauthorizedAccessException) { /* SUPPRESSED: access-denied treated same as locked; file remains undecided */ }
 
         _cache.Set(normalizedPath, result);
         return result;

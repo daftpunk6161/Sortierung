@@ -245,7 +245,7 @@ public sealed partial class RunOrchestrator : IDisposable
         }
 
         // Integrate deferred services in a non-destructive analysis pass.
-        new DeferredAnalysisPhaseStep((state, ct) => ExecuteDeferredServiceAnalysis(state, options, ct))
+        new DeferredAnalysisPhaseStep((state, ct) => ExecuteDeferredServiceAnalysis(state, options, result, ct))
             .Execute(pipelineState, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();

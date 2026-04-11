@@ -39,6 +39,10 @@ public sealed class WpfCoverageBoostTests : IDisposable
     {
         var result = FeatureService.SearchCommands("");
         Assert.True(result.Count >= 7); // CoreShortcuts only when no featureCommands passed
+        // Verify known core shortcuts are present
+        Assert.Contains(result, r => r.key == "dryrun");
+        Assert.Contains(result, r => r.key == "move");
+        Assert.Contains(result, r => r.key == "cancel");
     }
 
     [Fact]
@@ -46,6 +50,7 @@ public sealed class WpfCoverageBoostTests : IDisposable
     {
         var result = FeatureService.SearchCommands(null!);
         Assert.True(result.Count >= 7);
+        Assert.Contains(result, r => r.key == "rollback");
     }
 
     [Fact]
@@ -302,8 +307,8 @@ public sealed class WpfCoverageBoostTests : IDisposable
     public void IsPortableMode_ReturnsBoolWithoutException()
     {
         var result = FeatureService.IsPortableMode();
-        // Just verify it doesn't throw
-        Assert.True(result || !result);
+        // No .portable marker file exists in test runner directory
+        Assert.False(result);
     }
 
     // ═══ DAT: GenerateLogiqxEntry ═══════════════════════════════════════

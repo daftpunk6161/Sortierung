@@ -357,7 +357,7 @@ public partial class Program
                 return pathError;
 
             if (requireExistingRoots && !Directory.Exists(root))
-                return ApiError(400, "IO-ROOT-NOT-FOUND", $"Root not found: {root}");
+                return ApiError(400, ApiErrorCodes.IoRootNotFound, $"Root not found: {root}");
         }
 
         return null;
@@ -374,10 +374,10 @@ public partial class Program
             return rightValidation;
 
         if (request.CompareRequest.Limit < 1 || request.CompareRequest.Limit > 5000)
-            return ApiError(400, "COLLECTION-MERGE-INVALID-LIMIT", "compareRequest.limit must be an integer between 1 and 5000.");
+            return ApiError(400, ApiErrorCodes.CollectionMergeInvalidLimit, "compareRequest.limit must be an integer between 1 and 5000.");
 
         if (string.IsNullOrWhiteSpace(request.TargetRoot))
-            return ApiError(400, "COLLECTION-MERGE-TARGET-REQUIRED", "targetRoot is required.");
+            return ApiError(400, ApiErrorCodes.CollectionMergeTargetRequired, "targetRoot is required.");
 
         return ValidatePathSecurity(request.TargetRoot.Trim(), "targetRoot", allowedRootPolicy);
     }
@@ -430,17 +430,17 @@ public partial class Program
         CancellationToken ct)
     {
         if (!Guid.TryParse(runId, out _))
-            return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+            return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
 
         var run = manager.Get(runId);
         if (run is null)
-            return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+            return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
 
         if (!CanAccessRun(run, GetClientBindingId(context, trustForwardedFor)))
-            return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+            return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
         if (run.Status == RunConstants.StatusRunning)
-            return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
+            return ApiError(409, ApiErrorCodes.RunInProgress, "Run still in progress.", runId: runId);
 
         var dataDir = RunEnvironmentBuilder.TryResolveDataDir()
             ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
@@ -448,7 +448,7 @@ public partial class Program
 
         var runRoots = run.Roots ?? Array.Empty<string>();
         if (runRoots.Length == 0)
-            return ApiError(400, "RUN-NO-ROOTS", "Run has no roots configured.", runId: runId);
+            return ApiError(400, ApiErrorCodes.RunNoRoots, "Run has no roots configured.", runId: runId);
 
         foreach (var runRoot in runRoots)
         {
@@ -475,7 +475,7 @@ public partial class Program
 
         using var env = new RunEnvironmentFactory().Create(runOptions);
         if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
-            return ApiError(400, "DAT-NOT-AVAILABLE", "No DAT index available. Configure DatRoot in settings.", runId: runId);
+            return ApiError(400, ApiErrorCodes.DatNotAvailable, "No DAT index available. Configure DatRoot in settings.", runId: runId);
 
         var report = await CompletenessReportService.BuildAsync(
             env.DatIndex,
@@ -522,17 +522,17 @@ public partial class Program
         CancellationToken ct)
     {
         if (!Guid.TryParse(runId, out _))
-            return ApiError(400, "RUN-INVALID-ID", "Invalid run ID format.");
+            return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
 
         var run = manager.Get(runId);
         if (run is null)
-            return ApiError(404, "RUN-NOT-FOUND", "Run not found.", runId: runId);
+            return ApiError(404, ApiErrorCodes.RunNotFound, "Run not found.", runId: runId);
 
         if (!CanAccessRun(run, GetClientBindingId(context, trustForwardedFor)))
-            return ApiError(403, "AUTH-FORBIDDEN", "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
+            return ApiError(403, ApiErrorCodes.AuthForbidden, "Run belongs to a different client.", ErrorKind.Critical, runId: runId);
 
         if (run.Status == RunConstants.StatusRunning)
-            return ApiError(409, "RUN-IN-PROGRESS", "Run still in progress.", runId: runId);
+            return ApiError(409, ApiErrorCodes.RunInProgress, "Run still in progress.", runId: runId);
 
         if (string.IsNullOrWhiteSpace(outputPath))
             return ApiError(400, "FIXDAT-OUTPUT-REQUIRED", "outputPath is required.", runId: runId);
@@ -547,7 +547,7 @@ public partial class Program
 
         var runRoots = run.Roots ?? Array.Empty<string>();
         if (runRoots.Length == 0)
-            return ApiError(400, "RUN-NO-ROOTS", "Run has no roots configured.", runId: runId);
+            return ApiError(400, ApiErrorCodes.RunNoRoots, "Run has no roots configured.", runId: runId);
 
         foreach (var runRoot in runRoots)
         {
@@ -574,7 +574,7 @@ public partial class Program
 
         using var env = new RunEnvironmentFactory().Create(runOptions);
         if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
-            return ApiError(400, "DAT-NOT-AVAILABLE", "No DAT index available. Configure DatRoot in settings.", runId: runId);
+            return ApiError(400, ApiErrorCodes.DatNotAvailable, "No DAT index available. Configure DatRoot in settings.", runId: runId);
 
         var report = await CompletenessReportService.BuildAsync(
             env.DatIndex,

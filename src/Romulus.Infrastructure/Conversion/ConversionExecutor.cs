@@ -413,14 +413,14 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
         {
             try { sourceBytes = new FileInfo(plan.SourcePath).Length; }
             catch (IOException) { /* SUPPRESSED: telemetry only; source size is optional for reporting */ }
-            catch (UnauthorizedAccessException) { }
+            catch (UnauthorizedAccessException) { /* SUPPRESSED: telemetry only; access-denied on source size is non-fatal */ }
         }
 
         if (!string.IsNullOrWhiteSpace(targetPath) && File.Exists(targetPath))
         {
             try { targetBytes = new FileInfo(targetPath).Length; }
             catch (IOException) { /* SUPPRESSED: telemetry only; target size is optional for reporting */ }
-            catch (UnauthorizedAccessException) { }
+            catch (UnauthorizedAccessException) { /* SUPPRESSED: telemetry only; access-denied on target size is non-fatal */ }
         }
 
         return new ConversionResult(plan.SourcePath, targetPath, outcome, reason, exitCode)

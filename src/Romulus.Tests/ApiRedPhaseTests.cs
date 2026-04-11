@@ -172,17 +172,27 @@ public sealed class ApiRedPhaseTests : IDisposable
             using var createDoc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
             var runId = createDoc.RootElement.GetProperty("run").GetProperty("runId").GetString();
 
-            // Small delay to let elapsed accumulate
-            await Task.Delay(100);
+            // F-01: Poll until run has elapsed time > 0 instead of fixed delay
+            JsonDocument statusDoc;
+            for (int attempt = 0; attempt < 20; attempt++)
+            {
+                var statusResponse = await client.GetAsync($"/runs/{runId}");
+                Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
+                statusDoc = JsonDocument.Parse(await statusResponse.Content.ReadAsStringAsync());
+                var run = statusDoc.RootElement.GetProperty("run");
+                if (run.TryGetProperty("elapsedMs", out var el) && el.GetInt64() > 0)
+                    break;
+                await Task.Delay(50);
+            }
 
-            // Poll while running
-            var statusResponse = await client.GetAsync($"/runs/{runId}");
-            Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
+            // Final read for assertion
+            var finalStatusResponse = await client.GetAsync($"/runs/{runId}");
+            Assert.Equal(HttpStatusCode.OK, finalStatusResponse.StatusCode);
 
-            using var statusDoc = JsonDocument.Parse(await statusResponse.Content.ReadAsStringAsync());
-            var run = statusDoc.RootElement.GetProperty("run");
+            using var finalStatusDoc = JsonDocument.Parse(await finalStatusResponse.Content.ReadAsStringAsync());
+            var finalRun = finalStatusDoc.RootElement.GetProperty("run");
 
-            Assert.True(run.TryGetProperty("elapsedMs", out var elapsed),
+            Assert.True(finalRun.TryGetProperty("elapsedMs", out var elapsed),
                 "Running run must include 'elapsedMs' field (computed server-side).");
             Assert.True(elapsed.GetInt64() > 0, "elapsedMs must be > 0 for a running run.");
         }
@@ -355,12 +365,26 @@ public sealed class ApiRedPhaseTests : IDisposable
             using var createDoc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
             var runId = createDoc.RootElement.GetProperty("run").GetProperty("runId").GetString()!;
 
-            // Let it run for a bit, then cancel
-            await Task.Delay(200);
+            // F-01: Poll until run starts instead of fixed delay
+            for (int attempt = 0; attempt < 20; attempt++)
+            {
+                var statusCheck = await client.GetAsync($"/runs/{runId}");
+                using var sd = JsonDocument.Parse(await statusCheck.Content.ReadAsStringAsync());
+                var status = sd.RootElement.GetProperty("run").GetProperty("status").GetString();
+                if (status is "running") break;
+                await Task.Delay(50);
+            }
             await client.PostAsync($"/runs/{runId}/cancel", null);
 
-            // Wait for cancel to take effect
-            await Task.Delay(500);
+            // F-01: Poll for cancellation to take effect
+            for (int attempt = 0; attempt < 20; attempt++)
+            {
+                var statusCheck = await client.GetAsync($"/runs/{runId}");
+                using var sd = JsonDocument.Parse(await statusCheck.Content.ReadAsStringAsync());
+                var status = sd.RootElement.GetProperty("run").GetProperty("status").GetString();
+                if (status is "cancelled" or "completed" or "failed") break;
+                await Task.Delay(50);
+            }
 
             var resultResponse = await client.GetAsync($"/runs/{runId}/result");
             Assert.Equal(HttpStatusCode.OK, resultResponse.StatusCode);

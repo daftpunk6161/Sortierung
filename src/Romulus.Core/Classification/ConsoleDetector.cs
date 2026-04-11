@@ -500,7 +500,7 @@ public sealed class ConsoleDetector
         }
         catch (UnauthorizedAccessException)
         {
-            return false;
+            return false; /* SUPPRESSED: access-denied on size check; treat as non-empty to avoid false positive */
         }
     }
 
@@ -554,7 +554,7 @@ public sealed class ConsoleDetector
         }
         catch (InvalidDataException) { /* corrupt/not-a-zip */ }
         catch (IOException) { /* SUPPRESSED: archive content inspection is optional; I/O errors degrade to unknown detection */ }
-        catch (UnauthorizedAccessException) { }
+        catch (UnauthorizedAccessException) { /* SUPPRESSED: access-denied on archive; detection degrades to unknown */ }
 
         return null;
     }

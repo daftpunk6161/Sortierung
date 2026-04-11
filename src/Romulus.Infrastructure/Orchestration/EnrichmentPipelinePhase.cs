@@ -358,6 +358,14 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         detectionConflict = familyDecision.DetectionConflict;
         conflictType = familyDecision.ConflictType;
 
+        // D-03: Apply console-level category override if configured in consoles.json
+        if (consoleDetector is not null && consoleKey is not "UNKNOWN" and not "")
+        {
+            var categoryOverride = consoleDetector.GetCategoryOverride(consoleKey);
+            if (categoryOverride is not null && Enum.TryParse<FileCategory>(categoryOverride, true, out var overrideCategory))
+                category = overrideCategory;
+        }
+
         return CandidateFactory.Create(
             normalizedPath: filePath,
             extension: ext,

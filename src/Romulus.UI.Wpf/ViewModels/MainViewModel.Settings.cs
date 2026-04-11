@@ -301,6 +301,63 @@ public sealed partial class MainViewModel
         }
     }
 
+    // ═══ D-01: Bidirectional Region Preference Sync ═════════════════════
+
+    private static readonly Dictionary<string, string> PreferPropertyToRegionCode = new(StringComparer.Ordinal)
+    {
+        [nameof(PreferEU)] = "EU", [nameof(PreferUS)] = "US", [nameof(PreferJP)] = "JP", [nameof(PreferWORLD)] = "WORLD",
+        [nameof(PreferDE)] = "DE", [nameof(PreferFR)] = "FR", [nameof(PreferIT)] = "IT", [nameof(PreferES)] = "ES",
+        [nameof(PreferAU)] = "AU", [nameof(PreferASIA)] = "ASIA", [nameof(PreferKR)] = "KR", [nameof(PreferCN)] = "CN",
+        [nameof(PreferBR)] = "BR", [nameof(PreferNL)] = "NL", [nameof(PreferSE)] = "SE", [nameof(PreferSCAN)] = "SCAN",
+    };
+
+    /// <summary>D-01: Sync MainViewModel.Prefer* booleans → SetupViewModel.RegionItems.IsActive.</summary>
+    private void OnRegionPreferencePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_syncingSetupSettings || Setup is null || e.PropertyName is null)
+            return;
+
+        if (!PreferPropertyToRegionCode.TryGetValue(e.PropertyName, out var code))
+            return;
+
+        var value = GetRegionBool(code);
+        _syncingSetupSettings = true;
+        try
+        {
+            var item = Setup.RegionItems.FirstOrDefault(r => string.Equals(r.Code, code, StringComparison.Ordinal));
+            if (item is not null && item.IsActive != value)
+                item.IsActive = value;
+        }
+        finally
+        {
+            _syncingSetupSettings = false;
+        }
+    }
+
+    /// <summary>D-01: Subscribe to each SetupViewModel.RegionItem.PropertyChanged for reverse sync.</summary>
+    internal void SubscribeSetupRegionItems()
+    {
+        if (Setup is null) return;
+        foreach (var item in Setup.RegionItems)
+            item.PropertyChanged += OnSetupRegionItemPropertyChanged;
+    }
+
+    private void OnSetupRegionItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_syncingSetupSettings || sender is not RegionItem item || e.PropertyName != nameof(RegionItem.IsActive))
+            return;
+
+        _syncingSetupSettings = true;
+        try
+        {
+            SetRegionBool(item.Code, item.IsActive);
+        }
+        finally
+        {
+            _syncingSetupSettings = false;
+        }
+    }
+
     // ═══ BOOLEAN FLAGS (persisted) ══════════════════════════════════════
     [ObservableProperty]
     private bool _sortConsole = true;

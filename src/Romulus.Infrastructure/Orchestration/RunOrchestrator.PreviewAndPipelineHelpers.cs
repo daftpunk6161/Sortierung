@@ -18,6 +18,7 @@ public sealed partial class RunOrchestrator
     private void ExecuteDeferredServiceAnalysis(
         PipelineState state,
         RunOptions options,
+        RunResultBuilder result,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -31,6 +32,7 @@ public sealed partial class RunOrchestrator
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.CrossRoot", ex.Message));
+            result.Warnings.Add($"Deferred analysis skipped (CrossRoot): {ex.Message}");
         }
 
         try
@@ -40,6 +42,7 @@ public sealed partial class RunOrchestrator
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.FolderDedupe", ex.Message));
+            result.Warnings.Add($"Deferred analysis skipped (FolderDedupe): {ex.Message}");
         }
 
         try
@@ -49,6 +52,7 @@ public sealed partial class RunOrchestrator
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.Quarantine", ex.Message));
+            result.Warnings.Add($"Deferred analysis skipped (Quarantine): {ex.Message}");
         }
 
         try
@@ -58,6 +62,7 @@ public sealed partial class RunOrchestrator
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.Hardlink", ex.Message));
+            result.Warnings.Add($"Deferred analysis skipped (Hardlink): {ex.Message}");
         }
     }
 

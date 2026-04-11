@@ -65,7 +65,7 @@ public sealed class FolderDeduplicator
                 }
             }
             catch (IOException) { /* SUPPRESSED: missing/locked key file should skip hash contribution, not abort dedupe */ }
-            catch (UnauthorizedAccessException) { }
+            catch (UnauthorizedAccessException) { /* SUPPRESSED: access-denied on key file; skip hash contribution same as locked */ }
         }
 
         if (!found || !dataFed) return null;

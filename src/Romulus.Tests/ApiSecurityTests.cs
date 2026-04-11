@@ -125,7 +125,7 @@ public sealed class ApiSecurityTests : IDisposable
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-INVALID-CONVERT-FORMAT", body);
+        Assert.Contains(ApiErrorCodes.RunInvalidConvertFormat, body);
     }
 
     [Theory]
@@ -541,7 +541,7 @@ public sealed class ApiSecurityTests : IDisposable
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-TOO-MANY-PATHS", body, StringComparison.Ordinal);
+        Assert.Contains(ApiErrorCodes.RunTooManyPaths, body, StringComparison.Ordinal);
     }
 
     [Fact]

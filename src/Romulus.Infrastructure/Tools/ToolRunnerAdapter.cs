@@ -413,7 +413,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
                     false);
             }
 
-            process.WaitForExit();
+            process.WaitForExit(10_000);
 
             var output = CombineToolOutput(stdout, stderr);
             if (cancellationToken.IsCancellationRequested)

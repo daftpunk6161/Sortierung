@@ -33,6 +33,10 @@ public static class ZipSorter
             var extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var entry in archive.Entries)
             {
+                // SEC-ZIP-01: Skip entries with path traversal or rooted paths (Zip-Slip defense)
+                if (entry.FullName.Contains("..") || Path.IsPathRooted(entry.FullName))
+                    continue;
+
                 var ext = Path.GetExtension(entry.FullName);
                 if (!string.IsNullOrEmpty(ext))
                     extensions.Add(ext.ToLowerInvariant());

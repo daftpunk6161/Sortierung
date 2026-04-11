@@ -30,7 +30,7 @@ public sealed class ConversionConditionEvaluator
         {
             ConversionCondition.None => true,
             ConversionCondition.FileSizeLessThan700MB => SafeSize(sourcePath) is > 0 and < ConversionThresholds.CdImageThresholdBytes,
-            ConversionCondition.FileSizeGreaterEqual700MB => SafeSize(sourcePath) >= ConversionThresholds.CdImageThresholdBytes,
+            ConversionCondition.FileSizeGreaterEqual700MB => SafeSize(sourcePath) is > 0 and >= ConversionThresholds.CdImageThresholdBytes,
             ConversionCondition.IsNKitSource => fileName.Contains(".nkit.", StringComparison.OrdinalIgnoreCase),
             ConversionCondition.IsWadFile => string.Equals(extension, ".wad", StringComparison.OrdinalIgnoreCase),
             ConversionCondition.IsCdiSource => string.Equals(extension, ".cdi", StringComparison.OrdinalIgnoreCase),

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 
 namespace Romulus.Infrastructure.Metrics;
@@ -47,7 +48,7 @@ public sealed class PhaseMetricsCollector
             {
                 Phase = phaseName,
                 StartedAt = DateTime.UtcNow,
-                Status = "Running",
+                Status = RunConstants.PhaseStatusRunning,
                 Meta = meta ?? new Dictionary<string, object>()
             };
 
@@ -85,7 +86,7 @@ public sealed class PhaseMetricsCollector
         _activeStopwatch.Stop();
         _activePhase.Duration = _activeStopwatch.Elapsed;
         _activePhase.ItemCount = itemCount;
-        _activePhase.Status = "Completed";
+        _activePhase.Status = RunConstants.PhaseStatusCompleted;
         _activePhase.ItemsPerSec = _activeStopwatch.Elapsed.TotalSeconds > 0
             ? Math.Round(itemCount / _activeStopwatch.Elapsed.TotalSeconds, 1)
             : 0;
@@ -120,7 +121,7 @@ public sealed class PhaseMetricsCollector
                     Duration = activeDuration,
                     ItemCount = _activePhase.ItemCount,
                     ItemsPerSec = activeItemsPerSec,
-                    Status = "Running",
+                    Status = RunConstants.PhaseStatusRunning,
                     Meta = _activePhase.Meta
                 });
             }

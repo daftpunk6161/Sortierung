@@ -136,6 +136,11 @@ public sealed class RunResult
     /// Structured phase timing metrics.
     /// </summary>
     public PhaseMetricsResult? PhaseMetrics { get; init; }
+
+    /// <summary>
+    /// Non-fatal warnings collected during pipeline execution (e.g. skipped deferred analysis).
+    /// </summary>
+    public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
 }
 
 public static class RunResultValidator

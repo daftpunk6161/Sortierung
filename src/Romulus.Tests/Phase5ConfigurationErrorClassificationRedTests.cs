@@ -2,6 +2,7 @@ using System.Reflection;
 using Romulus.Api;
 using Romulus.Contracts;
 using Xunit;
+using Romulus.Contracts.Errors;
 
 namespace Romulus.Tests;
 
@@ -46,11 +47,11 @@ public sealed class Phase5ConfigurationErrorClassificationRedTests
     }
 
     [Theory]
-    [InlineData("RUN", "InvalidRegion", "RUN-INVALID-REGION")]
+    [InlineData("RUN", "InvalidRegion", ApiErrorCodes.RunInvalidRegion)]
     [InlineData("WATCH", "InvalidRegion", "WATCH-INVALID-REGION")]
     [InlineData("RUN", "ProtectedSystemPath", "SEC-SYSTEM-DIRECTORY")]
     [InlineData("RUN", "DriveRoot", "SEC-DRIVE-ROOT")]
-    [InlineData("RUN", "Unknown", "RUN-INVALID-CONFIG")]
+    [InlineData("RUN", "Unknown", ApiErrorCodes.RunInvalidConfig)]
     public void Program_MustMap_TypedConfigurationErrors_WithoutMessageParsing(
         string prefix,
         string codeName,

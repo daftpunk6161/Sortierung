@@ -32,7 +32,7 @@ public sealed class ApiIntegrationTests
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        AssertError(doc.RootElement, "AUTH-UNAUTHORIZED", ErrorKind.Critical, "Unauthorized");
+        AssertError(doc.RootElement, ApiErrorCodes.AuthUnauthorized, ErrorKind.Critical, "Unauthorized");
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public sealed class ApiIntegrationTests
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        AssertError(doc.RootElement, "AUTH-UNAUTHORIZED", ErrorKind.Critical, "Unauthorized");
+        AssertError(doc.RootElement, ApiErrorCodes.AuthUnauthorized, ErrorKind.Critical, "Unauthorized");
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public sealed class ApiIntegrationTests
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        AssertError(doc.RootElement, "AUTH-INVALID-CLIENT-ID", ErrorKind.Critical, "Invalid X-Client-Id");
+        AssertError(doc.RootElement, ApiErrorCodes.AuthInvalidClientId, ErrorKind.Critical, "Invalid X-Client-Id");
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public sealed class ApiIntegrationTests
         Assert.Equal(HttpStatusCode.OK, second.StatusCode);
         Assert.Equal((HttpStatusCode)429, third.StatusCode);
         using var doc = JsonDocument.Parse(await third.Content.ReadAsStringAsync());
-        AssertError(doc.RootElement, "RUN-RATE-LIMIT", ErrorKind.Transient, "Too many requests");
+        AssertError(doc.RootElement, ApiErrorCodes.RunRateLimit, ErrorKind.Transient, "Too many requests");
     }
 
     [Fact]
@@ -273,7 +273,7 @@ public sealed class ApiIntegrationTests
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            AssertError(doc.RootElement, "RUN-INVALID-REGION", ErrorKind.Recoverable, "Invalid region");
+            AssertError(doc.RootElement, ApiErrorCodes.RunInvalidRegion, ErrorKind.Recoverable, "Invalid region");
         }
         finally
         {
@@ -497,7 +497,7 @@ public sealed class ApiIntegrationTests
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        AssertError(doc.RootElement, "RUN-COMPARE-NOT-FOUND", ErrorKind.Recoverable, "not found");
+        AssertError(doc.RootElement, ApiErrorCodes.RunCompareNotFound, ErrorKind.Recoverable, "not found");
     }
 
     [Fact]
@@ -623,7 +623,7 @@ public sealed class ApiIntegrationTests
             Assert.Equal(HttpStatusCode.Forbidden, statusResponse.StatusCode);
 
             using var errorDoc = JsonDocument.Parse(await statusResponse.Content.ReadAsStringAsync());
-            AssertError(errorDoc.RootElement, "AUTH-FORBIDDEN", ErrorKind.Critical, "different client");
+            AssertError(errorDoc.RootElement, ApiErrorCodes.AuthForbidden, ErrorKind.Critical, "different client");
 
             _ = await ownerClient.PostAsync("/watch/stop", null);
         }
@@ -1021,7 +1021,7 @@ public sealed class ApiIntegrationTests
             Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
 
             using var doc = JsonDocument.Parse(await secondResponse.Content.ReadAsStringAsync());
-            AssertError(doc.RootElement, "RUN-IDEMPOTENCY-CONFLICT", ErrorKind.Recoverable, "Idempotency");
+            AssertError(doc.RootElement, ApiErrorCodes.RunIdempotencyConflict, ErrorKind.Recoverable, "Idempotency");
             Assert.Equal(doc.RootElement.GetProperty("runId").GetString(), doc.RootElement.GetProperty("meta").GetProperty("run").GetProperty("runId").GetString());
         }
         finally
@@ -1063,8 +1063,18 @@ public sealed class ApiIntegrationTests
             var runId = doc.RootElement.GetProperty("run").GetProperty("runId").GetString();
             Assert.True(doc.RootElement.GetProperty("waitTimedOut").GetBoolean());
 
-            await Task.Delay(1_700);
-            var resultResponse = await client.GetAsync($"/runs/{runId}/result");
+            // F-01: Poll until run completes instead of fixed delay
+            HttpResponseMessage resultResponse;
+            for (int attempt = 0; attempt < 40; attempt++)
+            {
+                resultResponse = await client.GetAsync($"/runs/{runId}");
+                using var statusDoc = JsonDocument.Parse(await resultResponse.Content.ReadAsStringAsync());
+                var status = statusDoc.RootElement.GetProperty("run").GetProperty("status").GetString();
+                if (status is not "running")
+                    break;
+                await Task.Delay(100);
+            }
+            resultResponse = await client.GetAsync($"/runs/{runId}/result");
             Assert.Equal(HttpStatusCode.OK, resultResponse.StatusCode);
         }
         finally
@@ -1215,7 +1225,7 @@ public sealed class ApiIntegrationTests
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("RUN-INVALID-CONTENT-TYPE", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(ApiErrorCodes.RunInvalidContentType, body, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1285,17 +1295,17 @@ public sealed class ApiIntegrationTests
         var response = await client.GetAsync($"/runs/{validGuid}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         using var responseDoc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        AssertError(responseDoc.RootElement, "RUN-NOT-FOUND", ErrorKind.Recoverable, "Run not found", validGuid);
+        AssertError(responseDoc.RootElement, ApiErrorCodes.RunNotFound, ErrorKind.Recoverable, "Run not found", validGuid);
 
         var resultResponse = await client.GetAsync($"/runs/{validGuid}/result");
         Assert.Equal(HttpStatusCode.NotFound, resultResponse.StatusCode);
         using var resultDoc = JsonDocument.Parse(await resultResponse.Content.ReadAsStringAsync());
-        AssertError(resultDoc.RootElement, "RUN-NOT-FOUND", ErrorKind.Recoverable, "Run not found", validGuid);
+        AssertError(resultDoc.RootElement, ApiErrorCodes.RunNotFound, ErrorKind.Recoverable, "Run not found", validGuid);
 
         var cancelResponse = await client.PostAsync($"/runs/{validGuid}/cancel", null);
         Assert.Equal(HttpStatusCode.NotFound, cancelResponse.StatusCode);
         using var cancelDoc = JsonDocument.Parse(await cancelResponse.Content.ReadAsStringAsync());
-        AssertError(cancelDoc.RootElement, "RUN-NOT-FOUND", ErrorKind.Recoverable, "Run not found", validGuid);
+        AssertError(cancelDoc.RootElement, ApiErrorCodes.RunNotFound, ErrorKind.Recoverable, "Run not found", validGuid);
     }
 
     [Fact]
@@ -1365,7 +1375,7 @@ public sealed class ApiIntegrationTests
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
-            Assert.Contains("RUN-INVALID-EXTENSION", body, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(ApiErrorCodes.RunInvalidExtension, body, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -1400,7 +1410,7 @@ public sealed class ApiIntegrationTests
             var rollbackResponse = await client.PostAsync($"/runs/{runId}/rollback", new StringContent("", Encoding.UTF8, "application/json"));
             Assert.Equal(HttpStatusCode.Conflict, rollbackResponse.StatusCode);
             var rollbackBody = await rollbackResponse.Content.ReadAsStringAsync();
-            Assert.Contains("RUN-ROLLBACK-NOT-AVAILABLE", rollbackBody, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(ApiErrorCodes.RunRollbackNotAvailable, rollbackBody, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
