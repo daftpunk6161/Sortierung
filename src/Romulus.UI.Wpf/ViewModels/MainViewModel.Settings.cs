@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,6 +13,8 @@ namespace Romulus.UI.Wpf.ViewModels;
 
 public sealed partial class MainViewModel
 {
+    private bool _syncingSetupSettings;
+
     // ═══ AUTO-SAVE (debounced 2s after last persisted property change) ═══
     private System.Threading.Timer? _autoSaveTimer;
     private bool _settingsLoaded;
@@ -63,7 +66,18 @@ public sealed partial class MainViewModel
     }
     // ═══ PATH PROPERTIES (persisted) ════════════════════════════════════
     private string _trashRoot = "";
-    public string TrashRoot { get => _trashRoot; set { if (SetProperty(ref _trashRoot, value)) { ValidateDirectoryPath(value, nameof(TrashRoot)); } } }
+    public string TrashRoot
+    {
+        get => _trashRoot;
+        set
+        {
+            if (!SetProperty(ref _trashRoot, value))
+                return;
+
+            ValidateDirectoryPath(value, nameof(TrashRoot));
+            SyncSetupProperty(nameof(SetupViewModel.TrashRoot), value);
+        }
+    }
 
     private string _datRoot = "";
     public string DatRoot
@@ -76,31 +90,216 @@ public sealed partial class MainViewModel
                 ValidateDirectoryPath(value, nameof(DatRoot));
                 RefreshStatus();
                 _autoDetectDatMappingsCommand?.NotifyCanExecuteChanged();
+                SyncSetupProperty(nameof(SetupViewModel.DatRoot), value);
             }
         }
     }
 
     private string _auditRoot = "";
-    public string AuditRoot { get => _auditRoot; set { if (SetProperty(ref _auditRoot, value)) ValidateDirectoryPath(value, nameof(AuditRoot)); } }
+    public string AuditRoot
+    {
+        get => _auditRoot;
+        set
+        {
+            if (!SetProperty(ref _auditRoot, value))
+                return;
+
+            ValidateDirectoryPath(value, nameof(AuditRoot));
+            SyncSetupProperty(nameof(SetupViewModel.AuditRoot), value);
+        }
+    }
 
     private string _ps3DupesRoot = "";
-    public string Ps3DupesRoot { get => _ps3DupesRoot; set { if (SetProperty(ref _ps3DupesRoot, value)) ValidateDirectoryPath(value, nameof(Ps3DupesRoot)); } }
+    public string Ps3DupesRoot
+    {
+        get => _ps3DupesRoot;
+        set
+        {
+            if (!SetProperty(ref _ps3DupesRoot, value))
+                return;
+
+            ValidateDirectoryPath(value, nameof(Ps3DupesRoot));
+            SyncSetupProperty(nameof(SetupViewModel.Ps3DupesRoot), value);
+        }
+    }
 
     // ═══ TOOL PATHS (persisted) ═════════════════════════════════════════
     private string _toolChdman = "";
-    public string ToolChdman { get => _toolChdman; set { if (SetProperty(ref _toolChdman, value)) { ValidateToolPath(value, nameof(ToolChdman)); RefreshStatus(); } } }
+    public string ToolChdman
+    {
+        get => _toolChdman;
+        set
+        {
+            if (!SetProperty(ref _toolChdman, value))
+                return;
+
+            ValidateToolPath(value, nameof(ToolChdman));
+            RefreshStatus();
+            SyncSetupProperty(nameof(SetupViewModel.ToolChdman), value);
+        }
+    }
 
     private string _toolDolphin = "";
-    public string ToolDolphin { get => _toolDolphin; set { if (SetProperty(ref _toolDolphin, value)) { ValidateToolPath(value, nameof(ToolDolphin)); RefreshStatus(); } } }
+    public string ToolDolphin
+    {
+        get => _toolDolphin;
+        set
+        {
+            if (!SetProperty(ref _toolDolphin, value))
+                return;
+
+            ValidateToolPath(value, nameof(ToolDolphin));
+            RefreshStatus();
+            SyncSetupProperty(nameof(SetupViewModel.ToolDolphin), value);
+        }
+    }
 
     private string _tool7z = "";
-    public string Tool7z { get => _tool7z; set { if (SetProperty(ref _tool7z, value)) { ValidateToolPath(value, nameof(Tool7z)); RefreshStatus(); } } }
+    public string Tool7z
+    {
+        get => _tool7z;
+        set
+        {
+            if (!SetProperty(ref _tool7z, value))
+                return;
+
+            ValidateToolPath(value, nameof(Tool7z));
+            RefreshStatus();
+            SyncSetupProperty(nameof(SetupViewModel.Tool7z), value);
+        }
+    }
 
     private string _toolPsxtract = "";
-    public string ToolPsxtract { get => _toolPsxtract; set { if (SetProperty(ref _toolPsxtract, value)) { ValidateToolPath(value, nameof(ToolPsxtract)); RefreshStatus(); } } }
+    public string ToolPsxtract
+    {
+        get => _toolPsxtract;
+        set
+        {
+            if (!SetProperty(ref _toolPsxtract, value))
+                return;
+
+            ValidateToolPath(value, nameof(ToolPsxtract));
+            RefreshStatus();
+            SyncSetupProperty(nameof(SetupViewModel.ToolPsxtract), value);
+        }
+    }
 
     private string _toolCiso = "";
-    public string ToolCiso { get => _toolCiso; set { if (SetProperty(ref _toolCiso, value)) { ValidateToolPath(value, nameof(ToolCiso)); RefreshStatus(); } } }
+    public string ToolCiso
+    {
+        get => _toolCiso;
+        set
+        {
+            if (!SetProperty(ref _toolCiso, value))
+                return;
+
+            ValidateToolPath(value, nameof(ToolCiso));
+            RefreshStatus();
+            SyncSetupProperty(nameof(SetupViewModel.ToolCiso), value);
+        }
+    }
+
+    private void SyncSetupProperty(string propertyName, string value)
+    {
+        if (_syncingSetupSettings)
+            return;
+
+        if (Setup is null)
+            return;
+
+        _syncingSetupSettings = true;
+        try
+        {
+            switch (propertyName)
+            {
+                case nameof(SetupViewModel.TrashRoot):
+                    if (!string.Equals(Setup.TrashRoot, value, StringComparison.Ordinal))
+                        Setup.TrashRoot = value;
+                    break;
+                case nameof(SetupViewModel.DatRoot):
+                    if (!string.Equals(Setup.DatRoot, value, StringComparison.Ordinal))
+                        Setup.DatRoot = value;
+                    break;
+                case nameof(SetupViewModel.AuditRoot):
+                    if (!string.Equals(Setup.AuditRoot, value, StringComparison.Ordinal))
+                        Setup.AuditRoot = value;
+                    break;
+                case nameof(SetupViewModel.Ps3DupesRoot):
+                    if (!string.Equals(Setup.Ps3DupesRoot, value, StringComparison.Ordinal))
+                        Setup.Ps3DupesRoot = value;
+                    break;
+                case nameof(SetupViewModel.ToolChdman):
+                    if (!string.Equals(Setup.ToolChdman, value, StringComparison.Ordinal))
+                        Setup.ToolChdman = value;
+                    break;
+                case nameof(SetupViewModel.ToolDolphin):
+                    if (!string.Equals(Setup.ToolDolphin, value, StringComparison.Ordinal))
+                        Setup.ToolDolphin = value;
+                    break;
+                case nameof(SetupViewModel.Tool7z):
+                    if (!string.Equals(Setup.Tool7z, value, StringComparison.Ordinal))
+                        Setup.Tool7z = value;
+                    break;
+                case nameof(SetupViewModel.ToolPsxtract):
+                    if (!string.Equals(Setup.ToolPsxtract, value, StringComparison.Ordinal))
+                        Setup.ToolPsxtract = value;
+                    break;
+                case nameof(SetupViewModel.ToolCiso):
+                    if (!string.Equals(Setup.ToolCiso, value, StringComparison.Ordinal))
+                        Setup.ToolCiso = value;
+                    break;
+            }
+        }
+        finally
+        {
+            _syncingSetupSettings = false;
+        }
+    }
+
+    private void OnSetupSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_syncingSetupSettings || Setup is null || string.IsNullOrEmpty(e.PropertyName))
+            return;
+
+        _syncingSetupSettings = true;
+        try
+        {
+            switch (e.PropertyName)
+            {
+                case nameof(SetupViewModel.TrashRoot):
+                    TrashRoot = Setup.TrashRoot;
+                    break;
+                case nameof(SetupViewModel.DatRoot):
+                    DatRoot = Setup.DatRoot;
+                    break;
+                case nameof(SetupViewModel.AuditRoot):
+                    AuditRoot = Setup.AuditRoot;
+                    break;
+                case nameof(SetupViewModel.Ps3DupesRoot):
+                    Ps3DupesRoot = Setup.Ps3DupesRoot;
+                    break;
+                case nameof(SetupViewModel.ToolChdman):
+                    ToolChdman = Setup.ToolChdman;
+                    break;
+                case nameof(SetupViewModel.ToolDolphin):
+                    ToolDolphin = Setup.ToolDolphin;
+                    break;
+                case nameof(SetupViewModel.Tool7z):
+                    Tool7z = Setup.Tool7z;
+                    break;
+                case nameof(SetupViewModel.ToolPsxtract):
+                    ToolPsxtract = Setup.ToolPsxtract;
+                    break;
+                case nameof(SetupViewModel.ToolCiso):
+                    ToolCiso = Setup.ToolCiso;
+                    break;
+            }
+        }
+        finally
+        {
+            _syncingSetupSettings = false;
+        }
+    }
 
     // ═══ BOOLEAN FLAGS (persisted) ══════════════════════════════════════
     [ObservableProperty]

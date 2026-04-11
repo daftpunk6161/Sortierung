@@ -99,6 +99,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         Shell.IsSimpleMode = _isSimpleMode;
         Shell.PropertyChanged += OnShellStatePropertyChanged;
         Setup = setup ?? MainViewModelChildFactory.CreateSetup(_theme, _dialog, _settings, _loc);
+        Setup.PropertyChanged += OnSetupSettingsPropertyChanged;
         Tools = tools ?? MainViewModelChildFactory.CreateTools(_loc);
         Tools.SetSimpleMode(_isSimpleMode);
         Run = run ?? MainViewModelChildFactory.CreateRun();

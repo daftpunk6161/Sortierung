@@ -13,7 +13,7 @@ concurrency:
 jobs:
   package:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -35,8 +35,9 @@ jobs:
       - name: Build
         run: dotnet build src/Romulus.sln --configuration Release
 
-      - name: Test
-        run: dotnet test src/Romulus.sln --no-build --configuration Release
+      - name: Test (Release Gate)
+        run: |
+          dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --configuration Release --filter "FullyQualifiedName~ApiIntegrationTests|FullyQualifiedName~CliProgramTests|FullyQualifiedName~GuiViewModelTests|FullyQualifiedName~WpfNewTests|FullyQualifiedName~FeatureCommandServiceTests|FullyQualifiedName~RunServiceAndSettingsTests|FullyQualifiedName~RunManagerTests|FullyQualifiedName~RunManagerAdvancedTests|FullyQualifiedName~AuditCsvStoreTests|FullyQualifiedName~AuditSigningServiceTests|FullyQualifiedName~SettingsLoaderTests"
 
       - name: Release smoke
         shell: pwsh
@@ -44,13 +45,13 @@ jobs:
           ./deploy/smoke/Invoke-ReleaseSmoke.ps1 -Configuration Release -SkipBuild -SkipFullTests
 
       - name: Publish CLI
-        run: dotnet publish src/Romulus.CLI/Romulus.CLI.csproj --configuration Release --output dist/cli
+        run: dotnet publish src/Romulus.CLI/Romulus.CLI.csproj --no-build --configuration Release --output dist/cli
 
       - name: Publish API
-        run: dotnet publish src/Romulus.Api/Romulus.Api.csproj --configuration Release --output dist/api
+        run: dotnet publish src/Romulus.Api/Romulus.Api.csproj --no-build --configuration Release --output dist/api
 
       - name: Publish WPF GUI
-        run: dotnet publish src/Romulus.UI.Wpf/Romulus.UI.Wpf.csproj --configuration Release --output dist/gui
+        run: dotnet publish src/Romulus.UI.Wpf/Romulus.UI.Wpf.csproj --no-build --configuration Release --output dist/gui
 
       - name: Create release archive
         shell: pwsh

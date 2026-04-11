@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Romulus Dashboard</title>
+  <link rel="stylesheet" href="/dashboard/styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Romulus</p>
+        <h1>Headless Control Surface</h1>
+        <p id="bootstrap-summary" class="hero-copy">Lade Dashboard-Bootstrap ...</p>
+      </div>
+      <div class="hero-card">
+        <label for="api-key-input">API Key</label>
+        <div class="inline-form">
+          <input id="api-key-input" type="password" autocomplete="off" placeholder="X-Api-Key">
+          <button id="connect-button" type="button">Verbinden</button>
+          <button id="clear-key-button" type="button" class="ghost">Vergessen</button>
+        </div>
+        <p id="connection-state" class="status-line">Noch nicht verbunden.</p>
+      </div>
+    </header>
+
+    <main class="dashboard-grid">
+      <section class="panel panel-wide">
+        <div class="panel-head">
+          <h2>Uebersicht</h2>
+          <button id="refresh-button" type="button" class="ghost">Aktualisieren</button>
+        </div>
+        <div id="summary-cards" class="card-grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Run Starten</h2>
+        </div>
+        <form id="run-form" class="stack-form">
+          <label for="roots-input">Roots</label>
+          <textarea id="roots-input" rows="4" placeholder="Eine Root pro Zeile"></textarea>
+
+          <div class="field-grid">
+            <div>
+              <label for="mode-select">Mode</label>
+              <select id="mode-select">
+                <option value="DryRun">DryRun</option>
+                <option value="Move">Move</option>
+              </select>
+            </div>
+            <div>
+              <label for="convert-select">Convert</label>
+              <select id="convert-select">
+                <option value="">Aus</option>
+                <option value="auto">Auto</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <div>
+              <label for="profile-select">Profil</label>
+              <select id="profile-select">
+                <option value="">Keins</option>
+              </select>
+            </div>
+            <div>
+              <label for="workflow-select">Workflow</label>
+              <select id="workflow-select">
+                <option value="">Keiner</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="toggle-grid">
+            <label><input id="sort-console-checkbox" type="checkbox"> Sort Console</label>
+            <label><input id="enable-dat-checkbox" type="checkbox"> DAT</label>
+            <label><input id="dat-audit-checkbox" type="checkbox"> DAT Audit</label>
+            <label><input id="dat-rename-checkbox" type="checkbox"> DAT Rename</label>
+            <label><input id="only-games-checkbox" type="checkbox"> Only Games</label>
+            <label><input id="aggressive-junk-checkbox" type="checkbox"> Aggressive Junk</label>
+            <label><input id="approve-reviews-checkbox" type="checkbox"> Sort Reviews freigeben</label>
+            <label><input id="approve-conversion-review-checkbox" type="checkbox"> Conversion Review freigeben</label>
+          </div>
+
+          <button id="start-run-button" type="submit">Run starten</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Aktiver Run</h2>
+          <button id="cancel-run-button" type="button" class="danger" disabled>Abbrechen</button>
+        </div>
+        <div id="active-run-card" class="empty-state">Kein aktiver Run.</div>
+        <pre id="active-run-log" class="event-log">Noch keine Live-Ereignisse.</pre>
+      </section>
+
+      <section class="panel panel-wide">
+        <div class="panel-head">
+          <h2>Letzte Runs</h2>
+        </div>
+        <div id="runs-table-container" class="table-shell"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>DAT Status</h2>
+          <button id="update-dats-button" type="button">DATs aktualisieren</button>
+        </div>
+        <div id="dat-status-card" class="empty-state">Noch keine DAT-Daten.</div>
+      </section>
+
+      <section class="panel panel-wide">
+        <div class="panel-head">
+          <h2>Run Details</h2>
+          <span id="selected-run-label" class="pill">Kein Run gewaehlt</span>
+        </div>
+        <div id="run-result-card" class="empty-state">Waehle einen Run aus der Liste.</div>
+        <div class="detail-grid">
+          <div>
+            <h3>Completeness</h3>
+            <div id="completeness-table" class="table-shell empty-state">Noch keine Daten.</div>
+          </div>
+          <div>
+            <div class="panel-head compact">
+              <h3>Review Queue</h3>
+              <button id="approve-visible-reviews-button" type="button" class="ghost" disabled>Sichtbare freigeben</button>
+            </div>
+            <div id="review-queue" class="review-list empty-state">Noch keine Review-Daten.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/dashboard/app.js" defer></script>
+</body>
+</html>
