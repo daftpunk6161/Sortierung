@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,6 +18,7 @@ namespace Romulus.Core.GameKeys;
 public static class GameKeyNormalizer
 {
     private static readonly TimeSpan RegexTimeout = SafeRegex.DefaultTimeout;
+    private const int MaxDosMetadataStripIterations = 50;
 
     /// <summary>
     /// Registered tag patterns from rules.json. Set by Infrastructure at startup via
@@ -24,9 +26,12 @@ public static class GameKeyNormalizer
     /// overload uses these instead of requiring explicit pattern injection.
     /// </summary>
     private static readonly object _registrationLock = new();
-    private static volatile IReadOnlyList<System.Text.RegularExpressions.Regex>? _registeredPatterns;
-    private static volatile IReadOnlyDictionary<string, string>? _registeredAliasMap;
+    private static volatile RegisteredState? _registeredState;
     private static volatile Func<(IReadOnlyList<System.Text.RegularExpressions.Regex>? Patterns, IReadOnlyDictionary<string, string> Aliases)>? _patternFactory;
+
+    private sealed record RegisteredState(
+        IReadOnlyList<System.Text.RegularExpressions.Regex> Patterns,
+        IReadOnlyDictionary<string, string> Aliases);
 
     /// <summary>
     /// Registers the default tag patterns and alias map (typically loaded from rules.json).
@@ -41,8 +46,7 @@ public static class GameKeyNormalizer
 
         lock (_registrationLock)
         {
-            _registeredPatterns = tagPatterns;
-            _registeredAliasMap = alwaysAliasMap;
+            _registeredState = new RegisteredState(tagPatterns, alwaysAliasMap);
         }
     }
 
@@ -62,17 +66,16 @@ public static class GameKeyNormalizer
 
     private static void EnsurePatternsLoaded()
     {
-        if (_registeredPatterns is not null) return;
+        if (_registeredState is not null) return;
 
         lock (_registrationLock)
         {
-            if (_registeredPatterns is not null) return;
+            if (_registeredState is not null) return;
             if (_patternFactory is null) return;
             var (patterns, aliases) = _patternFactory();
             if (patterns is not null)
             {
-                _registeredPatterns = patterns;
-                _registeredAliasMap = aliases;
+                _registeredState = new RegisteredState(patterns, aliases);
             }
         }
     }
@@ -106,7 +109,8 @@ public static class GameKeyNormalizer
     public static string Normalize(string baseName)
     {
         EnsurePatternsLoaded();
-        return Normalize(baseName, _registeredPatterns ?? [], _registeredAliasMap ?? EmptyAliasMap);
+        var state = _registeredState;
+        return Normalize(baseName, state?.Patterns ?? [], state?.Aliases ?? EmptyAliasMap);
     }
 
     /// <summary>
@@ -314,10 +318,14 @@ public static class GameKeyNormalizer
         var value = SafeRegex.Replace(MsDosTrailingBracketRegex, text, " ");
 
         // Remove trailing non-disc parenthesized tags (limit iterations to prevent infinite loop)
-        for (int i = 0; i < 20 && SafeRegex.IsMatch(MsDosTrailingParenRegex, value); i++)
+        var iterations = 0;
+        for (; iterations < MaxDosMetadataStripIterations && SafeRegex.IsMatch(MsDosTrailingParenRegex, value); iterations++)
         {
             value = SafeRegex.Replace(MsDosTrailingParenRegex, value, " ");
         }
+
+        if (iterations >= MaxDosMetadataStripIterations && SafeRegex.IsMatch(MsDosTrailingParenRegex, value))
+            Trace.WriteLine($"[GameKeyNormalizer] DOS metadata strip hit iteration cap ({MaxDosMetadataStripIterations}) for input '{text}'.");
 
         return value;
     }

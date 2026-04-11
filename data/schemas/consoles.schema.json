@@ -42,6 +42,7 @@
               "RedumpDisc",
               "Arcade",
               "ComputerTOSEC",
+              "Engine",
               "FolderBased",
               "Hybrid",
               "Unknown"
@@ -101,6 +102,12 @@
             "type": ["string", "null"]
           },
           "alternativeTargets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "zipIdentifyingExts": {
             "type": "array",
             "items": {
               "type": "string"

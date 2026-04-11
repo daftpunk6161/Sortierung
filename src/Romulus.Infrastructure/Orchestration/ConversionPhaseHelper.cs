@@ -122,10 +122,15 @@ internal static class ConversionPhaseHelper
             var done = Interlocked.Increment(ref completed);
             if ((done % progressUpdateInterval == 0 || done == workItems.Count) && synchronizedProgress is not null)
             {
-                synchronizedProgress(
-                    $"[Convert] Fortschritt: {done}/{workItems.Count} {progressUnitLabel} " +
-                    $"(ok={Volatile.Read(ref converted)}, skip={Volatile.Read(ref skipped)}, " +
-                    $"blocked={Volatile.Read(ref blocked)}, err={Volatile.Read(ref errors)})");
+                synchronizedProgress(RunProgressLocalization.Format(
+                    "Convert.Progress",
+                    done,
+                    workItems.Count,
+                    progressUnitLabel,
+                    Volatile.Read(ref converted),
+                    Volatile.Read(ref skipped),
+                    Volatile.Read(ref blocked),
+                    Volatile.Read(ref errors)));
             }
         }
 
@@ -194,7 +199,10 @@ internal static class ConversionPhaseHelper
             if (string.Equals(ext, target.Extension, StringComparison.OrdinalIgnoreCase))
                 return null; // Already in target format → not a conversion attempt
 
-            context.OnProgress?.Invoke($"[Convert] {Path.GetFileName(filePath)} → {target.Extension}");
+            context.OnProgress?.Invoke(RunProgressLocalization.Format(
+                "Convert.FileTarget",
+                Path.GetFileName(filePath),
+                target.Extension));
             convResult = converter.Convert(filePath, target, cancellationToken);
         }
 

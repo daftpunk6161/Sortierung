@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Reporting;
@@ -68,7 +69,8 @@ public sealed partial class FeatureCommandService
         var dir = _dialog.BrowseFolder("Konvertierte Dateien prüfen");
         if (dir is null) return;
         var files = Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories)
-            .Where(f => Path.GetExtension(f).ToLowerInvariant() is ".chd" or ".rvz" or ".7z").ToList();
+            .Where(f => DiscFormats.IsConversionVerificationExtension(Path.GetExtension(f).ToLowerInvariant()))
+            .ToList();
         var (passed, failed, missing) = FeatureService.VerifyConversions(files);
         _dialog.ShowText("Konvertierung verifizieren", $"Verifizierung: {dir}\n\n" +
             $"Bestanden: {passed}\nFehlgeschlagen: {failed}\nFehlend: {missing}\nGesamt: {files.Count}");

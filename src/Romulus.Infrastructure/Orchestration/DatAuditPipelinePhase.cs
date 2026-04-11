@@ -80,7 +80,8 @@ public sealed class DatAuditPipelinePhase : IPipelinePhase<DatAuditInput, DatAud
             DatAuditStatus.HaveWrongName => 95,
             DatAuditStatus.Miss => 90,
             DatAuditStatus.Ambiguous => 70,
-            _ => 60
+            DatAuditStatus.Unknown => 60,
+            _ => throw new InvalidOperationException($"Unexpected status: {status}")
         };
 }
 

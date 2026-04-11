@@ -10,14 +10,14 @@ public static class PipelinePhaseWeights
 {
     public static readonly IReadOnlyList<(string Prefix, int ProgressPercent)> Phases =
     [
-        ("[Preflight]", 5),
-        ("[Scan]", 20),
-        ("[Filter]", 30),
-        ("[Dedupe]", 45),
-        ("[Junk]", 60),
-        ("[Move]", 75),
-        ("[Sort]", 85),
-        ("[Convert]", 92),
-        ("[Report]", 97),
+        (RunConstants.Phases.Preflight, 5),
+        (RunConstants.Phases.Scan, 20),
+        (RunConstants.Phases.Filter, 30),
+        (RunConstants.Phases.Dedupe, 45),
+        (RunConstants.Phases.Junk, 60),
+        (RunConstants.Phases.Move, 75),
+        (RunConstants.Phases.Sort, 85),
+        (RunConstants.Phases.Convert, 92),
+        (RunConstants.Phases.Report, 97),
     ];
 }

@@ -95,6 +95,17 @@ public partial class App : Application
         // Feature domain services
         services.AddSingleton<IRunService, RunService>();
 
+        // Child ViewModels (TASK-050: DI composition)
+        services.AddSingleton<ShellViewModel>(sp =>
+            new ShellViewModel(sp.GetRequiredService<ILocalizationService>()));
+        services.AddSingleton<SetupViewModel>();
+        services.AddSingleton<ToolsViewModel>();
+        services.AddSingleton<RunViewModel>();
+        services.AddSingleton<CommandPaletteViewModel>();
+        services.AddSingleton<DatAuditViewModel>();
+        services.AddSingleton<DatCatalogViewModel>();
+        services.AddSingleton<ConversionPreviewViewModel>();
+
         // ViewModel
         services.AddSingleton<MainViewModel>();
 

@@ -9,6 +9,63 @@ namespace Romulus.Core.Deduplication;
 /// </summary>
 public static class DeduplicationEngine
 {
+    private static readonly object CategoryRankSync = new();
+    private static volatile IReadOnlyDictionary<string, int>? _registeredCategoryRanks;
+    private static Func<IReadOnlyDictionary<string, int>>? _categoryRankFactory;
+
+    private static readonly IReadOnlyDictionary<string, int> FallbackCategoryRanks =
+        new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            [nameof(FileCategory.Game)] = 5,
+            [nameof(FileCategory.Bios)] = 4,
+            [nameof(FileCategory.NonGame)] = 3,
+            [nameof(FileCategory.Junk)] = 2,
+            [nameof(FileCategory.Unknown)] = 1
+        };
+
+    public static void RegisterCategoryRankFactory(Func<IReadOnlyDictionary<string, int>> factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        lock (CategoryRankSync)
+        {
+            _categoryRankFactory = factory;
+            _registeredCategoryRanks = null;
+        }
+    }
+
+    public static void RegisterCategoryRanks(IReadOnlyDictionary<string, int> categoryRanks)
+    {
+        ArgumentNullException.ThrowIfNull(categoryRanks);
+        lock (CategoryRankSync)
+        {
+            _registeredCategoryRanks = new Dictionary<string, int>(categoryRanks, StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private static IReadOnlyDictionary<string, int> EnsureCategoryRanksLoaded()
+    {
+        var cached = _registeredCategoryRanks;
+        if (cached is not null)
+            return cached;
+
+        lock (CategoryRankSync)
+        {
+            cached = _registeredCategoryRanks;
+            if (cached is not null)
+                return cached;
+
+            if (_categoryRankFactory is not null)
+            {
+                var loaded = _categoryRankFactory();
+                if (loaded is not null)
+                    _registeredCategoryRanks = new Dictionary<string, int>(loaded, StringComparer.OrdinalIgnoreCase);
+            }
+
+            _registeredCategoryRanks ??= FallbackCategoryRanks;
+            return _registeredCategoryRanks;
+        }
+    }
+
     /// <summary>
     /// Selects the best ROM candidate from a group sharing the same GameKey.
     /// Multi-criteria sort (all descending except MainPath alphabetical):
@@ -39,15 +96,8 @@ public static class DeduplicationEngine
 
     private static int GetCategoryRank(RomCandidate candidate)
     {
-        return candidate.Category switch
-        {
-            FileCategory.Game => 5,
-            FileCategory.Bios => 4,
-            FileCategory.NonGame => 3,
-            FileCategory.Junk => 2,
-            FileCategory.Unknown => 1,
-            _ => 0
-        };
+        var categoryName = candidate.Category.ToString();
+        return EnsureCategoryRanksLoaded().TryGetValue(categoryName, out var rank) ? rank : 0;
     }
 
     /// <summary>
@@ -127,6 +177,6 @@ public static class DeduplicationEngine
             ? "UNKNOWN"
             : candidate.ConsoleKey.Trim();
 
-        return $"{consoleKey}||{candidate.GameKey}";
+        return $"{consoleKey}\0{candidate.GameKey}";
     }
 }

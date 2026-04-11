@@ -1,3 +1,4 @@
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 
@@ -14,7 +15,7 @@ public sealed class DiscDatStrategy : IFamilyDatStrategy
     public FamilyDatPolicy GetPolicy(string extension, string? hashStrategy)
     {
         var ext = (extension ?? string.Empty).ToLowerInvariant();
-        var allowNameOnly = ext is ".chd" or ".iso" or ".gcm" or ".img" or ".cso" or ".rvz" or ".bin";
+        var allowNameOnly = DiscFormats.IsDatNameOnlyExtension(ext);
 
         return new FamilyDatPolicy(
             PreferArchiveInnerHash: true,

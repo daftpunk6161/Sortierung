@@ -31,7 +31,6 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                 context.OnProgress?.Invoke(
                     RunProgressLocalization.Format(
                         "Move.Abort.OutOfSpace",
-                        "[Move] Abbruch: Zu wenig freier Speicher im Ziel ({0} Bytes verfuegbar, {1} Bytes benoetigt).",
                         availableBytes.Value,
                         estimatedMoveBytes));
                 return new MovePhaseResult(0, totalLosers, 0, 0, movedSourcePaths);
@@ -71,7 +70,6 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                     if (processedLosers % 100 == 0 || processedLosers == totalLosers)
                         context.OnProgress?.Invoke(RunProgressLocalization.Format(
                             "Move.Progress",
-                            "[Move] Fortschritt: {0}/{1} (moved={2}, skipped={3}, failed={4})",
                             processedLosers,
                             totalLosers,
                             moveCount,
@@ -94,7 +92,6 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                     if (processedLosers % 100 == 0 || processedLosers == totalLosers)
                         context.OnProgress?.Invoke(RunProgressLocalization.Format(
                             "Move.Progress",
-                            "[Move] Fortschritt: {0}/{1} (moved={2}, skipped={3}, failed={4})",
                             processedLosers,
                             totalLosers,
                             moveCount,
@@ -105,7 +102,9 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
 
                 if (skipConflicts && context.FileSystem.FileExists(destPath))
                 {
-                    context.OnProgress?.Invoke($"Skip (conflict): {Path.GetFileName(loser.MainPath)}");
+                    context.OnProgress?.Invoke(RunProgressLocalization.Format(
+                        "Move.SkipConflict",
+                        Path.GetFileName(loser.MainPath)));
                     if (hasAuditPath)
                     {
                         context.AuditStore.AppendAuditRow(input.Options.AuditPath!, root, loser.MainPath, destPath,
@@ -116,7 +115,6 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                     if (processedLosers % 100 == 0 || processedLosers == totalLosers)
                         context.OnProgress?.Invoke(RunProgressLocalization.Format(
                             "Move.Progress",
-                            "[Move] Fortschritt: {0}/{1} (moved={2}, skipped={3}, failed={4})",
                             processedLosers,
                             totalLosers,
                             moveCount,
@@ -208,7 +206,6 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                     if (processedLosers % 100 == 0 || processedLosers == totalLosers)
                         context.OnProgress?.Invoke(RunProgressLocalization.Format(
                             "Move.Progress",
-                            "[Move] Fortschritt: {0}/{1} (moved={2}, skipped={3}, failed={4})",
                             processedLosers,
                             totalLosers,
                             moveCount,
@@ -273,8 +270,11 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
 
                         if (rollbackFailures.Count > 0)
                         {
-                            context.OnProgress?.Invoke(
-                                $"WARNING: Set-member rollback incomplete for {Path.GetFileName(loser.MainPath)} ({rollbackFailures.Count} restore failure(s)).");
+                            if (hasAuditPath)
+                                context.AuditStore.Flush(input.Options.AuditPath!);
+
+                            throw new InvalidOperationException(
+                                $"Rollback failed for set-member move '{Path.GetFileName(loser.MainPath)}' ({rollbackFailures.Count} restore failure(s)); run aborted to prevent inconsistent state.");
                         }
                     }
                     else
@@ -328,7 +328,6 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                 if (processedLosers % 100 == 0 || processedLosers == totalLosers)
                     context.OnProgress?.Invoke(RunProgressLocalization.Format(
                         "Move.Progress",
-                        "[Move] Fortschritt: {0}/{1} (moved={2}, skipped={3}, failed={4})",
                         processedLosers,
                         totalLosers,
                         moveCount,

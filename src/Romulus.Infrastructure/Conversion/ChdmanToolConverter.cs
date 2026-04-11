@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 
@@ -31,18 +32,19 @@ internal sealed class ChdmanToolConverter
         var sourceExt = Path.GetExtension(sourcePath).ToLowerInvariant();
 
         // ZIP/7Z containing .cue/.bin → extract first, then convert the .cue
-        if (sourceExt is ".zip" or ".7z")
+        if (DiscFormats.IsChdmanArchiveExtension(sourceExt))
             return ConvertArchiveToChdman(sourcePath, targetPath, toolPath, command, sourceExt);
 
         // chdman only accepts .cue, .gdi, .iso, .bin as direct input
-        if (sourceExt is not (".cue" or ".gdi" or ".iso" or ".bin" or ".img"))
+        if (!DiscFormats.ChdmanDirectInputExtensions.Contains(sourceExt))
             return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped,
                 $"chdman-unsupported-source:{sourceExt}");
 
         // PS2 CD/DVD safety heuristic: images under 700MB should be treated as CD images.
         // This avoids createDVD on CD-based PS2 titles which can produce invalid outputs.
         var effectiveCommand = command;
-        if (string.Equals(command, "createdvd", StringComparison.OrdinalIgnoreCase) && sourceExt is ".iso" or ".bin" or ".img")
+        if (string.Equals(command, "createdvd", StringComparison.OrdinalIgnoreCase)
+            && DiscFormats.IsChdmanCreatedvdHeuristicExtension(sourceExt))
         {
             try
             {

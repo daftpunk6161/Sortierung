@@ -30,7 +30,7 @@ public sealed partial class RunOrchestrator
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
-            _onProgress?.Invoke($"[CrossRoot] Analyse übersprungen: {ex.Message}");
+            _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.CrossRoot", ex.Message));
         }
 
         try
@@ -39,7 +39,7 @@ public sealed partial class RunOrchestrator
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
-            _onProgress?.Invoke($"[FolderDedupe] Analyse übersprungen: {ex.Message}");
+            _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.FolderDedupe", ex.Message));
         }
 
         try
@@ -48,7 +48,7 @@ public sealed partial class RunOrchestrator
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
-            _onProgress?.Invoke($"[Quarantine] Analyse übersprungen: {ex.Message}");
+            _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.Quarantine", ex.Message));
         }
 
         try
@@ -57,7 +57,7 @@ public sealed partial class RunOrchestrator
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
-            _onProgress?.Invoke($"[Hardlink] Analyse übersprungen: {ex.Message}");
+            _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.Hardlink", ex.Message));
         }
     }
 
@@ -87,7 +87,10 @@ public sealed partial class RunOrchestrator
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            _onProgress?.Invoke($"[Audit] Sidecar write failed: {ex.GetType().Name}: {ex.Message}");
+            _onProgress?.Invoke(RunProgressLocalization.Format(
+                "Audit.SidecarWriteFailed",
+                ex.GetType().Name,
+                ex.Message));
             if (runOutcome == RunOutcome.Ok)
             {
                 result.Status = RunOutcome.CompletedWithErrors.ToStatusString();
@@ -97,7 +100,6 @@ public sealed partial class RunOrchestrator
 
         _onProgress?.Invoke(RunProgressLocalization.Format(
             "Done.Pipeline",
-            "[Fertig] Pipeline abgeschlossen in {0}ms — {1} Dateien, {2} Gruppen",
             sw.ElapsedMilliseconds,
             result.TotalFilesScanned,
             result.GroupCount));
@@ -116,8 +118,7 @@ public sealed partial class RunOrchestrator
         var reportStep = new ReportPhaseStep(() =>
         {
             _onProgress?.Invoke(RunProgressLocalization.Format(
-                "Report.Generate",
-                "[Report] Generiere HTML-Report…"));
+                "Report.Generate"));
             return GenerateReport(result, options);
         });
 
@@ -126,14 +127,12 @@ public sealed partial class RunOrchestrator
         {
             _onProgress?.Invoke(RunProgressLocalization.Format(
                 "Report.Created",
-                "[Report] Report erstellt: {0}",
                 result.ReportPath));
             return true;
         }
 
         _onProgress?.Invoke(RunProgressLocalization.Format(
-            "Report.Failed",
-            "[Report] Angeforderter Report konnte weder am Zielpfad noch im Fallback geschrieben werden."));
+            "Report.Failed"));
         return false;
     }
 
@@ -152,8 +151,7 @@ public sealed partial class RunOrchestrator
     private void WriteCompletedAuditSidecar(RunOptions options, RunResultBuilder result, long elapsedMs, RunOutcome? outcome = null)
     {
         _onProgress?.Invoke(RunProgressLocalization.Format(
-            "Audit.WriteSidecar",
-            "[Audit] Schreibe Audit-Sidecar…"));
+            "Audit.WriteSidecar"));
         if (string.IsNullOrEmpty(options.AuditPath) || !File.Exists(options.AuditPath))
             return;
 
@@ -259,7 +257,11 @@ public sealed partial class RunOrchestrator
             ct: cancellationToken);
 
         _onProgress?.Invoke(
-            $"[FolderDedupe] Preview: {preview.Results.Count} Analyse-Ergebnis(se), PS3-Roots={preview.Ps3Roots.Count}, BaseName-Roots={preview.FolderRoots.Count}");
+            RunProgressLocalization.Format(
+                "Preview.FolderDedupeSummary",
+                preview.Results.Count,
+                preview.Ps3Roots.Count,
+                preview.FolderRoots.Count));
     }
 
     private void ExecuteCrossRootPreview(IReadOnlyList<RomCandidate> candidates, RunOptions options)
@@ -300,7 +302,10 @@ public sealed partial class RunOrchestrator
             return;
 
         var groups = CrossRootDeduplicator.FindDuplicates(sample);
-        _onProgress?.Invoke($"[CrossRoot] Preview: {groups.Count} root-übergreifende Hash-Gruppen (Sample={sample.Count})");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Preview.CrossRootSummary",
+            groups.Count,
+            sample.Count));
     }
 
     private void ExecuteQuarantinePreview(IReadOnlyList<RomCandidate> candidates)
@@ -328,8 +333,10 @@ public sealed partial class RunOrchestrator
                 quarantineCandidates++;
         }
 
-        _onProgress?.Invoke(
-            $"[Quarantine] Preview: {quarantineCandidates} verdächtige Datei(en) im Sample von {sample.Count()} Kandidaten");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Preview.QuarantineSummary",
+            quarantineCandidates,
+            sample.Count()));
     }
 
     private void ExecuteHardlinkSupportPreview(RunOptions options)
@@ -338,7 +345,10 @@ public sealed partial class RunOrchestrator
             return;
 
         var supportedRoots = options.Roots.Count(HardlinkService.IsHardlinkSupported);
-        _onProgress?.Invoke($"[Hardlink] NTFS-Hardlink support: {supportedRoots}/{options.Roots.Count} Root(s)");
+        _onProgress?.Invoke(RunProgressLocalization.Format(
+            "Preview.HardlinkSummary",
+            supportedRoots,
+            options.Roots.Count));
     }
 
     private async Task<List<RomCandidate>> MaterializeEnrichedCandidatesAsync(
@@ -448,7 +458,7 @@ public sealed partial class RunOrchestrator
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            _onProgress?.Invoke($"[CollectionIndex] Delta lookups disabled for this run: {ex.Message}");
+            _onProgress?.Invoke(RunProgressLocalization.Format("CollectionIndex.DeltaLookupsDisabled", ex.Message));
             return (null, true);
         }
     }

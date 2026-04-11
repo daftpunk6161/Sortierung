@@ -1,3 +1,4 @@
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Core.Conversion;
@@ -305,7 +306,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
         if (onProgress is null || string.IsNullOrWhiteSpace(targetExtension))
             return;
 
-        onProgress($"[Convert] {Path.GetFileName(sourcePath)} -> {targetExtension}");
+        onProgress($"{RunConstants.Phases.Convert} {Path.GetFileName(sourcePath)} -> {targetExtension}");
     }
 
     private static Action<ConversionStep, ConversionStepResult>? CreateStepProgressEmitter(
@@ -324,7 +325,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
             if (!result.Success)
                 return;
 
-            onProgress($"[Convert] {fileName} Schritt {step.Order + 1} von {totalSteps} abgeschlossen");
+            onProgress($"{RunConstants.Phases.Convert} {fileName} step {step.Order + 1} of {totalSteps} completed");
         };
     }
 
@@ -549,8 +550,8 @@ public sealed class FormatConverterAdapter : IFormatConverter
         var tool = target.ToolName.ToLowerInvariant();
         return tool switch
         {
-            "chdman" => sourceExt is ".cue" or ".gdi" or ".iso" or ".bin" or ".img" or ".zip" or ".7z",
-            "dolphintool" => sourceExt is ".iso" or ".gcm" or ".wbfs" or ".rvz" or ".gcz" or ".wia",
+            "chdman" => DiscFormats.IsChdmanSupportedSourceExtension(sourceExt),
+            "dolphintool" => DiscFormats.IsDolphinSupportedSourceExtension(sourceExt),
             "psxtract" => sourceExt == ".pbp",
             "7z" => true,
             _ => false

@@ -97,6 +97,24 @@ public static class RunConstants
     }
 
     /// <summary>
+    /// Canonical phase prefixes emitted by pipeline progress messages.
+    /// </summary>
+    public static class Phases
+    {
+        public const string Preflight = "[Preflight]";
+        public const string Scan = "[Scan]";
+        public const string Filter = "[Filter]";
+        public const string Dedupe = "[Dedupe]";
+        public const string Junk = "[Junk]";
+        public const string Move = "[Move]";
+        public const string Sort = "[Sort]";
+        public const string Convert = "[Convert]";
+        public const string Report = "[Report]";
+        public const string Finished = "[Fertig]";
+        public const string Done = "[Done]";
+    }
+
+    /// <summary>
     /// Canonical audit action names used in CSV rows and rollback parsing.
     /// Keep values centralized to avoid drift between writers and rollback readers.
     /// </summary>

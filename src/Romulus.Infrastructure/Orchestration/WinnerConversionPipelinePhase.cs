@@ -1,3 +1,4 @@
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Conversion;
@@ -16,7 +17,7 @@ public sealed class WinnerConversionPipelinePhase : IPipelinePhase<WinnerConvers
     public WinnerConversionPhaseOutput Execute(WinnerConversionPhaseInput input, PipelineContext context, CancellationToken cancellationToken)
     {
         context.Metrics.StartPhase(Name);
-        context.OnProgress?.Invoke($"[Convert] Starte Formatkonvertierung für {input.GameGroups.Count} Gruppen…");
+        context.OnProgress?.Invoke(RunProgressLocalization.Format("Convert.StartGroups", input.GameGroups.Count));
 
         var workItems = input.GameGroups
             .Select((group, index) =>
@@ -43,7 +44,12 @@ public sealed class WinnerConversionPipelinePhase : IPipelinePhase<WinnerConvers
             progressUnitLabel: "Gruppen",
             cancellationToken);
 
-        context.OnProgress?.Invoke($"[Convert] Abgeschlossen: {batch.Converted} konvertiert, {batch.Skipped} übersprungen, {batch.Blocked} blockiert, {batch.Errors} Fehler");
+        context.OnProgress?.Invoke(RunProgressLocalization.Format(
+            "Convert.Completed",
+            batch.Converted,
+            batch.Skipped,
+            batch.Blocked,
+            batch.Errors));
         context.Metrics.CompletePhase(batch.Converted);
 
         return new WinnerConversionPhaseOutput(batch.Converted, batch.Errors, batch.Skipped, batch.Blocked, batch.Results);

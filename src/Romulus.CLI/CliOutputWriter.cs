@@ -116,13 +116,13 @@ internal static class CliOutputWriter
         stderr.WriteLine($"[Done] Moved {projection.MoveCount} files ({projection.SavedBytes:N0} bytes saved), {projection.FailCount} failed");
 
         if (convertedCount > 0)
-            stderr.WriteLine($"[Convert] {convertedCount} files converted");
+            stderr.WriteLine($"{RunConstants.Phases.Convert} {convertedCount} files converted");
 
         if (!string.IsNullOrEmpty(auditPath) && File.Exists(auditPath))
             stderr.WriteLine($"[Audit] {auditPath}");
 
         if (!string.IsNullOrEmpty(reportPath))
-            stderr.WriteLine($"[Report] {reportPath}");
+            stderr.WriteLine($"{RunConstants.Phases.Report} {reportPath}");
     }
 
     /// <summary>Help: Outputs usage text to stdout.</summary>

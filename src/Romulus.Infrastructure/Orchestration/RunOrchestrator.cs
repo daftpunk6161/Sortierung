@@ -205,9 +205,7 @@ public sealed partial class RunOrchestrator : IDisposable
 
         // Phase 1: Preflight
         metrics.StartPhase("Preflight");
-        _onProgress?.Invoke(RunProgressLocalization.Format(
-            "Preflight.Checking",
-            "[Preflight] Voraussetzungen prüfen…"));
+        _onProgress?.Invoke(RunProgressLocalization.Format("Preflight.Checking"));
         var preflight = Preflight(options);
         result.Preflight = preflight;
         metrics.CompletePhase();
@@ -215,7 +213,6 @@ public sealed partial class RunOrchestrator : IDisposable
         {
             _onProgress?.Invoke(RunProgressLocalization.Format(
                 "Preflight.Blocked",
-                "[Preflight] Blockiert: {0}",
                 preflight.Reason ?? string.Empty));
             result.Status = RunOutcome.Blocked.ToStatusString();
             result.ExitCode = RunOutcome.Blocked.ToExitCode();
@@ -223,7 +220,6 @@ public sealed partial class RunOrchestrator : IDisposable
         }
         _onProgress?.Invoke(RunProgressLocalization.Format(
             "Preflight.Ok",
-            "[Preflight] OK — {0} Root(s), {1} Extension(s), Modus: {2}",
             options.Roots.Count,
             options.Extensions.Count,
             options.Mode));
@@ -231,7 +227,6 @@ public sealed partial class RunOrchestrator : IDisposable
             foreach (var w in preflight.Warnings)
                 _onProgress?.Invoke(RunProgressLocalization.Format(
                     "Preflight.Warning",
-                    "[Preflight] Warnung: {0}",
                     w));
 
         cancellationToken.ThrowIfCancellationRequested();

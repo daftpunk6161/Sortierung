@@ -1,5 +1,6 @@
 using Romulus.Contracts.Models;
 using Romulus.Core.Deduplication;
+using Romulus.Infrastructure.Orchestration;
 using Xunit;
 
 namespace Romulus.Tests;
@@ -383,5 +384,53 @@ public class DeduplicationEngineTests
 
         var winner = DeduplicationEngine.SelectWinner(new[] { unknown, junk });
         Assert.Equal(FileCategory.Junk, winner!.Category);
+    }
+
+    [Fact]
+    public void SelectWinner_UsesRegisteredCustomCategoryRanks()
+    {
+        var customRanks = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            [nameof(FileCategory.Game)] = 1,
+            [nameof(FileCategory.Bios)] = 2,
+            [nameof(FileCategory.NonGame)] = 3,
+            [nameof(FileCategory.Junk)] = 4,
+            [nameof(FileCategory.Unknown)] = 10
+        };
+
+        var game = new RomCandidate
+        {
+            MainPath = "game.zip",
+            GameKey = "game",
+            Category = FileCategory.Game,
+            RegionScore = 1000,
+            VersionScore = 1000,
+            FormatScore = 1000
+        };
+
+        var unknown = new RomCandidate
+        {
+            MainPath = "unknown.zip",
+            GameKey = "game",
+            Category = FileCategory.Unknown,
+            RegionScore = 1,
+            VersionScore = 1,
+            FormatScore = 1
+        };
+
+        try
+        {
+            DeduplicationEngine.RegisterCategoryRanks(customRanks);
+
+            var winner = DeduplicationEngine.SelectWinner(new[] { game, unknown });
+
+            Assert.NotNull(winner);
+            Assert.Equal(FileCategory.Unknown, winner!.Category);
+        }
+        finally
+        {
+            // Restore defaults from defaults.json profile for subsequent tests.
+            DefaultsScoringProfile.EnsureRegistered();
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Core.Classification;
@@ -27,19 +28,23 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
         var candidates = new List<ScannedFileEntry>();
         var seenCandidatePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var setMemberPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var scanWarnings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var root in roots)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            _context.OnProgress?.Invoke($"[Scan] {root}: Dateien sammeln…");
+            _context.OnProgress?.Invoke(RunProgressLocalization.Format("Scan.RootCollecting", root));
             var normalizedRoot = Path.GetFullPath(root);
 
             var files = _context.FileSystem.GetFilesSafe(root, effectiveExtensions);
-            var scanWarnings = _context.FileSystem.ConsumeScanWarnings();
-            foreach (var warning in scanWarnings)
+            var rootWarnings = _context.FileSystem.ConsumeScanWarnings();
+            foreach (var warning in rootWarnings)
+            {
+                scanWarnings.Add(warning);
                 _context.OnProgress?.Invoke($"WARNING: {warning}");
+            }
 
-            _context.OnProgress?.Invoke($"[Scan] {root}: {files.Count} Dateien gefunden");
+            _context.OnProgress?.Invoke(RunProgressLocalization.Format("Scan.RootFound", root, files.Count));
 
             var processed = 0;
             var fileCount = files.Count;
@@ -62,7 +67,7 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
 
                 processed++;
                 if (processed % 500 == 0)
-                    _context.OnProgress?.Invoke($"[Scan] {processed}/{fileCount} Dateien verarbeitet…");
+                    _context.OnProgress?.Invoke(RunProgressLocalization.Format("Scan.ProgressProcessed", processed, fileCount));
 
                 var setMembers = PipelinePhaseHelpers.GetSetMembers(filePath, ext, includeM3uMembers: false);
                 foreach (var member in setMembers)
@@ -76,6 +81,9 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
                     TryGetLastWriteUtc(normalizedPath)));
             }
         }
+
+        if (scanWarnings.Count > 0)
+            _context.OnProgress?.Invoke(RunProgressLocalization.Format("Scan.IncompleteWarning", scanWarnings.Count));
 
         foreach (var candidate in candidates)
         {

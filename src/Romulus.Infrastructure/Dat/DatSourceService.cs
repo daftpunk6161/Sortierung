@@ -14,7 +14,7 @@ namespace Romulus.Infrastructure.Dat;
 /// </summary>
 public sealed class DatSourceService : IDisposable
 {
-    internal const string HttpClientName = "Romulus.DatSourceService";
+    public const string HttpClientName = "Romulus.DatSourceService";
     private static readonly Lazy<HttpClient> SharedHttpClient = new(CreateConfiguredHttpClient);
 
     private readonly HttpClient _http;
@@ -34,8 +34,8 @@ public sealed class DatSourceService : IDisposable
         _tools = tools;
     }
 
-    public DatSourceService(string datRoot, IToolRunner? tools = null, HttpClient? httpClient = null)
-        : this(datRoot, httpClient ?? SharedHttpClient.Value, tools)
+    public DatSourceService(string datRoot, IToolRunner? tools = null)
+        : this(datRoot, SharedHttpClient.Value, tools)
     {
     }
 
@@ -117,11 +117,20 @@ public sealed class DatSourceService : IDisposable
 
             if (response.Content.Headers.ContentLength is > MaxDownloadBytes)
                 return null;
-            var bytes = await response.Content.ReadAsByteArrayAsync(ct);
-            if (bytes.Length > MaxDownloadBytes)
-                return null;
 
-            await File.WriteAllBytesAsync(tempZip, bytes, ct);
+            await using (var responseStream = await response.Content.ReadAsStreamAsync(ct))
+            await using (var tempZipStream = new FileStream(
+                tempZip,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 81920,
+                FileOptions.SequentialScan))
+            {
+                var copied = await CopyWithSizeLimitAsync(responseStream, tempZipStream, MaxDownloadBytes, ct);
+                if (!copied)
+                    return null;
+            }
 
             // Verify ZIP integrity before extraction (if SHA256 available)
             if (!string.IsNullOrWhiteSpace(expectedSha256))
@@ -224,14 +233,24 @@ public sealed class DatSourceService : IDisposable
             if (response.Content.Headers.ContentLength is > MaxDownloadBytes)
                 return null;
 
-            var bytes = await response.Content.ReadAsByteArrayAsync(ct);
-            if (bytes.Length > MaxDownloadBytes)
+            await using (var responseStream = await response.Content.ReadAsStreamAsync(ct))
+            await using (var localFileStream = new FileStream(
+                localPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 81920,
+                FileOptions.SequentialScan))
             {
-                // Content-Length header was absent but body exceeds limit
-                return null;
+                var copied = await CopyWithSizeLimitAsync(responseStream, localFileStream, MaxDownloadBytes, ct);
+                if (!copied)
+                {
+                    localFileStream.Close();
+                    if (File.Exists(localPath))
+                        File.Delete(localPath);
+                    return null;
+                }
             }
-
-            await File.WriteAllBytesAsync(localPath, bytes, ct);
 
             // Verify integrity
             if (!await VerifyDatSignatureAsync(localPath, url, expectedSha256, ct))
@@ -255,6 +274,30 @@ public sealed class DatSourceService : IDisposable
         {
             throw; // Propagate HTML detection errors
         }
+    }
+
+    private static async Task<bool> CopyWithSizeLimitAsync(
+        Stream source,
+        Stream destination,
+        long maxBytes,
+        CancellationToken ct)
+    {
+        var buffer = new byte[81920];
+        long totalBytes = 0;
+        while (true)
+        {
+            var read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), ct);
+            if (read <= 0)
+                break;
+
+            totalBytes += read;
+            if (totalBytes > maxBytes)
+                return false;
+
+            await destination.WriteAsync(buffer.AsMemory(0, read), ct);
+        }
+
+        return true;
     }
 
     /// <summary>

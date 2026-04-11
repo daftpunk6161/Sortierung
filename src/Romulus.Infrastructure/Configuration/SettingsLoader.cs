@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Romulus.Contracts;
@@ -294,9 +295,9 @@ public sealed class SettingsLoader
             if (root.TryGetProperty("datFallback", out var datFallback) && (datFallback.ValueKind is JsonValueKind.True or JsonValueKind.False))
                 settings.Dat.DatFallback = datFallback.GetBoolean();
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            // Malformed defaults — use hardcoded defaults
+            Trace.WriteLine($"[SettingsLoader] defaults.json parsing failed: {ex.Message}");
         }
     }
 

@@ -15,7 +15,7 @@ public sealed class ConvertOnlyPipelinePhase : IPipelinePhase<ConvertOnlyPhaseIn
     public ConvertOnlyPhaseOutput Execute(ConvertOnlyPhaseInput input, PipelineContext context, CancellationToken cancellationToken)
     {
         context.Metrics.StartPhase(Name);
-        context.OnProgress?.Invoke($"[Convert] Nur-Konvertierung: {input.Candidates.Count} Dateien…");
+        context.OnProgress?.Invoke(RunProgressLocalization.Format("Convert.OnlyStart", input.Candidates.Count));
 
         var workItems = input.Candidates
             .Select((candidate, index) => new ConversionPhaseHelper.ConversionWorkItem(
@@ -34,7 +34,12 @@ public sealed class ConvertOnlyPipelinePhase : IPipelinePhase<ConvertOnlyPhaseIn
             progressUnitLabel: "Dateien",
             cancellationToken);
 
-        context.OnProgress?.Invoke($"[Convert] Abgeschlossen: {batch.Converted} konvertiert, {batch.Skipped} übersprungen, {batch.Blocked} blockiert, {batch.Errors} Fehler");
+        context.OnProgress?.Invoke(RunProgressLocalization.Format(
+            "Convert.Completed",
+            batch.Converted,
+            batch.Skipped,
+            batch.Blocked,
+            batch.Errors));
         context.Metrics.CompletePhase(batch.Converted);
 
         return new ConvertOnlyPhaseOutput(batch.Converted, batch.Errors, batch.Skipped, batch.Blocked, batch.Results);

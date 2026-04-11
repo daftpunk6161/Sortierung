@@ -10,5 +10,24 @@
   "hashType": "SHA1",
   "datFallback": true,
   "theme": "dark",
-  "locale": "de"
+  "locale": "de",
+  "healthScoreWeights": {
+    "baseScoreMax": 100.0,
+    "junkPenaltyCap": 30.0,
+    "junkPenaltyPerPercent": 0.3,
+    "extremeJunkThresholdPercent": 90.0,
+    "extremeJunkPenaltyFloor": 70.0,
+    "verifiedBonusCap": 10.0,
+    "verifiedBonusPerPercent": 0.15,
+    "errorPenaltyCap": 20.0,
+    "errorPenaltyPerError": 2.0
+  },
+  "categoryPriorityRanks": {
+    "Game": 5,
+    "Bios": 4,
+    "NonGame": 3,
+    "Junk": 2,
+    "Unknown": 1
+  },
+  "versionScoreMaxSegments": 6
 }

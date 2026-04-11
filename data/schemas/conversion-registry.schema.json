@@ -72,6 +72,10 @@
         },
         "additionalProperties": false
       }
+    },
+    "compressionEstimates": {
+      "type": "object",
+      "additionalProperties": true
     }
   },
   "additionalProperties": false

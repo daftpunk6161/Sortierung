@@ -1,5 +1,6 @@
 using Romulus.Core.Scoring;
 using Romulus.Core.SetParsing;
+using Romulus.Infrastructure.Orchestration;
 using Xunit;
 
 namespace Romulus.Tests;
@@ -134,5 +135,35 @@ public sealed class CompletenessAndHealthScorerTests : IDisposable
         var score = HealthScorer.GetHealthScore(100, dupes: 10, junk: 20, verified: 40);
 
         Assert.Equal(90, score);
+    }
+
+    [Fact]
+    public void Health_GetHealthScore_CustomWeights_AreApplied()
+    {
+        var customWeights = new HealthScorer.HealthScoreWeights(
+            BaseScoreMax: 100,
+            JunkPenaltyCap: 20,
+            JunkPenaltyPerPercent: 0.1,
+            ExtremeJunkThresholdPercent: 95,
+            ExtremeJunkPenaltyFloor: 10,
+            VerifiedBonusCap: 0,
+            VerifiedBonusPerPercent: 0,
+            ErrorPenaltyCap: 0,
+            ErrorPenaltyPerError: 0);
+
+        try
+        {
+            HealthScorer.RegisterWeights(customWeights);
+
+            // With custom weights: base=100, junkPenalty=max(min(20,10),10)=10 => 90.
+            var score = HealthScorer.GetHealthScore(100, dupes: 0, junk: 100, verified: 0);
+
+            Assert.Equal(90, score);
+        }
+        finally
+        {
+            // Restore defaults from defaults.json profile for subsequent tests.
+            DefaultsScoringProfile.EnsureRegistered();
+        }
     }
 }

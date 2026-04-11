@@ -180,11 +180,11 @@ internal static partial class Program
             // require explicit confirmation before mutating runs.
             if (!ConsoleOverrideEnabled.Value)
             {
-                SafeErrorWriteLine("[Move] Execute mode will move files. Continue? (y/N)");
+                SafeErrorWriteLine($"{RunConstants.Phases.Move} Execute mode will move files. Continue? (y/N)");
                 var response = Console.ReadLine();
                 if (!string.Equals(response?.Trim(), "y", StringComparison.OrdinalIgnoreCase))
                 {
-                    SafeErrorWriteLine("[Move] Aborted by user.");
+                    SafeErrorWriteLine($"{RunConstants.Phases.Move} Aborted by user.");
                     return 2;
                 }
             }
@@ -305,7 +305,7 @@ internal static partial class Program
 
             if (!string.IsNullOrEmpty(cliOpts.ReportPath) && !string.IsNullOrEmpty(result.ReportPath))
             {
-                SafeErrorWriteLine($"[Report] {result.ReportPath}");
+                SafeErrorWriteLine($"{RunConstants.Phases.Report} {result.ReportPath}");
                 log?.Info("CLI", "report", $"Report written: {result.ReportPath}", "report");
             }
             else if (!string.IsNullOrEmpty(cliOpts.ReportPath))
@@ -973,7 +973,7 @@ internal static partial class Program
         if (File.Exists(inputPath))
         {
             var result = service.ConvertFile(inputPath, opts.ConsoleKey, opts.TargetFormat);
-            SafeErrorWriteLine($"[Convert] {Path.GetFileName(inputPath)} -> {result.Outcome}");
+            SafeErrorWriteLine($"{RunConstants.Phases.Convert} {Path.GetFileName(inputPath)} -> {result.Outcome}");
             if (result.Outcome != ConversionOutcome.Success && result.Outcome != ConversionOutcome.Skipped)
                 SafeErrorWriteLine($"  [{result.Outcome}] {result.Reason}");
 

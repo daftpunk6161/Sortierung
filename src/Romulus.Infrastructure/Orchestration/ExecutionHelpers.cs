@@ -1,3 +1,5 @@
+using Romulus.Contracts;
+
 namespace Romulus.Infrastructure.Orchestration;
 
 /// <summary>
@@ -7,18 +9,7 @@ namespace Romulus.Infrastructure.Orchestration;
 /// </summary>
 public static class ExecutionHelpers
 {
-    /// <summary>
-    /// Standard disc-based file extensions recognized by the system.
-    /// Port of Get-StandaloneDiscExtensionSet.
-    /// </summary>
-    private static readonly HashSet<string> DiscExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".chd", ".iso", ".cue", ".bin", ".img", ".mdf", ".mds",
-        ".ccd", ".sub", ".gdi", ".cso", ".pbp", ".rvz", ".gcz",
-        ".wbfs", ".nrg", ".ecm", ".zip", ".7z"
-    };
-
-    public static HashSet<string> GetDiscExtensions() => DiscExtensions;
+    public static IReadOnlySet<string> GetDiscExtensions() => DiscFormats.AllDiscExtensions;
 
     internal static readonly HashSet<string> DefaultBlocklist = new(StringComparer.OrdinalIgnoreCase)
     {

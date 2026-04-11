@@ -1,3 +1,4 @@
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Core.Classification;
@@ -430,7 +431,6 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             var sizeMb = sizeBytes / (1024.0 * 1024.0);
             onProgress?.Invoke(RunProgressLocalization.Format(
                 "Scan.HashLarge",
-                "[Scan] Hash: {0} ({1:F0} MB)…",
                 Path.GetFileName(filePath),
                 sizeMb));
         }
@@ -538,7 +538,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         // Stage 4: Name-based fallback for disc images (CHD raw SHA1 ≠ per-track SHA1 in Redump DATs)
         if (!datMatch
             && datPolicy.AllowNameOnlyDatMatch
-            && lowerExt is ".chd" or ".iso" or ".gcm" or ".img" or ".cso" or ".rvz")
+            && DiscFormats.IsDatNameOnlyExtensionWithoutBin(lowerExt))
         {
             var stem = Path.GetFileNameWithoutExtension(filePath);
             if (!string.IsNullOrEmpty(stem)

@@ -332,6 +332,19 @@ public class DatSourceServiceTests : IDisposable
         Assert.Equal(content, File.ReadAllText(result!));
     }
 
+    [Fact]
+    public async Task DownloadDatAsync_ContentLengthExceedsLimit_ReturnsNull()
+    {
+        var handler = new OversizedContentLengthHandler();
+        using var httpClient = new HttpClient(handler);
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+
+        var result = await svc.DownloadDatAsync("https://example.invalid/huge.dat", "huge.dat");
+
+        Assert.Null(result);
+        Assert.False(File.Exists(Path.Combine(_tempDir, "huge.dat")));
+    }
+
     private sealed class ContentHandler(string content) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -610,6 +623,25 @@ public class DatSourceServiceTests : IDisposable
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new ByteArrayContent(content)
+            });
+        }
+    }
+
+    private sealed class OversizedContentLengthHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var uri = request.RequestUri?.ToString() ?? "";
+            if (uri.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase))
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+
+            var content = new ByteArrayContent([0x01]);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/xml");
+            content.Headers.ContentLength = (50L * 1024 * 1024) + 1;
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = content
             });
         }
     }

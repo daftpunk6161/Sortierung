@@ -216,6 +216,19 @@ public sealed class SafetyValidatorTests
         Assert.Contains("protected system path", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void EnsureSafeOutputPath_AncestryDepthOverLimit_Throws()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var deepPath = BuildDeepWindowsPath(270);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => SafetyValidator.EnsureSafeOutputPath(deepPath));
+
+        Assert.Contains("Max ancestry depth exceeded", ex.Message, StringComparison.Ordinal);
+    }
+
     // =========================================================================
     //  TestTools Tests
     // =========================================================================
@@ -248,6 +261,16 @@ public sealed class SafetyValidatorTests
 
         Assert.NotEmpty(runner.Timeouts);
         Assert.All(runner.Timeouts, timeout => Assert.Equal(TimeSpan.FromSeconds(13), timeout));
+    }
+
+    private static string BuildDeepWindowsPath(int depth)
+    {
+        var root = Path.GetPathRoot(Path.GetTempPath()) ?? @"C:\";
+        var current = root;
+        for (var i = 0; i < depth; i++)
+            current = Path.Combine(current, "a");
+
+        return current;
     }
 
     // Fakes

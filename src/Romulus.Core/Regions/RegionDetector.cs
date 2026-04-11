@@ -7,6 +7,24 @@ namespace Romulus.Core.Regions;
 /// </summary>
 public static class RegionDetector
 {
+    private sealed record DetectionConfig(
+        IReadOnlyList<RegionRule> OrderedRules,
+        IReadOnlyList<RegionRule> TwoLetterRules,
+        System.Text.RegularExpressions.Regex MultiRegionPattern,
+        IReadOnlyDictionary<string, string> TokenToRegionMap,
+        IReadOnlySet<string> LanguageCodes,
+        IReadOnlySet<string> EuLanguageCodes);
+
+    private static readonly object RegistrationSync = new();
+    private static volatile DetectionConfig? _registeredConfig;
+    private static Func<(
+        IReadOnlyList<RegionRule> OrderedRules,
+        IReadOnlyList<RegionRule> TwoLetterRules,
+        System.Text.RegularExpressions.Regex MultiRegionPattern,
+        IReadOnlyDictionary<string, string> TokenToRegionMap,
+        IReadOnlyCollection<string> LanguageCodes,
+        IReadOnlyCollection<string> EuLanguageCodes)>? _registrationFactory;
+
     /// <summary>
     /// Diagnostic result for region detection.
     /// </summary>
@@ -29,8 +47,8 @@ public static class RegionDetector
 
     private static readonly TimeSpan RegexTimeout = SafeRegex.DefaultTimeout;
 
-    // Default rules matching rules.json RegionOrdered — full set
-    private static readonly IReadOnlyList<RegionRule> DefaultOrderedRules = new[]
+    // Fallback rules preserving historical behavior if no external profile is registered.
+    private static readonly IReadOnlyList<RegionRule> FallbackOrderedRules = new[]
     {
         // Major regions (priority order)
         R("EU",    @"\((?:Europe|EUR|PAL(?:\d+)?)\)"),
@@ -64,7 +82,7 @@ public static class RegionDetector
         R("ASIA",  @"\((?:Taiwan|Hong\s*Kong|India|Singapore|Thailand|Vietnam|Indonesia|Malaysia|Philippines)\)"),
     };
 
-    private static readonly IReadOnlyList<RegionRule> DefaultTwoLetterRules = new[]
+    private static readonly IReadOnlyList<RegionRule> FallbackTwoLetterRules = new[]
     {
         R("EU",   @"\b(?:eu|eur|pal)\b"),
         R("US",   @"\b(?:us|usa|ntsc)\b"),
@@ -86,22 +104,178 @@ public static class RegionDetector
     };
 
     // All language codes from rules.json GameKeyPatterns (expanded set)
-    private static readonly System.Text.RegularExpressions.Regex DefaultMultiRegionPattern =
+    private static readonly System.Text.RegularExpressions.Regex FallbackMultiRegionPattern =
         new(@"\((?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu)(?:,\s*(?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu))+\)",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
             RegexTimeout);
+
+    public static void RegisterRuleFactory(Func<(
+        IReadOnlyList<RegionRule> OrderedRules,
+        IReadOnlyList<RegionRule> TwoLetterRules,
+        System.Text.RegularExpressions.Regex MultiRegionPattern,
+        IReadOnlyDictionary<string, string> TokenToRegionMap,
+        IReadOnlyCollection<string> LanguageCodes,
+        IReadOnlyCollection<string> EuLanguageCodes)> factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        lock (RegistrationSync)
+        {
+            _registrationFactory = factory;
+            _registeredConfig = null;
+        }
+    }
+
+    public static void RegisterDefaultRules(
+        IReadOnlyList<RegionRule> orderedRules,
+        IReadOnlyList<RegionRule> twoLetterRules,
+        System.Text.RegularExpressions.Regex multiRegionPattern,
+        IReadOnlyDictionary<string, string> tokenToRegionMap,
+        IReadOnlyCollection<string> languageCodes,
+        IReadOnlyCollection<string> euLanguageCodes)
+    {
+        ArgumentNullException.ThrowIfNull(orderedRules);
+        ArgumentNullException.ThrowIfNull(twoLetterRules);
+        ArgumentNullException.ThrowIfNull(multiRegionPattern);
+        ArgumentNullException.ThrowIfNull(tokenToRegionMap);
+        ArgumentNullException.ThrowIfNull(languageCodes);
+        ArgumentNullException.ThrowIfNull(euLanguageCodes);
+
+        lock (RegistrationSync)
+        {
+            _registeredConfig = BuildConfig(
+                orderedRules,
+                twoLetterRules,
+                multiRegionPattern,
+                tokenToRegionMap,
+                languageCodes,
+                euLanguageCodes);
+        }
+    }
+
+    private static DetectionConfig BuildConfig(
+        IReadOnlyList<RegionRule>? orderedRules,
+        IReadOnlyList<RegionRule>? twoLetterRules,
+        System.Text.RegularExpressions.Regex? multiRegionPattern,
+        IReadOnlyDictionary<string, string>? tokenToRegionMap,
+        IReadOnlyCollection<string>? languageCodes,
+        IReadOnlyCollection<string>? euLanguageCodes)
+    {
+        var mergedTokenMap = new Dictionary<string, string>(FallbackTokenToRegion, StringComparer.OrdinalIgnoreCase);
+        if (tokenToRegionMap is not null)
+        {
+            foreach (var kv in tokenToRegionMap)
+                mergedTokenMap[kv.Key] = kv.Value;
+        }
+
+        var mergedLanguageCodes = new HashSet<string>(FallbackLanguageCodes, StringComparer.OrdinalIgnoreCase);
+        if (languageCodes is not null)
+        {
+            foreach (var languageCode in languageCodes)
+                mergedLanguageCodes.Add(languageCode);
+        }
+
+        var mergedEuLanguageCodes = new HashSet<string>(FallbackEuLanguageCodes, StringComparer.OrdinalIgnoreCase);
+        if (euLanguageCodes is not null)
+        {
+            foreach (var euLanguageCode in euLanguageCodes)
+                mergedEuLanguageCodes.Add(euLanguageCode);
+        }
+
+        return new DetectionConfig(
+            MergeRules(orderedRules, FallbackOrderedRules),
+            MergeRules(twoLetterRules, FallbackTwoLetterRules),
+            multiRegionPattern ?? FallbackMultiRegionPattern,
+            mergedTokenMap,
+            mergedLanguageCodes,
+            mergedEuLanguageCodes);
+    }
+
+    private static IReadOnlyList<RegionRule> MergeRules(
+        IReadOnlyList<RegionRule>? primary,
+        IReadOnlyList<RegionRule> fallback)
+    {
+        var result = new List<RegionRule>();
+        var seenSignatures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        static string Signature(RegionRule rule) => $"{rule.Key}\0{rule.Pattern}";
+
+        if (primary is not null)
+        {
+            foreach (var rule in primary)
+            {
+                if (seenSignatures.Add(Signature(rule)))
+                    result.Add(rule);
+            }
+        }
+
+        foreach (var rule in fallback)
+        {
+            if (seenSignatures.Add(Signature(rule)))
+                result.Add(rule);
+        }
+
+        return result;
+    }
+
+    private static DetectionConfig EnsureRulesLoaded()
+    {
+        var cached = _registeredConfig;
+        if (cached is not null)
+            return cached;
+
+        lock (RegistrationSync)
+        {
+            cached = _registeredConfig;
+            if (cached is not null)
+                return cached;
+
+            if (_registrationFactory is not null)
+            {
+                var loaded = _registrationFactory();
+                _registeredConfig = BuildConfig(
+                    loaded.OrderedRules,
+                    loaded.TwoLetterRules,
+                    loaded.MultiRegionPattern,
+                    loaded.TokenToRegionMap,
+                    loaded.LanguageCodes,
+                    loaded.EuLanguageCodes);
+            }
+
+            _registeredConfig ??= BuildConfig(
+                orderedRules: null,
+                twoLetterRules: null,
+                FallbackMultiRegionPattern,
+                tokenToRegionMap: null,
+                languageCodes: null,
+                euLanguageCodes: null);
+
+            return _registeredConfig;
+        }
+    }
+
+    private static string NormalizeRegionKey(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return Regions.Unknown;
+
+        return key.Trim().ToUpperInvariant() switch
+        {
+            "USA" => Regions.US,
+            "JPN" => Regions.JP,
+            "EUROPE" => Regions.EU,
+            "FR" or "DE" or "ES" or "IT" or "NL" or "SE" or "SCAN"
+                or "AT" or "BE" or "PT" or "CH" or "DK" or "FI" or "NO"
+                or "GR" or "IE" or "LU" or "RO" or "BG" or "SK" or "SI"
+                or "EE" or "LV" or "LT" or "ZA" => Regions.EU,
+            var value => value
+        };
+    }
 
     // Helper to create compiled, case-insensitive RegionRule
     private static RegionRule R(string key, string pattern)
         => new(key, new System.Text.RegularExpressions.Regex(pattern,
             System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
             RegexTimeout));
-
-    // Pre-compiled UK/Great Britain pattern (TASK-153)
-    private static readonly System.Text.RegularExpressions.Regex UkPattern =
-        new(@"\((?:[^)]*\b(?:uk|united\s*kingdom|great\s*britain|england)\b[^)]*)\)",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
-            RegexTimeout);
 
     // Pre-compiled pattern for extracting parenthesized groups (BUG-M02)
     private static readonly System.Text.RegularExpressions.Regex ParenGroupPattern =
@@ -113,13 +287,19 @@ public static class RegionDetector
     /// Convenience overload using default detection rules from rules.json.
     /// </summary>
     public static string GetRegionTag(string name)
-        => Detect(name, DefaultOrderedRules, DefaultTwoLetterRules, DefaultMultiRegionPattern);
+    {
+        var config = EnsureRulesLoaded();
+        return Detect(name, config.OrderedRules, config.TwoLetterRules, config.MultiRegionPattern);
+    }
 
     /// <summary>
     /// Convenience overload returning region and diagnostic reason using default rules.
     /// </summary>
     public static RegionDetectionResult GetRegionTagWithDiagnostics(string name)
-        => DetectWithDiagnostics(name, DefaultOrderedRules, DefaultTwoLetterRules, DefaultMultiRegionPattern);
+    {
+        var config = EnsureRulesLoaded();
+        return DetectWithDiagnostics(name, config.OrderedRules, config.TwoLetterRules, config.MultiRegionPattern);
+    }
 
     /// <summary>
     /// Detects the primary region from a ROM filename.
@@ -149,19 +329,23 @@ public static class RegionDetector
         if (string.IsNullOrWhiteSpace(name))
             return new RegionDetectionResult(Regions.Unknown, "empty-input");
 
-        // UK / Great Britain → EU
-        if (UkPattern.IsMatch(name))
-        {
-            return new RegionDetectionResult(Regions.EU, "uk-priority-rule");
-        }
-
         // Multi-language tags: all-EU languages map to EU; mixed language families map to WORLD.
-        if (TryResolveLanguageMultiTag(name, out var languageRegion))
+        var config = EnsureRulesLoaded();
+
+        if (TryResolveLanguageMultiTag(name, config.LanguageCodes, config.EuLanguageCodes, out var languageRegion))
         {
             var reason = string.Equals(languageRegion, Regions.EU, StringComparison.Ordinal)
                 ? "language-multi-eu"
                 : "language-multi-world";
             return new RegionDetectionResult(languageRegion, reason);
+        }
+
+        if (TryResolveCommaSeparatedRegionGroup(name, config.TokenToRegionMap, out var commaSeparatedRegion))
+        {
+            var reason = string.Equals(commaSeparatedRegion, Regions.World, StringComparison.Ordinal)
+                ? "comma-region-world"
+                : "comma-region-single";
+            return new RegionDetectionResult(commaSeparatedRegion, reason);
         }
 
         // Multi-region → WORLD
@@ -172,11 +356,14 @@ public static class RegionDetector
         foreach (var rule in orderedRules)
         {
             if (rule.Pattern.IsMatch(name))
-                return new RegionDetectionResult(rule.Key, $"ordered-rule:{rule.Key}");
+            {
+                var normalized = NormalizeRegionKey(rule.Key);
+                return new RegionDetectionResult(normalized, $"ordered-rule:{normalized}");
+            }
         }
 
         // Try token-based parsing (less specific, e.g. NTSC → US)
-        var tokenResult = ResolveRegionFromTokens(name);
+        var tokenResult = ResolveRegionFromTokens(name, config.TokenToRegionMap);
         if (tokenResult is not null && tokenResult != Regions.Unknown)
             return new RegionDetectionResult(tokenResult, "token-fallback");
 
@@ -184,7 +371,10 @@ public static class RegionDetector
         foreach (var rule in twoLetterRules)
         {
             if (rule.Pattern.IsMatch(name))
-                return new RegionDetectionResult(rule.Key, $"two-letter-rule:{rule.Key}");
+            {
+                var normalized = NormalizeRegionKey(rule.Key);
+                return new RegionDetectionResult(normalized, $"two-letter-rule:{normalized}");
+            }
         }
 
         return new RegionDetectionResult(Regions.Unknown, "no-match");
@@ -195,6 +385,46 @@ public static class RegionDetector
     /// Port of Resolve-RegionTagFromTokens from Core.ps1.
     /// </summary>
     internal static string? ResolveRegionFromTokens(string name)
+    {
+        var config = EnsureRulesLoaded();
+        return ResolveRegionFromTokens(name, config.TokenToRegionMap);
+    }
+
+    internal static bool TryResolveCommaSeparatedRegionGroup(
+        string name,
+        IReadOnlyDictionary<string, string> tokenToRegionMap,
+        out string region)
+    {
+        region = Regions.Unknown;
+
+        var matches = ParenGroupPattern.Matches(name);
+        foreach (System.Text.RegularExpressions.Match match in matches)
+        {
+            var content = match.Groups[1].Value;
+            var tokens = content.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+            if (tokens.Length < 2)
+                continue;
+
+            var foundRegions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var token in tokens)
+            {
+                var normalizedToken = token.Trim().ToLowerInvariant();
+                if (IsRegionToken(normalizedToken, tokenToRegionMap, out var mappedRegion))
+                    foundRegions.Add(mappedRegion);
+            }
+
+            if (foundRegions.Count == 0)
+                continue;
+
+            region = foundRegions.Count > 1 ? Regions.World : foundRegions.Single();
+            return true;
+        }
+
+        return false;
+    }
+
+    internal static string? ResolveRegionFromTokens(string name, IReadOnlyDictionary<string, string> tokenToRegionMap)
     {
         // Extract all parenthesized groups
         var matches = ParenGroupPattern.Matches(name);
@@ -211,19 +441,22 @@ public static class RegionDetector
 
             foreach (var token in tokens)
             {
-                var t = token.Trim().ToLowerInvariant();
-                if (IsRegionToken(t, out var region))
-                    foundRegions.Add(region);
+                var normalizedToken = token.Trim().ToLowerInvariant();
+                if (IsRegionToken(normalizedToken, tokenToRegionMap, out var mappedRegion))
+                    foundRegions.Add(mappedRegion);
             }
         }
 
-        if (foundRegions.Count == 0) return null;
-        if (foundRegions.Count > 1) return Regions.World;
+        if (foundRegions.Count == 0)
+            return null;
+        if (foundRegions.Count > 1)
+            return Regions.World;
 
         return foundRegions.Single();
     }
 
-    private static readonly Dictionary<string, string> RegionTokenMap = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlyDictionary<string, string> FallbackTokenToRegion =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         // EU major
         ["europe"] = Regions.EU, ["eu"] = Regions.EU, ["eur"] = Regions.EU, ["pal"] = Regions.EU,
@@ -281,33 +514,37 @@ public static class RegionDetector
         ["south africa"] = Regions.EU, ["za"] = Regions.EU,
     };
 
-    private static bool IsRegionToken(string token, out string region)
+    private static bool IsRegionToken(string token, IReadOnlyDictionary<string, string> tokenToRegionMap, out string region)
     {
         region = Regions.Unknown;
 
-        if (RegionTokenMap.TryGetValue(token, out var mapped))
+        if (tokenToRegionMap.TryGetValue(token, out var mapped))
         {
-            region = mapped;
+            region = NormalizeRegionKey(mapped);
             return true;
         }
 
         return false;
     }
 
-    private static readonly HashSet<string> LanguageCodes = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlySet<string> FallbackLanguageCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "en", "fr", "de", "es", "it", "pt", "nl", "sv", "no", "da", "fi", "ru", "pl", "zh", "ko", "ja",
         "cs", "hu", "el", "tr", "ar", "he", "th", "vi", "id", "ms", "ro", "bg", "uk", "hr", "sk", "sl",
         "et", "lv", "lt", "af", "ca", "gd", "eu"
     };
 
-    private static readonly HashSet<string> EuLanguageCodes = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlySet<string> FallbackEuLanguageCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "fr", "de", "es", "it", "pt", "nl", "sv", "no", "da", "fi", "pl", "cs", "hu", "el", "ro", "bg",
         "uk", "hr", "sk", "sl", "et", "lv", "lt", "ca", "gd", "eu"
     };
 
-    private static bool TryResolveLanguageMultiTag(string name, out string region)
+    private static bool TryResolveLanguageMultiTag(
+        string name,
+        IReadOnlySet<string> languageCodes,
+        IReadOnlySet<string> euLanguageCodes,
+        out string region)
     {
         region = Regions.Unknown;
 
@@ -324,13 +561,13 @@ public static class RegionDetector
             foreach (var token in tokens)
             {
                 var t = token.Trim();
-                if (!LanguageCodes.Contains(t))
+                if (!languageCodes.Contains(t))
                 {
                     hasOnlyLanguageCodes = false;
                     break;
                 }
 
-                if (!EuLanguageCodes.Contains(t))
+                if (!euLanguageCodes.Contains(t))
                     hasOnlyEuLanguageCodes = false;
             }
 

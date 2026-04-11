@@ -142,6 +142,40 @@ public sealed class PipelinePhaseIsolationTests : IDisposable
     }
 
     [Fact]
+    public async Task StreamingScanPhase_EmitsIncompleteSummary_WhenDirectoriesAreInaccessible()
+    {
+        var root = Path.Combine(_tempDir, "streaming-scan-f35");
+        Directory.CreateDirectory(root);
+
+        var romPath = Path.Combine(root, "game.zip");
+        File.WriteAllText(romPath, "game");
+
+        var fs = new TestFileSystem();
+        fs.SetFiles(root, romPath);
+        fs.PendingScanWarnings.Add("Skipped inaccessible directory: denied-a");
+        fs.PendingScanWarnings.Add("Skipped inaccessible directory: denied-b");
+
+        var progress = new List<string>();
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Extensions = new[] { ".zip" }
+        };
+
+        var phase = new StreamingScanPipelinePhase(CreateContext(options, fs, onProgress: progress.Add));
+
+        var emitted = new List<ScannedFileEntry>();
+        await foreach (var file in phase.EnumerateFilesAsync(options.Roots, options.Extensions, CancellationToken.None))
+            emitted.Add(file);
+
+        Assert.Single(emitted);
+        Assert.Contains(
+            progress,
+            message => message.Contains("WARNING: Scan incomplete:", StringComparison.Ordinal)
+                       && message.Contains("2 directories inaccessible", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void DeduplicatePhase_FiltersOutJunkOnlyGroups_ForGameGroupsOutput()
     {
         var gameUs = Candidate("C:/roms/game (US).zip", "game", "US", 1000, FileCategory.Game);

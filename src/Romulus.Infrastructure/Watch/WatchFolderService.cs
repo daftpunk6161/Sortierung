@@ -1,4 +1,5 @@
 using System.IO;
+using Romulus.Infrastructure.Orchestration;
 
 namespace Romulus.Infrastructure.Watch;
 
@@ -93,7 +94,7 @@ public sealed class WatchFolderService : IDisposable
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
                 {
-                    WatcherError?.Invoke($"FileSystemWatcher-Fehler: {ex.Message}");
+                    WatcherError?.Invoke(RunProgressLocalization.Format("Watch.Error", ex.Message));
                 }
             }
 
@@ -165,8 +166,8 @@ public sealed class WatchFolderService : IDisposable
 
     private void OnWatcherError(object sender, ErrorEventArgs e)
     {
-        var message = e.GetException()?.Message ?? "Unbekannter Watcher-Fehler";
-        WatcherError?.Invoke($"FileSystemWatcher-Fehler: {message}");
+        var message = e.GetException()?.Message ?? RunProgressLocalization.Format("Watch.UnknownError");
+        WatcherError?.Invoke(RunProgressLocalization.Format("Watch.Error", message));
     }
 
     private void OnDebounceTimer(object? state)

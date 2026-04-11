@@ -1,3 +1,4 @@
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Core.Classification;
 using Romulus.Infrastructure.Metrics;
@@ -16,12 +17,10 @@ public sealed partial class RunOrchestrator
         metrics.StartPhase("Scan");
         _onProgress?.Invoke(RunProgressLocalization.Format(
             "Scan.Start",
-            "[Scan] Scanne {0} Root-Ordner…",
             options.Roots.Count));
         foreach (var root in options.Roots)
             _onProgress?.Invoke(RunProgressLocalization.Format(
                 "Scan.Root",
-                "[Scan] Root: {0}",
                 root));
 
         var scanSw = System.Diagnostics.Stopwatch.StartNew();
@@ -62,7 +61,6 @@ public sealed partial class RunOrchestrator
             result.FilteredNonGameCount = filteredNonGameCount;
             _onProgress?.Invoke(RunProgressLocalization.Format(
                 "Filter.OnlyGames",
-                "[Filter] OnlyGames aktiv: {0} Nicht-Spiel-Dateien ausgeschlossen (KeepUnknown={1})",
                 filteredNonGameCount,
                 keepUnknown));
         }
@@ -71,13 +69,14 @@ public sealed partial class RunOrchestrator
         result.TotalFilesScanned = candidates.Count;
         _onProgress?.Invoke(RunProgressLocalization.Format(
             "Scan.Completed",
-            "[Scan] Abgeschlossen: {0} Dateien in {1}ms",
             candidates.Count,
             scanSw.ElapsedMilliseconds));
         metrics.CompletePhase(candidates.Count);
 
         if (candidates.Count > 100_000)
-            _onProgress?.Invoke($"WARNING: {candidates.Count:N0} files scanned — high memory usage. Consider scanning fewer roots.");
+            _onProgress?.Invoke(RunProgressLocalization.Format(
+                "Scan.HighMemoryWarning",
+                candidates.Count));
 
         pipelineState.SetScanOutput(candidates, processingCandidates);
         return new ScanPhaseResult(

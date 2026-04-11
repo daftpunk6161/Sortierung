@@ -75,7 +75,15 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         ILocalizationService? loc = null,
         RunProfileService? runProfileService = null,
         RunConfigurationMaterializer? runConfigurationMaterializer = null,
-        ITimeProvider? timeProvider = null)
+        ITimeProvider? timeProvider = null,
+        ShellViewModel? shell = null,
+        SetupViewModel? setup = null,
+        ToolsViewModel? tools = null,
+        RunViewModel? run = null,
+        CommandPaletteViewModel? commandPalette = null,
+        DatAuditViewModel? datAudit = null,
+        DatCatalogViewModel? datCatalog = null,
+        ConversionPreviewViewModel? conversionPreview = null)
     {
         _theme = theme;
         _dialog = dialog;
@@ -86,22 +94,22 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         _syncContext = SynchronizationContext.Current;
 
         // ── Child ViewModels (GUI-021) ────────────────────────────────
-        Shell = new ShellViewModel(_loc, DeferCommandRequery);
+        Shell = shell ?? MainViewModelChildFactory.CreateShell(_loc, DeferCommandRequery);
+        Shell.SetCommandRequery(DeferCommandRequery);
         Shell.IsSimpleMode = _isSimpleMode;
         Shell.PropertyChanged += OnShellStatePropertyChanged;
-        Setup = new SetupViewModel(_theme, _dialog, _settings, _loc);
-        Tools = new ToolsViewModel(_loc);
+        Setup = setup ?? MainViewModelChildFactory.CreateSetup(_theme, _dialog, _settings, _loc);
+        Tools = tools ?? MainViewModelChildFactory.CreateTools(_loc);
         Tools.SetSimpleMode(_isSimpleMode);
-        Run = new RunViewModel();
-        CommandPalette = new CommandPaletteViewModel(_loc);
-        DatAudit = new DatAuditViewModel(_loc, _dialog);
-        DatCatalog = new DatCatalogViewModel(_loc, _dialog, () => DatRoot, AddLog);
-        ConversionPreview = new ConversionPreviewViewModel(_loc);
+        Run = run ?? MainViewModelChildFactory.CreateRun();
+        CommandPalette = commandPalette ?? MainViewModelChildFactory.CreateCommandPalette(_loc);
+        DatAudit = datAudit ?? MainViewModelChildFactory.CreateDatAudit(_loc, _dialog);
+        DatCatalog = datCatalog ?? MainViewModelChildFactory.CreateDatCatalog(_loc, _dialog, () => DatRoot, AddLog);
+        ConversionPreview = conversionPreview ?? MainViewModelChildFactory.CreateConversionPreview(_loc);
         InitializeRunConfigurationServices(runProfileService, runConfigurationMaterializer);
 
         // Wire child VM events
         Setup.StatusRefreshRequested += () => RefreshStatus();
-        Setup.PropertyChanged += OnSetupPropertyChanged;
         Run.CommandRequeryRequested += DeferCommandRequery;
         Run.PropertyChanged += OnRunPropertyChanged;
 
@@ -302,6 +310,13 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
 
     private void InitExtensionFilters()
     {
+        foreach (var existing in ExtensionFilters)
+        {
+            existing.PropertyChanged -= OnExtensionCheckedChanged;
+            existing.PropertyChanged -= OnExtensionFilterChanged;
+        }
+        ExtensionFilters.Clear();
+
         var items = new (string ext, string cat, string tip)[]
         {
             // Disc images
@@ -454,6 +469,10 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
 
     private void InitConsoleFilters()
     {
+        foreach (var existing in ConsoleFilters)
+            existing.PropertyChanged -= OnConsoleCheckedChanged;
+        ConsoleFilters.Clear();
+
         var items = new (string key, string display, string cat)[]
         {
             ("PS1", "PlayStation", "Sony"),

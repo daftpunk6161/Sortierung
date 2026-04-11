@@ -8,9 +8,43 @@
     "trashRoot": { "type": "string" },
     "auditRoot": { "type": "string" },
     "extensions": { "type": "string" },
+    "preferredRegions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "logLevel": { "type": "string" },
+    "useDat": { "type": "boolean" },
+    "hashType": { "type": "string" },
+    "datFallback": { "type": "boolean" },
     "theme": { "type": "string" },
-    "locale": { "type": "string" }
+    "locale": { "type": "string" },
+    "healthScoreWeights": {
+      "type": "object",
+      "properties": {
+        "baseScoreMax": { "type": "number" },
+        "junkPenaltyCap": { "type": "number" },
+        "junkPenaltyPerPercent": { "type": "number" },
+        "extremeJunkThresholdPercent": { "type": "number" },
+        "extremeJunkPenaltyFloor": { "type": "number" },
+        "verifiedBonusCap": { "type": "number" },
+        "verifiedBonusPerPercent": { "type": "number" },
+        "errorPenaltyCap": { "type": "number" },
+        "errorPenaltyPerError": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "categoryPriorityRanks": {
+      "type": "object",
+      "properties": {
+        "Game": { "type": "integer" },
+        "Bios": { "type": "integer" },
+        "NonGame": { "type": "integer" },
+        "Junk": { "type": "integer" },
+        "Unknown": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+    "versionScoreMaxSegments": { "type": "integer", "minimum": 1 }
   },
   "additionalProperties": false
 }

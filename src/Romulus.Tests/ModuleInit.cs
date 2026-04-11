@@ -31,6 +31,10 @@ internal static class ModuleInit
         var aliases = GameKeyNormalizationProfile.AlwaysAliasMap;
         if (patterns is { Count: > 0 })
             GameKeyNormalizer.RegisterDefaultPatterns(patterns, aliases);
+
+        RegionDetectionProfile.EnsureRegistered();
+        FormatScoringProfile.EnsureRegistered();
+        VersionScoringProfile.EnsureRegistered();
     }
 
     private static bool IsValidDataDir(string path)

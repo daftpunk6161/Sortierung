@@ -13,7 +13,7 @@ public sealed class JunkRemovalPipelinePhase : IPipelinePhase<JunkRemovalPhaseIn
     public JunkRemovalPhaseOutput Execute(JunkRemovalPhaseInput input, PipelineContext context, CancellationToken cancellationToken)
     {
         context.Metrics.StartPhase(Name);
-        context.OnProgress?.Invoke("[Junk] Entferne Junk-Dateien…");
+        context.OnProgress?.Invoke(RunProgressLocalization.Format("Junk.Start"));
 
         var protectedSetMembers = CollectReferencedSetMemberPaths(input.Groups);
 
@@ -89,7 +89,7 @@ public sealed class JunkRemovalPipelinePhase : IPipelinePhase<JunkRemovalPhaseIn
             }
         }
 
-        context.OnProgress?.Invoke($"[Junk] {moveCount} Junk-Dateien entfernt");
+        context.OnProgress?.Invoke(RunProgressLocalization.Format("Junk.Completed", moveCount));
         context.Metrics.CompletePhase(moveCount);
 
         return new JunkRemovalPhaseOutput(new MovePhaseResult(moveCount, failCount, savedBytes), removedPaths);

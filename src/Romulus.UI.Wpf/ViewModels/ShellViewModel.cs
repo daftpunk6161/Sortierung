@@ -19,7 +19,7 @@ public sealed class ShellViewModel : ObservableObject
     private const string SystemTag = "System";
 
     private readonly ILocalizationService _loc;
-    private readonly Action? _commandRequery;
+    private Action? _commandRequery;
 
     public ShellViewModel(ILocalizationService loc, Action? commandRequery = null)
     {
@@ -39,6 +39,11 @@ public sealed class ShellViewModel : ObservableObject
         WizardNextCommand = new RelayCommand(WizardNext);
         WizardBackCommand = new RelayCommand(WizardBack, () => WizardStep > 0);
         WizardSkipCommand = new RelayCommand(WizardSkip);
+    }
+
+    public void SetCommandRequery(Action? commandRequery)
+    {
+        _commandRequery = commandRequery;
     }
 
     // ═══ NAVIGATION (GUI-061 → Phase 1: 5-area shell) ═══════════════════

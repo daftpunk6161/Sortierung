@@ -34,7 +34,15 @@ public sealed class AllowedRootPathPolicy
         {
             fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
-        catch (Exception) when (path is not null)
+        catch (ArgumentException)
+        {
+            return false;
+        }
+        catch (PathTooLongException)
+        {
+            return false;
+        }
+        catch (NotSupportedException)
         {
             return false;
         }

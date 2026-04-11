@@ -10,20 +10,29 @@ public static class SettingsFileAccess
 {
     private const int DefaultMaxAttempts = 8;
     private const int InitialDelayMs = 25;
+    private const int DefaultTotalTimeoutMs = 2000;
 
-    public static string? TryReadAllText(string path, int maxAttempts = DefaultMaxAttempts)
+    public static string? TryReadAllText(
+        string path,
+        int maxAttempts = DefaultMaxAttempts,
+        int totalTimeoutMs = DefaultTotalTimeoutMs)
         // SYNC-JUSTIFIED: configuration load is consumed by synchronous startup paths.
-        => TryReadAllTextAsync(path, maxAttempts).GetAwaiter().GetResult();
+        => TryReadAllTextAsync(path, maxAttempts, totalTimeoutMs).GetAwaiter().GetResult();
 
     public static async Task<string?> TryReadAllTextAsync(
         string path,
         int maxAttempts = DefaultMaxAttempts,
+        int totalTimeoutMs = DefaultTotalTimeoutMs,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             return null;
 
+        if (totalTimeoutMs <= 0)
+            totalTimeoutMs = DefaultTotalTimeoutMs;
+
         var delayMs = InitialDelayMs;
+        var startedAtMs = Environment.TickCount64;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
@@ -43,7 +52,13 @@ public static class SettingsFileAccess
                 if (attempt == maxAttempts)
                     return null;
 
-                await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
+                var elapsedMs = (int)Math.Max(0, Environment.TickCount64 - startedAtMs);
+                var remainingMs = totalTimeoutMs - elapsedMs;
+                if (remainingMs <= 0)
+                    return null;
+
+                var boundedDelayMs = Math.Min(delayMs, remainingMs);
+                await Task.Delay(boundedDelayMs, cancellationToken).ConfigureAwait(false);
                 delayMs *= 2;
             }
         }

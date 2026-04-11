@@ -75,33 +75,40 @@ public sealed class AuditSigningService
                     // Restrict file permissions to current user only (Windows-only API)
                     if (OperatingSystem.IsWindows())
                     {
-                        try
-                        {
-                            var fi = new FileInfo(_keyFilePath);
-                            var security = fi.GetAccessControl();
-                            security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
-                            var currentUser = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
-                            security.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(
-                                currentUser,
-                                System.Security.AccessControl.FileSystemRights.FullControl,
-                                System.Security.AccessControl.AccessControlType.Allow));
-                            fi.SetAccessControl(security);
-                        }
-                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
-                        {
-                            _log?.Invoke("Could not restrict HMAC key file permissions — manual ACL recommended");
-                        }
+                        var fi = new FileInfo(_keyFilePath);
+                        var security = fi.GetAccessControl();
+                        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+                        var currentUser = System.Security.Principal.WindowsIdentity.GetCurrent().User
+                                          ?? throw new InvalidOperationException("Could not resolve current Windows identity SID.");
+                        security.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(
+                            currentUser,
+                            System.Security.AccessControl.FileSystemRights.FullControl,
+                            System.Security.AccessControl.InheritanceFlags.None,
+                            System.Security.AccessControl.PropagationFlags.None,
+                            System.Security.AccessControl.AccessControlType.Allow));
+                        fi.SetAccessControl(security);
                     }
                     // V2-SEC-M02: Set Unix file permissions to owner-only (0600)
                     else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
                     {
-                        try { File.SetUnixFileMode(_keyFilePath, UnixFileMode.UserRead | UnixFileMode.UserWrite); }
-                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log?.Invoke("Could not set HMAC key file permissions to 0600"); }
+                        File.SetUnixFileMode(_keyFilePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
                     }
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
                 {
-                    _log?.Invoke($"Failed to persist HMAC key: {ex.Message}");
+                    // Security hardening: never keep or use an unsecured persisted key file.
+                    try { if (File.Exists(_keyFilePath)) File.Delete(_keyFilePath); }
+                    catch (Exception cleanupEx) when (cleanupEx is IOException or UnauthorizedAccessException) { }
+                    try
+                    {
+                        var tmpPath = _keyFilePath + ".tmp";
+                        if (File.Exists(tmpPath))
+                            File.Delete(tmpPath);
+                    }
+                    catch (Exception cleanupEx) when (cleanupEx is IOException or UnauthorizedAccessException) { }
+
+                    _persistedKey = null;
+                    throw new InvalidOperationException("HMAC key file cannot be secured", ex);
                 }
             }
 
@@ -265,8 +272,7 @@ public sealed class AuditSigningService
             };
         }
 
-        var lines = File.ReadAllLines(auditCsvPath, Encoding.UTF8);
-        if (lines.Length <= 1) // header only
+        if (!HasAuditDataRows(auditCsvPath))
         {
             return new AuditRollbackResult
             {
@@ -307,9 +313,8 @@ public sealed class AuditSigningService
             .ToArray();
 
         // Process rows in reverse order (undo last moves first)
-        for (int i = lines.Length - 1; i >= 1; i--)
+        foreach (var line in ReadAuditRowsReverse(auditCsvPath))
         {
-            var line = lines[i];
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             totalRows++;
@@ -563,6 +568,91 @@ public sealed class AuditSigningService
             RestoredPaths = restoredPaths,
             PlannedPaths = plannedPaths
         };
+    }
+
+    private static bool HasAuditDataRows(string auditCsvPath)
+    {
+        using var stream = new FileStream(auditCsvPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+
+        // Skip header.
+        _ = reader.ReadLine();
+
+        while (!reader.EndOfStream)
+        {
+            var line = reader.ReadLine();
+            if (!string.IsNullOrWhiteSpace(line))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static IEnumerable<string> ReadAuditRowsReverse(string auditCsvPath)
+    {
+        var spoolPath = Path.Combine(Path.GetTempPath(), $"audit-rollback-{Guid.NewGuid():N}.spool");
+
+        try
+        {
+            using (var input = new FileStream(auditCsvPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            using (var reader = new StreamReader(input, Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+            using (var spool = new FileStream(spoolPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var writer = new BinaryWriter(spool, Encoding.UTF8, leaveOpen: true))
+            {
+                // Skip header.
+                _ = reader.ReadLine();
+
+                while (!reader.EndOfStream)
+                {
+                    var line = reader.ReadLine();
+                    if (string.IsNullOrWhiteSpace(line))
+                        continue;
+
+                    var bytes = Encoding.UTF8.GetBytes(line);
+                    writer.Write(bytes.Length);
+                    writer.Write(bytes);
+                    writer.Write(bytes.Length);
+                }
+            }
+
+            using var spoolRead = new FileStream(spoolPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var binaryReader = new BinaryReader(spoolRead, Encoding.UTF8, leaveOpen: true);
+
+            var cursor = spoolRead.Length;
+            while (cursor >= sizeof(int))
+            {
+                cursor -= sizeof(int);
+                spoolRead.Position = cursor;
+                var trailingLength = binaryReader.ReadInt32();
+
+                if (trailingLength < 0 || cursor < trailingLength + sizeof(int))
+                    throw new InvalidDataException("Malformed rollback spool record.");
+
+                cursor -= trailingLength;
+                spoolRead.Position = cursor;
+                var payload = binaryReader.ReadBytes(trailingLength);
+
+                cursor -= sizeof(int);
+                spoolRead.Position = cursor;
+                var leadingLength = binaryReader.ReadInt32();
+                if (leadingLength != trailingLength)
+                    throw new InvalidDataException("Rollback spool record length mismatch.");
+
+                yield return Encoding.UTF8.GetString(payload);
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(spoolPath))
+                    File.Delete(spoolPath);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Best effort cleanup.
+            }
+        }
     }
 
     internal static string? NormalizeRollbackAction(string action)

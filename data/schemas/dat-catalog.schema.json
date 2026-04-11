@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://romulus.local/schemas/dat-catalog.schema.json",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["Id", "System", "Format"],
+    "properties": {
+      "Id": { "type": "string", "minLength": 1 },
+      "System": { "type": "string", "minLength": 1 },
+      "Format": {
+        "type": "string",
+        "enum": ["raw-dat", "zip-dat", "7z-dat", "nointro-pack"]
+      },
+      "Group": { "type": ["string", "null"] },
+      "PackMatch": { "type": ["string", "null"] },
+      "Url": { "type": ["string", "null"] },
+      "ConsoleKey": { "type": ["string", "null"] }
+    },
+    "additionalProperties": false
+  }
+}

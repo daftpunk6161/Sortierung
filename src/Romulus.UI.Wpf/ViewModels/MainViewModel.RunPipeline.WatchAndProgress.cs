@@ -12,6 +12,10 @@ namespace Romulus.UI.Wpf.ViewModels;
 
 public sealed partial class MainViewModel
 {
+    private const double InPhaseProgressCap = 0.97d;
+    private const double InPhaseEventSaturationCount = 600d;
+    private const double InPhaseTimeSaturationSeconds = 240d;
+
     // ═══ WATCH-MODE ════════════════════════════════════════════════════
 
     /// <summary>GUI-109: Start/stop periodic scheduled runs.</summary>
@@ -273,8 +277,10 @@ public sealed partial class MainViewModel
         if (!TryGetPhaseRange(phaseKey, out var rangeStart, out var rangeEnd))
             return -1;
 
-        if (phaseKey.Equals("[Fertig]", StringComparison.OrdinalIgnoreCase))
+        if (phaseKey.Equals(RunConstants.Phases.Finished, StringComparison.OrdinalIgnoreCase))
             return 100;
+
+        var isCompletionMessage = IsCompletionProgressMessage(message, phaseKey);
 
         if (!phaseKey.Equals(_progressPhaseKey, StringComparison.OrdinalIgnoreCase))
         {
@@ -287,11 +293,14 @@ public sealed partial class MainViewModel
 
         if (TryParseProgressFraction(message, out var fraction))
         {
-            var preciseCandidate = rangeStart + ((rangeEnd - rangeStart) * fraction);
+            var effectiveFraction = isCompletionMessage
+                ? fraction
+                : Math.Min(InPhaseProgressCap, fraction);
+            var preciseCandidate = rangeStart + ((rangeEnd - rangeStart) * effectiveFraction);
             return Math.Min(rangeEnd, Math.Max(Progress, preciseCandidate));
         }
 
-        if (message.Contains("Abgeschlossen", StringComparison.OrdinalIgnoreCase))
+        if (isCompletionMessage)
             return Math.Max(Progress, rangeEnd);
 
         var elapsedSeconds = _progressPhaseStartedUtc == DateTime.MinValue
@@ -299,12 +308,25 @@ public sealed partial class MainViewModel
             : (_timeProvider.UtcNow.UtcDateTime - _progressPhaseStartedUtc).TotalSeconds;
 
         // Grow conservatively when no explicit x/y progress is available.
-        var eventFactor = Math.Min(1d, _progressPhaseEventCount / 120d);
-        var timeFactor = Math.Min(1d, elapsedSeconds / 45d);
+        var eventFactor = Math.Min(InPhaseProgressCap, _progressPhaseEventCount / InPhaseEventSaturationCount);
+        var timeFactor = Math.Min(InPhaseProgressCap, elapsedSeconds / InPhaseTimeSaturationSeconds);
         var factor = Math.Max(eventFactor, timeFactor);
 
         var candidate = rangeStart + ((rangeEnd - rangeStart) * factor);
         return Math.Min(rangeEnd, Math.Max(Progress, candidate));
+    }
+
+    private static bool IsCompletionProgressMessage(string message, string phaseKey)
+    {
+        if (phaseKey.StartsWith(RunConstants.Phases.Finished, StringComparison.OrdinalIgnoreCase)
+            || phaseKey.StartsWith(RunConstants.Phases.Done, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return message.Contains("Abgeschlossen", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("Completed", StringComparison.OrdinalIgnoreCase)
+               || message.Contains("Termine", StringComparison.OrdinalIgnoreCase);
     }
 
     private void UpdateCurrentRunStateFromProgress(string message)
@@ -413,7 +435,7 @@ public sealed partial class MainViewModel
 
     private bool TryGetPhaseRange(string phaseKey, out double start, out double end)
     {
-        if (phaseKey.StartsWith("[Fertig]", StringComparison.OrdinalIgnoreCase))
+        if (phaseKey.StartsWith(RunConstants.Phases.Finished, StringComparison.OrdinalIgnoreCase))
         {
             start = 100d;
             end = 100d;
@@ -437,28 +459,28 @@ public sealed partial class MainViewModel
     {
         switch (phaseKey)
         {
-            case var _ when phaseKey.StartsWith("[Preflight]", StringComparison.OrdinalIgnoreCase):
+            case var _ when phaseKey.StartsWith(RunConstants.Phases.Preflight, StringComparison.OrdinalIgnoreCase):
                 phase = UiProgressPhase.Preflight;
                 return true;
-            case var _ when phaseKey.StartsWith("[Scan]", StringComparison.OrdinalIgnoreCase)
-                          || phaseKey.StartsWith("[Filter]", StringComparison.OrdinalIgnoreCase):
+            case var _ when phaseKey.StartsWith(RunConstants.Phases.Scan, StringComparison.OrdinalIgnoreCase)
+                          || phaseKey.StartsWith(RunConstants.Phases.Filter, StringComparison.OrdinalIgnoreCase):
                 phase = UiProgressPhase.Scan;
                 return true;
-            case var _ when phaseKey.StartsWith("[Dedupe]", StringComparison.OrdinalIgnoreCase):
+            case var _ when phaseKey.StartsWith(RunConstants.Phases.Dedupe, StringComparison.OrdinalIgnoreCase):
                 phase = UiProgressPhase.Dedupe;
                 return true;
-            case var _ when phaseKey.StartsWith("[Junk]", StringComparison.OrdinalIgnoreCase)
-                          || phaseKey.StartsWith("[Move]", StringComparison.OrdinalIgnoreCase):
+            case var _ when phaseKey.StartsWith(RunConstants.Phases.Junk, StringComparison.OrdinalIgnoreCase)
+                          || phaseKey.StartsWith(RunConstants.Phases.Move, StringComparison.OrdinalIgnoreCase):
                 phase = UiProgressPhase.Move;
                 return true;
-            case var _ when phaseKey.StartsWith("[Sort]", StringComparison.OrdinalIgnoreCase):
+            case var _ when phaseKey.StartsWith(RunConstants.Phases.Sort, StringComparison.OrdinalIgnoreCase):
                 phase = UiProgressPhase.Sort;
                 return true;
-            case var _ when phaseKey.StartsWith("[Convert]", StringComparison.OrdinalIgnoreCase):
+            case var _ when phaseKey.StartsWith(RunConstants.Phases.Convert, StringComparison.OrdinalIgnoreCase):
                 phase = UiProgressPhase.Convert;
                 return true;
-            case var _ when phaseKey.StartsWith("[Report]", StringComparison.OrdinalIgnoreCase)
-                          || phaseKey.StartsWith("[Fertig]", StringComparison.OrdinalIgnoreCase):
+            case var _ when phaseKey.StartsWith(RunConstants.Phases.Report, StringComparison.OrdinalIgnoreCase)
+                          || phaseKey.StartsWith(RunConstants.Phases.Finished, StringComparison.OrdinalIgnoreCase):
                 phase = UiProgressPhase.Report;
                 return true;
             default:

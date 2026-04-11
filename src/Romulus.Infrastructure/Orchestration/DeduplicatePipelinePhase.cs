@@ -15,7 +15,7 @@ public sealed class DeduplicatePipelinePhase : IPipelinePhase<IReadOnlyList<RomC
         cancellationToken.ThrowIfCancellationRequested();
 
         context.Metrics.StartPhase(Name);
-        context.OnProgress?.Invoke($"[Dedupe] Gruppiere {input.Count} Dateien nach GameKey…");
+        context.OnProgress?.Invoke(RunProgressLocalization.Format("Dedupe.Start", input.Count));
 
         var dedupeSw = System.Diagnostics.Stopwatch.StartNew();
         var groups = DeduplicationEngine.Deduplicate(input);
@@ -25,7 +25,13 @@ public sealed class DeduplicatePipelinePhase : IPipelinePhase<IReadOnlyList<RomC
         var loserCount = gameGroups.Sum(g => g.Losers.Count);
         var junkGroupCount = groups.Count(g => g.Winner.Category == FileCategory.Junk);
 
-        context.OnProgress?.Invoke($"[Dedupe] Abgeschlossen in {dedupeSw.ElapsedMilliseconds}ms: {gameGroups.Count} Gruppen, Keep={gameGroups.Count - loserCount}, Move={loserCount}, Junk={junkGroupCount}");
+        context.OnProgress?.Invoke(RunProgressLocalization.Format(
+            "Dedupe.Completed",
+            dedupeSw.ElapsedMilliseconds,
+            gameGroups.Count,
+            gameGroups.Count - loserCount,
+            loserCount,
+            junkGroupCount));
         context.Metrics.CompletePhase(gameGroups.Count);
 
         return new DedupePhaseOutput(groups, gameGroups, loserCount);

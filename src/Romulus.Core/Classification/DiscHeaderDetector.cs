@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using System.Text.RegularExpressions;
+using Romulus.Contracts;
 using Romulus.Core.Caching;
 
 namespace Romulus.Core.Classification;
@@ -137,7 +138,7 @@ public sealed class DiscHeaderDetector
             var ext = Path.GetExtension(path).ToLowerInvariant();
             results[path] = ext == ".chd"
                 ? DetectFromChd(path)
-                : ext is ".iso" or ".gcm" or ".img" or ".bin"
+                : DiscFormats.IsHeaderProbeExtension(ext)
                     ? DetectFromDiscImage(path)
                     : null;
 

@@ -651,7 +651,7 @@ public sealed partial class FeatureCommandService
             foreach (var f in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories).Take(200))
             {
                 var ext = Path.GetExtension(f).ToLowerInvariant();
-                if (ext is ".chd" or ".iso" or ".bin" or ".cue" or ".gdi") hasDisc = true;
+                if (DiscFormats.IsAutoProfileDiscExtension(ext)) hasDisc = true;
                 if (ext is ".nes" or ".sfc" or ".gba" or ".nds" or ".z64" or ".gb") hasCartridge = true;
             }
         }

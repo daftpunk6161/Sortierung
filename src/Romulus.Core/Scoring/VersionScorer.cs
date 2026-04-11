@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace Romulus.Core.Scoring;
@@ -11,6 +12,15 @@ namespace Romulus.Core.Scoring;
 /// </summary>
 public sealed class VersionScorer
 {
+    private const string FallbackLangPattern = @"\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu)(?:,\s*(?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu))*\)";
+    private const int FallbackMaxVersionSegments = 6;
+
+    private static readonly object Sync = new();
+    private static volatile string? _registeredLangPattern;
+    private static int? _registeredMaxVersionSegments;
+    private static Func<string>? _langPatternFactory;
+    private static Func<int?>? _maxVersionSegmentsFactory;
+
     private readonly Regex _rxVerified;
     private readonly Regex _rxRevision;
     private readonly Regex _rxVersion;
@@ -33,8 +43,106 @@ public sealed class VersionScorer
             verifiedPattern: @"\[!\]",
             revisionPattern: @"\(rev\s*([a-z0-9.]+)\)",
             versionPattern: @"\(v\s*([\d.]+)\)",
-            langPattern: @"\((en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu)(?:,\s*(?:en|fr|de|es|it|pt|nl|sv|no|da|fi|ru|pl|zh|ko|ja|cs|hu|el|tr|ar|he|th|vi|id|ms|ro|bg|uk|hr|sk|sl|et|lv|lt|af|ca|gd|eu))*\)")
+            langPattern: ResolveLanguagePattern())
     {
+    }
+
+    public static void RegisterDefaultLanguagePattern(string langPattern)
+    {
+        if (string.IsNullOrWhiteSpace(langPattern))
+            return;
+
+        lock (Sync)
+        {
+            _registeredLangPattern = langPattern;
+        }
+    }
+
+    public static void RegisterLanguagePatternFactory(Func<string> languagePatternFactory)
+    {
+        ArgumentNullException.ThrowIfNull(languagePatternFactory);
+
+        lock (Sync)
+        {
+            _langPatternFactory = languagePatternFactory;
+            _registeredLangPattern = null;
+        }
+    }
+
+    public static void RegisterMaxVersionSegments(int maxVersionSegments)
+    {
+        if (maxVersionSegments < 1)
+            return;
+
+        lock (Sync)
+        {
+            _registeredMaxVersionSegments = maxVersionSegments;
+        }
+    }
+
+    public static void RegisterMaxVersionSegmentsFactory(Func<int?> maxVersionSegmentsFactory)
+    {
+        ArgumentNullException.ThrowIfNull(maxVersionSegmentsFactory);
+
+        lock (Sync)
+        {
+            _maxVersionSegmentsFactory = maxVersionSegmentsFactory;
+            _registeredMaxVersionSegments = null;
+        }
+    }
+
+    private static string ResolveLanguagePattern()
+    {
+        var cached = _registeredLangPattern;
+        if (!string.IsNullOrWhiteSpace(cached))
+            return cached;
+
+        lock (Sync)
+        {
+            cached = _registeredLangPattern;
+            if (!string.IsNullOrWhiteSpace(cached))
+                return cached;
+
+            if (_langPatternFactory is not null)
+            {
+                var loaded = _langPatternFactory();
+                if (!string.IsNullOrWhiteSpace(loaded))
+                {
+                    _registeredLangPattern = loaded;
+                    return loaded;
+                }
+            }
+
+            _registeredLangPattern = FallbackLangPattern;
+            return FallbackLangPattern;
+        }
+    }
+
+    private static int ResolveMaxVersionSegments()
+    {
+        var cached = _registeredMaxVersionSegments;
+        if (cached.HasValue)
+            return Math.Max(1, cached.Value);
+
+        lock (Sync)
+        {
+            cached = _registeredMaxVersionSegments;
+            if (cached.HasValue)
+                return Math.Max(1, cached.Value);
+
+            if (_maxVersionSegmentsFactory is not null)
+            {
+                var loaded = _maxVersionSegmentsFactory();
+                if (loaded is > 0)
+                {
+                    _registeredMaxVersionSegments = loaded.Value;
+                    return loaded.Value;
+                }
+            }
+
+            _registeredMaxVersionSegments = FallbackMaxVersionSegments;
+            return FallbackMaxVersionSegments;
+        }
     }
 
     public VersionScorer(string verifiedPattern, string revisionPattern,
@@ -142,10 +250,10 @@ public sealed class VersionScorer
 
             if (segments.Count > 0)
             {
-                // Clamp to max 6 segments to prevent long overflow (1000^5 ≈ 10^15 fits in long).
+                // Clamp to configured max segment count to prevent long overflow in weighted scoring.
                 // CORE-02 FIX: If truncated, add +1 per extra segment so versions with
                 // more segments score slightly higher than those with fewer.
-                const int maxSegments = 6;
+                var maxSegments = ResolveMaxVersionSegments();
                 bool wasTruncated = segments.Count > maxSegments;
                 var effectiveSegments = wasTruncated
                     ? segments.GetRange(0, maxSegments)
@@ -165,7 +273,10 @@ public sealed class VersionScorer
 
                 // CORE-02: Differentiate versions with trailing segments beyond the clamp
                 if (wasTruncated)
+                {
                     score += segments.Count - maxSegments;
+                    Trace.WriteLine($"[VersionScorer] Version segment list truncated to {maxSegments} segment(s) for '{baseName}'.");
+                }
             }
         }
 

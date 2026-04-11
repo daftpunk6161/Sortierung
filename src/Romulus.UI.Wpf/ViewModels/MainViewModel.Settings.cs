@@ -63,7 +63,7 @@ public sealed partial class MainViewModel
     }
     // ═══ PATH PROPERTIES (persisted) ════════════════════════════════════
     private string _trashRoot = "";
-    public string TrashRoot { get => _trashRoot; set { if (SetProperty(ref _trashRoot, value)) { ValidateDirectoryPath(value, nameof(TrashRoot)); SyncToSetup(nameof(TrashRoot), value); } } }
+    public string TrashRoot { get => _trashRoot; set { if (SetProperty(ref _trashRoot, value)) { ValidateDirectoryPath(value, nameof(TrashRoot)); } } }
 
     private string _datRoot = "";
     public string DatRoot
@@ -88,19 +88,19 @@ public sealed partial class MainViewModel
 
     // ═══ TOOL PATHS (persisted) ═════════════════════════════════════════
     private string _toolChdman = "";
-    public string ToolChdman { get => _toolChdman; set { if (SetProperty(ref _toolChdman, value)) { ValidateToolPath(value, nameof(ToolChdman)); RefreshStatus(); SyncToSetup(nameof(ToolChdman), value); } } }
+    public string ToolChdman { get => _toolChdman; set { if (SetProperty(ref _toolChdman, value)) { ValidateToolPath(value, nameof(ToolChdman)); RefreshStatus(); } } }
 
     private string _toolDolphin = "";
-    public string ToolDolphin { get => _toolDolphin; set { if (SetProperty(ref _toolDolphin, value)) { ValidateToolPath(value, nameof(ToolDolphin)); RefreshStatus(); SyncToSetup(nameof(ToolDolphin), value); } } }
+    public string ToolDolphin { get => _toolDolphin; set { if (SetProperty(ref _toolDolphin, value)) { ValidateToolPath(value, nameof(ToolDolphin)); RefreshStatus(); } } }
 
     private string _tool7z = "";
-    public string Tool7z { get => _tool7z; set { if (SetProperty(ref _tool7z, value)) { ValidateToolPath(value, nameof(Tool7z)); RefreshStatus(); SyncToSetup(nameof(Tool7z), value); } } }
+    public string Tool7z { get => _tool7z; set { if (SetProperty(ref _tool7z, value)) { ValidateToolPath(value, nameof(Tool7z)); RefreshStatus(); } } }
 
     private string _toolPsxtract = "";
-    public string ToolPsxtract { get => _toolPsxtract; set { if (SetProperty(ref _toolPsxtract, value)) { ValidateToolPath(value, nameof(ToolPsxtract)); RefreshStatus(); SyncToSetup(nameof(ToolPsxtract), value); } } }
+    public string ToolPsxtract { get => _toolPsxtract; set { if (SetProperty(ref _toolPsxtract, value)) { ValidateToolPath(value, nameof(ToolPsxtract)); RefreshStatus(); } } }
 
     private string _toolCiso = "";
-    public string ToolCiso { get => _toolCiso; set { if (SetProperty(ref _toolCiso, value)) { ValidateToolPath(value, nameof(ToolCiso)); RefreshStatus(); SyncToSetup(nameof(ToolCiso), value); } } }
+    public string ToolCiso { get => _toolCiso; set { if (SetProperty(ref _toolCiso, value)) { ValidateToolPath(value, nameof(ToolCiso)); RefreshStatus(); } } }
 
     // ═══ BOOLEAN FLAGS (persisted) ══════════════════════════════════════
     [ObservableProperty]
@@ -707,46 +707,6 @@ public sealed partial class MainViewModel
             AddLog(_loc["Log.SettingsSaved"], "INFO");
         else
             AddLog(_loc["Log.SettingsSaveFailed"], "ERROR");
-    }
-
-    // ═══ SETTINGS SYNC (TASK-123) ═══════════════════════════════════════
-
-    private bool _syncingSettings;
-
-    /// <summary>Push a property value from MainViewModel to Setup (avoids infinite loop).</summary>
-    private void SyncToSetup(string propertyName, string value)
-    {
-        if (_syncingSettings) return;
-        _syncingSettings = true;
-        try
-        {
-            var prop = Setup.GetType().GetProperty(propertyName);
-            if (prop is not null && prop.PropertyType == typeof(string))
-            {
-                var current = (string?)prop.GetValue(Setup);
-                if (!string.Equals(current, value, StringComparison.Ordinal))
-                    prop.SetValue(Setup, value);
-            }
-        }
-        finally { _syncingSettings = false; }
-    }
-
-    /// <summary>Pull changed property from Setup back to MainViewModel.</summary>
-    private void OnSetupPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (_syncingSettings || e.PropertyName is null) return;
-        var prop = GetType().GetProperty(e.PropertyName);
-        var setupProp = Setup.GetType().GetProperty(e.PropertyName);
-        if (prop is null || setupProp is null || prop.PropertyType != typeof(string)) return;
-
-        var setupValue = (string?)setupProp.GetValue(Setup) ?? "";
-        var localValue = (string?)prop.GetValue(this) ?? "";
-        if (!string.Equals(setupValue, localValue, StringComparison.Ordinal))
-        {
-            _syncingSettings = true;
-            try { prop.SetValue(this, setupValue); }
-            finally { _syncingSettings = false; }
-        }
     }
 
     private void OnLoadSettings()

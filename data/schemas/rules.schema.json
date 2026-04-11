@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://romulus.local/schemas/rules.schema.json",
   "type": "object",
-  "required": ["RegionOrdered"],
+  "required": ["RegionOrdered", "Region2Letter", "regionTokenMap"],
   "properties": {
     "LangPattern": { "type": "string" },
     "RegionOrdered": {
@@ -17,6 +17,25 @@
         "additionalProperties": false
       }
     },
+    "Region2Letter": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["Key", "Pattern"],
+        "properties": {
+          "Key": { "type": "string" },
+          "Pattern": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "regionTokenMap": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "languageCodes": { "type": "array", "items": { "type": "string" } },
+    "euLanguageCodes": { "type": "array", "items": { "type": "string" } },
+    "MultiRegionPattern": { "type": "string" },
     "JunkPatterns": { "type": "array", "items": { "type": "string" } },
     "AggressiveJunkPatterns": { "type": "array", "items": { "type": "string" } },
     "BiosPatterns": { "type": "array", "items": { "type": "string" } },

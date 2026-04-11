@@ -604,7 +604,7 @@ public sealed partial class MainViewModel
                     junkFiles++;
 
                 var normalizedExtension = extension.ToLowerInvariant();
-                if (normalizedExtension is ".iso" or ".bin" or ".cue" or ".chd" or ".gdi" or ".cso" or ".pbp" or ".rvz" or ".wbfs")
+                if (DiscFormats.IsDiscLikeAnalysisExtension(normalizedExtension))
                     hasDiscLikeFormats = true;
                 if (normalizedExtension is ".nes" or ".sfc" or ".smc" or ".gba" or ".gb" or ".gbc" or ".nds" or ".z64" or ".n64" or ".v64")
                     hasCartridgeFormats = true;

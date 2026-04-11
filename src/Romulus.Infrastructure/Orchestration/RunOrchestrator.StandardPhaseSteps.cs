@@ -79,7 +79,6 @@ public sealed partial class RunOrchestrator
         var totalLosers = groups.Sum(g => g.Losers.Count);
         _onProgress?.Invoke(RunProgressLocalization.Format(
             "Move.Start",
-            "[Move] Verschiebe {0} Duplikate in Trash…",
             totalLosers));
 
         var movePhase = new MovePipelinePhase();
@@ -95,7 +94,6 @@ public sealed partial class RunOrchestrator
         var moveResult = movePhase.Execute(new MovePhaseInput(groups, options), moveContext, cancellationToken);
         _onProgress?.Invoke(RunProgressLocalization.Format(
             "Move.Completed",
-            "[Move] Abgeschlossen: {0} verschoben, {1} Fehler",
             moveResult.MoveCount,
             moveResult.FailCount));
         result.MoveResult = moveResult;
@@ -148,8 +146,7 @@ public sealed partial class RunOrchestrator
 
         metrics.StartPhase("ConsoleSort");
         _onProgress?.Invoke(RunProgressLocalization.Format(
-            "Sort.Start",
-            "[Sort] Sortiere Dateien nach Konsole…"));
+            "Sort.Start"));
 
         // Build sort-decision map from enrichment phase.
         // We use the SortDecision computed by HypothesisResolver to route files.
@@ -217,8 +214,7 @@ public sealed partial class RunOrchestrator
             state.ApplyPathMutations(pathMutations);
 
         _onProgress?.Invoke(RunProgressLocalization.Format(
-            "Sort.Completed",
-            "[Sort] Konsolen-Sortierung abgeschlossen"));
+            "Sort.Completed"));
         metrics.CompletePhase();
         return PhaseStepResult.Ok(result.ConsoleSortResult?.Moved ?? 0, result.ConsoleSortResult);
     }

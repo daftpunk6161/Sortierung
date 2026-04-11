@@ -1522,6 +1522,77 @@ public class GuiViewModelTests
     }
 
     [Fact]
+    public void ProgressEstimator_ScanFractionWithoutCompletion_DoesNotReachPhaseCeiling()
+    {
+        var vm = new MainViewModel(new ThemeService(), new StubDialogService());
+        var configureMethod = typeof(MainViewModel).GetMethod(
+            "ConfigureRunProgressPlan",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var estimateMethod = typeof(MainViewModel).GetMethod(
+            "EstimatePhaseProgress",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        Assert.NotNull(configureMethod);
+        Assert.NotNull(estimateMethod);
+
+        configureMethod!.Invoke(vm, new object[]
+        {
+            new RunOptions
+            {
+                Roots = new[] { @"C:\ROMS" },
+                Extensions = new[] { ".zip" },
+                Mode = RunConstants.ModeDryRun
+            }
+        });
+
+        var nonTerminal = (double)estimateMethod!.Invoke(vm, new object[] { "[Scan] 850/850 Dateien verarbeitet..." })!;
+        vm.Progress = nonTerminal;
+        var completed = (double)estimateMethod.Invoke(vm, new object[] { "[Scan] Abgeschlossen: 850 Dateien in 1ms" })!;
+
+        Assert.True(nonTerminal < completed,
+            $"Expected non-completion scan fraction to stay below completion ceiling (nonTerminal={nonTerminal}, completed={completed})");
+        Assert.True(completed <= 100d, $"Expected completion ceiling to stay within 0..100, got {completed}");
+    }
+
+    [Fact]
+    public void ProgressEstimator_LongRunningScanHeuristic_StaysBelowPhaseCeilingUntilCompletion()
+    {
+        var timeProvider = new TestTimeProvider(new DateTimeOffset(2026, 4, 10, 12, 0, 0, TimeSpan.Zero));
+        var vm = new MainViewModel(new ThemeService(), new StubDialogService(), timeProvider: timeProvider);
+        var configureMethod = typeof(MainViewModel).GetMethod(
+            "ConfigureRunProgressPlan",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var estimateMethod = typeof(MainViewModel).GetMethod(
+            "EstimatePhaseProgress",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        Assert.NotNull(configureMethod);
+        Assert.NotNull(estimateMethod);
+
+        configureMethod!.Invoke(vm, new object[]
+        {
+            new RunOptions
+            {
+                Roots = new[] { @"C:\ROMS" },
+                Extensions = new[] { ".zip" },
+                Mode = RunConstants.ModeDryRun
+            }
+        });
+
+        var start = (double)estimateMethod!.Invoke(vm, new object[] { "[Scan] Root: C:\\ROMS" })!;
+        vm.Progress = start;
+
+        timeProvider.Advance(TimeSpan.FromMinutes(10));
+        var heuristic = (double)estimateMethod.Invoke(vm, new object[] { "[Scan] Hash: Batricops.chd (277 MB)..." })!;
+        vm.Progress = heuristic;
+        var completed = (double)estimateMethod.Invoke(vm, new object[] { "[Scan] Abgeschlossen: 850 Dateien in 1ms" })!;
+
+        Assert.True(heuristic > start, $"Expected long-running scan heuristic to increase progress (start={start}, heuristic={heuristic})");
+        Assert.True(heuristic < completed,
+            $"Expected heuristic progress to stay below scan completion ceiling (heuristic={heuristic}, completed={completed})");
+    }
+
+    [Fact]
     public void ProgressEstimator_ConvertOnlyRun_UsesActivePhasePlan_InsteadOfFixedTailRange()
     {
         var vm = new MainViewModel(new ThemeService(), new StubDialogService());
@@ -2802,6 +2873,18 @@ public class GuiViewModelTests
             => Path.Combine(Path.GetDirectoryName(rootPath) ?? rootPath, siblingName);
 
         public bool HasVerifiedRollback(string? auditPath) => false;
+    }
+
+    private sealed class TestTimeProvider(DateTimeOffset initialUtcNow) : ITimeProvider
+    {
+        private DateTimeOffset _utcNow = initialUtcNow;
+
+        public DateTimeOffset UtcNow => _utcNow;
+
+        public void Advance(TimeSpan delta)
+        {
+            _utcNow = _utcNow.Add(delta);
+        }
     }
 
     // ═══ XAML Binding Validation (VERIFY-001) ═══════════════════════════

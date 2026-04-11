@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Romulus.Contracts.Ports;
 using IO = Romulus.Infrastructure.IO;
 using Romulus.Infrastructure.Audit;
+using Romulus.Infrastructure.Configuration;
 using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Hashing;
@@ -18,6 +19,10 @@ public static class SharedServiceRegistration
     public static IServiceCollection AddRomulusCore(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+
+        var dataDir = RunEnvironmentBuilder.TryResolveDataDir();
+        if (!string.IsNullOrWhiteSpace(dataDir))
+            StartupDataSchemaValidator.ValidateRequiredFiles(dataDir);
 
         services.AddSingleton(new CollectionIndexPathOptions());
         services.AddSingleton(new RunProfilePathOptions());

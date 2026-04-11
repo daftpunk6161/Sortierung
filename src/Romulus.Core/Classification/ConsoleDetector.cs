@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Romulus.Contracts;
 using Romulus.Core.Caching;
 using Romulus.Core.SetParsing;
 using Romulus.Contracts.Models;
@@ -350,7 +351,7 @@ public sealed class ConsoleDetector
             var discExt = ext.ToLowerInvariant();
             string? byHeader = discExt == ".chd"
                 ? _discHeaderDetector.DetectFromChd(filePath)
-                : discExt is ".iso" or ".gcm" or ".img" or ".bin"
+                : DiscFormats.IsHeaderProbeExtension(discExt)
                     ? _discHeaderDetector.DetectFromDiscImage(filePath)
                     : null;
             if (byHeader is not null)
@@ -417,7 +418,7 @@ public sealed class ConsoleDetector
             var discExt = ext.ToLowerInvariant();
             string? byHeader = discExt == ".chd"
                 ? _discHeaderDetector.DetectFromChd(filePath)
-                : discExt is ".iso" or ".gcm" or ".img" or ".bin"
+                : DiscFormats.IsHeaderProbeExtension(discExt)
                     ? _discHeaderDetector.DetectFromDiscImage(filePath)
                     : null;
             if (byHeader is not null)
@@ -476,7 +477,7 @@ public sealed class ConsoleDetector
         if (!string.Equals(byFolder, "PS2", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        return discExt is ".iso" or ".bin" or ".img" or ".chd";
+        return DiscFormats.IsPsxHeaderDowngradeSensitiveExtension(discExt);
     }
 
     private static bool IsClearlyInvalidFile(string filePath)

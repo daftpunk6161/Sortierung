@@ -9,6 +9,21 @@ namespace Romulus.Infrastructure.Safety;
 /// </summary>
 public sealed class SafetyValidator
 {
+    private const int MaxAncestryDepth = 256;
+
+    private static readonly Lazy<string[]> ProtectedSystemRoots = new(() =>
+    {
+        return new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+        }
+        .Where(p => !string.IsNullOrWhiteSpace(p))
+        .ToArray();
+    });
+
     private static readonly Dictionary<string, SafetyProfile> Profiles = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Conservative"] = new SafetyProfile
@@ -337,15 +352,7 @@ public sealed class SafetyValidator
     /// </summary>
     public static bool IsProtectedSystemPath(string fullPath)
     {
-        var protectedRoots = new[]
-        {
-            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-            Environment.GetFolderPath(Environment.SpecialFolder.System),
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
-        }
-        .Where(p => !string.IsNullOrWhiteSpace(p))
-        .ToArray();
+        var protectedRoots = ProtectedSystemRoots.Value;
 
         var normalized = NormalizePath(fullPath);
         if (normalized is null) return true; // invalid path → treat as protected
@@ -430,8 +437,14 @@ public sealed class SafetyValidator
                 ? Path.GetFullPath(normalizedPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 : Path.GetDirectoryName(Path.GetFullPath(normalizedPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
 
+            var depth = 0;
+
             while (!string.IsNullOrWhiteSpace(current))
             {
+                depth++;
+                if (depth > MaxAncestryDepth)
+                    throw new InvalidOperationException("Max ancestry depth exceeded");
+
                 if (Directory.Exists(current))
                 {
                     var info = new DirectoryInfo(current);
