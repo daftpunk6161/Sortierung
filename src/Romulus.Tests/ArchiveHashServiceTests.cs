@@ -46,12 +46,8 @@ public class ArchiveHashServiceTests : IDisposable
 
         var hashes = _service.GetArchiveHashes(zip, "SHA1");
 
-        // 2 entries × (SHA1 + native CRC32 from ZIP header) = 4 hashes
-        Assert.Equal(4, hashes.Length);
-        var sha1Hashes = hashes.Where(h => h.Length == 40).ToArray();
-        var crc32Hashes = hashes.Where(h => h.Length == 8).ToArray();
-        Assert.Equal(2, sha1Hashes.Length);
-        Assert.Equal(2, crc32Hashes.Length);
+        Assert.Equal(2, hashes.Length);
+        Assert.All(hashes, hash => Assert.Equal(40, hash.Length));
     }
 
     [Fact]
@@ -74,10 +70,8 @@ public class ArchiveHashServiceTests : IDisposable
 
         var hashes = _service.GetArchiveHashes(zip, "MD5");
 
-        // 1 entry × (MD5 + native CRC32) = 2 hashes
-        Assert.Equal(2, hashes.Length);
+        Assert.Single(hashes);
         Assert.Equal(32, hashes[0].Length); // MD5 = 32 hex chars
-        Assert.Equal(8, hashes[1].Length);  // CRC32 = 8 hex chars
     }
 
     [Fact]
@@ -88,10 +82,8 @@ public class ArchiveHashServiceTests : IDisposable
 
         var hashes = _service.GetArchiveHashes(zip, "SHA256");
 
-        // 1 entry × (SHA256 + native CRC32) = 2 hashes
-        Assert.Equal(2, hashes.Length);
+        Assert.Single(hashes);
         Assert.Equal(64, hashes[0].Length); // SHA256 = 64 hex chars
-        Assert.Equal(8, hashes[1].Length);  // CRC32 = 8 hex chars
     }
 
     // ── Caching ──

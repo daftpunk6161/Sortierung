@@ -12,19 +12,19 @@
 | Kategorie                | Gesamt | ✅ Fixed | ⚠️ Partial | ❌ Open |
 |--------------------------|--------|---------|------------|--------|
 | Entry Points / MVVM      | 15     | 15      | 0          | 0      |
-| Safety / Security         | 10     | 8       | 1          | 1      |
-| Data / Schema / Config    | 12     | 5       | 3          | 4      |
-| DI / Startup              | 10     | 4       | 3          | 3      |
-| Error Handling             | 9      | 2       | 3          | 4      |
-| Hashing / Tools            | 13     | 6       | 3          | 4      |
-| Orchestration (R7)         | 10     | 6       | 1          | 3      |
-| Final Sweep (R8)           | 6      | 0       | 1          | 5      |
-| Sorting / Move Pipeline    | 5      | 1       | 1          | 3      |
-| **Dedup / Core Logic**     | 8      | 3       | 2          | 3      |
-| **API Hardening**          | 8      | 4       | 2          | 2      |
-| **Test Hygiene**           | 7      | 2       | 1          | 4      |
-| **i18n / UX**              | 7      | 4       | 1          | 2      |
-| **Summe**                  | **120**| **60**  | **22**     | **38** |
+| Safety / Security         | 10     | 9       | 1          | 0      |
+| Data / Schema / Config    | 12     | 12      | 0          | 0      |
+| DI / Startup              | 10     | 8       | 2          | 0      |
+| Error Handling             | 9      | 6       | 2          | 1      |
+| Hashing / Tools            | 13     | 13      | 0          | 0      |
+| Orchestration (R7)         | 10     | 8       | 1          | 1      |
+| Final Sweep (R8)           | 6      | 3       | 2          | 1      |
+| Sorting / Move Pipeline    | 5      | 5       | 0          | 0      |
+| **Dedup / Core Logic**     | 8      | 5       | 2          | 1      |
+| **API Hardening**          | 8      | 7       | 1          | 0      |
+| **Test Hygiene**           | 7      | 6       | 1          | 0      |
+| **i18n / UX**              | 7      | 5       | 2          | 0      |
+| **Summe**                  | **120**| **102** | **14**     | **4**  |
 
 ---
 
@@ -106,7 +106,7 @@
 - [ ] **SEC-09** ⚠️ File-Level TOCTOU: Akzeptiertes Risiko, dokumentiert, IOException-Fallback  
   📁 `src/Romulus.Infrastructure/FileSystem/FileSystemAdapter.cs:219-220`
 
-- [ ] **SEC-10** ❌ Preflight Probe: `File.WriteAllText`/`File.Delete` nutzt bare File API statt IFileSystem  
+- [x] **SEC-10** ✅ Preflight Probe nutzt jetzt I/O-Port statt bare File API (`_fs.WriteAllText`/`_fs.DeleteFile`)  
   📁 `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.cs:173`
 
 ---
@@ -119,14 +119,14 @@
 - [x] **DATA-02** ✅ console-maps.json ist in der Startup-Validierung enthalten  
   📁 `src/Romulus.Infrastructure/Configuration/StartupDataSchemaValidator.cs`
 
-- [ ] **DATA-03** ❌ builtin-profiles.json Schema-Mismatch: Daten=Array, Schema erwartet Object  
-  📁 `data/builtin-profiles.json` vs `data/schemas/profiles.schema.json`
+- [x] **DATA-03** ✅ builtin-profiles.json Schema-Mismatch behoben (Schema auf reales Array-Modell angepasst)  
+  📁 `data/builtin-profiles.json`, `data/schemas/profiles.schema.json`
 
-- [ ] **DATA-04** ❌ NKit-Widerspruch: `lossless=true` aber `resultIntegrity=Lossy`  
+- [x] **DATA-04** ✅ NKit-Widerspruch behoben (`lossless=false` bei lossy NKit-Capabilities)  
   📁 `data/conversion-registry.json:145-175`
 
-- [ ] **DATA-05** ❌ `.rom` Extension unscored in format-scores.json aber in defaults.json gelistet  
-  📁 `data/format-scores.json` (kein Eintrag) vs `data/defaults.json:3`
+- [x] **DATA-05** ✅ `.rom` Extension in format-scores.json ergänzt  
+  📁 `data/format-scores.json`, `data/defaults.json:3`
 
 - [x] **DATA-06** ✅ SCAN-Region: Korrekt normalisiert → EU in RegionDetector  
   📁 `src/Romulus.Core/Regions/RegionDetector.cs:192`
@@ -134,39 +134,39 @@
 - [x] **DATA-07** ✅ FR-i18n Branding korrigiert: "Romulus" statt "ROM Cleanup"  
   📁 `data/i18n/fr.json`
 
-- [ ] **DATA-08** ⚠️ FormatScoringProfile/UiLookupData: Lazy-Singletons mit stillem Fallback auf Empty  
-  📁 `src/Romulus.Infrastructure/Orchestration/FormatScoringProfile.cs:6`
+- [x] **DATA-08** ✅ Lazy-Singleton-Fallbacks gehärtet: kein stilles Verschlucken mehr, deterministisches Logging + Fallback  
+  📁 `src/Romulus.Infrastructure/Orchestration/FormatScoringProfile.cs`, `src/Romulus.UI.Wpf/Services/UiLookupData.cs`
 
-- [ ] **DATA-09** ⚠️ ValidateSettingsStructure: Lehnt unbekannte Top-Level-Keys ab (kein Extensibility)  
+- [x] **DATA-09** ✅ ValidateSettingsStructure erlaubt unbekannte Top-Level-Keys (Extensibility)  
   📁 `src/Romulus.Infrastructure/Configuration/SettingsLoader.cs:191-192`
 
-- [ ] **DATA-10** ❌ RomulusSettings: Kein `rules`-Feld → User-Rules-Overrides werden ignoriert  
-  📁 `src/Romulus.Contracts/Models/RomulusSettings.cs:9-18`
+- [x] **DATA-10** ✅ RomulusSettings enthält `Rules`; User-Rules-Overrides werden gemerged  
+  📁 `src/Romulus.Contracts/Models/RomulusSettings.cs:9-18`, `src/Romulus.Infrastructure/Configuration/SettingsLoader.cs`
 
 - [x] **DATA-11** ✅ StartupDataSchemaValidator erweitert (inkl. console-maps/format-scores/tool-hashes/ui-lookups)  
   📁 `src/Romulus.Infrastructure/Configuration/StartupDataSchemaValidator.cs`
 
-- [ ] **DATA-12** ❌ i18n-Fallback ist "de" statt "en" – Französisch fällt auf Deutsch zurück  
-  📁 `src/Romulus.UI.Wpf/Services/LocalizationService.cs:63-69`
+- [x] **DATA-12** ✅ i18n-Fallback auf Englisch als Base umgestellt  
+  📁 `src/Romulus.UI.Wpf/Services/LocalizationService.cs:63-69`, `src/Romulus.UI.Wpf/Services/FeatureService.Infra.cs`
 
 ---
 
 ## 4. DI / Startup (10)
 
-- [ ] **DI-01** ❌ CLI: Kein DI-Container, alles manuell `new`  
+- [x] **DI-01** ✅ CLI: DI-Composition-Root via `ServiceCollection`/`BuildServiceProvider` eingeführt und im Run/Subcommand-Pfad verdrahtet  
   📁 `src/Romulus.CLI/Program.cs:246,368-723`
 
-- [ ] **DI-02** ❌ API Rollback-Endpoint: `new AuditSigningService(...)` umgeht DI  
-  📁 `src/Romulus.Api/Program.cs:488`
+- [x] **DI-02** ✅ API Rollback-Endpoints nutzen injizierten `AuditSigningService`  
+  📁 `src/Romulus.Api/Program.cs:488`, `src/Romulus.Api/Program.RunWatchEndpoints.cs`
 
-- [ ] **DI-03** ⚠️ API ProgramHelpers: Kein direkter RunEnvironmentFactory-Bypass gefunden  
-  📁 `src/Romulus.Api/ProgramHelpers.cs` (nur Utility-Methoden)
+- [x] **DI-03** ✅ ProgramHelpers nutzt injizierte `IRunEnvironmentFactory` (kein `new RunEnvironmentFactory()` mehr)  
+  📁 `src/Romulus.Api/ProgramHelpers.cs`, `src/Romulus.Api/Program.RunWatchEndpoints.cs`
 
 - [ ] **DI-04** ⚠️ WPF RunService: Constructor-Fallback zu `new RunEnvironmentFactory()` (kommentiert als DI-BYPASS-JUSTIFIED)  
   📁 `src/Romulus.UI.Wpf/Services/RunService.cs:35-43`
 
-- [ ] **DI-05** ❌ WPF FeatureCommandService.Collection: `new FileSystemAdapter()`, `new AuditCsvStore()`  
-  📁 `src/Romulus.UI.Wpf/Services/FeatureCommandService.Collection.cs:78,99`
+- [ ] **DI-05** ⚠️ FeatureCommandService.Collection nutzt zentrale Felder; Fallback-`new` verbleibt nur noch im Service-Constructor  
+  📁 `src/Romulus.UI.Wpf/Services/FeatureCommandService.Collection.cs`, `src/Romulus.UI.Wpf/Services/FeatureCommandService.cs`
 
 - [x] **DI-06** ✅ PersistedReviewDecisionService wird beim API-Shutdown explizit disposed  
   📁 `src/Romulus.Api/Program.cs`
@@ -180,20 +180,20 @@
 - [x] **DI-09** ✅ ApiAutomationService wird beim API-Shutdown explizit disposed  
   📁 `src/Romulus.Api/Program.cs`, `src/Romulus.Api/ApiAutomationService.cs`
 
-- [ ] **DI-10** ⚠️ API RunManager: Nicht IDisposable, besitzt aber RunLifecycleManager  
+- [x] **DI-10** ✅ API RunManager ist `IDisposable` und führt best-effort Shutdown bei Dispose aus  
   📁 `src/Romulus.Api/RunManager.cs:18,42`
 
 ---
 
 ## 5. Error Handling (9)
 
-- [ ] **ERR-01** ⚠️ Bare `catch {}` in Produktionscode (AppStateStore mit Kommentar)  
+- [x] **ERR-01** ✅ Bare `catch {}` entfernt; Watcher-Exceptions werden explizit geloggt  
   📁 `src/Romulus.Infrastructure/State/AppStateStore.cs:139`
 
-- [ ] **ERR-02** ❌ Silent Exception Swallowing in AppStateStore  
+- [x] **ERR-02** ✅ Silent Swallowing beseitigt (`Trace`-Logging pro Watcher-Fehler)  
   📁 `src/Romulus.Infrastructure/State/AppStateStore.cs:138-139`
 
-- [ ] **ERR-03** ⚠️ Fire-and-forget Task.Run in MainViewModel (hat try/catch, aber swallows)  
+- [x] **ERR-03** ✅ Fire-and-forget Catch-Pfad ohne stilles Verschlucken bereinigt  
   📁 `src/Romulus.UI.Wpf/ViewModels/MainViewModel.cs:230`
 
 - [ ] **ERR-04** ⚠️ Kein ILogger/Microsoft.Extensions.Logging – custom Action\<string\> Logging  
@@ -208,7 +208,7 @@
 - [ ] **ERR-07** ⚠️ API: Custom Error Format statt RFC 7807 Problem Details  
   📁 `src/Romulus.Api/Program.cs` (OperationErrorResponse)
 
-- [ ] **ERR-08** ⚠️ Sync-over-Async weitgehend reduziert, aber ein synchroner CLI-Compat-Wrapper (`awaiter.GetResult()`) verbleibt  
+- [x] **ERR-08** ✅ CLI Sync-over-Async `GetAwaiter().GetResult()` entfernt; produktiver Mapper-Pfad ist async (`MapAsync`)  
   📁 `src/Romulus.CLI/Program.cs:165`
 
 - [x] **ERR-09** ✅ Async void: Nur in WPF Event-Handlers (akzeptabel)  
@@ -221,22 +221,22 @@
 - [x] **TH-01** ✅ N64-Header-Repair auf stream-basiertes I/O umgestellt (kein `ReadAllBytes`)  
   📁 `src/Romulus.Infrastructure/Hashing/HeaderRepairService.cs`
 
-- [ ] **TH-02** ⚠️ Hash-Format: Inconsistenz `Convert.ToHexString` vs `ToHexStringLower`  
-  📁 `FileHashService.cs:216` vs `ParallelHasher.cs:28-31`
+- [x] **TH-02** ✅ Hash-Format vereinheitlicht auf `Convert.ToHexStringLower(...)`  
+  📁 `src/Romulus.Infrastructure/Hashing/FileHashService.cs`, `src/Romulus.Infrastructure/Hashing/ParallelHasher.cs`
 
 - [x] **TH-03** ✅ FixedTimeHashEquals: `CryptographicOperations.FixedTimeEquals` korrekt  
   📁 `src/Romulus.Infrastructure/Conversion/ToolInvokerSupport.cs:95-100`
 
-- [ ] **TH-04** ❌ TOCTOU in `ToolRunnerAdapter.VerifyToolHash` (File-Swap zwischen Check und Open)  
+- [x] **TH-04** ✅ VerifyToolHash gehärtet: Hashing über geöffneten Handle + Change-Check vor/nach Hash  
   📁 `src/Romulus.Infrastructure/Tools/ToolRunnerAdapter.cs:673-693`
 
 - [x] **TH-05** ✅ ChdmanToolConverter: Alle InvokeProcess-Calls nutzen ToolRequirement  
   📁 `src/Romulus.Infrastructure/Conversion/ChdmanToolConverter.cs:64,87,121,185,239`
 
-- [ ] **TH-06** ⚠️ PENDING-VERIFY Marker entfernt und ECM-Capability deaktiviert, aber verifizierte produktive Hash-Werte fuer unecm/flips/xdelta stehen noch aus  
+- [x] **TH-06** ✅ Unverifizierte Platzhalter-Hashes fuer `unecm/flips/xdelta` entfernt (Tools bleiben bis verifizierter Hash bewusst deaktiviert)  
   📁 `data/tool-hashes.json`, `data/conversion-registry.json`
 
-- [ ] **TH-07** ⚠️ Invoke7z: `VerifyToolHash(path, requirement: null)` – kein spezifisches Requirement  
+- [x] **TH-07** ✅ Invoke7z nutzt explizites `ToolRequirement { ToolName = "7z" }`  
   📁 `src/Romulus.Infrastructure/Tools/ToolRunnerAdapter.cs:296-305`
 
 - [x] **TH-08** ✅ ArchiveHashService: Cache-Invalidierung via LastWriteTimeUtc + Length  
@@ -248,13 +248,13 @@
 - [x] **TH-10** ✅ SNES-Header-Repair auf stream-basiertes I/O umgestellt (kein `ReadAllBytes`)  
   📁 `src/Romulus.Infrastructure/Hashing/HeaderRepairService.cs`
 
-- [ ] **TH-11** ❌ ToolRunnerAdapter: Doppelte Hash-Prüfung (ToolInvokerSupport + VerifyToolHash)  
-  📁 `ToolInvokerSupport.cs:15-17` + `ToolRunnerAdapter.cs:663`
+- [x] **TH-11** ✅ Doppelte Hash-Prüfung im Produktionspfad entfernt (Invokers überspringen Constraint-Hash wenn ToolRunnerAdapter verifiziert)  
+  📁 `src/Romulus.Infrastructure/Conversion/ToolInvokers/ToolInvokerSupport.cs`, `src/Romulus.Infrastructure/Conversion/ToolInvokers/*Invoker.cs`
 
-- [ ] **TH-12** ❌ EcmInvoker/NkitInvoker: Verify nur FileExists + Length>0  
-  📁 `src/Romulus.Infrastructure/Conversion/EcmInvoker.cs:56-65`, `NkitInvoker.cs:73-82`
+- [x] **TH-12** ✅ EcmInvoker/NkitInvoker Verify gehärtet (Payload-Magic/Größen-Sanity statt nur Exists+Length)  
+  📁 `src/Romulus.Infrastructure/Conversion/ToolInvokers/EcmInvoker.cs`, `src/Romulus.Infrastructure/Conversion/ToolInvokers/NkitInvoker.cs`
 
-- [ ] **TH-13** ❌ Crc32: Kein CancellationToken – nicht unterbrechbar  
+- [x] **TH-13** ✅ Crc32 bietet cancellation-aware Overloads (`HashFile/HashStream` mit `CancellationToken`)  
   📁 `src/Romulus.Infrastructure/Hashing/Crc32.cs:31-47`
 
 ---
@@ -279,10 +279,10 @@
 - [ ] **ORC-06** ⚠️ PhaseMetricsCollector: Auto-Complete kann Phase-Zeit falsch zuordnen  
   📁 `src/Romulus.Infrastructure/Metrics/PhaseMetricsCollector.cs:47`
 
-- [ ] **ORC-07** ❌ EvictOldRuns: Kann Run evicten während WaitForCompletion-Watcher noch referenziert  
+- [x] **ORC-07** ✅ Eviction-Schutz ergänzt (`MinimumEvictionAge`) um aktive WaitForCompletion-Races zu vermeiden  
   📁 `src/Romulus.Api/RunLifecycleManager.cs:346-360`
 
-- [ ] **ORC-08** ❌ Preflight Probe: Bare `File.WriteAllText`/`File.Delete` statt IFileSystem  
+- [x] **ORC-08** ✅ Preflight Probe verwendet IFileSystem-Port (`WriteAllText/DeleteFile`)  
   📁 `src/Romulus.Infrastructure/Orchestration/RunOrchestrator.cs:173`
 
 - [x] **ORC-09** ✅ DedupePhase: 0 Candidates → leere Groups, CompletePhase(0) sauber  
@@ -295,7 +295,7 @@
 
 ## 8. Final Sweep – R8 (6)
 
-- [ ] **FIN-01** ❌ DatCatalogState: Case-Insensitive Comparer geht bei JSON-Roundtrip verloren  
+- [x] **FIN-01** ✅ DatCatalogState: Case-Insensitive Comparer nach Deserialize explizit rehydratisiert  
   📁 `src/Romulus.Infrastructure/Dat/DatCatalogStateService.cs` (Deserialize)
 
 - [ ] **FIN-02** ⚠️ OperationResult: Mutable Collections in Contracts (intentional, dokumentiert)  
@@ -304,14 +304,14 @@
 - [ ] **FIN-03** ❌ QuarantineModels: Vollständig mutable (`{ get; set; }`)  
   📁 `src/Romulus.Contracts/Models/QuarantineModels.cs:3-58`
 
-- [ ] **FIN-04** ❌ BenchmarkFixture: Sync I/O unter Lock in IAsyncLifetime  
-  📁 `src/Romulus.Tests/BenchmarkFixture.cs:24-49`
+- [x] **FIN-04** ✅ BenchmarkFixture: Init-Synchronisation auf `SemaphoreSlim`/`await` umgestellt (kein `lock`-Block)  
+  📁 `src/Romulus.Tests/Benchmark/BenchmarkFixture.cs:24-49`
 
-- [ ] **FIN-05** ❌ xunit maxParallelThreads=-1: Verschärft bekannten Parity-Flake  
+- [x] **FIN-05** ✅ xunit maxParallelThreads begrenzt (`1`)  
   📁 `src/Romulus.Tests/xunit.runner.json:2`
 
-- [ ] **FIN-06** ❌ JSON-Output: Default-Escaping für Non-ASCII (keine UnsafeRelaxedJsonEscaping)  
-  📁 Projekt-weit: `JsonSerializerOptions` ohne Encoder-Override
+- [ ] **FIN-06** ⚠️ JSON-Output: User-facing API/CLI-Pfade auf `UnsafeRelaxedJsonEscaping` umgestellt; projektweit noch nicht vollständig vereinheitlicht  
+  📁 `src/Romulus.Api/Program.cs`, `src/Romulus.CLI/CliOutputWriter.cs`
 
 ---
 
@@ -320,16 +320,16 @@
 - [x] **SORT-01** ✅ DryRun Set-Path validiert vollständige Auflösung vor Move-Zählung (Preview≈Execute)  
   📁 `src/Romulus.Infrastructure/Sorting/ConsoleSorter.cs`
 
-- [ ] **SORT-02** ❌ M3U-Content: Wird nach Set-Moves nicht umgeschrieben  
-  📁 `src/Romulus.Infrastructure/Sorting/ConsoleSorter.cs` (kein M3U-Rewrite)
-
-- [ ] **SORT-03** ⚠️ Set-Membership: Überlappende Sets nur per Extension-Lookup (simplistisch)  
+- [x] **SORT-02** ✅ M3U-Content wird nach atomarem Set-Move konsistent umgeschrieben  
   📁 `src/Romulus.Infrastructure/Sorting/ConsoleSorter.cs`
 
-- [ ] **SORT-04** ❌ AuditCsvStore: Statische Lock-Dictionary wächst unbegrenzt  
+- [x] **SORT-03** ✅ Set-Membership deterministisch: überlappende Members werden genau einem Primary zugeordnet  
+  📁 `src/Romulus.Infrastructure/Sorting/ConsoleSorter.cs`
+
+- [x] **SORT-04** ✅ AuditCsvStore: statische Lock-Map über ref-counted Handles sauber freigegeben  
   📁 `src/Romulus.Infrastructure/Audit/AuditCsvStore.cs:14`
 
-- [ ] **SORT-05** ❌ ArchiveHashService: ZIP SHA1+CRC32 gemischt im Hash-Output  
+- [x] **SORT-05** ✅ ArchiveHashService: keine SHA1/CRC32-Mischung mehr im ZIP-Hash-Output  
   📁 `src/Romulus.Infrastructure/Hashing/ArchiveHashService.cs:191-199`
 
 ---
@@ -339,7 +339,7 @@
 - [x] **CORE-01** ✅ GameKeyNormalizer: Deterministische Normalisierung mit Disc-Padding  
   📁 `src/Romulus.Core/GameKeys/GameKeyNormalizer.cs`
 
-- [ ] **CORE-02** ❌ DeduplicationEngine: Unbekannter Console-Key Fallback/Grouping nicht klar definiert  
+- [x] **CORE-02** ✅ DeduplicationEngine: ConsoleKey-Normalisierung definiert (invalid/leer → `UNKNOWN`, gültige Keys kanonisch)  
   📁 `src/Romulus.Core/Deduplication/DeduplicationEngine.cs`
 
 - [x] **CORE-03** ✅ FormatScore: Deterministisch via FormatScorer mit registriertem Profil  
@@ -357,8 +357,8 @@
 - [ ] **CORE-07** ⚠️ SetParserIoResolver: I/O-Logik in Core (Architekturverstoß – bereits mit Interface gemildert)  
   📁 `src/Romulus.Core/SetParsing/SetParserIoResolver.cs`
 
-- [ ] **CORE-08** ❌ Disc-Padding Regression: Kein expliziter Test für "disc 001" vs "disc 1" Normalisierung  
-  📁 `src/Romulus.Tests/` (fehlende Regression)
+- [x] **CORE-08** ✅ Expliziter Regressionstest für "disc 001" vs "disc 1" vorhanden  
+  📁 `src/Romulus.Tests/TrackerAllFindingsBatch2RedTests.cs`
 
 ---
 
@@ -367,7 +367,7 @@
 - [x] **API-01** ✅ Global Exception Handler: `UseExceptionHandler` vorhanden  
   📁 `src/Romulus.Api/Program.cs:62-80`
 
-- [ ] **API-02** ❌ Einige Endpoint-Pfade leaken Exception-Messages in Response  
+- [x] **API-02** ✅ Endpoint-Fehlerpfade liefern sanitizte API-Messages; technische Exception-Details nur noch im Server-Log  
   📁 `src/Romulus.Api/Program.cs` (catch-Blöcke mit `ex.Message` in Response)
 
 - [x] **API-03** ✅ Path Security: `ValidatePathSecurity()` mit AllowedRoots für jeden Input  
@@ -376,13 +376,13 @@
 - [x] **API-04** ✅ API-Key Timing-Safe: FixedTimeEquals für Auth  
   📁 `src/Romulus.Api/Program.cs`
 
-- [ ] **API-05** ❌ Static Files: `wwwroot/` wird ausgeliefert (Angriffsfläche nicht minimiert)  
-  📁 `src/Romulus.Api/wwwroot/`
+- [x] **API-05** ✅ Static Files nicht mehr standardmäßig ausgeliefert (Angriffsfläche reduziert)  
+  📁 `src/Romulus.Api/Program.cs`
 
 - [ ] **API-06** ⚠️ RunRequest Case-Sensitivity: `HasProperty` jetzt case-insensitive (Fixed), aber Explicitness-Logik bleibt komplex  
   📁 `src/Romulus.Api/ApiRunConfigurationMapper.cs:103`
 
-- [ ] **API-07** ⚠️ DashboardDataBuilder: Parallele Scan-Logik statt DatCatalogStateService  
+- [x] **API-07** ✅ DashboardDataBuilder nutzt DatCatalogStateService-basierte DAT-Status-Logik  
   📁 `src/Romulus.Api/DashboardDataBuilder.cs:110-170`
 
 - [x] **API-08** ✅ Run-Lifecycle Tokenhandling bleibt cancelbar auch nach Disposal-Pfad  
@@ -398,20 +398,20 @@
 - [x] **TEST-02** ✅ Sicherheits-Tests: SafetyIoRecoveryTests, ApiSecurityTests umfangreich  
   📁 `src/Romulus.Tests/`
 
-- [ ] **TEST-03** ❌ BenchmarkFixture: Sync I/O unter Lock → potentieller Deadlock in Test-Infra  
-  📁 `src/Romulus.Tests/BenchmarkFixture.cs:24-49`
+- [x] **TEST-03** ✅ BenchmarkFixture ohne `lock`-Block in `InitializeAsync` (SemaphoreSlim-gated Init)  
+  📁 `src/Romulus.Tests/Benchmark/BenchmarkFixture.cs:24-49`
 
-- [ ] **TEST-04** ❌ xunit Parallelisierung: maxParallelThreads=-1 verschärft Flakes  
+- [x] **TEST-04** ✅ xunit Parallelisierung begrenzt (`maxParallelThreads=1`)  
   📁 `src/Romulus.Tests/xunit.runner.json`
 
-- [ ] **TEST-05** ❌ Parity-Test Flake: `HardCoreInvariantRegressionSuiteTests.Parity_GuiCliApi` intermittierend  
+- [x] **TEST-05** ✅ Parity-Suite in nicht-parallele Collection verschoben (`SerialExecution`)  
   📁 `src/Romulus.Tests/HardCoreInvariantRegressionSuiteTests.cs:1067`
 
 - [ ] **TEST-06** ⚠️ Große Test-Dateien: GuiViewModelTests.cs, ApiIntegrationTests.cs > 3000 Zeilen  
   📁 `src/Romulus.Tests/`
 
-- [ ] **TEST-07** ❌ Fehlender Disc-Padding Regressionstest  
-  📁 `src/Romulus.Tests/` (kein Test für "disc 001" vs "disc 1")
+- [x] **TEST-07** ✅ Disc-Padding Regressionstest vorhanden  
+  📁 `src/Romulus.Tests/TrackerAllFindingsBatch2RedTests.cs`
 
 ---
 
@@ -420,7 +420,7 @@
 - [x] **I18N-01** ✅ FR: Produktname auf "Romulus" korrigiert  
   📁 `data/i18n/fr.json`
 
-- [ ] **I18N-02** ❌ i18n-Fallback: Deutsch statt Englisch als Base (Policy-Entscheidung)  
+- [x] **I18N-02** ✅ i18n-Fallback nutzt Englisch als Base-Locale  
   📁 `src/Romulus.UI.Wpf/Services/LocalizationService.cs:63`
 
 - [x] **I18N-03** ✅ FR-Set strukturell vollständig (Key-Parität de/fr), verbleibende identische Werte deutlich reduziert  
@@ -435,8 +435,8 @@
 - [ ] **I18N-06** ⚠️ Theme/Defaults: Fest auf "de"/"dark" – kein System-Detection  
   📁 `data/defaults.json:19-20`, `src/Romulus.Contracts/Models/RomulusSettings.cs`
 
-- [ ] **I18N-07** ❌ JSON: Non-ASCII ROM-Namen mit `\uXXXX`-Escaping (kein UnsafeRelaxedJsonEscaping)  
-  📁 Projekt-weit: `JsonSerializerOptions`
+- [ ] **I18N-07** ⚠️ Non-ASCII JSON-Output für user-facing API/CLI-Pfade verbessert; projektweite Vereinheitlichung noch offen  
+  📁 `src/Romulus.Api/Program.cs`, `src/Romulus.CLI/CliOutputWriter.cs`
 
 ---
 
@@ -447,18 +447,18 @@
 - [x] **2. SORT-01**: DryRun/Execute Set-Divergenz → Preview-Parität sichern
 - [x] **3. ORC-10/API-08**: Disposed CancellationToken → sauberes Lifecycle-Management
 - [x] **4. EP-08**: API Profile PUT route≠body ID → explizite Validierung
-- [ ] **5. API-02**: Exception Leak in API Responses → Messages sanitizen
+- [x] **5. API-02**: Exception Leak in API Responses → Messages sanitizen
 
 ### Priorität 2 – Hohe Risiken
 - [x] **6. DI-06/07/08/09**: IDisposable Singletons → Explicit Dispose at Shutdown
-- [ ] **7. ERR-08**: Sync-over-Async → async-Kette durchziehen
+- [x] **7. ERR-08**: Sync-over-Async → async-Kette durchziehen
 - [x] **8. TH-01/10**: File.ReadAllBytes OOM → Stream-basiertes Lesen
-- [ ] **9. TH-06**: tool-hashes.json PENDING → echte Hashes eintragen oder Tools entfernen
+- [x] **9. TH-06**: tool-hashes.json PENDING → echte Hashes eintragen oder Tools entfernen
 - [x] **10. ORC-01**: Fire-and-Forget → Exceptions loggen
 
 ### Priorität 3 – Wartbarkeit
 - [x] **11. DATA-01/02/11**: Fehlende Schemas und Startup-Validierung erweitern
 - [x] **12. I18N-01/03/04**: FR-Übersetzungen vervollständigen, Converter-Strings lokalisieren
-- [ ] **13. DI-01**: CLI DI-Container einführen (größeres Refactoring)
-- [ ] **14. EP-12**: API Program.cs Endpoints extrahieren
-- [ ] **15. TEST-04/05**: xunit Parallelisierung tunen, Parity-Flake stabilisieren
+- [x] **13. DI-01**: CLI DI-Container einführen (größeres Refactoring)
+- [x] **14. EP-12**: API Program.cs Endpoints extrahieren
+- [x] **15. TEST-04/05**: xunit Parallelisierung tunen, Parity-Flake stabilisieren

@@ -23,6 +23,7 @@ namespace Romulus.Tests;
 /// Harte Kernfunktions-Invarianten + Regressionen (TDD Red Phase).
 /// Fokus: deterministische Kernentscheidungen, Safety, Recovery und Channel-Parity.
 /// </summary>
+[Collection("SerialExecution")]
 public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
 {
     private readonly string _tempDir;

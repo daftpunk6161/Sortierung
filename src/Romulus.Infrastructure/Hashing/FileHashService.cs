@@ -213,7 +213,7 @@ public sealed class FileHashService : IDisposable
         };
 
         var bytes = algo.ComputeHash(stream);
-        return Convert.ToHexString(bytes).ToLowerInvariant();
+        return Convert.ToHexStringLower(bytes);
     }
 
     private static bool TryReadChdRawSha1(string path, out string? sha1)

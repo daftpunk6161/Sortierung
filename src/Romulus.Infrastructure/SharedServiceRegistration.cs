@@ -30,6 +30,11 @@ public static class SharedServiceRegistration
         services.AddSingleton<IClassificationIo, IO.ClassificationIo>();
         services.AddSingleton<IFileSystem, FileSystemAdapter>();
         services.AddSingleton<ITimeProvider, SystemTimeProvider>();
+        services.AddSingleton(sp =>
+            new AuditSigningService(
+                sp.GetRequiredService<IFileSystem>(),
+                _ => { },
+                AuditSecurityPaths.GetDefaultSigningKeyPath()));
         services.AddSingleton<IAuditStore>(sp =>
             new AuditCsvStore(
                 sp.GetRequiredService<IFileSystem>(),

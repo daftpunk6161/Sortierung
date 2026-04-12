@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Security.Cryptography;
+using System.Text.Encodings.Web;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
@@ -54,6 +55,11 @@ builder.Services.AddSingleton<RunLifecycleManager>(sp =>
     sp.GetRequiredService<RunManager>().Lifecycle);
 builder.Services.AddSingleton<ApiAutomationService>();
 builder.Services.AddOpenApi(OpenApiSpec.DocumentName, OpenApiSpec.Configure);
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    // FIN-06 / I18N-07: keep user-facing non-ASCII names readable in JSON output.
+    options.SerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+});
 
 var app = builder.Build();
 var timeProvider = app.Services.GetRequiredService<ITimeProvider>();
@@ -198,12 +204,6 @@ app.Use(async (ctx, next) =>
 
     await next();
 });
-
-if (headlessOptions.DashboardEnabled)
-{
-    app.UseDefaultFiles();
-    app.UseStaticFiles();
-}
 
 // --- Request Logging (P3-API-11) ---
 app.Use(async (ctx, next) =>
@@ -380,7 +380,7 @@ app.MapPost("/collections/merge/apply", async (
 
 app.MapPost("/collections/merge/rollback", async (
     HttpContext ctx,
-    IFileSystem fileSystem,
+    AuditSigningService auditSigningService,
     AllowedRootPathPolicy allowedRootPolicy,
     CancellationToken ct) =>
 {
@@ -411,8 +411,7 @@ app.MapPost("/collections/merge/rollback", async (
         return ApiError(400, SecurityErrorCodes.OutsideAllowedRoots, "Rollback paths are outside configured AllowedRoots.", ErrorKind.Critical);
     }
 
-    var signing = new AuditSigningService(fileSystem, keyFilePath: AuditSecurityPaths.GetDefaultSigningKeyPath());
-    var rollback = signing.Rollback(auditPath, rootSet.RestoreRoots, rootSet.CurrentRoots, dryRun: request.DryRun);
+    var rollback = auditSigningService.Rollback(auditPath, rootSet.RestoreRoots, rootSet.CurrentRoots, dryRun: request.DryRun);
     return Results.Ok(rollback);
 })
     .WithSummary("Rollback a collection merge audit using persisted root metadata")
@@ -549,7 +548,8 @@ app.MapPost("/dats/update", async (HttpContext ctx, AllowedRootPathPolicy allowe
         try { Directory.CreateDirectory(datRoot); }
         catch (Exception ex)
         {
-            return ApiError(500, ApiErrorCodes.DatRootCreateFailed, $"Cannot create DatRoot: {ex.Message}");
+            app.Logger.LogError(ex, "Failed to create DatRoot at '{DatRoot}'", datRoot);
+            return ApiError(500, ApiErrorCodes.DatRootCreateFailed, "Cannot create DatRoot.");
         }
     }
 
@@ -618,7 +618,8 @@ app.MapPost("/dats/update", async (HttpContext ctx, AllowedRootPathPolicy allowe
         catch (Exception ex) when (ex is InvalidOperationException or HttpRequestException or IOException)
         {
             failed++;
-            errors.Add($"{entry.Id}: {ex.Message}");
+            app.Logger.LogWarning(ex, "DAT update failed for catalog entry '{EntryId}'", entry.Id);
+            errors.Add($"{entry.Id}: download failed");
         }
     }
 
@@ -706,11 +707,13 @@ app.MapPost("/dats/import", async (HttpContext ctx, AllowedRootPathPolicy allowe
     }
     catch (InvalidOperationException ex)
     {
-        return ApiError(400, ApiErrorCodes.DatImportBlocked, ex.Message, ErrorKind.Critical);
+        app.Logger.LogWarning(ex, "DAT import blocked for source path '{SourcePath}'", sourcePath);
+        return ApiError(400, ApiErrorCodes.DatImportBlocked, "DAT import blocked by policy.", ErrorKind.Critical);
     }
     catch (IOException ex)
     {
-        return ApiError(500, ApiErrorCodes.DatImportIoError, $"Import failed: {ex.Message}");
+        app.Logger.LogError(ex, "DAT import failed for source path '{SourcePath}'", sourcePath);
+        return ApiError(500, ApiErrorCodes.DatImportIoError, "DAT import failed due to an I/O error.");
     }
 });
 

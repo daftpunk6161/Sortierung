@@ -9,8 +9,8 @@
   "useDat": true,
   "hashType": "SHA1",
   "datFallback": true,
-  "theme": "dark",
-  "locale": "de",
+  "theme": "auto",
+  "locale": "auto",
   "healthScoreWeights": {
     "baseScoreMax": 100.0,
     "junkPenaltyCap": 30.0,

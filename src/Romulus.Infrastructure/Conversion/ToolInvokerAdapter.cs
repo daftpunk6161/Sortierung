@@ -47,7 +47,8 @@ public sealed class ToolInvokerAdapter(IToolRunner tools) : IToolInvoker
             return new ToolInvocationResult(false, null, -1, null, $"tool-not-found:{toolName}", 0, VerificationStatus.VerifyNotAvailable);
         }
 
-        var toolConstraintError = ValidateToolConstraints(toolPath, capability.Tool);
+        var skipHashConstraintValidation = ToolInvokerSupport.ShouldSkipHashConstraintValidation(_tools);
+        var toolConstraintError = ValidateToolConstraints(toolPath, capability.Tool, skipHashConstraintValidation);
         if (toolConstraintError is not null)
         {
             return new ToolInvocationResult(false, null, -1, null, toolConstraintError, 0, VerificationStatus.VerifyNotAvailable);
@@ -151,8 +152,8 @@ public sealed class ToolInvokerAdapter(IToolRunner tools) : IToolInvoker
     private static string? ReadSafeCommandToken(string rawCommand)
         => ToolInvokerSupport.ReadSafeCommandToken(rawCommand);
 
-    private static string? ValidateToolConstraints(string toolPath, ToolRequirement requirement)
-        => ToolInvokerSupport.ValidateToolConstraints(toolPath, requirement);
+    private static string? ValidateToolConstraints(string toolPath, ToolRequirement requirement, bool skipExpectedHashValidation)
+        => ToolInvokerSupport.ValidateToolConstraints(toolPath, requirement, skipExpectedHashValidation);
 
     private VerificationStatus VerifyChd(string targetPath)
     {

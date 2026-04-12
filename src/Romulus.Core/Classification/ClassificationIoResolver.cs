@@ -3,28 +3,24 @@ using Romulus.Contracts.Ports;
 
 namespace Romulus.Core.Classification;
 
-internal static class ClassificationIoResolver
+public static class ClassificationIoResolver
 {
-    private static readonly Lazy<IClassificationIo> DefaultIo = new(CreateDefaultIo, LazyThreadSafetyMode.ExecutionAndPublication);
+    private static readonly object DefaultGate = new();
+    private static Lazy<IClassificationIo> _defaultIo = new(CreateUnconfiguredIo, LazyThreadSafetyMode.ExecutionAndPublication);
+
+    public static void ConfigureDefault(Func<IClassificationIo> factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+
+        lock (DefaultGate)
+            _defaultIo = new Lazy<IClassificationIo>(factory, LazyThreadSafetyMode.ExecutionAndPublication);
+    }
 
     internal static IClassificationIo Resolve(IClassificationIo? io)
-        => io ?? DefaultIo.Value;
+        => io ?? _defaultIo.Value;
 
-    private static IClassificationIo CreateDefaultIo()
-    {
-        try
-        {
-            var adapterType = Type.GetType("Romulus.Infrastructure.IO.ClassificationIo, Romulus.Infrastructure", throwOnError: false);
-            if (adapterType is not null && Activator.CreateInstance(adapterType) is IClassificationIo adapter)
-                return adapter;
-        }
-        catch
-        {
-            // Fall back to explicit injection path.
-        }
-
-        return new UnconfiguredClassificationIo();
-    }
+    private static IClassificationIo CreateUnconfiguredIo()
+        => new UnconfiguredClassificationIo();
 
     private sealed class UnconfiguredClassificationIo : IClassificationIo
     {

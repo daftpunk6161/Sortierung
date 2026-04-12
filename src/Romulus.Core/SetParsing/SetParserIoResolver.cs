@@ -2,28 +2,24 @@ using Romulus.Contracts.Ports;
 
 namespace Romulus.Core.SetParsing;
 
-internal static class SetParserIoResolver
+public static class SetParserIoResolver
 {
-    private static readonly Lazy<ISetParserIo> DefaultIo = new(CreateDefaultIo, LazyThreadSafetyMode.ExecutionAndPublication);
+    private static readonly object DefaultGate = new();
+    private static Lazy<ISetParserIo> _defaultIo = new(CreateUnconfiguredIo, LazyThreadSafetyMode.ExecutionAndPublication);
+
+    public static void ConfigureDefault(Func<ISetParserIo> factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+
+        lock (DefaultGate)
+            _defaultIo = new Lazy<ISetParserIo>(factory, LazyThreadSafetyMode.ExecutionAndPublication);
+    }
 
     internal static ISetParserIo Resolve(ISetParserIo? io)
-        => io ?? DefaultIo.Value;
+        => io ?? _defaultIo.Value;
 
-    private static ISetParserIo CreateDefaultIo()
-    {
-        try
-        {
-            var adapterType = Type.GetType("Romulus.Infrastructure.IO.SetParserIo, Romulus.Infrastructure", throwOnError: false);
-            if (adapterType is not null && Activator.CreateInstance(adapterType) is ISetParserIo adapter)
-                return adapter;
-        }
-        catch
-        {
-            // Fall back to explicit injection path.
-        }
-
-        return new UnconfiguredSetParserIo();
-    }
+    private static ISetParserIo CreateUnconfiguredIo()
+        => new UnconfiguredSetParserIo();
 
     private sealed class UnconfiguredSetParserIo : ISetParserIo
     {

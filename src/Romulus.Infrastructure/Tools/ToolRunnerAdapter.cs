@@ -298,7 +298,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
         if (!File.Exists(sevenZipPath))
             return new ToolResult(-1, "7z: executable not found", false);
 
-        if (!VerifyToolHash(sevenZipPath, requirement: null))
+        if (!VerifyToolHash(sevenZipPath, requirement: new ToolRequirement { ToolName = "7z" }))
             return new ToolResult(-1, "7z: hash verification failed", false);
 
         return RunProcess(sevenZipPath, arguments, "7z", timeout: null, cancellationToken: CancellationToken.None);
@@ -668,26 +668,47 @@ public sealed class ToolRunnerAdapter : IToolRunner
             return false;
         }
 
-        // PERF-02: Cache tool hash with LastWriteTime + FileLength check (Issue #22)
         var fullPath = Path.GetFullPath(toolPath);
-        var fileInfo = new FileInfo(fullPath);
-        var lastWrite = fileInfo.LastWriteTimeUtc;
-        var fileLength = fileInfo.Length;
-        if (_hashCache.TryGetValue(fullPath, out var cached)
-            && cached.LastWriteUtc == lastWrite
-            && cached.Length == fileLength)
+
+        try
         {
-            return ToolInvokerSupport.FixedTimeHashEquals(cached.Hash, expectedHash);
+            // PERF-02: Cache tool hash with LastWriteTime + FileLength check (Issue #22)
+            if (_hashCache.TryGetValue(fullPath, out var cached))
+            {
+                var cachedLastWrite = File.GetLastWriteTimeUtc(fullPath);
+                using var cachedStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1, FileOptions.SequentialScan);
+                var cachedLength = cachedStream.Length;
+
+                if (cached.LastWriteUtc == cachedLastWrite && cached.Length == cachedLength)
+                    return ToolInvokerSupport.FixedTimeHashEquals(cached.Hash, expectedHash);
+            }
+
+            // TH-04: Open the file first with FileShare.Read and hash that specific handle.
+            // This reduces file-swap TOCTOU risk between metadata check and hash read.
+            using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.SequentialScan);
+            var lengthBeforeHash = stream.Length;
+            var lastWriteBeforeHash = File.GetLastWriteTimeUtc(fullPath);
+
+            using var sha256 = SHA256.Create();
+            var hashBytes = sha256.ComputeHash(stream);
+            var actualHash = Convert.ToHexStringLower(hashBytes);
+
+            var lastWriteAfterHash = File.GetLastWriteTimeUtc(fullPath);
+            var lengthAfterHash = new FileInfo(fullPath).Length;
+            if (lastWriteAfterHash != lastWriteBeforeHash || lengthAfterHash != lengthBeforeHash)
+            {
+                _log?.Invoke($"[SECURITY] Tool binary changed during hash verification: {fileName}");
+                return false;
+            }
+
+            _hashCache[fullPath] = (actualHash, lastWriteAfterHash, lengthAfterHash);
+            return ToolInvokerSupport.FixedTimeHashEquals(actualHash, expectedHash);
         }
-
-        using var sha256 = SHA256.Create();
-        using var stream = File.OpenRead(toolPath);
-        var hashBytes = sha256.ComputeHash(stream);
-        var actualHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-
-        _hashCache[fullPath] = (actualHash, lastWrite, fileLength);
-
-        return ToolInvokerSupport.FixedTimeHashEquals(actualHash, expectedHash);
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log?.Invoke($"[SECURITY] Tool hash verification failed for {fileName}: {ex.Message}");
+            return false;
+        }
     }
 
     private void EnsureToolHashesLoaded()

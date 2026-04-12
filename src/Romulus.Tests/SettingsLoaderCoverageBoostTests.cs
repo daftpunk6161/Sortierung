@@ -144,7 +144,7 @@ public sealed class SettingsLoaderCoverageBoostTests : IDisposable
         var json = """{"unknown1":1,"general":"wrong","dat":"wrong","unknown2":2}""";
         var errors = SettingsLoader.ValidateSettingsStructure(json);
 
-        Assert.True(errors.Count >= 3);
+        Assert.True(errors.Count >= 2);
     }
 
     [Fact]

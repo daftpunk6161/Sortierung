@@ -715,10 +715,16 @@ public sealed class HygieneCleanupRegressionTests
     public void ApiReviewApproval_UsesTypeInfoDeserialization()
     {
         var srcDir = ResolveSrcDir();
-        var codePath = Path.Combine(srcDir, "Romulus.Api", "Program.cs");
-        Assert.True(File.Exists(codePath), $"Missing file: {codePath}");
+        var programPaths = new[]
+        {
+            Path.Combine(srcDir, "Romulus.Api", "Program.cs"),
+            Path.Combine(srcDir, "Romulus.Api", "Program.RunWatchEndpoints.cs")
+        };
 
-        var code = File.ReadAllText(codePath);
+        var existingFiles = programPaths.Where(File.Exists).ToArray();
+        Assert.NotEmpty(existingFiles);
+
+        var code = string.Join("\n", existingFiles.Select(File.ReadAllText));
 
         Assert.DoesNotContain("ReadFromJsonAsync<ApiReviewApprovalRequest>()", code, StringComparison.Ordinal);
         Assert.Contains("ReadFromJsonAsync(ApiJsonSerializerContext.Default.ApiReviewApprovalRequest)", code, StringComparison.Ordinal);

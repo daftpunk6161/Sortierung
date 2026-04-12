@@ -105,9 +105,16 @@ public sealed class Block2_SecurityHardeningTests : IDisposable
         using var doc = JsonDocument.Parse(File.ReadAllText(hashesPath));
         var tools = doc.RootElement.GetProperty("Tools");
 
-        Assert.True(tools.TryGetProperty("unecm.exe", out _), "tool-hashes.json must pin unecm.exe");
-        Assert.True(tools.TryGetProperty("flips.exe", out _), "tool-hashes.json must pin flips.exe");
-        Assert.True(tools.TryGetProperty("xdelta3.exe", out _), "tool-hashes.json must pin xdelta3.exe");
+        Assert.True(tools.TryGetProperty("7z.exe", out _), "tool-hashes.json must pin 7z.exe");
+        Assert.True(tools.TryGetProperty("psxtract.exe", out _), "tool-hashes.json must pin psxtract.exe");
+        Assert.True(tools.TryGetProperty("chdman.exe", out _), "tool-hashes.json must pin chdman.exe");
+        Assert.True(tools.TryGetProperty("dolphintool.exe", out _), "tool-hashes.json must pin dolphintool.exe");
+        Assert.True(tools.TryGetProperty("ciso.exe", out _), "tool-hashes.json must pin ciso.exe");
+        Assert.True(tools.TryGetProperty("nkitprocessingapp.exe", out _), "tool-hashes.json must pin nkitprocessingapp.exe");
+
+        Assert.False(tools.TryGetProperty("unecm.exe", out _), "unecm.exe must stay disabled until a verified production hash is available.");
+        Assert.False(tools.TryGetProperty("flips.exe", out _), "flips.exe must stay disabled until a verified production hash is available.");
+        Assert.False(tools.TryGetProperty("xdelta3.exe", out _), "xdelta3.exe must stay disabled until a verified production hash is available.");
     }
 
     [Fact]

@@ -1,11 +1,19 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://romulus.local/schemas/profiles.schema.json",
-  "type": "object",
-  "required": ["schemaVersion", "profiles"],
-  "properties": {
-    "schemaVersion": { "type": "string" },
-    "profiles": { "type": "object" }
-  },
-  "additionalProperties": false
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["version", "id", "name"],
+    "properties": {
+      "version": { "type": "integer", "minimum": 1 },
+      "id": { "type": "string", "minLength": 1 },
+      "name": { "type": "string", "minLength": 1 },
+      "description": { "type": "string" },
+      "builtIn": { "type": "boolean" },
+      "tags": { "type": "array", "items": { "type": "string" } },
+      "settings": { "type": "object" }
+    },
+    "additionalProperties": false
+  }
 }

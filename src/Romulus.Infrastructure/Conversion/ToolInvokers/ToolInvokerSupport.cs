@@ -3,17 +3,21 @@ using System.Security.Cryptography;
 using System.Text;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
+using Romulus.Infrastructure.Tools;
 
 namespace Romulus.Infrastructure.Conversion.ToolInvokers;
 
 internal static class ToolInvokerSupport
 {
-    public static string? ValidateToolConstraints(string toolPath, ToolRequirement requirement)
+    public static string? ValidateToolConstraints(
+        string toolPath,
+        ToolRequirement requirement,
+        bool skipExpectedHashValidation = false)
     {
         if (!File.Exists(toolPath))
             return "tool-not-found-on-disk";
 
-        if (!string.IsNullOrWhiteSpace(requirement.ExpectedHash))
+        if (!skipExpectedHashValidation && !string.IsNullOrWhiteSpace(requirement.ExpectedHash))
         {
             var actualHash = ComputeSha256(toolPath);
             if (!FixedTimeHashEquals(actualHash, requirement.ExpectedHash))
@@ -89,7 +93,7 @@ internal static class ToolInvokerSupport
         using var sha256 = SHA256.Create();
         using var stream = File.OpenRead(filePath);
         var bytes = sha256.ComputeHash(stream);
-        return Convert.ToHexString(bytes).ToLowerInvariant();
+        return Convert.ToHexStringLower(bytes);
     }
 
     internal static bool FixedTimeHashEquals(string actualHash, string expectedHash)
@@ -98,6 +102,9 @@ internal static class ToolInvokerSupport
         var expected = Encoding.ASCII.GetBytes(expectedHash.ToLowerInvariant());
         return CryptographicOperations.FixedTimeEquals(actual, expected);
     }
+
+    internal static bool ShouldSkipHashConstraintValidation(IToolRunner toolRunner)
+        => toolRunner is ToolRunnerAdapter;
 
     private static System.Version? TryReadFileVersion(string toolPath)
     {

@@ -12,6 +12,9 @@
     <InternalsVisibleTo Include="Romulus.Tests" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Romulus.Core\Romulus.Core.csproj" />
     <ProjectReference Include="..\Romulus.Contracts\Romulus.Contracts.csproj" />
     <ProjectReference Include="..\Romulus.Infrastructure\Romulus.Infrastructure.csproj" />

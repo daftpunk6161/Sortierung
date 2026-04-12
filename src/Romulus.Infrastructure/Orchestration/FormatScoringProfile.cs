@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Diagnostics;
 using Romulus.Core.Scoring;
 
 namespace Romulus.Infrastructure.Orchestration;
@@ -26,7 +27,10 @@ public static class FormatScoringProfile
         {
             var filePath = ResolveFormatScoresPath();
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                Trace.WriteLine("[FormatScoringProfile] format-scores.json missing; falling back to built-in FormatScorer defaults.");
                 return FormatScoreData.Empty;
+            }
 
             using var doc = JsonDocument.Parse(File.ReadAllText(filePath));
             var root = doc.RootElement;
@@ -36,12 +40,16 @@ public static class FormatScoringProfile
             var discExtensions = ParseStringArray(root, "discExtensions");
 
             if (formatScores.Count == 0)
+            {
+                Trace.WriteLine("[FormatScoringProfile] formatScores is empty; falling back to built-in FormatScorer defaults.");
                 return FormatScoreData.Empty;
+            }
 
             return new FormatScoreData(formatScores, setTypeScores, discExtensions);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
+            Trace.WriteLine($"[FormatScoringProfile] Failed to load format-scores.json: {ex.Message}. Falling back to built-in FormatScorer defaults.");
             return FormatScoreData.Empty;
         }
     }

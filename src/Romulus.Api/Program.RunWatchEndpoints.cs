@@ -8,7 +8,6 @@ using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Analysis;
 using Romulus.Infrastructure.Audit;
-using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Profiles;
@@ -103,8 +102,8 @@ public partial class Program
     internal static void MapRunCompletenessEndpoints(WebApplication app, bool trustForwardedFor)
     {
         app.MapGet("/runs/{runId}/completeness",
-            (string runId, HttpContext ctx, RunLifecycleManager mgr, AllowedRootPathPolicy allowedRootPolicy, CancellationToken ct)
-                => HandleRunCompletenessAsync(runId, ctx, mgr, allowedRootPolicy, trustForwardedFor, ct));
+            (string runId, HttpContext ctx, RunLifecycleManager mgr, IRunEnvironmentFactory runEnvironmentFactory, AllowedRootPathPolicy allowedRootPolicy, CancellationToken ct)
+                => HandleRunCompletenessAsync(runId, ctx, mgr, runEnvironmentFactory, allowedRootPolicy, trustForwardedFor, ct));
 
         app.MapPost("/runs/{runId}/fixdat", (
             string runId,
@@ -112,9 +111,10 @@ public partial class Program
             [FromQuery] string? name,
             HttpContext ctx,
             RunLifecycleManager mgr,
+            IRunEnvironmentFactory runEnvironmentFactory,
             AllowedRootPathPolicy allowedRootPolicy,
             CancellationToken ct)
-                => HandleRunFixDatAsync(runId, outputPath, name, ctx, mgr, allowedRootPolicy, trustForwardedFor, ct))
+                => HandleRunFixDatAsync(runId, outputPath, name, ctx, mgr, runEnvironmentFactory, allowedRootPolicy, trustForwardedFor, ct))
             .WithSummary("Generate a FixDAT from run completeness and persist it to disk")
             .Produces(StatusCodes.Status200OK)
             .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
@@ -195,7 +195,8 @@ public partial class Program
             }
             catch (InvalidOperationException ex)
             {
-                return ApiError(400, ApiErrorCodes.RunInvalidConfig, ex.Message);
+                SafeConsoleWriteLine($"[API-WARN] Run configuration rejected: {ex.GetType().Name}");
+                return ApiError(400, ApiErrorCodes.RunInvalidConfig, "Run configuration is invalid.");
             }
         
             if (request.Roots is null || request.Roots.Length == 0)
@@ -512,7 +513,7 @@ public partial class Program
             .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
             .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound);
         
-        app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, string? dryRun, RunLifecycleManager mgr, AllowedRootPathPolicy allowedRootPolicy) =>
+        app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, string? dryRun, RunLifecycleManager mgr, AllowedRootPathPolicy allowedRootPolicy, AuditSigningService auditSigningService) =>
         {
             if (!Guid.TryParse(runId, out _))
                 return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
@@ -551,8 +552,7 @@ public partial class Program
                 return ApiError(400, SecurityErrorCodes.OutsideAllowedRoots, "Rollback paths are outside configured AllowedRoots.", ErrorKind.Critical, runId: runId);
             }
         
-            var signing = new AuditSigningService(new FileSystemAdapter(), keyFilePath: AuditSecurityPaths.GetDefaultSigningKeyPath());
-            var rollback = signing.Rollback(run.AuditPath, restoreRoots, currentRoots, dryRun: isDryRun);
+            var rollback = auditSigningService.Rollback(run.AuditPath, restoreRoots, currentRoots, dryRun: isDryRun);
         
             return Results.Ok(new
             {
@@ -737,7 +737,8 @@ public partial class Program
             }
             catch (InvalidOperationException ex)
             {
-                return ApiError(400, ApiErrorCodes.WatchInvalidConfig, ex.Message);
+                SafeConsoleWriteLine($"[API-WARN] Watch configuration rejected: {ex.GetType().Name}");
+                return ApiError(400, ApiErrorCodes.WatchInvalidConfig, "Watch configuration is invalid.");
             }
         
             if (request.Roots is null || request.Roots.Length == 0)
@@ -873,7 +874,13 @@ public partial class Program
                     var current = mgr.Get(runId);
                     if (current is null)
                     {
-                        await WriteSseEvent(writer, encoding, "error", CreateErrorResponse(ApiErrorCodes.RunNotFound, "Run not found.", ErrorKind.Recoverable, runId));
+                        await WriteSseEvent(writer, encoding, "error", CreateErrorResponse(
+                            StatusCodes.Status404NotFound,
+                            ApiErrorCodes.RunNotFound,
+                            "Run not found.",
+                            ErrorKind.Recoverable,
+                            runId,
+                            instance: $"/runs/{runId}/stream"));
                         break;
                     }
         

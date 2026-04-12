@@ -5,12 +5,12 @@ namespace Romulus.Contracts.Models;
 /// </summary>
 public sealed class QuarantineItem
 {
-    public string FilePath { get; set; } = "";
-    public string Console { get; set; } = "";
-    public string Format { get; set; } = "";
-    public string DatStatus { get; set; } = "";
-    public string Category { get; set; } = "";
-    public string HeaderStatus { get; set; } = "";
+    public string FilePath { get; init; } = "";
+    public string Console { get; init; } = "";
+    public string Format { get; init; } = "";
+    public string DatStatus { get; init; } = "";
+    public string Category { get; init; } = "";
+    public string HeaderStatus { get; init; } = "";
 }
 
 /// <summary>
@@ -18,8 +18,8 @@ public sealed class QuarantineItem
 /// </summary>
 public sealed class QuarantineRule
 {
-    public string Field { get; set; } = "";
-    public string Value { get; set; } = "";
+    public string Field { get; init; } = "";
+    public string Value { get; init; } = "";
 }
 
 /// <summary>
@@ -27,9 +27,9 @@ public sealed class QuarantineRule
 /// </summary>
 public sealed class QuarantineCandidateResult
 {
-    public bool IsCandidate { get; set; }
-    public List<string> Reasons { get; set; } = new();
-    public QuarantineItem Item { get; set; } = new();
+    public bool IsCandidate { get; init; }
+    public IReadOnlyList<string> Reasons { get; init; } = Array.Empty<string>();
+    public QuarantineItem Item { get; init; } = new();
 }
 
 /// <summary>
@@ -37,14 +37,14 @@ public sealed class QuarantineCandidateResult
 /// </summary>
 public sealed class QuarantineAction
 {
-    public string SourcePath { get; set; } = "";
-    public string TargetPath { get; set; } = "";
-    public string QuarantineDir { get; set; } = "";
-    public List<string> Reasons { get; set; } = new();
-    public string Mode { get; set; } = "DryRun";
-    public string Status { get; set; } = "Pending";
-    public string Timestamp { get; set; } = "";
-    public string? Error { get; set; }
+    public string SourcePath { get; init; } = "";
+    public string TargetPath { get; init; } = "";
+    public string QuarantineDir { get; init; } = "";
+    public IReadOnlyList<string> Reasons { get; init; } = Array.Empty<string>();
+    public string Mode { get; init; } = "DryRun";
+    public string Status { get; init; } = "Pending";
+    public string Timestamp { get; init; } = "";
+    public string? Error { get; init; }
 }
 
 /// <summary>
@@ -52,10 +52,10 @@ public sealed class QuarantineAction
 /// </summary>
 public sealed class QuarantineResult
 {
-    public int Processed { get; set; }
-    public int Moved { get; set; }
-    public int Errors { get; set; }
-    public List<QuarantineAction> Results { get; set; } = new();
+    public int Processed { get; init; }
+    public int Moved { get; init; }
+    public int Errors { get; init; }
+    public IReadOnlyList<QuarantineAction> Results { get; init; } = Array.Empty<QuarantineAction>();
 }
 
 /// <summary>
@@ -63,9 +63,9 @@ public sealed class QuarantineResult
 /// </summary>
 public sealed class QuarantineFileEntry
 {
-    public string Name { get; set; } = "";
-    public string Path { get; set; } = "";
-    public long Size { get; set; }
+    public string Name { get; init; } = "";
+    public string Path { get; init; } = "";
+    public long Size { get; init; }
 }
 
 /// <summary>
@@ -73,10 +73,11 @@ public sealed class QuarantineFileEntry
 /// </summary>
 public sealed class QuarantineContents
 {
-    public List<QuarantineFileEntry> Files { get; set; } = new();
-    public long TotalSize { get; set; }
-    public double TotalSizeMB { get; set; }
-    public Dictionary<string, List<QuarantineFileEntry>> DateGroups { get; set; } = new();
+    public IReadOnlyList<QuarantineFileEntry> Files { get; init; } = Array.Empty<QuarantineFileEntry>();
+    public long TotalSize { get; init; }
+    public double TotalSizeMB { get; init; }
+    public IReadOnlyDictionary<string, IReadOnlyList<QuarantineFileEntry>> DateGroups { get; init; } =
+        new Dictionary<string, IReadOnlyList<QuarantineFileEntry>>(StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>
@@ -84,8 +85,8 @@ public sealed class QuarantineContents
 /// </summary>
 public sealed class QuarantineRestoreResult
 {
-    public string Status { get; set; } = "";
-    public string? Reason { get; set; }
-    public string From { get; set; } = "";
-    public string To { get; set; } = "";
+    public string Status { get; init; } = "";
+    public string? Reason { get; init; }
+    public string From { get; init; } = "";
+    public string To { get; init; } = "";
 }

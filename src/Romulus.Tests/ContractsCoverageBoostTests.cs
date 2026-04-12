@@ -328,13 +328,13 @@ public sealed class ContractsCoverageBoostTests : IDisposable
     }
 
     [Fact]
-    public void OperationResult_MetaAndWarnings_Mutable()
+    public void OperationResult_Collections_UseControlledMutationMethods()
     {
         var result = OperationResult.Ok();
-        result.Meta["key"] = "value";
-        result.Warnings.Add("warning-1");
-        result.Metrics["time"] = 1.5;
-        result.Artifacts.Add("report.html");
+        result.SetMeta("key", "value")
+            .AddWarning("warning-1")
+            .SetMetric("time", 1.5)
+            .AddArtifact("report.html");
 
         Assert.Single(result.Meta);
         Assert.Single(result.Warnings);

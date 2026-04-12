@@ -38,7 +38,8 @@ public sealed class NkitInvoker(IToolRunner tools) : IToolInvoker
         if (string.IsNullOrWhiteSpace(toolPath))
             return ToolInvokerSupport.ToolNotFound("nkit");
 
-        var constraintError = ToolInvokerSupport.ValidateToolConstraints(toolPath, capability.Tool);
+        var skipHashConstraintValidation = ToolInvokerSupport.ShouldSkipHashConstraintValidation(_tools);
+        var constraintError = ToolInvokerSupport.ValidateToolConstraints(toolPath, capability.Tool, skipHashConstraintValidation);
         if (constraintError is not null)
             return ToolInvokerSupport.ConstraintFailure(constraintError);
 
@@ -75,9 +76,14 @@ public sealed class NkitInvoker(IToolRunner tools) : IToolInvoker
         try
         {
             var info = new FileInfo(targetPath);
-            return info.Exists && info.Length > 0
-                ? VerificationStatus.Verified
-                : VerificationStatus.VerifyFailed;
+            if (!info.Exists || info.Length <= 0)
+                return VerificationStatus.VerifyFailed;
+
+            // Expanded output must not still carry an NKit marker header.
+            if (LooksLikeNkitPayload(targetPath))
+                return VerificationStatus.VerifyFailed;
+
+            return VerificationStatus.Verified;
         }
         catch (IOException)
         {
@@ -86,6 +92,34 @@ public sealed class NkitInvoker(IToolRunner tools) : IToolInvoker
         catch (UnauthorizedAccessException)
         {
             return VerificationStatus.VerifyFailed;
+        }
+    }
+
+    private static bool LooksLikeNkitPayload(string path)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            if (stream.Length < 4)
+                return false;
+
+            Span<byte> header = stackalloc byte[4];
+            var read = stream.Read(header);
+            if (read != 4)
+                return false;
+
+            return header[0] == (byte)'N'
+                   && header[1] == (byte)'K'
+                   && header[2] == (byte)'I'
+                   && header[3] == (byte)'T';
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
         }
     }
 }

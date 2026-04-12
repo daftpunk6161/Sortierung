@@ -1,4 +1,5 @@
 using System.IO;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace Romulus.UI.Wpf.Services;
@@ -25,13 +26,22 @@ public sealed class UiLookupData
         UiLookupData result;
         if (!File.Exists(path))
         {
+            Trace.WriteLine("[UiLookupData] ui-lookups.json missing; using built-in defaults.");
             result = new UiLookupData();
         }
         else
         {
-            var json = File.ReadAllText(path);
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            result = JsonSerializer.Deserialize<UiLookupData>(json, options) ?? new UiLookupData();
+            try
+            {
+                var json = File.ReadAllText(path);
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                result = JsonSerializer.Deserialize<UiLookupData>(json, options) ?? new UiLookupData();
+            }
+            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+            {
+                Trace.WriteLine($"[UiLookupData] Failed to load ui-lookups.json: {ex.Message}. Using built-in defaults.");
+                result = new UiLookupData();
+            }
         }
 
         PopulateDefaults(result);

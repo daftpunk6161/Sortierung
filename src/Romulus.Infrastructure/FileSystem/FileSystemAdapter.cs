@@ -666,6 +666,15 @@ public sealed class FileSystemAdapter : IFileSystem
         File.Delete(fullPath);
     }
 
+    public void WriteAllText(string path, string content)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            throw new ArgumentException("Path must not be empty.", nameof(path));
+
+        var fullPath = Path.GetFullPath(path);
+        File.WriteAllText(fullPath, content, System.Text.Encoding.UTF8);
+    }
+
     public void CopyFile(string sourcePath, string destinationPath, bool overwrite = false)
     {
         if (string.IsNullOrWhiteSpace(sourcePath))

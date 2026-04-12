@@ -61,10 +61,15 @@ public sealed class OperationResult
     public string Status { get; init; } = RunConstants.StatusOk;
     public string? Reason { get; init; }
     public object? Value { get; init; }
-    public Dictionary<string, object> Meta { get; init; } = new();
-    public List<string> Warnings { get; init; } = new();
-    public Dictionary<string, double> Metrics { get; init; } = new();
-    public List<string> Artifacts { get; init; } = new();
+    private readonly Dictionary<string, object> _meta = new(StringComparer.Ordinal);
+    private readonly List<string> _warnings = [];
+    private readonly Dictionary<string, double> _metrics = new(StringComparer.Ordinal);
+    private readonly List<string> _artifacts = [];
+
+    public IReadOnlyDictionary<string, object> Meta => _meta;
+    public IReadOnlyList<string> Warnings => _warnings;
+    public IReadOnlyDictionary<string, double> Metrics => _metrics;
+    public IReadOnlyList<string> Artifacts => _artifacts;
 
     public bool ShouldReturn => Status is RunConstants.StatusBlocked or StatusError;
     public string Outcome => Status switch
@@ -88,4 +93,32 @@ public sealed class OperationResult
 
     public static OperationResult Error(string reason)
         => new() { Status = StatusError, Reason = reason };
+
+    public OperationResult SetMeta(string key, object value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        _meta[key] = value;
+        return this;
+    }
+
+    public OperationResult AddWarning(string warning)
+    {
+        if (!string.IsNullOrWhiteSpace(warning))
+            _warnings.Add(warning);
+        return this;
+    }
+
+    public OperationResult SetMetric(string key, double value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        _metrics[key] = value;
+        return this;
+    }
+
+    public OperationResult AddArtifact(string artifactPath)
+    {
+        if (!string.IsNullOrWhiteSpace(artifactPath))
+            _artifacts.Add(artifactPath);
+        return this;
+    }
 }

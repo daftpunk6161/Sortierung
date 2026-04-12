@@ -21,6 +21,12 @@ internal static class CliOptionsMapper
         CliRunOptions cli,
         RomulusSettings settings,
         string? dataDir = null)
+        => MapAsync(cli, settings, dataDir).Result;
+
+    internal static async Task<(RunOptions? runOptions, IReadOnlyList<string>? errors)> MapAsync(
+        CliRunOptions cli,
+        RomulusSettings settings,
+        string? dataDir = null)
     {
         try
         {
@@ -31,13 +37,11 @@ internal static class CliOptionsMapper
             var materializer = new RunConfigurationMaterializer(
                 new RunConfigurationResolver(profileService),
                 new RunOptionsFactory());
-            // SYNC-JUSTIFIED: mapper contract is synchronous; materialization must finish
-            // before command dispatch continues in the same execution flow.
-            var materialized = materializer.MaterializeAsync(
+            var materialized = await materializer.MaterializeAsync(
                 CreateDraft(cli),
                 CreateExplicitness(cli),
                 settings,
-                profileFilePath: cli.ProfileFilePath).GetAwaiter().GetResult();
+                profileFilePath: cli.ProfileFilePath).ConfigureAwait(false);
 
             cli.ProfileId = materialized.EffectiveProfileId;
             cli.WorkflowScenarioId = materialized.Workflow?.Id;
@@ -53,15 +57,13 @@ internal static class CliOptionsMapper
 
             var runOptions = (auditPath == materialized.Options.AuditPath && cli.ReportPath == materialized.Options.ReportPath)
                 ? materialized.Options
-                // SYNC-JUSTIFIED: second materialization reuses computed overlays and preserves
-                // deterministic option shaping for sync CLI call paths.
-                : materializer.MaterializeAsync(
+                : (await materializer.MaterializeAsync(
                     CreateDraft(cli),
                     CreateExplicitness(cli),
                     settings,
                     profileFilePath: cli.ProfileFilePath,
                     auditPath: auditPath,
-                    reportPath: cli.ReportPath).GetAwaiter().GetResult().Options;
+                    reportPath: cli.ReportPath).ConfigureAwait(false)).Options;
 
             return (runOptions, null);
         }

@@ -14,7 +14,7 @@ namespace Romulus.Infrastructure.Audit;
 public sealed class AuditCsvStore : IAuditStore
 {
     private readonly AuditSigningService _signingService;
-    private static readonly ConcurrentDictionary<string, object> FileLocks = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, FileLockHandle> FileLocks = new(StringComparer.OrdinalIgnoreCase);
     private const string AuditCsvHeader = "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n";
 
     public AuditCsvStore(IFileSystem? fs = null, Action<string>? log = null, string? keyFilePath = null)
@@ -82,20 +82,27 @@ public sealed class AuditCsvStore : IAuditStore
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
-        var lockObj = FileLocks.GetOrAdd(auditCsvPath, static _ => new object());
-        lock (lockObj)
+        var lockHandle = AcquireFileLock(auditCsvPath);
+        try
         {
-            bool writeHeader = !File.Exists(auditCsvPath);
+            lock (lockHandle.Sync)
+            {
+                bool writeHeader = !File.Exists(auditCsvPath);
 
-            // REC-03: Use explicit file stream + Flush(true) for crash-safe durability.
-            using var fs = new FileStream(auditCsvPath, FileMode.Append, FileAccess.Write, FileShare.Read);
-            using var sw = new StreamWriter(fs, Encoding.UTF8);
-            if (writeHeader)
-                sw.WriteLine("RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp");
+                // REC-03: Use explicit file stream + Flush(true) for crash-safe durability.
+                using var fs = new FileStream(auditCsvPath, FileMode.Append, FileAccess.Write, FileShare.Read);
+                using var sw = new StreamWriter(fs, Encoding.UTF8);
+                if (writeHeader)
+                    sw.WriteLine("RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp");
 
-            WriteAuditRowCore(sw, new AuditAppendRow(rootPath, oldPath, newPath, action, category, hash, reason));
-            sw.Flush();
-            fs.Flush(flushToDisk: true);
+                WriteAuditRowCore(sw, new AuditAppendRow(rootPath, oldPath, newPath, action, category, hash, reason));
+                sw.Flush();
+                fs.Flush(flushToDisk: true);
+            }
+        }
+        finally
+        {
+            ReleaseFileLock(auditCsvPath, lockHandle);
         }
     }
 
@@ -112,46 +119,53 @@ public sealed class AuditCsvStore : IAuditStore
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
-        var lockObj = FileLocks.GetOrAdd(auditCsvPath, static _ => new object());
-        lock (lockObj)
+        var lockHandle = AcquireFileLock(auditCsvPath);
+        try
         {
-            var tempPath = auditCsvPath + $".append.{Guid.NewGuid():N}.tmp";
-
-            try
+            lock (lockHandle.Sync)
             {
-                if (File.Exists(auditCsvPath))
-                {
-                    File.Copy(auditCsvPath, tempPath, overwrite: true);
-                }
-                else
-                {
-                    File.WriteAllText(tempPath, AuditCsvHeader, Encoding.UTF8);
-                }
+                var tempPath = auditCsvPath + $".append.{Guid.NewGuid():N}.tmp";
 
-                using (var fs = new FileStream(tempPath, FileMode.Append, FileAccess.Write, FileShare.None))
-                using (var sw = new StreamWriter(fs, Encoding.UTF8))
-                {
-                    foreach (var row in rows)
-                        WriteAuditRowCore(sw, row);
-
-                    sw.Flush();
-                    fs.Flush(flushToDisk: true);
-                }
-
-                File.Move(tempPath, auditCsvPath, overwrite: true);
-            }
-            finally
-            {
                 try
                 {
-                    if (File.Exists(tempPath))
-                        File.Delete(tempPath);
+                    if (File.Exists(auditCsvPath))
+                    {
+                        File.Copy(auditCsvPath, tempPath, overwrite: true);
+                    }
+                    else
+                    {
+                        File.WriteAllText(tempPath, AuditCsvHeader, Encoding.UTF8);
+                    }
+
+                    using (var fs = new FileStream(tempPath, FileMode.Append, FileAccess.Write, FileShare.None))
+                    using (var sw = new StreamWriter(fs, Encoding.UTF8))
+                    {
+                        foreach (var row in rows)
+                            WriteAuditRowCore(sw, row);
+
+                        sw.Flush();
+                        fs.Flush(flushToDisk: true);
+                    }
+
+                    File.Move(tempPath, auditCsvPath, overwrite: true);
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                finally
                 {
-                    // best effort cleanup only
+                    try
+                    {
+                        if (File.Exists(tempPath))
+                            File.Delete(tempPath);
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        // best effort cleanup only
+                    }
                 }
             }
+        }
+        finally
+        {
+            ReleaseFileLock(auditCsvPath, lockHandle);
         }
     }
 
@@ -184,5 +198,32 @@ public sealed class AuditCsvStore : IAuditStore
             SanitizeCsvField(row.Hash),
             SanitizeCsvField(row.Reason),
             SanitizeCsvField(timestamp)));
+    }
+
+    private static FileLockHandle AcquireFileLock(string auditCsvPath)
+    {
+        while (true)
+        {
+            var handle = FileLocks.GetOrAdd(auditCsvPath, static _ => new FileLockHandle());
+            Interlocked.Increment(ref handle.RefCount);
+            if (ReferenceEquals(FileLocks.GetOrAdd(auditCsvPath, handle), handle))
+                return handle;
+
+            ReleaseFileLock(auditCsvPath, handle);
+        }
+    }
+
+    private static void ReleaseFileLock(string auditCsvPath, FileLockHandle handle)
+    {
+        if (Interlocked.Decrement(ref handle.RefCount) != 0)
+            return;
+
+        FileLocks.TryRemove(new KeyValuePair<string, FileLockHandle>(auditCsvPath, handle));
+    }
+
+    private sealed class FileLockHandle
+    {
+        public object Sync { get; } = new();
+        public int RefCount;
     }
 }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text;
 using System.Security.Cryptography;
+using Microsoft.Extensions.DependencyInjection;
 using Romulus.Contracts;
 using Romulus.Contracts.Errors;
 using Romulus.Contracts.Models;
@@ -74,7 +75,7 @@ internal static partial class Program
 
                 // Subcommands
                 case CliCommand.Analyze:
-                    return SubcommandAnalyze(result.Options!);
+                    return await SubcommandAnalyzeAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.Export:
                     return await SubcommandExportAsync(result.Options!).ConfigureAwait(false);
@@ -134,7 +135,7 @@ internal static partial class Program
                     return SubcommandHeader(result.Options!);
 
                 case CliCommand.JunkReport:
-                    return SubcommandJunkReport(result.Options!);
+                    return await SubcommandJunkReportAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.Completeness:
                     return await SubcommandCompletenessAsync(result.Options!).ConfigureAwait(false);
@@ -158,12 +159,6 @@ internal static partial class Program
 
     private static Task<int> RunAsync(CliRunOptions cliOpts)
         => ExecuteRunCoreAsync(cliOpts, CancellationToken.None, wireConsoleCancel: true);
-
-    private static int Run(CliRunOptions cliOpts)
-    {
-        var awaiter = RunAsync(cliOpts).ConfigureAwait(false).GetAwaiter();
-        return awaiter.GetResult();
-    }
 
     private static PersistedReviewDecisionService? CreateReviewDecisionService(Action<string>? onWarning)
         => ReviewDecisionServiceFactory.TryCreate(onWarning);
@@ -238,7 +233,7 @@ internal static partial class Program
 
             var dataDir = RunEnvironmentBuilder.ResolveDataDir();
             var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
-            var (runOptions, mapErrors) = CliOptionsMapper.Map(cliOpts, settings, dataDir);
+            var (runOptions, mapErrors) = await CliOptionsMapper.MapAsync(cliOpts, settings, dataDir).ConfigureAwait(false);
 
             if (runOptions is null)
             {
@@ -249,29 +244,33 @@ internal static partial class Program
             if (!string.IsNullOrWhiteSpace(cliOpts.ConvertFormat))
                 log?.Info("CLI", "convert-init", $"Format conversion enabled: {cliOpts.ConvertFormat}", "init");
 
-            using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-            using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
+            var serviceProvider = CreateCliServiceProvider(SafeErrorWriteLine);
+            try
+            {
+                var runEnvironmentFactory = serviceProvider.GetRequiredService<IRunEnvironmentFactory>();
+                using var env = runEnvironmentFactory.Create(runOptions, SafeErrorWriteLine);
+                using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
 
-            log?.Info("CLI", "start", $"Run started: Mode={cliOpts.Mode}, Roots={string.Join(";", cliOpts.Roots)}", "scan");
+                log?.Info("CLI", "start", $"Run started: Mode={cliOpts.Mode}, Roots={string.Join(";", cliOpts.Roots)}", "scan");
 
-            using var orchestrator = new RunOrchestrator(
-                env.FileSystem,
-                env.AuditStore,
-                env.ConsoleDetector,
-                env.HashService,
-                env.Converter,
-                env.DatIndex,
-                onProgress: SafeErrorWriteLine,
-                archiveHashService: env.ArchiveHashService,
-                knownBiosHashes: env.KnownBiosHashes,
-                collectionIndex: env.CollectionIndex,
-                enrichmentFingerprint: env.EnrichmentFingerprint,
-                reviewDecisionService: reviewDecisionService);
+                using var orchestrator = new RunOrchestrator(
+                    env.FileSystem,
+                    env.AuditStore,
+                    env.ConsoleDetector,
+                    env.HashService,
+                    env.Converter,
+                    env.DatIndex,
+                    onProgress: SafeErrorWriteLine,
+                    archiveHashService: env.ArchiveHashService,
+                    knownBiosHashes: env.KnownBiosHashes,
+                    collectionIndex: env.CollectionIndex,
+                    enrichmentFingerprint: env.EnrichmentFingerprint,
+                    reviewDecisionService: reviewDecisionService);
 
-            var runStartedUtc = TimeProvider.UtcNow.UtcDateTime;
-            var result = orchestrator.Execute(runOptions, cts.Token);
-            var runCompletedUtc = TimeProvider.UtcNow.UtcDateTime;
-            var projection = RunProjectionFactory.Create(result);
+                var runStartedUtc = TimeProvider.UtcNow.UtcDateTime;
+                var result = orchestrator.Execute(runOptions, cts.Token);
+                var runCompletedUtc = TimeProvider.UtcNow.UtcDateTime;
+                var projection = RunProjectionFactory.Create(result);
 
             try
             {
@@ -291,44 +290,49 @@ internal static partial class Program
                 SafeErrorWriteLine($"[CollectionIndex] Run snapshot persist skipped: {ex.Message}");
             }
 
-            log?.Info("CLI", "scan-complete", $"{result.TotalFilesScanned} files scanned", "scan");
-            log?.Info("CLI", "dedupe-complete",
-                $"{result.GroupCount} groups: Keep={result.WinnerCount}, Move={result.LoserCount}", "dedupe");
+                log?.Info("CLI", "scan-complete", $"{result.TotalFilesScanned} files scanned", "scan");
+                log?.Info("CLI", "dedupe-complete",
+                    $"{result.GroupCount} groups: Keep={result.WinnerCount}, Move={result.LoserCount}", "dedupe");
 
-            if (cliOpts.Mode == RunConstants.ModeDryRun)
-            {
-                SafeStandardWriteLine(CliOutputWriter.FormatDryRunJson(
-                    projection,
-                    result.DedupeGroups,
-                    result.ConversionReport,
-                    result.Preflight?.Warnings));
-            }
-            else if (cliOpts.Mode == RunConstants.ModeMove)
-            {
-                CliOutputWriter.WriteMoveSummary(GetStderr(), projection,
-                    runOptions.AuditPath, result.ReportPath, result.ConvertedCount);
-            }
+                if (cliOpts.Mode == RunConstants.ModeDryRun)
+                {
+                    SafeStandardWriteLine(CliOutputWriter.FormatDryRunJson(
+                        projection,
+                        result.DedupeGroups,
+                        result.ConversionReport,
+                        result.Preflight?.Warnings));
+                }
+                else if (cliOpts.Mode == RunConstants.ModeMove)
+                {
+                    CliOutputWriter.WriteMoveSummary(GetStderr(), projection,
+                        runOptions.AuditPath, result.ReportPath, result.ConvertedCount);
+                }
 
-            if (!string.IsNullOrEmpty(cliOpts.ReportPath) && !string.IsNullOrEmpty(result.ReportPath))
-            {
-                SafeErrorWriteLine($"{RunConstants.Phases.Report} {result.ReportPath}");
-                log?.Info("CLI", "report", $"Report written: {result.ReportPath}", "report");
-            }
-            else if (!string.IsNullOrEmpty(cliOpts.ReportPath))
-            {
-                SafeErrorWriteLine("[Warning] Report requested but not written");
-                log?.Warning("CLI", "Report requested but not written", "report");
-            }
+                if (!string.IsNullOrEmpty(cliOpts.ReportPath) && !string.IsNullOrEmpty(result.ReportPath))
+                {
+                    SafeErrorWriteLine($"{RunConstants.Phases.Report} {result.ReportPath}");
+                    log?.Info("CLI", "report", $"Report written: {result.ReportPath}", "report");
+                }
+                else if (!string.IsNullOrEmpty(cliOpts.ReportPath))
+                {
+                    SafeErrorWriteLine("[Warning] Report requested but not written");
+                    log?.Warning("CLI", "Report requested but not written", "report");
+                }
 
-            if (log != null)
-            {
-                log.Info("CLI", "done", $"Run completed in {result.DurationMs}ms", "done");
-                log.Dispose();
-                if (!string.IsNullOrEmpty(cliOpts.LogPath))
-                    JsonlLogRotation.Rotate(cliOpts.LogPath);
-            }
+                if (log != null)
+                {
+                    log.Info("CLI", "done", $"Run completed in {result.DurationMs}ms", "done");
+                    log.Dispose();
+                    if (!string.IsNullOrEmpty(cliOpts.LogPath))
+                        JsonlLogRotation.Rotate(cliOpts.LogPath);
+                }
 
-            return NormalizeProcessExitCode(result.ExitCode);
+                return NormalizeProcessExitCode(result.ExitCode);
+            }
+            finally
+            {
+                (serviceProvider as IDisposable)?.Dispose();
+            }
         }
         finally
         {
@@ -464,51 +468,59 @@ internal static partial class Program
             }
         }
 
-        var fs = new FileSystemAdapter();
-        var keyPath = AuditSecurityPaths.GetDefaultSigningKeyPath();
-        var signing = new AuditSigningService(fs, keyFilePath: keyPath);
-
-        // Derive allowed roots from audit CSV — same roots that were used in the original run
-        var rootSet = AuditRollbackRootResolver.Resolve(auditPath);
-        var roots = rootSet.RestoreRoots.ToArray();
-        if (roots.Length == 0)
+        var serviceProvider = CreateCliServiceProvider(SafeErrorWriteLine);
+        try
         {
-            SafeErrorWriteLine("[Error] Could not determine root paths from audit file.");
-            return 1;
-        }
+            var fs = serviceProvider.GetRequiredService<IFileSystem>();
+            var keyPath = AuditSecurityPaths.GetDefaultSigningKeyPath();
+            var signing = new AuditSigningService(fs, keyFilePath: keyPath);
 
-        // Current roots: original roots + current audit metadata + trash paths (files may be in trash now)
-        var currentRoots = rootSet.CurrentRoots.ToList();
-        if (!string.IsNullOrWhiteSpace(cliOpts.TrashRoot))
-            currentRoots.Add(cliOpts.TrashRoot);
-        // Also add default trash folders within each root
-        foreach (var root in roots)
+            // Derive allowed roots from audit CSV — same roots that were used in the original run
+            var rootSet = AuditRollbackRootResolver.Resolve(auditPath);
+            var roots = rootSet.RestoreRoots.ToArray();
+            if (roots.Length == 0)
+            {
+                SafeErrorWriteLine("[Error] Could not determine root paths from audit file.");
+                return 1;
+            }
+
+            // Current roots: original roots + current audit metadata + trash paths (files may be in trash now)
+            var currentRoots = rootSet.CurrentRoots.ToList();
+            if (!string.IsNullOrWhiteSpace(cliOpts.TrashRoot))
+                currentRoots.Add(cliOpts.TrashRoot);
+            // Also add default trash folders within each root
+            foreach (var root in roots)
+            {
+                var trashDir = Path.Combine(root, RunConstants.WellKnownFolders.TrashGeneric);
+                if (Directory.Exists(trashDir))
+                    currentRoots.Add(trashDir);
+                var trashConv = Path.Combine(root, RunConstants.WellKnownFolders.TrashConverted);
+                if (Directory.Exists(trashConv))
+                    currentRoots.Add(trashConv);
+            }
+
+            var result = signing.Rollback(auditPath, roots, currentRoots.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), dryRun);
+
+            SafeErrorWriteLine($"[Rollback] Total rows: {result.TotalRows}");
+            SafeErrorWriteLine($"[Rollback] Eligible: {result.EligibleRows}");
+            if (dryRun)
+                SafeErrorWriteLine($"[Rollback] Planned: {result.DryRunPlanned}");
+            else
+                SafeErrorWriteLine($"[Rollback] Restored: {result.RolledBack}");
+            SafeErrorWriteLine($"[Rollback] Skipped (unsafe): {result.SkippedUnsafe}");
+            SafeErrorWriteLine($"[Rollback] Skipped (collision): {result.SkippedCollision}");
+            SafeErrorWriteLine($"[Rollback] Skipped (missing): {result.SkippedMissingDest}");
+            SafeErrorWriteLine($"[Rollback] Failed: {result.Failed}");
+
+            if (!string.IsNullOrWhiteSpace(result.RollbackAuditPath))
+                SafeErrorWriteLine($"[Rollback] Trail: {result.RollbackAuditPath}");
+
+            return result.Failed > 0 ? 1 : 0;
+        }
+        finally
         {
-            var trashDir = Path.Combine(root, RunConstants.WellKnownFolders.TrashGeneric);
-            if (Directory.Exists(trashDir))
-                currentRoots.Add(trashDir);
-            var trashConv = Path.Combine(root, RunConstants.WellKnownFolders.TrashConverted);
-            if (Directory.Exists(trashConv))
-                currentRoots.Add(trashConv);
+            (serviceProvider as IDisposable)?.Dispose();
         }
-
-        var result = signing.Rollback(auditPath, roots, currentRoots.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), dryRun);
-
-        SafeErrorWriteLine($"[Rollback] Total rows: {result.TotalRows}");
-        SafeErrorWriteLine($"[Rollback] Eligible: {result.EligibleRows}");
-        if (dryRun)
-            SafeErrorWriteLine($"[Rollback] Planned: {result.DryRunPlanned}");
-        else
-            SafeErrorWriteLine($"[Rollback] Restored: {result.RolledBack}");
-        SafeErrorWriteLine($"[Rollback] Skipped (unsafe): {result.SkippedUnsafe}");
-        SafeErrorWriteLine($"[Rollback] Skipped (collision): {result.SkippedCollision}");
-        SafeErrorWriteLine($"[Rollback] Skipped (missing): {result.SkippedMissingDest}");
-        SafeErrorWriteLine($"[Rollback] Failed: {result.Failed}");
-
-        if (!string.IsNullOrWhiteSpace(result.RollbackAuditPath))
-            SafeErrorWriteLine($"[Rollback] Trail: {result.RollbackAuditPath}");
-
-        return result.Failed > 0 ? 1 : 0;
     }
 
     // ═══ SUBCOMMAND HANDLERS ═══════════════════════════════════════════
@@ -607,7 +619,7 @@ internal static partial class Program
     {
         var profileService = CreateRunProfileService();
         var profiles = await profileService.ListAsync().ConfigureAwait(false);
-        SafeStandardWriteLine(JsonSerializer.Serialize(profiles, new JsonSerializerOptions { WriteIndented = true }));
+        SafeStandardWriteLine(CliOutputWriter.SerializeJson(profiles));
         return 0;
     }
 
@@ -621,7 +633,7 @@ internal static partial class Program
             return 1;
         }
 
-        SafeStandardWriteLine(JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true }));
+        SafeStandardWriteLine(CliOutputWriter.SerializeJson(profile));
         return 0;
     }
 
@@ -629,7 +641,7 @@ internal static partial class Program
     {
         var profileService = CreateRunProfileService();
         var profile = await profileService.ImportAsync(opts.InputPath!).ConfigureAwait(false);
-        SafeStandardWriteLine(JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true }));
+        SafeStandardWriteLine(CliOutputWriter.SerializeJson(profile));
         SafeErrorWriteLine($"[Profiles] Imported '{profile.Id}' from {opts.InputPath}");
         return 0;
     }
@@ -660,9 +672,8 @@ internal static partial class Program
     {
         if (string.IsNullOrWhiteSpace(opts.WorkflowScenarioId))
         {
-            SafeStandardWriteLine(JsonSerializer.Serialize(
-                WorkflowScenarioCatalog.List(),
-                new JsonSerializerOptions { WriteIndented = true }));
+            SafeStandardWriteLine(CliOutputWriter.SerializeJson(
+                WorkflowScenarioCatalog.List()));
             return 0;
         }
 
@@ -673,7 +684,7 @@ internal static partial class Program
             return 1;
         }
 
-        SafeStandardWriteLine(JsonSerializer.Serialize(workflow, new JsonSerializerOptions { WriteIndented = true }));
+        SafeStandardWriteLine(CliOutputWriter.SerializeJson(workflow));
         return 0;
     }
 
@@ -702,7 +713,7 @@ internal static partial class Program
             return 1;
         }
 
-        var json = JsonSerializer.Serialize(build.Result, new JsonSerializerOptions { WriteIndented = true });
+        var json = CliOutputWriter.SerializeJson(build.Result);
         if (!string.IsNullOrWhiteSpace(opts.OutputPath))
         {
             File.WriteAllText(opts.OutputPath, json);
@@ -748,7 +759,7 @@ internal static partial class Program
                 return 1;
             }
 
-            var json = JsonSerializer.Serialize(build.Plan, new JsonSerializerOptions { WriteIndented = true });
+            var json = CliOutputWriter.SerializeJson(build.Plan);
             if (!string.IsNullOrWhiteSpace(opts.OutputPath))
             {
                 File.WriteAllText(opts.OutputPath, json);
@@ -776,7 +787,7 @@ internal static partial class Program
             return 1;
         }
 
-        var jsonResult = JsonSerializer.Serialize(applyResult, new JsonSerializerOptions { WriteIndented = true });
+        var jsonResult = CliOutputWriter.SerializeJson(applyResult);
         if (!string.IsNullOrWhiteSpace(opts.OutputPath))
         {
             File.WriteAllText(opts.OutputPath, jsonResult);
@@ -806,7 +817,7 @@ internal static partial class Program
 
         if (!string.IsNullOrWhiteSpace(opts.OutputPath))
         {
-            File.WriteAllText(opts.OutputPath, JsonSerializer.Serialize(comparison, new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(opts.OutputPath, CliOutputWriter.SerializeJson(comparison));
             SafeErrorWriteLine($"[Compare] JSON written to {opts.OutputPath}");
             return 0;
         }
@@ -824,7 +835,7 @@ internal static partial class Program
 
         if (!string.IsNullOrWhiteSpace(opts.OutputPath))
         {
-            File.WriteAllText(opts.OutputPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(opts.OutputPath, CliOutputWriter.SerializeJson(report));
             SafeErrorWriteLine($"[Trends] JSON written to {opts.OutputPath}");
             return 0;
         }
@@ -1082,7 +1093,7 @@ internal static partial class Program
 
         try
         {
-            return Run(opts);
+            return Task.Run(() => RunAsync(opts)).Result;
         }
         finally
         {
@@ -1252,6 +1263,16 @@ internal static partial class Program
         => Path.GetFullPath(root)
             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             .ToUpperInvariant();
+
+    private static IServiceProvider CreateCliServiceProvider(Action<string>? onWarning)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IFileSystem, FileSystemAdapter>();
+        services.AddSingleton<IRunEnvironmentFactory, RunEnvironmentFactory>();
+        services.AddSingleton<IAuditStore>(sp =>
+            new AuditCsvStore(sp.GetRequiredService<IFileSystem>(), onWarning));
+        return services.BuildServiceProvider();
+    }
 
     private sealed class RunExecutionMutexLease : IDisposable
     {

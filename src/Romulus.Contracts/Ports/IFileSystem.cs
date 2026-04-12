@@ -137,4 +137,11 @@ public interface IFileSystem
     bool IsReparsePoint(string path);
     void DeleteFile(string path);
     void CopyFile(string sourcePath, string destinationPath, bool overwrite = false);
+    void WriteAllText(string path, string content)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            throw new ArgumentException("Path must not be empty.", nameof(path));
+
+        File.WriteAllText(path, content);
+    }
 }

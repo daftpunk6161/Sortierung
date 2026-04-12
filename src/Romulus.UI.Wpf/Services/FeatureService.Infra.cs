@@ -46,8 +46,6 @@ public static partial class FeatureService
 
         var path = Path.Combine(dataDir, $"{locale}.json");
         if (!File.Exists(path))
-            path = Path.Combine(dataDir, "de.json");
-        if (!File.Exists(path))
             return new Dictionary<string, string>();
 
         try
@@ -71,9 +69,9 @@ public static partial class FeatureService
         if (localized.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
             return value;
 
-        var germanFallback = LoadLocale("de");
-        if (germanFallback.TryGetValue(key, out var germanValue) && !string.IsNullOrWhiteSpace(germanValue))
-            return germanValue;
+        var englishFallback = LoadLocale("en");
+        if (englishFallback.TryGetValue(key, out var englishValue) && !string.IsNullOrWhiteSpace(englishValue))
+            return englishValue;
 
         return fallback;
     }

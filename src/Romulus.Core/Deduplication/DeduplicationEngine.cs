@@ -185,10 +185,23 @@ public static class DeduplicationEngine
 
     private static string BuildGroupKey(RomCandidate candidate)
     {
-        var consoleKey = string.IsNullOrWhiteSpace(candidate.ConsoleKey)
-            ? "UNKNOWN"
-            : candidate.ConsoleKey.Trim();
+        var consoleKey = NormalizeConsoleKey(candidate.ConsoleKey);
 
         return $"{consoleKey}\0{candidate.GameKey}";
+    }
+
+    private static string NormalizeConsoleKey(string? consoleKey)
+    {
+        if (string.IsNullOrWhiteSpace(consoleKey))
+            return "UNKNOWN";
+
+        var normalized = consoleKey.Trim();
+        foreach (var ch in normalized)
+        {
+            if (!(char.IsLetterOrDigit(ch) || ch is '-' or '_'))
+                return "UNKNOWN";
+        }
+
+        return normalized.ToUpperInvariant();
     }
 }

@@ -24,13 +24,13 @@ public static class Crc32
         return t;
     }
 
-    public static string HashFile(string path)
+    public static string HashFile(string path, CancellationToken cancellationToken = default)
     {
         using var fs = File.OpenRead(path);
-        return HashStream(fs);
+        return HashStream(fs, cancellationToken);
     }
 
-    public static string HashStream(Stream s)
+    public static string HashStream(Stream s, CancellationToken cancellationToken = default)
     {
         var crc = 0xFFFFFFFFu;
         var buf = ArrayPool<byte>.Shared.Rent(81_920); // 80 KB — avoids LOH allocation
@@ -39,6 +39,7 @@ public static class Crc32
             int read;
             while ((read = s.Read(buf, 0, buf.Length)) > 0)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 for (var i = 0; i < read; i++)
                     crc = Table[(crc ^ buf[i]) & 0xFF] ^ (crc >> 8);
             }

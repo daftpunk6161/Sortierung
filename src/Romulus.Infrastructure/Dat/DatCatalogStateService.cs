@@ -46,7 +46,20 @@ public sealed class DatCatalogStateService
             if (string.IsNullOrWhiteSpace(json))
                 return new DatCatalogState();
 
-            return JsonSerializer.Deserialize<DatCatalogState>(json, JsonOpts) ?? new DatCatalogState();
+            var loaded = JsonSerializer.Deserialize<DatCatalogState>(json, JsonOpts);
+            if (loaded is null)
+                return new DatCatalogState();
+
+            // FIN-01: Preserve case-insensitive semantics after JSON roundtrip.
+            loaded.Entries = loaded.Entries is null
+                ? new Dictionary<string, DatLocalInfo>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, DatLocalInfo>(loaded.Entries, StringComparer.OrdinalIgnoreCase);
+            loaded.RemovedBuiltinIds = loaded.RemovedBuiltinIds is null
+                ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>(loaded.RemovedBuiltinIds, StringComparer.OrdinalIgnoreCase);
+            loaded.UserEntries ??= [];
+
+            return loaded;
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {

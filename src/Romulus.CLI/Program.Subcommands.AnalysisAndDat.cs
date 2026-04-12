@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
@@ -14,36 +15,40 @@ namespace Romulus.CLI;
 
 internal static partial class Program
 {
-    private static int SubcommandAnalyze(CliRunOptions opts)
+    private static async Task<int> SubcommandAnalyzeAsync(CliRunOptions opts)
     {
         SafeErrorWriteLine($"[Analyze] Scanning {opts.Roots.Length} root(s)...");
         var dataDir = RunEnvironmentBuilder.ResolveDataDir();
         var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
-        var (runOptions, mapErrors) = CliOptionsMapper.Map(opts, settings, dataDir);
+        var (runOptions, mapErrors) = await CliOptionsMapper.MapAsync(opts, settings, dataDir).ConfigureAwait(false);
         if (runOptions is null)
         {
             CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
             return 3;
         }
 
-        using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
-        using var orchestrator = new RunOrchestrator(
-            env.FileSystem,
-            env.AuditStore,
-            env.ConsoleDetector,
-            env.HashService,
-            env.Converter,
-            env.DatIndex,
-            onProgress: SafeErrorWriteLine,
-            archiveHashService: env.ArchiveHashService,
-            knownBiosHashes: env.KnownBiosHashes,
-            collectionIndex: env.CollectionIndex,
-            enrichmentFingerprint: env.EnrichmentFingerprint,
-            reviewDecisionService: reviewDecisionService);
+        var serviceProvider = CreateCliServiceProvider(SafeErrorWriteLine);
+        try
+        {
+            var runEnvironmentFactory = serviceProvider.GetRequiredService<IRunEnvironmentFactory>();
+            using var env = runEnvironmentFactory.Create(runOptions, SafeErrorWriteLine);
+            using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
+            using var orchestrator = new RunOrchestrator(
+                env.FileSystem,
+                env.AuditStore,
+                env.ConsoleDetector,
+                env.HashService,
+                env.Converter,
+                env.DatIndex,
+                onProgress: SafeErrorWriteLine,
+                archiveHashService: env.ArchiveHashService,
+                knownBiosHashes: env.KnownBiosHashes,
+                collectionIndex: env.CollectionIndex,
+                enrichmentFingerprint: env.EnrichmentFingerprint,
+                reviewDecisionService: reviewDecisionService);
 
-        var result = orchestrator.Execute(runOptions);
-        var projection = RunProjectionFactory.Create(result);
+            var result = orchestrator.Execute(runOptions);
+            var projection = RunProjectionFactory.Create(result);
 
         var healthScore = CollectionAnalysisService.CalculateHealthScore(
             projection.TotalFiles, projection.Dupes, projection.Junk, projection.DatMatches);
@@ -62,17 +67,22 @@ internal static partial class Program
             bios = projection.Bios,
             datMatches = projection.DatMatches
         };
-        SafeStandardWriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
+        SafeStandardWriteLine(CliOutputWriter.SerializeJson(output));
 
-        if (result.DedupeGroups.Count > 0)
-        {
-            var heatmap = CollectionAnalysisService.GetDuplicateHeatmap(result.DedupeGroups);
-            SafeErrorWriteLine("\n[Heatmap]");
-            foreach (var h in heatmap.Take(15))
-                SafeErrorWriteLine($"  {h.Console,-15} {h.Total,5} total, {h.Duplicates,5} dupes ({h.DuplicatePercent:F1}%)");
+            if (result.DedupeGroups.Count > 0)
+            {
+                var heatmap = CollectionAnalysisService.GetDuplicateHeatmap(result.DedupeGroups);
+                SafeErrorWriteLine("\n[Heatmap]");
+                foreach (var h in heatmap.Take(15))
+                    SafeErrorWriteLine($"  {h.Console,-15} {h.Total,5} total, {h.Duplicates,5} dupes ({h.DuplicatePercent:F1}%)");
+            }
+
+            return 0;
         }
-
-        return 0;
+        finally
+        {
+            (serviceProvider as IDisposable)?.Dispose();
+        }
     }
 
     private static async Task<int> SubcommandExportAsync(CliRunOptions opts)
@@ -80,34 +90,43 @@ internal static partial class Program
         SafeErrorWriteLine($"[Export] Preparing {opts.Roots.Length} root(s)...");
         var dataDir = RunEnvironmentBuilder.ResolveDataDir();
         var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
-        var (runOptions, mapErrors) = CliOptionsMapper.Map(opts, settings, dataDir);
+        var (runOptions, mapErrors) = await CliOptionsMapper.MapAsync(opts, settings, dataDir).ConfigureAwait(false);
         if (runOptions is null)
         {
             CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
             return 3;
         }
 
-        using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        var exportResult = await FrontendExportService.ExportAsync(
-            new FrontendExportRequest(
-                opts.ExportFormat ?? FrontendExportTargets.Csv,
-                opts.OutputPath ?? Path.Combine(
-                    ArtifactPathResolver.GetArtifactDirectory(runOptions.Roots, AppIdentity.ArtifactDirectories.Reports),
-                    $"frontend-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}.out"),
-                string.IsNullOrWhiteSpace(opts.CollectionName) ? "Romulus" : opts.CollectionName.Trim(),
-                runOptions.Roots,
-                runOptions.Extensions),
-            env.FileSystem,
-            env.CollectionIndex,
-            env.EnrichmentFingerprint,
-            fallbackCandidateFactory: exportCt => LoadExportCandidatesAsync(runOptions, env, exportCt),
-            ct: CancellationToken.None).ConfigureAwait(false);
+        var serviceProvider = CreateCliServiceProvider(SafeErrorWriteLine);
+        try
+        {
+            var runEnvironmentFactory = serviceProvider.GetRequiredService<IRunEnvironmentFactory>();
+            using var env = runEnvironmentFactory.Create(runOptions, SafeErrorWriteLine);
+            var exportResult = await FrontendExportService.ExportAsync(
+                new FrontendExportRequest(
+                    opts.ExportFormat ?? FrontendExportTargets.Csv,
+                    opts.OutputPath ?? Path.Combine(
+                        ArtifactPathResolver.GetArtifactDirectory(runOptions.Roots, AppIdentity.ArtifactDirectories.Reports),
+                        $"frontend-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}.out"),
+                    string.IsNullOrWhiteSpace(opts.CollectionName) ? "Romulus" : opts.CollectionName.Trim(),
+                    runOptions.Roots,
+                    runOptions.Extensions),
+                env.FileSystem,
+                env.CollectionIndex,
+                env.EnrichmentFingerprint,
+                fallbackCandidateFactory: exportCt => LoadExportCandidatesAsync(runOptions, env, exportCt),
+                ct: CancellationToken.None).ConfigureAwait(false);
 
-        SafeStandardWriteLine(JsonSerializer.Serialize(exportResult, new JsonSerializerOptions { WriteIndented = true }));
-        foreach (var artifact in exportResult.Artifacts)
-            SafeErrorWriteLine($"[Export] {artifact.Label}: {artifact.Path} ({artifact.ItemCount} item(s))");
+            SafeStandardWriteLine(CliOutputWriter.SerializeJson(exportResult));
+            foreach (var artifact in exportResult.Artifacts)
+                SafeErrorWriteLine($"[Export] {artifact.Label}: {artifact.Path} ({artifact.ItemCount} item(s))");
 
-        return 0;
+            return 0;
+        }
+        finally
+        {
+            (serviceProvider as IDisposable)?.Dispose();
+        }
     }
 
     private static int SubcommandDatDiff(CliRunOptions opts)
@@ -138,95 +157,113 @@ internal static partial class Program
 
         opts.EnableDat = true;
 
-        var (runOptions, mapErrors) = CliOptionsMapper.Map(opts, settings, dataDir);
+        var (runOptions, mapErrors) = await CliOptionsMapper.MapAsync(opts, settings, dataDir).ConfigureAwait(false);
         if (runOptions is null)
         {
             CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
             return 3;
         }
 
-        using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
-        {
-            SafeErrorWriteLine("[Error] No DAT index available. Configure DatRoot in settings or use --dat-root.");
-            return 1;
-        }
-
-        var completeness = await CompletenessReportService.BuildAsync(
-            env.DatIndex,
-            runOptions.Roots,
-            env.CollectionIndex,
-            runOptions.Extensions).ConfigureAwait(false);
-
-        var generatedUtc = DateTime.UtcNow;
-        var datName = string.IsNullOrWhiteSpace(opts.DatName)
-            ? $"Romulus-FixDAT-{generatedUtc:yyyyMMdd-HHmmss}"
-            : opts.DatName.Trim();
-
-        var fixDat = DatAnalysisService.BuildFixDatFromCompleteness(env.DatIndex, completeness, datName, generatedUtc);
-
-        var targetPath = opts.OutputPath;
-        if (string.IsNullOrWhiteSpace(targetPath))
-        {
-            targetPath = Path.Combine(
-                ArtifactPathResolver.GetArtifactDirectory(runOptions.Roots, AppIdentity.ArtifactDirectories.Reports),
-                $"fixdat-{generatedUtc:yyyyMMdd-HHmmss}.dat");
-        }
-
-        string safeTargetPath;
+        var serviceProvider = CreateCliServiceProvider(SafeErrorWriteLine);
         try
         {
-            safeTargetPath = SafetyValidator.EnsureSafeOutputPath(targetPath, allowUnc: false);
+            var runEnvironmentFactory = serviceProvider.GetRequiredService<IRunEnvironmentFactory>();
+            using var env = runEnvironmentFactory.Create(runOptions, SafeErrorWriteLine);
+            if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
+            {
+                SafeErrorWriteLine("[Error] No DAT index available. Configure DatRoot in settings or use --dat-root.");
+                return 1;
+            }
+
+            var completeness = await CompletenessReportService.BuildAsync(
+                env.DatIndex,
+                runOptions.Roots,
+                env.CollectionIndex,
+                runOptions.Extensions).ConfigureAwait(false);
+
+            var generatedUtc = DateTime.UtcNow;
+            var datName = string.IsNullOrWhiteSpace(opts.DatName)
+                ? $"Romulus-FixDAT-{generatedUtc:yyyyMMdd-HHmmss}"
+                : opts.DatName.Trim();
+
+            var fixDat = DatAnalysisService.BuildFixDatFromCompleteness(env.DatIndex, completeness, datName, generatedUtc);
+
+            var targetPath = opts.OutputPath;
+            if (string.IsNullOrWhiteSpace(targetPath))
+            {
+                targetPath = Path.Combine(
+                    ArtifactPathResolver.GetArtifactDirectory(runOptions.Roots, AppIdentity.ArtifactDirectories.Reports),
+                    $"fixdat-{generatedUtc:yyyyMMdd-HHmmss}.dat");
+            }
+
+            string safeTargetPath;
+            try
+            {
+                safeTargetPath = SafetyValidator.EnsureSafeOutputPath(targetPath, allowUnc: false);
+            }
+            catch (InvalidOperationException ex)
+            {
+                SafeErrorWriteLine($"[Error] Invalid fixdat output path: {ex.Message}");
+                return 3;
+            }
+
+            var outputDirectory = Path.GetDirectoryName(safeTargetPath);
+            if (!string.IsNullOrWhiteSpace(outputDirectory))
+                Directory.CreateDirectory(outputDirectory);
+
+            File.WriteAllText(safeTargetPath, fixDat.XmlContent, Encoding.UTF8);
+            SafeStandardWriteLine(DatAnalysisService.FormatFixDatReport(fixDat));
+            SafeErrorWriteLine($"[FixDAT] Written: {safeTargetPath}");
+
+            return 0;
         }
-        catch (InvalidOperationException ex)
+        finally
         {
-            SafeErrorWriteLine($"[Error] Invalid fixdat output path: {ex.Message}");
-            return 3;
+            (serviceProvider as IDisposable)?.Dispose();
         }
-
-        var outputDirectory = Path.GetDirectoryName(safeTargetPath);
-        if (!string.IsNullOrWhiteSpace(outputDirectory))
-            Directory.CreateDirectory(outputDirectory);
-
-        File.WriteAllText(safeTargetPath, fixDat.XmlContent, Encoding.UTF8);
-        SafeStandardWriteLine(DatAnalysisService.FormatFixDatReport(fixDat));
-        SafeErrorWriteLine($"[FixDAT] Written: {safeTargetPath}");
-
-        return 0;
     }
 
-    private static int SubcommandJunkReport(CliRunOptions opts)
+    private static async Task<int> SubcommandJunkReportAsync(CliRunOptions opts)
     {
         SafeErrorWriteLine($"[JunkReport] Scanning {opts.Roots.Length} root(s)...");
         var dataDir = RunEnvironmentBuilder.ResolveDataDir();
         var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
-        var (runOptions, mapErrors) = CliOptionsMapper.Map(opts, settings, dataDir);
+        var (runOptions, mapErrors) = await CliOptionsMapper.MapAsync(opts, settings, dataDir).ConfigureAwait(false);
         if (runOptions is null)
         {
             CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
             return 3;
         }
 
-        using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
-        using var orchestrator = new RunOrchestrator(
-            env.FileSystem,
-            env.AuditStore,
-            env.ConsoleDetector,
-            env.HashService,
-            env.Converter,
-            env.DatIndex,
-            onProgress: SafeErrorWriteLine,
-            archiveHashService: env.ArchiveHashService,
-            knownBiosHashes: env.KnownBiosHashes,
-            collectionIndex: env.CollectionIndex,
-            enrichmentFingerprint: env.EnrichmentFingerprint,
-            reviewDecisionService: reviewDecisionService);
+        var serviceProvider = CreateCliServiceProvider(SafeErrorWriteLine);
+        try
+        {
+            var runEnvironmentFactory = serviceProvider.GetRequiredService<IRunEnvironmentFactory>();
+            using var env = runEnvironmentFactory.Create(runOptions, SafeErrorWriteLine);
+            using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
+            using var orchestrator = new RunOrchestrator(
+                env.FileSystem,
+                env.AuditStore,
+                env.ConsoleDetector,
+                env.HashService,
+                env.Converter,
+                env.DatIndex,
+                onProgress: SafeErrorWriteLine,
+                archiveHashService: env.ArchiveHashService,
+                knownBiosHashes: env.KnownBiosHashes,
+                collectionIndex: env.CollectionIndex,
+                enrichmentFingerprint: env.EnrichmentFingerprint,
+                reviewDecisionService: reviewDecisionService);
 
-        var result = orchestrator.Execute(runOptions);
-        var report = CollectionExportService.BuildJunkReport(result.AllCandidates, opts.AggressiveJunk);
-        SafeStandardWriteLine(report);
-        return 0;
+            var result = orchestrator.Execute(runOptions);
+            var report = CollectionExportService.BuildJunkReport(result.AllCandidates, opts.AggressiveJunk);
+            SafeStandardWriteLine(report);
+            return 0;
+        }
+        finally
+        {
+            (serviceProvider as IDisposable)?.Dispose();
+        }
     }
 
     private static async Task<int> SubcommandCompletenessAsync(CliRunOptions opts)
@@ -238,46 +275,54 @@ internal static partial class Program
         // Force DAT on for completeness
         opts.EnableDat = true;
 
-        var (runOptions, mapErrors) = CliOptionsMapper.Map(opts, settings, dataDir);
+        var (runOptions, mapErrors) = await CliOptionsMapper.MapAsync(opts, settings, dataDir).ConfigureAwait(false);
         if (runOptions is null)
         {
             CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
             return 3;
         }
 
-        using var env = new RunEnvironmentFactory().Create(runOptions, SafeErrorWriteLine);
-        if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
+        var serviceProvider = CreateCliServiceProvider(SafeErrorWriteLine);
+        try
         {
-            SafeErrorWriteLine("[Error] No DAT index available. Configure DatRoot in settings or use --dat-root.");
-            return 1;
-        }
-
-        var report = await CompletenessReportService.BuildAsync(
-            env.DatIndex,
-            runOptions.Roots,
-            env.CollectionIndex,
-            runOptions.Extensions).ConfigureAwait(false);
-        SafeStandardWriteLine(CompletenessReportService.FormatReport(report));
-
-        // Also output JSON summary for machine consumption
-        var json = JsonSerializer.Serialize(
-            report.Entries.Select(e => new
+            var runEnvironmentFactory = serviceProvider.GetRequiredService<IRunEnvironmentFactory>();
+            using var env = runEnvironmentFactory.Create(runOptions, SafeErrorWriteLine);
+            if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
             {
-                e.ConsoleKey,
-                e.TotalInDat,
-                e.Verified,
-                e.MissingCount,
-                e.Percentage
-            }).ToArray(),
-            new JsonSerializerOptions { WriteIndented = true });
+                SafeErrorWriteLine("[Error] No DAT index available. Configure DatRoot in settings or use --dat-root.");
+                return 1;
+            }
 
-        if (opts.OutputPath is not null)
-        {
-            File.WriteAllText(opts.OutputPath, json);
-            SafeErrorWriteLine($"[Completeness] JSON written to {opts.OutputPath}");
+            var report = await CompletenessReportService.BuildAsync(
+                env.DatIndex,
+                runOptions.Roots,
+                env.CollectionIndex,
+                runOptions.Extensions).ConfigureAwait(false);
+            SafeStandardWriteLine(CompletenessReportService.FormatReport(report));
+
+            // Also output JSON summary for machine consumption
+            var json = CliOutputWriter.SerializeJson(
+                report.Entries.Select(e => new
+                {
+                    e.ConsoleKey,
+                    e.TotalInDat,
+                    e.Verified,
+                    e.MissingCount,
+                    e.Percentage
+                }).ToArray());
+
+            if (opts.OutputPath is not null)
+            {
+                File.WriteAllText(opts.OutputPath, json);
+                SafeErrorWriteLine($"[Completeness] JSON written to {opts.OutputPath}");
+            }
+
+            return 0;
         }
-
-        return 0;
+        finally
+        {
+            (serviceProvider as IDisposable)?.Dispose();
+        }
     }
 
     private static Task<IReadOnlyList<RomCandidate>> LoadExportCandidatesAsync(

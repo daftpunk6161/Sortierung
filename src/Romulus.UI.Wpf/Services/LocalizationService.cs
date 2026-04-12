@@ -6,7 +6,7 @@ namespace Romulus.UI.Wpf.Services;
 
 /// <summary>
 /// GUI-047: JSON-based localization service with runtime locale switching.
-/// Loads strings from data/i18n/{locale}.json. Falls back to de.json.
+/// Loads strings from data/i18n/{locale}.json. Falls back to en.json.
 /// Implements INotifyPropertyChanged so XAML bindings auto-update on locale change.
 /// </summary>
 public sealed class LocalizationService : ILocalizationService
@@ -57,8 +57,8 @@ public sealed class LocalizationService : ILocalizationService
 
     private void LoadStrings(string locale)
     {
-        var baseDict = FeatureService.LoadLocale("de");
-        if (string.Equals(locale, "de", StringComparison.OrdinalIgnoreCase))
+        var baseDict = FeatureService.LoadLocale("en");
+        if (string.Equals(locale, "en", StringComparison.OrdinalIgnoreCase))
         {
             _strings = baseDict;
             return;

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Romulus.Contracts.Models;
@@ -16,6 +17,9 @@ public sealed class RomulusSettings
 
     [JsonPropertyName("dat")]
     public DatSettings Dat { get; set; } = new();
+
+    [JsonPropertyName("rules")]
+    public Dictionary<string, JsonElement> Rules { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 public sealed class GeneralSettings
@@ -39,10 +43,10 @@ public sealed class GeneralSettings
     public string Extensions { get; set; } = ".zip,.7z,.rar,.chd,.iso,.rvz,.cso,.gcz,.wbfs,.nsp,.xci,.3ds,.cia,.nes,.sfc,.smc,.gba,.gb,.gbc,.gen,.sms,.gg,.n64,.z64,.pce,.lnx,.nds,.ngp,.ngc,.a26,.col,.bin,.cue,.gdi,.ccd,.m3u,.pbp";
 
     [JsonPropertyName("theme")]
-    public string Theme { get; set; } = "dark";
+    public string Theme { get; set; } = "auto";
 
     [JsonPropertyName("locale")]
-    public string Locale { get; set; } = "de";
+    public string Locale { get; set; } = "auto";
 }
 
 public sealed class ToolPathSettings

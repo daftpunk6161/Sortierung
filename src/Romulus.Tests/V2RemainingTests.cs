@@ -274,11 +274,11 @@ public sealed class V2RemainingTests : IDisposable
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    //  V2-BUG-L03: SettingsLoader — Verify unknown property warning
+    //  V2-BUG-L03: SettingsLoader — Verify unknown top-level keys stay extensible
     // ═══════════════════════════════════════════════════════════════════
 
     [Fact]
-    public void SettingsLoader_UnknownProperty_ReturnsWarning()
+    public void SettingsLoader_UnknownProperty_IsAccepted()
     {
         var json = """
         {
@@ -289,7 +289,7 @@ public sealed class V2RemainingTests : IDisposable
         """;
 
         var errors = Infrastructure.Configuration.SettingsLoader.ValidateSettingsStructure(json);
-        Assert.Contains(errors, e => e.Contains("Unknown top-level key") && e.Contains("unknownSection"));
+        Assert.Empty(errors);
     }
 
     [Fact]

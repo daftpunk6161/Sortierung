@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Romulus.Contracts;
@@ -17,6 +18,7 @@ internal static class CliOutputWriter
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         DefaultIgnoreCondition = JsonIgnoreCondition.Never
     };
 
@@ -214,6 +216,9 @@ Exit codes:
 
     internal static string FormatRunHistoryJson(CollectionRunHistoryPage page)
         => JsonSerializer.Serialize(page, JsonOptions);
+
+    internal static string SerializeJson<T>(T value)
+        => JsonSerializer.Serialize(value, JsonOptions);
 
     private static CliConversionPlan[] BuildConversionPlans(ConversionReport? report)
     {

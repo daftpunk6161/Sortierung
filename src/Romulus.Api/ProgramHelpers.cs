@@ -446,6 +446,7 @@ public partial class Program
         string runId,
         HttpContext context,
         RunLifecycleManager manager,
+        IRunEnvironmentFactory runEnvironmentFactory,
         AllowedRootPathPolicy allowedRootPolicy,
         bool trustForwardedFor,
         CancellationToken ct)
@@ -494,7 +495,7 @@ public partial class Program
             Extensions = run.Extensions
         };
 
-        using var env = new RunEnvironmentFactory().Create(runOptions);
+        using var env = runEnvironmentFactory.Create(runOptions);
         if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
             return ApiError(400, ApiErrorCodes.DatNotAvailable, "No DAT index available. Configure DatRoot in settings.", runId: runId);
 
@@ -538,6 +539,7 @@ public partial class Program
         string? name,
         HttpContext context,
         RunLifecycleManager manager,
+        IRunEnvironmentFactory runEnvironmentFactory,
         AllowedRootPathPolicy allowedRootPolicy,
         bool trustForwardedFor,
         CancellationToken ct)
@@ -593,7 +595,7 @@ public partial class Program
             Extensions = run.Extensions
         };
 
-        using var env = new RunEnvironmentFactory().Create(runOptions);
+        using var env = runEnvironmentFactory.Create(runOptions);
         if (env.DatIndex is null || env.DatIndex.TotalEntries == 0)
             return ApiError(400, ApiErrorCodes.DatNotAvailable, "No DAT index available. Configure DatRoot in settings.", runId: runId);
 
@@ -692,7 +694,10 @@ public partial class Program
         string? runId = null,
         IDictionary<string, object>? meta = null)
     {
-        return Results.Json(CreateErrorResponse(code, message, kind, runId, meta), statusCode: statusCode);
+        return Results.Json(
+            CreateErrorResponse(statusCode, code, message, kind, runId, meta),
+            statusCode: statusCode,
+            contentType: "application/problem+json");
     }
 
     internal static Task WriteApiError(
@@ -705,17 +710,34 @@ public partial class Program
         IDictionary<string, object>? meta = null)
     {
         context.Response.StatusCode = statusCode;
-        return context.Response.WriteAsJsonAsync(CreateErrorResponse(code, message, kind, runId, meta));
+        context.Response.ContentType = "application/problem+json";
+        return context.Response.WriteAsJsonAsync(CreateErrorResponse(
+            statusCode,
+            code,
+            message,
+            kind,
+            runId,
+            meta,
+            context.Request.Path.HasValue ? context.Request.Path.Value : null));
     }
 
     internal static OperationErrorResponse CreateErrorResponse(
+        int statusCode,
         string code,
         string message,
         ErrorKind kind = ErrorKind.Recoverable,
         string? runId = null,
-        IDictionary<string, object>? meta = null)
+        IDictionary<string, object>? meta = null,
+        string? instance = null)
     {
-        return new OperationErrorResponse(new OperationError(code, message, kind, "API"), runId, meta);
+        return new OperationErrorResponse(new OperationError(code, message, kind, "API"), runId, meta)
+        {
+            Type = $"https://httpstatuses.com/{statusCode}",
+            Title = "Request failed",
+            Status = statusCode,
+            Detail = message,
+            Instance = instance ?? runId
+        };
     }
 
     internal static IDictionary<string, object> CreateMeta(params (string Key, object? Value)[] entries)

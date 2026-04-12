@@ -32,7 +32,7 @@ public sealed partial class RunOrchestrator
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.CrossRoot", ex.Message));
-            result.Warnings.Add($"Deferred analysis skipped (CrossRoot): {ex.Message}");
+            result.AddWarning($"Deferred analysis skipped (CrossRoot): {ex.Message}");
         }
 
         try
@@ -42,7 +42,7 @@ public sealed partial class RunOrchestrator
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.FolderDedupe", ex.Message));
-            result.Warnings.Add($"Deferred analysis skipped (FolderDedupe): {ex.Message}");
+            result.AddWarning($"Deferred analysis skipped (FolderDedupe): {ex.Message}");
         }
 
         try
@@ -52,7 +52,7 @@ public sealed partial class RunOrchestrator
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.Quarantine", ex.Message));
-            result.Warnings.Add($"Deferred analysis skipped (Quarantine): {ex.Message}");
+            result.AddWarning($"Deferred analysis skipped (Quarantine): {ex.Message}");
         }
 
         try
@@ -62,7 +62,7 @@ public sealed partial class RunOrchestrator
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             _onProgress?.Invoke(RunProgressLocalization.Format("Analyze.Skipped.Hardlink", ex.Message));
-            result.Warnings.Add($"Deferred analysis skipped (Hardlink): {ex.Message}");
+            result.AddWarning($"Deferred analysis skipped (Hardlink): {ex.Message}");
         }
     }
 

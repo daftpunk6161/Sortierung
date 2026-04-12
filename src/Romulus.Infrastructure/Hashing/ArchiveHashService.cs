@@ -190,8 +190,6 @@ public sealed class ArchiveHashService
             .OrderBy(e => e.FullName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var isCrc = hashType.ToUpperInvariant() is "CRC" or "CRC32";
-
         foreach (var entry in sortedEntries)
         {
             ct.ThrowIfCancellationRequested();
@@ -202,13 +200,6 @@ public sealed class ArchiveHashService
                 var h = HashStream(stream, hashType);
                 if (h is not null)
                     hashes.Add(h);
-
-                // Also emit native CRC32 from ZIP header for DATs that only carry CRC32
-                // (MAME, FBNeo). ZIP stores CRC32 per entry at no extra cost.
-                if (!isCrc && entry.Crc32 != 0)
-                {
-                    hashes.Add(entry.Crc32.ToString("x8"));
-                }
             }
             catch (InvalidDataException) { /* skip corrupt entries */ }
             catch (IOException) { /* skip unreadable entries */ }

@@ -220,11 +220,11 @@ public sealed class SettingsSchemaValidationTests
     }
 
     [Fact]
-    public void ValidateSettingsStructure_UnknownKey_ReportsError()
+    public void ValidateSettingsStructure_UnknownKey_IsAccepted()
     {
         var json = """{ "general": {}, "toolPaths": {}, "dat": {}, "unknownStuff": 42 }""";
         var errors = SettingsLoader.ValidateSettingsStructure(json);
-        Assert.Contains(errors, e => e.Contains("Unknown top-level key"));
+        Assert.Empty(errors);
     }
 
     [Fact]

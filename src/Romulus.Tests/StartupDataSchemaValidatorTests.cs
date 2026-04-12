@@ -10,8 +10,12 @@ public sealed class StartupDataSchemaValidatorTests : IDisposable
     private static readonly string[] RequiredDataFiles =
     [
         "consoles.json",
+        "console-maps.json",
         "rules.json",
         "defaults.json",
+        "format-scores.json",
+        "tool-hashes.json",
+        "ui-lookups.json",
         "conversion-registry.json",
         "dat-catalog.json"
     ];
@@ -19,8 +23,12 @@ public sealed class StartupDataSchemaValidatorTests : IDisposable
     private static readonly string[] RequiredSchemaFiles =
     [
         "consoles.schema.json",
+        "console-maps.schema.json",
         "rules.schema.json",
         "defaults.schema.json",
+        "format-scores.schema.json",
+        "tool-hashes.schema.json",
+        "ui-lookups.schema.json",
         "conversion-registry.schema.json",
         "dat-catalog.schema.json"
     ];

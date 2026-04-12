@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Win32;
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Infrastructure.Paths;
@@ -40,6 +42,7 @@ public sealed class SettingsLoader
             MergeFromUserSettings(settings, userPath, onWarning);
         }
 
+        ApplySystemDerivedDefaults(settings);
         return settings;
     }
 
@@ -54,6 +57,7 @@ public sealed class SettingsLoader
         if (defaultsJsonPath is not null && File.Exists(defaultsJsonPath))
             MergeFromDefaults(settings, defaultsJsonPath);
 
+        ApplySystemDerivedDefaults(settings);
         return settings;
     }
 
@@ -68,6 +72,7 @@ public sealed class SettingsLoader
         if (File.Exists(userSettingsPath))
             MergeFromUserSettings(settings, userSettingsPath, onWarning);
 
+        ApplySystemDerivedDefaults(settings);
         return settings;
     }
 
@@ -191,20 +196,13 @@ public sealed class SettingsLoader
                 return errors;
             }
 
-            // Check known top-level sections
-            var allowedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                { "general", "toolPaths", "dat", "rules", "schemaVersion" };
-
-            foreach (var prop in root.EnumerateObject())
-            {
-                if (!allowedKeys.Contains(prop.Name))
-                    errors.Add($"Unknown top-level key: '{prop.Name}'");
-            }
+            // Keep settings extensible: unknown top-level keys are allowed.
 
             // Validate section types
             ValidateSectionType(root, "general", JsonValueKind.Object, errors);
             ValidateSectionType(root, "toolPaths", JsonValueKind.Object, errors);
             ValidateSectionType(root, "dat", JsonValueKind.Object, errors);
+            ValidateSectionType(root, "rules", JsonValueKind.Object, errors);
 
             // Validate known field types within general
             if (root.TryGetProperty("general", out var general) && general.ValueKind == JsonValueKind.Object)
@@ -271,9 +269,9 @@ public sealed class SettingsLoader
             if (root.TryGetProperty("logLevel", out var ll))
                 settings.General.LogLevel = ValidateEnum(ll.GetString(), AllowedLogLevels, settings.General.LogLevel);
             if (root.TryGetProperty("theme", out var theme))
-                settings.General.Theme = theme.GetString() ?? "dark";
+                settings.General.Theme = ResolveThemeSetting(theme.GetString(), settings.General.Theme);
             if (root.TryGetProperty("locale", out var locale))
-                settings.General.Locale = locale.GetString() ?? "de";
+                settings.General.Locale = ResolveLocaleSetting(locale.GetString(), settings.General.Locale);
             if (root.TryGetProperty("preferredRegions", out var preferredRegions) && preferredRegions.ValueKind == JsonValueKind.Array)
             {
                 var parsedRegions = preferredRegions
@@ -294,6 +292,8 @@ public sealed class SettingsLoader
                 settings.Dat.HashType = ValidateEnum(hashType.GetString(), AllowedHashTypes, settings.Dat.HashType);
             if (root.TryGetProperty("datFallback", out var datFallback) && (datFallback.ValueKind is JsonValueKind.True or JsonValueKind.False))
                 settings.Dat.DatFallback = datFallback.GetBoolean();
+            if (root.TryGetProperty("rules", out var rules) && rules.ValueKind == JsonValueKind.Object)
+                settings.Rules = CloneObjectProperties(rules);
         }
         catch (JsonException ex)
         {
@@ -330,9 +330,9 @@ public sealed class SettingsLoader
                 if (!string.IsNullOrEmpty(user.General.Extensions))
                     settings.General.Extensions = user.General.Extensions;
                 if (!string.IsNullOrEmpty(user.General.Theme))
-                    settings.General.Theme = user.General.Theme;
+                    settings.General.Theme = ResolveThemeSetting(user.General.Theme, settings.General.Theme);
                 if (!string.IsNullOrEmpty(user.General.Locale))
-                    settings.General.Locale = user.General.Locale;
+                    settings.General.Locale = ResolveLocaleSetting(user.General.Locale, settings.General.Locale);
             }
 
             if (user.ToolPaths is not null)
@@ -356,6 +356,9 @@ public sealed class SettingsLoader
                 if (user.Dat.DatFallback.HasValue)
                     settings.Dat.DatFallback = user.Dat.DatFallback.Value;
             }
+
+            if (user.Rules.HasValue && user.Rules.Value.ValueKind == JsonValueKind.Object)
+                settings.Rules = CloneObjectProperties(user.Rules.Value);
 
             var validationErrors = RomulusSettingsValidator.Validate(settings);
             if (validationErrors.Count > 0)
@@ -399,6 +402,73 @@ public sealed class SettingsLoader
     private static string ValidateEnum(string? value, HashSet<string> allowedValues, string fallback)
         => !string.IsNullOrWhiteSpace(value) && allowedValues.Contains(value) ? value : fallback;
 
+    private static void ApplySystemDerivedDefaults(RomulusSettings settings)
+    {
+        settings.General.Theme = ResolveThemeSetting(settings.General.Theme, "dark");
+        settings.General.Locale = ResolveLocaleSetting(settings.General.Locale, "en");
+    }
+
+    private static string ResolveThemeSetting(string? value, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return fallback;
+
+        return string.Equals(value.Trim(), "auto", StringComparison.OrdinalIgnoreCase)
+            ? ResolveSystemTheme()
+            : value;
+    }
+
+    private static string ResolveLocaleSetting(string? value, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return fallback;
+
+        return string.Equals(value.Trim(), "auto", StringComparison.OrdinalIgnoreCase)
+            ? ResolveSystemLocale()
+            : value;
+    }
+
+    internal static string ResolveSystemTheme()
+    {
+        try
+        {
+            const string personalizeKey = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+            var value = Registry.GetValue(personalizeKey, "AppsUseLightTheme", defaultValue: 0);
+            if (value is int intValue)
+                return intValue == 0 ? "dark" : "light";
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or IOException or UnauthorizedAccessException)
+        {
+            // Fallback to dark when the platform does not expose theme settings.
+        }
+
+        return "dark";
+    }
+
+    internal static string ResolveSystemLocale()
+    {
+        try
+        {
+            var locale = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+            if (!string.IsNullOrWhiteSpace(locale))
+                return locale.ToLowerInvariant();
+        }
+        catch (CultureNotFoundException)
+        {
+            // Fallback handled below.
+        }
+
+        return "en";
+    }
+
+    private static Dictionary<string, JsonElement> CloneObjectProperties(JsonElement source)
+    {
+        var result = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var prop in source.EnumerateObject())
+            result[prop.Name] = prop.Value.Clone();
+        return result;
+    }
+
     // ── P1-BUG-033: Nullable deserialization model ──
     // Separate model with bool? so that missing JSON keys deserialize as null
     // instead of false, allowing us to distinguish "user explicitly set false"
@@ -414,6 +484,9 @@ public sealed class SettingsLoader
 
         [JsonPropertyName("dat")]
         public NullableDatSettings? Dat { get; set; }
+
+        [JsonPropertyName("rules")]
+        public JsonElement? Rules { get; set; }
     }
 
     private sealed class NullableGeneralSettings

@@ -34,7 +34,8 @@ public sealed class EcmInvoker(IToolRunner tools) : IToolInvoker
         if (string.IsNullOrWhiteSpace(toolPath))
             return ToolInvokerSupport.ToolNotFound("unecm");
 
-        var constraintError = ToolInvokerSupport.ValidateToolConstraints(toolPath, capability.Tool);
+        var skipHashConstraintValidation = ToolInvokerSupport.ShouldSkipHashConstraintValidation(_tools);
+        var constraintError = ToolInvokerSupport.ValidateToolConstraints(toolPath, capability.Tool, skipHashConstraintValidation);
         if (constraintError is not null)
             return ToolInvokerSupport.ConstraintFailure(constraintError);
 
@@ -59,9 +60,20 @@ public sealed class EcmInvoker(IToolRunner tools) : IToolInvoker
         try
         {
             var info = new FileInfo(targetPath);
-            return info.Exists && info.Length > 0
-                ? VerificationStatus.Verified
-                : VerificationStatus.VerifyFailed;
+            if (!info.Exists || info.Length <= 0)
+                return VerificationStatus.VerifyFailed;
+
+            // Decompressed output must not still be an ECM payload.
+            if (LooksLikeEcmPayload(targetPath))
+                return VerificationStatus.VerifyFailed;
+
+            if (string.Equals(capability.TargetExtension, ".iso", StringComparison.OrdinalIgnoreCase)
+                && info.Length < 2048)
+            {
+                return VerificationStatus.VerifyFailed;
+            }
+
+            return VerificationStatus.Verified;
         }
         catch (IOException)
         {
@@ -70,6 +82,28 @@ public sealed class EcmInvoker(IToolRunner tools) : IToolInvoker
         catch (UnauthorizedAccessException)
         {
             return VerificationStatus.VerifyFailed;
+        }
+    }
+
+    private static bool LooksLikeEcmPayload(string path)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            if (stream.Length < 4)
+                return false;
+
+            Span<byte> header = stackalloc byte[4];
+            var read = stream.Read(header);
+            return read == 4 && header.SequenceEqual("ECM\0"u8);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
         }
     }
 }

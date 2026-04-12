@@ -15,7 +15,7 @@ namespace Romulus.Api;
 /// Manages run lifecycle: creation (singleton), execution, cancellation, results.
 /// Now delegates to RunOrchestrator for the actual pipeline.
 /// </summary>
-public sealed class RunManager
+public sealed class RunManager : IDisposable
 {
     private readonly RunLifecycleManager _lifecycle;
     private readonly IRunOptionsFactory _runOptionsFactory;
@@ -23,6 +23,7 @@ public sealed class RunManager
     private readonly PersistedReviewDecisionService? _reviewDecisionService;
     private readonly string? _collectionDatabasePath;
     private readonly ITimeProvider _timeProvider;
+    private bool _disposed;
 
     public RunManager(
         IFileSystem fs,
@@ -80,6 +81,23 @@ public sealed class RunManager
     /// Cancel any active run and wait for completion. Called during host shutdown.
     /// </summary>
     public Task ShutdownAsync() => _lifecycle.ShutdownAsync();
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        try
+        {
+            ShutdownAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception)
+        {
+            // best-effort shutdown on host dispose
+        }
+
+        _disposed = true;
+    }
 
     private async Task<RunExecutionOutcome> ExecuteWithOrchestratorAsync(
         RunRecord run,

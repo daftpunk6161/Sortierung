@@ -229,14 +229,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
 
         _ = Task.Run(async () =>
         {
-            try
-            {
-                await Task.Delay(InlineMoveConfirmDebounceDelay).ConfigureAwait(false);
-            }
-            catch
-            {
-                return;
-            }
+            await Task.Delay(InlineMoveConfirmDebounceDelay).ConfigureAwait(false);
 
             if (token != _inlineMoveConfirmDebounceToken || !Shell.ShowMoveInlineConfirm)
                 return;

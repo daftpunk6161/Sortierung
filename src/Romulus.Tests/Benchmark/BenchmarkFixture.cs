@@ -2,6 +2,7 @@ using Romulus.Core.Classification;
 using Romulus.Tests.Benchmark.Generators;
 using Romulus.Tests.Benchmark.Infrastructure;
 using Romulus.Tests.Benchmark.Models;
+using System.Threading;
 using Xunit;
 
 namespace Romulus.Tests.Benchmark;
@@ -13,7 +14,7 @@ namespace Romulus.Tests.Benchmark;
 /// </summary>
 public sealed class BenchmarkFixture : IAsyncLifetime
 {
-    private readonly object _lock = new();
+    private readonly SemaphoreSlim _initGate = new(1, 1);
     private bool _initialized;
 
     /// <summary>Root directory containing all generated stub files.</summary>
@@ -25,12 +26,13 @@ public sealed class BenchmarkFixture : IAsyncLifetime
     /// <summary>Production-quality console detector loaded from consoles.json.</summary>
     public ConsoleDetector Detector { get; private set; } = null!;
 
-    public Task InitializeAsync()
+    public async Task InitializeAsync()
     {
-        lock (_lock)
+        await _initGate.WaitAsync().ConfigureAwait(false);
+        try
         {
             if (_initialized)
-                return Task.CompletedTask;
+                return;
 
             SamplesRoot = Path.Combine(BenchmarkPaths.BenchmarkDir, "samples");
             AllEntries = GroundTruthLoader.LoadAll();
@@ -70,8 +72,10 @@ public sealed class BenchmarkFixture : IAsyncLifetime
 
             _initialized = true;
         }
-
-        return Task.CompletedTask;
+        finally
+        {
+            _initGate.Release();
+        }
     }
 
     public Task DisposeAsync()

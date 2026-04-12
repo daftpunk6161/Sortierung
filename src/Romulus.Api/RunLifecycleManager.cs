@@ -21,6 +21,7 @@ public sealed class RunLifecycleManager
     private readonly ConcurrentDictionary<string, string> _idempotencyIndex = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _activeLock = new();
     private const int MaxRunHistory = 100;
+    private static readonly TimeSpan MinimumEvictionAge = TimeSpan.FromMinutes(2);
     private string? _activeRunId;
     private Task? _activeTask;
     private readonly IFileSystem _fs;
@@ -347,8 +348,10 @@ public sealed class RunLifecycleManager
     private void EvictOldRuns()
     {
         if (_runs.Count <= MaxRunHistory) return;
+        var evictionCutoff = _timeProvider.UtcNow.UtcDateTime - MinimumEvictionAge;
         var oldest = _runs.Values
             .Where(r => r.Status != RunConstants.StatusRunning)
+            .Where(r => r.CompletedUtc is null || r.CompletedUtc <= evictionCutoff)
             .OrderBy(r => r.StartedUtc)
             .Take(_runs.Count - MaxRunHistory)
             .ToList();

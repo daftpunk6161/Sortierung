@@ -245,7 +245,7 @@ public sealed class ConversionRegistrySchemaTests
     }
 
     [Fact]
-    public void EcmCapability_IsDisabledAndToolHashHasNoPendingMarker()
+    public void EcmCapability_IsDisabledAndUnecmHashPin_IsAbsentUntilVerified()
     {
         using var registry = OpenJson("conversion-registry.json");
         using var toolHashes = OpenJson("tool-hashes.json");
@@ -259,9 +259,9 @@ public sealed class ConversionRegistrySchemaTests
 
         Assert.False(hasEcmCapability);
 
-        var configuredHash = toolHashes.RootElement.GetProperty("Tools").GetProperty("unecm.exe").GetString();
-        Assert.False(string.IsNullOrWhiteSpace(configuredHash));
-        Assert.DoesNotContain("PENDING-VERIFY", configuredHash, StringComparison.OrdinalIgnoreCase);
+        Assert.False(
+            toolHashes.RootElement.GetProperty("Tools").TryGetProperty("unecm.exe", out _),
+            "unecm.exe hash pin must remain absent until a verified production hash is available.");
     }
 
     private static int GetPolicyCount(IReadOnlyDictionary<string, int> policyCounts, string key)

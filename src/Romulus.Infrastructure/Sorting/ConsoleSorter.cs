@@ -459,6 +459,7 @@ public sealed class ConsoleSorter
             }
 
             // Audit all moves in the atomic set after all succeeded
+            RewriteMovedM3uPlaylistIfNeeded(primaryPath, primaryActualDest, completedMoves);
             WriteAuditRow(root, primaryPath, primaryActualDest, auditReasonTag);
             foreach (var (src, dst) in completedMoves.Skip(1)) // skip primary, already written
                 WriteAuditRow(root, src, dst, auditReasonTag + ":set-member");
@@ -573,10 +574,12 @@ public sealed class ConsoleSorter
         HashSet<string> setDependents,
         Dictionary<string, List<string>> setPrimaryToMembers)
     {
+        var claimedMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var file in files)
         {
             var ext = Path.GetExtension(file).ToLowerInvariant();
-            IReadOnlyList<string> members = ext switch
+            IReadOnlyList<string> parsedMembers = ext switch
             {
                 ".cue" => CueSetParser.GetRelatedFiles(file),
                 ".gdi" => GdiSetParser.GetRelatedFiles(file),
@@ -586,13 +589,81 @@ public sealed class ConsoleSorter
                 _ => Array.Empty<string>()
             };
 
-            if (members.Count > 0)
+            if (parsedMembers.Count == 0)
+                continue;
+
+            var effectiveMembers = new List<string>(parsedMembers.Count);
+            foreach (var member in parsedMembers)
             {
-                setPrimaryToMembers[file] = members.ToList();
-                foreach (var m in members)
-                    setDependents.Add(m);
+                if (string.Equals(member, file, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (!File.Exists(member))
+                    continue;
+
+                if (!claimedMembers.Add(member))
+                    continue;
+
+                effectiveMembers.Add(member);
+            }
+
+            if (effectiveMembers.Count == 0)
+                continue;
+
+            setPrimaryToMembers[file] = effectiveMembers;
+            foreach (var member in effectiveMembers)
+                setDependents.Add(member);
+        }
+    }
+
+    private static void RewriteMovedM3uPlaylistIfNeeded(
+        string sourcePlaylistPath,
+        string movedPlaylistPath,
+        IReadOnlyList<(string Source, string Dest)> completedMoves)
+    {
+        if (!string.Equals(Path.GetExtension(sourcePlaylistPath), ".m3u", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (!File.Exists(movedPlaylistPath))
+            return;
+
+        var sourceDirectory = Path.GetDirectoryName(sourcePlaylistPath) ?? string.Empty;
+        var memberRenameMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (source, destination) in completedMoves.Skip(1))
+        {
+            var destinationFileName = Path.GetFileName(destination);
+            if (string.IsNullOrWhiteSpace(destinationFileName))
+                continue;
+
+            var sourceRelative = Path.GetRelativePath(sourceDirectory, source).Replace('/', '\\');
+            if (!string.IsNullOrWhiteSpace(sourceRelative))
+                memberRenameMap[sourceRelative] = destinationFileName;
+
+            memberRenameMap[Path.GetFileName(source)] = destinationFileName;
+            memberRenameMap[source.Replace('/', '\\')] = destinationFileName;
+        }
+
+        if (memberRenameMap.Count == 0)
+            return;
+
+        var lines = File.ReadAllLines(movedPlaylistPath);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var trimmed = line.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith('#'))
+                continue;
+
+            var normalized = trimmed.Replace('/', '\\');
+            if (memberRenameMap.TryGetValue(normalized, out var replacement)
+                || memberRenameMap.TryGetValue(Path.GetFileName(normalized), out replacement))
+            {
+                lines[i] = replacement;
             }
         }
+
+        File.WriteAllLines(movedPlaylistPath, lines);
     }
 
     internal static bool IsInExcludedFolder(string filePath, string root)

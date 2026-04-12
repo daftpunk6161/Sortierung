@@ -1,4 +1,5 @@
 using Romulus.Contracts.Ports;
+using System.Diagnostics;
 
 namespace Romulus.Infrastructure.State;
 
@@ -136,7 +137,11 @@ public sealed class AppStateStore : IAppState
         foreach (var handler in snapshot)
         {
             try { handler(state); }
-            catch (Exception) { /* watchers must not crash the state store */ }
+            catch (Exception ex)
+            {
+                // Watcher failures must never crash state propagation.
+                Trace.WriteLine($"[AppStateStore] Watcher callback failed: {ex}");
+            }
         }
     }
 

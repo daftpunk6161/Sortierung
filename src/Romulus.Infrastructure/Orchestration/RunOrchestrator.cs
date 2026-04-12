@@ -136,9 +136,11 @@ public sealed partial class RunOrchestrator : IDisposable
         warnings.AddRange(RunOptionsBuilder.GetDryRunFeatureWarnings(options));
 
         var result = OperationResult.Ok("preflight-passed");
-        result.Warnings.AddRange(warnings);
-        result.Meta["RootCount"] = options.Roots.Count;
-        result.Meta["ExtensionCount"] = options.Extensions.Count;
+        foreach (var warning in warnings)
+            result.AddWarning(warning);
+
+        result.SetMeta("RootCount", options.Roots.Count);
+        result.SetMeta("ExtensionCount", options.Extensions.Count);
         return result;
     }
 
@@ -170,8 +172,8 @@ public sealed partial class RunOrchestrator : IDisposable
         {
             _fs.EnsureDirectory(targetDirectory);
             var probePath = Path.Combine(targetDirectory, $".write_test_{Guid.NewGuid():N}");
-            File.WriteAllText(probePath, string.Empty);
-            File.Delete(probePath);
+            _fs.WriteAllText(probePath, string.Empty);
+            _fs.DeleteFile(probePath);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)

@@ -39,7 +39,8 @@ public sealed class DolphinToolInvoker(IToolRunner tools) : IToolInvoker
         if (string.IsNullOrWhiteSpace(toolPath))
             return ToolInvokerSupport.ToolNotFound("dolphintool");
 
-        var constraintError = ToolInvokerSupport.ValidateToolConstraints(toolPath, capability.Tool);
+        var skipHashConstraintValidation = ToolInvokerSupport.ShouldSkipHashConstraintValidation(_tools);
+        var constraintError = ToolInvokerSupport.ValidateToolConstraints(toolPath, capability.Tool, skipHashConstraintValidation);
         if (constraintError is not null)
             return ToolInvokerSupport.ConstraintFailure(constraintError);
 
