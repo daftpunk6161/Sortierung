@@ -16,16 +16,16 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
           dotnet-quality: 'ga'
 
       - name: NuGet Cache
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('src/**/*.csproj') }}
@@ -62,7 +62,7 @@ jobs:
           Write-Host "Created $zipPath"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: rom-cleanup-release
           path: dist/rom-cleanup-*.zip
