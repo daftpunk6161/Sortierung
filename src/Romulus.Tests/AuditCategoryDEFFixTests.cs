@@ -231,6 +231,13 @@ public sealed class AuditCategoryDEFFixTests
     }
 
     [Fact]
+    public void D03_RunOrchestratorPreviewHelpers_DoesNotUseSyncOverAsyncGetResult()
+    {
+        var helperPath = Path.Combine(FindSrcDir(), "Romulus.Infrastructure", "Orchestration", "RunOrchestrator.PreviewAndPipelineHelpers.cs");
+        var content = File.ReadAllText(helperPath);
+
+        Assert.DoesNotContain("GetAwaiter().GetResult()", content);
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // E-01: fr.json encoding fix
@@ -239,6 +246,8 @@ public sealed class AuditCategoryDEFFixTests
     [Fact]
     public void E01_FrJson_NoMojibakeCharacters()
     {
+        var frPath = Path.Combine(FindDataDir(), "i18n", "fr.json");
+        var content = File.ReadAllText(frPath);
 
         Assert.DoesNotContain("├á", content);  // was à
     }

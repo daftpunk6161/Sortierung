@@ -306,16 +306,14 @@ public sealed class ReportParityTests : IDisposable
     }
 
     private static JsonDocument ParseCliSummaryJson(string stdout, string? stderr = null)
-    {
-        var text = string.IsNullOrWhiteSpace(stdout) ? (stderr ?? string.Empty) : stdout;
-
-        var start = text.IndexOf('{');
-        var end = text.LastIndexOf('}');
-        if (start >= 0 && end > start)
-            return JsonDocument.Parse(text[start..(end + 1)]);
-
-        return JsonDocument.Parse(text);
-    }
+        => CliSummaryJsonParser.ParseSummary(
+            stdout,
+            stderr,
+            "TotalFiles",
+            "Groups",
+            "Keep",
+            "Dupes",
+            "Results");
 
     private static string[] BuildCliIdentity(JsonElement root)
     {
@@ -389,14 +387,14 @@ public sealed class ReportParityTests : IDisposable
     }
 
     private static JsonDocument ParseCliSummaryJson(string stdout)
-    {
-        var start = stdout.IndexOf('{');
-        var end = stdout.LastIndexOf('}');
-        Assert.True(start >= 0 && end > start, $"CLI stdout did not contain a JSON object. Output: {stdout}");
-
-        var jsonPayload = stdout[start..(end + 1)];
-        return JsonDocument.Parse(jsonPayload);
-    }
+        => CliSummaryJsonParser.ParseSummary(
+            stdout,
+            null,
+            "TotalFiles",
+            "Groups",
+            "Keep",
+            "Dupes",
+            "Results");
 
     private static MainViewModel CreateViewModel()
         => new(new StubThemeService(), new StubDialogService());

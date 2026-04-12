@@ -29,19 +29,17 @@ public sealed class RunProfileService
         var builtIns = await LoadBuiltInsAsync(ct).ConfigureAwait(false);
         var userProfiles = await _store.ListAsync(ct).ConfigureAwait(false);
 
-        return builtIns
-            .Concat(userProfiles)
-            .OrderBy(static profile => profile.BuiltIn ? 0 : 1)
-            .ThenBy(static profile => profile.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(static profile => profile.Id, StringComparer.OrdinalIgnoreCase)
-            .Select(static profile => new RunProfileSummary(
-                profile.Id,
-                profile.Name,
-                profile.Description,
-                profile.BuiltIn,
-                profile.Tags,
-                profile.WorkflowScenarioId))
-            .ToArray();
+        return BuildSummaries(builtIns.Concat(userProfiles));
+    }
+
+    public IReadOnlyList<RunProfileSummary> ListBuiltInSummaries()
+    {
+        return BuildSummaries(LoadBuiltIns());
+    }
+
+    public IReadOnlyList<RunProfileSummary> ListStartupSummaries()
+    {
+        return BuildSummaries(LoadBuiltIns().Concat(LoadStoredProfilesSynchronously()));
     }
 
     public async ValueTask<RunProfileDocument?> TryGetAsync(string id, CancellationToken ct = default)
@@ -155,6 +153,30 @@ public sealed class RunProfileService
         var json = await File.ReadAllTextAsync(builtInPath, ct).ConfigureAwait(false);
         var documents = JsonSerializer.Deserialize<RunProfileDocument[]>(json, SerializerOptions) ?? Array.Empty<RunProfileDocument>();
 
+        return NormalizeBuiltIns(documents);
+    }
+
+    private IReadOnlyList<RunProfileDocument> LoadBuiltIns()
+    {
+        var builtInPath = RunProfilePaths.ResolveBuiltInProfilesPath(_dataDir);
+        if (!File.Exists(builtInPath))
+            return Array.Empty<RunProfileDocument>();
+
+        var json = File.ReadAllText(builtInPath);
+        var documents = JsonSerializer.Deserialize<RunProfileDocument[]>(json, SerializerOptions) ?? Array.Empty<RunProfileDocument>();
+
+        return NormalizeBuiltIns(documents);
+    }
+
+    private IReadOnlyList<RunProfileDocument> LoadStoredProfilesSynchronously()
+    {
+        return _store is ISynchronousRunProfileStore synchronousStore
+            ? synchronousStore.ListSynchronously()
+            : Array.Empty<RunProfileDocument>();
+    }
+
+    private static IReadOnlyList<RunProfileDocument> NormalizeBuiltIns(IEnumerable<RunProfileDocument> documents)
+    {
         return documents
             .Select(static profile => profile with
             {
@@ -165,6 +187,22 @@ public sealed class RunProfileService
             })
             .Where(profile => RunProfileValidator.ValidateDocument(profile).Count == 0)
             .OrderBy(static profile => profile.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<RunProfileSummary> BuildSummaries(IEnumerable<RunProfileDocument> profiles)
+    {
+        return profiles
+            .OrderBy(static profile => profile.BuiltIn ? 0 : 1)
+            .ThenBy(static profile => profile.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(static profile => profile.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(static profile => new RunProfileSummary(
+                profile.Id,
+                profile.Name,
+                profile.Description,
+                profile.BuiltIn,
+                profile.Tags,
+                profile.WorkflowScenarioId))
             .ToArray();
     }
 }

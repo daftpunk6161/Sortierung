@@ -9,6 +9,8 @@ public static class ApiErrorCodes
 {
     // ── AUTH ─────────────────────────────────────────────────────────
 
+    public const string InternalError = "INTERNAL_ERROR";
+
     public const string AuthInvalidClientId = "AUTH-INVALID-CLIENT-ID";
     public const string AuthUnauthorized = "AUTH-UNAUTHORIZED";
     public const string AuthForbidden = "AUTH-FORBIDDEN";

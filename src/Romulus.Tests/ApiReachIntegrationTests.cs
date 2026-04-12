@@ -45,16 +45,14 @@ public sealed class ApiReachIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task DashboardStaticShell_IsAnonymous()
+    public async Task DashboardStaticShell_RequiresAuth()
     {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
         var response = await client.GetAsync("/dashboard/");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Headless Control Surface", body);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]

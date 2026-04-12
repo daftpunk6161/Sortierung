@@ -4,7 +4,7 @@ using Romulus.Contracts.Ports;
 
 namespace Romulus.Infrastructure.Profiles;
 
-public sealed class JsonRunProfileStore : IRunProfileStore
+public sealed class JsonRunProfileStore : IRunProfileStore, ISynchronousRunProfileStore
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -30,6 +30,23 @@ public sealed class JsonRunProfileStore : IRunProfileStore
         {
             ct.ThrowIfCancellationRequested();
             var document = await TryReadProfileAsync(filePath, ct).ConfigureAwait(false);
+            if (document is not null)
+                profiles.Add(document with { BuiltIn = false });
+        }
+
+        return profiles;
+    }
+
+    public IReadOnlyList<RunProfileDocument> ListSynchronously()
+    {
+        if (!Directory.Exists(_profileDirectory))
+            return Array.Empty<RunProfileDocument>();
+
+        var profiles = new List<RunProfileDocument>();
+        foreach (var filePath in Directory.EnumerateFiles(_profileDirectory, "*.json", SearchOption.TopDirectoryOnly)
+                     .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var document = TryReadProfile(filePath);
             if (document is not null)
                 profiles.Add(document with { BuiltIn = false });
         }
@@ -87,6 +104,24 @@ public sealed class JsonRunProfileStore : IRunProfileStore
         try
         {
             var json = await File.ReadAllTextAsync(filePath, ct).ConfigureAwait(false);
+            var document = JsonSerializer.Deserialize<RunProfileDocument>(json, SerializerOptions);
+            if (document is null)
+                return null;
+
+            var errors = RunProfileValidator.ValidateDocument(document);
+            return errors.Count == 0 ? document : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    private static RunProfileDocument? TryReadProfile(string filePath)
+    {
+        try
+        {
+            var json = File.ReadAllText(filePath);
             var document = JsonSerializer.Deserialize<RunProfileDocument>(json, SerializerOptions);
             if (document is null)
                 return null;

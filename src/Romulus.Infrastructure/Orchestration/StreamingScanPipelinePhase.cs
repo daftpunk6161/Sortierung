@@ -26,8 +26,8 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
     {
         foreach (var candidate in EnumerateFiles(roots, extensions, cancellationToken))
         {
+            await Task.Yield();
             yield return candidate;
-
         }
     }
 

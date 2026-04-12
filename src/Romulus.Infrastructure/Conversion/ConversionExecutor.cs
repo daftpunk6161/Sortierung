@@ -336,7 +336,6 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             CleanupPath(invocationOutputPath);
-            CleanupPath(finalOutputPath);
             throw new InvalidOperationException("staged-output-promote-failed");
         }
     }

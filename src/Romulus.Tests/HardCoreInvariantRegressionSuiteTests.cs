@@ -13,6 +13,7 @@ using Romulus.Infrastructure.Hashing;
 using Romulus.Infrastructure.Metrics;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Sorting;
+using Romulus.Tests.TestFixtures;
 using Xunit;
 using CliProgram = Romulus.CLI.Program;
 
@@ -1279,61 +1280,13 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
     }
 
     private static JsonDocument ParseCliSummaryJson(string stdout)
-    {
-        var start = stdout.IndexOf('{');
-        if (start < 0)
-            return JsonDocument.Parse(stdout);
-
-        var depth = 0;
-        var inString = false;
-        var escaped = false;
-
-        for (var i = start; i < stdout.Length; i++)
-        {
-            var ch = stdout[i];
-
-            if (inString)
-            {
-                if (escaped)
-                {
-                    escaped = false;
-                    continue;
-                }
-
-                if (ch == '\\')
-                {
-                    escaped = true;
-                    continue;
-                }
-
-                if (ch == '"')
-                    inString = false;
-
-                continue;
-            }
-
-            if (ch == '"')
-            {
-                inString = true;
-                continue;
-            }
-
-            if (ch == '{')
-            {
-                depth++;
-                continue;
-            }
-
-            if (ch != '}')
-                continue;
-
-            depth--;
-            if (depth == 0)
-                return JsonDocument.Parse(stdout[start..(i + 1)]);
-        }
-
-        return JsonDocument.Parse(stdout[start..]);
-    }
+        => CliSummaryJsonParser.ParseSummary(
+            stdout,
+            null,
+            "TotalFiles",
+            "Groups",
+            "Keep",
+            "Dupes");
 
     private sealed class SuccessfulConverter : IFormatConverter
     {

@@ -37,7 +37,7 @@ public sealed class RunService : IRunService
     {
         _appState = appState ?? new AppStateStore();
         _runEnvironmentFactory = runEnvironmentFactory ?? new RunEnvironmentFactory();
-        _recoveryAuditStore = recoveryAuditStore ?? new AuditCsvStore();
+        _recoveryAuditStore = recoveryAuditStore ?? new AuditCsvStore(keyFilePath: AuditSecurityPaths.GetDefaultSigningKeyPath());
         var dataDir = FeatureService.ResolveDataDirectory()
                       ?? RunEnvironmentBuilder.ResolveDataDir();
         var optionsFactory = runOptionsFactory ?? new RunOptionsFactory();
@@ -61,7 +61,7 @@ public sealed class RunService : IRunService
     [Obsolete("Use BuildOrchestratorAsync to avoid blocking calls.")]
     public (RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)
         BuildOrchestrator(MainViewModel vm, Action<string>? onProgress = null)
-        => Task.Run(() => BuildOrchestratorAsync(vm, onProgress)).GetAwaiter().GetResult();
+        => BuildOrchestratorAsync(vm, onProgress).ConfigureAwait(false).GetAwaiter().GetResult();
 
     /// <inheritdoc/>
     public async Task<(RunOrchestrator Orchestrator, RunOptions Options, string? AuditPath, string? ReportPath)>
@@ -190,9 +190,7 @@ public sealed class RunService : IRunService
         string? auditPath,
         string? reportPath,
         CancellationToken ct)
-        => System.Threading.Tasks.Task.Run(
-            () => ExecuteRunAsync(orchestrator, options, auditPath, reportPath, ct),
-            ct).GetAwaiter().GetResult();
+        => ExecuteRunAsync(orchestrator, options, auditPath, reportPath, ct).ConfigureAwait(false).GetAwaiter().GetResult();
 
     /// <summary>
     /// Get a directory at the same level as <paramref name="rootPath"/>.

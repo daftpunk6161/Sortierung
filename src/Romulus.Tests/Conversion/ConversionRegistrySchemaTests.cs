@@ -245,7 +245,7 @@ public sealed class ConversionRegistrySchemaTests
     }
 
     [Fact]
-    public void EcmCapability_RemainsFailClosedUntilToolHashIsPinned()
+    public void EcmCapability_RemainsFailClosedWhileToolHashPlaceholderIsConfigured()
     {
         using var registry = OpenJson("conversion-registry.json");
         using var toolHashes = OpenJson("tool-hashes.json");
@@ -260,7 +260,8 @@ public sealed class ConversionRegistrySchemaTests
         var tool = ecmCapability.GetProperty("tool");
         Assert.Equal("unecm", tool.GetProperty("toolName").GetString());
         Assert.False(tool.TryGetProperty("expectedHash", out _));
-        Assert.False(toolHashes.RootElement.GetProperty("Tools").TryGetProperty("unecm.exe", out _));
+        var configuredHash = toolHashes.RootElement.GetProperty("Tools").GetProperty("unecm.exe").GetString();
+        Assert.StartsWith("PLACEHOLDER", configuredHash, StringComparison.OrdinalIgnoreCase);
     }
 
     private static int GetPolicyCount(IReadOnlyDictionary<string, int> policyCounts, string key)

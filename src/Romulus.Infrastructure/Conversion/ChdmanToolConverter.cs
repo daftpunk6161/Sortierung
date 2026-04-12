@@ -12,6 +12,7 @@ namespace Romulus.Infrastructure.Conversion;
 internal sealed class ChdmanToolConverter
 {
     private readonly IToolRunner _tools;
+    private static readonly ToolRequirement ChdmanRequirement = new() { ToolName = "chdman" };
 
     /// <summary>Maximum number of entries allowed in a ZIP archive during conversion extraction.</summary>
     internal const int MaxZipEntryCount = 10_000;
@@ -59,7 +60,7 @@ internal sealed class ChdmanToolConverter
         }
 
         var args = new[] { effectiveCommand, "-i", sourcePath, "-o", targetPath };
-        var result = _tools.InvokeProcess(toolPath, args, "chdman");
+        var result = _tools.InvokeProcess(toolPath, args, ChdmanRequirement, "chdman", null, CancellationToken.None);
 
         if (!result.Success)
         {
@@ -82,7 +83,7 @@ internal sealed class ChdmanToolConverter
     {
         var chdmanPath = _tools.FindTool("chdman");
         if (chdmanPath is null) return false;
-        var result = _tools.InvokeProcess(chdmanPath, new[] { "verify", "-i", targetPath }, "chdman verify");
+        var result = _tools.InvokeProcess(chdmanPath, ["verify", "-i", targetPath], ChdmanRequirement, "chdman verify", null, CancellationToken.None);
         return result.Success;
     }
 
@@ -180,7 +181,7 @@ internal sealed class ChdmanToolConverter
 
             // Step 3: Convert via chdman
             var args = new[] { command, "-i", inputFile, "-o", targetPath };
-            var result = _tools.InvokeProcess(toolPath, args, "chdman");
+            var result = _tools.InvokeProcess(toolPath, args, ChdmanRequirement, "chdman", null, CancellationToken.None);
 
             if (!result.Success)
             {
@@ -234,7 +235,7 @@ internal sealed class ChdmanToolConverter
             var targetPath = Path.Combine(outputDir, cueBaseName + ".chd");
 
             var args = new[] { command, "-i", cueFiles[i], "-o", targetPath };
-            var result = _tools.InvokeProcess(toolPath, args, "chdman");
+            var result = _tools.InvokeProcess(toolPath, args, ChdmanRequirement, "chdman", null, CancellationToken.None);
 
             if (!result.Success)
             {

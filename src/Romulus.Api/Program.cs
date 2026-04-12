@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Mvc;
 using Romulus.Api;
@@ -56,6 +57,29 @@ builder.Services.AddOpenApi(OpenApiSpec.DocumentName, OpenApiSpec.Configure);
 
 var app = builder.Build();
 var timeProvider = app.Services.GetRequiredService<ITimeProvider>();
+
+app.UseExceptionHandler(exceptionApp =>
+{
+    exceptionApp.Run(async context =>
+    {
+        var exceptionFeature = context.Features.Get<IExceptionHandlerFeature>();
+        if (exceptionFeature?.Error is not null)
+        {
+            SafeConsoleWriteLine($"[API-ERROR] Unhandled exception: {exceptionFeature.Error.GetType().Name}: {exceptionFeature.Error.Message}");
+        }
+
+        if (context.Response.HasStarted)
+            return;
+
+        context.Response.Clear();
+        await WriteApiError(
+            context,
+            StatusCodes.Status500InternalServerError,
+            ApiErrorCodes.InternalError,
+            "An unexpected error occurred.",
+            ErrorKind.Critical);
+    });
+});
 
 // --- Middleware ---
 var apiKeys = ParseApiKeys(configuredApiKey);
@@ -118,12 +142,6 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
-if (headlessOptions.DashboardEnabled)
-{
-    app.UseDefaultFiles();
-    app.UseStaticFiles();
-}
-
 app.Use(async (ctx, next) =>
 {
     var rawCorrelationId = ctx.Request.Headers["X-Correlation-ID"].FirstOrDefault();
@@ -174,6 +192,12 @@ app.Use(async (ctx, next) =>
 
     await next();
 });
+
+if (headlessOptions.DashboardEnabled)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
 
 // --- Request Logging (P3-API-11) ---
 app.Use(async (ctx, next) =>

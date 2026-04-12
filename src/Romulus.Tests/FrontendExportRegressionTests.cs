@@ -111,7 +111,7 @@ public sealed class FrontendExportRegressionTests : IDisposable
     }
 
     [Fact]
-    public async Task FrontendExportService_Csv_QuotesDangerousFormulaPrefixes()
+    public async Task FrontendExportService_Csv_PrefixesDangerousFormulaFields()
     {
         var outputPath = Path.Combine(_tempRoot, "collection.csv");
         var candidates = new[]
@@ -148,8 +148,8 @@ public sealed class FrontendExportRegressionTests : IDisposable
         Assert.Equal(2, lines.Length);
 
         var dataLine = lines[1];
-        Assert.StartsWith("\"=2+3.zip\";", dataLine, StringComparison.Ordinal);
-        Assert.EndsWith(";\"=2+3.zip\"", dataLine, StringComparison.Ordinal);
+        Assert.StartsWith("'=2+3.zip;", dataLine, StringComparison.Ordinal);
+        Assert.EndsWith(";'=2+3.zip", dataLine, StringComparison.Ordinal);
     }
 
     [Fact]

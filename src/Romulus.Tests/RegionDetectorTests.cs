@@ -11,6 +11,7 @@ public class RegionDetectorTests
     [InlineData("Game (Europe)", "EU")]
     [InlineData("Game (EUR)", "EU")]
     [InlineData("Game (PAL)", "EU")]
+    [InlineData("Game (PAL60)", "EU")]
     [InlineData("Game (USA)", "US")]
     [InlineData("Game (Japan)", "JP")]
     [InlineData("Game (World)", "WORLD")]

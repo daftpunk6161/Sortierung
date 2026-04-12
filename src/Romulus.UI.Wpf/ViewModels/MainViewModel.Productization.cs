@@ -20,6 +20,7 @@ public sealed partial class MainViewModel
     private RunConfigurationDraft? _selectionBaselineDraft;
     private bool _suppressRunConfigurationSelectionApply;
     private bool _applyingRunConfigurationSelection;
+    private Task _pendingRunConfigurationSelectionTask = Task.CompletedTask;
     private bool _wizardAnalysisDirty = true;
     private CancellationTokenSource? _wizardAnalysisCts;
 
@@ -116,29 +117,18 @@ public sealed partial class MainViewModel
                 new RunConfigurationResolver(_runProfileService),
                 new RunOptionsFactory());
 
-        RefreshRunConfigurationCatalogs();
+        SeedRunConfigurationCatalogs();
     }
 
-    internal void RefreshRunConfigurationCatalogs()
+    private void SeedRunConfigurationCatalogs()
     {
         try
         {
-            var profiles = _runProfileService.ListAsync().AsTask().Result;
-            AvailableRunProfiles.Clear();
-            foreach (var profile in profiles)
-                AvailableRunProfiles.Add(profile);
-
-            AvailableWorkflows.Clear();
-            foreach (var workflow in WorkflowScenarioCatalog.List()
-                         .OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                AvailableWorkflows.Add(workflow);
-            }
-
-            OnRunConfigurationSelectionMetadataChanged();
+            PopulateRunConfigurationCatalogs(_runProfileService.ListStartupSummaries());
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or JsonException)
         {
+            PopulateRunConfigurationCatalogs([]);
             AddLog($"[Profiles] Katalog konnte nicht geladen werden: {ex.Message}", "WARN");
         }
     }
@@ -153,23 +143,28 @@ public sealed partial class MainViewModel
         try
         {
             var profiles = await _runProfileService.ListAsync();
-            AvailableRunProfiles.Clear();
-            foreach (var profile in profiles)
-                AvailableRunProfiles.Add(profile);
-
-            AvailableWorkflows.Clear();
-            foreach (var workflow in WorkflowScenarioCatalog.List()
-                         .OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                AvailableWorkflows.Add(workflow);
-            }
-
-            OnRunConfigurationSelectionMetadataChanged();
+            PopulateRunConfigurationCatalogs(profiles);
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or JsonException)
         {
             AddLog($"[Profiles] Katalog konnte nicht geladen werden: {ex.Message}", "WARN");
         }
+    }
+
+    private void PopulateRunConfigurationCatalogs(IReadOnlyList<RunProfileSummary> profiles)
+    {
+        AvailableRunProfiles.Clear();
+        foreach (var profile in profiles)
+            AvailableRunProfiles.Add(profile);
+
+        AvailableWorkflows.Clear();
+        foreach (var workflow in WorkflowScenarioCatalog.List()
+                     .OrderBy(static item => item.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            AvailableWorkflows.Add(workflow);
+        }
+
+        OnRunConfigurationSelectionMetadataChanged();
     }
 
     internal void RestoreRunConfigurationSelection(string? workflowScenarioId, string? profileId)
@@ -324,9 +319,24 @@ public sealed partial class MainViewModel
         };
     }
 
-    internal void ApplySelectedRunConfiguration()
+    internal async Task ApplySelectedRunConfigurationAsync()
     {
-        if (_suppressRunConfigurationSelectionApply || _applyingRunConfigurationSelection)
+        if (_suppressRunConfigurationSelectionApply)
+            return;
+
+        if (_applyingRunConfigurationSelection)
+        {
+            await _pendingRunConfigurationSelectionTask;
+            return;
+        }
+
+        _pendingRunConfigurationSelectionTask = ApplySelectedRunConfigurationCoreAsync();
+        await _pendingRunConfigurationSelectionTask;
+    }
+
+    private async Task ApplySelectedRunConfigurationCoreAsync()
+    {
+        if (_applyingRunConfigurationSelection)
             return;
 
         var workflowId = NormalizeSelection(SelectedWorkflowScenarioId);
@@ -352,11 +362,11 @@ public sealed partial class MainViewModel
                 ProfileId = profileId
             };
 
-            var materialized = _runConfigurationMaterializer.MaterializeAsync(
+            var materialized = await _runConfigurationMaterializer.MaterializeAsync(
                 selectionDraft,
                 new RunConfigurationExplicitness(),
                 settings,
-                baselineDraft: baselineDraft).AsTask().Result;
+                baselineDraft: baselineDraft);
 
             ApplyMaterializedRunConfiguration(materialized);
         }
@@ -365,16 +375,15 @@ public sealed partial class MainViewModel
             AddLog($"[Profiles] Auswahl konnte nicht angewendet werden: {ex.Message}", "WARN");
             OnRunConfigurationSelectionMetadataChanged();
         }
+        catch (Exception ex)
+        {
+            AddLog($"[Profiles] Unerwarteter Fehler beim Anwenden der Auswahl: {ex.Message}", "ERROR");
+            OnRunConfigurationSelectionMetadataChanged();
+        }
         finally
         {
             _applyingRunConfigurationSelection = false;
         }
-    }
-
-    internal Task ApplySelectedRunConfigurationAsync()
-    {
-        ApplySelectedRunConfiguration();
-        return Task.CompletedTask;
     }
 
     internal void ApplyMaterializedRunConfiguration(MaterializedRunConfiguration materialized)
@@ -422,7 +431,7 @@ public sealed partial class MainViewModel
         OnRunConfigurationSelectionMetadataChanged();
 
         if (!_suppressRunConfigurationSelectionApply)
-            ApplySelectedRunConfiguration();
+            _ = ApplySelectedRunConfigurationAsync();
     }
 
     private void OnRunConfigurationSelectionMetadataChanged()
@@ -535,6 +544,8 @@ public sealed partial class MainViewModel
                 SelectedWorkflowScenarioId = recommendedWorkflowId;
             if (string.IsNullOrWhiteSpace(SelectedRunProfileId) && workflow is not null)
                 SelectedRunProfileId = workflow.RecommendedProfileId;
+
+            await ApplySelectedRunConfigurationAsync();
 
             var convertibleFiles = advisor.Consoles.Sum(static item => item.FileCount);
             WizardAnalysisSummary =

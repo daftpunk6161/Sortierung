@@ -49,7 +49,7 @@ public sealed class WpfProductizationTests : IDisposable
     }
 
     [Fact]
-    public void MainViewModel_SelectedWorkflowScenario_AppliesSharedWorkflowDefaults()
+    public async Task MainViewModel_SelectedWorkflowScenario_AppliesSharedWorkflowDefaults()
     {
         var vm = CreateViewModel();
         vm.Roots.Add(_tempRoot);
@@ -60,6 +60,7 @@ public sealed class WpfProductizationTests : IDisposable
         vm.DryRun = false;
 
         vm.SelectedWorkflowScenarioId = WorkflowScenarioIds.FullAudit;
+    await vm.ApplySelectedRunConfigurationAsync();
 
         Assert.Equal(WorkflowScenarioIds.FullAudit, vm.SelectedWorkflowScenarioId);
         Assert.True(vm.UseDat);
@@ -71,7 +72,7 @@ public sealed class WpfProductizationTests : IDisposable
     }
 
     [Fact]
-    public void MainViewModel_SelectedRunProfile_AppliesSharedProfileDefaults()
+    public async Task MainViewModel_SelectedRunProfile_AppliesSharedProfileDefaults()
     {
         var vm = CreateViewModel();
         vm.Roots.Add(_tempRoot);
@@ -80,6 +81,7 @@ public sealed class WpfProductizationTests : IDisposable
         vm.RemoveJunk = true;
 
         vm.SelectedRunProfileId = "quick-scan";
+    await vm.ApplySelectedRunConfigurationAsync();
 
         Assert.Equal("quick-scan", vm.SelectedRunProfileId);
         Assert.False(vm.UseDat);
@@ -89,12 +91,13 @@ public sealed class WpfProductizationTests : IDisposable
     }
 
     [Fact]
-    public void MainViewModel_Explicitness_TracksOnlyUserOverridesAfterSelection()
+    public async Task MainViewModel_Explicitness_TracksOnlyUserOverridesAfterSelection()
     {
         var vm = CreateViewModel();
         vm.Roots.Add(_tempRoot);
 
         vm.SelectedWorkflowScenarioId = WorkflowScenarioIds.FullAudit;
+        await vm.ApplySelectedRunConfigurationAsync();
 
         var baselineExplicitness = vm.BuildCurrentRunConfigurationExplicitness();
         Assert.False(baselineExplicitness.RemoveJunk);
@@ -209,6 +212,7 @@ public sealed class WpfProductizationTests : IDisposable
         vm.Roots.Add(root);
 
         await vm.AnalyzeWizardSetupAsync();
+        await vm.ApplySelectedRunConfigurationAsync();
 
         Assert.False(vm.WizardAnalysisInProgress);
         Assert.True(vm.WizardHasAnalysis);

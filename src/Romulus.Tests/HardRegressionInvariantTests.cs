@@ -975,14 +975,13 @@ public sealed class HardRegressionInvariantTests : IDisposable
     }
 
     private static JsonDocument ParseCliSummaryJson(string stdout)
-    {
-        var start = stdout.IndexOf('{');
-        var end = stdout.LastIndexOf('}');
-        if (start >= 0 && end > start)
-            return JsonDocument.Parse(stdout[start..(end + 1)]);
-
-        return JsonDocument.Parse(stdout);
-    }
+        => CliSummaryJsonParser.ParseSummary(
+            stdout,
+            null,
+            "TotalFiles",
+            "Groups",
+            "Keep",
+            "Dupes");
 
     private static MainViewModel CreateViewModel()
         => new(new StubThemeService(), new StubDialogService());
