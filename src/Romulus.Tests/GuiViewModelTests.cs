@@ -2826,6 +2826,12 @@ public partial class GuiViewModelTests
         public string GetSiblingDirectory(string rootPath, string siblingName)
             => Path.Combine(Path.GetDirectoryName(rootPath) ?? rootPath, siblingName);
 
+        public IReadOnlyList<ConversionReviewEntry> BuildConversionReviewEntries(
+            RunOptions runOptions,
+            IReadOnlyList<DedupeGroup> dedupeGroups,
+            CancellationToken cancellationToken = default)
+            => Array.Empty<ConversionReviewEntry>();
+
         public bool HasVerifiedRollback(string? auditPath) => _hasVerifiedRollback;
     }
 
@@ -2871,6 +2877,12 @@ public partial class GuiViewModelTests
 
         public string GetSiblingDirectory(string rootPath, string siblingName)
             => Path.Combine(Path.GetDirectoryName(rootPath) ?? rootPath, siblingName);
+
+        public IReadOnlyList<ConversionReviewEntry> BuildConversionReviewEntries(
+            RunOptions runOptions,
+            IReadOnlyList<DedupeGroup> dedupeGroups,
+            CancellationToken cancellationToken = default)
+            => Array.Empty<ConversionReviewEntry>();
 
         public bool HasVerifiedRollback(string? auditPath) => false;
     }

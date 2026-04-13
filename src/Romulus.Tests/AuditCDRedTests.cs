@@ -111,10 +111,17 @@ public sealed class AuditCDRedTests
     public void C10_ScheduleAutoSave_ReusesSingleTimerInstance()
     {
         var source = ReadSource("src/Romulus.UI.Wpf/ViewModels/MainViewModel.Settings.cs");
+        var scheduleMatch = Regex.Match(
+            source,
+            @"private void ScheduleAutoSave\(\)[\s\S]*?\n    }",
+            RegexOptions.Singleline);
 
-        Assert.DoesNotContain("_autoSaveTimer?.Dispose();", source, StringComparison.Ordinal);
-        Assert.Contains("_autoSaveTimer ??=", source, StringComparison.Ordinal);
-        Assert.Contains("_autoSaveTimer.Change", source, StringComparison.Ordinal);
+        Assert.True(scheduleMatch.Success, "ScheduleAutoSave method not found.");
+        var scheduleBody = scheduleMatch.Value;
+
+        Assert.DoesNotContain("_autoSaveTimer?.Dispose();", scheduleBody, StringComparison.Ordinal);
+        Assert.Contains("_autoSaveTimer ??=", scheduleBody, StringComparison.Ordinal);
+        Assert.Contains("_autoSaveTimer.Change", scheduleBody, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -133,6 +140,30 @@ public sealed class AuditCDRedTests
 
         Assert.Contains("registration precedence", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Trace.TraceWarning", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void C13_RegionPreferenceAccess_MustUseDictionaryMapping()
+    {
+        var source = ReadSource("src/Romulus.UI.Wpf/ViewModels/MainViewModel.Settings.cs");
+
+        Assert.Contains("RegionPreferenceReaders", source, StringComparison.Ordinal);
+        Assert.Contains("RegionPreferenceWriters", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("private bool GetRegionBool(string code) => code switch", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("switch (code)", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void C14_MainViewModel_NavigationCommands_MustUseNamedTagConstants()
+    {
+        var source = ReadSource("src/Romulus.UI.Wpf/ViewModels/MainViewModel.cs");
+
+        Assert.Contains("NavTagConfig", source, StringComparison.Ordinal);
+        Assert.Contains("NavTagLibrary", source, StringComparison.Ordinal);
+        Assert.Contains("NavTagTools", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Shell.NavigateTo(\"Config\")", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Shell.NavigateTo(\"Library\")", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Shell.NavigateTo(\"Tools\")", source, StringComparison.Ordinal);
     }
 
     [Fact]

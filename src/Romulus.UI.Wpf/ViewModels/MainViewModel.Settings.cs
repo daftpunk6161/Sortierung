@@ -369,6 +369,48 @@ public sealed partial class MainViewModel
         [nameof(PreferBR)] = "BR", [nameof(PreferNL)] = "NL", [nameof(PreferSE)] = "SE", [nameof(PreferSCAN)] = "SCAN",
     };
 
+    private static readonly IReadOnlyDictionary<string, Func<MainViewModel, bool>> RegionPreferenceReaders =
+        new Dictionary<string, Func<MainViewModel, bool>>(StringComparer.Ordinal)
+        {
+            ["EU"] = static vm => vm.PreferEU,
+            ["US"] = static vm => vm.PreferUS,
+            ["WORLD"] = static vm => vm.PreferWORLD,
+            ["JP"] = static vm => vm.PreferJP,
+            ["DE"] = static vm => vm.PreferDE,
+            ["FR"] = static vm => vm.PreferFR,
+            ["IT"] = static vm => vm.PreferIT,
+            ["ES"] = static vm => vm.PreferES,
+            ["AU"] = static vm => vm.PreferAU,
+            ["ASIA"] = static vm => vm.PreferASIA,
+            ["KR"] = static vm => vm.PreferKR,
+            ["CN"] = static vm => vm.PreferCN,
+            ["BR"] = static vm => vm.PreferBR,
+            ["NL"] = static vm => vm.PreferNL,
+            ["SE"] = static vm => vm.PreferSE,
+            ["SCAN"] = static vm => vm.PreferSCAN,
+        };
+
+    private static readonly IReadOnlyDictionary<string, Action<MainViewModel, bool>> RegionPreferenceWriters =
+        new Dictionary<string, Action<MainViewModel, bool>>(StringComparer.Ordinal)
+        {
+            ["EU"] = static (vm, value) => vm.PreferEU = value,
+            ["US"] = static (vm, value) => vm.PreferUS = value,
+            ["WORLD"] = static (vm, value) => vm.PreferWORLD = value,
+            ["JP"] = static (vm, value) => vm.PreferJP = value,
+            ["DE"] = static (vm, value) => vm.PreferDE = value,
+            ["FR"] = static (vm, value) => vm.PreferFR = value,
+            ["IT"] = static (vm, value) => vm.PreferIT = value,
+            ["ES"] = static (vm, value) => vm.PreferES = value,
+            ["AU"] = static (vm, value) => vm.PreferAU = value,
+            ["ASIA"] = static (vm, value) => vm.PreferASIA = value,
+            ["KR"] = static (vm, value) => vm.PreferKR = value,
+            ["CN"] = static (vm, value) => vm.PreferCN = value,
+            ["BR"] = static (vm, value) => vm.PreferBR = value,
+            ["NL"] = static (vm, value) => vm.PreferNL = value,
+            ["SE"] = static (vm, value) => vm.PreferSE = value,
+            ["SCAN"] = static (vm, value) => vm.PreferSCAN = value,
+        };
+
     /// <summary>D-01: Sync MainViewModel.Prefer* booleans → SetupViewModel.RegionItems.IsActive.</summary>
     private void OnRegionPreferencePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -617,36 +659,22 @@ public sealed partial class MainViewModel
         UpdateWizardRegionSummary();
     }
 
-    private bool GetRegionBool(string code) => code switch
+    private bool GetRegionBool(string code)
     {
-        "EU" => PreferEU, "US" => PreferUS, "WORLD" => PreferWORLD, "JP" => PreferJP,
-        "DE" => PreferDE, "FR" => PreferFR, "IT" => PreferIT, "ES" => PreferES,
-        "AU" => PreferAU, "ASIA" => PreferASIA, "KR" => PreferKR, "CN" => PreferCN,
-        "BR" => PreferBR, "NL" => PreferNL, "SE" => PreferSE, "SCAN" => PreferSCAN,
-        _ => false,
-    };
+        if (string.IsNullOrWhiteSpace(code))
+            return false;
+
+        return RegionPreferenceReaders.TryGetValue(code, out var reader)
+            && reader(this);
+    }
 
     private void SetRegionBool(string code, bool value)
     {
-        switch (code)
-        {
-            case "EU": PreferEU = value; break;
-            case "US": PreferUS = value; break;
-            case "WORLD": PreferWORLD = value; break;
-            case "JP": PreferJP = value; break;
-            case "DE": PreferDE = value; break;
-            case "FR": PreferFR = value; break;
-            case "IT": PreferIT = value; break;
-            case "ES": PreferES = value; break;
-            case "AU": PreferAU = value; break;
-            case "ASIA": PreferASIA = value; break;
-            case "KR": PreferKR = value; break;
-            case "CN": PreferCN = value; break;
-            case "BR": PreferBR = value; break;
-            case "NL": PreferNL = value; break;
-            case "SE": PreferSE = value; break;
-            case "SCAN": PreferSCAN = value; break;
-        }
+        if (string.IsNullOrWhiteSpace(code))
+            return;
+
+        if (RegionPreferenceWriters.TryGetValue(code, out var writer))
+            writer(this, value);
     }
 
     /// <summary>TASK-117: Move a region from one index to another (Drag &amp; Drop reorder).

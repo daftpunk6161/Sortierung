@@ -190,12 +190,12 @@
   - **Datei:** `src/Romulus.Core/GameKeys/GameKeyNormalizer.cs` (Zeilen 56-75)
   - **Fix:** Expliziten Guard oder Dokumentation der Präzedenz.
 
-- [ ] **C-13 (P3): Region-Bool 16x Switch Copy-Paste**
+- [x] **C-13 (P3): Region-Bool 16x Switch Copy-Paste**
   - **Impact:** 16 manuelle Cases für GetRegionBool/SetRegionBool. Fehleranfällig bei neuen Regionen.
   - **Datei:** `src/Romulus.UI.Wpf/ViewModels/MainViewModel.Settings.cs` (Zeilen 356-380)
   - **Fix:** Dictionary-basiertes Pattern.
 
-- [ ] **C-14 (P3): Magic Strings in MainViewModel Commands**
+- [x] **C-14 (P3): Magic Strings in MainViewModel Commands**
   - **Impact:** Commands wie `"Config"`, `"Analyse"`, `"Library"` hardcoded statt Enums/Constants.
   - **Datei:** `src/Romulus.UI.Wpf/ViewModels/MainViewModel.cs` (Zeilen 72, 150, 180+)
   - **Fix:** Constants oder Enum-Lookup.
@@ -209,6 +209,13 @@
   - **Impact:** Nach Member-Move werden M3U-Einträge rewritten. Mehrere Matching-Strategien (relativ/absolut). Risiko: Playlist-Korruption bei Symlinks/UNC.
   - **Datei:** `src/Romulus.Infrastructure/Sorting/ConsoleSorter.cs`
   - **Fix:** Robusteren Playlist-Parser mit defensivem Fallback.
+
+### Verifikation C (2026-04-13, Ergänzung C-13/C-14)
+
+- [x] **C-13** umgesetzt in `MainViewModel.Settings`: region-code Zugriff läuft über `RegionPreferenceReaders`/`RegionPreferenceWriters` statt 16x `switch`.
+  - **Verifiziert durch:** `AuditCDRedTests.C13_RegionPreferenceAccess_MustUseDictionaryMapping`
+- [x] **C-14** umgesetzt in `MainViewModel` + `MainViewModel.RunPipeline`: zentrale Nav-Tag-Konstanten (`NavTagConfig`, `NavTagLibrary`, `NavTagTools`, `NavTagMissionControl`) statt harter Strings.
+  - **Verifiziert durch:** `AuditCDRedTests.C14_MainViewModel_NavigationCommands_MustUseNamedTagConstants`
 
 ---
 
@@ -386,7 +393,7 @@
 | **P0** | 3 | A-1, A-2, F-1 |
 | **P1** | 11 | A-3, A-4, B-1, B-2, C-1, C-2, D-1, F-2, F-3, F-4, F-5, F-6 |
 | **P2** | 20 | A-5, A-6, B-3, B-4, B-5, C-3, C-4, C-5, C-6, C-7, C-8, C-9, C-10, C-11, C-12, D-2, D-3, F-7–F-13 |
-| **P3** | 15 | C-13, C-14, C-15, C-16, D-4, D-5, E-1–E-9, F-14–F-16 |
+| **P3** | 13 | C-15, C-16, D-4, D-5, E-1–E-9, F-14–F-16 |
 | **Total** | **49** | |
 
 ---
@@ -403,4 +410,4 @@
 - C-1, C-2, C-3, C-5, C-6
 
 ### Bewusst verschieben
-- B-3 (kein reales Exploit), E-3, E-4, E-5, C-13, C-14
+- B-3 (kein reales Exploit), E-3, E-4, E-5

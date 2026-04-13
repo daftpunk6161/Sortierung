@@ -222,6 +222,13 @@ public sealed class TrackerAllFindingsBatch4RedTests
         Assert.Contains("ResolveSystemLocale", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void I18n06_SettingsLoader_MustGuardRegistryAccessWithWindowsCheck()
+    {
+        var source = File.ReadAllText(FindRepoFile("src", "Romulus.Infrastructure", "Configuration", "SettingsLoader.cs"));
+        Assert.Contains("OperatingSystem.IsWindows()", source, StringComparison.Ordinal);
+    }
+
     private static string FindRepoFile(params string[] segments)
     {
         var dataDir = RunEnvironmentBuilder.ResolveDataDir();

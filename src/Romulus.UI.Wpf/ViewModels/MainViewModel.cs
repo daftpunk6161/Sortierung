@@ -46,6 +46,10 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     private static readonly TimeSpan InlineMoveConfirmDebounceDelay = TimeSpan.FromMilliseconds(1500);
     private DateTime _inlineMoveUnlockAtUtc = DateTime.MinValue;
     private int _inlineMoveConfirmDebounceToken;
+    private const string NavTagMissionControl = "MissionControl";
+    private const string NavTagLibrary = "Library";
+    private const string NavTagConfig = "Config";
+    private const string NavTagTools = "Tools";
 
     // ═══ CHILD VIEWMODELS (GUI-021: shell ViewModel pattern) ════════════
     /// <summary>Shell state: navigation, overlays, wizard, notifications.</summary>
@@ -155,11 +159,11 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
             () => Roots.Count > 0 && !IsBusy && !HasBlockingValidationErrors);
 
         // GUI-063: Navigation history commands (delegate to Shell)
-        GoToSetupCommand = new RelayCommand(() => Shell.NavigateTo("Config"));
-        GoToAnalyseCommand = new RelayCommand(() => Shell.NavigateTo("Library"));
-        GoToConfigCommand = new RelayCommand(() => Shell.NavigateTo("Config"));
-        GoToLibraryCommand = new RelayCommand(() => Shell.NavigateTo("Library"));
-        GoToToolsCommand = new RelayCommand(() => Shell.NavigateTo("Tools"));
+        GoToSetupCommand = new RelayCommand(() => Shell.NavigateTo(NavTagConfig));
+        GoToAnalyseCommand = new RelayCommand(() => Shell.NavigateTo(NavTagLibrary));
+        GoToConfigCommand = new RelayCommand(() => Shell.NavigateTo(NavTagConfig));
+        GoToLibraryCommand = new RelayCommand(() => Shell.NavigateTo(NavTagLibrary));
+        GoToToolsCommand = new RelayCommand(() => Shell.NavigateTo(NavTagTools));
 
         // GUI-081: Wizard commands live on Shell
 

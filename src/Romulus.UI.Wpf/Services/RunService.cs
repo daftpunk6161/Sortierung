@@ -4,6 +4,7 @@ using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Audit;
+using Romulus.Infrastructure.Conversion;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;

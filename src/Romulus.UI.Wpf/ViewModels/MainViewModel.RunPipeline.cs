@@ -205,8 +205,8 @@ public sealed partial class MainViewModel
 
     public bool ShowSmartActionBar =>
         IsBusy ||
-        (!string.Equals(Shell.SelectedNavTag, "MissionControl", StringComparison.Ordinal) &&
-         !(string.Equals(Shell.SelectedNavTag, "Library", StringComparison.Ordinal)
+                (!string.Equals(Shell.SelectedNavTag, NavTagMissionControl, StringComparison.Ordinal) &&
+                 !(string.Equals(Shell.SelectedNavTag, NavTagLibrary, StringComparison.Ordinal)
            && string.Equals(Shell.SelectedSubTab, "Results", StringComparison.Ordinal)));
 
     public bool HasRunResult =>
@@ -714,53 +714,13 @@ public sealed partial class MainViewModel
     }
 
     private IReadOnlyList<ConversionReviewEntry> BuildConversionReviewEntries(RunOptions runOptions, CancellationToken cancellationToken)
+        => _runService.BuildConversionReviewEntries(runOptions, LastDedupeGroups, cancellationToken);
+
+    private void ResetDeclinedRunPromptState()
     {
-        var dataDir = FeatureService.ResolveDataDirectory() ?? RunEnvironmentBuilder.ResolveDataDir();
-        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
-        using var env = RunEnvironmentBuilder.Build(runOptions, settings, dataDir);
-
-        if (env.Converter is not FormatConverterAdapter converter)
-            return Array.Empty<ConversionReviewEntry>();
-
-        var entries = new List<ConversionReviewEntry>();
-        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var group in LastDedupeGroups)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var winner = group.Winner;
-            if (winner is null || string.IsNullOrWhiteSpace(winner.MainPath))
-                continue;
-
-            if (!seenPaths.Add(winner.MainPath))
-                continue;
-
-            if (!File.Exists(winner.MainPath))
-                continue;
-
-            var plan = converter.PlanForConsole(winner.MainPath, winner.ConsoleKey ?? string.Empty);
-            if (plan is null || !plan.RequiresReview)
-                continue;
-
-            entries.Add(new ConversionReviewEntry(
-                winner.MainPath,
-                plan.FinalTargetExtension,
-                BuildConversionSafetyReason(plan)));
-        }
-
-        return entries;
-    }
-
-    private string BuildConversionSafetyReason(ConversionPlan plan)
-    {
-        if (plan.Policy == ConversionPolicy.ManualOnly)
-            return "Policy=ManualOnly";
-        if (plan.Safety == ConversionSafety.Risky)
-            return "Safety=Risky";
-        if (plan.SourceIntegrity == SourceIntegrity.Lossy)
-            return "SourceIntegrity=Lossy";
-        return _loc["Conversion.ReviewRequired"];
+        ConvertOnly = false;
+        BusyHint = string.Empty;
+        CurrentRunState = RunState.Idle;
     }
 
     private void ShowInfoDialogNonBlocking(string message, string title)
@@ -870,7 +830,7 @@ public sealed partial class MainViewModel
             OnMovePreviewGateChanged();
             ResetDashboardForNewRun();
             DashMode = "Rollback";
-            Shell.SelectedNavTag = "Analyse";
+            Shell.SelectedNavTag = NavTagLibrary;
             SelectedResultSection = "Dashboard";
             SetRunSummary(
                 _loc.Format("Result.Summary.RollbackDone", restored.RolledBack, restored.SkippedMissingDest, restored.SkippedCollision, restored.Failed),
@@ -1006,7 +966,7 @@ public sealed partial class MainViewModel
         {
             _lastSuccessfulPreviewFingerprint = BuildPreviewConfigurationFingerprint();
             CurrentRunState = RunState.CompletedDryRun;
-            Shell.SelectedNavTag = "Analyse";
+            Shell.SelectedNavTag = NavTagLibrary;
             SelectedResultSection = "Dashboard";
             IsResultPerfDetailsExpanded = true;
             SetRunSummary(
@@ -1021,7 +981,7 @@ public sealed partial class MainViewModel
             CurrentRunState = RunState.Completed;
             CanRollback = _runService.HasVerifiedRollback(LastAuditPath);
             ShowMoveCompleteBanner = true;
-            Shell.SelectedNavTag = "Analyse";
+            Shell.SelectedNavTag = NavTagLibrary;
             SelectedResultSection = "Dashboard";
             IsResultPerfDetailsExpanded = true;
             SetRunSummary(_loc.Format("Result.Summary.ChangesApplied", MoveConsequenceText), UiErrorSeverity.Info);
@@ -1030,14 +990,14 @@ public sealed partial class MainViewModel
         {
             CurrentRunState = RunState.Cancelled;
             ShowMoveCompleteBanner = false;
-            Shell.SelectedNavTag = "Analyse";
+            Shell.SelectedNavTag = NavTagLibrary;
             SelectedResultSection = "Dashboard";
             SetRunSummary(BuildCancelledRunSummary(), UiErrorSeverity.Warning);
         }
         else if (completedWithErrors)
         {
             CurrentRunState = RunState.Failed;
-            Shell.SelectedNavTag = "Analyse";
+            Shell.SelectedNavTag = NavTagLibrary;
             SelectedResultSection = "Dashboard";
             IsResultPerfDetailsExpanded = true;
             SetRunSummary(_loc["Result.Summary.CompletedWithErrors"], UiErrorSeverity.Warning);
@@ -1045,7 +1005,7 @@ public sealed partial class MainViewModel
         else
         {
             CurrentRunState = RunState.Failed;
-            Shell.SelectedNavTag = "Analyse";
+            Shell.SelectedNavTag = NavTagLibrary;
             SelectedResultSection = "Dashboard";
             SetRunSummary(_loc["Result.Summary.Failed"], UiErrorSeverity.Error);
         }
@@ -1234,9 +1194,7 @@ public sealed partial class MainViewModel
         if (!DryRun && !ConvertOnly && ConfirmMove && !ConfirmMoveDialog())
         {
             // SEC-001: Reset transient flags on dialog decline before returning to Idle
-            ConvertOnly = false;
-            BusyHint = "";
-            CurrentRunState = RunState.Idle;
+            ResetDeclinedRunPromptState();
             return;
         }
 
@@ -1275,9 +1233,7 @@ public sealed partial class MainViewModel
             if (!conversionReviewDecision.Proceed)
             {
                 // SEC-001: Reset transient flags on dialog decline before returning to Idle
-                ConvertOnly = false;
-                BusyHint = "";
-                CurrentRunState = RunState.Idle;
+                ResetDeclinedRunPromptState();
                 return;
             }
 
@@ -1288,9 +1244,7 @@ public sealed partial class MainViewModel
             if (!await ConfirmDatRenamePreviewDialogAsync(runOptions, ct))
             {
                 // SEC-001: Reset transient flags on dialog decline before returning to Idle
-                ConvertOnly = false;
-                BusyHint = "";
-                CurrentRunState = RunState.Idle;
+                ResetDeclinedRunPromptState();
                 return;
             }
 

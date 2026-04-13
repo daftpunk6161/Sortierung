@@ -40,6 +40,7 @@ public sealed partial class RunOrchestrator : IDisposable
     private readonly PersistedReviewDecisionService? _reviewDecisionService;
     private readonly IFamilyDatStrategyResolver? _familyDatStrategyResolver;
     private readonly IFamilyPipelineSelector? _familyPipelineSelector;
+    private readonly IPhasePlanExecutor _phasePlanExecutor;
     private bool _disposed;
 
     public RunOrchestrator(
@@ -58,7 +59,8 @@ public sealed partial class RunOrchestrator : IDisposable
         string? enrichmentFingerprint = null,
         PersistedReviewDecisionService? reviewDecisionService = null,
         IFamilyDatStrategyResolver? familyDatStrategyResolver = null,
-        IFamilyPipelineSelector? familyPipelineSelector = null)
+        IFamilyPipelineSelector? familyPipelineSelector = null,
+        IPhasePlanExecutor? phasePlanExecutor = null)
     {
         _fs = fs;
         _audit = audit;
@@ -76,6 +78,7 @@ public sealed partial class RunOrchestrator : IDisposable
         _reviewDecisionService = reviewDecisionService;
         _familyDatStrategyResolver = familyDatStrategyResolver;
         _familyPipelineSelector = familyPipelineSelector;
+        _phasePlanExecutor = phasePlanExecutor ?? new PhasePlanExecutor(onProgress);
     }
 
     /// <summary>
@@ -265,7 +268,7 @@ public sealed partial class RunOrchestrator : IDisposable
                 WinnerConversion = (state, ct) => RunWinnerConversionStep(state, options, result, metrics, ct)
             });
 
-            ExecutePhasePlan(phasePlan, pipelineState, cancellationToken);
+            _phasePlanExecutor.Execute(phasePlan, pipelineState, cancellationToken);
         }
 
         // Propagate DatAudit / DatRename results from pipeline state to builder
@@ -413,28 +416,6 @@ public sealed partial class RunOrchestrator : IDisposable
             loserCount += group.Losers.Count;
 
         result.LoserCount = loserCount;
-    }
-
-    private void ExecutePhasePlan(
-        IReadOnlyList<IPhaseStep> phasePlan,
-        PipelineState pipelineState,
-        CancellationToken cancellationToken)
-    {
-        foreach (var phase in phasePlan)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            _onProgress?.Invoke($"[Plan] Phase: {phase.Name}");
-            var stepResult = phase.Execute(pipelineState, cancellationToken);
-
-            foreach (var warning in stepResult.Warnings)
-                _onProgress?.Invoke($"[WARN] {phase.Name}: {warning}");
-
-            if (string.Equals(stepResult.Status, Contracts.RunConstants.StatusFailed, StringComparison.OrdinalIgnoreCase))
-            {
-                _onProgress?.Invoke($"[Plan] Phase '{phase.Name}' failed – aborting remaining phases.");
-                break;
-            }
-        }
     }
 
 }

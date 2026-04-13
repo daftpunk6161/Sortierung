@@ -333,7 +333,6 @@ public sealed partial class MainViewModel
                 string value => value,
                 string[] values => string.Join(",", values),
                 bool booleanValue => booleanValue.ToString(),
-                bool? nullableBoolean => nullableBoolean?.ToString() ?? string.Empty,
                 _ => rawValue.ToString() ?? string.Empty
             };
         }

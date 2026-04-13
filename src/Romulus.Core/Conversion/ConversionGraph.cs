@@ -1,5 +1,6 @@
 namespace Romulus.Core.Conversion;
 
+using System.Diagnostics;
 using Romulus.Contracts.Models;
 
 /// <summary>
@@ -7,7 +8,38 @@ using Romulus.Contracts.Models;
 /// </summary>
 public sealed class ConversionGraph(IReadOnlyList<ConversionCapability> capabilities)
 {
+    private const int DefaultMaxSearchDepth = 5;
+    private static readonly object MaxDepthSync = new();
+    private static int _registeredMaxSearchDepth = DefaultMaxSearchDepth;
+
     private readonly IReadOnlyList<ConversionCapability> _capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
+
+    public static void RegisterMaxSearchDepth(int maxSearchDepth)
+    {
+        if (maxSearchDepth < 1)
+            throw new ArgumentOutOfRangeException(nameof(maxSearchDepth), maxSearchDepth, "maxSearchDepth must be greater than zero.");
+
+        lock (MaxDepthSync)
+        {
+            _registeredMaxSearchDepth = maxSearchDepth;
+        }
+    }
+
+    internal static void ResetForTesting()
+    {
+        lock (MaxDepthSync)
+        {
+            _registeredMaxSearchDepth = DefaultMaxSearchDepth;
+        }
+    }
+
+    private static int ResolveMaxSearchDepth()
+    {
+        lock (MaxDepthSync)
+        {
+            return _registeredMaxSearchDepth;
+        }
+    }
 
     /// <summary>
     /// Finds the cheapest conversion path from source extension to target extension.
@@ -35,13 +67,27 @@ public sealed class ConversionGraph(IReadOnlyList<ConversionCapability> capabili
         var previous = new Dictionary<string, (string PrevExt, ConversionCapability Edge)>(StringComparer.OrdinalIgnoreCase);
 
         var enqueueOrder = 0;
+        var maxSearchDepth = ResolveMaxSearchDepth();
+        var emittedDepthWarning = false;
         queue.Enqueue((source, 0), (0, enqueueOrder++));
 
         while (queue.TryDequeue(out var current, out var currentPriority))
         {
             var currentCost = currentPriority.Cost;
-            if (current.Depth > 5)
+            if (current.Depth > maxSearchDepth)
+            {
+                if (!emittedDepthWarning)
+                {
+                    emittedDepthWarning = true;
+                    Trace.TraceWarning(
+                        "conversion-depth-limit: pruning path expansion at depth {0} for source '{1}' and target '{2}'.",
+                        maxSearchDepth,
+                        source,
+                        target);
+                }
+
                 continue;
+            }
 
             if (!distances.TryGetValue(current.Ext, out var knownCost) || currentCost > knownCost)
                 continue;

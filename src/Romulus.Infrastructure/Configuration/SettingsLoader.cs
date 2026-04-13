@@ -432,6 +432,9 @@ public sealed class SettingsLoader
     {
         try
         {
+            if (!OperatingSystem.IsWindows())
+                return "dark";
+
             const string personalizeKey = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
             var value = Registry.GetValue(personalizeKey, "AppsUseLightTheme", defaultValue: 0);
             if (value is int intValue)

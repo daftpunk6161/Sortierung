@@ -28,6 +28,15 @@ public static class GameKeyNormalizer
     private static readonly object _registrationLock = new();
     private static volatile RegisteredState? _registeredState;
     private static volatile Func<(IReadOnlyList<System.Text.RegularExpressions.Regex>? Patterns, IReadOnlyDictionary<string, string> Aliases)>? _patternFactory;
+    private static RegistrationSource _registrationSource;
+
+    // registration precedence: explicit default registrations win over lazy factories.
+    private enum RegistrationSource
+    {
+        None,
+        Defaults,
+        Factory
+    }
 
     private sealed record RegisteredState(
         IReadOnlyList<System.Text.RegularExpressions.Regex> Patterns,
@@ -46,6 +55,7 @@ public static class GameKeyNormalizer
         {
             _registeredState = null;
             _patternFactory = null;
+            _registrationSource = RegistrationSource.None;
         }
     }
 
@@ -58,7 +68,14 @@ public static class GameKeyNormalizer
 
         lock (_registrationLock)
         {
+            if (_registrationSource == RegistrationSource.Factory)
+            {
+                Trace.TraceWarning(
+                    "[GameKeyNormalizer] registration precedence: overriding previously registered pattern factory with explicit default patterns.");
+            }
+
             _registeredState = new RegisteredState(tagPatterns, alwaysAliasMap);
+            _registrationSource = RegistrationSource.Defaults;
         }
     }
 
@@ -70,9 +87,19 @@ public static class GameKeyNormalizer
     public static void RegisterPatternFactory(
         Func<(IReadOnlyList<System.Text.RegularExpressions.Regex>? Patterns, IReadOnlyDictionary<string, string> Aliases)> factory)
     {
+        ArgumentNullException.ThrowIfNull(factory);
+
         lock (_registrationLock)
         {
-            _patternFactory = factory ?? throw new ArgumentNullException(nameof(factory));
+            if (_registrationSource == RegistrationSource.Defaults && _registeredState is not null)
+            {
+                Trace.TraceWarning(
+                    "[GameKeyNormalizer] registration precedence: ignored pattern factory registration because explicit default patterns are already active.");
+                return;
+            }
+
+            _patternFactory = factory;
+            _registrationSource = RegistrationSource.Factory;
         }
     }
 
@@ -337,7 +364,7 @@ public static class GameKeyNormalizer
         }
 
         if (iterations >= MaxDosMetadataStripIterations && SafeRegex.IsMatch(MsDosTrailingParenRegex, value))
-            Trace.WriteLine($"[GameKeyNormalizer] DOS metadata strip hit iteration cap ({MaxDosMetadataStripIterations}) for input '{text}'.");
+            Trace.TraceWarning($"[GameKeyNormalizer] DOS metadata strip hit iteration cap ({MaxDosMetadataStripIterations}) for input '{text}'.");
 
         return value;
     }

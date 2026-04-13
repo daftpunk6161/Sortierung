@@ -264,7 +264,12 @@ public sealed class VersionScorer
                         segments.Add(segVal);
                 }
             }
-            catch (RegexMatchTimeoutException) { }
+            catch (RegexMatchTimeoutException)
+            {
+                Trace.TraceWarning(
+                    "version-score-timeout: regex segment parsing timed out for '{0}'.",
+                    baseName);
+            }
 
             if (segments.Count > 0)
             {

@@ -223,8 +223,7 @@ public partial class MainWindow : Window, IWindowHost
         // Final safety net: terminate any remaining tracked child processes.
         ExternalProcessGuard.KillAllTrackedProcesses("app-shutdown", msg => _vm.AddLog(msg, "WARN"));
 
-        // GUI-115: Dispose file watchers (owned by VM) — includes WatchService event unsubscription
-        _vm.CleanupWatchers();
+        // GUI-115: Dispose VM-owned resources (watchers, timers, event subscriptions)
         _vm.Dispose();
 
         // Force application exit so no zombie .NET Host processes remain
