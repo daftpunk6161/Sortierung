@@ -20,7 +20,7 @@ concurrency:
 jobs:
   tests:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,7 +51,7 @@ jobs:
 
       - name: Unit + Coverage Gate
         run: |
-          dotnet test src/Romulus.sln --no-build --configuration Release --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+          dotnet test src/Romulus.sln --no-build --configuration Release --blame-hang --blame-hang-timeout 10m --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
           # Install and run coverage threshold check
           dotnet tool install --global dotnet-reportgenerator-globaltool 2>$null
           $coverageFiles = Get-ChildItem -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1

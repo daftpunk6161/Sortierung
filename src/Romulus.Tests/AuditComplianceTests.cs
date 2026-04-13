@@ -202,6 +202,20 @@ public sealed class AuditComplianceTests : IDisposable
         Assert.Contains("'--configuration', $Configuration", coverageGate, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Audit1_Test005c_TestPipeline_UnitCoverageGate_MustIncludeHangGuardrails()
+    {
+        var pipelinePath = Path.GetFullPath(Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..",
+            ".github", "workflows", "test-pipeline.yml"));
+        Assert.True(File.Exists(pipelinePath), $"Expected CI workflow at {pipelinePath}");
+
+        var content = File.ReadAllText(pipelinePath);
+        Assert.Contains("timeout-minutes: 30", content, StringComparison.Ordinal);
+        Assert.Contains("--blame-hang", content, StringComparison.Ordinal);
+        Assert.Contains("--blame-hang-timeout", content, StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// AUDIT1-TEST-006: GetFolderBaseKey Edge Cases — covered in FolderDeduplicatorTests.
     /// </summary>
