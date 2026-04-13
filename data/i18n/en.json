@@ -1238,5 +1238,13 @@
   "Cmd.StorageTiering.TrendsTitle": "Run Trends",
 
   "Progress.PerfPhase": "Phase: {0}",
-  "Progress.PerfFile": "File: {0}"
+  "Progress.PerfFile": "File: {0}",
+
+  "Report.Summary.Duplicates": "Duplicates",
+  "Report.Summary.ConvertErrors": "Convert Errors",
+  "Report.Summary.Errors": "Errors",
+  "Report.Unknown.BannerTitle": "{0} entry(ies) with UNKNOWN classification",
+  "Report.Unknown.Explain": "UNKNOWN means the file could not be assigned to a known console or category.",
+  "Report.Unknown.Causes": "Hints: non-standard file name, unknown format, or missing DAT coverage.",
+  "Report.Unknown.Recommendation": "Recommendation: check file name, refresh DAT directory, or assign manually."
 }

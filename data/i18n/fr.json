@@ -1174,5 +1174,13 @@
   "Cmd.StorageTiering.Title": "Storage Tiering",
   "Cmd.StorageTiering.TrendsTitle": "Run Trends",
   "Progress.PerfPhase": "Phase: {0}",
-  "Progress.PerfFile": "File: {0}"
+  "Progress.PerfFile": "File: {0}",
+
+  "Report.Summary.Duplicates": "Doublons",
+  "Report.Summary.ConvertErrors": "Erreurs conversion",
+  "Report.Summary.Errors": "Erreurs",
+  "Report.Unknown.BannerTitle": "{0} entree(s) avec classification UNKNOWN",
+  "Report.Unknown.Explain": "UNKNOWN signifie que le fichier ne peut pas etre associe a une console ou categorie connue.",
+  "Report.Unknown.Causes": "Indices: nom non standard, format inconnu ou couverture DAT manquante.",
+  "Report.Unknown.Recommendation": "Recommendation: verifier le nom, actualiser le dossier DAT ou affecter manuellement."
 }

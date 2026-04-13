@@ -429,38 +429,57 @@ tr:hover { background: rgba(137,180,250,0.05); }
     private static string FormatSize(long bytes)
         => Formatting.FormatSize(bytes);
 
-    private static readonly IReadOnlyDictionary<string, string> ReportTextDe = new Dictionary<string, string>(StringComparer.Ordinal)
-    {
-        ["Summary.Duplicates"] = "Doppeldateien",
-        ["Summary.ConvertErrors"] = "Convert Errors",
-        ["Summary.Errors"] = "Errors",
-        ["Unknown.BannerTitle"] = "{0} entry(ies) with UNKNOWN classification",
-        ["Unknown.Explain"] = "UNKNOWN means the file could not be assigned to a known console or category.",
-        ["Unknown.Causes"] = "Hints: non-standard file name, unknown format, or missing DAT coverage.",
-        ["Unknown.Recommendation"] = "Recommendation: check file name, refresh DAT directory, or assign manually."
-    };
+    /// <summary>Lazily loaded report locale strings from data/i18n/{locale}.json.</summary>
+    private static IReadOnlyDictionary<string, string>? _cachedReportLocale;
+    private static string? _cachedReportLocaleKey;
+    private static readonly object ReportLocaleLock = new();
 
-    private static readonly IReadOnlyDictionary<string, string> ReportTextEn = new Dictionary<string, string>(StringComparer.Ordinal)
+    private static IReadOnlyDictionary<string, string> LoadReportLocale(string locale)
     {
-        ["Summary.Duplicates"] = "Duplicates",
-        ["Summary.ConvertErrors"] = "Convert Errors",
-        ["Summary.Errors"] = "Errors",
-        ["Unknown.BannerTitle"] = "{0} entry(ies) with UNKNOWN classification",
-        ["Unknown.Explain"] = "UNKNOWN means the file could not be assigned to a known console or category.",
-        ["Unknown.Causes"] = "Hints: non-standard file name, unknown format, or missing DAT coverage.",
-        ["Unknown.Recommendation"] = "Recommendation: check file name, refresh DAT directory, or assign manually."
-    };
+        lock (ReportLocaleLock)
+        {
+            if (_cachedReportLocaleKey is not null
+                && _cachedReportLocaleKey.Equals(locale, StringComparison.OrdinalIgnoreCase)
+                && _cachedReportLocale is not null)
+            {
+                return _cachedReportLocale;
+            }
 
-    private static readonly IReadOnlyDictionary<string, string> ReportTextFr = new Dictionary<string, string>(StringComparer.Ordinal)
-    {
-        ["Summary.Duplicates"] = "Doublons",
-        ["Summary.ConvertErrors"] = "Erreurs conversion",
-        ["Summary.Errors"] = "Erreurs",
-        ["Unknown.BannerTitle"] = "{0} entree(s) avec classification UNKNOWN",
-        ["Unknown.Explain"] = "UNKNOWN signifie que le fichier ne peut pas etre associe a une console ou categorie connue.",
-        ["Unknown.Causes"] = "Indices: nom non standard, format inconnu ou couverture DAT manquante.",
-        ["Unknown.Recommendation"] = "Recommendation: verifier le nom, actualiser le dossier DAT ou affecter manuellement."
-    };
+            var dict = new Dictionary<string, string>(StringComparer.Ordinal);
+            var dataDir = Orchestration.RunEnvironmentBuilder.TryResolveDataDir();
+            if (dataDir is not null)
+            {
+                var path = Path.Combine(dataDir, "i18n", $"{locale}.json");
+                if (File.Exists(path))
+                {
+                    try
+                    {
+                        var json = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(File.ReadAllText(path));
+                        if (json is not null)
+                        {
+                            foreach (var kv in json)
+                            {
+                                if (kv.Key.StartsWith("Report.", StringComparison.Ordinal)
+                                    && kv.Value.ValueKind == JsonValueKind.String)
+                                {
+                                    // Strip "Report." prefix for internal lookup
+                                    dict[kv.Key["Report.".Length..]] = kv.Value.GetString() ?? "";
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+                    {
+                        // Graceful fallback: empty dict → uses fallback strings
+                    }
+                }
+            }
+
+            _cachedReportLocale = dict;
+            _cachedReportLocaleKey = locale;
+            return dict;
+        }
+    }
 
     private static string ReportText(string key, string fallback, params object[] args)
     {
@@ -481,20 +500,27 @@ tr:hover { background: rgba(137,180,250,0.05); }
     private static string ResolveReportText(string key, string fallback)
     {
         var locale = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-        if (locale.Equals("en", StringComparison.OrdinalIgnoreCase)
-            && ReportTextEn.TryGetValue(key, out var enValue))
+
+        // Try requested locale
+        var localeDict = LoadReportLocale(locale);
+        if (localeDict.TryGetValue(key, out var localeValue))
+            return localeValue;
+
+        // Fallback to English
+        if (!locale.Equals("en", StringComparison.OrdinalIgnoreCase))
         {
-            return enValue;
+            var enDict = LoadReportLocale("en");
+            if (enDict.TryGetValue(key, out var enValue))
+                return enValue;
         }
 
-        if (locale.Equals("fr", StringComparison.OrdinalIgnoreCase)
-            && ReportTextFr.TryGetValue(key, out var frValue))
+        // Fallback to German (default)
+        if (!locale.Equals("de", StringComparison.OrdinalIgnoreCase))
         {
-            return frValue;
+            var deDict = LoadReportLocale("de");
+            if (deDict.TryGetValue(key, out var deValue))
+                return deValue;
         }
-
-        if (ReportTextDe.TryGetValue(key, out var deValue))
-            return deValue;
 
         return fallback;
     }
