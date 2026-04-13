@@ -70,9 +70,9 @@ app.UseExceptionHandler(exceptionApp =>
     {
         var exceptionFeature = context.Features.Get<IExceptionHandlerFeature>();
         if (exceptionFeature?.Error is not null)
-        {
-            SafeConsoleWriteLine($"[API-ERROR] Unhandled exception: {exceptionFeature.Error.GetType().Name}: {exceptionFeature.Error.Message}");
-        }
+            app.Logger.LogError(
+                "Unhandled exception captured by global exception handler. ExceptionType={ExceptionType}",
+                exceptionFeature.Error.GetType().Name);
 
         if (context.Response.HasStarted)
             return;

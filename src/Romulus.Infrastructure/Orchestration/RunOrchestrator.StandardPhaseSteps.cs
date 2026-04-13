@@ -210,7 +210,7 @@ public sealed partial class RunOrchestrator
             candidatePaths: candidatePaths,
             conflictPolicy: options.ConflictPolicy);
 
-        if (!dryRunSort && result.ConsoleSortResult?.PathMutations is { Count: > 0 } pathMutations)
+        if (result.ConsoleSortResult?.PathMutations is { Count: > 0 } pathMutations)
             state.ApplyPathMutations(pathMutations);
 
         _onProgress?.Invoke(RunProgressLocalization.Format(

@@ -5,6 +5,7 @@ using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
 using Romulus.Infrastructure.Workflow;
 using Romulus.Infrastructure.Safety;
+using Romulus.Infrastructure.Version;
 
 namespace Romulus.CLI;
 
@@ -85,6 +86,7 @@ internal static partial class CliArgsParser
                     if (!TryConsumeValue(args, ref i, "--profile", errors, out var profileVal))
                         break;
                     opts.ProfileId = profileVal;
+                    opts.ProfileIdExplicit = true;
                     break;
 
                 case "--profile-file":
@@ -97,14 +99,15 @@ internal static partial class CliArgsParser
                     if (!TryConsumeValue(args, ref i, "--workflow", errors, out var workflowVal))
                         break;
                     opts.WorkflowScenarioId = workflowVal;
+                    opts.WorkflowScenarioExplicit = true;
                     break;
 
                 case "-extensions" or "--extensions":
                     if (!TryConsumeValue(args, ref i, "--extensions", errors, out var extsRaw))
                         break;
-                    var exts = extsRaw.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                    var exts = VersionHelper.NormalizeExtensionList(extsRaw);
                     opts.Extensions = new HashSet<string>(
-                        exts.Select(e => e.StartsWith(".") ? e : "." + e),
+                        exts,
                         StringComparer.OrdinalIgnoreCase);
                     opts.ExtensionsExplicit = true;
                     break;
@@ -413,11 +416,6 @@ internal static partial class CliArgsParser
         if (protectedPathError is not null)
             return CliParseResult.ValidationError([$"[Error] {protectedPathError}"]);
 
-        // Validate extensions have dot prefix
-        var invalidExts = opts.Extensions.Where(e => !e.StartsWith('.')).ToList();
-        if (invalidExts.Count > 0)
-            return CliParseResult.ValidationError([$"[Error] Extensions must start with '.': {string.Join(", ", invalidExts)}"]);
-
         if (!opts.OnlyGames && !opts.KeepUnknownWhenOnlyGames)
             return CliParseResult.ValidationError(["[Error] --dropunknown requires --gamesonly."]);
 
@@ -606,7 +604,9 @@ internal sealed class CliRunOptions
     public string Mode { get; set; } = "DryRun";
     public bool ModeExplicit { get; set; }
     public string? WorkflowScenarioId { get; set; }
+    public bool WorkflowScenarioExplicit { get; set; }
     public string? ProfileId { get; set; }
+    public bool ProfileIdExplicit { get; set; }
     public string? ProfileFilePath { get; set; }
     public string[] PreferRegions { get; set; } = Array.Empty<string>();
     public bool PreferRegionsExplicit { get; set; }

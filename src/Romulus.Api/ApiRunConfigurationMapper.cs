@@ -49,6 +49,8 @@ internal static class ApiRunConfigurationMapper
         var explicitness = new RunConfigurationExplicitness
         {
             Mode = presence.Mode,
+            WorkflowScenarioId = presence.WorkflowScenarioId,
+            ProfileId = presence.ProfileId,
             PreferRegions = presence.PreferRegions,
             Extensions = presence.Extensions,
             RemoveJunk = presence.RemoveJunk,

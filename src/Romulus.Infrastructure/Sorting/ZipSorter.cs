@@ -33,11 +33,11 @@ public static class ZipSorter
             var extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var entry in archive.Entries)
             {
-                // SEC-ZIP-01: Skip entries with path traversal or rooted paths (Zip-Slip defense)
-                if (entry.FullName.Contains("..") || Path.IsPathRooted(entry.FullName))
+                // SEC-ZIP-01: Skip unsafe entry paths (Zip-Slip defense)
+                if (!TryGetSafeEntryPath(entry.FullName, out var safeEntryPath))
                     continue;
 
-                var ext = Path.GetExtension(entry.FullName);
+                var ext = Path.GetExtension(safeEntryPath);
                 if (!string.IsNullOrEmpty(ext))
                     extensions.Add(ext.ToLowerInvariant());
             }
@@ -45,6 +45,50 @@ public static class ZipSorter
         }
         catch (InvalidDataException) { return Array.Empty<string>(); }
         catch (IOException) { return Array.Empty<string>(); }
+    }
+
+    private static bool TryGetSafeEntryPath(string entryPath, out string safeEntryPath)
+    {
+        safeEntryPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(entryPath))
+            return false;
+
+        var normalized = entryPath.Replace('\\', '/');
+        string decoded;
+        try
+        {
+            decoded = Uri.UnescapeDataString(normalized);
+        }
+        catch (UriFormatException)
+        {
+            return false;
+        }
+
+        if (decoded.IndexOf('\0') >= 0)
+            return false;
+
+        if (Path.IsPathRooted(decoded))
+            return false;
+
+        if (decoded.StartsWith("/", StringComparison.Ordinal)
+            || decoded.StartsWith("\\", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var segments = decoded.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var segment in segments)
+        {
+            if (segment is "." or "..")
+                return false;
+
+            // Block drive-like segments (for example "C:evil.bin").
+            if (segment.Contains(':', StringComparison.Ordinal))
+                return false;
+        }
+
+        safeEntryPath = decoded;
+        return true;
     }
 
     /// <summary>

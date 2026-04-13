@@ -2,6 +2,7 @@ namespace Romulus.Infrastructure.Orchestration;
 
 using Romulus.Contracts.Models;
 using Romulus.Core.Scoring;
+using System.Diagnostics;
 
 /// <summary>
 /// Channel-neutral projection of RunResult metrics used by CLI/API/UI adapters.
@@ -60,8 +61,18 @@ public static class RunProjectionFactory
         var total = result.TotalFilesScanned;
         var dedupeGroups = result.DedupeGroups ?? Array.Empty<DedupeGroup>();
         var winnerCount = CountKeptGames(candidates, dedupeGroups);
-        if (winnerCount == 0 && candidates.Count == 0 && result.WinnerCount > 0)
+        if (winnerCount == 0
+            && candidates.Count == 0
+            && result.WinnerCount > 0
+            && result.GroupCount > 0
+            && result.GroupCount == result.WinnerCount)
+        {
+            Trace.TraceWarning(
+                "winner-count-fallback: projection used RunResult winner/group snapshot because candidates were unavailable (winnerCount={0}, groupCount={1}).",
+                result.WinnerCount,
+                result.GroupCount);
             winnerCount = result.WinnerCount;
+        }
 
         var loserCount = result.LoserCount > 0
             ? result.LoserCount
@@ -73,7 +84,16 @@ public static class RunProjectionFactory
         var unknown = result.UnknownCount;
         var datMatches = candidates.Count(c => c.DatMatch);
         var filteredNonGameCount = result.FilteredNonGameCount;
-        var verificationFailDelta = Math.Max(0, result.ConvertVerifyFailedCount - result.ConvertErrorCount);
+        var verificationFailDeltaRaw = result.ConvertVerifyFailedCount - result.ConvertErrorCount;
+        if (verificationFailDeltaRaw < 0)
+        {
+            Trace.TraceWarning(
+                "negative-verify-delta: ConvertVerifyFailedCount ({0}) is lower than ConvertErrorCount ({1}); clamping additional fail delta to zero.",
+                result.ConvertVerifyFailedCount,
+                result.ConvertErrorCount);
+        }
+
+        var verificationFailDelta = Math.Max(0, verificationFailDeltaRaw);
         var failCount = (result.MoveResult?.FailCount ?? 0)
                       + (result.JunkMoveResult?.FailCount ?? 0)
                       + result.ConvertErrorCount

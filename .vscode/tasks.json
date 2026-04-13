@@ -134,6 +134,28 @@
 			}
 		},
 		{
+			"label": "tests: coverage lcov",
+			"type": "process",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"${workspaceFolder}/src/Romulus.sln",
+				"--collect",
+				"XPlat Code Coverage",
+				"--",
+				"DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=lcov"
+			],
+			"group": "test",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": true,
+				"close": true
+			}
+		},
+		{
 			"label": "tests: benchmark gate",
 			"type": "shell",
 			"command": "pwsh",

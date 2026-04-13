@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
+using System.Threading;
 using Romulus.Core.Classification;
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
@@ -23,6 +25,31 @@ public sealed partial class MainViewModel
     private Task _pendingRunConfigurationSelectionTask = Task.CompletedTask;
     private bool _wizardAnalysisDirty = true;
     private CancellationTokenSource? _wizardAnalysisCts;
+
+    private IDisposable EnterRunConfigurationSelectionSuppressionScope()
+    {
+        SetRunConfigurationSelectionSuppression(value: true);
+        return new RunConfigurationSelectionSuppressionScope(this);
+    }
+
+    private void SetRunConfigurationSelectionSuppression(bool value)
+        => _suppressRunConfigurationSelectionApply = value;
+
+    private sealed class RunConfigurationSelectionSuppressionScope : IDisposable
+    {
+        private MainViewModel? _owner;
+
+        public RunConfigurationSelectionSuppressionScope(MainViewModel owner)
+        {
+            _owner = owner;
+        }
+
+        public void Dispose()
+        {
+            var owner = Interlocked.Exchange(ref _owner, null);
+            owner?.SetRunConfigurationSelectionSuppression(value: false);
+        }
+    }
 
     private bool _wizardAnalysisInProgress;
     public bool WizardAnalysisInProgress
@@ -169,16 +196,9 @@ public sealed partial class MainViewModel
 
     internal void RestoreRunConfigurationSelection(string? workflowScenarioId, string? profileId)
     {
-        _suppressRunConfigurationSelectionApply = true;
-        try
-        {
-            SelectedWorkflowScenarioId = workflowScenarioId;
-            SelectedRunProfileId = profileId;
-        }
-        finally
-        {
-            _suppressRunConfigurationSelectionApply = false;
-        }
+        using var _ = EnterRunConfigurationSelectionSuppressionScope();
+        SelectedWorkflowScenarioId = workflowScenarioId;
+        SelectedRunProfileId = profileId;
 
         OnRunConfigurationSelectionMetadataChanged();
     }
@@ -214,8 +234,10 @@ public sealed partial class MainViewModel
 
     internal RunConfigurationExplicitness BuildCurrentRunConfigurationExplicitness()
     {
-        var hasSelection = !string.IsNullOrWhiteSpace(NormalizeSelection(SelectedWorkflowScenarioId))
-                           || !string.IsNullOrWhiteSpace(NormalizeSelection(SelectedRunProfileId));
+        var currentWorkflowId = NormalizeSelection(SelectedWorkflowScenarioId);
+        var currentProfileId = NormalizeSelection(SelectedRunProfileId);
+        var hasSelection = !string.IsNullOrWhiteSpace(currentWorkflowId)
+                           || !string.IsNullOrWhiteSpace(currentProfileId);
 
         if (!hasSelection || _selectionBaselineDraft is null)
             return CreateAllExplicit();
@@ -226,6 +248,8 @@ public sealed partial class MainViewModel
         return new RunConfigurationExplicitness
         {
             Mode = !AreEquivalent(currentDraft.Mode, baselineDraft.Mode),
+            WorkflowScenarioId = !AreEquivalent(currentWorkflowId, baselineDraft.WorkflowScenarioId),
+            ProfileId = !AreEquivalent(currentProfileId, baselineDraft.ProfileId),
             PreferRegions = !AreEquivalent(currentDraft.PreferRegions, baselineDraft.PreferRegions),
             Extensions = !AreEquivalent(currentDraft.Extensions, baselineDraft.Extensions),
             RemoveJunk = currentDraft.RemoveJunk != baselineDraft.RemoveJunk,
@@ -289,35 +313,38 @@ public sealed partial class MainViewModel
     internal IReadOnlyDictionary<string, string> GetCurrentRunConfigurationMap()
         => BuildRunConfigurationMap(BuildCurrentRunConfigurationDraft());
 
+    private static readonly PropertyInfo[] RunConfigurationDraftMapProperties = typeof(RunConfigurationDraft)
+        .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+        .OrderBy(static property => property.Name, StringComparer.Ordinal)
+        .ToArray();
+
     internal static IReadOnlyDictionary<string, string> BuildRunConfigurationMap(RunConfigurationDraft draft)
     {
         ArgumentNullException.ThrowIfNull(draft);
 
-        return new Dictionary<string, string>(StringComparer.Ordinal)
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var property in RunConfigurationDraftMapProperties)
         {
-            ["workflowScenarioId"] = draft.WorkflowScenarioId ?? string.Empty,
-            ["profileId"] = draft.ProfileId ?? string.Empty,
-            ["mode"] = draft.Mode ?? string.Empty,
-            ["preferRegions"] = string.Join(",", draft.PreferRegions ?? Array.Empty<string>()),
-            ["extensions"] = string.Join(",", draft.Extensions ?? Array.Empty<string>()),
-            ["removeJunk"] = draft.RemoveJunk?.ToString() ?? string.Empty,
-            ["onlyGames"] = draft.OnlyGames?.ToString() ?? string.Empty,
-            ["keepUnknownWhenOnlyGames"] = draft.KeepUnknownWhenOnlyGames?.ToString() ?? string.Empty,
-            ["aggressiveJunk"] = draft.AggressiveJunk?.ToString() ?? string.Empty,
-            ["sortConsole"] = draft.SortConsole?.ToString() ?? string.Empty,
-            ["enableDat"] = draft.EnableDat?.ToString() ?? string.Empty,
-            ["enableDatAudit"] = draft.EnableDatAudit?.ToString() ?? string.Empty,
-            ["enableDatRename"] = draft.EnableDatRename?.ToString() ?? string.Empty,
-            ["datRoot"] = draft.DatRoot ?? string.Empty,
-            ["hashType"] = draft.HashType ?? string.Empty,
-            ["convertFormat"] = draft.ConvertFormat ?? string.Empty,
-            ["convertOnly"] = draft.ConvertOnly?.ToString() ?? string.Empty,
-            ["approveReviews"] = draft.ApproveReviews?.ToString() ?? string.Empty,
-            ["approveConversionReview"] = draft.ApproveConversionReview?.ToString() ?? string.Empty,
-            ["conflictPolicy"] = draft.ConflictPolicy ?? string.Empty,
-            ["trashRoot"] = draft.TrashRoot ?? string.Empty
-        };
+            var key = ToCamelCase(property.Name);
+            var rawValue = property.GetValue(draft);
+            map[key] = rawValue switch
+            {
+                null => string.Empty,
+                string value => value,
+                string[] values => string.Join(",", values),
+                bool booleanValue => booleanValue.ToString(),
+                bool? nullableBoolean => nullableBoolean?.ToString() ?? string.Empty,
+                _ => rawValue.ToString() ?? string.Empty
+            };
+        }
+
+        return map;
     }
+
+    private static string ToCamelCase(string value)
+        => string.IsNullOrEmpty(value)
+            ? value
+            : char.ToLowerInvariant(value[0]) + value[1..];
 
     internal async Task ApplySelectedRunConfigurationAsync()
     {
@@ -391,7 +418,8 @@ public sealed partial class MainViewModel
         ArgumentNullException.ThrowIfNull(materialized);
 
         var draft = materialized.EffectiveDraft;
-        _suppressRunConfigurationSelectionApply = true;
+        var snapshot = CaptureRunConfigurationUiSnapshot();
+        using var _ = EnterRunConfigurationSelectionSuppressionScope();
         try
         {
             DryRun = !string.Equals(draft.Mode, RunConstants.ModeMove, StringComparison.OrdinalIgnoreCase);
@@ -416,15 +444,92 @@ public sealed partial class MainViewModel
             SetRunConfigurationSelectionInternal(materialized.Workflow?.Id, materialized.EffectiveProfileId);
             _selectionBaselineDraft = draft;
         }
-        finally
+        catch
         {
-            _suppressRunConfigurationSelectionApply = false;
+            RestoreRunConfigurationUiSnapshot(snapshot);
+            throw;
         }
 
         RefreshStatus();
         UpdateWizardRegionSummary();
         OnRunConfigurationSelectionMetadataChanged();
     }
+
+    private RunConfigurationUiSnapshot CaptureRunConfigurationUiSnapshot()
+    {
+        return new RunConfigurationUiSnapshot(
+            DryRun,
+            RemoveJunk,
+            OnlyGames,
+            KeepUnknownWhenOnlyGames,
+            AggressiveJunk,
+            SortConsole,
+            UseDat,
+            EnableDatAudit,
+            EnableDatRename,
+            DatRoot,
+            DatHashType,
+            ConvertEnabled,
+            ConvertOnly,
+            ApproveReviews,
+            ApproveConversionReview,
+            TrashRoot,
+            ConflictPolicy,
+            GetPreferredRegions(),
+            BuildSelectedExtensionsForRunConfiguration(),
+            NormalizeSelection(SelectedWorkflowScenarioId),
+            NormalizeSelection(SelectedRunProfileId),
+            _selectionBaselineDraft);
+    }
+
+    private void RestoreRunConfigurationUiSnapshot(RunConfigurationUiSnapshot snapshot)
+    {
+        DryRun = snapshot.DryRun;
+        RemoveJunk = snapshot.RemoveJunk;
+        OnlyGames = snapshot.OnlyGames;
+        KeepUnknownWhenOnlyGames = snapshot.KeepUnknownWhenOnlyGames;
+        AggressiveJunk = snapshot.AggressiveJunk;
+        SortConsole = snapshot.SortConsole;
+        UseDat = snapshot.UseDat;
+        EnableDatAudit = snapshot.EnableDatAudit;
+        EnableDatRename = snapshot.EnableDatRename;
+        DatRoot = snapshot.DatRoot;
+        DatHashType = snapshot.DatHashType;
+        ConvertEnabled = snapshot.ConvertEnabled;
+        ConvertOnly = snapshot.ConvertOnly;
+        ApproveReviews = snapshot.ApproveReviews;
+        ApproveConversionReview = snapshot.ApproveConversionReview;
+        TrashRoot = snapshot.TrashRoot;
+        ConflictPolicy = snapshot.ConflictPolicy;
+        ApplyPreferredRegions(snapshot.PreferredRegions);
+        ApplySelectedExtensions(snapshot.Extensions);
+        SetRunConfigurationSelectionInternal(snapshot.WorkflowScenarioId, snapshot.ProfileId);
+        _selectionBaselineDraft = snapshot.SelectionBaselineDraft;
+    }
+
+    private sealed record RunConfigurationUiSnapshot(
+        bool DryRun,
+        bool RemoveJunk,
+        bool OnlyGames,
+        bool KeepUnknownWhenOnlyGames,
+        bool AggressiveJunk,
+        bool SortConsole,
+        bool UseDat,
+        bool EnableDatAudit,
+        bool EnableDatRename,
+        string DatRoot,
+        string DatHashType,
+        bool ConvertEnabled,
+        bool ConvertOnly,
+        bool ApproveReviews,
+        bool ApproveConversionReview,
+        string TrashRoot,
+        Models.ConflictPolicy ConflictPolicy,
+        string[] PreferredRegions,
+        string[] Extensions,
+        string? WorkflowScenarioId,
+        string? ProfileId,
+        RunConfigurationDraft? SelectionBaselineDraft);
 
     private void OnRunConfigurationSelectionChanged()
     {
@@ -719,6 +824,8 @@ public sealed partial class MainViewModel
         => new()
         {
             Mode = true,
+            WorkflowScenarioId = true,
+            ProfileId = true,
             PreferRegions = true,
             Extensions = true,
             RemoveJunk = true,
@@ -768,7 +875,13 @@ public sealed partial class MainViewModel
             return;
 
         if (Enum.TryParse<Models.ConflictPolicy>(conflictPolicy, ignoreCase: true, out var parsed))
+        {
             ConflictPolicy = parsed;
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Run configuration contains invalid conflictPolicy '{conflictPolicy}'.");
     }
 
     private void ApplyPreferredRegions(string[]? preferredRegions)

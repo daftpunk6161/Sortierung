@@ -107,6 +107,8 @@ internal static class CliOptionsMapper
         return new RunConfigurationExplicitness
         {
             Mode = cli.ModeExplicit,
+            WorkflowScenarioId = cli.WorkflowScenarioExplicit,
+            ProfileId = cli.ProfileIdExplicit,
             PreferRegions = cli.PreferRegionsExplicit,
             Extensions = cli.ExtensionsExplicit,
             RemoveJunk = cli.RemoveJunkExplicit,
@@ -155,6 +157,12 @@ internal static class CliOptionsMapper
         {
             cli.ModeExplicit = true;
         }
+
+        if (!cli.WorkflowScenarioExplicit && !string.IsNullOrWhiteSpace(cli.WorkflowScenarioId))
+            cli.WorkflowScenarioExplicit = true;
+
+        if (!cli.ProfileIdExplicit && !string.IsNullOrWhiteSpace(cli.ProfileId))
+            cli.ProfileIdExplicit = true;
 
         if (!cli.PreferRegionsExplicit && cli.PreferRegions.Length > 0)
             cli.PreferRegionsExplicit = true;

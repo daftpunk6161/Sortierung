@@ -37,6 +37,8 @@ public sealed record RunConfigurationDraft
 public sealed record RunConfigurationExplicitness
 {
     public bool Mode { get; init; }
+    public bool WorkflowScenarioId { get; init; }
+    public bool ProfileId { get; init; }
     public bool PreferRegions { get; init; }
     public bool Extensions { get; init; }
     public bool RemoveJunk { get; init; }

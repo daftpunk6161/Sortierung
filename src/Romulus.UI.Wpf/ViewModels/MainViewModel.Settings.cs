@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Threading;
@@ -15,6 +16,8 @@ namespace Romulus.UI.Wpf.ViewModels;
 public sealed partial class MainViewModel
 {
     private int _setupSyncDepth;
+    private readonly SetupSyncMirrorState _setupSyncMirrorState = new();
+    private bool _mainViewModelDisposed;
 
     private bool IsSetupSyncInProgress => _setupSyncDepth > 0;
 
@@ -38,6 +41,29 @@ public sealed partial class MainViewModel
             var owner = Interlocked.Exchange(ref _owner, null);
             if (owner is not null)
                 Interlocked.Decrement(ref owner._setupSyncDepth);
+        }
+    }
+
+    private sealed class SetupSyncMirrorState
+    {
+        private readonly object _sync = new();
+        private readonly Dictionary<string, string> _values = new(StringComparer.Ordinal);
+
+        public bool TryUpdate(string key, string? rawValue, out string normalizedValue)
+        {
+            normalizedValue = rawValue ?? string.Empty;
+
+            lock (_sync)
+            {
+                if (_values.TryGetValue(key, out var current)
+                    && string.Equals(current, normalizedValue, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+
+                _values[key] = normalizedValue;
+                return true;
+            }
         }
     }
 
@@ -65,30 +91,38 @@ public sealed partial class MainViewModel
     /// <summary>Schedule an auto-save 2 seconds after the last persisted property change.</summary>
     private void ScheduleAutoSave()
     {
-        if (!_settingsLoaded) return;
-        _autoSaveTimer?.Dispose();
-        _autoSaveTimer = new System.Threading.Timer(
-            _ =>
+        if (!_settingsLoaded)
+            return;
+
+        lock (_settingsSaveLock)
+        {
+            _autoSaveTimer ??= new System.Threading.Timer(OnAutoSaveTimerElapsed, null,
+                System.Threading.Timeout.InfiniteTimeSpan,
+                System.Threading.Timeout.InfiniteTimeSpan);
+
+            _autoSaveTimer.Change(TimeSpan.FromSeconds(2), System.Threading.Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    private void OnAutoSaveTimerElapsed(object? _)
+    {
+        // Must run on UI thread — SaveFrom reads ObservableCollection<string> Roots
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null)
+            return;
+
+        dispatcher.BeginInvoke(() =>
+        {
+            try
             {
-                // Must run on UI thread — SaveFrom reads ObservableCollection<string> Roots
-                var dispatcher = System.Windows.Application.Current?.Dispatcher;
-                if (dispatcher is null) return;
-                dispatcher.BeginInvoke(() =>
-                {
-                    try
-                    {
-                        SaveSettings();
-                        AddLog(_loc["Log.SettingsAutoSaved"], "DEBUG");
-                    }
-                    catch (Exception ex)
-                    {
-                        AddLog(_loc.Format("Log.AutoSaveFailed", ex.Message), "WARN");
-                    }
-                });
-            },
-            null,
-            TimeSpan.FromSeconds(2),
-            System.Threading.Timeout.InfiniteTimeSpan);
+                SaveSettings();
+                AddLog(_loc["Log.SettingsAutoSaved"], "DEBUG");
+            }
+            catch (Exception ex)
+            {
+                AddLog(_loc.Format("Log.AutoSaveFailed", ex.Message), "WARN");
+            }
+        });
     }
     // ═══ PATH PROPERTIES (persisted) ════════════════════════════════════
     private string _trashRoot = "";
@@ -233,44 +267,47 @@ public sealed partial class MainViewModel
         if (Setup is null)
             return;
 
+        if (!_setupSyncMirrorState.TryUpdate(propertyName, value, out var normalizedValue))
+            return;
+
         using var _ = EnterSetupSyncScope();
         switch (propertyName)
         {
             case nameof(SetupViewModel.TrashRoot):
-                if (!string.Equals(Setup.TrashRoot, value, StringComparison.Ordinal))
-                    Setup.TrashRoot = value;
+                if (!string.Equals(Setup.TrashRoot, normalizedValue, StringComparison.Ordinal))
+                    Setup.TrashRoot = normalizedValue;
                 break;
             case nameof(SetupViewModel.DatRoot):
-                if (!string.Equals(Setup.DatRoot, value, StringComparison.Ordinal))
-                    Setup.DatRoot = value;
+                if (!string.Equals(Setup.DatRoot, normalizedValue, StringComparison.Ordinal))
+                    Setup.DatRoot = normalizedValue;
                 break;
             case nameof(SetupViewModel.AuditRoot):
-                if (!string.Equals(Setup.AuditRoot, value, StringComparison.Ordinal))
-                    Setup.AuditRoot = value;
+                if (!string.Equals(Setup.AuditRoot, normalizedValue, StringComparison.Ordinal))
+                    Setup.AuditRoot = normalizedValue;
                 break;
             case nameof(SetupViewModel.Ps3DupesRoot):
-                if (!string.Equals(Setup.Ps3DupesRoot, value, StringComparison.Ordinal))
-                    Setup.Ps3DupesRoot = value;
+                if (!string.Equals(Setup.Ps3DupesRoot, normalizedValue, StringComparison.Ordinal))
+                    Setup.Ps3DupesRoot = normalizedValue;
                 break;
             case nameof(SetupViewModel.ToolChdman):
-                if (!string.Equals(Setup.ToolChdman, value, StringComparison.Ordinal))
-                    Setup.ToolChdman = value;
+                if (!string.Equals(Setup.ToolChdman, normalizedValue, StringComparison.Ordinal))
+                    Setup.ToolChdman = normalizedValue;
                 break;
             case nameof(SetupViewModel.ToolDolphin):
-                if (!string.Equals(Setup.ToolDolphin, value, StringComparison.Ordinal))
-                    Setup.ToolDolphin = value;
+                if (!string.Equals(Setup.ToolDolphin, normalizedValue, StringComparison.Ordinal))
+                    Setup.ToolDolphin = normalizedValue;
                 break;
             case nameof(SetupViewModel.Tool7z):
-                if (!string.Equals(Setup.Tool7z, value, StringComparison.Ordinal))
-                    Setup.Tool7z = value;
+                if (!string.Equals(Setup.Tool7z, normalizedValue, StringComparison.Ordinal))
+                    Setup.Tool7z = normalizedValue;
                 break;
             case nameof(SetupViewModel.ToolPsxtract):
-                if (!string.Equals(Setup.ToolPsxtract, value, StringComparison.Ordinal))
-                    Setup.ToolPsxtract = value;
+                if (!string.Equals(Setup.ToolPsxtract, normalizedValue, StringComparison.Ordinal))
+                    Setup.ToolPsxtract = normalizedValue;
                 break;
             case nameof(SetupViewModel.ToolCiso):
-                if (!string.Equals(Setup.ToolCiso, value, StringComparison.Ordinal))
-                    Setup.ToolCiso = value;
+                if (!string.Equals(Setup.ToolCiso, normalizedValue, StringComparison.Ordinal))
+                    Setup.ToolCiso = normalizedValue;
                 break;
         }
     }
@@ -284,31 +321,40 @@ public sealed partial class MainViewModel
         switch (e.PropertyName)
         {
             case nameof(SetupViewModel.TrashRoot):
-                TrashRoot = Setup.TrashRoot;
+                if (_setupSyncMirrorState.TryUpdate(e.PropertyName, Setup.TrashRoot, out var trashRoot))
+                    TrashRoot = trashRoot;
                 break;
             case nameof(SetupViewModel.DatRoot):
-                DatRoot = Setup.DatRoot;
+                if (_setupSyncMirrorState.TryUpdate(e.PropertyName, Setup.DatRoot, out var datRoot))
+                    DatRoot = datRoot;
                 break;
             case nameof(SetupViewModel.AuditRoot):
-                AuditRoot = Setup.AuditRoot;
+                if (_setupSyncMirrorState.TryUpdate(e.PropertyName, Setup.AuditRoot, out var auditRoot))
+                    AuditRoot = auditRoot;
                 break;
             case nameof(SetupViewModel.Ps3DupesRoot):
-                Ps3DupesRoot = Setup.Ps3DupesRoot;
+                if (_setupSyncMirrorState.TryUpdate(e.PropertyName, Setup.Ps3DupesRoot, out var ps3DupesRoot))
+                    Ps3DupesRoot = ps3DupesRoot;
                 break;
             case nameof(SetupViewModel.ToolChdman):
-                ToolChdman = Setup.ToolChdman;
+                if (_setupSyncMirrorState.TryUpdate(e.PropertyName, Setup.ToolChdman, out var toolChdman))
+                    ToolChdman = toolChdman;
                 break;
             case nameof(SetupViewModel.ToolDolphin):
-                ToolDolphin = Setup.ToolDolphin;
+                if (_setupSyncMirrorState.TryUpdate(e.PropertyName, Setup.ToolDolphin, out var toolDolphin))
+                    ToolDolphin = toolDolphin;
                 break;
             case nameof(SetupViewModel.Tool7z):
-                Tool7z = Setup.Tool7z;
+                if (_setupSyncMirrorState.TryUpdate(e.PropertyName, Setup.Tool7z, out var tool7z))
+                    Tool7z = tool7z;
                 break;
             case nameof(SetupViewModel.ToolPsxtract):
-                ToolPsxtract = Setup.ToolPsxtract;
+                if (_setupSyncMirrorState.TryUpdate(e.PropertyName, Setup.ToolPsxtract, out var toolPsxtract))
+                    ToolPsxtract = toolPsxtract;
                 break;
             case nameof(SetupViewModel.ToolCiso):
-                ToolCiso = Setup.ToolCiso;
+                if (_setupSyncMirrorState.TryUpdate(e.PropertyName, Setup.ToolCiso, out var toolCiso))
+                    ToolCiso = toolCiso;
                 break;
         }
     }

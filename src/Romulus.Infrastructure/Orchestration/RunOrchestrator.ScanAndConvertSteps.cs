@@ -102,6 +102,11 @@ public sealed partial class RunOrchestrator
         ExecuteConvertOnlyPhase(processingCandidates, options, result, metrics, cancellationToken);
         result.AllCandidates = candidates;
         result.TotalFilesScanned = candidates.Count;
+        var gameCandidateCount = processingCandidates.Count(static candidate => candidate.Category == FileCategory.Game);
+        result.GroupCount = gameCandidateCount;
+        result.WinnerCount = gameCandidateCount;
+        result.LoserCount = 0;
+        result.DedupeGroups = Array.Empty<DedupeGroup>();
         return true;
     }
 }

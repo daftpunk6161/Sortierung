@@ -1,6 +1,7 @@
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Contracts;
+using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Metrics;
 using Romulus.Infrastructure.Orchestration;
 using Xunit;
@@ -387,7 +388,72 @@ public sealed class MovePhaseAuditInvariantTests : IDisposable
     }
 
     [Fact]
-    public void Move_SetMemberRollbackRestoreFailure_ThrowsInvalidOperation()
+    public void Move_SetMemberPreflightFailure_SkipsWholeSetAndLeavesDescriptorInPlace()
+    {
+        var root = Path.Combine(_tempDir, "set-preflight");
+        Directory.CreateDirectory(root);
+
+        var cue = CreateSizedFile(root, "broken.cue", 64,
+            "FILE \"broken (track 1).bin\" BINARY\n" +
+            "  TRACK 01 MODE1/2352\n" +
+            "    INDEX 01 00:00:00\n" +
+            "FILE \"broken (track 2).bin\" BINARY\n" +
+            "  TRACK 02 MODE1/2352\n" +
+            "    INDEX 01 00:00:00\n");
+        var bin1 = CreateSizedFile(root, "broken (track 1).bin", 16);
+        var bin2 = CreateSizedFile(root, "broken (track 2).bin", 20);
+
+        var trashDir = Path.Combine(root, RunConstants.WellKnownFolders.TrashRegionDedupe);
+        Directory.CreateDirectory(trashDir);
+        File.WriteAllText(Path.Combine(trashDir, Path.GetFileName(bin1)), "conflict");
+
+        var fs = new FileSystemAdapter();
+        var audit = new InvariantAuditStore();
+        var options = new RunOptions
+        {
+            Roots = new[] { root },
+            Mode = "Move",
+            ConflictPolicy = "Skip",
+            AuditPath = Path.Combine(_tempDir, "audit-set-preflight.csv")
+        };
+
+        var group = new DedupeGroup
+        {
+            GameKey = "set-preflight",
+            Winner = Candidate(Path.Combine(root, "winner.zip")),
+            Losers = new[]
+            {
+                new RomCandidate
+                {
+                    MainPath = cue,
+                    GameKey = "set-preflight",
+                    Region = "US",
+                    RegionScore = 1000,
+                    FormatScore = 500,
+                    VersionScore = 100,
+                    SizeBytes = 64,
+                    Extension = ".cue",
+                    ConsoleKey = "PSX",
+                    Category = FileCategory.Game
+                }
+            }
+        };
+
+        var result = new MovePipelinePhase().Execute(
+            new MovePhaseInput(new[] { group }, options),
+            Context(options, fs, audit),
+            CancellationToken.None);
+
+        Assert.Equal(0, result.MoveCount);
+        Assert.Equal(1, result.FailCount);
+        Assert.True(File.Exists(cue));
+        Assert.True(File.Exists(bin1));
+        Assert.True(File.Exists(bin2));
+        Assert.False(File.Exists(Path.Combine(root, RunConstants.WellKnownFolders.TrashRegionDedupe, Path.GetFileName(cue))));
+    }
+
+    [Fact]
+    public void Move_SetMemberRollbackRestoreFailure_DoesNotThrowAndCountsFailure()
     {
         var root = Path.Combine(_tempDir, "tgap52-rollback-failure-root");
         Directory.CreateDirectory(root);
@@ -438,12 +504,14 @@ public sealed class MovePhaseAuditInvariantTests : IDisposable
             }
         };
 
-        var ex = Assert.Throws<InvalidOperationException>(() => new MovePipelinePhase().Execute(
+        var result = new MovePipelinePhase().Execute(
             new MovePhaseInput(new[] { group }, options),
             Context(options, fs, audit),
-            CancellationToken.None));
+            CancellationToken.None);
 
-        Assert.Contains("Rollback failed for set-member move", ex.Message, StringComparison.Ordinal);
+        Assert.Equal(0, result.MoveCount);
+        Assert.Equal(1, result.FailCount);
+        Assert.Contains(audit.Rows, action => string.Equals(action, "MOVE_FAILED", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

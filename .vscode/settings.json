@@ -13,6 +13,10 @@
         "**/reports/**": true,
         "**/audit-logs/archive/**": true
     },
+    "markiscodecoverage.searchCriteria": "src/**/TestResults/**/coverage.info",
+    "markiscodecoverage.coverageThreshold": 34,
+    "markiscodecoverage.enableOnStartup": true,
+    "markiscodecoverage.enableDecorations": false,
     "chat.agent.maxRequests": 1500,
     "pester.runTestsInNewProcess": true,
     "pester.autoDebugOnSave": false,

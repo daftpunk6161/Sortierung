@@ -268,14 +268,8 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                                 "MOVE_FAILED", loser.Category.ToString().ToUpperInvariant(), "", reason);
                         }
 
-                        if (rollbackFailures.Count > 0)
-                        {
-                            if (hasAuditPath)
-                                context.AuditStore.Flush(input.Options.AuditPath!);
-
-                            throw new InvalidOperationException(
-                                $"Rollback failed for set-member move '{Path.GetFileName(loser.MainPath)}' ({rollbackFailures.Count} restore failure(s)); run aborted to prevent inconsistent state.");
-                        }
+                        if (rollbackFailures.Count > 0 && hasAuditPath)
+                            context.AuditStore.Flush(input.Options.AuditPath!);
                     }
                     else
                     {

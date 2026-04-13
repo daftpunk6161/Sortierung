@@ -304,6 +304,7 @@ public sealed partial class RunOrchestrator : IDisposable
             // Issue #19: Write partial audit sidecar so rollback is possible after cancel
             try
             {
+                TryFlushHashCache();
                 WritePartialAuditSidecar(options, result, metrics, sw.ElapsedMilliseconds);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -335,6 +336,7 @@ public sealed partial class RunOrchestrator : IDisposable
             // Write partial audit sidecar so rollback is possible even after crash
             try
             {
+                TryFlushHashCache();
                 WritePartialAuditSidecar(options, result, metrics, sw.ElapsedMilliseconds);
             }
             catch (Exception sidecarEx) when (sidecarEx is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -346,14 +348,19 @@ public sealed partial class RunOrchestrator : IDisposable
         }
         finally
         {
-            try
-            {
-                _hashService?.FlushPersistentCache();
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
-            {
-                _onProgress?.Invoke($"[HashCache] Persist failed: {ex.Message}");
-            }
+            TryFlushHashCache();
+        }
+    }
+
+    private void TryFlushHashCache()
+    {
+        try
+        {
+            _hashService?.FlushPersistentCache();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            _onProgress?.Invoke($"[HashCache] Persist failed: {ex.Message}");
         }
     }
 
