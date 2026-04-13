@@ -67,7 +67,7 @@ public static class M3uPlaylistParser
                 continue;
 
             var refPath = Path.IsPathRooted(line)
-                ? line
+                ? Path.GetFullPath(line)
                 : Path.GetFullPath(Path.Combine(dir, line));
 
             // Path traversal guard: must stay within M3U directory

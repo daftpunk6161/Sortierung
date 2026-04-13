@@ -192,7 +192,7 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
                             totalWatch.ElapsedMilliseconds);
                     }
 
-                    if (!ConversionOutputValidator.TryValidateCreatedOutput(invocationOutputPath, out var outputFailureReason))
+                    if (!ConversionOutputValidator.TryValidateCreatedOutput(invocationOutputPath, step.IsIntermediate, out var outputFailureReason))
                     {
                         onStepComplete?.Invoke(
                             step,

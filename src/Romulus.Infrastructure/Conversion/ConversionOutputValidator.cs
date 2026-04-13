@@ -20,6 +20,11 @@ internal static class ConversionOutputValidator
 
     public static bool TryValidateCreatedOutput(string targetPath, out string failureReason)
     {
+        return TryValidateCreatedOutput(targetPath, isIntermediate: false, out failureReason);
+    }
+
+    public static bool TryValidateCreatedOutput(string targetPath, bool isIntermediate, out string failureReason)
+    {
         if (!File.Exists(targetPath))
         {
             failureReason = "output-not-created";
@@ -35,11 +40,16 @@ internal static class ConversionOutputValidator
                 return false;
             }
 
-            var minimumExpectedBytes = ResolveMinimumExpectedBytes(targetPath);
-            if (length < minimumExpectedBytes)
+            // Intermediate outputs only need existence + non-empty check;
+            // strict minimum-size validation applies only to final outputs.
+            if (!isIntermediate)
             {
-                failureReason = "output-too-small";
-                return false;
+                var minimumExpectedBytes = ResolveMinimumExpectedBytes(targetPath);
+                if (length < minimumExpectedBytes)
+                {
+                    failureReason = "output-too-small";
+                    return false;
+                }
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

@@ -23,10 +23,24 @@ internal static class ConversionVerificationHelpers
         if (convResult.VerificationResult != VerificationStatus.NotAttempted)
             return convResult.VerificationResult == VerificationStatus.Verified;
 
-        if (target is null)
+        // When target is null (e.g. FormatConverterAdapter path), try to derive from plan.
+        var effectiveTarget = target;
+        if (effectiveTarget is null && convResult.Plan?.Steps is { Count: > 0 } steps)
+        {
+            var lastStep = steps[^1];
+            if (lastStep.Capability is not null)
+            {
+                effectiveTarget = new ConversionTarget(
+                    lastStep.Capability.TargetExtension,
+                    lastStep.Capability.Tool.ToolName,
+                    lastStep.Capability.Command);
+            }
+        }
+
+        if (effectiveTarget is null)
             return false;
 
-        return converter.Verify(convResult.TargetPath, target);
+        return converter.Verify(convResult.TargetPath, effectiveTarget);
     }
 
     /// <summary>

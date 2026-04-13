@@ -446,6 +446,12 @@ public sealed class ConsoleSorter
             // Move each member
             foreach (var member in members)
             {
+                // SEC-SORT-01: Validate source member is within the allowed root
+                // to prevent crafted set descriptors from moving files outside roots.
+                if (!IsPathWithinRoot(member, root))
+                    throw new InvalidOperationException(
+                        $"Source containment blocked for set member outside root: {member}");
+
                 var memberDest = ResolveMoveDestination(root, member, destDir);
                 if (memberDest is null)
                     throw new InvalidOperationException(

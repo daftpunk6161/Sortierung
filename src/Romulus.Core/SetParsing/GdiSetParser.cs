@@ -66,7 +66,7 @@ public static class GdiSetParser
             try
             {
                 fullPath = Path.IsPathRooted(fileName)
-                    ? fileName
+                    ? Path.GetFullPath(fileName)
                     : Path.GetFullPath(Path.Combine(dir, fileName));
             }
             catch (ArgumentException)

@@ -425,6 +425,48 @@
 - [x] **F-15** umgesetzt durch dedizierten Repeated-Flag-Test und Parser-Validation bei doppeltem `--roots`.
   - **Verifiziert durch:** `AuditCDRedTests.F15_CliParser_RepeatedRootsFlag_ReturnsValidationError`, `CliProgramTests`, `CliArgsParser*`
 
+### Verifikation E (Batch 2, 2026-04-14)
+
+- [x] **E-2** umgesetzt: Report-Locale-Dictionaries durch `LoadReportLocale()` ersetzt, liest aus `data/i18n/{locale}.json`. Report.*-Keys in de/en/fr ergänzt.
+  - **Verifiziert durch:** `AuditEFOpenTests.E02_ReportLocalization_MustNotHaveHardcodedDictionaries`, `E02_ReportLocalization_I18nFilesMustContainReportKeys`
+- [x] **E-7** umgesetzt: `LevenshteinDistance` nach `StringUtils.cs` extrahiert, `FeatureService` delegiert.
+  - **Verifiziert durch:** `AuditEFOpenTests.E07_LevenshteinDistance_MustBeDelegatedToStringUtils`
+- [x] **E-8** verifiziert: CsvSafe `StartsWith('"')` Guard verhindert Double-Quoting korrekt. Kein Code-Change nötig.
+  - **Verifiziert durch:** `AuditEFOpenTests.E08_CsvSafe_MustNotDoubleQuote_WhenSanitizerAlreadyQuotes`
+
+### Verifikation F (2026-04-14)
+
+- [x] **F-1** abgesichert durch 2 Behavioral-Tests (3-Group + 5-Group mit Partial Failure): Audit-Rows für erfolgreiche MOVE_PENDING/MOVE und FailCount-Invariante.
+  - **Verifiziert durch:** `AuditEFBehavioralTests.F01_MovePhase_MultiGroup_PartialFailure_AuditTracksAllOutcomes`, `F01_MovePhase_FailureMidway_CountInvariantHolds`
+- [x] **F-2** abgesichert durch ConversionGraph-Tests: Lossy→Lossy blockiert (CSO→WBFS), expand-Exemption erlaubt (NKit).
+  - **Verifiziert durch:** `AuditEFOpenTests.F02_ConversionGraph_LossyToLossy_IsBlocked`, `F02_ConversionGraph_LossyExpand_IsAllowed`
+- [x] **F-3** abgesichert durch 10 parallele AuditCsvStore-Writes: Row-Count und CSV-Feldintegrität.
+  - **Verifiziert durch:** `AuditEFBehavioralTests.F03_AuditCsvStore_ConcurrentWrites_NoCorruptedRows`
+- [x] **F-4** abgesichert durch 2 Tests: Tampered-Sidecar → Failed=5 (nicht 1); fehlender Sidecar → Failed≥3.
+  - **Verifiziert durch:** `AuditEFBehavioralTests.F04_RollbackService_IntegrityFailure_FailedCountEqualsRowCount`, `F04_RollbackService_NoSidecar_FailedCountEqualsRowCount`
+- [x] **F-5** abgesichert: Source-Level-Test bestätigt pathMutations-Tracking im DryRun-Pfad.
+  - **Verifiziert durch:** `AuditEFOpenTests.F05_ConsoleSortResult_DryRunVsExecute_MustHaveConsistentCounts`
+- [x] **F-6** abgesichert durch CUE+BIN Set-Preflight-Test: BIN-Konflikt → CUE und alle BINs bleiben in Place.
+  - **Verifiziert durch:** `AuditEFBehavioralTests.F06_SetMember_BINPreflightFail_CUEAndBINStayInPlace`
+- [x] **F-7** abgesichert: Source-Level-Test bestätigt RegexMatchTimeoutException-Catch + TraceWarning.
+  - **Verifiziert durch:** `AuditEFOpenTests.F07_VersionScorer_RegexTimeoutCatch_LogsTraceWarning`
+- [x] **F-8** abgesichert: 1000 Candidates, 20 Shuffle-Runs → deterministischer Winner.
+  - **Verifiziert durch:** `AuditEFOpenTests.F08_DeduplicationEngine_1000Candidates_DeterministicWinner`
+- [x] **F-9** abgesichert: CJK, Cyrillic, Chinese, Fullwidth→Halfwidth → stabile nicht-leere Keys.
+  - **Verifiziert durch:** `AuditEFOpenTests.F09_GameKeyNormalizer_*` (4 Tests)
+- [x] **F-10** abgesichert: Null, Empty, Whitespace, Unknown, Known Extension → DefaultUnknownFormatScore / positive Score.
+  - **Verifiziert durch:** `AuditEFOpenTests.F10_FormatScorer_*` (5 Tests)
+- [x] **F-11** abgesichert: Unbalanced open/close, empty, nested Parens → kein Crash.
+  - **Verifiziert durch:** `AuditEFOpenTests.F11_RegionDetector_*` (4 Tests)
+- [x] **F-12** abgesichert: ZipSorter Source-Check + ArchiveHashService.AreEntryPathsSafe blockiert Traversal.
+  - **Verifiziert durch:** `AuditEFOpenTests.F12_ZipSorter_TraversalEntry_SourceCheck`, `F12_ArchiveHashService_AreEntryPathsSafe_BlocksTraversal`
+- [x] **F-13** abgesichert: 2 parallele DryRun-Rollbacks → keine Exception, Audit-Datei intakt.
+  - **Verifiziert durch:** `AuditEFBehavioralTests.F13_AuditCsvStore_ConcurrentRollback_NoException`
+- [x] **F-14** abgesichert: Source-Level-Test bestätigt MaxRequestBodySize in API-Konfiguration.
+  - **Verifiziert durch:** `AuditEFOpenTests.F14_ApiProgram_HasRequestBodySizeLimit`
+- [x] **F-16** abgesichert: SVG/Script encoding + Source-Level HtmlEncode-Nachweis.
+  - **Verifiziert durch:** `AuditEFOpenTests.F16_*` (3 Tests)
+
 ---
 
 ## G. Positive Patterns (zur Kenntnisnahme)

@@ -150,6 +150,14 @@ public sealed class FormatConverterAdapter : IFormatConverter
         if (registryTarget is not null)
             return registryTarget;
 
+        // If registry is available and policy blocks conversion, do NOT fall through to defaults.
+        if (_registry is not null)
+        {
+            var policy = _registry.GetPolicy(normalizedConsole);
+            if (policy is ConversionPolicy.None or ConversionPolicy.ManualOnly)
+                return null;
+        }
+
         if (BlockedAutoSystems.Contains(normalizedConsole) || ManualOnlySystems.Contains(normalizedConsole))
             return null;
 
@@ -285,6 +293,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
     /// <summary>
     /// Returns the planner-generated conversion plan for preview/review UI flows.
     /// Returns null when no planner is configured or source file does not exist.
+    /// Includes archive-fallback parity with ConvertForConsole to ensure Preview == Execute.
     /// </summary>
     public ConversionPlan? PlanForConsole(string sourcePath, string consoleKey)
     {
@@ -292,7 +301,56 @@ public sealed class FormatConverterAdapter : IFormatConverter
             return null;
 
         var sourceExt = SourcePathFormatDetector.ResolveSourceExtension(sourcePath);
-        return _planner.Plan(sourcePath, consoleKey, sourceExt);
+        var plan = _planner.Plan(sourcePath, consoleKey, sourceExt);
+
+        // Mirror the archive-fallback logic from ConvertForConsole so Preview == Execute.
+        if (!plan.IsExecutable
+            && string.Equals(plan.SkipReason, "no-conversion-path", StringComparison.OrdinalIgnoreCase)
+            && IsArchiveContainerSource(sourceExt))
+        {
+            var fallbackTarget = GetTargetFormat(consoleKey, sourceExt);
+            if (fallbackTarget is not null)
+            {
+                var capability = new ConversionCapability
+                {
+                    SourceExtension = sourceExt,
+                    TargetExtension = fallbackTarget.Extension,
+                    Tool = new ToolRequirement { ToolName = fallbackTarget.ToolName },
+                    Command = fallbackTarget.Command,
+                    ApplicableConsoles = null,
+                    RequiredSourceIntegrity = null,
+                    ResultIntegrity = SourceIntegrityClassifier.Classify(sourceExt, Path.GetFileName(sourcePath)),
+                    Lossless = fallbackTarget.ToolName is "7z" or "chdman" or "dolphintool",
+                    Cost = 0,
+                    Verification = GetVerificationForExtension(fallbackTarget.Extension),
+                    Description = "archive-legacy-fallback",
+                    Condition = ConversionCondition.None
+                };
+
+                return new ConversionPlan
+                {
+                    SourcePath = sourcePath,
+                    ConsoleKey = consoleKey,
+                    Policy = plan.Policy,
+                    SourceIntegrity = plan.SourceIntegrity,
+                    Safety = ConversionSafety.Acceptable,
+                    Steps =
+                    [
+                        new ConversionStep
+                        {
+                            Order = 0,
+                            InputExtension = sourceExt,
+                            OutputExtension = fallbackTarget.Extension,
+                            Capability = capability,
+                            IsIntermediate = false
+                        }
+                    ],
+                    SkipReason = null
+                };
+            }
+        }
+
+        return plan;
     }
 
     private static bool IsArchiveContainerSource(string extension)
