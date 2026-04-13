@@ -380,7 +380,7 @@ internal static partial class Program
             // Download only URL-based catalog entries. nointro-pack entries are imported from local folders.
             var downloadEntries = catalog
                 .Where(e => !string.IsNullOrWhiteSpace(e.Url)
-                    && !string.Equals(e.Format, "nointro-pack", StringComparison.OrdinalIgnoreCase))
+                    && !string.Equals(e.Format, RunConstants.FormatNoIntroPack, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             SafeErrorWriteLine($"[DatUpdate] URL-based entries: {downloadEntries.Count}");
@@ -606,8 +606,10 @@ internal static partial class Program
 
         if (!string.IsNullOrWhiteSpace(opts.OutputPath))
         {
-            File.WriteAllText(opts.OutputPath, json);
-            SafeErrorWriteLine($"[History] JSON written to {opts.OutputPath}");
+            if (!TryWriteSafeOutputFile(opts.OutputPath, json, "history JSON", out var safeOutputPath))
+                return 3;
+
+            SafeErrorWriteLine($"[History] JSON written to {safeOutputPath}");
             return 0;
         }
 
@@ -716,8 +718,10 @@ internal static partial class Program
         var json = CliOutputWriter.SerializeJson(build.Result);
         if (!string.IsNullOrWhiteSpace(opts.OutputPath))
         {
-            File.WriteAllText(opts.OutputPath, json);
-            SafeErrorWriteLine($"[Diff] JSON written to {opts.OutputPath}");
+            if (!TryWriteSafeOutputFile(opts.OutputPath, json, "diff JSON", out var safeOutputPath))
+                return 3;
+
+            SafeErrorWriteLine($"[Diff] JSON written to {safeOutputPath}");
             return 0;
         }
 
@@ -762,8 +766,10 @@ internal static partial class Program
             var json = CliOutputWriter.SerializeJson(build.Plan);
             if (!string.IsNullOrWhiteSpace(opts.OutputPath))
             {
-                File.WriteAllText(opts.OutputPath, json);
-                SafeErrorWriteLine($"[Merge] Plan JSON written to {opts.OutputPath}");
+                if (!TryWriteSafeOutputFile(opts.OutputPath, json, "merge plan JSON", out var safeOutputPath))
+                    return 3;
+
+                SafeErrorWriteLine($"[Merge] Plan JSON written to {safeOutputPath}");
                 return 0;
             }
 
@@ -790,8 +796,10 @@ internal static partial class Program
         var jsonResult = CliOutputWriter.SerializeJson(applyResult);
         if (!string.IsNullOrWhiteSpace(opts.OutputPath))
         {
-            File.WriteAllText(opts.OutputPath, jsonResult);
-            SafeErrorWriteLine($"[Merge] Apply JSON written to {opts.OutputPath}");
+            if (!TryWriteSafeOutputFile(opts.OutputPath, jsonResult, "merge apply JSON", out var safeOutputPath))
+                return 3;
+
+            SafeErrorWriteLine($"[Merge] Apply JSON written to {safeOutputPath}");
         }
         else
         {
@@ -817,8 +825,10 @@ internal static partial class Program
 
         if (!string.IsNullOrWhiteSpace(opts.OutputPath))
         {
-            File.WriteAllText(opts.OutputPath, CliOutputWriter.SerializeJson(comparison));
-            SafeErrorWriteLine($"[Compare] JSON written to {opts.OutputPath}");
+            if (!TryWriteSafeOutputFile(opts.OutputPath, CliOutputWriter.SerializeJson(comparison), "compare JSON", out var safeOutputPath))
+                return 3;
+
+            SafeErrorWriteLine($"[Compare] JSON written to {safeOutputPath}");
             return 0;
         }
 
@@ -835,8 +845,10 @@ internal static partial class Program
 
         if (!string.IsNullOrWhiteSpace(opts.OutputPath))
         {
-            File.WriteAllText(opts.OutputPath, CliOutputWriter.SerializeJson(report));
-            SafeErrorWriteLine($"[Trends] JSON written to {opts.OutputPath}");
+            if (!TryWriteSafeOutputFile(opts.OutputPath, CliOutputWriter.SerializeJson(report), "trends JSON", out var safeOutputPath))
+                return 3;
+
+            SafeErrorWriteLine($"[Trends] JSON written to {safeOutputPath}");
             return 0;
         }
 
@@ -1207,6 +1219,32 @@ internal static partial class Program
                 try { fallbackWriter.WriteLine(message); }
                 catch { System.Diagnostics.Debug.WriteLine($"CLI fallback write failed for: {message}"); }
             }
+        }
+    }
+
+    private static bool TryWriteSafeOutputFile(string outputPath, string content, string outputLabel, out string safeOutputPath)
+    {
+        safeOutputPath = string.Empty;
+
+        try
+        {
+            safeOutputPath = SafetyValidator.EnsureSafeOutputPath(outputPath, allowUnc: false);
+            var outputDirectory = Path.GetDirectoryName(safeOutputPath);
+            if (!string.IsNullOrWhiteSpace(outputDirectory))
+                Directory.CreateDirectory(outputDirectory);
+
+            File.WriteAllText(safeOutputPath, content, Encoding.UTF8);
+            return true;
+        }
+        catch (InvalidOperationException ex)
+        {
+            SafeErrorWriteLine($"[Error] Invalid {outputLabel} path: {ex.Message}");
+            return false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            SafeErrorWriteLine($"[Error] Failed to write {outputLabel}: {ex.Message}");
+            return false;
         }
     }
 

@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using Romulus.Contracts;
 using Romulus.Contracts.Ports;
 
 namespace Romulus.Infrastructure.Dat;
@@ -85,7 +86,7 @@ public sealed class DatSourceService : IDisposable
             return null;
 
         // nointro-pack: no URL, local scan only
-        if (string.Equals(format, "nointro-pack", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(format, RunConstants.FormatNoIntroPack, StringComparison.OrdinalIgnoreCase))
             return null;
 
         if (string.IsNullOrWhiteSpace(url))

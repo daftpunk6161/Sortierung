@@ -1,13 +1,13 @@
 using System.Globalization;
 using System.IO;
 using System.Security;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
+using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Analysis;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Tools;
@@ -63,17 +63,7 @@ public static partial class FeatureService
 
 
     internal static string SanitizeCsvField(string value)
-    {
-        if (string.IsNullOrEmpty(value)) return "";
-        // CSV injection protection (OWASP)
-        if (value[0] is '=' or '+' or '@' or '\t' or '\r')
-            value = "'" + value;
-        else if (value[0] == '-' && !IsPlainNegativeNumber(value))
-            value = "'" + value;
-        if (value.Contains('"') || value.Contains(';') || value.Contains(','))
-            return "\"" + value.Replace("\"", "\"\"") + "\"";
-        return value;
-    }
+        => AuditCsvParser.SanitizeLegacyUiCsvField(value);
 
     internal static bool IsPlainNegativeNumber(string value)
     {
@@ -131,30 +121,7 @@ public static partial class FeatureService
 
 
     internal static string[] ParseCsvLine(string line)
-    {
-        var fields = new List<string>();
-        var current = new StringBuilder();
-        bool inQuotes = false;
-        for (int i = 0; i < line.Length; i++)
-        {
-            var ch = line[i];
-            if (inQuotes)
-            {
-                if (ch == '"' && i + 1 < line.Length && line[i + 1] == '"')
-                { current.Append('"'); i++; }
-                else if (ch == '"') inQuotes = false;
-                else current.Append(ch);
-            }
-            else
-            {
-                if (ch == '"') inQuotes = true;
-                else if (ch == ',') { fields.Add(current.ToString()); current.Clear(); }
-                else current.Append(ch);
-            }
-        }
-        fields.Add(current.ToString());
-        return fields.ToArray();
-    }
+        => AuditCsvParser.ParseCsvLine(line);
 
 }
 

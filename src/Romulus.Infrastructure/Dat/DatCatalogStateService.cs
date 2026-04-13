@@ -332,7 +332,7 @@ public sealed class DatCatalogStateService
             return DatDownloadStrategy.ManualLogin;
 
         // nointro-pack requires pack import
-        if (string.Equals(entry.Format, "nointro-pack", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(entry.Format, RunConstants.FormatNoIntroPack, StringComparison.OrdinalIgnoreCase))
             return DatDownloadStrategy.PackImport;
 
         // Auto-downloadable if URL is present and format supports direct download

@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Romulus.Contracts;
@@ -9,7 +8,6 @@ using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.Export;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
-using Romulus.Infrastructure.Safety;
 
 namespace Romulus.CLI;
 
@@ -196,22 +194,9 @@ internal static partial class Program
                     $"fixdat-{generatedUtc:yyyyMMdd-HHmmss}.dat");
             }
 
-            string safeTargetPath;
-            try
-            {
-                safeTargetPath = SafetyValidator.EnsureSafeOutputPath(targetPath, allowUnc: false);
-            }
-            catch (InvalidOperationException ex)
-            {
-                SafeErrorWriteLine($"[Error] Invalid fixdat output path: {ex.Message}");
+            if (!TryWriteSafeOutputFile(targetPath, fixDat.XmlContent, "fixdat output", out var safeTargetPath))
                 return 3;
-            }
 
-            var outputDirectory = Path.GetDirectoryName(safeTargetPath);
-            if (!string.IsNullOrWhiteSpace(outputDirectory))
-                Directory.CreateDirectory(outputDirectory);
-
-            File.WriteAllText(safeTargetPath, fixDat.XmlContent, Encoding.UTF8);
             SafeStandardWriteLine(DatAnalysisService.FormatFixDatReport(fixDat));
             SafeErrorWriteLine($"[FixDAT] Written: {safeTargetPath}");
 
@@ -311,10 +296,12 @@ internal static partial class Program
                     e.Percentage
                 }).ToArray());
 
-            if (opts.OutputPath is not null)
+            if (!string.IsNullOrWhiteSpace(opts.OutputPath))
             {
-                File.WriteAllText(opts.OutputPath, json);
-                SafeErrorWriteLine($"[Completeness] JSON written to {opts.OutputPath}");
+                if (!TryWriteSafeOutputFile(opts.OutputPath, json, "completeness JSON", out var safeOutputPath))
+                    return 3;
+
+                SafeErrorWriteLine($"[Completeness] JSON written to {safeOutputPath}");
             }
 
             return 0;

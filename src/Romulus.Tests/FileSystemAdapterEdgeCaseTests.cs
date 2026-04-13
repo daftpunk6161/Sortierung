@@ -330,6 +330,30 @@ public sealed class FileSystemAdapterEdgeCaseTests : IDisposable
         Assert.Throws<ArgumentException>(() => _fs.CopyFile(Path.Combine(_tempDir, "src.rom"), dst!));
     }
 
+    // ===== WriteAllText =====
+
+    [Fact]
+    public void WriteAllText_CreatesParentDirectory_AndWritesUtf8()
+    {
+        var target = Path.Combine(_tempDir, "nested", "audit", "out.json");
+
+        _fs.WriteAllText(target, "{\"ok\":true}");
+
+        Assert.True(File.Exists(target));
+        Assert.Contains("\"ok\":true", File.ReadAllText(target), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WriteAllText_ProtectedSystemPath_Throws()
+    {
+        var windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (string.IsNullOrWhiteSpace(windowsDir) || !Directory.Exists(windowsDir))
+            return;
+
+        var protectedTarget = Path.Combine(windowsDir, "romulus-fs-edge-test.txt");
+        Assert.Throws<InvalidOperationException>(() => _fs.WriteAllText(protectedTarget, "x"));
+    }
+
     // ===== IsReparsePoint =====
 
     [Fact]

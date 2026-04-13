@@ -6,8 +6,10 @@ using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Core.Classification;
+using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Paths;
+using Romulus.Infrastructure.Safety;
 using Romulus.Infrastructure.Tools;
 
 namespace Romulus.Infrastructure.Analysis;
@@ -52,8 +54,7 @@ public static class IntegrityService
         history.Add(new TrendSnapshot(now, totalFiles, sizeBytes, verified, dupes, junk,
             CollectionAnalysisService.CalculateHealthScore(totalFiles, dupes, junk, verified)));
         if (history.Count > 365) history.RemoveRange(0, history.Count - 365);
-        Directory.CreateDirectory(Path.GetDirectoryName(TrendFile)!);
-        File.WriteAllText(TrendFile, JsonSerializer.Serialize(history, new JsonSerializerOptions { WriteIndented = true }));
+        WriteTextSafely(TrendFile, JsonSerializer.Serialize(history, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     public static List<TrendSnapshot> LoadTrendHistory()
@@ -88,7 +89,7 @@ public static class IntegrityService
     // --- Integrity Baseline ---
 
     public static async Task<Dictionary<string, IntegrityEntry>> CreateBaseline(
-        IReadOnlyList<string> filePaths, IProgress<string>? progress = null, CancellationToken ct = default)
+        IReadOnlyList<string> filePaths, IProgress<string>? progress = null, CancellationToken ct = default, IFileSystem? fileSystem = null)
     {
         if (filePaths.Count == 0)
             return new Dictionary<string, IntegrityEntry>(StringComparer.OrdinalIgnoreCase);
@@ -113,8 +114,7 @@ public static class IntegrityService
             .OrderBy(static pair => pair.Key, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(static pair => pair.Key, static pair => pair.Value, StringComparer.OrdinalIgnoreCase);
         var wrapper = new IntegrityBaseline(commonRoot, entries);
-        Directory.CreateDirectory(Path.GetDirectoryName(BaselinePath)!);
-        File.WriteAllText(BaselinePath, JsonSerializer.Serialize(wrapper, new JsonSerializerOptions { WriteIndented = true }));
+        WriteTextSafely(BaselinePath, JsonSerializer.Serialize(wrapper, new JsonSerializerOptions { WriteIndented = true }), fileSystem);
         return entries;
     }
 
@@ -168,33 +168,70 @@ public static class IntegrityService
 
     // --- Backup ---
 
-    public static string CreateBackup(IReadOnlyList<string> filePaths, string backupRoot, string label, TimeProvider? timeProvider = null)
+    public static string CreateBackup(
+        IReadOnlyList<string> filePaths,
+        string backupRoot,
+        string label,
+        TimeProvider? timeProvider = null,
+        IFileSystem? fileSystem = null)
     {
+        var fs = ResolveFileSystem(fileSystem);
+        var safeBackupRoot = SafetyValidator.EnsureSafeOutputPath(backupRoot, allowUnc: false);
+        fs.EnsureDirectory(safeBackupRoot);
+
         var now = (timeProvider ?? TimeProvider.System).GetLocalNow().DateTime;
-        var sessionDir = Path.Combine(backupRoot, $"{now:yyyyMMdd-HHmmss}_{label}");
-        Directory.CreateDirectory(sessionDir);
+        var normalizedLabel = NormalizeBackupLabel(label);
+        var sessionLeaf = $"{now:yyyyMMdd-HHmmss}_{normalizedLabel}";
+        var sessionDir = SafetyValidator.EnsureSafeOutputPath(Path.Combine(safeBackupRoot, sessionLeaf), allowUnc: false);
+
+        var rootPrefix = safeBackupRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (!sessionDir.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Blocked: Backup session path escapes backup root.");
+
+        fs.EnsureDirectory(sessionDir);
 
         var commonRoot = FindCommonRoot(filePaths);
 
         foreach (var path in filePaths)
         {
-            if (!File.Exists(path)) continue;
+            var normalizedSource = SafetyValidator.NormalizePath(path);
+            if (string.IsNullOrWhiteSpace(normalizedSource) || !File.Exists(normalizedSource))
+                continue;
+
             var relativePath = commonRoot is not null
-                ? Path.GetRelativePath(commonRoot, path)
-                : Path.GetFileName(path);
-            var dest = Path.Combine(sessionDir, relativePath);
+                ? Path.GetRelativePath(commonRoot, normalizedSource)
+                : Path.GetFileName(normalizedSource);
+            var dest = fs.ResolveChildPathWithinRoot(sessionDir, relativePath);
+            if (string.IsNullOrWhiteSpace(dest))
+                throw new InvalidOperationException("Blocked: Backup destination escaped session root.");
+
             var destDir = Path.GetDirectoryName(dest);
-            if (destDir is not null) Directory.CreateDirectory(destDir);
-            File.Copy(path, dest, overwrite: false);
+            if (!string.IsNullOrWhiteSpace(destDir))
+                fs.EnsureDirectory(destDir);
+
+            fs.CopyFile(normalizedSource, dest, overwrite: false);
         }
         return sessionDir;
     }
 
-    public static int CleanupOldBackups(string backupRoot, int retentionDays, Func<int, bool>? confirmDelete = null, TimeProvider? timeProvider = null)
+    public static int CleanupOldBackups(
+        string backupRoot,
+        int retentionDays,
+        Func<int, bool>? confirmDelete = null,
+        TimeProvider? timeProvider = null,
+        IFileSystem? fileSystem = null)
     {
-        if (!Directory.Exists(backupRoot)) return 0;
+        var fs = ResolveFileSystem(fileSystem);
+        var safeBackupRoot = SafetyValidator.EnsureSafeOutputPath(backupRoot, allowUnc: false);
+        if (!Directory.Exists(safeBackupRoot)) return 0;
+
+        var rootPrefix = safeBackupRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         var cutoff = (timeProvider ?? TimeProvider.System).GetLocalNow().DateTime.AddDays(-retentionDays);
-        var expired = Directory.GetDirectories(backupRoot)
+        var expired = Directory.GetDirectories(safeBackupRoot)
+            .Select(Path.GetFullPath)
+            .Where(dir => dir.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+            .Where(dir => !fs.IsReparsePoint(dir))
+            .Where(dir => !HasReparsePointInDirectoryTree(dir, fs))
             .Where(dir => Directory.GetCreationTime(dir) < cutoff)
             .ToList();
         if (expired.Count == 0) return 0;
@@ -206,6 +243,59 @@ public static class IntegrityService
             removed++;
         }
         return removed;
+    }
+
+    private static IFileSystem ResolveFileSystem(IFileSystem? fileSystem)
+        => fileSystem ?? new FileSystemAdapter();
+
+    private static void WriteTextSafely(string path, string content, IFileSystem? fileSystem = null)
+    {
+        var fs = ResolveFileSystem(fileSystem);
+        var safePath = SafetyValidator.EnsureSafeOutputPath(path, allowUnc: false);
+        var directory = Path.GetDirectoryName(safePath);
+        if (!string.IsNullOrWhiteSpace(directory))
+            fs.EnsureDirectory(directory);
+
+        fs.WriteAllText(safePath, content);
+    }
+
+    private static string NormalizeBackupLabel(string label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+            return "backup";
+
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var normalized = new string(label
+            .Trim()
+            .Select(c => invalidChars.Contains(c) ? '_' : c)
+            .ToArray());
+
+        return string.IsNullOrWhiteSpace(normalized) ? "backup" : normalized;
+    }
+
+    private static bool HasReparsePointInDirectoryTree(string directoryPath, IFileSystem fileSystem)
+    {
+        var stack = new Stack<string>();
+        stack.Push(directoryPath);
+
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            if (fileSystem.IsReparsePoint(current))
+                return true;
+
+            try
+            {
+                foreach (var subDirectory in Directory.GetDirectories(current))
+                    stack.Push(subDirectory);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // --- Patch Detection ---

@@ -339,6 +339,37 @@ public sealed class CliProgramTests : IDisposable
     }
 
     [Fact]
+    public async Task HistoryForTests_ProtectedOutputPath_ReturnsValidationError()
+    {
+        var windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (string.IsNullOrWhiteSpace(windowsDir) || !Directory.Exists(windowsDir))
+            return;
+
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var index = new FakeCollectionIndex(Array.Empty<CollectionRunSnapshot>());
+
+        try
+        {
+            CliProgram.SetConsoleOverrides(stdout, stderr);
+            var exitCode = await CliProgram.HistoryForTests(new CliRunOptions
+            {
+                HistoryOffset = 0,
+                HistoryLimit = 10,
+                OutputPath = Path.Combine(windowsDir, "romulus-history.json")
+            }, index);
+
+            Assert.Equal(3, exitCode);
+            Assert.Equal(string.Empty, stdout.ToString());
+            Assert.Contains("Invalid history JSON path", stderr.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            CliProgram.SetConsoleOverrides(null, null);
+        }
+    }
+
+    [Fact]
     public void ParseArgs_MissingModeValue_ReturnsExitCode3_AndWriteOnlyStderr()
     {
         var (opts, exitCode, stdout, stderr) = ParseArgsWithCapturedConsole(new[] { "--roots", _tempDir, "--mode" });

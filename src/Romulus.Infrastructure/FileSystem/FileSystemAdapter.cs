@@ -742,7 +742,11 @@ public sealed class FileSystemAdapter : IFileSystem
         if (string.IsNullOrWhiteSpace(path))
             throw new ArgumentException("Path must not be empty.", nameof(path));
 
-        var fullPath = Path.GetFullPath(path);
+        var fullPath = SafetyValidator.EnsureSafeOutputPath(path, allowUnc: false);
+        var directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+            Directory.CreateDirectory(directory);
+
         File.WriteAllText(fullPath, content, System.Text.Encoding.UTF8);
     }
 

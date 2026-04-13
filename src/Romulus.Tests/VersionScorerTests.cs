@@ -140,4 +140,59 @@ public class VersionScorerTests
         Assert.Equal(999_999_999_990L, first);
         Assert.Equal(first, second);
     }
+
+    // --- Letter Revision Overflow Protection ---
+
+    [Fact]
+    public void PureLetterRevision_LongString_DoesNotOverflow()
+    {
+        // 20-char pure letter revision would overflow long without clamp (26^13 > long.MaxValue).
+        var score = _sut.GetVersionScore("Game (Rev zzzzzzzzzzzzzzzzzzzz)");
+        Assert.True(score >= 0, "Score must not overflow to negative.");
+    }
+
+    [Fact]
+    public void PureLetterRevision_LongString_IsDeterministic()
+    {
+        var first = _sut.GetVersionScore("Game (Rev abcdefghijklmnop)");
+        var second = _sut.GetVersionScore("Game (Rev abcdefghijklmnop)");
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
+    public void PureLetterRevision_LongString_PreservesOrdering()
+    {
+        // Even with clamping, higher letters should still score higher.
+        var revA16 = _sut.GetVersionScore("Game (Rev aaaaaaaaaaaaaaaa)");
+        var revZ16 = _sut.GetVersionScore("Game (Rev zzzzzzzzzzzzzzzz)");
+        Assert.True(revZ16 > revA16, "Longer high-letter revision must still score higher than low-letter.");
+    }
+
+    [Fact]
+    public void PureLetterRevision_ExactlyEightChars_IsNotClamped()
+    {
+        // 8 chars is the clamp boundary — score should match unclamped calculation.
+        var score8 = _sut.GetVersionScore("Game (Rev abcdefgh)");
+        Assert.True(score8 > 0);
+
+        // 9 chars should be clamped to first 8, so score equals 8-char variant.
+        var score9 = _sut.GetVersionScore("Game (Rev abcdefghi)");
+        Assert.Equal(score8, score9);
+    }
+
+    [Fact]
+    public void NumericSuffix_LongLetterSuffix_DoesNotOverflow()
+    {
+        // Numeric revision with long letter suffix: "1zzzzzzzzzzzzzzzz"
+        var score = _sut.GetVersionScore("Game (Rev 1zzzzzzzzzzzzzzzz)");
+        Assert.True(score >= 0, "Suffix score must not overflow to negative.");
+    }
+
+    [Fact]
+    public void NumericSuffix_LongLetterSuffix_IsDeterministic()
+    {
+        var first = _sut.GetVersionScore("Game (Rev 5abcdefghijklmnop)");
+        var second = _sut.GetVersionScore("Game (Rev 5abcdefghijklmnop)");
+        Assert.Equal(first, second);
+    }
 }

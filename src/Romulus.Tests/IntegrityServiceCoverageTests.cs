@@ -469,10 +469,32 @@ public sealed class IntegrityServiceCoverageTests : IDisposable
     }
 
     [Fact]
+    public void CreateBackup_ProtectedBackupRoot_Throws()
+    {
+        var windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (string.IsNullOrWhiteSpace(windowsDir) || !Directory.Exists(windowsDir))
+            return;
+
+        var f1 = CreateFile("exists.bin", "data");
+        Assert.Throws<InvalidOperationException>(() =>
+            IntegrityService.CreateBackup([f1], windowsDir, "protected-root"));
+    }
+
+    [Fact]
     public void CleanupOldBackups_NoDirectory_ReturnsZero()
     {
         Assert.Equal(0, IntegrityService.CleanupOldBackups(
             Path.Combine(_tempDir, "nonexistent"), 7));
+    }
+
+    [Fact]
+    public void CleanupOldBackups_ProtectedBackupRoot_Throws()
+    {
+        var windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (string.IsNullOrWhiteSpace(windowsDir) || !Directory.Exists(windowsDir))
+            return;
+
+        Assert.Throws<InvalidOperationException>(() => IntegrityService.CleanupOldBackups(windowsDir, 7));
     }
 
     [Fact]

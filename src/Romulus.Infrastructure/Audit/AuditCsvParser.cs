@@ -89,6 +89,45 @@ public static class AuditCsvParser
     }
 
     /// <summary>
+    /// Legacy WPF-compatible CSV sanitization policy kept for backwards-compatible UI exports.
+    /// Consolidated here to avoid duplicate CSV logic across entry points.
+    /// </summary>
+    public static string SanitizeLegacyUiCsvField(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        if (value[0] is '=' or '+' or '@' or '\t' or '\r')
+            value = "'" + value;
+        else if (value[0] == '-' && !IsPlainNegativeNumber(value))
+            value = "'" + value;
+
+        if (value.Contains('"') || value.Contains(';') || value.Contains(','))
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
+
+        return value;
+    }
+
+    /// <summary>
+    /// Dat-audit CSV export compatibility sanitization.
+    /// Keeps historical behavior (always protects leading '-' and emits "" for empty fields).
+    /// </summary>
+    public static string SanitizeDatAuditCsvField(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return "\"\"";
+
+        var sanitized = value;
+        if (sanitized.Length > 0 && sanitized[0] is '=' or '+' or '-' or '@' or '\t' or '\r')
+            sanitized = "'" + sanitized;
+
+        if (sanitized.Contains('"') || sanitized.Contains(',') || sanitized.Contains('\n'))
+            return "\"" + sanitized.Replace("\"", "\"\"") + "\"";
+
+        return sanitized;
+    }
+
+    /// <summary>
     /// Sanitize a delimited text field to prevent CSV injection (OWASP).
     /// Dangerous formula-like prefixes are always emitted as RFC-4180 quoted fields.
     /// </summary>

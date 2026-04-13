@@ -49,6 +49,11 @@ public static class RunConstants
             ConvertFormat7z
         };
 
+    // ── DAT format constants ───────────────────────────────────────
+
+    /// <summary>DAT catalog format for No-Intro pack imports (local folder scan, no URL download).</summary>
+    public const string FormatNoIntroPack = "nointro-pack";
+
     // ── Run Mode constants ──────────────────────────────────────────
 
     /// <summary>DryRun mode — preview only, no file operations.</summary>

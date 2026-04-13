@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace Romulus.Core;
@@ -24,8 +25,9 @@ public static class SafeRegex
         {
             return regex.IsMatch(input);
         }
-        catch (RegexMatchTimeoutException)
+        catch (RegexMatchTimeoutException ex)
         {
+            Trace.WriteLine($"[SafeRegex] IsMatch timeout: pattern='{regex}', inputLen={input.Length}, timeout={ex.MatchTimeout.TotalMilliseconds}ms");
             return false;
         }
     }
@@ -40,8 +42,9 @@ public static class SafeRegex
         {
             return regex.Match(input);
         }
-        catch (RegexMatchTimeoutException)
+        catch (RegexMatchTimeoutException ex)
         {
+            Trace.WriteLine($"[SafeRegex] Match timeout: pattern='{regex}', inputLen={input.Length}, timeout={ex.MatchTimeout.TotalMilliseconds}ms");
             return System.Text.RegularExpressions.Match.Empty;
         }
     }
@@ -56,8 +59,9 @@ public static class SafeRegex
         {
             return regex.Replace(input, replacement);
         }
-        catch (RegexMatchTimeoutException)
+        catch (RegexMatchTimeoutException ex)
         {
+            Trace.WriteLine($"[SafeRegex] Replace timeout: pattern='{regex}', inputLen={input.Length}, timeout={ex.MatchTimeout.TotalMilliseconds}ms");
             return input;
         }
     }
@@ -74,6 +78,7 @@ public static class SafeRegex
         }
         catch (RegexMatchTimeoutException)
         {
+            Trace.WriteLine($"[SafeRegex] Replace(ad-hoc) timeout: pattern='{pattern}', inputLen={input.Length}, timeout={timeout.TotalMilliseconds}ms");
             return input;
         }
     }

@@ -74,6 +74,14 @@ internal static partial class CliArgsParser
         }
         if (errors.Count > 0) return CliParseResult.ValidationError(errors);
         if (opts.Roots.Length == 0) return CliParseResult.ValidationError([$"[Error] --roots is required for '{command}'."]);
+
+        var outputPathError = ValidateOptionalPath(
+            opts.OutputPath,
+            $"{command.ToString().ToLowerInvariant()} output path",
+            allowUnc: false);
+        if (outputPathError is not null)
+            return CliParseResult.ValidationError([$"[Error] {outputPathError}"]);
+
         return CliParseResult.Subcommand(command, opts);
     }
 

@@ -593,7 +593,7 @@ app.MapPost("/dats/update", async (HttpContext ctx, AllowedRootPathPolicy allowe
     var errors = new List<string>();
 
     using var datService = new DatSourceService(datRoot, httpClientFactory.CreateClient(DatSourceService.HttpClientName));
-    foreach (var entry in catalog.Where(e => !string.IsNullOrWhiteSpace(e.Url) && !string.Equals(e.Format, "nointro-pack", StringComparison.OrdinalIgnoreCase)))
+    foreach (var entry in catalog.Where(e => !string.IsNullOrWhiteSpace(e.Url) && !string.Equals(e.Format, RunConstants.FormatNoIntroPack, StringComparison.OrdinalIgnoreCase)))
     {
         var fileName = entry.Id + ".dat";
         var targetPath = Path.Combine(datRoot, fileName);

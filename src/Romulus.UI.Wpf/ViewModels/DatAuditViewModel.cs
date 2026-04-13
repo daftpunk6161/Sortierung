@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
+using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Safety;
 using Romulus.UI.Wpf.Services;
 
@@ -230,18 +231,5 @@ public sealed partial class DatAuditViewModel : ObservableObject
     }
 
     private static string CsvEscape(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return "\"\"";
-
-        // CSV-Injection prevention: prefix formula characters
-        var sanitized = value;
-        if (sanitized.Length > 0 && sanitized[0] is '=' or '+' or '-' or '@' or '\t' or '\r')
-            sanitized = "'" + sanitized;
-
-        if (sanitized.Contains('"') || sanitized.Contains(',') || sanitized.Contains('\n'))
-            return "\"" + sanitized.Replace("\"", "\"\"") + "\"";
-
-        return sanitized;
-    }
+        => AuditCsvParser.SanitizeDatAuditCsvField(value);
 }

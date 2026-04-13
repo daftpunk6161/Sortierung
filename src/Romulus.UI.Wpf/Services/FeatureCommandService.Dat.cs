@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Dat;
@@ -59,7 +60,7 @@ public sealed partial class FeatureCommandService
             !string.IsNullOrWhiteSpace(e.Url);
 
         bool IsNoIntroPack(Infrastructure.Dat.DatCatalogEntry e) =>
-            string.Equals(e.Format, "nointro-pack", StringComparison.OrdinalIgnoreCase);
+            string.Equals(e.Format, RunConstants.FormatNoIntroPack, StringComparison.OrdinalIgnoreCase);
 
         // Redump requires login → exclude from auto-download
         bool IsRedump(Infrastructure.Dat.DatCatalogEntry e) =>

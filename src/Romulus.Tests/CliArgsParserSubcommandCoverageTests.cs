@@ -461,6 +461,20 @@ public sealed class CliArgsParserSubcommandCoverageTests : IDisposable
     }
 
     [Fact]
+    public void JunkReport_WithProtectedOutput_ReturnsValidationError()
+    {
+        var windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (string.IsNullOrWhiteSpace(windowsDir) || !Directory.Exists(windowsDir))
+            return;
+
+        var protectedOutput = Path.Combine(windowsDir, "romulus-junk-report.json");
+        var result = CliArgsParser.Parse(["junk-report", "--roots", _tempDir, "-o", protectedOutput]);
+
+        Assert.Equal(3, result.ExitCode);
+        Assert.Contains(result.Errors, error => error.Contains("protected system path", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Completeness_WithAggressive_SetsFlag()
     {
         var result = CliArgsParser.Parse(["completeness", "--roots", _tempDir, "--aggressive"]);
@@ -475,6 +489,20 @@ public sealed class CliArgsParserSubcommandCoverageTests : IDisposable
         var result = CliArgsParser.Parse(["completeness", "--roots", _tempDir, "-o", outPath]);
         Assert.Equal(CliCommand.Completeness, result.Command);
         Assert.Equal(outPath, result.Options!.OutputPath);
+    }
+
+    [Fact]
+    public void Completeness_WithProtectedOutput_ReturnsValidationError()
+    {
+        var windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (string.IsNullOrWhiteSpace(windowsDir) || !Directory.Exists(windowsDir))
+            return;
+
+        var protectedOutput = Path.Combine(windowsDir, "romulus-completeness.json");
+        var result = CliArgsParser.Parse(["completeness", "--roots", _tempDir, "-o", protectedOutput]);
+
+        Assert.Equal(3, result.ExitCode);
+        Assert.Contains(result.Errors, error => error.Contains("protected system path", StringComparison.OrdinalIgnoreCase));
     }
 
     // ──────────────────────────────────────────

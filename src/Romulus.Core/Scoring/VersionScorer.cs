@@ -190,8 +190,10 @@ public sealed class VersionScorer
             if (SafeRegex.IsMatch(RxPureLetters, rev))
             {
                 // Pure letter revision: a=1, b=2, ..., z=26, aa=27 etc.
+                // Clamp to 8 chars to prevent long overflow (26^13 > long.MaxValue).
+                var effectiveRev = rev.Length > 8 ? rev[..8] : rev;
                 long letterScore = 0;
-                foreach (var ch in rev)
+                foreach (var ch in effectiveRev)
                 {
                     letterScore = (letterScore * 26) + (ch - 'a' + 1);
                 }
@@ -227,7 +229,9 @@ public sealed class VersionScorer
                 long suffixScore = 0;
                 if (!string.IsNullOrWhiteSpace(suffix))
                 {
-                    foreach (var ch in suffix.ToLowerInvariant())
+                    // Clamp to 8 chars to prevent long overflow.
+                    var effectiveSuffix = suffix.Length > 8 ? suffix[..8] : suffix;
+                    foreach (var ch in effectiveSuffix.ToLowerInvariant())
                     {
                         suffixScore = (suffixScore * 26) + (ch - 'a' + 1);
                     }
