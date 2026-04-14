@@ -66,12 +66,20 @@ public static class M3uPlaylistParser
             if (string.IsNullOrEmpty(line) || line.StartsWith("#"))
                 continue;
 
-            var refPath = Path.IsPathRooted(line)
-                ? Path.GetFullPath(line)
-                : Path.GetFullPath(Path.Combine(dir, line));
+            string refPath;
+            try
+            {
+                refPath = Path.IsPathRooted(line)
+                    ? Path.GetFullPath(line)
+                    : Path.GetFullPath(Path.Combine(dir, line));
+            }
+            catch (ArgumentException)
+            {
+                continue;
+            }
 
             // Path traversal guard: must stay within M3U directory
-            var normalizedDir = dir.TrimEnd(Path.DirectorySeparatorChar)
+            var normalizedDir = dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                                 + Path.DirectorySeparatorChar;
             if (!refPath.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase))
                 continue;

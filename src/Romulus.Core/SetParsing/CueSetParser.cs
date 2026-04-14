@@ -44,7 +44,7 @@ public static class CueSetParser
 
         // BUG-FIX: Use absolute directory from GetFullPath to handle relative CUE paths
         // and prevent the guard from being ineffective when dir is empty.
-        var normalizedDir = dir.TrimEnd(Path.DirectorySeparatorChar)
+        var normalizedDir = dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                             + Path.DirectorySeparatorChar;
 
         foreach (var line in io.ReadLines(cuePath))
@@ -53,9 +53,18 @@ public static class CueSetParser
             if (!match.Success) continue;
 
             var refPath = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
-            var fullPath = Path.IsPathRooted(refPath)
-                ? Path.GetFullPath(refPath)
-                : Path.GetFullPath(Path.Combine(dir, refPath));
+
+            string fullPath;
+            try
+            {
+                fullPath = Path.IsPathRooted(refPath)
+                    ? Path.GetFullPath(refPath)
+                    : Path.GetFullPath(Path.Combine(dir, refPath));
+            }
+            catch (ArgumentException)
+            {
+                continue;
+            }
 
             // Path traversal guard: must stay within CUE directory
             if (!fullPath.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase))

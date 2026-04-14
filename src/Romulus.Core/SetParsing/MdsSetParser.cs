@@ -27,9 +27,9 @@ public static class MdsSetParser
         if (string.IsNullOrWhiteSpace(mdsPath))
             return Array.Empty<string>();
 
-        var dir = Path.GetDirectoryName(mdsPath) ?? "";
+        var dir = Path.GetDirectoryName(Path.GetFullPath(mdsPath)) ?? "";
         var baseName = Path.GetFileNameWithoutExtension(mdsPath);
-        var mdfPath = Path.Combine(dir, baseName + ".mdf");
+        var mdfPath = Path.GetFullPath(Path.Combine(dir, baseName + ".mdf"));
 
         return !parserIo.Exists(mdfPath) ? new[] { mdfPath } : Array.Empty<string>();
     }

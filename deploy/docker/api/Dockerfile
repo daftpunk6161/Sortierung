@@ -22,4 +22,5 @@ RUN mkdir -p /app/.romulus \
 ENV ROMULUS_DATA_DIR=/app/data
 EXPOSE 7878
 
+USER app
 ENTRYPOINT ["dotnet", "Romulus.Api.dll"]

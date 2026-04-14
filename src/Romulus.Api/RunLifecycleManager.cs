@@ -147,14 +147,17 @@ public sealed class RunLifecycleManager
             _runs[runId] = record;
             if (!string.IsNullOrWhiteSpace(idempotencyKey))
                 _idempotencyIndex[idempotencyKey] = runId;
-            _activeRunId = runId;
 
-            _activeTask = Task.Factory.StartNew(
-                    () => ExecuteRunAsync(record),
-                    CancellationToken.None,
-                    TaskCreationOptions.DenyChildAttach | TaskCreationOptions.LongRunning,
-                    TaskScheduler.Default)
-                .Unwrap();
+            lock (_activeLock)
+            {
+                _activeRunId = runId;
+                _activeTask = Task.Factory.StartNew(
+                        () => ExecuteRunAsync(record),
+                        CancellationToken.None,
+                        TaskCreationOptions.DenyChildAttach | TaskCreationOptions.LongRunning,
+                        TaskScheduler.Default)
+                    .Unwrap();
+            }
 
             return new RunCreateResult(RunCreateDisposition.Created, record);
         }

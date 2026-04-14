@@ -628,9 +628,10 @@ public partial class Program
             ct);
 
         var generatedUtc = DateTime.UtcNow;
-        var datName = string.IsNullOrWhiteSpace(name)
+        var trimmedName = name?.Trim();
+        var datName = string.IsNullOrWhiteSpace(trimmedName)
             ? $"Romulus-FixDAT-{runId}"
-            : name.Trim();
+            : trimmedName.Length > 255 ? trimmedName[..255] : trimmedName;
 
         var fixDat = DatAnalysisService.BuildFixDatFromCompleteness(env.DatIndex, report, datName, generatedUtc);
 
