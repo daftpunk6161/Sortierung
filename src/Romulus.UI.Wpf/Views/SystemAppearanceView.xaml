@@ -68,6 +68,46 @@
 
       <Border Style="{StaticResource SectionCard}" Margin="0,14,0,0">
         <StackPanel>
+          <TextBlock Text="Theme Preview" FontWeight="SemiBold" FontSize="13"
+                     Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,8"/>
+
+          <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}"
+                  BorderThickness="1" CornerRadius="8" Padding="12,10">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+
+              <StackPanel>
+                <TextBlock Text="{Binding CurrentThemeLabel}" FontWeight="Bold"
+                           Foreground="{DynamicResource BrushTextPrimary}"/>
+                <TextBlock Text="Live-Vorschau der aktiven Farblogik für Karten, Status und Aktionen."
+                           Margin="0,4,0,0" TextWrapping="Wrap"
+                           Foreground="{DynamicResource BrushTextMuted}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                  <Border Background="{DynamicResource BrushSuccessBg}" BorderBrush="{DynamicResource BrushSuccess}" BorderThickness="1" CornerRadius="6" Padding="6,2" Margin="0,0,6,0">
+                    <TextBlock Text="Success" Foreground="{DynamicResource BrushSuccess}" FontSize="11"/>
+                  </Border>
+                  <Border Background="{DynamicResource BrushWarningBg}" BorderBrush="{DynamicResource BrushWarning}" BorderThickness="1" CornerRadius="6" Padding="6,2" Margin="0,0,6,0">
+                    <TextBlock Text="Warning" Foreground="{DynamicResource BrushWarning}" FontSize="11"/>
+                  </Border>
+                  <Border Background="{DynamicResource BrushDangerBg}" BorderBrush="{DynamicResource BrushDanger}" BorderThickness="1" CornerRadius="6" Padding="6,2">
+                    <TextBlock Text="Danger" Foreground="{DynamicResource BrushDanger}" FontSize="11"/>
+                  </Border>
+                </StackPanel>
+              </StackPanel>
+
+              <Button Grid.Column="1" Content="Tour starten" MinWidth="120" Margin="14,0,0,0"
+                      Command="{Binding Shell.StartOnboardingTourCommand}"
+                      AutomationProperties.Name="Onboarding Tour starten"/>
+            </Grid>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <Border Style="{StaticResource SectionCard}" Margin="0,14,0,0">
+        <StackPanel>
           <TextBlock Text="Accessibility &amp; Motion" FontWeight="SemiBold" FontSize="13"
                      Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,8"/>
 

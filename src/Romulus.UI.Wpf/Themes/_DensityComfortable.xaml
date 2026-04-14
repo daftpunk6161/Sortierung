@@ -1,0 +1,29 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+<!-- ═══ DENSITY: COMFORTABLE (×1.25 spacing scale) ═══════════════════ -->
+<!-- Overrides spacing tokens from _DesignTokens.xaml for more breathing room. -->
+
+    <sys:Double x:Key="SpaceXS">5</sys:Double>
+    <sys:Double x:Key="SpaceSM">10</sys:Double>
+    <sys:Double x:Key="SpaceMD">15</sys:Double>
+    <sys:Double x:Key="SpaceLG">20</sys:Double>
+    <sys:Double x:Key="SpaceXL">30</sys:Double>
+    <sys:Double x:Key="SpaceXXL">40</sys:Double>
+    <Thickness x:Key="SpaceBottomXS">0 0 0 5</Thickness>
+    <Thickness x:Key="SpaceBottomSM">0 0 0 10</Thickness>
+    <Thickness x:Key="SpaceBottomMD">0 0 0 15</Thickness>
+    <Thickness x:Key="SpaceBottomLG">0 0 0 20</Thickness>
+    <Thickness x:Key="SpaceBottomXL">0 0 0 30</Thickness>
+    <Thickness x:Key="PaddingBar">20 10 20 10</Thickness>
+    <Thickness x:Key="PaddingSection">20 20 20 20</Thickness>
+    <Thickness x:Key="PaddingCard">20 20 20 20</Thickness>
+    <Thickness x:Key="SpaceRightSM">0 0 10 0</Thickness>
+    <Thickness x:Key="SpaceRightMD">0 0 15 0</Thickness>
+    <Thickness x:Key="SpaceDotInline">5 0 5 0</Thickness>
+    <Thickness x:Key="SpaceDivider">10 0 10 0</Thickness>
+    <Thickness x:Key="SpaceLeftSM">10 0 0 0</Thickness>
+    <Thickness x:Key="SpaceRightXS">0 0 5 0</Thickness>
+    <Thickness x:Key="SpaceTopLG">0 20 0 0</Thickness>
+
+</ResourceDictionary>

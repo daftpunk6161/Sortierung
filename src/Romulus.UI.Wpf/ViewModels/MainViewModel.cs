@@ -670,6 +670,14 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     public bool IsToolSearchActive => Tools.IsToolSearchActive;
     public bool HasRecommendedTools => Tools.HasRecommendedTools;
 
+    // Tool view mode: Grid (card tiles) or List (compact rows)
+    private string _toolViewMode = "Grid";
+    public string ToolViewMode
+    {
+        get => _toolViewMode;
+        set => SetProperty(ref _toolViewMode, value);
+    }
+
     public string ToolFilterText
     {
         get => Tools.ToolFilterText;

@@ -213,9 +213,7 @@ public sealed class AuditP0P1FixTests : IDisposable
         public void ApplyTheme(AppTheme theme) { }
         public void ApplyTheme(bool dark) { }
         public void Toggle() { }
-    }
-
-    private sealed class MinimalWindowHost : IWindowHost
+        public void ApplyDensity(UiDensityMode density) { } : IWindowHost
     {
         public double FontSize { get; set; } = 14;
         public void SelectTab(int index) { }

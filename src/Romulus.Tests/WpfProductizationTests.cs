@@ -494,6 +494,125 @@ public sealed class WpfProductizationTests : IDisposable
         Assert.Contains("Stark Contrast", settingsVm);
     }
 
+    [Fact]
+    public void Phase4_GlowEffects_AreConsistentAcrossThemes()
+    {
+        var synthwaveTheme = File.ReadAllText(FindUiFile("Themes", "SynthwaveDark.xaml"));
+        var arcadeTheme = File.ReadAllText(FindUiFile("Themes", "ArcadeNeon.xaml"));
+
+        Assert.DoesNotContain("Style TargetType=\"ProgressBar\"", synthwaveTheme, StringComparison.Ordinal);
+        Assert.DoesNotContain("Style TargetType=\"ProgressBar\"", arcadeTheme, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Phase4_AnimationTimings_UseTokenizedDurations()
+    {
+        var controlTemplates = File.ReadAllText(FindUiFile("Themes", "_ControlTemplates.xaml"));
+
+        Assert.Contains("Duration=\"{StaticResource TimingNormal}\"", controlTemplates, StringComparison.Ordinal);
+        Assert.Contains("Duration=\"{StaticResource TimingFast}\"", controlTemplates, StringComparison.Ordinal);
+        Assert.DoesNotContain("Duration=\"0:0:0.18\"", controlTemplates, StringComparison.Ordinal);
+        Assert.DoesNotContain("Duration=\"0:0:0.12\"", controlTemplates, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Phase4_AppearanceView_HasThemePreviewAndOnboardingTourEntry()
+    {
+        var appearanceXaml = File.ReadAllText(FindUiFile("Views", "SystemAppearanceView.xaml"));
+        var shellVm = File.ReadAllText(FindUiFile("ViewModels", "ShellViewModel.cs"));
+
+        Assert.Contains("Theme Preview", appearanceXaml, StringComparison.Ordinal);
+        Assert.Contains("Shell.StartOnboardingTourCommand", appearanceXaml, StringComparison.Ordinal);
+        Assert.Contains("StartOnboardingTourCommand", shellVm, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Phase4_ResultView_ConsoleDistributionChart_IsVisuallyEnhanced()
+    {
+        var resultViewXaml = File.ReadAllText(FindUiFile("Views", "ResultView.xaml"));
+
+        Assert.Contains("ConsoleDistributionTrack", resultViewXaml, StringComparison.Ordinal);
+        Assert.Contains("ConsoleDistributionBarFill", resultViewXaml, StringComparison.Ordinal);
+        Assert.Contains("StringFormat={}{0:P0}", resultViewXaml, StringComparison.Ordinal);
+    }
+
+    // ═══ Open Items (Sections 10–11 of UI_UX_REDESIGN_PROPOSAL.md) ══════
+
+    [Fact]
+    public void OpenItem_DensitySpacing_ResourceDictionariesExist()
+    {
+        // Density modes must have dedicated spacing resource dictionaries
+        var compactPath = FindUiFile("Themes", "_DensityCompact.xaml");
+        var comfortablePath = FindUiFile("Themes", "_DensityComfortable.xaml");
+
+        Assert.True(File.Exists(compactPath), "_DensityCompact.xaml must exist");
+        Assert.True(File.Exists(comfortablePath), "_DensityComfortable.xaml must exist");
+
+        var compact = File.ReadAllText(compactPath);
+        var comfortable = File.ReadAllText(comfortablePath);
+
+        // Compact must scale spacing down (×0.75 → PaddingCard should be 12)
+        Assert.Contains("PaddingCard", compact, StringComparison.Ordinal);
+        Assert.Contains("PaddingSection", compact, StringComparison.Ordinal);
+
+        // Comfortable must scale spacing up (×1.25 → PaddingCard should be 20)
+        Assert.Contains("PaddingCard", comfortable, StringComparison.Ordinal);
+        Assert.Contains("PaddingSection", comfortable, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OpenItem_DensitySpacing_ViewModelExposesDensityScale()
+    {
+        var settingsVm = File.ReadAllText(FindUiFile("ViewModels", "MainViewModel.Settings.cs"));
+
+        // ViewModel must expose a DensitySpacingScale property or call density dictionary swap
+        Assert.Contains("DensitySpacingScale", settingsVm, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OpenItem_DensitySpacing_ThemeServiceCanApplyDensity()
+    {
+        var themeService = File.ReadAllText(FindUiFile("Services", "ThemeService.cs"));
+
+        // ThemeService must have method to swap density dictionaries
+        Assert.Contains("ApplyDensity", themeService, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OpenItem_LiveRegions_ResultViewHasLiveSettings()
+    {
+        var resultViewXaml = File.ReadAllText(FindUiFile("Views", "ResultView.xaml"));
+
+        // Run summary and KPI values must be announced to screen readers
+        Assert.Contains("AutomationProperties.LiveSetting", resultViewXaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OpenItem_LiveRegions_ContextPanelHasLiveSettings()
+    {
+        var contextPanelXaml = File.ReadAllText(FindUiFile("Views", "ContextPanel.xaml"));
+
+        Assert.Contains("AutomationProperties.LiveSetting", contextPanelXaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OpenItem_ToolsView_HasViewModeToggle()
+    {
+        var toolsViewXaml = File.ReadAllText(FindUiFile("Views", "ToolsView.xaml"));
+
+        // ToolsView must offer Grid/List view mode toggle
+        Assert.Contains("ToolViewMode", toolsViewXaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OpenItem_ToolsView_HasListViewTemplate()
+    {
+        var toolsViewXaml = File.ReadAllText(FindUiFile("Views", "ToolsView.xaml"));
+
+        // ToolsView must have a compact list template for List mode
+        Assert.Contains("ToolListTemplate", toolsViewXaml, StringComparison.Ordinal);
+    }
+
     private static async Task ExecuteCommandAsync(ICommand command)
     {
         command.Execute(null);

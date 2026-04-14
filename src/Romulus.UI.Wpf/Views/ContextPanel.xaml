@@ -41,7 +41,8 @@
           <StackPanel>
             <TextBlock Text="Status" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
-            <Border Style="{StaticResource AccentHeaderChip}" Margin="0,0,0,8">
+            <Border Style="{StaticResource AccentHeaderChip}" Margin="0,0,0,8"
+                    AutomationProperties.LiveSetting="Polite">
               <StackPanel Orientation="Horizontal">
                 <TextBlock Text="{Binding ReadyStatusLevel, Converter={StaticResource StatusToGlyph}}"
                            FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"

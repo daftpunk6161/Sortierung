@@ -371,7 +371,7 @@
                   <BeginStoryboard>
                     <Storyboard>
                       <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="Opacity"
-                                       From="0.75" To="1" Duration="0:0:0.18"/>
+                                             From="0.75" To="1" Duration="{StaticResource TimingNormal}"/>
                     </Storyboard>
                   </BeginStoryboard>
                 </Trigger.EnterActions>
@@ -962,13 +962,13 @@
             <BeginStoryboard>
               <Storyboard>
                 <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                 From="0" To="1" Duration="0:0:0.18">
+                                 From="0" To="1" Duration="{StaticResource TimingNormal}">
                   <DoubleAnimation.EasingFunction>
                     <CubicEase EasingMode="EaseOut"/>
                   </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                 From="-12" To="0" Duration="0:0:0.18">
+                                 From="-12" To="0" Duration="{StaticResource TimingNormal}">
                   <DoubleAnimation.EasingFunction>
                     <CubicEase EasingMode="EaseOut"/>
                   </DoubleAnimation.EasingFunction>
@@ -994,13 +994,13 @@
             <BeginStoryboard>
               <Storyboard>
                 <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                 From="0" To="1" Duration="0:0:0.12">
+                                 From="0" To="1" Duration="{StaticResource TimingFast}">
                   <DoubleAnimation.EasingFunction>
                     <CubicEase EasingMode="EaseOut"/>
                   </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                 From="-8" To="0" Duration="0:0:0.12">
+                                 From="-8" To="0" Duration="{StaticResource TimingFast}">
                   <DoubleAnimation.EasingFunction>
                     <CubicEase EasingMode="EaseOut"/>
                   </DoubleAnimation.EasingFunction>

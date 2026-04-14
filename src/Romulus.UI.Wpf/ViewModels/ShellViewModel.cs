@@ -40,6 +40,7 @@ public sealed class ShellViewModel : ObservableObject
         WizardNextCommand = new RelayCommand(WizardNext);
         WizardBackCommand = new RelayCommand(WizardBack, () => WizardStep > 0);
         WizardSkipCommand = new RelayCommand(WizardSkip);
+        StartOnboardingTourCommand = new RelayCommand(StartOnboardingTour);
     }
 
     public void SetCommandRequery(Action? commandRequery)
@@ -508,6 +509,7 @@ public sealed class ShellViewModel : ObservableObject
     public RelayCommand ToggleContextWingCommand { get; }
     public RelayCommand ToggleShortcutSheetCommand { get; }
     public RelayCommand ToggleDetailDrawerCommand { get; }
+    public RelayCommand StartOnboardingTourCommand { get; }
 
     // ═══ NAVIGATION COMMANDS ════════════════════════════════════════════
     public IRelayCommand NavBackCommand { get; }
@@ -531,6 +533,13 @@ public sealed class ShellViewModel : ObservableObject
     }
 
     public void DismissNotification(NotificationItem item) => Notifications.Remove(item);
+
+    public void StartOnboardingTour()
+    {
+        WizardStep = 0;
+        ShowFirstRunWizard = true;
+        SelectedNavTag = MissionControlTag;
+    }
 
     // ═══ ACCESSIBILITY ══════════════════════════════════════════════════
     private bool _reduceMotionPreference;

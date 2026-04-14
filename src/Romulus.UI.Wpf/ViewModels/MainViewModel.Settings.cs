@@ -843,8 +843,17 @@ public sealed partial class MainViewModel
                 return;
 
             OnPropertyChanged(nameof(UiBaseFontSize));
+            OnPropertyChanged(nameof(DensitySpacingScale));
+            _theme.ApplyDensity(value);
         }
     }
+
+    public double DensitySpacingScale => SelectedDensityMode switch
+    {
+        UiDensityMode.Compact => 0.75,
+        UiDensityMode.Comfortable => 1.25,
+        _ => 1.0,
+    };
 
     public IReadOnlyList<UiDensityMode> AvailableDensityModes { get; } =
         [UiDensityMode.Compact, UiDensityMode.Normal, UiDensityMode.Comfortable];

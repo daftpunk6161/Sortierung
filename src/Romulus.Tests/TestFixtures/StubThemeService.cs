@@ -14,4 +14,5 @@ internal sealed class StubThemeService : IThemeService
     public void ApplyTheme(AppTheme theme) { }
     public void ApplyTheme(bool dark) { }
     public void Toggle() { }
+    public void ApplyDensity(UiDensityMode density) { }
 }

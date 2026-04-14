@@ -23,9 +23,7 @@ public sealed class SetupViewModelCoverageTests
         public void ApplyTheme(AppTheme theme) => Current = theme;
         public void ApplyTheme(bool dark) => Current = dark ? AppTheme.Dark : AppTheme.Light;
         public void Toggle() => Current = Current == AppTheme.Dark ? AppTheme.CleanDarkPro : AppTheme.Dark;
-    }
-
-    private sealed class StubDialog : IDialogService
+        public void ApplyDensity(UiDensityMode density) { } : IDialogService
     {
         public string? NextBrowseFolder { get; set; }
         public string? NextBrowseFile { get; set; }

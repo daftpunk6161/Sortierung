@@ -113,6 +113,33 @@
         </Button>
       </Grid>
     </DataTemplate>
+
+    <DataTemplate x:Key="ToolListTemplate">
+      <Button Padding="8,6" Margin="0,0,0,2"
+              HorizontalContentAlignment="Stretch"
+              Command="{Binding Command}"
+              ToolTip="{Binding MaturityDescription}"
+              AutomationProperties.Name="{Binding DisplayName}">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="24"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Text="{Binding Icon}" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                     Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center"/>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="12"
+                       Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
+            <TextBlock Text=" — " Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" FontSize="11"/>
+            <TextBlock Text="{Binding Description}" Style="{StaticResource CaptionText}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="400"/>
+          </StackPanel>
+          <TextBlock Grid.Column="2" Text="{Binding MaturityBadgeText}" FontSize="9" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+        </Grid>
+      </Button>
+    </DataTemplate>
   </UserControl.Resources>
 
   <Grid>
@@ -172,6 +199,24 @@
                      Text="{Binding ToolCountLabel}"
                      Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"
                      Margin="{DynamicResource SpaceLeftSM}" FontSize="11"/>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                      Margin="{DynamicResource SpaceLeftSM}">
+            <TextBlock Text="{Binding ToolCountLabel}"
+                       Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" FontSize="11"
+                       Margin="0,0,10,0"/>
+            <RadioButton GroupName="ToolViewMode" Tag="Grid"
+                         Content="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="14" Padding="4,2"
+                         IsChecked="{Binding ToolViewMode, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Grid}"
+                         Style="{DynamicResource SidebarNavItem}"
+                         ToolTip="Kachelansicht"
+                         AutomationProperties.Name="Grid View"/>
+            <RadioButton GroupName="ToolViewMode" Tag="List"
+                         Content="&#xE8FD;" FontFamily="Segoe MDL2 Assets" FontSize="14" Padding="4,2"
+                         IsChecked="{Binding ToolViewMode, Converter={StaticResource StrEqualsToBool}, ConverterParameter=List}"
+                         Style="{DynamicResource SidebarNavItem}"
+                         ToolTip="Listenansicht"
+                         AutomationProperties.Name="List View"/>
+          </StackPanel>
         </Grid>
       </Border>
 

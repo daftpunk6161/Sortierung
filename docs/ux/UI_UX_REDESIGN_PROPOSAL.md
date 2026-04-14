@@ -1377,6 +1377,7 @@ So bekommen alle Nutzergruppen ihren optimalen Modus, ohne dass die Grundstruktu
 | Phase 1 | Umgesetzt | Theme-/Kontrast-Fixes, Focus-Ring, Danger-Styling, Context-Wing-Anpassungen in der WPF-Oberfläche integriert |
 | Phase 2 | Umgesetzt | Tool-Grouping, Mission-Control-Integration für Setup/Config, Activity-Log-Entkopplung in den Detail-Drawer, KPI-Disclosure und Simple/Expert-Verhalten umgesetzt |
 | Phase 3 | Umgesetzt (Scope dieser Iteration) | Pipeline als eigener Nav-Bereich, neue Appearance-Steuerungen (Reduced Motion, Density, Wizard-Startup), Dialog-Basisstil mit Severity-Tagging sowie Theme-Update auf Clean Daylight / Stark Contrast umgesetzt |
+| Phase 4 | Umgesetzt (Scope dieser Iteration) | Glow-Strategie vereinheitlicht (keine theme-spezifischen Progress-Glows), Animation-Timings auf Tokens standardisiert, Theme-Preview + Tour-Start in Appearance ergänzt, Console-Distribution-Chart visuell aufgewertet |
 
 #### Verifizierung (Pflicht)
 
@@ -1388,7 +1389,9 @@ So bekommen alle Nutzergruppen ihren optimalen Modus, ohne dass die Grundstruktu
       - `GuiViewModelTests.AccessibilityAndRedTests`
 - Tests (Phase-3-Akzeptanz): 5 bestanden, 0 fehlgeschlagen
       - `dotnet test src/Romulus.sln --filter "FullyQualifiedName~Phase3_"`
-- Tests (Phase-3-Regression/Impact): 581 bestanden, 0 fehlgeschlagen
+- Tests (Phase-4-Akzeptanz): 4 bestanden, 0 fehlgeschlagen
+      - `dotnet test src/Romulus.sln --filter "FullyQualifiedName~Phase4_"`
+- Tests (Phase-3/4-Regression/Impact): 585 bestanden, 0 fehlgeschlagen
       - `WpfProductizationTests`
       - `ShellViewModelCoverageTests`
       - `GuiViewModelTests`
@@ -1449,4 +1452,4 @@ So bekommen alle Nutzergruppen ihren optimalen Modus, ohne dass die Grundstruktu
 
 *Erstellt: 2026-04-14*
 *Für: Romulus UI/UX Redesign*
-*Status: Phase 1 bis Phase 3 umgesetzt, Phase 4 in Planung*
+*Status: Phase 1 bis Phase 4 umgesetzt*

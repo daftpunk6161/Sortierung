@@ -1,3 +1,5 @@
+using Romulus.UI.Wpf.Models;
+
 namespace Romulus.UI.Wpf.Services;
 
 /// <summary>RF-008: Testable interface for theme switching.</summary>
@@ -9,4 +11,5 @@ public interface IThemeService
     void ApplyTheme(AppTheme theme);
     void ApplyTheme(bool dark);
     void Toggle();
+    void ApplyDensity(UiDensityMode density);
 }

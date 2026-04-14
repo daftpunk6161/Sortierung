@@ -1709,9 +1709,7 @@ public sealed class HardGuiInvariantTests
         public void ApplyTheme(AppTheme theme) { }
         public void ApplyTheme(bool dark) { }
         public void Toggle() { }
-    }
-
-    private sealed class GuiStubDialogService : IDialogService
+        public void ApplyDensity(UiDensityMode density) { } : IDialogService
     {
         public string? BrowseFolder(string title = "Ordner auswählen") => null;
         public string? BrowseFile(string title = "Datei auswählen", string filter = "Alle Dateien|*.*") => null;

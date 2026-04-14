@@ -43,18 +43,4 @@
     <SolidColorBrush x:Key="BrushWarningHover"    Color="#FFD50022"/>
     <SolidColorBrush x:Key="BrushScrimOverlay"    Color="#CC0A0020"/>
 
-    <!-- ── Theme-specific override: neon glow on ProgressBar ─────────── -->
-    <Style TargetType="ProgressBar">
-      <Setter Property="Background"      Value="{DynamicResource BrushSurface}"/>
-      <Setter Property="Foreground"      Value="{DynamicResource BrushAccentCyan}"/>
-      <Setter Property="BorderBrush"     Value="{DynamicResource BrushBorder}"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Height"          Value="8"/>
-      <Setter Property="Effect">
-        <Setter.Value>
-          <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.5" Color="#FF2D95"/>
-        </Setter.Value>
-      </Setter>
-    </Style>
-
 </ResourceDictionary>

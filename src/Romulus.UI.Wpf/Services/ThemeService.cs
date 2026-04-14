@@ -1,4 +1,5 @@
 using System.Windows;
+using Romulus.UI.Wpf.Models;
 
 namespace Romulus.UI.Wpf.Services;
 
@@ -90,5 +91,36 @@ public sealed class ThemeService : IThemeService
             return ThemeUris.Contains(rd.Source.OriginalString);
         // Legacy sentinel key from programmatic HC dictionary
         return rd.Contains("__HighContrastTheme");
+    }
+
+    // ── Density dictionary swapping ─────────────────────────────────────
+    private const string DensityCompactUri    = "pack://application:,,,/Themes/_DensityCompact.xaml";
+    private const string DensityComfortableUri = "pack://application:,,,/Themes/_DensityComfortable.xaml";
+
+    private static readonly HashSet<string> DensityUris = new(StringComparer.OrdinalIgnoreCase)
+    {
+        DensityCompactUri,
+        DensityComfortableUri,
+    };
+
+    /// <summary>Apply density-specific spacing overrides. Normal removes all density overrides.</summary>
+    public void ApplyDensity(UiDensityMode density)
+    {
+        var mergedDicts = Application.Current.Resources.MergedDictionaries;
+        for (int i = mergedDicts.Count - 1; i >= 0; i--)
+        {
+            if (mergedDicts[i].Source is { } src && DensityUris.Contains(src.OriginalString))
+                mergedDicts.RemoveAt(i);
+        }
+
+        var uri = density switch
+        {
+            UiDensityMode.Compact     => DensityCompactUri,
+            UiDensityMode.Comfortable => DensityComfortableUri,
+            _                         => null,
+        };
+
+        if (uri is not null)
+            mergedDicts.Add(new ResourceDictionary { Source = new Uri(uri, UriKind.Absolute) });
     }
 }
