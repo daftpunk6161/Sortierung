@@ -18,6 +18,9 @@ namespace Romulus.Infrastructure.Hashing;
 public sealed class FileHashService : IDisposable
 {
     private readonly LruCache<string, string> _cache;
+    // R6-002 FIX: Track fingerprints for memory-cached entries so we can
+    // detect stale cache hits when files are modified between lookups.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, FileFingerprint> _cacheFp = new(StringComparer.OrdinalIgnoreCase);
     private readonly string? _persistentCachePath;
     private readonly ICollectionIndex? _collectionIndex;
     private readonly IDisposable? _ownedCollectionIndex;
@@ -71,7 +74,17 @@ public sealed class FileHashService : IDisposable
         var cacheKey = $"{normalizedHashType}|{fullPath}";
 
         if (_cache.TryGet(cacheKey, out var cached))
-            return cached;
+        {
+            // R6-002 FIX: Validate file fingerprint before returning memory-cached hash.
+            // Without this check, a stale hash is returned if the file was modified since caching.
+            if (TryGetFileFingerprint(fullPath, out var currentFp)
+                && _cacheFp.TryGetValue(cacheKey, out var storedFp)
+                && currentFp == storedFp)
+            {
+                return cached;
+            }
+            // Fingerprint mismatch or missing — fall through to recompute.
+        }
 
         try
         {
@@ -79,6 +92,7 @@ public sealed class FileHashService : IDisposable
                 && TryGetPersistedHash(cacheKey, fullPath, normalizedHashType, fingerprint, out var persistedHash))
             {
                 _cache.Set(cacheKey, persistedHash);
+                _cacheFp[cacheKey] = fingerprint;
                 return persistedHash;
             }
 
@@ -86,6 +100,7 @@ public sealed class FileHashService : IDisposable
             if (hash is not null)
             {
                 _cache.Set(cacheKey, hash);
+                _cacheFp[cacheKey] = fingerprint;
                 PersistHashBestEffort(cacheKey, normalizedHashType, fullPath, fingerprint, hash);
             }
             return hash;
@@ -105,6 +120,7 @@ public sealed class FileHashService : IDisposable
     {
         ThrowIfDisposed();
         _cache.Clear();
+        _cacheFp.Clear();
 
         if (_collectionIndex is not null)
             return;

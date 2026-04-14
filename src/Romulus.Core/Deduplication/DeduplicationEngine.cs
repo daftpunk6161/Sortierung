@@ -198,7 +198,7 @@ public static class DeduplicationEngine
         var normalized = consoleKey.Trim();
         foreach (var ch in normalized)
         {
-            if (!(char.IsLetterOrDigit(ch) || ch is '-' or '_'))
+            if (!(char.IsLetterOrDigit(ch) || ch is '-' or '_' or ' '))
                 return "UNKNOWN";
         }
 

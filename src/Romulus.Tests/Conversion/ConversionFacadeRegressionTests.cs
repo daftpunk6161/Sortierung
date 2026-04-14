@@ -208,7 +208,7 @@ public sealed class ConversionFacadeRegressionTests : IDisposable
     }
 
     [Fact]
-    public void GetTargetFormat_RegistryPolicyNone_BlocksRegistryTarget()
+    public void GetTargetFormat_RegistryPolicyNone_DoesNotFallBackToDefault()
     {
         var registry = new StubRegistry(
             preferredTarget: ".chd",
@@ -226,14 +226,11 @@ public sealed class ConversionFacadeRegressionTests : IDisposable
         // but registry blocks it with Policy.None
         var target = adapter.GetTargetFormat("PS1", ".iso");
 
-        // Registry returns null (Policy.None), falls back to DefaultBestFormats
-        Assert.NotNull(target);
-        Assert.Equal(".chd", target!.Extension);
-        Assert.Equal("chdman", target.ToolName);
+        Assert.Null(target);
     }
 
     [Fact]
-    public void GetTargetFormat_RegistryManualOnly_FallsBackToDefault()
+    public void GetTargetFormat_RegistryManualOnly_DoesNotFallBackToDefault()
     {
         var registry = new StubRegistry(
             preferredTarget: ".chd",
@@ -249,10 +246,7 @@ public sealed class ConversionFacadeRegressionTests : IDisposable
 
         var target = adapter.GetTargetFormat("PS1", ".cue");
 
-        // ManualOnly in registry → TryGetRegistryTarget returns null → DefaultBestFormats used
-        Assert.NotNull(target);
-        Assert.Equal(".chd", target!.Extension);
-        Assert.Equal("chdman", target.ToolName);
+        Assert.Null(target);
     }
 
     // -----------------------------------------------------------------------

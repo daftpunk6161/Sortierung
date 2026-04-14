@@ -22,7 +22,9 @@ public sealed class DeduplicatePipelinePhase : IPipelinePhase<IReadOnlyList<RomC
         var gameGroups = GetGameGroups(groups);
         dedupeSw.Stop();
 
-        var loserCount = gameGroups.Sum(g => g.Losers.Count);
+        // R4-015 FIX: Count losers from ALL groups including BIOS/Junk,
+        // not just gameGroups, so the total loser count is accurate for reporting.
+        var loserCount = groups.Sum(g => g.Losers.Count);
         var junkGroupCount = groups.Count(g => g.Winner.Category == FileCategory.Junk);
 
         context.OnProgress?.Invoke(RunProgressLocalization.Format(

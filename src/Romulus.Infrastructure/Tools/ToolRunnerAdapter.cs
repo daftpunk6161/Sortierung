@@ -614,17 +614,33 @@ public sealed class ToolRunnerAdapter : IToolRunner
         var builder = new StringBuilder();
         builder.Append(label).Append(": ").Append(reason);
         builder.AppendLine();
-        builder.Append("Invocation: ").Append(invocation);
+        builder.Append("Invocation: ").Append(RedactAbsolutePaths(invocation));
 
         var output = CombineToolOutput(stdout, stderr);
         if (!string.IsNullOrWhiteSpace(output))
         {
             builder.AppendLine();
             builder.Append("Tool output:").AppendLine();
-            builder.Append(TruncateForDiagnostics(output, 4096));
+            builder.Append(TruncateForDiagnostics(RedactAbsolutePaths(output), 4096));
         }
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// R5-015: Redact absolute paths from tool output to prevent path leakage in error messages and reports.
+    /// Replaces Windows absolute paths (C:\...) with relative-only filename portions.
+    /// </summary>
+    private static string RedactAbsolutePaths(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return input;
+
+        // Redact Windows absolute paths: drive letter + colon + backslash
+        return System.Text.RegularExpressions.Regex.Replace(
+            input,
+            """[A-Za-z]:\\(?:[^\s"'<>|*?]+\\)*""",
+            @"[path]\");
     }
 
     private static string BuildInvocationSummary(string exePath, string[] arguments)

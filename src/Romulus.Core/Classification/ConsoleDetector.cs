@@ -330,58 +330,7 @@ public sealed class ConsoleDetector
     /// </summary>
     public string Detect(string filePath, string rootPath)
     {
-        var fileName = Path.GetFileNameWithoutExtension(filePath);
-        if (IsClearlyInvalidFile(filePath))
-            return "UNKNOWN";
-
-        // Method 1: Folder name
-        var byFolder = DetectByFolder(filePath, rootPath);
-        if (byFolder is not null)
-            return byFolder;
-
-        // Method 2: Unique extension
-        var ext = Path.GetExtension(filePath);
-        var byExt = DetectByExtension(ext);
-        if (byExt is not null)
-            return byExt;
-
-        // Method 3: Ambiguous extension (return first match if only one)
-        var ambig = GetAmbiguousMatches(ext);
-        if (ambig.Count == 1)
-            return ambig[0];
-
-        // Method 3b: Disc header binary detection (ISO/BIN/GCM/CHD) — higher confidence than archive interior
-        if (_discHeaderDetector is not null)
-        {
-            var discExt = ext.ToLowerInvariant();
-            string? byHeader = discExt == ".chd"
-                ? _discHeaderDetector.DetectFromChd(filePath)
-                : DiscFormats.IsHeaderProbeExtension(discExt)
-                    ? _discHeaderDetector.DetectFromDiscImage(filePath)
-                    : null;
-            if (byHeader is not null)
-                return byHeader;
-        }
-
-        // Method 4: Archive interior extension (ZIP/7z contain ROM files whose extension reveals the console)
-        var byArchive = DetectByArchiveContent(filePath, ext);
-        if (byArchive is not null)
-            return byArchive;
-
-        // Method 5: Cartridge header binary detection (NES/SNES/MD/N64/GBA/GB)
-        if (_cartridgeHeaderDetector is not null)
-        {
-            var byCartridge = _cartridgeHeaderDetector.Detect(filePath);
-            if (byCartridge is not null)
-                return byCartridge;
-        }
-
-        // Method 6: Filename serial numbers and system keywords (e.g. SLUS-00123 → PS1, [GBA] tag)
-        var byFilename = FilenameConsoleAnalyzer.Detect(fileName);
-        if (byFilename is not null)
-            return byFilename.Value.ConsoleKey;
-
-        return "UNKNOWN";
+        return DetectWithConfidence(filePath, rootPath).ConsoleKey;
     }
 
     /// <summary>

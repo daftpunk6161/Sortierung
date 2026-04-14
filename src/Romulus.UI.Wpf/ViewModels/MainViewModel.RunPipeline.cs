@@ -779,8 +779,10 @@ public sealed partial class MainViewModel
         lock (_ctsLock)
         {
             try { _cts?.Cancel(); } catch (ObjectDisposedException) { }
+            // R3-012 FIX: Set Cancelled state inside lock to prevent race with
+            // CreateRunCancellation that could start a new run between unlock and state change.
+            CurrentRunState = RunState.Cancelled;
         }
-        CurrentRunState = RunState.Cancelled;
         Progress = 0;
         ProgressText = string.Empty;
         BusyHint = _loc["Progress.BusyHint.CancelRequested"];

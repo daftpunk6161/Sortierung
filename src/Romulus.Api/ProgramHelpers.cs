@@ -32,6 +32,9 @@ public partial class Program
     internal static bool FixedTimeEquals(string expected, string? actual)
     {
         if (actual is null) return false;
+        // R3-004 FIX: Reject empty expected keys — HMAC with an empty key is
+        // deterministic, allowing an attacker to pre-compute the target hash.
+        if (string.IsNullOrEmpty(expected)) return false;
         // HMAC both values to normalize length before comparison,
         // eliminating the length oracle from FixedTimeEquals.
         var key = Encoding.UTF8.GetBytes(expected);

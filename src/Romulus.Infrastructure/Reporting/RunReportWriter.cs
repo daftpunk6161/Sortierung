@@ -91,7 +91,10 @@ public static class RunReportWriter
         // Invariant: report accounting must match scanned files.
         // Use canonical accounting from scanned candidates + prefilter count,
         // independent from dedupe grouping internals.
-        if (projection.TotalFiles > 0)
+        // R5-005: Skip invariant for partial/cancelled runs where counts may be incomplete.
+        var isCancelled = string.Equals(projection.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(projection.Status, "Error", StringComparison.OrdinalIgnoreCase);
+        if (projection.TotalFiles > 0 && !isCancelled)
         {
             // Newer pipelines keep AllCandidates as the full scanned set.
             // In that case FilteredNonGameCount is already represented in Candidates

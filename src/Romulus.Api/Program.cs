@@ -193,7 +193,9 @@ app.Use(async (ctx, next) =>
         return;
     }
 
-    var rateLimitBucket = BuildRateLimitBucketId(providedKey!);
+    // R3-006 FIX: Use stable client binding identity, not raw user-provided key.
+    // Raw providedKey allows timing-based bucket enumeration by key probing.
+    var rateLimitBucket = BuildRateLimitBucketId(clientBindingId);
 
     if (!rateLimiter.TryAcquire(rateLimitBucket))
     {

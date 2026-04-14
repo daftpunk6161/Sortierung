@@ -65,6 +65,17 @@ public sealed class StreamingScanPipelinePhase : IAsyncFileScanner
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                // R4-022: Skip symlinks/reparse points — they can escape root policy
+                // and cause non-deterministic dedup via different path representations
+                try
+                {
+                    var attrs = File.GetAttributes(filePath);
+                    if ((attrs & FileAttributes.ReparsePoint) != 0)
+                        continue;
+                }
+                catch (IOException) { continue; }
+                catch (UnauthorizedAccessException) { continue; }
+
                 var normalizedPath = Path.GetFullPath(filePath);
                 if (!seenCandidatePaths.Add(normalizedPath))
                     continue;

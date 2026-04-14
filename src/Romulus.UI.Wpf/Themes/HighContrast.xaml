@@ -44,6 +44,7 @@
     <SolidColorBrush x:Key="BrushPrimaryHover"    Color="#CCCC00"/>
     <SolidColorBrush x:Key="BrushPrimaryActive"   Color="#999900"/>
     <SolidColorBrush x:Key="BrushDangerHover"     Color="#FF333333"/>
+    <SolidColorBrush x:Key="BrushWarningHover"    Color="#FF993300"/>
     <SolidColorBrush x:Key="BrushScrimOverlay"    Color="#DD000000"/>
 
     <!-- ═══ HC OVERRIDE: Focus ring 3 px ══════════════════════════════ -->

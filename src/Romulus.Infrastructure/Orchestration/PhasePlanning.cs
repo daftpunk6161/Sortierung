@@ -86,10 +86,28 @@ public sealed class PipelineState
         if (pathMutations.Count == 0)
             return;
 
-        var mutationMap = pathMutations
+        // R4-014: Filter out cyclic mutations (A→B, B→A) to prevent non-deterministic rebasing
+        var validMutations = pathMutations
             .Where(static mutation =>
                 !string.IsNullOrWhiteSpace(mutation.SourcePath)
                 && !string.IsNullOrWhiteSpace(mutation.TargetPath))
+            .ToList();
+
+        var targetToSource = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var cycleFreeList = new List<PathMutation>(validMutations.Count);
+        foreach (var mutation in validMutations)
+        {
+            // Detect direct cycle: A→B exists and now B→A is attempted
+            if (targetToSource.TryGetValue(mutation.SourcePath, out var prevSource)
+                && string.Equals(prevSource, mutation.TargetPath, StringComparison.OrdinalIgnoreCase))
+            {
+                continue; // Skip cyclic mutation
+            }
+            targetToSource[mutation.TargetPath] = mutation.SourcePath;
+            cycleFreeList.Add(mutation);
+        }
+
+        var mutationMap = cycleFreeList
             .GroupBy(static mutation => mutation.SourcePath, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 static group => group.Key,

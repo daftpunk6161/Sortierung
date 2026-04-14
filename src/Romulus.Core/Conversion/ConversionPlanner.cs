@@ -21,7 +21,7 @@ public sealed class ConversionPlanner(
     /// <inheritdoc />
     public ConversionPlan Plan(string sourcePath, string consoleKey, string sourceExtension)
     {
-        var normalizedConsole = (consoleKey ?? string.Empty).Trim();
+        var normalizedConsole = (consoleKey ?? string.Empty).Trim().ToUpperInvariant();
         var normalizedExt = (sourceExtension ?? string.Empty).Trim().ToLowerInvariant();
         var sourceIntegrity = SourceIntegrityClassifier.Classify(normalizedExt, Path.GetFileName(sourcePath));
 

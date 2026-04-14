@@ -150,6 +150,14 @@ public sealed class FormatConverterAdapter : IFormatConverter
         if (registryTarget is not null)
             return registryTarget;
 
+        // If registry is available and policy blocks conversion, do NOT fall through to defaults.
+        if (_registry is not null)
+        {
+            var policy = _registry.GetPolicy(normalizedConsole);
+            if (policy is ConversionPolicy.None or ConversionPolicy.ManualOnly)
+                return null;
+        }
+
         if (BlockedAutoSystems.Contains(normalizedConsole) || ManualOnlySystems.Contains(normalizedConsole))
             return null;
 

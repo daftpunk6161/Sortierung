@@ -47,6 +47,11 @@ public sealed class AllowedRootPathPolicy
             return false;
         }
 
+        // R2-005 FIX: Reject paths containing reparse points (symlinks/junctions)
+        // to prevent symlink-based root-escape attacks.
+        if (ContainsReparsePoint(fullPath))
+            return false;
+
         foreach (var root in _allowedRoots)
         {
             if (string.Equals(fullPath, root, StringComparison.OrdinalIgnoreCase))
@@ -63,5 +68,26 @@ public sealed class AllowedRootPathPolicy
     {
         var fullPath = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         return fullPath;
+    }
+
+    /// <summary>
+    /// R2-005: Walk each segment of the resolved path and reject if any directory
+    /// is a reparse point (symlink, junction, mount point).
+    /// </summary>
+    private static bool ContainsReparsePoint(string fullPath)
+    {
+        try
+        {
+            var dir = new DirectoryInfo(Path.GetDirectoryName(fullPath) ?? fullPath);
+            while (dir is not null)
+            {
+                if (dir.Exists && (dir.Attributes & FileAttributes.ReparsePoint) != 0)
+                    return true;
+                dir = dir.Parent;
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        return false;
     }
 }

@@ -15,6 +15,7 @@
       <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
       <conv:InverseBoolConverter x:Key="InverseBool"/>
       <conv:StatusLevelToBrushConverter x:Key="StatusToBrush"/>
+      <conv:StatusLevelToGlyphConverter x:Key="StatusToGlyph"/>
       <conv:LogLevelToBrushConverter x:Key="LogLevelToBrush"/>
       <conv:StepActiveBrushConverter x:Key="StepToBrush"/>
       <conv:PipelinePhaseBrushConverter x:Key="PhaseBrush"/>

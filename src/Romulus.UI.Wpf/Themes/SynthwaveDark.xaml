@@ -40,6 +40,7 @@
     <SolidColorBrush x:Key="BrushPrimaryHover"    Color="#00F5FF55"/>
     <SolidColorBrush x:Key="BrushPrimaryActive"   Color="#00F5FF77"/>
     <SolidColorBrush x:Key="BrushDangerHover"     Color="#FF004422"/>
+    <SolidColorBrush x:Key="BrushWarningHover"    Color="#FFB70022"/>
     <SolidColorBrush x:Key="BrushScrimOverlay"    Color="#CC0D0D1F"/>
 
     <!-- ── Theme-specific overrides ──────────────────────────────────── -->

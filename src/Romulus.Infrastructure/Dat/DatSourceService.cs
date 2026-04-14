@@ -178,7 +178,13 @@ public sealed class DatSourceService : IDisposable
                         Directory.CreateDirectory(parentDir);
 
                     // Do not overwrite extracted files to avoid ambiguous archive collisions.
-                    entry.ExtractToFile(destPath, overwrite: false);
+                    // R5-009 FIX: Handle IOException for already-existing files gracefully
+                    // instead of crashing the entire extraction loop.
+                    try
+                    {
+                        entry.ExtractToFile(destPath, overwrite: false);
+                    }
+                    catch (IOException) { /* File exists — skip silently for collision safety. */ }
                 }
             }
 

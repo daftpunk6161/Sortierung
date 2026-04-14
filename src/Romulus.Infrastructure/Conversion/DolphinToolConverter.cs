@@ -10,6 +10,7 @@ namespace Romulus.Infrastructure.Conversion;
 internal sealed class DolphinToolConverter
 {
     private readonly IToolRunner _tools;
+    private static readonly ToolRequirement DolphinRequirement = new() { ToolName = "dolphintool" };
 
     public DolphinToolConverter(IToolRunner tools)
     {
@@ -25,7 +26,7 @@ internal sealed class DolphinToolConverter
             return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped, "dolphintool-unsupported-source");
 
         var args = new[] { "convert", "-i", sourcePath, "-o", targetPath, "-f", "rvz", "-c", "zstd", "-l", "5", "-b", "131072" };
-        var result = _tools.InvokeProcess(toolPath, args, "dolphintool");
+        var result = _tools.InvokeProcess(toolPath, args, DolphinRequirement, "dolphintool", null, CancellationToken.None);
 
         if (!result.Success)
         {

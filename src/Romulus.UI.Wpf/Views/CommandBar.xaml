@@ -31,6 +31,9 @@
       <WrapPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
         <Border Style="{StaticResource AccentHeaderChip}">
           <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{Binding ReadyStatusLevel, Converter={StaticResource StatusToGlyph}}"
+                       FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"
+                       Foreground="{Binding ReadyStatusLevel, Converter={StaticResource StatusToBrush}}"/>
             <Border Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,8,0"
                     CornerRadius="2"
                     Background="{Binding ReadyStatusLevel, Converter={StaticResource StatusToBrush}}"/>
@@ -44,27 +47,27 @@
 
         <Border Style="{StaticResource HeaderChip}">
           <StackPanel Orientation="Horizontal">
-            <Border Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
-                    CornerRadius="2"
-                    Background="{Binding RootsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+            <TextBlock Text="{Binding RootsStatusLevel, Converter={StaticResource StatusToGlyph}}"
+                       FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0"
+                       Foreground="{Binding RootsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
             <TextBlock Text="{Binding StatusRoots}" Foreground="{DynamicResource BrushTextPrimary}"/>
           </StackPanel>
         </Border>
 
         <Border Style="{StaticResource HeaderChip}">
           <StackPanel Orientation="Horizontal">
-            <Border Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
-                    CornerRadius="2"
-                    Background="{Binding ToolsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+            <TextBlock Text="{Binding ToolsStatusLevel, Converter={StaticResource StatusToGlyph}}"
+                       FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0"
+                       Foreground="{Binding ToolsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
             <TextBlock Text="{Binding StatusTools}" Foreground="{DynamicResource BrushTextPrimary}"/>
           </StackPanel>
         </Border>
 
         <Border Style="{StaticResource HeaderChip}">
           <StackPanel Orientation="Horizontal">
-            <Border Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,8,0"
-                    CornerRadius="2"
-                    Background="{Binding DatStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+            <TextBlock Text="{Binding DatStatusLevel, Converter={StaticResource StatusToGlyph}}"
+                       FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0"
+                       Foreground="{Binding DatStatusLevel, Converter={StaticResource StatusToBrush}}"/>
             <TextBlock Text="{Binding StatusDat}" Foreground="{DynamicResource BrushTextPrimary}"/>
           </StackPanel>
         </Border>

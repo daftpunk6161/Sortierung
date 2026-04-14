@@ -258,7 +258,9 @@ public sealed class MovePipelinePhase : IPipelinePhase<MovePhaseInput, MovePhase
                             }
                         }
 
-                        failCount++;
+                        // R4-025 FIX: Account for actual rollback failure count,
+                        // not just +1 regardless of how many members failed to rollback.
+                        failCount += 1 + rollbackFailures.Count;
                         if (hasAuditPath)
                         {
                             var reason = rollbackFailures.Count == 0

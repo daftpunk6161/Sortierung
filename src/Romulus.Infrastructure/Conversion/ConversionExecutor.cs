@@ -258,7 +258,9 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
                             null,
                             invokeResult.DurationMs));
 
-                    finalVerification = verifyStatus;
+                    // R5-025 FIX: Keep worst verification status across multi-step conversion.
+                    // Without this, a step-2 "Verified" overwrites a step-1 "VerifyNotAvailable".
+                    finalVerification = WorstVerificationStatus(finalVerification, verifyStatus);
                     currentInputPath = finalOutputPath;
                 }
                 catch (InvalidOperationException ex)
@@ -394,6 +396,23 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
         {
             // SUPPRESSED: best-effort cleanup only; conversion result has already been finalized.
         }
+    }
+
+    /// <summary>
+    /// R5-025: Return the "worse" of two verification statuses so multi-step
+    /// conversions retain the least-trusted result across all steps.
+    /// Severity order: VerifyFailed > VerifyNotAvailable > NotAttempted > Verified.
+    /// </summary>
+    private static VerificationStatus WorstVerificationStatus(VerificationStatus a, VerificationStatus b)
+    {
+        static int Severity(VerificationStatus s) => s switch
+        {
+            VerificationStatus.VerifyFailed => 3,
+            VerificationStatus.VerifyNotAvailable => 2,
+            VerificationStatus.NotAttempted => 1,
+            _ => 0
+        };
+        return Severity(a) >= Severity(b) ? a : b;
     }
 
     private static ConversionResult BuildResult(

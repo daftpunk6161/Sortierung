@@ -40,6 +40,7 @@
     <SolidColorBrush x:Key="BrushPrimaryHover"    Color="#FF2D9555"/>
     <SolidColorBrush x:Key="BrushPrimaryActive"   Color="#FF2D9577"/>
     <SolidColorBrush x:Key="BrushDangerHover"     Color="#FF444422"/>
+    <SolidColorBrush x:Key="BrushWarningHover"    Color="#FFD50022"/>
     <SolidColorBrush x:Key="BrushScrimOverlay"    Color="#CC0A0020"/>
 
     <!-- ── Theme-specific override: neon glow on ProgressBar ─────────── -->

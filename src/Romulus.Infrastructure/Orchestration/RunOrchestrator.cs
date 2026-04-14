@@ -177,6 +177,18 @@ public sealed partial class RunOrchestrator : IDisposable
             var probePath = Path.Combine(targetDirectory, $".write_test_{Guid.NewGuid():N}");
             _fs.WriteAllText(probePath, string.Empty);
             _fs.DeleteFile(probePath);
+
+            // R4-018: When validating a file path (not directory), also probe the actual file
+            if (!treatAsDirectory)
+            {
+                var normalized = Path.GetFullPath(configuredPath!);
+                using var fs = new FileStream(normalized, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite);
+                fs.Close();
+                // Clean up probe file if we just created it (empty)
+                if (new FileInfo(normalized).Length == 0)
+                    File.Delete(normalized);
+            }
+
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)

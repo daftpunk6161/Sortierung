@@ -330,7 +330,11 @@ public sealed class RunLifecycleManager
             run.AuditPath = File.Exists(auditPath) ? auditPath : run.AuditPath;
             run.ReportPath = File.Exists(reportPath) ? reportPath : run.ReportPath;
             run.CompletedUtc = _timeProvider.UtcNow.UtcDateTime;
-            UpdateRecoveryState(run);
+            // R3-008 FIX: GuaranteeSignalCompletion — wrap UpdateRecoveryState
+            // in try/catch so SignalCompletion always executes. If recovery state
+            // update throws, clients would hang indefinitely waiting for completion.
+            try { UpdateRecoveryState(run); }
+            catch (Exception ex) { SafeLog($"[ERROR] Recovery state update failed for {run.RunId}: {ex.Message}"); }
             run.SignalCompletion();
             run.DisposeCancellationSource();
             lock (_activeLock)

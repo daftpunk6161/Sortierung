@@ -43,6 +43,9 @@
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
             <Border Style="{StaticResource AccentHeaderChip}" Margin="0,0,0,8">
               <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding ReadyStatusLevel, Converter={StaticResource StatusToGlyph}}"
+                           FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"
+                           Foreground="{Binding ReadyStatusLevel, Converter={StaticResource StatusToBrush}}"/>
                 <Border Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,8,0"
                         CornerRadius="2"
                         Background="{Binding ReadyStatusLevel, Converter={StaticResource StatusToBrush}}"/>
@@ -55,25 +58,25 @@
             <WrapPanel>
               <Border Style="{StaticResource HeaderChip}">
                 <StackPanel Orientation="Horizontal">
-                  <Border Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
-                          CornerRadius="2"
-                          Background="{Binding RootsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+                  <TextBlock Text="{Binding RootsStatusLevel, Converter={StaticResource StatusToGlyph}}"
+                             FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0"
+                             Foreground="{Binding RootsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
                   <TextBlock Text="{Binding StatusRoots}" Foreground="{DynamicResource BrushTextPrimary}"/>
                 </StackPanel>
               </Border>
               <Border Style="{StaticResource HeaderChip}">
                 <StackPanel Orientation="Horizontal">
-                  <Border Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
-                          CornerRadius="2"
-                          Background="{Binding ToolsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+                  <TextBlock Text="{Binding ToolsStatusLevel, Converter={StaticResource StatusToGlyph}}"
+                             FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0"
+                             Foreground="{Binding ToolsStatusLevel, Converter={StaticResource StatusToBrush}}"/>
                   <TextBlock Text="{Binding StatusTools}" Foreground="{DynamicResource BrushTextPrimary}"/>
                 </StackPanel>
               </Border>
               <Border Style="{StaticResource HeaderChip}">
                 <StackPanel Orientation="Horizontal">
-                  <Border Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,8,0"
-                          CornerRadius="2"
-                          Background="{Binding DatStatusLevel, Converter={StaticResource StatusToBrush}}"/>
+                  <TextBlock Text="{Binding DatStatusLevel, Converter={StaticResource StatusToGlyph}}"
+                             FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0"
+                             Foreground="{Binding DatStatusLevel, Converter={StaticResource StatusToBrush}}"/>
                   <TextBlock Text="{Binding StatusDat}" Foreground="{DynamicResource BrushTextPrimary}"/>
                 </StackPanel>
               </Border>
@@ -138,8 +141,12 @@
         <Border Style="{StaticResource SectionCard}"
                 Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=MissionControl}">
           <StackPanel>
-            <TextBlock Text="Nächster sinnvoller Schritt" FontWeight="SemiBold"
-                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <TextBlock Text="&#xE8FC;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                         Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <TextBlock Text="Nächster sinnvoller Schritt" FontWeight="SemiBold"
+                         Foreground="{DynamicResource BrushTextMuted}"/>
+            </StackPanel>
             <TextBlock Text="{Binding Loc[Context.StartHint1]}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
             <TextBlock Text="{Binding Loc[Context.StartHint2]}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
             <TextBlock Text="{Binding Loc[Context.StartHint3]}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10"/>
@@ -151,8 +158,12 @@
         <Border Style="{StaticResource SectionCard}"
                 Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Library}">
           <StackPanel>
-            <TextBlock Text="Analyse-Fokus" FontWeight="SemiBold"
-                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                         Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <TextBlock Text="Analyse-Fokus" FontWeight="SemiBold"
+                         Foreground="{DynamicResource BrushTextMuted}"/>
+            </StackPanel>
             <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
               <Run Text="Modus: "/><Run Text="{Binding Run.DashMode}"/>
             </TextBlock>
@@ -170,8 +181,12 @@
         <Border Style="{StaticResource SectionCard}"
                 Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Config}">
           <StackPanel>
-            <TextBlock Text="Sicherheits-Check" FontWeight="SemiBold"
-                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <TextBlock Text="&#xE8D7;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                         Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <TextBlock Text="Sicherheits-Check" FontWeight="SemiBold"
+                         Foreground="{DynamicResource BrushTextMuted}"/>
+            </StackPanel>
             <TextBlock Text="{Binding MoveApplyGateText}" TextWrapping="Wrap"
                        Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10"/>
             <Button Content="{Binding Loc[Context.RunPreview]}" Command="{Binding QuickPreviewCommand}"
@@ -182,8 +197,12 @@
         <Border Style="{StaticResource SectionCard}"
                 Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}">
           <StackPanel>
-            <TextBlock Text="Tool-Zustand" FontWeight="SemiBold"
-                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                         Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <TextBlock Text="Tool-Zustand" FontWeight="SemiBold"
+                         Foreground="{DynamicResource BrushTextMuted}"/>
+            </StackPanel>
             <TextBlock Text="{Binding StatusTools}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
             <TextBlock Text="{Binding StatusDat}" Foreground="{DynamicResource BrushTextPrimary}"/>
           </StackPanel>
@@ -192,8 +211,12 @@
         <Border Style="{StaticResource SectionCard}"
                 Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=System}">
           <StackPanel>
-            <TextBlock Text="System-Aktionen" FontWeight="SemiBold"
-                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <TextBlock Text="&#xE770;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                         Foreground="{DynamicResource BrushAccentCyan}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <TextBlock Text="System-Aktionen" FontWeight="SemiBold"
+                         Foreground="{DynamicResource BrushTextMuted}"/>
+            </StackPanel>
             <Button Content="{Binding Loc[Start.FlowOpenSetup]}" Command="{Binding GoToConfigCommand}" Margin="0,0,0,6"
                     AutomationProperties.Name="{Binding Loc[Start.FlowOpenSetup]}"/>
             <Button Content="{Binding Loc[Start.FlowOpenAnalyse]}" Command="{Binding GoToLibraryCommand}" Margin="0,0,0,6"

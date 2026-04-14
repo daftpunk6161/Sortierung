@@ -117,11 +117,12 @@
 
         <Button Command="{Binding RollbackCommand}"
           Width="110" MinHeight="52" Padding="6,2" Margin="{DynamicResource SpaceRightXS}"
-                BorderBrush="{DynamicResource BrushAccentPurple}" Foreground="{DynamicResource BrushAccentPurple}"
                 AutomationProperties.AcceleratorKey="Ctrl+Z"
-                Background="{DynamicResource BrushDangerBg}" BorderThickness="2"
                 ToolTip="{Binding Loc[Start.RollbackTip]}" AutomationProperties.Name="{Binding Loc[Start.RollbackButton]}" TabIndex="5"
                 Visibility="{Binding CanRollback, Converter={StaticResource BoolToVis}}">
+          <Button.Style>
+            <Style TargetType="Button" BasedOn="{StaticResource WarningButton}"/>
+          </Button.Style>
           <StackPanel HorizontalAlignment="Center">
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE777;" FontSize="20" HorizontalAlignment="Center"/>
             <TextBlock Text="{Binding Loc[Start.RollbackButton]}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>

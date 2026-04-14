@@ -73,7 +73,9 @@ public sealed class DatRenamePipelinePhase : IPipelinePhase<DatRenameInput, DatR
             var winnersByTargetPath = new Dictionary<string, DatRenameExecutionItem>(StringComparer.OrdinalIgnoreCase);
             foreach (var item in executableItems
                 .OrderByDescending(static item => item.Entry.Confidence)
-                .ThenBy(static item => item.Entry.FilePath, StringComparer.OrdinalIgnoreCase))
+                .ThenBy(static item => item.Entry.FilePath, StringComparer.OrdinalIgnoreCase)
+                // R4-005 FIX: Stable 3rd tiebreaker — .NET OrderBy is not stable for equal keys.
+                .ThenBy(static item => item.Entry.Hash, StringComparer.OrdinalIgnoreCase))
             {
                 if (!winnersByTargetPath.ContainsKey(item.TargetPath))
                     winnersByTargetPath[item.TargetPath] = item;

@@ -69,6 +69,24 @@ public sealed class StatusLevelToBrushConverter : IValueConverter
     }
 }
 
+/// <summary>Converts StatusLevel enum to a Segoe MDL2 glyph for triple-encoding (icon + color + text).</summary>
+public sealed class StatusLevelToGlyphConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is StatusLevel level ? level switch
+        {
+            StatusLevel.Ok => "\uE73E",       // CheckMark
+            StatusLevel.Warning => "\uE7BA",   // Warning
+            StatusLevel.Blocked => "\uE711",   // Cancel
+            _ => "\uE946"                      // Unknown
+        } : "\uE946";
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 /// <summary>Converts LogEntry.Level to a SolidColorBrush for log coloring.</summary>
 public sealed class LogLevelToBrushConverter : IValueConverter
 {

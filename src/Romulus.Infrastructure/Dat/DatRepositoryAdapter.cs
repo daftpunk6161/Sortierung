@@ -249,6 +249,14 @@ public sealed class DatRepositoryAdapter
 
                             // Fallback chain: if the preferred hash is absent, try alternatives.
                             // Many DATs (MAME, FBNeo) only carry CRC32; No-Intro has all four.
+                            // R5-007 FIX: Include SHA1 in fallback (was skipped between SHA256→MD5).
+                            if (hash is null && requestedHashType is not "SHA1" and not ("CRC" or "CRC32"))
+                            {
+                                hash = reader.GetAttribute("sha1");
+                                if (hash is not null)
+                                    selectedHashType = "SHA1";
+                            }
+
                             if (hash is null && requestedHashType is not ("CRC" or "CRC32"))
                             {
                                 hash = reader.GetAttribute("md5");

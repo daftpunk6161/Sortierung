@@ -22,7 +22,8 @@
 
     <!-- ── Text ───────────────────────────────────────────────────────── -->
     <SolidColorBrush x:Key="BrushTextPrimary"  Color="#D4D6DE"/>
-    <SolidColorBrush x:Key="BrushTextMuted"    Color="#8A8EA0"/>
+    <!-- GUI-P1: #8A8EA0→#9BA0B8 für WCAG AA 4.5:1 Kontrast auf #16181D -->
+    <SolidColorBrush x:Key="BrushTextMuted"    Color="#9BA0B8"/>
     <SolidColorBrush x:Key="BrushBorder"       Color="#333648"/>
 
     <!-- ── Semantic Backgrounds ──────────────────────────────────────── -->
@@ -40,6 +41,7 @@
     <SolidColorBrush x:Key="BrushPrimaryHover"    Color="#6CA6E855"/>
     <SolidColorBrush x:Key="BrushPrimaryActive"   Color="#6CA6E877"/>
     <SolidColorBrush x:Key="BrushDangerHover"     Color="#E0606022"/>
+    <SolidColorBrush x:Key="BrushWarningHover"    Color="#D9A64622"/>
     <SolidColorBrush x:Key="BrushScrimOverlay"    Color="#CC1A1A2E"/>
 
 </ResourceDictionary>

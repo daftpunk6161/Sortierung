@@ -164,7 +164,9 @@ public static class AuditCsvParser
         return true;
     }
 
+    // R5-021 FIX: Include tab (\t) and carriage return (\r) — both are dangerous
+    // spreadsheet prefixes that can trigger formula execution in Excel/Calc.
     private static bool HasDangerousSpreadsheetPrefix(string value)
         => !string.IsNullOrEmpty(value)
-            && value[0] is '=' or '+' or '-' or '@';
+            && value[0] is '=' or '+' or '-' or '@' or '\t' or '\r';
 }

@@ -120,8 +120,7 @@
     <Style TargetType="CheckBox">
       <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
       <Setter Property="Margin"     Value="0 3"/>
-      <Setter Property="Cursor"     Value="Hand"/>
-      <Setter Property="Template">
+      <Setter Property="Cursor"     Value="Hand"/>      <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>      <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="CheckBox">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -516,8 +515,7 @@
     <Style TargetType="RadioButton">
       <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
       <Setter Property="Margin"     Value="0 3"/>
-      <Setter Property="Cursor"     Value="Hand"/>
-      <Setter Property="Template">
+      <Setter Property="Cursor"     Value="Hand"/>      <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>      <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="RadioButton">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -743,6 +741,44 @@
     </Style>
 
     <!-- ═══ GHOST BUTTON (tertiäre Aktionen) ══════════════════════════ -->
+
+    <!-- ═══ WARNING BUTTON (reversible danger, e.g. Rollback) ═════════ -->
+    <Style x:Key="WarningButton" TargetType="Button">
+      <Setter Property="Background" Value="{DynamicResource BrushSurface}"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrushWarning}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrushWarning}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="12 6"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="bd"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="6">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Margin="{TemplateBinding Padding}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="bd" Property="Background" Value="{DynamicResource BrushWarningHover}"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="bd" Property="Opacity" Value="0.4"/>
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource BrushAccentCyan}"/>
+                <Setter TargetName="bd" Property="BorderThickness" Value="2"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
     <Style x:Key="GhostButton" TargetType="Button">
       <Setter Property="Background"      Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>

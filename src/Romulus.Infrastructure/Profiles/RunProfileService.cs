@@ -118,6 +118,11 @@ public sealed class RunProfileService
             ?? throw new InvalidOperationException($"Profile '{id}' was not found.");
 
         var fullTargetPath = Path.GetFullPath(targetPath);
+
+        // R6-001: Validate export path is not a protected system path (path traversal protection)
+        if (Romulus.Infrastructure.Safety.SafetyValidator.IsProtectedSystemPath(fullTargetPath))
+            throw new InvalidOperationException($"Export path is a protected system location: {fullTargetPath}");
+
         var directory = Path.GetDirectoryName(fullTargetPath);
         if (!string.IsNullOrWhiteSpace(directory))
             Directory.CreateDirectory(directory);

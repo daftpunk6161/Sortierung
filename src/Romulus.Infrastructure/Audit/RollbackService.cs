@@ -35,7 +35,9 @@ public static class RollbackService
                     count++;
             }
 
-            return Math.Max(1, count);
+            // R6-006 FIX: Return actual count — Math.Max(1, 0) returned 1 for empty
+            // audit files, displaying misleading "1 Failed" in rollback results.
+            return count;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

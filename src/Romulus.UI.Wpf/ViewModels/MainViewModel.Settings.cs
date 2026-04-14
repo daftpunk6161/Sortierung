@@ -106,6 +106,10 @@ public sealed partial class MainViewModel
 
     private void OnAutoSaveTimerElapsed(object? _)
     {
+        // R3-015 FIX: Guard against post-Dispose timer callback.
+        // Timer.Dispose does not prevent already-queued callbacks from firing.
+        if (_mainViewModelDisposed) return;
+
         // Must run on UI thread — SaveFrom reads ObservableCollection<string> Roots
         var dispatcher = System.Windows.Application.Current?.Dispatcher;
         if (dispatcher is null)

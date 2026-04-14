@@ -155,13 +155,16 @@ public sealed class ToolInvokerAdapter(IToolRunner tools) : IToolInvoker
     private static string? ValidateToolConstraints(string toolPath, ToolRequirement requirement, bool skipExpectedHashValidation)
         => ToolInvokerSupport.ValidateToolConstraints(toolPath, requirement, skipExpectedHashValidation);
 
+    private static readonly ToolRequirement ChdmanVerifyRequirement = new() { ToolName = "chdman" };
+    private static readonly ToolRequirement SevenZipVerifyRequirement = new() { ToolName = "7z" };
+
     private VerificationStatus VerifyChd(string targetPath)
     {
         var chdman = _tools.FindTool("chdman");
         if (chdman is null)
             return VerificationStatus.VerifyNotAvailable;
 
-        var result = _tools.InvokeProcess(chdman, ["verify", "-i", targetPath], "chdman verify");
+        var result = _tools.InvokeProcess(chdman, ["verify", "-i", targetPath], ChdmanVerifyRequirement, "chdman verify", null, CancellationToken.None);
         return result.Success ? VerificationStatus.Verified : VerificationStatus.VerifyFailed;
     }
 
@@ -171,7 +174,7 @@ public sealed class ToolInvokerAdapter(IToolRunner tools) : IToolInvoker
         if (sevenZip is null)
             return VerificationStatus.VerifyNotAvailable;
 
-        var result = _tools.InvokeProcess(sevenZip, ["t", "-y", targetPath], "7z verify");
+        var result = _tools.InvokeProcess(sevenZip, ["t", "-y", targetPath], SevenZipVerifyRequirement, "7z verify", null, CancellationToken.None);
         return result.Success ? VerificationStatus.Verified : VerificationStatus.VerifyFailed;
     }
 

@@ -36,10 +36,12 @@
     <SolidColorBrush x:Key="BrushInputSelection"  Color="#33FF3344"/>
     <SolidColorBrush x:Key="BrushBorderHover"     Color="#33AA33"/>
     <SolidColorBrush x:Key="BrushPrimaryBg"       Color="#33FF3333"/>
-    <SolidColorBrush x:Key="BrushTextOnAccent"    Color="#000000"/>
+    <!-- GUI-P1: #000000→#0A200A für konsistente Retro-Identität auf #33FF33 -->
+    <SolidColorBrush x:Key="BrushTextOnAccent"    Color="#0A200A"/>
     <SolidColorBrush x:Key="BrushPrimaryHover"    Color="#33FF3355"/>
     <SolidColorBrush x:Key="BrushPrimaryActive"   Color="#33FF3377"/>
     <SolidColorBrush x:Key="BrushDangerHover"     Color="#FF222222"/>
+    <SolidColorBrush x:Key="BrushWarningHover"    Color="#FFAA0022"/>
     <SolidColorBrush x:Key="BrushScrimOverlay"    Color="#CC000800"/>
 
 </ResourceDictionary>
