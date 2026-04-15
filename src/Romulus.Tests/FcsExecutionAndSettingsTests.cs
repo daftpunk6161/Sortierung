@@ -761,7 +761,10 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
         public void ApplyTheme(AppTheme theme) { }
         public void ApplyTheme(bool dark) { }
         public void Toggle() { }
-        public void ApplyDensity(UiDensityMode density) { } : ISettingsService
+        public void ApplyDensity(UiDensityMode density) { }
+    }
+
+    private sealed class StubSettingsServiceEx : ISettingsService
     {
         public string? LastAuditPath { get; set; }
         public string LastTheme { get; set; } = "Dark";

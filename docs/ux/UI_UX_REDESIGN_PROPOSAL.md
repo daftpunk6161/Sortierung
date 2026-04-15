@@ -1325,7 +1325,7 @@ So bekommen alle Nutzergruppen ihren optimalen Modus, ohne dass die Grundstruktu
 | **Status nicht nur Farbe** | ⚠️ Teilweise | Triple-Encoding durchsetzen (Icon+Farbe+Text) |
 | **Touch Targets ≥ 44px** | ✓ MinTouchTarget definiert | CheckBox-Padding prüfen |
 | **Reduced Motion** | ✓ Umgesetzt | Toggle in System > Appearance vorhanden, wirkt auf Shell-Motion-Verhalten |
-| **Live Regions** | ⚠️ Teilweise | Status-Änderungen als LiveRegion markieren |
+| **Live Regions** | ✓ Umgesetzt | ResultView + ContextPanel mit `AutomationProperties.LiveSetting="Polite"` versehen |
 
 ### Konkrete Fixes (priorisiert)
 
@@ -1378,6 +1378,7 @@ So bekommen alle Nutzergruppen ihren optimalen Modus, ohne dass die Grundstruktu
 | Phase 2 | Umgesetzt | Tool-Grouping, Mission-Control-Integration für Setup/Config, Activity-Log-Entkopplung in den Detail-Drawer, KPI-Disclosure und Simple/Expert-Verhalten umgesetzt |
 | Phase 3 | Umgesetzt (Scope dieser Iteration) | Pipeline als eigener Nav-Bereich, neue Appearance-Steuerungen (Reduced Motion, Density, Wizard-Startup), Dialog-Basisstil mit Severity-Tagging sowie Theme-Update auf Clean Daylight / Stark Contrast umgesetzt |
 | Phase 4 | Umgesetzt (Scope dieser Iteration) | Glow-Strategie vereinheitlicht (keine theme-spezifischen Progress-Glows), Animation-Timings auf Tokens standardisiert, Theme-Preview + Tour-Start in Appearance ergänzt, Console-Distribution-Chart visuell aufgewertet |
+| Open Items | Umgesetzt (2026-04-15) | **Density Spacing**: `_DensityCompact.xaml` / `_DensityComfortable.xaml` + `ThemeService.ApplyDensity()` + `DensitySpacingScale` in ViewModel. **Live Regions**: `AutomationProperties.LiveSetting="Polite"` in ResultView + ContextPanel. **Tool View Modes**: Grid/List-Toggle + `ToolListTemplate` in ToolsView + `ToolViewMode` in MainViewModel. |
 
 #### Verifizierung (Pflicht)
 
@@ -1395,6 +1396,10 @@ So bekommen alle Nutzergruppen ihren optimalen Modus, ohne dass die Grundstruktu
       - `WpfProductizationTests`
       - `ShellViewModelCoverageTests`
       - `GuiViewModelTests`
+- Tests (Open-Items-Akzeptanz): 7 bestanden, 0 fehlgeschlagen
+      - `dotnet test src/Romulus.sln --filter "FullyQualifiedName~OpenItem_"`
+- Tests (Open-Items-Regression): 719 bestanden, 0 fehlgeschlagen
+      - `GuiViewModelTests`, `ShellViewModelCoverageTests`, `SetupViewModelCoverageTests`, `FcsExecutionAndSettingsTests`, `AuditP0P1FixTests`, `HardRegressionInvariantTests`, `HardGuiInvariantTests`
 
 ### Phase 3: Designsystem-Verfeinerung (4-8 Wochen)
 
@@ -1402,7 +1407,7 @@ So bekommen alle Nutzergruppen ihren optimalen Modus, ohne dass die Grundstruktu
 |---|----------|--------|---------|
 | 13 | **Neue Themes** (Clean Daylight, Stark Contrast verbessern) | Mittel | Mittel |
 | 14 | **Reduced Motion Setting** | Mittel | Niedrig |
-| 15 | **Screen Density Modi** (Compact/Normal/Comfortable) | Mittel | Hoch |
+| 15 | **Screen Density Modi** (Compact/Normal/Comfortable) | ✓ Umgesetzt | `_DensityCompact.xaml` / `_DensityComfortable.xaml` mit skalierten Spacing-Tokens, `ThemeService.ApplyDensity()`, `MainViewModel.DensitySpacingScale` |
 | 16 | **Wizard-Flow verbessern** (Stepper-UI, First-Time-Experience) | Hoch | Hoch |
 | 17 | **Dialog-Konsolidierung** (BaseDialog mit Severity) | Niedrig | Mittel |
 | 18 | **Pipeline-Section** als eigener Nav-Bereich | Mittel | Hoch |
