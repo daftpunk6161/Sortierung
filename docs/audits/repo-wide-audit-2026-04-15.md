@@ -878,3 +878,560 @@ Nach 5 tiefen Audit-Runden mit insgesamt **15+ analysierten Subsystemen** steht 
 - **20 Medium/Low:** ueberwiegend Edge-Case-Robustheit und Defense-in-Depth
 
 **Gesamtbewertung:** 44 Findings ueber 5 Runden. Die Codebasis ist **architektonisch sehr solide, thread-safe und security-geheartet**. Die verbleibenden Bugs betreffen Edge-Case-Robustheit, Exception-Safety und Inkonsistenzen in Neben-Codepfaden — keine fundamentalen Design- oder Sicherheitsprobleme. Die Audit-Trefferquote sinkt deutlich: Runde 5 (3 Findings) vs. Runde 2 (9 Findings) — die Codebasis naehert sich dem Punkt, an dem weitere Deep-Dives nur noch Marginal-Findings liefern.
+
+---
+---
+
+## Runde 6 — Pipeline-Execution, DAT-Indexing, Sorting, Daten-Konsistenz, Safety (2026-04-15)
+
+> **Methode:** 5 parallele Subagenten fuer: (1) RunOrchestrator Pipeline-Execution-Phasen, (2) Safety/PathPolicy Deep-Dive, (3) DAT-Indexing/Matching/Catalog, (4) Sorting/ConsoleSorter/Move-Operationen, (5) Data-JSON-Konsistenz und Lade-Validierung. Anschliessend manuelle Verifikation jedes Findings am Quellcode.
+>
+> **Safety-Subagent:** Alle 3 Findings waren **Duplikate** bestehender Findings (DB-002, DB-003, DB-004 aus Runde 2). Keine neuen Safety-Bugs.
+>
+> **Was fehlerfrei bestaetigt wurde:**
+> - **ConsoleSorter M3U-Rewrite:** Angeblicher "wrong reference path"-Bug ist korrekt — alle Set-Members werden in dasselbe Zielverzeichnis verschoben, Filename-Only-Mapping ist bewusst und korrekt
+> - **MoveItemSafelyCore DUP-Loop:** Beide Branches haben korrekte `if (!moved) throw` Guards — kein unbegrenzter Loop
+> - **IsInExcludedFolder:** Caller (`GetFilesForRoot`) garantiert, dass root immer Praefix von filePath ist — kein Runtime-Crash
+> - **rules.json EU/ASIA Keys:** Duplicate Keys sind **beabsichtigtes Sub-Region-Grouping** (UK→EU, Taiwan→ASIA) — kein Bug
+> - **rules.json NZ→AU:** Beabsichtigtes Oceania-Grouping gemaess ROM-Distribution-Konventionen (No-Intro, Redump)
+> - **DatIndex OrdinalIgnoreCase:** Bewusste Design-Entscheidung fuer Hex-Hash-Vergleich — funktional korrekt
+
+---
+
+### DB-026: MEDIUM — Move-Phase nutzt GameGroups statt AllGroups — BIOS-Losers werden nicht verschoben
+
+- [ ] **Offen**
+- **Schweregrad:** Medium (unvollstaendige Deduplizierung fuer BIOS-Dateien)
+- **Impact:** `RunMoveStep` uebergibt `state.GameGroups` (gefiltert) an `MovePipelinePhase.Execute()`. `GameGroups` schliesst seit F-012 reine BIOS-Winner-Gruppen aus (nur fuer Zaehlung gedacht). Seiteneffekt: BIOS-Loser-Dateien werden nie an die Move-Phase uebergeben und verbleiben als Duplikate in der Sammlung. JunkRemoval nutzt korrekterweise `state.AllGroups`.
+- **Betroffene Dateien:**
+  - [RunOrchestrator.StandardPhaseSteps.cs](../src/Romulus.Infrastructure/Orchestration/RunOrchestrator.StandardPhaseSteps.cs#L78) — `var groups = state.GameGroups ?? Array.Empty<DedupeGroup>();`
+  - [DeduplicatePipelinePhase.cs](../src/Romulus.Infrastructure/Orchestration/DeduplicatePipelinePhase.cs#L37-L45) — `GetGameGroups()` filtert BIOS-Winner
+- **Asymmetrie:**
+  - JunkRemoval (Zeile 62): `state.AllGroups` ← korrekt
+  - MoveStep (Zeile 78): `state.GameGroups` ← gefiltert, BIOS fehlt
+- **Reproduktion:** 2 BIOS-Dateien (bios_v1.bin Winner, bios_v2.bin Loser) → Deduplizierung erkennt Gruppe → Move-Phase sieht Gruppe nicht → bios_v2.bin bleibt in Sammlung
+- **Ursache:** F-012-Fix war nur fuer Zaehlung gedacht, aber Move-Phase liest dieselbe gefilterte Liste
+- **Fix:** In `RunMoveStep`: `var groups = state.AllGroups ?? Array.Empty<DedupeGroup>();`
+- **Testabsicherung:** Unit-Test: Deduplizierung mit reiner BIOS-Gruppe → Move-Phase muss BIOS-Loser verarbeiten
+
+---
+
+### DB-027: LOW — DAT-Hash-Werte aus XML nicht getrimmt/normalisiert
+
+- [ ] **Offen**
+- **Schweregrad:** Low (potenzielle falsche DAT-Mismatches bei malformierten DATs)
+- **Impact:** `DatRepositoryAdapter.ParseDatFile()` speichert Hashes aus `reader.GetAttribute("sha1")` direkt in `rom["hash"]` ohne `Trim()`. In `GetDatIndex()` wird der Hash 1:1 an `index.Add()` uebergeben. Wenn eine DAT-Datei Whitespace in Hash-Attributen hat (`sha1="  DEADBEEF  "`), scheitert der Lookup gegen den getrimmten Hash aus `FileHashService`.
+- **Betroffene Dateien:**
+  - [DatRepositoryAdapter.cs](../src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs#L280) — `rom["hash"] = hash;` ohne Trim
+  - [DatRepositoryAdapter.cs](../src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs#L58) — `index.Add(consoleKey, hash, ...)` ohne Trim
+- **Mitigierung:** `DatIndex` nutzt `StringComparer.OrdinalIgnoreCase` fuer Hash-Lookups, was Case-Differenzen abdeckt. Whitespace-Padding wird aber nicht mitigiert. Standard-DATs (No-Intro, Redump, MAME) haben saubere Hex-Strings.
+- **Praktische Relevanz:** Niedrig — nur bei malformierten Community-DATs oder fehlerhaften DAT-Konvertern. Aber: stille Miss-Klassifikation ohne Diagnosis.
+- **Fix:** `rom["hash"] = hash.Trim();` und/oder `index.Add(consoleKey, hash.Trim(), ...)` — idealerweise auch `.ToLowerInvariant()` fuer kanonische Form
+- **Testabsicherung:** Unit-Test: DAT mit whitespace-padded Hash → Lookup muss trotzdem matchen
+
+---
+
+### DB-028: LOW — PhasePlanExecutor setzt FailedPhaseName nicht bei unbehandelten Exceptions
+
+- [ ] **Offen**
+- **Schweregrad:** Low (Diagnostik-Luecke)
+- **Impact:** `PhasePlanExecutor.Execute()` setzt `pipelineState.SetFailedPhase(phase.Name, ...)` nur wenn eine Phase `StatusFailed` zurueckgibt. Wenn eine Phase eine unbehandelte Exception wirft, propagiert diese direkt zum Caller (`RunOrchestrator`), aber `FailedPhaseName` bleibt null. Der Catch-Block in `RunOrchestrator` hat die Exception-Message, kennt aber die fehlgeschlagene Phase nicht. Das Audit-Sidecar kann die Phase nicht identifizieren.
+- **Betroffene Dateien:**
+  - [PhasePlanExecutor.cs](../src/Romulus.Infrastructure/Orchestration/PhasePlanExecutor.cs#L19-L27) — kein try/catch um `phase.Execute()`
+  - [RunOrchestrator.cs](../src/Romulus.Infrastructure/Orchestration/RunOrchestrator.cs#L334) — `catch (Exception ex)` ohne Phasen-Info
+- **Reproduktion:** Move-Phase wirft IOException → RunOrchestrator faengt Exception → `pipelineState.FailedPhaseName == null` → Audit-Sidecar hat `LastPhase=unknown`
+- **Fix:** In `PhasePlanExecutor.Execute()` um den `phase.Execute()`-Call einen try/catch legen: `catch { pipelineState.SetFailedPhase(phase.Name, "exception"); throw; }`
+- **Testabsicherung:** Unit-Test: Phase wirft Exception → `pipelineState.FailedPhaseName` muss gesetzt sein
+
+---
+
+## Aktualisierte Zusammenfassung (inkl. Runde 6)
+
+| Quelle | Anzahl | Critical/Blocking | High | Medium-High | Medium | Low |
+|---|---|---|---|---|---|---|
+| Erstaudit (P1-P7) | 19 | 1 | — | — | 10 | 8 |
+| Deep-Dive Runde 2 | 9 | 1 | 3 | — | 4 | 1 |
+| Runde 3 | 7 | — | — | 1 | 4 | 2 |
+| Runde 4 | 6 | — | 2 | — | 1 | 3 |
+| Runde 5 | 3 | — | — | — | 1 | 2 |
+| Runde 6 | 3 | — | — | — | 1 | 2 |
+| **Gesamt** | **47** | **2** | **5** | **1** | **21** | **18** |
+
+---
+
+## Aktualisierte Top-Massnahmen (priorisiert nach Runde 6)
+
+1. **DB-001:** Legacy-Conversion-Verification-Bug fixen (CRITICAL — konvertierte Files werden geloescht)
+2. **F-001:** RollbackMovedArtifacts Fehler-Propagation (BLOCKING)
+3. **DB-017:** ConversionExecutor success=true bei VerifyFailed fixen (HIGH)
+4. **DB-018:** LiteDbCollectionIndex.RecreateDatabase Exception-Safety (HIGH)
+5. **DB-002:** MoveDirectorySafely full-ancestry Reparse-Point-Check (HIGH)
+6. **DB-003:** AllowedRootPathPolicy File-Level Reparse-Point-Check (HIGH)
+7. **DB-004:** AuditCsvParser Unclosed-Quote-Handling (HIGH)
+8. **DB-010:** SettingsLoader.MergeFromUserSettings Validation-Revert implementieren (MEDIUM-HIGH)
+9. **DB-026:** Move-Phase AllGroups statt GameGroups fuer BIOS-Loser-Move (MEDIUM)
+10. **DB-024:** AuditSigningService.Rollback Math.Max(1,...) R6-006-Inconsistenz fixen (MEDIUM)
+11. **DB-019:** _syncContext-null-Pfad Background-Thread-PropertyChanged absichern (MEDIUM)
+12. **F-004:** Root-Validierung in ConvertSingleFile (Defense-in-Depth)
+13. **DB-011:** ConversionRegistryLoader ReadRequired-Wrapper fuer lossless/cost
+14. **DB-020:** PBP-Registry command/target-Inkonsistenz verifizieren und korrigieren
+
+---
+
+## Gesamtschlussurteil (nach Runde 6)
+
+Nach 6 tiefen Audit-Runden mit insgesamt **20+ analysierten Subsystemen** steht fest:
+
+### Was fehlerfrei bestaetigt ist
+- **Kernlogik:** Deduplication, Scoring, GameKey, RegionDetection — deterministisch und korrekt
+- **Thread-Safety:** gesamte Codebasis produktionsreif (Runde 4)
+- **CLI & API Layer:** Input-Validierung, Path-Security, Auth, CORS — alles korrekt (Runde 5)
+- **CartridgeHeaderDetector:** SNES-Checksum-XOR mathematisch korrekt
+- **Reporting Security:** HTML-XSS-Encoding, CSV-Injection-Schutz, CSP-Headers korrekt
+- **Audit Integrity:** HMAC-SHA256 Verifizierung, Concurrent Access, Signing — korrekt
+- **Safety-Module:** Keine neuen Findings in Runde 6 (alle 3 waren Duplikate R2)
+- **ConsoleSorter M3U-Rewrite:** Korrekt — Set-Members gehen in dasselbe Zielverzeichnis
+- **MoveItemSafelyCore DUP-Loop:** Korrekt — beide Branches haben Exception-Guards
+- **rules.json Region-Grouping:** Beabsichtigtes Sub-Region-Design (NZ→AU, UK→EU, Taiwan→ASIA)
+
+### Was offen bleibt
+- **2 Critical/Blocking:** DB-001 (Conversion-Output-Loeschung), F-001 (Rollback-Error-Propagation)
+- **5 High:** DB-002/DB-003 (Reparse-Point-Asymmetrien), DB-004 (CSV-Quote), DB-017 (StepResult-Widerspruch), DB-018 (Exception-Safety LiteDb)
+- **1 Medium-High:** DB-010 (Settings-Validation-Revert)
+- **21 Medium/Low:** ueberwiegend Edge-Case-Robustheit, Diagnostik-Luecken und Defense-in-Depth
+
+### Trefferquoten-Trend
+
+| Runde | Findings | Trend |
+|---|---|---|
+| Runde 2 | 9 | Hoch |
+| Runde 3 | 7 | ↓ |
+| Runde 4 | 6 | ↓ |
+| Runde 5 | 3 | ↓ |
+| Runde 6 | 3 | → (Plateau) |
+
+**Gesamtbewertung:** 47 Findings ueber 6 Runden. Die Codebasis ist **architektonisch sehr solide, thread-safe und security-geheartet**. Die Trefferquote hat ein Plateau bei 3 Findings pro Runde erreicht — ueberwiegend Edge-Case-Robustheit und Diagnostik-Verbesserungen. **Die Codebasis hat den Punkt erreicht, an dem weitere Deep-Dives nur noch marginale Findings liefern.** Empfehlung: Verbleibende Critical/High-Findings (DB-001, F-001, DB-017, DB-018, DB-002–DB-004) fixen und Release vorbereiten.
+
+---
+---
+
+## Runde 7 — Hashing, Set-Parsing, WPF-XAML, i18n, Profiles/Enrichment (2026-04-15)
+
+> **Methode:** 5 parallele Subagenten fuer: (1) Hashing-Modul (FileHashService, ArchiveHashService, Caching), (2) Set-Parser (CUE/GDI/MDS/PBP/CCD), (3) WPF-XAML/Converter/Code-Behind, (4) i18n/Lokalisierung, (5) RunConfigurationResolver/Profile/Enrichment. Anschliessend manuelle Verifikation jedes Findings am Quellcode.
+>
+> **Abgelehnte Findings (FALSE ALARM):**
+> - WPF LibraryReportView "Memory Leak": Button ist Child des UserControl — Event-Handler-Referenz bleibt im selben Objektgraph, kein externer Ref-Leak bei GC
+> - i18n Convert.Progress De/Fr param mismatch: De hat tatsaechlich alle 7 Parameter `{0}-{6}`, identisch zu En — Subagent hat falschen Code referenziert
+> - RunConfigurationResolver workflow > profile Prioritaet: Deliberate Design-Entscheidung — `isExplicit` faengt User-explizite Werte ab, Workflow-Override auf Non-Explicit-Defaults ist konsistentes Verhalten
+> - CcdSetParser GetMissingFiles: Bereits als DB-025 in Runde 5 dokumentiert (Duplikat)
+>
+> **Was fehlerfrei bestaetigt wurde:**
+> - **FileHashService:** Cache-Invalidierung, Fingerprint-Validierung, Stream-Handling korrekt
+> - **HeaderlessHasher/HeaderRepairService:** N64 Byte-Order-Normalisierung, Buffer-Offsets korrekt
+> - **Crc32/ParallelHasher:** Table-Initialisierung, Streaming-Hash, Resource-Cleanup korrekt
+> - **CueSetParser/GdiSetParser/PbpSetParser:** Pfadauflosung, Set-Member-Erkennung korrekt
+> - **EnrichmentPipelinePhase/ScanPipelinePhase:** Hash-Propagation, Candidate-Mapping, deterministische Sortierung korrekt
+> - **RunConfigurationMaterializer:** Cascading (resolved → baseline → settings → defaults) korrekt
+> - **RunOptionsBuilder.Normalize/Validate:** Extension-/Region-/Mode-Normalisierung korrekt
+
+---
+
+### DB-029: LOW — MdsSetParser.GetMissingFiles fehlende Datei-Existenz-Pruefung
+
+- [ ] **Offen**
+- **Schweregrad:** Low (inkonsistentes Verhalten gegenueber GetRelatedFiles)
+- **Impact:** `MdsSetParser.GetMissingFiles("Z:\\nonexistent\\file.mds")` berechnet und liefert `[file.mdf]` als "fehlende" Datei, auch wenn die MDS-Basisdatei selbst nicht existiert. `GetRelatedFiles()` (Zeile 14) prueft `if (!parserIo.Exists(mdsPath)) return []` — diese Pruefung fehlt in `GetMissingFiles()`.
+- **Betroffene Datei:** [MdsSetParser.cs](../src/Romulus.Core/SetParsing/MdsSetParser.cs#L27-L35) — `GetMissingFiles()` ohne Existenz-Check
+- **Ursache:** Identisches Muster wie DB-025 (CcdSetParser) — fehlende Symmetrie zwischen GetRelatedFiles und GetMissingFiles
+- **Fix:** `if (string.IsNullOrWhiteSpace(mdsPath) || !parserIo.Exists(mdsPath)) return [];`
+- **Testabsicherung:** Unit-Test: GetMissingFiles mit nicht-existentem Pfad → leeres Array
+
+---
+
+### DB-030: LOW — ArchiveHashService ZIP/7z-Inkonsistenz bei Zero-Length-Eintraegen
+
+- [ ] **Offen**
+- **Schweregrad:** Low (Inkonsistenz mit extrem niedriger praktischer Relevanz)
+- **Impact:** `HashZipEntries()` filtert Eintraege mit `entry.Length <= 0` (Zeile 196 — uebersprungen). `Hash7zEntries()` nutzt `Directory.GetFiles()` das Verzeichnisse natuerlich ausschliesst, aber echte Null-Byte-Dateien einschliesst. Ergebnis: Wenn ein ZIP und ein identisches 7z-Archiv jeweils eine genuiine Null-Byte-Datei enthalten, liefert ZIP weniger Hashes als 7z.
+- **Betroffene Datei:** [ArchiveHashService.cs](../src/Romulus.Infrastructure/Hashing/ArchiveHashService.cs#L196) — `if (entry.Length <= 0) continue;` in `HashZipEntries`
+- **Praktische Relevanz:** Extrem niedrig — Null-Byte-Dateien in ROM-Archiven sind in der Praxis nicht existent. Der Filter schuetzt zudem korrekt gegen ZIP-Directory-Eintraege (Length=0, FullName endet mit '/').
+- **Fix:** Praeziseren Filter nutzen: `if (string.IsNullOrEmpty(entry.Name)) continue;` (filtert Directory-Eintraege ohne echte Dateien zu verlieren)
+- **Testabsicherung:** Unit-Test: ZIP mit genuiner Null-Byte-Datei → Hash-Count muss identisch zu 7z sein
+
+---
+
+### DB-031: LOW — Franzoesische i18n-Uebersetzungen unvollstaendig (~15 fehlende Keys)
+
+- [ ] **Offen**
+- **Schweregrad:** Low (keine Runtime-Fehler, Fallback auf Deutsch)
+- **Impact:** Die franzoesische Uebersetzung (`Fr`) in `RunProgressLocalization.cs` hat ca. 15 fehlende Keys gegenueber De und En. Fehlende Keys fallen auf die deutsche Uebersetzung zurueck (`ResolveTemplate()` gibt De-Template bei fehlendem Fr-Key). Franzoesische UI zeigt deutsche Fortschrittsmeldungen.
+- **Betroffene Datei:** [RunProgressLocalization.cs](../src/Romulus.Infrastructure/Orchestration/RunProgressLocalization.cs) — `Fr` Dictionary
+- **Fehlende Keys (Beispiele):** `Scan.RootCollecting`, `Scan.RootFound`, `Scan.ProgressProcessed`, `Scan.IncompleteWarning`, `Move.SkipConflict`, `Dedupe.Start`, `Dedupe.Completed`, `Junk.Start`, `Junk.Completed`, `Convert.OnlyStart`, `Convert.StartGroups`, `Convert.Completed`, `Convert.Progress`, `Convert.FileTarget`, `Convert.StepDone`, `Audit.SidecarWriteFailed`, `Preview.*`, `CollectionIndex.DeltaLookupsDisabled`
+- **Fix:** Fehlende Keys in Fr-Dictionary ergaenzen mit franzoesischen Uebersetzungen
+- **Testabsicherung:** Unit-Test: Fuer jeden Key in De/En pruefen, dass Fr den Key ebenfalls enthaelt
+
+---
+
+## Aktualisierte Zusammenfassung (inkl. Runde 7)
+
+| Quelle | Anzahl | Critical/Blocking | High | Medium-High | Medium | Low |
+|---|---|---|---|---|---|---|
+| Erstaudit (P1-P7) | 19 | 1 | — | — | 10 | 8 |
+| Deep-Dive Runde 2 | 9 | 1 | 3 | — | 4 | 1 |
+| Runde 3 | 7 | — | — | 1 | 4 | 2 |
+| Runde 4 | 6 | — | 2 | — | 1 | 3 |
+| Runde 5 | 3 | — | — | — | 1 | 2 |
+| Runde 6 | 3 | — | — | — | 1 | 2 |
+| Runde 7 | 3 | — | — | — | — | 3 |
+| **Gesamt** | **50** | **2** | **5** | **1** | **21** | **21** |
+
+---
+
+## Aktualisierte Top-Massnahmen (priorisiert nach Runde 7)
+
+1. **DB-001:** Legacy-Conversion-Verification-Bug fixen (CRITICAL — konvertierte Files werden geloescht)
+2. **F-001:** RollbackMovedArtifacts Fehler-Propagation (BLOCKING)
+3. **DB-017:** ConversionExecutor success=true bei VerifyFailed fixen (HIGH)
+4. **DB-018:** LiteDbCollectionIndex.RecreateDatabase Exception-Safety (HIGH)
+5. **DB-002:** MoveDirectorySafely full-ancestry Reparse-Point-Check (HIGH)
+6. **DB-003:** AllowedRootPathPolicy File-Level Reparse-Point-Check (HIGH)
+7. **DB-004:** AuditCsvParser Unclosed-Quote-Handling (HIGH)
+8. **DB-010:** SettingsLoader.MergeFromUserSettings Validation-Revert implementieren (MEDIUM-HIGH)
+9. **DB-026:** Move-Phase AllGroups statt GameGroups fuer BIOS-Loser-Move (MEDIUM)
+10. **DB-024:** AuditSigningService.Rollback Math.Max(1,...) R6-006-Inconsistenz fixen (MEDIUM)
+11. **DB-019:** _syncContext-null-Pfad Background-Thread-PropertyChanged absichern (MEDIUM)
+12. **F-004:** Root-Validierung in ConvertSingleFile (Defense-in-Depth)
+13. **DB-011:** ConversionRegistryLoader ReadRequired-Wrapper fuer lossless/cost
+14. **DB-020:** PBP-Registry command/target-Inkonsistenz verifizieren und korrigieren
+
+---
+
+## Gesamtschlussurteil (nach Runde 7)
+
+Nach 7 tiefen Audit-Runden mit insgesamt **25+ analysierten Subsystemen** steht fest:
+
+### Was fehlerfrei bestaetigt ist
+
+- **Kernlogik:** Deduplication, Scoring, GameKey, RegionDetection — deterministisch und korrekt
+- **Thread-Safety:** gesamte Codebasis produktionsreif (Runde 4)
+- **CLI & API Layer:** Input-Validierung, Path-Security, Auth, CORS — alles korrekt (Runde 5)
+- **CartridgeHeaderDetector:** SNES-Checksum-XOR mathematisch korrekt
+- **Reporting Security:** HTML-XSS-Encoding, CSV-Injection-Schutz, CSP-Headers korrekt
+- **Audit Integrity:** HMAC-SHA256 Verifizierung, Concurrent Access, Signing — korrekt
+- **Safety-Module:** Keine neuen Findings seit Runde 2 (alle Runde-6-Findings waren Duplikate)
+- **ConsoleSorter:** M3U-Rewrite, DUP-Loop, IsInExcludedFolder — korrekt
+- **rules.json Region-Grouping:** Beabsichtigtes Sub-Region-Design (NZ→AU, UK→EU, Taiwan→ASIA)
+- **Hashing-Modul:** FileHashService, HeaderlessHasher, Crc32, ParallelHasher — korrekt (Runde 7)
+- **Set-Parser:** CueSetParser, GdiSetParser, PbpSetParser — korrekt (Runde 7)
+- **Enrichment/Scan-Pipeline:** Hash-Propagation, Candidate-Mapping, Filtering — korrekt (Runde 7)
+- **RunConfigurationMaterializer/Resolver:** Cascading-Logik, Workflow/Profile-Prioritaet — korrekt (Runde 7)
+- **WPF-XAML-Layer:** Event-Handler-Patterns, Converter-Registration — korrekt (Runde 7)
+
+### Was offen bleibt
+
+- **2 Critical/Blocking:** DB-001 (Conversion-Output-Loeschung), F-001 (Rollback-Error-Propagation)
+- **5 High:** DB-002/DB-003 (Reparse-Point-Asymmetrien), DB-004 (CSV-Quote), DB-017 (StepResult-Widerspruch), DB-018 (Exception-Safety LiteDb)
+- **1 Medium-High:** DB-010 (Settings-Validation-Revert)
+- **21 Medium/Low:** ueberwiegend Edge-Case-Robustheit, Diagnostik-Luecken und Defense-in-Depth
+
+### Trefferquoten-Trend
+
+| Runde | Findings | Schweregrad-Trend |
+|---|---|---|
+| Runde 2 | 9 | 1 CRITICAL, 3 HIGH |
+| Runde 3 | 7 | 1 MEDIUM-HIGH |
+| Runde 4 | 6 | 2 HIGH |
+| Runde 5 | 3 | alle LOW/MEDIUM |
+| Runde 6 | 3 | 1 MEDIUM, 2 LOW |
+| Runde 7 | 3 | alle LOW |
+
+**Gesamtbewertung:** 50 Findings ueber 7 Runden. Die Codebasis ist **architektonisch sehr solide, thread-safe und security-geheartet**. Runde 7 hat nur noch 3 LOW-Findings produziert — eine i18n-Luecke, eine Set-Parser-Symmetrie-Luecke und eine Hashing-Inkonsistenz. **Der Audit hat definitiv den Punkt der diminishing returns erreicht.** Alle neuen Findings sind rein defensive Verbesserungen ohne praktischen Produktions-Impact. Empfehlung: Die 2 Critical/Blocking und 5 High-Findings sind die einzigen release-relevanten Punkte — alles andere ist planbar.
+
+---
+---
+
+## Runde 8 — API-Isolation, WPF-Konfig-Fidelity, Settings-Pipeline, Dashboard Exposure (2026-04-15)
+
+> **Methode:** gezielter Deep-Dive in API-Read-Models (`/runs*`, `/dashboard/*`), WPF-Run-Configuration-Round-Trip und Settings/Profile-Ingress. `dotnet build src/Romulus.sln --no-restore -v minimal` war gruen. Ein voller Lauf von `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-restore -v minimal` lief auf dem Audit-Rechner >10 Minuten ohne Abschluss; selektive `PreviewExecuteParityTests` (4 Tests) waren gruen.
+>
+> **Abgelehnte Findings (FALSE ALARM / nicht belastbar genug):**
+> - Reine `FeatureCommandKeys`-Registrierungs-Luecken sind auf aktuellem HEAD nicht bestaetigt; das offene Hygiene-Thema liegt eher bei Handler-Reife/Tool-Katalog als bei nackter Registrierung.
+>
+> **Was fehlerfrei bestaetigt wurde:**
+> - **Live-Run-Sichtbarkeit:** `/runs` filtert ueber `CanAccessRun(...)` korrekt pro `X-Client-Id`
+> - **Shared run truth:** `RunConfigurationMaterializer` bleibt der zentrale Materialisierungspfad fuer CLI/API/WPF
+> - **Build-Zustand:** `src/Romulus.sln` baut auf aktuellem HEAD ohne Fehler/Warnungen
+
+---
+
+### DB-032: HIGH — Persistierte Run-History und Dashboard umgehen das Client-Binding
+
+- [ ] **Offen**
+- **Schweregrad:** High (Security / API-Paritaet / Mandantenisolation)
+- **Impact:** Das Live-Run-Modell ist clientgebunden, die persistierten Read-Models aber nicht. `/runs` filtert ueber `CanAccessRun(...)`, aber `/runs/history`, `/runs/compare`, `/runs/trends` lesen globale Snapshots ohne `HttpContext` oder Client-Filter. `DashboardSummary` exponiert zusaetzlich `GetActive()` und die letzten Snapshots ebenfalls global. Ein API-Client kann dadurch Run-IDs, Root-Fingerprints, Groessen- und KPI-Daten anderer Clients sehen, obwohl dieselben Runs im Live-Endpoint `/runs` korrekt versteckt werden.
+- **Betroffene Dateien:**
+  - [Program.RunWatchEndpoints.cs](../src/Romulus.Api/Program.RunWatchEndpoints.cs#L21-L99) — `/runs` filtert, `/runs/history`, `/runs/compare`, `/runs/trends` nicht
+  - [DashboardDataBuilder.cs](../src/Romulus.Api/DashboardDataBuilder.cs#L34-L70) — `BuildSummaryAsync()` nutzt `GetActive()` und `ListRunSnapshotsAsync()` global
+  - [ProgramHelpers.cs](../src/Romulus.Api/ProgramHelpers.cs#L165-L183) — Client-Binding existiert, wird aber nur im Live-Pfad angewandt
+  - [CollectionIndexModels.cs](../src/Romulus.Contracts/Models/CollectionIndexModels.cs#L173-L231) — `CollectionRunSnapshot` hat kein `OwnerClientId`
+  - [CollectionRunSnapshotWriter.cs](../src/Romulus.Infrastructure/Index/CollectionRunSnapshotWriter.cs#L39-L80) — persistiert keine Owner-/Tenant-Information
+- **Reproduktion / Beispiel:**
+  1. Client A startet einen Run mit `X-Client-Id: owner-history`.
+  2. Client B mit `X-Client-Id: other-history` sieht diesen Run in `/runs` korrekterweise nicht.
+  3. Derselbe Client B bekommt in `/dashboard/summary` den globalen `activeRun` und nach Abschluss in `/runs/history`, `/runs/compare` und `/runs/trends` dieselben persistierten Snapshot-Daten trotzdem geliefert.
+- **Ursache:** Die Ownership-Information endet am `RunRecord`. Beim Uebergang in Snapshot-/Dashboard-Read-Models wird kein Owner-/Tenant-Schluessel mitgefuehrt und spaeter auch nicht gefiltert.
+- **Fix:** Client-Binding durchgaengig ueber die Read-Model-Pipeline ziehen. `CollectionRunSnapshot` braucht ein `OwnerClientId` (oder aequivalenten Tenant-Key), `CollectionRunSnapshotWriter` muss es persistieren, und `history/compare/trends/dashboard summary` muessen vor der Projektion clientgefiltert werden. Falls bewusst ein globales Admin-Dashboard gewollt ist, muss es explizit admin-only statt normal API-authenticated sein.
+- **Testabsicherung:**
+  - Integrationstest: Client A erstellt Run, Client B sieht ihn in `/dashboard/summary` nicht
+  - Integrationstest: `/runs/history`, `/runs/compare`, `/runs/trends` liefern nur Snapshots des anfragenden Clients
+  - Regressionstest: Snapshot-Persistierung traegt `OwnerClientId` durch
+
+---
+
+### DB-033: HIGH — WPF kollabiert explizite `ConvertFormat`-Werte still auf `"auto"`
+
+- [ ] **Offen**
+- **Schweregrad:** High (falsche fachliche Entscheidung / GUI-CLI-Profile-Paritaet / stille Verhaltensaenderung)
+- **Impact:** Die WPF-Oberflaeche speichert die konkrete Zielkonvertierung nicht, sondern nur `ConvertEnabled`. Wird ein Profil oder Workflow mit `ConvertFormat = "rvz"`, `"chd"`, `"zip"` oder `"7z"` angewendet, geht diese Information im UI-State verloren. Beim naechsten Draft-Build schreibt die GUI immer `"auto"` zurueck. Dadurch kann ein unveraendert geladenes Profil still umgedeutet werden; `BuildCurrentRunConfigurationExplicitness()` markiert `ConvertFormat` dann faelschlich als explizit geaendert, und Profil-Save bzw. CLI-Command-Copy exportieren nicht mehr den urspruenglichen Zielformat-Wert.
+- **Betroffene Dateien:**
+  - [MainViewModel.Productization.cs](../src/Romulus.UI.Wpf/ViewModels/MainViewModel.Productization.cs#L206-L231) — `BuildCurrentRunConfigurationDraft()` schreibt immer `"auto"`
+  - [MainViewModel.Productization.cs](../src/Romulus.UI.Wpf/ViewModels/MainViewModel.Productization.cs#L245-L270) — Explicitness vergleicht `"auto"` gegen den urspruenglichen Baseline-Wert
+  - [MainViewModel.Productization.cs](../src/Romulus.UI.Wpf/ViewModels/MainViewModel.Productization.cs#L415-L446) — `ApplyMaterializedRunConfiguration()` setzt nur `ConvertEnabled`
+  - [FeatureCommandService.cs](../src/Romulus.UI.Wpf/Services/FeatureCommandService.cs#L379-L423) — CLI-Copy kann den konkreten Zielformat-Wert nicht mehr abbilden
+  - [GuiViewModelTests.cs](../src/Romulus.Tests/GuiViewModelTests.cs#L1614-L1617) / [WpfProductizationTests.cs](../src/Romulus.Tests/WpfProductizationTests.cs#L145-L181) — decken nur `"auto"` bzw. keinen non-auto-Round-Trip ab
+- **Reproduktion / Beispiel:**
+  1. Ein Profil definiert `ConvertFormat = "rvz"`.
+  2. `ApplyMaterializedRunConfiguration()` setzt `ConvertEnabled = true`, speichert aber kein `"rvz"` im ViewModel.
+  3. `BuildCurrentRunConfigurationDraft()` erzeugt daraus `"auto"`.
+  4. `BuildCurrentRunConfigurationExplicitness()` erkennt nun einen Unterschied zwischen Baseline `"rvz"` und aktuellem Draft `"auto"`.
+  5. Profil-Save / CLI-Copy / erneute Materialisierung laufen mit `"auto"` statt `"rvz"`.
+- **Ursache:** Die GUI bildet ein mehrwertiges fachliches Feld (`ConvertFormat`) verlustbehaftet als Bool (`ConvertEnabled`) ab.
+- **Fix:** Konkretes `ConvertFormat` als eigener ViewModel-State fuehren und round-trippen. `"auto"` darf nur gesetzt werden, wenn der Benutzer oder das Profil explizit `auto` gewaehlt hat. CLI-Copy muss den konkreten Wert (`--convertformat rvz` etc.) ausgeben koennen.
+- **Testabsicherung:**
+  - WPF-Regressionstest: Materialized profile `ConvertFormat = "rvz"` -> Apply -> BuildDraft bleibt `"rvz"`
+  - WPF-Regressionstest: unveraendertes Profil darf `ConvertFormat` nicht als explicit override markieren
+  - FeatureCommandService-Test: CLI-Copy rendert den konkreten `--convertformat`-Wert
+
+---
+
+### DB-034: MEDIUM — WPF-Settings/Profil-Import umgehen die zentrale `SettingsLoader`-Validierung
+
+- [ ] **Offen**
+- **Schweregrad:** Medium (Schattenlogik / inkonsistente Validierung / potenziell stiller Settings-Reset)
+- **Impact:** Die WPF hat einen eigenen JSON-Import-/Load-Pfad fuer `%APPDATA%\\Romulus\\settings.json`, statt die zentrale `SettingsLoader`-Pipeline zu nutzen. `ProfileService.Import()` validiert nur "Root ist Objekt" plus drei Pflichtsektionen und kopiert die Datei dann direkt nach `settings.json`. `SettingsService.Load()` parst dieselbe Datei spaeter manuell und faengt Strukturfehler pauschal mit Default-Fallback ab. Ergebnis: syntaktisch gueltige, aber strukturell falsche Profile koennen importiert werden, die GUI faellt danach still auf Defaults zurueck, waehrend CLI/API ueber `SettingsLoader` andere Validierungs- und Korruptionspfade verwenden.
+- **Betroffene Dateien:**
+  - [SettingsService.cs](../src/Romulus.UI.Wpf/Services/SettingsService.cs#L33-L197) — manueller Parse-/Fallback-Pfad statt `SettingsLoader.LoadFromSafe()`
+  - [ProfileService.cs](../src/Romulus.UI.Wpf/Services/ProfileService.cs#L74-L100) — Import prueft nur Top-Level-Praesenz und kopiert danach blind
+  - [SettingsLoader.cs](../src/Romulus.Infrastructure/Configuration/SettingsLoader.cs#L132-L181) — zentrale Safe-Load-/Schema-Validierung, die WPF hier umgeht
+  - [GuiViewModelTests.cs](../src/Romulus.Tests/GuiViewModelTests.cs#L2105-L2115) / [WpfNewTests.cs](../src/Romulus.Tests/WpfNewTests.cs#L840-L853) — testen nur kaputtes JSON bzw. Array-Root, nicht semantisch falsche Objektstrukturen
+- **Reproduktion / Beispiel:** Importiere ein syntaktisch gueltiges Profil wie `{\"general\":[],\"toolPaths\":{},\"dat\":{}}`. `ProfileService.Import()` akzeptiert die Datei, weil alle drei Pflichtsektionen vorhanden sind. `SettingsService.Load()` ruft spaeter `TryGetProperty(...)` auf `general` (Array statt Objekt) auf, faengt die resultierende Exception und liefert still die Defaults zurueck.
+- **Ursache:** Historisch gewachsene GUI-Persistenz dupliziert die Settings-Ingress-Logik statt den vorhandenen `SettingsLoader` zu reuse-en.
+- **Fix:** WPF-Import und WPF-Load auf `SettingsLoader.LoadFromSafe()` bzw. eine gemeinsame, testbare Mapping-Pipeline umstellen. `ProfileService.Import()` darf erst nach erfolgreicher Schema-/Semantikvalidierung in `%APPDATA%` kopieren.
+- **Testabsicherung:**
+  - Regressionstest: semantisch falsches, aber syntaktisch gueltiges Profil wird beim Import abgewiesen
+  - Regressionstest: WPF-Load nutzt denselben Korruptions-/Backup-Pfad wie `SettingsLoader`
+  - Paritaetstest: identische `settings.json` ergeben in GUI und CLI/API dieselbe effektive Konfiguration
+
+---
+
+### DB-035: LOW — Anonymer Dashboard-Bootstrap exponiert `AllowedRoots`
+
+- [ ] **Offen**
+- **Schweregrad:** Low (Information Disclosure / Hardening)
+- **Impact:** `/dashboard/bootstrap` ist explizit anonym und liefert `AllowedRoots` 1:1 aus `AllowedRootPathPolicy` zurueck. In Remote-/Headless-Deployments koennen damit absolute Root-Pfade ohne API-Key enumeriert werden. Das ist kein direkter Escape aus der Root-Policy, aber ein unnoetiger Recon-Kanal ueber Deployment- und Dateisystemstruktur.
+- **Betroffene Dateien:**
+  - [ProgramHelpers.cs](../src/Romulus.Api/ProgramHelpers.cs#L124-L128) — `/dashboard/bootstrap` ist anonymous
+  - [Program.cs](../src/Romulus.Api/Program.cs#L252-L255) — mappt den anonymen Bootstrap-Endpoint
+  - [DashboardDataBuilder.cs](../src/Romulus.Api/DashboardDataBuilder.cs#L15-L31) — projiziert `AllowedRoots`
+  - [DashboardModels.cs](../src/Romulus.Api/DashboardModels.cs#L6-L17) — DTO enthaelt `AllowedRoots`
+  - [DashboardDataBuilderCoverageTests.cs](../src/Romulus.Tests/DashboardDataBuilderCoverageTests.cs#L13-L31) — aktuelle Tests bestaetigen das Leaken der Werte sogar
+- **Reproduktion / Beispiel:** `GET /dashboard/bootstrap` ohne `X-Api-Key` liefert `allowedRoots` inklusive absoluter Pfade.
+- **Ursache:** Bootstrap wurde fuer den Dashboard-Shell-Start zu grosszuegig modelliert und exponiert Betriebsmetadaten, die fuer den anonymen Client nicht notwendig sind.
+- **Fix:** `AllowedRoots` aus dem anonymen Payload entfernen oder auf unschaedliche Metadaten reduzieren (`AllowedRootsEnforced`, Count). Alternative: Bootstrap nur im Local-Only-Modus anonym lassen und bei Remote-/Headless-Deployments authentifizieren.
+- **Testabsicherung:**
+  - Integrationstest: anonymer Bootstrap enthaelt keine konkreten Root-Pfade
+  - Regressionstest: bei Remote-/Headless-Konfiguration bleibt Bootstrap auth-sicher oder liefert nur redigierte Metadaten
+
+---
+
+## Aktualisierte Zusammenfassung (inkl. Runde 8)
+
+| Quelle | Anzahl | Critical/Blocking | High | Medium-High | Medium | Low |
+|---|---|---|---|---|---|---|
+| Erstaudit (P1-P7) | 19 | 1 | — | — | 10 | 8 |
+| Deep-Dive Runde 2 | 9 | 1 | 3 | — | 4 | 1 |
+| Runde 3 | 7 | — | — | 1 | 4 | 2 |
+| Runde 4 | 6 | — | 2 | — | 1 | 3 |
+| Runde 5 | 3 | — | — | — | 1 | 2 |
+| Runde 6 | 3 | — | — | — | 1 | 2 |
+| Runde 7 | 3 | — | — | — | — | 3 |
+| Runde 8 | 4 | — | 2 | — | 1 | 1 |
+| **Gesamt** | **54** | **2** | **7** | **1** | **22** | **22** |
+
+---
+
+## Aktualisierte Top 20 Massnahmen (priorisiert nach Runde 8)
+
+1. **DB-001:** Legacy-Conversion-Verification-Bug fixen (CRITICAL — konvertierte Files werden geloescht)
+2. **F-001:** RollbackMovedArtifacts Fehler-Propagation (BLOCKING)
+3. **DB-032:** Persistierte Run-History / Dashboard client-isolieren (HIGH)
+4. **DB-002:** MoveDirectorySafely full-ancestry Reparse-Point-Check (HIGH)
+5. **DB-003:** AllowedRootPathPolicy File-Level Reparse-Point-Check (HIGH)
+6. **DB-004:** AuditCsvParser Unclosed-Quote-Handling (HIGH)
+7. **DB-017:** ConversionExecutor success=true bei VerifyFailed fixen (HIGH)
+8. **DB-033:** WPF `ConvertFormat` non-auto round-trip reparieren (HIGH)
+9. **DB-018:** LiteDbCollectionIndex.RecreateDatabase Exception-Safety (HIGH)
+10. **DB-010:** SettingsLoader.MergeFromUserSettings Validation-Revert implementieren (MEDIUM-HIGH)
+11. **DB-034:** WPF Settings/Profile auf zentrale `SettingsLoader`-Validierung umstellen (MEDIUM)
+12. **DB-026:** Move-Phase AllGroups statt GameGroups fuer BIOS-Loser-Move (MEDIUM)
+13. **F-013:** Verification-Status-Aggregation vereinheitlichen
+14. **DB-024:** AuditSigningService.Rollback Math.Max(1,...) R6-006-Inkonsistenz fixen (MEDIUM)
+15. **DB-019:** `_syncContext`-null-Pfad Background-Thread-PropertyChanged absichern (MEDIUM)
+16. **F-004:** Root-Validierung in ConvertSingleFile (Defense-in-Depth)
+17. **DB-011:** ConversionRegistryLoader ReadRequired-Wrapper fuer lossless/cost
+18. **F-010:** Timeout-Recovery-Test fuer ConversionExecutor schreiben
+19. **F-011:** Korrupte-Audit-CSV-Rollback-Test schreiben
+20. **DB-035:** Dashboard-Bootstrap ohne Root-Disclosure haerten (LOW)
+
+---
+
+## Aktualisierte Systemische Hauptursachen (nach Runde 8)
+
+1. **Security-/Ownership-Modell endet zu frueh:** Client-Binding ist im Live-Run-Pfad vorhanden, wird aber beim Uebergang in persistierte Read-Models und Dashboard-Projektionen nicht mitgezogen.
+
+2. **Verlustbehaftete UI-Zustandsmodelle:** Mehrwertige fachliche Felder wie `ConvertFormat` werden in der WPF als Bool komprimiert und spaeter heuristisch rekonstruiert. Das erzeugt stille Paritaetsfehler.
+
+3. **Mehrere Settings-Ingress-Pfade mit Schattenlogik:** GUI `SettingsService` / `ProfileService` und Infrastructure `SettingsLoader` validieren und behandeln Korruption unterschiedlich. Dieselbe Datei kann je nach Entry Point zu unterschiedlichen effektiven Settings fuehren.
+
+4. **Testabdeckung fokussiert zu stark auf Reachability und Happy Paths:** Live-Run-Auth ist getestet, aber Cross-Client-Isolation in persistierten Read-Models und non-auto-Konfigurations-Round-Trips sind nicht als Invarianten verankert. Der nicht abschliessende Volltestlauf auf dem Audit-Rechner ist ein weiteres Signal fuer zu teure End-to-End-Validierung.
+
+---
+
+## Aktualisierte Sanierungsstrategie (nach Runde 8)
+
+### Phase 1 – Release-Blocker und Security schliessen (1 Sprint)
+- DB-001 und F-001 beheben
+- DB-032 client-isolierte History-/Dashboard-Read-Models implementieren
+- DB-002, DB-003, DB-004 haerten
+- DB-017 und DB-018 korrigieren
+
+### Phase 2 – Fachliche Wahrheit zwischen GUI / CLI / API konsolidieren (1 Sprint)
+- DB-033 non-auto-`ConvertFormat` im WPF-State sauber modellieren
+- DB-010 und DB-034 auf einen gemeinsamen Settings-Validierungspfad konsolidieren
+- DB-026, F-013 und DB-024 fuer Preview/Execute/Report-Konsistenz schliessen
+
+### Phase 3 – Testluecken und Hardening schliessen (1 Sprint)
+- Cross-Client-Integrationstests fuer `/runs/history`, `/runs/compare`, `/runs/trends`, `/dashboard/summary`
+- WPF-Round-Trip-Regressionstests fuer konkrete `ConvertFormat`-Werte
+- Settings-Import-/Korruptions-Regressionstests fuer GUI und CLI/API-Paritaet
+- F-010, F-011 und DB-035 als Hardening-/Regression-Paket abschliessen
+
+---
+
+## Gesamtschlussurteil (nach Runde 8)
+
+Nach 8 Audit-Runden mit insgesamt **54 Findings** ist das Bild zweigeteilt:
+
+### Was weiterhin stark ist
+
+- **Core-Domaenenlogik:** Deduplication, GameKey, RegionDetection, Scoring bleiben deterministisch und sauber
+- **Architektur:** Schichtung und zentrale Materialisierung sind grundsaetzlich stark
+- **Build-Qualitaet:** `src/Romulus.sln` baut gruen
+- **Viele Security-Basics:** HTML-Escaping, CSV-Injection-Schutz, Tool-Hashing, Audit-Signing, Zip-Slip-Grundschutz bleiben intakt
+
+### Was release-relevant offen ist
+
+- **2 Critical/Blocking:** DB-001, F-001
+- **7 High:** DB-002, DB-003, DB-004, DB-017, DB-018, DB-032, DB-033
+- **1 Medium-High:** DB-010
+- **44 Medium/Low:** ueberwiegend Konsistenz-, Diagnostik- und Hardening-Themen
+
+### Revidierte Gesamtbewertung
+
+Die vorherige Einschaetzung "nur noch Low-Value-Diminishing-Returns" gilt **nicht** mehr uneingeschraenkt. Runde 8 hat zwei weitere echte Release-Findings in schichtuebergreifenden Pfaden gefunden: **fehlende Client-Isolation in den persistierten API-Read-Models** und **stille GUI-Umdeutung expliziter `ConvertFormat`-Werte**. Beides sind keine kosmetischen Hygiene-Punkte, sondern reale Security- bzw. Paritaetsfehler.
+
+**Schlussurteil:** Romulus ist **architektonisch stark, aber noch nicht release-fertig fuer shared/headless API-Deployments und profilgetriebene Conversion-Workflows**, solange DB-032 und DB-033 zusammen mit den bestehenden Critical/High-Findings offen sind. Sobald diese P1/P2-Punkte geschlossen und mit den genannten Regressionstests abgesichert sind, ist die Codebasis wieder auf einem belastbaren Release-Pfad.
+
+---
+---
+
+## Runde 9 — Voll-Re-Sweep aller Bereiche (2026-04-15)
+
+> **Methode:** erneuter Sweep ueber alle 5 Hauptbereiche mit Ausschluss bereits bekannter Findings (DB-001..DB-035, F-001..F-004):
+> - Bereich A: Core-Domaenenlogik (GameKeys, Regions, Scoring, Deduplication, Classification)
+> - Bereich B: Orchestration / Conversion / Reporting / Audit
+> - Bereich C: Safety / FileSystem / DAT / Hashing
+> - Bereich D: CLI / API / WPF
+> - Bereich E: data/*.json / Configuration / Test-Rigor
+
+### Bereichsverdicts Runde 9
+
+- **Bereich A:** 1 neues Finding
+- **Bereich B:** 0 neue Findings
+- **Bereich C:** 0 neue Findings
+- **Bereich D:** 0 neue Findings
+- **Bereich E:** 0 neue Findings
+
+---
+
+### DB-036: HIGH — `VersionScorer` kann bei grossen Version-Segmenten in `long` ueberlaufen
+
+- [ ] **Offen**
+- **Schweregrad:** High (Determinismus / Winner-Selection-Risiko)
+- **Impact:** In der Version-Scoring-Logik wird fuer Segmentlisten ein Gewicht bis `1000^(n-1)` aufgebaut und dann `versionScore += seg * weight` gerechnet. Bei grossen numerischen Segmenten (bis `int.MaxValue` aus `int.TryParse`) kann `seg * weight` den `long`-Bereich ueberlaufen. Das fuehrt zu stillem Wraparound und potenziell falscher Ranking-Reihenfolge.
+- **Betroffene Datei:** [VersionScorer.cs](../src/Romulus.Core/Scoring/VersionScorer.cs#L276-L293)
+- **Reproduktion / Beispiel:** Dateiname mit grossem Versionsmuster wie `Game (v2000000000.999999999.999999999.999999999.999999999.999999999)` kann bei gewichteter Summierung ueberlaufen.
+- **Ursache:** Segmentanzahl wird begrenzt, Segmentgroesse aber nicht; die Multiplikation laeuft ausserhalb eines `checked`-Kontexts.
+- **Fix:** `checked`-arithmetik mit deterministischem Overflow-Handling (z.B. Cap/Saturation oder validierungsseitige Segmentobergrenze), damit Ranking stabil bleibt.
+- **Testabsicherung:** Regressionstest mit sehr grossen Versionsegmenten; Erwartung: kein Wraparound, deterministische Ordnung.
+
+---
+
+## Aktualisierte Zusammenfassung (inkl. Runde 9)
+
+| Quelle | Anzahl | Critical/Blocking | High | Medium-High | Medium | Low |
+|---|---|---|---|---|---|---|
+| Erstaudit (P1-P7) | 19 | 1 | — | — | 10 | 8 |
+| Deep-Dive Runde 2 | 9 | 1 | 3 | — | 4 | 1 |
+| Runde 3 | 7 | — | — | 1 | 4 | 2 |
+| Runde 4 | 6 | — | 2 | — | 1 | 3 |
+| Runde 5 | 3 | — | — | — | 1 | 2 |
+| Runde 6 | 3 | — | — | — | 1 | 2 |
+| Runde 7 | 3 | — | — | — | — | 3 |
+| Runde 8 | 4 | — | 2 | — | 1 | 1 |
+| Runde 9 | 1 | — | 1 | — | — | — |
+| **Gesamt** | **55** | **2** | **8** | **1** | **22** | **22** |
+
+---
+
+## Runde 10 — Verifikationsrunde "0 neue Findings" (2026-04-15)
+
+> **Ziel:** Abschlusskriterium aus dem Deep-Dive-Prozess pruefen: "In jedem Bereich keine neuen Findings mehr".
+>
+> **Vorgehen:**
+> - Bereich A nach Aufnahme von DB-036 erneut gesweept
+> - Bereiche B-E unveraendert seit Runde 9, dort bereits 0 neue Findings
+
+### Bereichsverdicts Runde 10
+
+- **Bereich A:** 0 neue Findings
+- **Bereich B:** 0 neue Findings (Runde 9)
+- **Bereich C:** 0 neue Findings (Runde 9)
+- **Bereich D:** 0 neue Findings (Runde 9)
+- **Bereich E:** 0 neue Findings (Runde 9)
+
+### Abschlussstatus
+
+Das Stoppkriterium fuer den wiederholten Bereichs-Sweep ist erreicht: **keine neuen Findings mehr in allen Hauptbereichen**.
+
+Es bleiben ausschliesslich bereits bekannte, priorisierte Findings offen (insb. DB-001, F-001, DB-002, DB-003, DB-004, DB-017, DB-018, DB-032, DB-033, DB-036).
+
+---
+
+## Gesamtschlussurteil (nach Runde 10)
+
+Der iterative Deep-Dive wurde bis zum geforderten Endkriterium fortgefuehrt. In der finalen Verifikationsrunde liegen fuer alle Bereiche **0 neue Findings** vor.
+
+Romulus ist damit aus Audit-Sicht nicht mehr im Modus "neue unbekannte Fehlerklassen finden", sondern im Modus "bekannte Findings gezielt schliessen".
+
+Die weitere Arbeit sollte auf die bereits priorisierten Critical/High-Findings konzentriert werden; zusaetzliche brute-force Auditrunden haben nur noch sehr geringen Erkenntnisgewinn.
