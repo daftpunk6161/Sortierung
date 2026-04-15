@@ -52,9 +52,11 @@ public sealed class CollectionRunSnapshotWriterTests : IDisposable
             result,
             projection,
             new DateTime(2026, 4, 1, 9, 0, 0, DateTimeKind.Utc),
-            new DateTime(2026, 4, 1, 9, 0, 1, DateTimeKind.Utc));
+            new DateTime(2026, 4, 1, 9, 0, 1, DateTimeKind.Utc),
+            ownerClientId: "client-a");
 
         Assert.Equal("abcd1234", snapshot.RunId);
+        Assert.Equal("client-a", snapshot.OwnerClientId);
         Assert.Equal(RunConstants.ModeMove, snapshot.Mode);
         Assert.Equal(RunConstants.StatusOk, snapshot.Status);
         Assert.Single(snapshot.Roots);
@@ -94,12 +96,14 @@ public sealed class CollectionRunSnapshotWriterTests : IDisposable
             options,
             result,
             new DateTime(2026, 4, 1, 9, 0, 0, DateTimeKind.Utc),
-            new DateTime(2026, 4, 1, 9, 0, 1, DateTimeKind.Utc));
+            new DateTime(2026, 4, 1, 9, 0, 1, DateTimeKind.Utc),
+            ownerClientId: "owner-api");
 
         var snapshots = await index.ListRunSnapshotsAsync();
 
         Assert.Single(snapshots);
         Assert.Equal("run-42", snapshots[0].RunId);
+        Assert.Equal("owner-api", snapshots[0].OwnerClientId);
         Assert.Equal(RunConstants.StatusCompletedWithErrors, snapshots[0].Status);
         Assert.Equal(12, snapshots[0].TotalFiles);
         Assert.Equal(987, snapshots[0].DurationMs);

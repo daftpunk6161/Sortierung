@@ -75,7 +75,7 @@ public sealed partial class RunOrchestrator
             return PhaseStepResult.Skipped();
 
         metrics.StartPhase("Move");
-        var groups = state.GameGroups ?? Array.Empty<DedupeGroup>();
+        var groups = state.AllGroups ?? Array.Empty<DedupeGroup>();
         var totalLosers = groups.Sum(g => g.Losers.Count);
         _onProgress?.Invoke(RunProgressLocalization.Format(
             "Move.Start",

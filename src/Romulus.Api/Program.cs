@@ -255,6 +255,7 @@ app.MapGet("/dashboard/bootstrap", (HeadlessApiOptions options, AllowedRootPathP
     .Produces<DashboardBootstrapResponse>(StatusCodes.Status200OK);
 
 app.MapGet("/dashboard/summary", async (
+    HttpContext ctx,
     RunLifecycleManager mgr,
     ApiAutomationService automationService,
     ICollectionIndex collectionIndex,
@@ -262,12 +263,14 @@ app.MapGet("/dashboard/summary", async (
     AllowedRootPathPolicy allowedRootPolicy,
     CancellationToken ct) =>
 {
+    var requesterClientId = GetClientBindingId(ctx, trustForwardedFor);
     var summary = await DashboardDataBuilder.BuildSummaryAsync(
         mgr,
         automationService,
         collectionIndex,
         profileService,
         allowedRootPolicy,
+        requesterClientId,
         ApiVersion,
         ct);
     return Results.Ok(summary);

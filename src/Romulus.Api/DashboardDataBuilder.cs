@@ -26,7 +26,7 @@ internal static class DashboardDataBuilder
             DashboardEnabled = options.DashboardEnabled,
             AllowRemoteClients = options.AllowRemoteClients,
             AllowedRootsEnforced = allowedRootPolicy.IsEnforced,
-            AllowedRoots = allowedRootPolicy.AllowedRoots.ToArray(),
+            AllowedRoots = Array.Empty<string>(),
             PublicBaseUrl = options.PublicBaseUrl
         };
     }
@@ -37,6 +37,7 @@ internal static class DashboardDataBuilder
         ICollectionIndex collectionIndex,
         RunProfileService profileService,
         AllowedRootPathPolicy allowedRootPolicy,
+        string requesterClientId,
         string version,
         CancellationToken ct)
     {
@@ -47,8 +48,14 @@ internal static class DashboardDataBuilder
         ArgumentNullException.ThrowIfNull(allowedRootPolicy);
 
         var activeRun = lifecycleManager.GetActive();
-        var snapshots = await collectionIndex.ListRunSnapshotsAsync(10, ct).ConfigureAwait(false);
-        var trends = await RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, 30, ct).ConfigureAwait(false);
+        if (activeRun is not null && !Program.CanAccessRun(activeRun, requesterClientId))
+            activeRun = null;
+
+        var snapshots = await collectionIndex.ListRunSnapshotsAsync(int.MaxValue, ct).ConfigureAwait(false);
+        var visibleSnapshots = snapshots
+            .Where(snapshot => Program.CanAccessSnapshot(snapshot, requesterClientId))
+            .ToArray();
+        var trends = RunHistoryInsightsService.BuildStorageInsights(visibleSnapshots, 30);
         var profiles = await profileService.ListAsync(ct).ConfigureAwait(false);
         var workflows = WorkflowScenarioCatalog.List();
         var datStatus = await BuildDatStatusAsync(allowedRootPolicy, ct).ConfigureAwait(false);
@@ -61,7 +68,7 @@ internal static class DashboardDataBuilder
             WatchStatus = automationService.GetStatus(),
             DatStatus = datStatus,
             Trends = trends,
-            RecentRuns = CollectionRunHistoryPageBuilder.Build(snapshots, snapshots.Count, 0, 10)
+            RecentRuns = CollectionRunHistoryPageBuilder.Build(visibleSnapshots, visibleSnapshots.Length, 0, 10)
                 .Runs
                 .Select(MapRunHistoryEntry)
                 .ToArray(),

@@ -44,6 +44,20 @@ public sealed class SettingsService : ISettingsService
 
         try
         {
+            var safeLoad = SettingsLoader.LoadFromSafe(SettingsPath);
+            if (safeLoad.WasCorrupt)
+            {
+                LastAuditPath = dto.LastAuditPath;
+                LastTheme = dto.Theme;
+                return dto;
+            }
+
+            var mergedCoreSettings = SettingsLoader.LoadWithExplicitUserPath(
+                SettingsLoader.ResolveDefaultsJsonPath(),
+                SettingsPath,
+                warning => System.Diagnostics.Debug.WriteLine(warning));
+            dto = MapToDto(mergedCoreSettings);
+
             var json = SettingsFileAccess.TryReadAllText(SettingsPath);
             if (string.IsNullOrWhiteSpace(json))
             {
@@ -52,8 +66,14 @@ public sealed class SettingsService : ISettingsService
                 return dto;
             }
 
-            var doc = JsonDocument.Parse(json);
+            using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                LastAuditPath = dto.LastAuditPath;
+                LastTheme = dto.Theme;
+                return dto;
+            }
 
             // GUI-060: Check schema version and migrate if needed
             var fileVersion = 0;
@@ -66,7 +86,7 @@ public sealed class SettingsService : ISettingsService
                     $"[WARN] Settings version {fileVersion} is newer than supported {CurrentVersion}. Using defaults for unknown fields.");
             }
 
-            if (root.TryGetProperty("general", out var general))
+            if (root.TryGetProperty("general", out var general) && general.ValueKind == JsonValueKind.Object)
             {
                 dto = dto with
                 {
@@ -89,7 +109,7 @@ public sealed class SettingsService : ISettingsService
                 }
             }
 
-            if (root.TryGetProperty("toolPaths", out var tools))
+            if (root.TryGetProperty("toolPaths", out var tools) && tools.ValueKind == JsonValueKind.Object)
             {
                 dto = dto with
                 {
@@ -101,7 +121,7 @@ public sealed class SettingsService : ISettingsService
                 };
             }
 
-            if (root.TryGetProperty("dat", out var dat))
+            if (root.TryGetProperty("dat", out var dat) && dat.ValueKind == JsonValueKind.Object)
             {
                 dto = dto with
                 {
@@ -114,7 +134,7 @@ public sealed class SettingsService : ISettingsService
                 };
             }
 
-            if (root.TryGetProperty("paths", out var paths))
+            if (root.TryGetProperty("paths", out var paths) && paths.ValueKind == JsonValueKind.Object)
             {
                 dto = dto with
                 {
@@ -125,7 +145,7 @@ public sealed class SettingsService : ISettingsService
                 };
             }
 
-            if (root.TryGetProperty("ui", out var ui))
+            if (root.TryGetProperty("ui", out var ui) && ui.ValueKind == JsonValueKind.Object)
             {
                 var cp = Models.ConflictPolicy.Rename;
                 if (ui.TryGetProperty("conflictPolicy", out var cpEl) && cpEl.ValueKind == JsonValueKind.String)

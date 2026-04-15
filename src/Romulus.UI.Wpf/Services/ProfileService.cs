@@ -1,6 +1,7 @@
 using System.IO;
 using System.Threading;
 using System.Text.Json;
+using Romulus.Infrastructure.Configuration;
 using Romulus.Infrastructure.Paths;
 using Romulus.Infrastructure.Safety;
 
@@ -88,6 +89,10 @@ public sealed class ProfileService
             if (!root.TryGetProperty(prop, out _))
                 throw new InvalidOperationException($"Profile is missing required section: \"{prop}\".");
         }
+
+        var safeLoad = SettingsLoader.LoadFromSafe(sourcePath);
+        if (safeLoad.WasCorrupt)
+            throw new InvalidOperationException($"Profile validation failed: {safeLoad.CorruptionMessage}");
 
         Directory.CreateDirectory(SettingsDir);
         if (File.Exists(SettingsPath))

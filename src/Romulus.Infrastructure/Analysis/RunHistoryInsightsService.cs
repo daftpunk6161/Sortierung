@@ -7,16 +7,14 @@ namespace Romulus.Infrastructure.Analysis;
 
 public static class RunHistoryInsightsService
 {
-    public static async Task<RunSnapshotComparison?> CompareAsync(
-        ICollectionIndex? collectionIndex,
+    public static RunSnapshotComparison? Compare(
+        IReadOnlyList<CollectionRunSnapshot>? snapshots,
         string runId,
-        string compareToRunId,
-        CancellationToken ct = default)
+        string compareToRunId)
     {
-        if (collectionIndex is null || string.IsNullOrWhiteSpace(runId) || string.IsNullOrWhiteSpace(compareToRunId))
+        if (snapshots is null || string.IsNullOrWhiteSpace(runId) || string.IsNullOrWhiteSpace(compareToRunId))
             return null;
 
-        var snapshots = await collectionIndex.ListRunSnapshotsAsync(3650, ct).ConfigureAwait(false);
         var current = snapshots.FirstOrDefault(snapshot => string.Equals(snapshot.RunId, runId, StringComparison.OrdinalIgnoreCase));
         var previous = snapshots.FirstOrDefault(snapshot => string.Equals(snapshot.RunId, compareToRunId, StringComparison.OrdinalIgnoreCase));
         if (current is null || previous is null)
@@ -42,20 +40,32 @@ public static class RunHistoryInsightsService
             BuildDelta(current.HealthScore, previous.HealthScore));
     }
 
-    public static async Task<StorageInsightReport> BuildStorageInsightsAsync(
+    public static async Task<RunSnapshotComparison?> CompareAsync(
         ICollectionIndex? collectionIndex,
-        int limit = 30,
+        string runId,
+        string compareToRunId,
         CancellationToken ct = default)
     {
-        if (collectionIndex is null)
+        if (collectionIndex is null || string.IsNullOrWhiteSpace(runId) || string.IsNullOrWhiteSpace(compareToRunId))
+            return null;
+
+        var snapshots = await collectionIndex.ListRunSnapshotsAsync(3650, ct).ConfigureAwait(false);
+        return Compare(snapshots, runId, compareToRunId);
+    }
+
+    public static StorageInsightReport BuildStorageInsights(
+        IReadOnlyList<CollectionRunSnapshot>? snapshots,
+        int limit = 30)
+    {
+        if (snapshots is null)
             return EmptyReport();
 
         var boundedLimit = Math.Clamp(limit, 1, 3650);
-        var snapshots = await collectionIndex.ListRunSnapshotsAsync(boundedLimit, ct).ConfigureAwait(false);
-        if (snapshots.Count == 0)
+        var limitedSnapshots = snapshots.Take(boundedLimit).ToArray();
+        if (limitedSnapshots.Length == 0)
             return EmptyReport();
 
-        var ordered = snapshots
+        var ordered = limitedSnapshots
             .OrderBy(static snapshot => snapshot.CompletedUtc)
             .ThenBy(static snapshot => snapshot.RunId, StringComparer.Ordinal)
             .ToArray();
@@ -79,6 +89,19 @@ public static class RunHistoryInsightsService
             cumulativeSaved,
             cumulativeConvertSaved,
             averageGrowth);
+    }
+
+    public static async Task<StorageInsightReport> BuildStorageInsightsAsync(
+        ICollectionIndex? collectionIndex,
+        int limit = 30,
+        CancellationToken ct = default)
+    {
+        if (collectionIndex is null)
+            return EmptyReport();
+
+        var boundedLimit = Math.Clamp(limit, 1, 3650);
+        var snapshots = await collectionIndex.ListRunSnapshotsAsync(boundedLimit, ct).ConfigureAwait(false);
+        return BuildStorageInsights(snapshots, boundedLimit);
     }
 
     public static string FormatComparisonReport(RunSnapshotComparison comparison)

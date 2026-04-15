@@ -20,6 +20,7 @@ public sealed partial class MainViewModel
     private RunProfileService _runProfileService = null!;
     private RunConfigurationMaterializer _runConfigurationMaterializer = null!;
     private RunConfigurationDraft? _selectionBaselineDraft;
+    private string _selectedConvertFormat = "auto";
     private bool _suppressRunConfigurationSelectionApply;
     private bool _applyingRunConfigurationSelection;
     private Task _pendingRunConfigurationSelectionTask = Task.CompletedTask;
@@ -223,7 +224,7 @@ public sealed partial class MainViewModel
             EnableDatRename = UseDat && EnableDatRename,
             DatRoot = string.IsNullOrWhiteSpace(DatRoot) ? null : DatRoot,
             HashType = string.IsNullOrWhiteSpace(DatHashType) ? RunConstants.DefaultHashType : DatHashType,
-            ConvertFormat = (ConvertEnabled || ConvertOnly) ? "auto" : null,
+            ConvertFormat = (ConvertEnabled || ConvertOnly) ? ResolveSelectedConvertFormat() : null,
             ConvertOnly = ConvertOnly,
             ApproveReviews = ApproveReviews,
             ApproveConversionReview = ApproveConversionReview,
@@ -433,7 +434,11 @@ public sealed partial class MainViewModel
             EnableDatRename = effectiveEnableDat && (draft.EnableDatRename ?? EnableDatRename);
             DatRoot = draft.DatRoot ?? string.Empty;
             DatHashType = draft.HashType ?? RunConstants.DefaultHashType;
-            ConvertEnabled = !string.IsNullOrWhiteSpace(draft.ConvertFormat);
+            var materializedConvertFormat = NormalizeConvertFormat(draft.ConvertFormat);
+            if (materializedConvertFormat is not null)
+                _selectedConvertFormat = materializedConvertFormat;
+
+            ConvertEnabled = materializedConvertFormat is not null;
             ConvertOnly = draft.ConvertOnly ?? false;
             ApproveReviews = draft.ApproveReviews ?? false;
             ApproveConversionReview = draft.ApproveConversionReview ?? false;
@@ -471,6 +476,7 @@ public sealed partial class MainViewModel
             DatHashType,
             ConvertEnabled,
             ConvertOnly,
+            _selectedConvertFormat,
             ApproveReviews,
             ApproveConversionReview,
             TrashRoot,
@@ -497,6 +503,7 @@ public sealed partial class MainViewModel
         DatHashType = snapshot.DatHashType;
         ConvertEnabled = snapshot.ConvertEnabled;
         ConvertOnly = snapshot.ConvertOnly;
+        _selectedConvertFormat = snapshot.ConvertFormat;
         ApproveReviews = snapshot.ApproveReviews;
         ApproveConversionReview = snapshot.ApproveConversionReview;
         TrashRoot = snapshot.TrashRoot;
@@ -521,6 +528,7 @@ public sealed partial class MainViewModel
         string DatHashType,
         bool ConvertEnabled,
         bool ConvertOnly,
+        string ConvertFormat,
         bool ApproveReviews,
         bool ApproveConversionReview,
         string TrashRoot,
@@ -868,6 +876,17 @@ public sealed partial class MainViewModel
         var normalizedRight = NormalizeStringArray(right);
         return normalizedLeft.SequenceEqual(normalizedRight, StringComparer.OrdinalIgnoreCase);
     }
+
+    private static string? NormalizeConvertFormat(string? convertFormat)
+    {
+        if (string.IsNullOrWhiteSpace(convertFormat))
+            return null;
+
+        return convertFormat.Trim().ToLowerInvariant();
+    }
+
+    private string ResolveSelectedConvertFormat()
+        => NormalizeConvertFormat(_selectedConvertFormat) ?? "auto";
 
     private static string[] NormalizeStringArray(string[]? values)
         => (values ?? Array.Empty<string>())

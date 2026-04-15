@@ -18,7 +18,8 @@ public static class CollectionRunSnapshotWriter
         DateTime startedUtc,
         DateTime completedUtc,
         Action<string>? onWarning = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? ownerClientId = null)
     {
         ArgumentNullException.ThrowIfNull(collectionIndex);
         ArgumentNullException.ThrowIfNull(options);
@@ -27,7 +28,7 @@ public static class CollectionRunSnapshotWriter
         try
         {
             var projection = RunProjectionFactory.Create(result);
-            var snapshot = CreateSnapshot(options, result, projection, startedUtc, completedUtc);
+            var snapshot = CreateSnapshot(options, result, projection, startedUtc, completedUtc, ownerClientId);
             await collectionIndex.AppendRunSnapshotAsync(snapshot, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
@@ -41,7 +42,8 @@ public static class CollectionRunSnapshotWriter
         RunResult result,
         RunProjection projection,
         DateTime startedUtc,
-        DateTime completedUtc)
+        DateTime completedUtc,
+        string? ownerClientId = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(result);
@@ -59,6 +61,7 @@ public static class CollectionRunSnapshotWriter
         return new CollectionRunSnapshot
         {
             RunId = ResolveRunId(result, options, rootFingerprint, completedUtc),
+            OwnerClientId = string.IsNullOrWhiteSpace(ownerClientId) ? string.Empty : ownerClientId.Trim(),
             StartedUtc = ToUtc(startedUtc),
             CompletedUtc = ToUtc(completedUtc),
             Mode = options.Mode,

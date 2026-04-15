@@ -175,6 +175,9 @@ public sealed record CollectionRunSnapshot
     /// <summary>Stable run identifier.</summary>
     public string RunId { get; init; } = "";
 
+    /// <summary>Client binding identifier that owns this run snapshot.</summary>
+    public string OwnerClientId { get; init; } = "";
+
     /// <summary>UTC run start timestamp.</summary>
     public DateTime StartedUtc { get; init; }
 

@@ -459,12 +459,21 @@ public sealed class CoverageGateTests
             .Where(k => !manifest.CoverageActuals.ContainsKey(k))
             .ToList();
 
-        // Some target keys may not have actuals if the area doesn't exist yet, that's OK.
-        // But top-level keys must be present.
+        Assert.Empty(missingActuals);
         Assert.True(manifest.CoverageActuals.ContainsKey("totalEntries"),
             "coverageActuals missing totalEntries");
         Assert.True(manifest.CoverageActuals.ContainsKey("systemsCovered"),
             "coverageActuals missing systemsCovered");
+    }
+
+    [Fact]
+    public void ManifestCalculator_HoldoutActualMatchesHoldoutEntries()
+    {
+        var manifest = ManifestCalculator.Calculate();
+
+        Assert.True(manifest.CoverageActuals.ContainsKey("specialAreas.holdout"),
+            "coverageActuals missing specialAreas.holdout");
+        Assert.Equal(manifest.HoldoutEntries, manifest.CoverageActuals["specialAreas.holdout"]);
     }
 
     [Fact]

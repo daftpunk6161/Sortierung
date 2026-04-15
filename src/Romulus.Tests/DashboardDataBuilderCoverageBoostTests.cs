@@ -43,7 +43,7 @@ public sealed class DashboardDataBuilderCoverageBoostTests : IDisposable
         Assert.True(result.DashboardEnabled);
         Assert.False(result.AllowRemoteClients);
         Assert.True(result.AllowedRootsEnforced);
-        Assert.Single(result.AllowedRoots);
+        Assert.Empty(result.AllowedRoots);
         Assert.Equal("http://localhost:7878", result.PublicBaseUrl);
     }
 

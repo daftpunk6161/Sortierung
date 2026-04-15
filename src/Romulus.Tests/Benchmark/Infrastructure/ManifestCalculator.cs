@@ -161,7 +161,7 @@ internal static class ManifestCalculator
 
         // Coverage targets vs actuals from gates.json
         var coverageTargets = BuildCoverageTargets();
-        var coverageActuals = BuildCoverageActuals(entries, byPlatformFamily, fallklasseCounts, specialAreaCounts, byDifficulty);
+        var coverageActuals = BuildCoverageActuals(entries, byPlatformFamily, fallklasseCounts, specialAreaCounts, byDifficulty, holdoutCount);
 
         return new ManifestData
         {
@@ -271,7 +271,8 @@ internal static class ManifestCalculator
         Dictionary<string, int> byPlatformFamily,
         Dictionary<string, int> fallklasseCounts,
         Dictionary<string, int> specialAreaCounts,
-        Dictionary<string, int> byDifficulty)
+        Dictionary<string, int> byDifficulty,
+        int holdoutCount)
     {
         var actuals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
@@ -294,6 +295,8 @@ internal static class ManifestCalculator
 
         foreach (var (area, count) in specialAreaCounts)
             actuals[$"specialAreas.{area}"] = count;
+
+        actuals["specialAreas.holdout"] = holdoutCount;
 
         return actuals;
     }

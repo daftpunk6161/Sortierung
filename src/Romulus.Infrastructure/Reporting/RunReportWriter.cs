@@ -149,7 +149,7 @@ public static class RunReportWriter
             ConsoleSortUnknown = projection.ConsoleSortUnknown,
             FailCount = projection.FailCount,
             ErrorCount = totalErrorCount,
-            SkippedCount = projection.ConvertSkippedCount + projection.ConvertBlockedCount + projection.SkipCount,
+            SkippedCount = projection.ConvertSkippedCount + projection.ConvertBlockedCount + projection.DatRenameSkippedCount + projection.SkipCount,
             SavedBytes = projection.SavedBytes,
             GroupCount = projection.Groups,
             Duration = TimeSpan.FromMilliseconds(projection.DurationMs)

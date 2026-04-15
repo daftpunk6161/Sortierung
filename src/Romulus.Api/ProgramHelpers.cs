@@ -182,6 +182,14 @@ public partial class Program
         return string.Equals(run.OwnerClientId, requesterClientId, StringComparison.Ordinal);
     }
 
+    internal static bool CanAccessSnapshot(CollectionRunSnapshot snapshot, string requesterClientId)
+    {
+        if (string.IsNullOrWhiteSpace(snapshot.OwnerClientId))
+            return true;
+
+        return string.Equals(snapshot.OwnerClientId, requesterClientId, StringComparison.Ordinal);
+    }
+
     internal static ApiRunList BuildRunList(IReadOnlyList<RunRecord> runs, int offset = 0, int? limit = null)
     {
         var safeOffset = Math.Min(offset, runs.Count);

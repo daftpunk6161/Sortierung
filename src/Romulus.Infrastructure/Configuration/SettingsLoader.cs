@@ -314,6 +314,11 @@ public sealed class SettingsLoader
             var user = JsonSerializer.Deserialize<NullableUserSettings>(json, JsonOptions);
             if (user is null) return;
 
+            var generalSnapshot = CloneGeneralSettings(settings.General);
+            var toolPathsSnapshot = CloneToolPathSettings(settings.ToolPaths);
+            var datSnapshot = CloneDatSettings(settings.Dat);
+            var rulesSnapshot = CloneRules(settings.Rules);
+
             if (user.General is not null)
             {
                 if (user.General.PreferredRegions is { Count: > 0 })
@@ -363,10 +368,39 @@ public sealed class SettingsLoader
             var validationErrors = RomulusSettingsValidator.Validate(settings);
             if (validationErrors.Count > 0)
             {
-                // R6-008 FIX: Only revert the specific invalid user-settings sections
-                // instead of resetting to hardcoded defaults (which discards defaults.json values).
-                // Re-apply from defaults.json so that non-user-modified fields survive.
-                onWarning?.Invoke($"[Warning] User settings '{path}' produced invalid values; reverting affected sections.");
+                var revertGeneral = validationErrors.Any(static error =>
+                    error.StartsWith("general.", StringComparison.OrdinalIgnoreCase));
+                var revertDat = validationErrors.Any(static error =>
+                    error.StartsWith("dat.", StringComparison.OrdinalIgnoreCase));
+
+                // Unknown validation errors: fail-safe rollback for all user-overridden sections.
+                var revertAll = !revertGeneral && !revertDat;
+
+                if (revertGeneral || revertAll)
+                    settings.General = generalSnapshot;
+
+                if (revertDat || revertAll)
+                    settings.Dat = datSnapshot;
+
+                if (revertAll)
+                {
+                    settings.ToolPaths = toolPathsSnapshot;
+                    settings.Rules = CloneRules(rulesSnapshot);
+                }
+
+                var revertedSections = new List<string>();
+                if (revertGeneral || revertAll)
+                    revertedSections.Add("general");
+                if (revertDat || revertAll)
+                    revertedSections.Add("dat");
+                if (revertAll)
+                {
+                    revertedSections.Add("toolPaths");
+                    revertedSections.Add("rules");
+                }
+
+                onWarning?.Invoke(
+                    $"[Warning] User settings '{path}' produced invalid values; reverting affected sections ({string.Join(", ", revertedSections.Distinct(StringComparer.OrdinalIgnoreCase))}).");
             }
         }
         catch (JsonException ex)
@@ -470,6 +504,51 @@ public sealed class SettingsLoader
         foreach (var prop in source.EnumerateObject())
             result[prop.Name] = prop.Value.Clone();
         return result;
+    }
+
+    private static GeneralSettings CloneGeneralSettings(GeneralSettings source)
+    {
+        return new GeneralSettings
+        {
+            LogLevel = source.LogLevel,
+            PreferredRegions = new List<string>(source.PreferredRegions),
+            AggressiveJunk = source.AggressiveJunk,
+            AliasEditionKeying = source.AliasEditionKeying,
+            Mode = source.Mode,
+            Extensions = source.Extensions,
+            Theme = source.Theme,
+            Locale = source.Locale
+        };
+    }
+
+    private static ToolPathSettings CloneToolPathSettings(ToolPathSettings source)
+    {
+        return new ToolPathSettings
+        {
+            Chdman = source.Chdman,
+            SevenZip = source.SevenZip,
+            DolphinTool = source.DolphinTool
+        };
+    }
+
+    private static DatSettings CloneDatSettings(DatSettings source)
+    {
+        return new DatSettings
+        {
+            UseDat = source.UseDat,
+            DatRoot = source.DatRoot,
+            HashType = source.HashType,
+            DatFallback = source.DatFallback,
+            StrictSidecarValidation = source.StrictSidecarValidation
+        };
+    }
+
+    private static Dictionary<string, JsonElement> CloneRules(Dictionary<string, JsonElement> source)
+    {
+        var clone = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in source)
+            clone[entry.Key] = entry.Value.Clone();
+        return clone;
     }
 
     // ── P1-BUG-033: Nullable deserialization model ──

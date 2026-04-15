@@ -162,7 +162,8 @@ public sealed class RunManager : IDisposable, IAsyncDisposable
                     run.ProgressMessage = msg;
                     run.ProgressPercent = ProgressEstimator.EstimateFromMessage(msg);
                 },
-                CancellationToken.None).ConfigureAwait(false);
+                CancellationToken.None,
+                ownerClientId: run.OwnerClientId).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {

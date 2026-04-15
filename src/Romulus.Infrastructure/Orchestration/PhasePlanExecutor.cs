@@ -21,13 +21,29 @@ internal sealed class PhasePlanExecutor(Action<string>? onProgress) : IPhasePlan
         {
             cancellationToken.ThrowIfCancellationRequested();
             _onProgress?.Invoke($"[Plan] Phase: {phase.Name}");
-            var stepResult = phase.Execute(pipelineState, cancellationToken);
+            PhaseStepResult stepResult;
+            try
+            {
+                stepResult = phase.Execute(pipelineState, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                pipelineState.SetFailedPhase(phase.Name, Contracts.RunConstants.StatusFailed);
+                _onProgress?.Invoke($"[Plan] Phase '{phase.Name}' failed with exception: {ex.Message}");
+                throw;
+            }
 
             foreach (var warning in stepResult.Warnings)
                 _onProgress?.Invoke($"[WARN] {phase.Name}: {warning}");
 
             if (string.Equals(stepResult.Status, Contracts.RunConstants.StatusFailed, StringComparison.OrdinalIgnoreCase))
-            {                pipelineState.SetFailedPhase(phase.Name, stepResult.Status);                _onProgress?.Invoke($"[Plan] Phase '{phase.Name}' failed – aborting remaining phases.");
+            {
+                pipelineState.SetFailedPhase(phase.Name, stepResult.Status);
+                _onProgress?.Invoke($"[Plan] Phase '{phase.Name}' failed - aborting remaining phases.");
                 break;
             }
         }

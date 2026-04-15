@@ -26,7 +26,7 @@ public sealed class DashboardDataBuilderCoverageTests
         Assert.True(result.DashboardEnabled);
         Assert.True(result.AllowRemoteClients);
         Assert.True(result.AllowedRootsEnforced);
-        Assert.Equal(2, result.AllowedRoots.Length);
+        Assert.Empty(result.AllowedRoots);
         Assert.Equal("https://example.com", result.PublicBaseUrl);
     }
 

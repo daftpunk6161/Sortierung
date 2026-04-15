@@ -294,6 +294,7 @@ foreach ($fc in $fcCounts.Keys) {
 foreach ($area in $specialAreas.Keys) {
     $coverageActuals["specialAreas.$area"] = $specialAreas[$area]
 }
+$coverageActuals["specialAreas.holdout"] = $holdoutCount
 
 # --- Build systemsCoveredByFamily as sorted lists ---
 $systemsCoveredByFamilyOut = @{}

@@ -80,6 +80,7 @@ public sealed class CollectionIndexContractTests
         var snapshot = new CollectionRunSnapshot();
 
         Assert.Equal("", snapshot.RunId);
+        Assert.Equal("", snapshot.OwnerClientId);
         Assert.Equal(default, snapshot.StartedUtc);
         Assert.Equal(default, snapshot.CompletedUtc);
         Assert.Equal(RunConstants.ModeDryRun, snapshot.Mode);
@@ -171,6 +172,7 @@ public sealed class CollectionIndexContractTests
         var snapshot = new CollectionRunSnapshot
         {
             RunId = "run-123",
+            OwnerClientId = "client-a",
             StartedUtc = new DateTime(2026, 4, 1, 9, 0, 0, DateTimeKind.Utc),
             CompletedUtc = new DateTime(2026, 4, 1, 9, 2, 0, DateTimeKind.Utc),
             Mode = RunConstants.ModeMove,
@@ -259,6 +261,7 @@ public sealed class CollectionIndexContractTests
         Assert.Equal(hashEntry.RecordedUtc, roundTrip.HashEntry.RecordedUtc);
 
         Assert.Equal(snapshot.RunId, roundTrip.Snapshot.RunId);
+        Assert.Equal(snapshot.OwnerClientId, roundTrip.Snapshot.OwnerClientId);
         Assert.Equal(snapshot.StartedUtc, roundTrip.Snapshot.StartedUtc);
         Assert.Equal(snapshot.CompletedUtc, roundTrip.Snapshot.CompletedUtc);
         Assert.Equal(snapshot.Mode, roundTrip.Snapshot.Mode);

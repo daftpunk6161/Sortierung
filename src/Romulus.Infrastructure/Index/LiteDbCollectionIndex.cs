@@ -792,6 +792,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             Id = string.IsNullOrWhiteSpace(snapshot.RunId)
                 ? throw new ArgumentException("RunId must not be empty.", nameof(snapshot))
                 : snapshot.RunId,
+            OwnerClientId = snapshot.OwnerClientId ?? string.Empty,
             StartedUtcTicks = NormalizeUtc(snapshot.StartedUtc).Ticks,
             CompletedUtcTicks = NormalizeUtc(snapshot.CompletedUtc).Ticks,
             Mode = snapshot.Mode ?? RunConstants.ModeDryRun,
@@ -816,6 +817,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
         => new()
         {
             RunId = document.Id,
+            OwnerClientId = document.OwnerClientId,
             StartedUtc = new DateTime(document.StartedUtcTicks, DateTimeKind.Utc),
             CompletedUtc = new DateTime(document.CompletedUtcTicks, DateTimeKind.Utc),
             Mode = document.Mode,
@@ -906,6 +908,7 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
     private sealed class CollectionRunSnapshotDocument
     {
         public string Id { get; set; } = "";
+        public string OwnerClientId { get; set; } = "";
         public long StartedUtcTicks { get; set; }
         public long CompletedUtcTicks { get; set; }
         public string Mode { get; set; } = RunConstants.ModeDryRun;

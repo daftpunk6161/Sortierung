@@ -46,7 +46,7 @@ public partial class Program
             .Produces<ApiRunList>(StatusCodes.Status200OK)
             .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest);
 
-        app.MapGet("/runs/history", async (string? offset, string? limit, ICollectionIndex collectionIndex, CancellationToken ct) =>
+        app.MapGet("/runs/history", async (HttpContext ctx, string? offset, string? limit, ICollectionIndex collectionIndex, CancellationToken ct) =>
         {
             var parsedOffset = 0;
             if (!string.IsNullOrWhiteSpace(offset))
@@ -64,23 +64,35 @@ public partial class Program
             }
 
             var effectiveLimit = CollectionRunHistoryPageBuilder.NormalizeLimit(parsedLimit);
-            var fetchLimit = parsedOffset > int.MaxValue - effectiveLimit
-                ? int.MaxValue
-                : parsedOffset + effectiveLimit;
-            var total = await collectionIndex.CountRunSnapshotsAsync(ct);
-            var snapshots = await collectionIndex.ListRunSnapshotsAsync(fetchLimit, ct);
-            return Results.Ok(BuildRunHistoryList(CollectionRunHistoryPageBuilder.Build(snapshots, total, parsedOffset, effectiveLimit)));
+            var requesterClientId = GetClientBindingId(ctx, trustForwardedFor);
+            var snapshots = await collectionIndex.ListRunSnapshotsAsync(int.MaxValue, ct);
+            var visibleSnapshots = snapshots
+                .Where(snapshot => CanAccessSnapshot(snapshot, requesterClientId))
+                .ToArray();
+
+            return Results.Ok(BuildRunHistoryList(
+                CollectionRunHistoryPageBuilder.Build(
+                    visibleSnapshots,
+                    visibleSnapshots.Length,
+                    parsedOffset,
+                    effectiveLimit)));
         })
             .WithSummary("List persisted run history snapshots from the collection index")
             .Produces<ApiRunHistoryList>(StatusCodes.Status200OK)
             .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest);
 
-        app.MapGet("/runs/compare", async (string runId, string compareToRunId, ICollectionIndex collectionIndex, CancellationToken ct) =>
+        app.MapGet("/runs/compare", async (string runId, string compareToRunId, HttpContext ctx, ICollectionIndex collectionIndex, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(runId) || string.IsNullOrWhiteSpace(compareToRunId))
                 return ApiError(400, ApiErrorCodes.RunCompareIdsRequired, "runId and compareToRunId are required.");
 
-            var comparison = await RunHistoryInsightsService.CompareAsync(collectionIndex, runId, compareToRunId, ct);
+            var requesterClientId = GetClientBindingId(ctx, trustForwardedFor);
+            var snapshots = await collectionIndex.ListRunSnapshotsAsync(3650, ct);
+            var visibleSnapshots = snapshots
+                .Where(snapshot => CanAccessSnapshot(snapshot, requesterClientId))
+                .ToArray();
+            var comparison = RunHistoryInsightsService.Compare(visibleSnapshots, runId, compareToRunId);
+
             return comparison is null
                 ? ApiError(404, ApiErrorCodes.RunCompareNotFound, "One or both run snapshots were not found.")
                 : Results.Ok(comparison);
@@ -90,9 +102,14 @@ public partial class Program
             .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound);
 
-        app.MapGet("/runs/trends", async (int? limit, ICollectionIndex collectionIndex, CancellationToken ct) =>
+        app.MapGet("/runs/trends", async (HttpContext ctx, int? limit, ICollectionIndex collectionIndex, CancellationToken ct) =>
         {
-            var report = await RunHistoryInsightsService.BuildStorageInsightsAsync(collectionIndex, limit ?? 30, ct);
+            var requesterClientId = GetClientBindingId(ctx, trustForwardedFor);
+            var snapshots = await collectionIndex.ListRunSnapshotsAsync(int.MaxValue, ct);
+            var visibleSnapshots = snapshots
+                .Where(snapshot => CanAccessSnapshot(snapshot, requesterClientId))
+                .ToArray();
+            var report = RunHistoryInsightsService.BuildStorageInsights(visibleSnapshots, limit ?? 30);
             return Results.Ok(report);
         })
             .WithSummary("Build storage and trend insights from persisted run history")

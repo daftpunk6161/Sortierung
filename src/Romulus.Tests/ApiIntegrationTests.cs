@@ -414,6 +414,53 @@ public sealed class ApiIntegrationTests
     }
 
     [Fact]
+    public async Task Runs_History_IsFiltered_ByRequesterClientId()
+    {
+        var fakeIndex = new FakeCollectionIndex(
+        [
+            new CollectionRunSnapshot
+            {
+                RunId = "run-owner-a",
+                OwnerClientId = "owner-a",
+                StartedUtc = new DateTime(2026, 4, 2, 10, 0, 0, DateTimeKind.Utc),
+                CompletedUtc = new DateTime(2026, 4, 2, 10, 1, 0, DateTimeKind.Utc),
+                Mode = "DryRun",
+                Status = "ok",
+                Roots = [@"C:\Roms\A"],
+                RootFingerprint = "a",
+                TotalFiles = 10,
+                CollectionSizeBytes = 1000
+            },
+            new CollectionRunSnapshot
+            {
+                RunId = "run-owner-b",
+                OwnerClientId = "owner-b",
+                StartedUtc = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
+                CompletedUtc = new DateTime(2026, 4, 1, 10, 1, 0, DateTimeKind.Utc),
+                Mode = "DryRun",
+                Status = "ok",
+                Roots = [@"C:\Roms\B"],
+                RootFingerprint = "b",
+                TotalFiles = 20,
+                CollectionSizeBytes = 2000
+            }
+        ]);
+
+        using var factory = CreateFactory(collectionIndex: fakeIndex);
+        using var client = CreateClientWithApiKey(factory);
+        client.DefaultRequestHeaders.Add("X-Client-Id", "owner-a");
+
+        var response = await client.GetAsync("/runs/history?offset=0&limit=10");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = doc.RootElement;
+        Assert.Equal(1, root.GetProperty("total").GetInt32());
+        Assert.Equal(1, root.GetProperty("returned").GetInt32());
+        Assert.Equal("run-owner-a", root.GetProperty("runs")[0].GetProperty("runId").GetString());
+    }
+
+    [Fact]
     public async Task Runs_Compare_ReturnsPersistedSnapshotDelta()
     {
         var fakeIndex = new FakeCollectionIndex(
@@ -474,6 +521,40 @@ public sealed class ApiIntegrationTests
         Assert.Equal(333000000L, size.GetProperty("current").GetInt64());
         Assert.Equal(111000000L, size.GetProperty("previous").GetInt64());
         Assert.Equal(222000000L, size.GetProperty("delta").GetInt64());
+    }
+
+    [Fact]
+    public async Task Runs_Compare_ForeignSnapshot_IsNotVisible_ForRequesterClient()
+    {
+        var fakeIndex = new FakeCollectionIndex(
+        [
+            new CollectionRunSnapshot
+            {
+                RunId = "run-owner-a",
+                OwnerClientId = "owner-a",
+                CompletedUtc = new DateTime(2026, 4, 1, 10, 1, 0, DateTimeKind.Utc),
+                Status = "ok",
+                TotalFiles = 10
+            },
+            new CollectionRunSnapshot
+            {
+                RunId = "run-owner-b",
+                OwnerClientId = "owner-b",
+                CompletedUtc = new DateTime(2026, 4, 1, 10, 2, 0, DateTimeKind.Utc),
+                Status = "ok",
+                TotalFiles = 20
+            }
+        ]);
+
+        using var factory = CreateFactory(collectionIndex: fakeIndex);
+        using var client = CreateClientWithApiKey(factory);
+        client.DefaultRequestHeaders.Add("X-Client-Id", "owner-a");
+
+        var response = await client.GetAsync("/runs/compare?runId=run-owner-a&compareToRunId=run-owner-b");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        AssertError(doc.RootElement, ApiErrorCodes.RunCompareNotFound, ErrorKind.Recoverable, "not found");
     }
 
     [Fact]
@@ -549,6 +630,125 @@ public sealed class ApiIntegrationTests
         var size = root.GetProperty("collectionSizeBytes");
         Assert.Equal(222000000L, size.GetProperty("delta").GetInt64());
         Assert.Equal(222000000d, root.GetProperty("averageRunGrowthBytes").GetDouble());
+    }
+
+    [Fact]
+    public async Task Runs_Trends_IsFiltered_ByRequesterClientId()
+    {
+        var fakeIndex = new FakeCollectionIndex(
+        [
+            new CollectionRunSnapshot
+            {
+                RunId = "run-owner-a-old",
+                OwnerClientId = "owner-a",
+                CompletedUtc = new DateTime(2026, 4, 1, 10, 1, 0, DateTimeKind.Utc),
+                TotalFiles = 10,
+                CollectionSizeBytes = 1000,
+                HealthScore = 80
+            },
+            new CollectionRunSnapshot
+            {
+                RunId = "run-owner-a-new",
+                OwnerClientId = "owner-a",
+                CompletedUtc = new DateTime(2026, 4, 2, 10, 1, 0, DateTimeKind.Utc),
+                TotalFiles = 15,
+                CollectionSizeBytes = 1500,
+                HealthScore = 85
+            },
+            new CollectionRunSnapshot
+            {
+                RunId = "run-owner-b",
+                OwnerClientId = "owner-b",
+                CompletedUtc = new DateTime(2026, 4, 3, 10, 1, 0, DateTimeKind.Utc),
+                TotalFiles = 999,
+                CollectionSizeBytes = 999000,
+                HealthScore = 1
+            }
+        ]);
+
+        using var factory = CreateFactory(collectionIndex: fakeIndex);
+        using var client = CreateClientWithApiKey(factory);
+        client.DefaultRequestHeaders.Add("X-Client-Id", "owner-a");
+
+        var response = await client.GetAsync("/runs/trends?limit=30");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = doc.RootElement;
+        Assert.Equal(2, root.GetProperty("sampleCount").GetInt32());
+        Assert.Equal(15, root.GetProperty("totalFiles").GetProperty("current").GetInt64());
+        Assert.Equal(10, root.GetProperty("totalFiles").GetProperty("previous").GetInt64());
+    }
+
+    [Fact]
+    public async Task Dashboard_Summary_IsFiltered_ByRequesterClientId()
+    {
+        var fakeIndex = new FakeCollectionIndex(
+        [
+            new CollectionRunSnapshot
+            {
+                RunId = "run-owner-a",
+                OwnerClientId = "owner-a",
+                CompletedUtc = new DateTime(2026, 4, 2, 10, 1, 0, DateTimeKind.Utc),
+                StartedUtc = new DateTime(2026, 4, 2, 10, 0, 0, DateTimeKind.Utc),
+                Mode = "DryRun",
+                Status = "ok",
+                Roots = [@"C:\Roms\A"],
+                RootFingerprint = "a",
+                TotalFiles = 10,
+                CollectionSizeBytes = 1000,
+                HealthScore = 90
+            },
+            new CollectionRunSnapshot
+            {
+                RunId = "run-owner-b",
+                OwnerClientId = "owner-b",
+                CompletedUtc = new DateTime(2026, 4, 3, 10, 1, 0, DateTimeKind.Utc),
+                StartedUtc = new DateTime(2026, 4, 3, 10, 0, 0, DateTimeKind.Utc),
+                Mode = "DryRun",
+                Status = "ok",
+                Roots = [@"C:\Roms\B"],
+                RootFingerprint = "b",
+                TotalFiles = 20,
+                CollectionSizeBytes = 2000,
+                HealthScore = 80
+            }
+        ]);
+
+        using var factory = CreateFactory(collectionIndex: fakeIndex);
+        using var client = CreateClientWithApiKey(factory);
+        client.DefaultRequestHeaders.Add("X-Client-Id", "owner-a");
+
+        var response = await client.GetAsync("/dashboard/summary");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = doc.RootElement;
+        Assert.Equal(1, root.GetProperty("recentRuns").GetArrayLength());
+        Assert.Equal("run-owner-a", root.GetProperty("recentRuns")[0].GetProperty("runId").GetString());
+        Assert.Equal(1, root.GetProperty("trends").GetProperty("sampleCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task Dashboard_Bootstrap_DoesNotExposeConcreteAllowedRoots()
+    {
+        using var factory = CreateFactory(new Dictionary<string, string?>
+        {
+            ["AllowRemoteClients"] = "true",
+            ["PublicBaseUrl"] = "https://romulus.example",
+            ["AllowedRoots:0"] = @"C:\Secure\A",
+            ["AllowedRoots:1"] = @"D:\Secure\B"
+        });
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/dashboard/bootstrap");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(doc.RootElement.GetProperty("allowedRootsEnforced").GetBoolean());
+
+        if (doc.RootElement.TryGetProperty("allowedRoots", out var allowedRoots))
+            Assert.Equal(0, allowedRoots.GetArrayLength());
     }
 
     [Fact]

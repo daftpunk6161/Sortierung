@@ -257,7 +257,7 @@ public sealed class AuditSigningService
                 {
                     AuditCsvPath = auditCsvPath,
                     DryRun = dryRun,
-                    Failed = Math.Max(1, CountAuditDataRows(auditCsvPath))
+                    Failed = CountAuditDataRows(auditCsvPath)
                 };
             }
         }
@@ -268,7 +268,7 @@ public sealed class AuditSigningService
             {
                 AuditCsvPath = auditCsvPath,
                 DryRun = dryRun,
-                Failed = Math.Max(1, CountAuditDataRows(auditCsvPath))
+                Failed = CountAuditDataRows(auditCsvPath)
             };
         }
 

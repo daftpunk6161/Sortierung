@@ -35,6 +35,9 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: windows-latest
     timeout-minutes: 15
+    env:
+      RELEASE_GATE_FILTER: >-
+        Category=CoverageGate|Category=QualityGate|Category=AntiGaming|Category=BenchmarkPerformance|FullyQualifiedName~Romulus.Tests.Benchmark.DatCoverageBenchmarkTests|FullyQualifiedName~Romulus.Tests.Benchmark.RepairSafetyBenchmarkTests
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,13 +59,13 @@ jobs:
       - name: Build
         run: dotnet build src/Romulus.Tests/Romulus.Tests.csproj --configuration Release --nologo
 
-      - name: Coverage Gate Tests
-        run: |
-          dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --configuration Release --nologo --filter "Category=CoverageGate" --logger "trx;LogFileName=coverage-gate.trx"
+      - name: Regenerate benchmark manifest
+        shell: pwsh
+        run: pwsh -NoProfile -File benchmark/tools/Update-Manifest.ps1
 
-      - name: Quality Gate Tests (informational)
+      - name: Release Gate Suite
         run: |
-          dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --configuration Release --nologo --filter "Category=QualityGate" --logger "trx;LogFileName=quality-gate.trx"
+          dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --configuration Release --nologo --filter "${{ env.RELEASE_GATE_FILTER }}" --logger "trx;LogFileName=release-gate.trx"
 
       - name: Upload gate results
         if: always()
@@ -78,6 +81,9 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      FULL_BENCHMARK_FILTER: >-
+        Category=Benchmark|Category=BenchmarkRegression|Category=QualityGate|Category=CoverageGate|Category=AntiGaming|Category=BenchmarkPerformance
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -99,13 +105,17 @@ jobs:
       - name: Build
         run: dotnet build src/Romulus.Tests/Romulus.Tests.csproj --configuration Release --nologo
 
+      - name: Regenerate benchmark manifest
+        shell: pwsh
+        run: pwsh -NoProfile -File benchmark/tools/Update-Manifest.ps1
+
       - name: Full Benchmark Suite
         env:
           ROMULUS_ENFORCE_QUALITY_GATES: ${{ github.event.inputs.enforce_gates == 'true' && 'true' || 'false' }}
           ROMULUS_UPDATE_BASELINE: ${{ github.event.inputs.update_baseline == 'true' && 'true' || 'false' }}
           ROMULUS_BASELINE_REASON: ${{ github.event.inputs.baseline_reason || format('Nightly {0}', github.run_id) }}
         run: |
-          dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --configuration Release --nologo --filter "Category=Benchmark|Category=BenchmarkRegression|Category=QualityGate|Category=CoverageGate" --logger "trx;LogFileName=benchmark-full.trx"
+          dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --configuration Release --nologo --filter "${{ env.FULL_BENCHMARK_FILTER }}" --logger "trx;LogFileName=benchmark-full.trx"
 
       - name: Upload benchmark artifacts
         if: always()

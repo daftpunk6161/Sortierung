@@ -410,7 +410,7 @@ public sealed partial class FeatureCommandService
         if (draft.EnableDatRename == true) parts.Add("--datrename");
         if (!string.IsNullOrWhiteSpace(draft.DatRoot)) parts.Add($"--datroot \"{draft.DatRoot}\"");
         if (!string.IsNullOrWhiteSpace(draft.HashType)) parts.Add($"--hashtype {draft.HashType}");
-        if (!string.IsNullOrWhiteSpace(draft.ConvertFormat)) parts.Add("--convertformat");
+        if (!string.IsNullOrWhiteSpace(draft.ConvertFormat)) parts.Add($"--convertformat {draft.ConvertFormat}");
         if (draft.ConvertOnly == true) parts.Add("--convertonly");
         if (draft.ApproveReviews == true) parts.Add("--approve-reviews");
         if (!string.IsNullOrWhiteSpace(draft.ConflictPolicy)) parts.Add($"--conflictpolicy {draft.ConflictPolicy}");
