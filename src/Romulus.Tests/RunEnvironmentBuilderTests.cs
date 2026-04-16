@@ -421,7 +421,7 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
     }
 
     [Fact]
-    public void NormalizeRuntimeDatMappings_RemapsDescriptorKeysAndDropsInvalidPhantoms()
+    public void NormalizeRuntimeDatMappings_RemapsDescriptorKeysAndKeepsSanitizedFallbacks()
     {
         var gbcDat = Path.Combine(_datRoot, "Nintendo - Game Boy Color (20260328-141827).dat");
         var nesDat = Path.Combine(_datRoot, "NES.dat");
@@ -468,10 +468,13 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
             _datRoot,
             onWarning: null);
 
-        Assert.Equal(2, map.Count);
+        // GBC and NES resolved via ConsoleDetector, "invalid descriptor" kept as sanitized key
+        Assert.Equal(3, map.Count);
         Assert.Equal(gbcDat, map["GBC"]);
         Assert.Equal(nesDat, map["NES"]);
-        Assert.False(map.ContainsKey("invalid descriptor"));
+        // "invalid descriptor" → sanitized to "INVALID_DESCRIPTOR"
+        Assert.True(map.ContainsKey("INVALID_DESCRIPTOR"));
+        Assert.Equal(invalidDat, map["INVALID_DESCRIPTOR"]);
         Assert.Empty(supplemental);
     }
 
@@ -793,5 +796,100 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
 
         Assert.Equal(2, map.Count);
         Assert.Empty(supplementalDats);
+    }
+
+    // ── Stem-Fallback DATs for unknown platforms ───────────────────────
+
+    [Fact]
+    public void ResolveRuntimeDatConsoleKey_UnknownPlatformStem_ReturnsSanitizedKey()
+    {
+        // DAT stem for a platform not in consoles.json — should produce a sanitized key, not null
+        var result = RunEnvironmentBuilder.ResolveRuntimeDatConsoleKey(
+            "ACT - Apricot PC Xi (20211125-165629)",
+            Path.Combine(_datRoot, "ACT - Apricot PC Xi (20211125-165629).dat"),
+            _datRoot,
+            consoleDetector: null);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.DoesNotContain(" ", result);
+        Assert.DoesNotContain("(", result);
+        Assert.DoesNotContain(")", result);
+        Assert.Matches("^[A-Z0-9_-]+$", result);
+    }
+
+    [Fact]
+    public void ResolveRuntimeDatConsoleKey_NoIntroDatStem_WithoutDetector_ReturnsSanitizedKey()
+    {
+        var result = RunEnvironmentBuilder.ResolveRuntimeDatConsoleKey(
+            "Nintendo - Game Boy Advance (20260401-133204)",
+            Path.Combine(_datRoot, "Nintendo - Game Boy Advance (20260401-133204).dat"),
+            _datRoot,
+            consoleDetector: null);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.Matches("^[A-Z0-9_-]+$", result);
+    }
+
+    [Fact]
+    public void ResolveRuntimeDatConsoleKey_TosecDatStem_WithoutDetector_ReturnsSanitizedKey()
+    {
+        var result = RunEnvironmentBuilder.ResolveRuntimeDatConsoleKey(
+            "3DO 3DO Interactive Multiplayer - Games (TOSEC-v2020-11-20)",
+            Path.Combine(_datRoot, "3DO 3DO Interactive Multiplayer - Games (TOSEC-v2020-11-20).dat"),
+            _datRoot,
+            consoleDetector: null);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.Matches("^[A-Z0-9_-]+$", result);
+    }
+
+    [Fact]
+    public void NormalizeRuntimeDatMappings_KeepsUnknownPlatformDats()
+    {
+        var unknownPlatformDat = Path.Combine(_datRoot, "ACT - Apricot PC Xi (20211125-165629).dat");
+        var nesDat = Path.Combine(_datRoot, "NES.dat");
+        File.WriteAllText(unknownPlatformDat, "apricot");
+        File.WriteAllText(nesDat, "nes");
+
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ACT - Apricot PC Xi (20211125-165629)"] = unknownPlatformDat,
+            ["NES"] = nesDat
+        };
+        var supplemental = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        RunEnvironmentBuilder.NormalizeRuntimeDatMappings(
+            map,
+            supplemental,
+            consoleDetector: null,
+            _datRoot,
+            onWarning: null);
+
+        // Both DATs should be kept — NES as-is, Apricot under a sanitized key
+        Assert.Equal(2, map.Count);
+        Assert.Contains("NES", map.Keys);
+        // The sanitized key for the Apricot DAT
+        Assert.Contains(unknownPlatformDat, map.Values);
+    }
+
+    [Fact]
+    public void ResolveRuntimeDatConsoleKey_SentinelKeys_StillDropped()
+    {
+        Assert.Null(RunEnvironmentBuilder.ResolveRuntimeDatConsoleKey(
+            "UNKNOWN", Path.Combine(_datRoot, "UNKNOWN.dat"), _datRoot, null));
+        Assert.Null(RunEnvironmentBuilder.ResolveRuntimeDatConsoleKey(
+            "AMBIGUOUS", Path.Combine(_datRoot, "AMBIGUOUS.dat"), _datRoot, null));
+    }
+
+    [Fact]
+    public void ResolveRuntimeDatConsoleKey_EmptyAndWhitespace_StillDropped()
+    {
+        Assert.Null(RunEnvironmentBuilder.ResolveRuntimeDatConsoleKey(
+            "", Path.Combine(_datRoot, "empty.dat"), _datRoot, null));
+        Assert.Null(RunEnvironmentBuilder.ResolveRuntimeDatConsoleKey(
+            "   ", Path.Combine(_datRoot, "space.dat"), _datRoot, null));
     }
 }

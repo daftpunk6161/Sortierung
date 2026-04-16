@@ -78,11 +78,12 @@ public sealed class Block4_RobustnessTests : IDisposable
         var firstResult = sut.GetArchiveHashes(zipPath, "SHA1");
         Assert.NotEmpty(firstResult); // sanity: ZIP was hashed successfully
 
-        // Ensure the file modification time is distinct (filesystem granularity)
-        System.Threading.Thread.Sleep(10);
+        var firstWriteUtc = File.GetLastWriteTimeUtc(zipPath);
 
         // Replace the ZIP with version-2 content (different data, different size)
         WriteZip(zipPath, "game.rom", v2Content);
+        // Force a distinct timestamp without relying on wall-clock sleeps.
+        File.SetLastWriteTimeUtc(zipPath, firstWriteUtc.AddSeconds(1));
 
         // ACT – request hashes again for the same path
         var secondResult = sut.GetArchiveHashes(zipPath, "SHA1");

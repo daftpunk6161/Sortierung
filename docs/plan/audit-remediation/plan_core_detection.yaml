@@ -1,0 +1,609 @@
+plan_id: core-detection-surgical-fix-2026-04-15
+objective: |
+  Chirurgische Korrektur des Confidence-Modells im Erkennungs-Kern.
+  Die Architektur (8 Detektoren → Hypothesen → HypothesisResolver → DecisionResolver →
+  FamilyPipelineSelector → SortDecision → ConsoleSorter) ist KORREKT und wird BEWAHRT.
+
+  Das Problem ist schmal und praezise lokalisierbar:
+  1. DetectionSource-Enum-Int-Werte werden direkt als Confidence-Werte missbraucht
+  2. Confidence ist Decision-Input an genau EINER Stelle (DecisionResolver.cs Tier1-Gate)
+  3. SoftOnlyCap kann mathematisch SortThreshold erreichen
+  4. AMBIGUOUS-Entry-Guard ist Confidence-basiert statt Tier-basiert
+
+  Loesung: 3 chirurgische Eingriffe in 4 Dateien. ~150 Zeilen Produktionsaenderung.
+  Kein Rebuild, kein neues Benchmark-Framework, kein Enum-Value-Rewrite.
+
+created_at: "2026-04-15T23:45:00Z"
+revised_at: "2026-04-16T01:00:00Z"
+created_by: gem-planner
+revised_by: gem-critic
+revision_reason: |
+  Urspruenglicher 6-Wave/11-Task-Plan war 3x ueberengineert fuer ein schmales Problem.
+  Critique deckte 3 Blocking-Fehler auf:
+  - Falsche Dateipfade (Contracts/Models statt Core/Classification)
+  - Unnoetige Enum-Value-Rewrite (DetectionSource wird nirgends serialisiert)
+  - Benchmark-Task nimmt ROM-Dateien an, aber Ground-Truth enthaelt JSONL-Fixtures
+  Neue Version: 3 Eingriffe statt 6 Waves. Gleiche Korrektheit, 70% weniger Aufwand.
+status: approved
+research_confidence: high
+
+plan_metrics:
+  task_count: 7
+  total_dependencies: 5
+  risk_score: low
+  estimated_production_lines_changed: 150
+  estimated_test_lines_changed: 200
+
+tldr: |
+  DIAGNOSE:
+  - Architektur ist KORREKT (1800 Zeilen kampferprobter Detection-Code mit echten Edge-Cases)
+  - Problem ist SCHMAL: Confidence = Enum-Int-Wert, wird an 1 Decision-Stelle gebraucht
+  - Confidence wird in Production nur in DecisionResolver.cs:63 (Tier1-Gate) und
+    FamilyPipelineSelector (Confidence-Bump/Cap) als Decision-Input verwendet
+  - ConsoleSorter benutzt NUR SortDecision, KEIN Confidence — alles andere ist Display
+
+  THERAPIE: 3 chirurgische Eingriffe:
+  - Eingriff 1: Confidence von Enum entkoppeln (ConfidenceRating statt Cast)
+  - Eingriff 2: Tier1-Gate explizit machen (hasHardEvidence statt confidence>=85)
+  - Eingriff 3: Guards reparieren (SoftOnlyCap, AMBIGUOUS-Trigger)
+
+  ERGEBNIS: Confidence wird reiner Display-Wert. Entscheidungen basieren auf
+  (Tier, Conflict, HasHardEvidence, DAT) — explizit, auditierbar, deterministisch.
+
+  KEIN Rebuild. KEIN neues Benchmark-Framework. KEIN Enum-Value-Rewrite.
+  4 Dateien, ~150 Zeilen, 3 Phasen sequentiell.
+
+open_questions: []
+
+architecture_assessment:
+  verdict: "KORREKT — Reform, nicht Rebuild"
+  what_works:
+    - "8 Detection-Methoden mit Domain-Edge-Cases (PS1/PS2-Header-Downgrade, Archive-Staerke-Ranking)"
+    - "Tier-System (T0-T4) bildet echte Evidenz-Hierarchie korrekt ab"
+    - "DAT-first-Authority ist richtig: DAT-Hash → strukturell → heuristisch"
+    - "SortDecision-Routing in ConsoleSorter ist clean — kein Confidence-Check"
+    - "Family-Safety-Gates (Cross-Family → Blocked, Arcade → Review) sind korrekt"
+    - "Deterministic Tie-Breaking (Priority → Confidence → Alpha) ist vollstaendig"
+    - "AMBIGUOUS-Detection mit Tier-Gleichheits-Check ist ein kluger Guard"
+  what_is_broken:
+    - "(int)DetectionSource.X als Confidence: FolderName=85=SortThreshold aber Tier3=Blocked"
+    - "Confidence als Decision-Input (DecisionResolver Tier1-Gate): Magic Number statt explizite Regel"
+    - "SoftOnlyCap Math.Min(85,...) kann SortThreshold erreichen: semantisch falsch"
+    - "AMBIGUOUS Entry-Guard MaxSingleConfidence>=60: bricht bei Confidence-Entkopplung"
+    - "FamilyPipelineSelector Confidence-Bump MAX(92): wird sinnlos wenn Confidence nicht Decision-Input"
+  decision_pipeline: |
+    File → DetectWithConfidence() [8 Methoden]
+      → HypothesisResolver.Resolve() [Aggregation + Caps + Penalties]
+        → DecisionResolver.Resolve(tier, conflict, confidence, datAvailable, conflictType)
+          → FamilyPipelineSelector.Apply() [Cross-Family/Disc/Arcade Guards]
+            → RomCandidate.SortDecision
+              → ConsoleSorter.Sort() [routet NUR nach SortDecision, KEIN Confidence]
+  confidence_usage_map:
+    decision_input:
+      - location: "DecisionResolver.cs:63 — Tier1 + !conflict + confidence>=85 → Sort"
+        impact: "EINZIGE Stelle die Confidence fuer Entscheidung nutzt"
+      - location: "FamilyPipelineSelector.cs:37 — MIN(confidence, 75) bei Cross-Family"
+        impact: "Caps Confidence VOR DecisionResolver"
+      - location: "FamilyPipelineSelector.cs:47 — MAX(confidence, 92) bei DiscHeader"
+        impact: "Bumpt Confidence VOR DecisionResolver"
+    display_only:
+      - "ConsoleDetectionResult.Confidence — Transport-Wert"
+      - "RecognitionResult.Confidence — API-Modell"
+      - "EnrichmentPipelinePhase — speichert Wert"
+      - "LiteDbCollectionIndex — Audit/Comparison"
+      - "UI/API Reports — Anzeige"
+
+pre_mortem:
+  overall_risk_level: low
+  critical_failure_modes:
+    - scenario: "Neue Confidence-Werte verschieben Decision-Verteilung — Files landen anders"
+      likelihood: low
+      impact: medium
+      mitigation: |
+        Eingriff 2 eliminiert Confidence als Decision-Input komplett.
+        Entscheidungen basieren danach auf (Tier, Conflict, HasHardEvidence, DAT).
+        Confidence-Aenderungen aus Eingriff 1 haben NULL Decision-Impact
+        solange Eingriff 2 gleichzeitig oder vorher landet.
+    - scenario: "Bestehende Tests erwarten alte Confidence-Werte — Test-Rot"
+      likelihood: high
+      impact: low
+      mitigation: |
+        9 Test-Assertions in DetectionPipelineTests.cs pruefen (int)DetectionSource.X.
+        Diese werden auf .ConfidenceRating() umgestellt mit identischer Semantik.
+        Fachliches Verhalten aendert sich nicht — nur die Confidence-Zahlen.
+    - scenario: "AMBIGUOUS-Trigger bricht fuer Soft-vs-Soft nach Confidence-Senkung"
+      likelihood: high
+      impact: medium
+      mitigation: |
+        Eingriff 3 stellt AMBIGUOUS auf Tier-basiert um — gleichzeitig mit
+        Confidence-Entkopplung. Kein Zwischenzustand wo AMBIGUOUS kaputt ist.
+  assumptions:
+    - "Build ist vor Beginn gruen"
+    - "DetectionSource wird nirgends serialisiert oder persistiert (VERIFIZIERT: grep bestaetigt)"
+    - "Keine parallelen Feature-Branches die ConsoleDetector oder HypothesisResolver aendern"
+    - "Tier-Architektur (T0-T4) bleibt korrekt und wird nicht angefasst"
+    - "Ground-Truth unter benchmark/ground-truth/ sind JSONL-Fixtures, keine ROM-Dateien"
+
+implementation_specification:
+  code_structure: |
+    Aenderungen in 2 Projekten:
+    - Core/Classification: ConfidenceRating(), DecisionResolver, HypothesisResolver
+    - Infrastructure/Orchestration: FamilyPipelineSelector Cleanup
+    DetectionSource Enum bleibt UNVERAENDERT (Int-Werte bleiben, werden nur nicht mehr als Confidence gecastet).
+    Reihenfolge: Eingriff 1+2 gleichzeitig (gegenseitig abhaengig), dann Eingriff 3.
+  affected_files:
+    - path: "src/Romulus.Core/Classification/DetectionHypothesis.cs"
+      changes: "Neue Extension ConfidenceRating() — kalibrierte Startwerte getrennt von Enum-Werten"
+    - path: "src/Romulus.Core/Classification/ConsoleDetector.cs"
+      changes: "7 Stellen: (int)DetectionSource.X → DetectionSource.X.ConfidenceRating()"
+    - path: "src/Romulus.Core/Classification/DecisionResolver.cs"
+      changes: "Tier1-Gate: confidence>=85 → hasHardEvidence (neuer Parameter)"
+    - path: "src/Romulus.Core/Classification/HypothesisResolver.cs"
+      changes: "SoftOnlyCap 75→79, ComputeSoftOnlyCap Max 85→79, AMBIGUOUS Entry-Guard Tier-basiert"
+    - path: "src/Romulus.Infrastructure/Orchestration/FamilyPipelineSelector.cs"
+      changes: "Confidence-Bump MAX(92) entfernen (nicht mehr noetig)"
+    - path: "src/Romulus.Tests/"
+      changes: "9 Confidence-Assertions anpassen, Boundary-Tests ergaenzen"
+  not_affected:
+    - "DetectionSource Enum-Werte (bleiben DatHash=100, FolderName=85 etc.)"
+    - "IsHardEvidence() Extension (unveraendert)"
+    - "ToEvidenceTier() Extension (unveraendert)"
+    - "ConsoleSorter (benutzt kein Confidence)"
+    - "EnrichmentPipelinePhase DAT-Authority-Logic"
+    - "8 Detection-Methoden in ConsoleDetector (Logik unveraendert, nur Confidence-Quelle)"
+
+# ============================================================================
+# EINGRIFF 1: Confidence von Enum entkoppeln
+# ============================================================================
+tasks:
+  - id: "e1-confidence-rating"
+    title: "EINGRIFF 1a: ConfidenceRating() Extension einfuehren"
+    description: |
+      Neue Extension Method auf DetectionSource die kalibrierte Confidence-Werte liefert,
+      GETRENNT von den Enum-Int-Werten. Die Enum-Werte bleiben unveraendert (kein Rewrite).
+
+      DetectionSource wird NIRGENDS serialisiert oder persistiert (verifiziert).
+      Die Enum-Werte dienen nur als interne Diskriminatoren und Ordinalzahlen.
+
+      Neue Methode in DetectionHypothesis.cs (DetectionSourceExtensions):
+        public static int ConfidenceRating(this DetectionSource source) => source switch
+        {
+            DetectionSource.DatHash            => 100,
+            DetectionSource.DiscHeader         => 95,
+            DetectionSource.CartridgeHeader    => 90,
+            DetectionSource.SerialNumber       => 80,
+            DetectionSource.UniqueExtension    => 80,
+            DetectionSource.ArchiveContent     => 60,
+            DetectionSource.FolderName         => 45,
+            DetectionSource.FilenameKeyword    => 40,
+            DetectionSource.AmbiguousExtension => 25,
+            _ => 0,
+        };
+
+      Kalibrierung:
+      - Hard-Sources (DatHash, Disc, Cartridge, Serial): hohe Werte, Tier-konform
+      - DiscHeader(95) > CartridgeHeader(90): Disc-Header sind zuverlaessiger
+      - UniqueExtension(80): stark aber nicht strukturell (Tier2)
+      - FolderName(45) < SortThreshold(85): Tier3/Weak darf nie Sort erreichen
+      - AmbiguousExtension(25): niedrigster Wert, Tier3
+
+      WICHTIG: Enum-Werte (DatHash=100, FolderName=85 etc.) bleiben UNVERAENDERT.
+      Sie werden nur nicht mehr als Confidence gecastet.
+    phase: 1
+    agent: gem-implementer
+    covers:
+      - "D-001"
+      - "S-001"
+    priority: critical
+    status: pending
+    dependencies: []
+    context_files:
+      - path: "src/Romulus.Core/Classification/DetectionHypothesis.cs"
+        description: "DetectionSource Enum + Extensions — hier wird ConfidenceRating() eingefuegt"
+    verification:
+      - "dotnet build src/Romulus.sln — gruen"
+      - "ConfidenceRating() existiert als Extension auf DetectionSource"
+      - "ConfidenceRating() deckt alle 9 DetectionSource-Werte ab"
+      - "Kein ConfidenceRating() Wert fuer Soft-Sources >= SortThreshold(85)"
+    acceptance_criteria:
+      - "ConfidenceRating() als Extension Method in DetectionSourceExtensions"
+      - "Alle 9 DetectionSource-Werte gemappt"
+      - "Hard-Source-Werte >= 80, Soft-Source-Werte < 80"
+      - "FolderName.ConfidenceRating() < 50"
+      - "Invariantentest: kein Tier3-Source mit ConfidenceRating >= 60"
+    estimated_effort: small
+    estimated_lines: 25
+
+  - id: "e1-migrate-casts"
+    title: "EINGRIFF 1b: (int)DetectionSource.X Casts migrieren"
+    description: |
+      Alle 7 Stellen in ConsoleDetector.cs wo (int)DetectionSource.X als Confidence
+      uebergeben wird auf .ConfidenceRating() umstellen.
+
+      Betroffene Stellen (verifiziert):
+        ConsoleDetector.cs:354 — (int)DetectionSource.FolderName         → DetectionSource.FolderName.ConfidenceRating()
+        ConsoleDetector.cs:360 — (int)DetectionSource.UniqueExtension    → DetectionSource.UniqueExtension.ConfidenceRating()
+        ConsoleDetector.cs:366 — (int)DetectionSource.AmbiguousExtension → DetectionSource.AmbiguousExtension.ConfidenceRating()
+        ConsoleDetector.cs:381 — (int)DetectionSource.DiscHeader         → DetectionSource.DiscHeader.ConfidenceRating()
+        ConsoleDetector.cs:388 — (int)DetectionSource.CartridgeHeader    → DetectionSource.CartridgeHeader.ConfidenceRating()
+        ConsoleDetector.cs:399 — (int)DetectionSource.ArchiveContent     → DetectionSource.ArchiveContent.ConfidenceRating()
+        ConsoleDetector.cs:407 — (int)DetectionSource.FilenameKeyword    → DetectionSource.FilenameKeyword.ConfidenceRating()
+
+      Plus 9 Test-Assertions in DetectionPipelineTests.cs (Zeilen 1053-1061) anpassen:
+        ALT: Assert.Equal((int)DetectionSource.FolderName, result.Confidence)
+        NEU: Assert.Equal(DetectionSource.FolderName.ConfidenceRating(), result.Confidence)
+
+      REIHENFOLGE: e1-confidence-rating MUSS zuerst fertig sein.
+
+      HINWEIS: Fachliches Verhalten der Detection-Methoden aendert sich NICHT.
+      Nur die Confidence-ZAHLEN aendern sich. Die Detection-Logik (welche Konsole
+      erkannt wird) bleibt identisch.
+    phase: 1
+    agent: gem-implementer
+    covers:
+      - "D-001"
+    priority: critical
+    status: pending
+    dependencies:
+      - "e1-confidence-rating"
+    context_files:
+      - path: "src/Romulus.Core/Classification/ConsoleDetector.cs"
+        description: "7 Cast-Stellen bei Zeilen 354-407"
+      - path: "src/Romulus.Tests/DetectionPipelineTests.cs"
+        description: "9 Assertions bei Zeilen 1053-1061"
+    verification:
+      - "dotnet build src/Romulus.sln — gruen"
+      - "grep -rn '(int)DetectionSource' src/ — 0 Treffer in Production-Code"
+      - "Alle bestehenden Tests gruen"
+      - "Jede Test-Anpassung hat Begruendung im Commit"
+    acceptance_criteria:
+      - "0 (int)DetectionSource.X Casts in Production-Code"
+      - "Tests verwenden .ConfidenceRating() statt (int)DetectionSource.X"
+      - "Build + Tests gruen"
+    estimated_effort: small
+    estimated_lines: 30
+
+  # ============================================================================
+  # EINGRIFF 2: Tier1-Gate explizit machen
+  # ============================================================================
+  - id: "e2-explicit-gate"
+    title: "EINGRIFF 2: DecisionResolver Tier1-Gate auf hasHardEvidence umstellen"
+    description: |
+      KERNFIX — Confidence wird NICHT MEHR als Decision-Input gebraucht.
+
+      Aktuell (DecisionResolver.cs:63):
+        if (tier == EvidenceTier.Tier1_Structural)
+        {
+            if (datAvailable) return DecisionClass.Review;
+            if (!hasConflict && confidence >= 85) return DecisionClass.Sort;
+            return DecisionClass.Review;
+        }
+
+      Problem: `confidence >= 85` ist Magic Number. Funktioniert nur zufaellig,
+      weil DiscHeader(92) und CartridgeHeader(90) >= 85 sind. Ist aber fragil
+      und semantisch falsch — die Entscheidung sollte auf Evidenz-Typ basieren,
+      nicht auf einem Zahlenwert.
+
+      Fix: Neuer Parameter `bool hasHardEvidence` statt `confidence >= 85`:
+        public static DecisionClass Resolve(
+            EvidenceTier tier, bool hasConflict, int confidence,
+            bool datAvailable, ConflictType conflictType,
+            bool hasHardEvidence = false)  // NEU
+        {
+            // ... bestehende Cross-Family, Tier0 etc. unveraendert ...
+
+            if (tier == EvidenceTier.Tier1_Structural)
+            {
+                if (datAvailable) return DecisionClass.Review;
+                if (!hasConflict && hasHardEvidence) return DecisionClass.Sort;  // EXPLIZIT
+                return DecisionClass.Review;
+            }
+            // ... rest unveraendert ...
+        }
+
+      Aufrufer anpassen:
+      1. HypothesisResolver.cs: DecisionResolver.Resolve(..., hasHardEvidence: hasHardEvidence)
+         (Variable existiert bereits als lokale Variable)
+      2. EnrichmentPipelinePhase.cs: DecisionResolver.Resolve(..., hasHardEvidence: hasHardEvidence)
+         (Variable existiert bereits)
+      3. Backward-compatible: Default-Wert hasHardEvidence=false -> bestehende Aufrufer
+         ohne den Parameter aendern Verhalten NICHT (bleiben konservativ Review).
+
+      KONSEQUENZ: Nach diesem Fix hat Confidence KEINEN Einfluss auf Entscheidungen mehr.
+      Confidence ist reiner Display-Wert. Entscheidungen basieren auf:
+      - EvidenceTier (was fuer Evidenz?)
+      - HasConflict (widerspricht sich was?)
+      - HasHardEvidence (ist die Evidenz strukturell?)
+      - DatAvailable (gibt es eine DAT die keinen Hash-Match hatte?)
+      - ConflictType (gleiche oder verschiedene Plattform-Familie?)
+
+      FOLGE-CLEANUP:
+      - FamilyPipelineSelector.cs: Confidence-Bump MAX(confidence, 92) fuer DiscHeader
+        entfernen — nicht mehr noetig, da Confidence nicht mehr Decision-Input ist.
+      - FamilyPipelineSelector.cs: Confidence-Cap MIN(confidence, 75) bei Cross-Family
+        bleibt — ist Display-relevant (niedrigerer Confidence-Wert bei Konflikten ist korrekt).
+    phase: 2
+    agent: gem-implementer
+    covers:
+      - "D-003"
+    priority: critical
+    status: pending
+    dependencies:
+      - "e1-migrate-casts"
+    context_files:
+      - path: "src/Romulus.Core/Classification/DecisionResolver.cs"
+        description: "Tier1-Gate Zeile 63-65 — Kern des Fixes"
+      - path: "src/Romulus.Core/Classification/HypothesisResolver.cs"
+        description: "Aufrufer von DecisionResolver.Resolve() — Zeile 243"
+      - path: "src/Romulus.Infrastructure/Orchestration/EnrichmentPipelinePhase.cs"
+        description: "Aufrufer von DecisionResolver.Resolve() — DAT-Authority-Override"
+      - path: "src/Romulus.Infrastructure/Orchestration/FamilyPipelineSelector.cs"
+        description: "Confidence-Bump cleanup"
+    verification:
+      - "dotnet build src/Romulus.sln — gruen"
+      - "DecisionResolver.Resolve() hat Parameter hasHardEvidence"
+      - "Tier1 + !conflict + hardEvidence → Sort"
+      - "Tier1 + !conflict + !hardEvidence → Review"
+      - "Tier1 + conflict → Review (egal ob hardEvidence)"
+      - "Tier1 + datAvailable → Review (egal ob hardEvidence)"
+      - "Alle anderen Tiers: unveraendert"
+      - "Kein 'confidence >= 85' mehr in DecisionResolver"
+      - "FamilyPipelineSelector MAX(92) Bump entfernt"
+    acceptance_criteria:
+      - "confidence ist nicht mehr Decision-Input in DecisionResolver"
+      - "hasHardEvidence ist expliziter Parameter"
+      - "Backward-compatible Default-Wert false"
+      - "6+ Unit-Tests fuer Tier1-Gate Kombinationen"
+      - "FamilyPipelineSelector Confidence-Bump entfernt"
+    estimated_effort: medium
+    estimated_lines: 60
+
+  # ============================================================================
+  # EINGRIFF 3: Guards reparieren
+  # ============================================================================
+  - id: "e3-softonly-cap"
+    title: "EINGRIFF 3a: SoftOnlyCap fest unter SortThreshold"
+    description: |
+      HypothesisResolver.ComputeSoftOnlyCap() kann aktuell Math.Min(85, ...) = 85 erreichen.
+      85 = SortThreshold. Das ist semantisch falsch: Soft-only Evidence darf nie
+      SortThreshold erreichen. Aktuell nicht exploitbar (Soft-Only ist nie Tier1),
+      aber fragil und verwirrend.
+
+      Fix:
+        SoftOnlyCap: 75 → 79    (explizit unter SortThreshold 85, Spielraum fuer Anzeige)
+        ComputeSoftOnlyCap():
+          ALT: Math.Min(85, strongestSourceCap + multiSourceAgreementBonus)
+          NEU: Math.Min(79, strongestSourceCap + multiSourceAgreementBonus)
+
+      Konstanten bleiben:
+        SortThreshold = 85 (unveraendert)
+        ReviewThreshold = 55 (unveraendert)
+        MultiSourceAgreementBonus = 15 (unveraendert — nach Eingriff 2 hat Bonus
+          keinen Decision-Impact mehr, nur Display-Impact)
+
+      HINWEIS: SoftOnlyCap=79 statt 70 oder 65, weil nach Eingriff 2 der Cap
+      KEINEN Decision-Impact mehr hat — nur Display. Ein zu niedriger Cap wuerde
+      Soft-Only-Ergebnisse optisch schlechter aussehen lassen als noetig.
+      79 ist deutlich unter 85 (klar keine Sort-Verwechslung) aber hoch genug
+      fuer informative Confidence-Anzeige.
+    phase: 3
+    agent: gem-implementer
+    covers:
+      - "D-002"
+    priority: high
+    status: pending
+    dependencies:
+      - "e2-explicit-gate"
+    context_files:
+      - path: "src/Romulus.Core/Classification/HypothesisResolver.cs"
+        description: "SoftOnlyCap Konstante und ComputeSoftOnlyCap()"
+    verification:
+      - "dotnet build src/Romulus.sln — gruen"
+      - "SoftOnlyCap Konstante == 79"
+      - "ComputeSoftOnlyCap() <= 79 fuer ALLE Soft-Source-Kombinationen"
+      - "Invariantentest: ComputeSoftOnlyCap < SortThreshold"
+    acceptance_criteria:
+      - "SoftOnlyCap kann mathematisch nie SortThreshold erreichen"
+      - "Invariantentest beweist SoftOnlyCap < SortThreshold"
+      - "Bestehende Tests gruen"
+    estimated_effort: small
+    estimated_lines: 10
+
+  - id: "e3-ambiguous-guard"
+    title: "EINGRIFF 3b: AMBIGUOUS Entry-Guard Tier-basiert machen"
+    description: |
+      Aktueller AMBIGUOUS-Trigger (HypothesisResolver.cs:136):
+        if (winner.MaxSingleConfidence >= 60 && runnerMax >= 60)
+
+      Problem: Nach Confidence-Entkopplung (Eingriff 1) ist FolderName.ConfidenceRating()=45.
+      Das bedeutet FolderName vs FolderName Konflikte triggern AMBIGUOUS nicht mehr
+      (beide < 60). Das ist eine stille Verhaltensaenderung.
+
+      ANALYSE:
+      - FolderName vs FolderName ist Tier3 vs Tier3. DecisionResolver setzt Tier3 → Blocked.
+      - AMBIGUOUS vs Blocked: Beide verhindern Sortierung. Semantisch:
+        AMBIGUOUS = "wir wissen nicht WAS es ist"
+        Blocked = "wir koennen nicht sortieren"
+      - Fuer Tier3 vs Tier3 Konflikte ist Blocked korrekt — FolderName-Konflikte
+        haben zu wenig Evidenz fuer eine AMBIGUOUS-Diagnose.
+      - AMBIGUOUS sollte nur triggern wenn BEIDE Seiten mindestens Tier2-Evidenz haben.
+
+      Fix: Entry-Guard auf Tier-basiert umstellen:
+        ALT: if (winner.MaxSingleConfidence >= 60 && runnerMax >= 60)
+        NEU: if (winnerBestTier <= EvidenceTier.Tier2_StrongHeuristic
+              && runnerBestTier <= EvidenceTier.Tier2_StrongHeuristic)
+
+      Dazu: winnerBestTier und runnerBestTier aus den Hypothesen ableiten:
+        var winnerBestTier = winner.Value.Items.Min(h => h.Source.ToEvidenceTier());
+        var runnerBestTier = sorted[1].Value.Items.Min(h => h.Source.ToEvidenceTier());
+
+      EFFEKT:
+      - Hard vs Hard Konflikte (Tier0/Tier1): AMBIGUOUS moeglich (wie bisher)
+      - Tier2 vs Tier2 (UniqueExt vs ArchiveContent): AMBIGUOUS moeglich (wie bisher)
+      - Tier3 vs Tier3 (Folder vs Keyword): KEIN AMBIGUOUS → direkt Blocked (NEU, korrekt)
+      - Tier3 vs Tier2: KEIN AMBIGUOUS → Tier2 gewinnt klar (NEU, korrekt)
+    phase: 3
+    agent: gem-implementer
+    covers:
+      - "S-002"
+    priority: high
+    status: pending
+    dependencies:
+      - "e1-migrate-casts"
+    context_files:
+      - path: "src/Romulus.Core/Classification/HypothesisResolver.cs"
+        description: "AMBIGUOUS-Detection Zeilen 136-167"
+    verification:
+      - "dotnet build src/Romulus.sln — gruen"
+      - "AMBIGUOUS triggert bei Tier1 vs Tier1 Konflikten"
+      - "AMBIGUOUS triggert bei Tier2 vs Tier2 Konflikten"
+      - "AMBIGUOUS triggert NICHT bei Tier3 vs Tier3 Konflikten"
+      - "AMBIGUOUS triggert NICHT bei Tier3 vs Tier2 Konflikten"
+      - "Bestehende AMBIGUOUS-Tests gruen (ggf. angepasst mit Begruendung)"
+    acceptance_criteria:
+      - "Entry-Guard ist Tier-basiert, nicht Confidence-basiert"
+      - "4+ Unit-Tests fuer Tier-Kombinationen"
+      - "Kein Magic Number (60) mehr im AMBIGUOUS-Pfad"
+    estimated_effort: small
+    estimated_lines: 15
+
+  - id: "e3-boundary-tests"
+    title: "EINGRIFF 3c: Boundary- und Invariantentests ergaenzen"
+    description: |
+      Nach allen 3 Eingriffen: gezielte Tests die die neuen Invarianten absichern.
+
+      Invariantentests:
+      1. ConfidenceRating()-Kalibrierung: Jeder Tier3-Source hat ConfidenceRating < 60
+      2. ConfidenceRating()-Kalibrierung: Jeder Hard-Source hat ConfidenceRating >= 80
+      3. SoftOnlyCap < SortThreshold fuer ALLE Soft-Source-Kombinationen
+      4. DecisionResolver: confidence-Parameter hat KEINEN Einfluss auf Ergebnis
+         (wenn Tier und hasHardEvidence gleich sind, muss jeder Confidence-Wert dasselbe liefern)
+      5. AMBIGUOUS triggert nur wenn beide Seiten mindestens Tier2
+
+      Boundary-Tests:
+      6. Tier1 + hasHardEvidence=true + !conflict → Sort
+      7. Tier1 + hasHardEvidence=false + !conflict → Review
+      8. Tier1 + hasHardEvidence=true + conflict → Review
+      9. 3-Konsolen-Szenario: A(Tier1) vs B(Tier2) vs C(Tier3) → A gewinnt deterministisch
+      10. Cross-family Hard-vs-Hard → Blocked (nicht AMBIGUOUS, nicht Sort)
+
+      Regressionstests:
+      11. PS1-Header-in-PS2-Disc Downgrade bleibt funktional
+      12. FolderName-only Detection erreicht nie Sort (auch nicht als Display-Confidence >= 85)
+      13. DatNameOnly + Cross-console-Detection → Review
+
+      Diese Tests sind die langfristige Absicherung des Herzstuecks.
+    phase: 3
+    agent: gem-implementer
+    covers: []
+    priority: high
+    status: pending
+    dependencies:
+      - "e2-explicit-gate"
+      - "e3-softonly-cap"
+      - "e3-ambiguous-guard"
+    context_files:
+      - path: "src/Romulus.Tests/"
+        description: "Bestehende Detection-Tests"
+      - path: "src/Romulus.Core/Classification/"
+        description: "Alle Classification-Dateien"
+    verification:
+      - "dotnet test — alle Tests gruen"
+      - "Mindestens 13 neue Tests (5 Invarianten + 5 Boundary + 3 Regression)"
+      - "Jeder Test prueft eine echte Fachregel, keine Alibi-Assertion"
+    acceptance_criteria:
+      - "13+ neue Tests ergaenzt"
+      - "Alle bestehenden Tests gruen"
+      - "Invarianten sind als [Fact] oder [Theory] mit klarem Namen dokumentiert"
+      - "Tests koennen echte Fehler finden (keine tautologischen Assertions)"
+    estimated_effort: medium
+    estimated_lines: 200
+
+# ============================================================================
+# AUSFUEHRUNGSREIHENFOLGE
+# ============================================================================
+execution_order:
+  phase_1_confidence_decoupling:
+    description: "Confidence von Enum entkoppeln"
+    tasks: ["e1-confidence-rating", "e1-migrate-casts"]
+    gate: "0 (int)DetectionSource.X Casts in Production. Build gruen."
+  phase_2_explicit_gate:
+    description: "Tier1-Gate explizit machen — Confidence wird reiner Display-Wert"
+    tasks: ["e2-explicit-gate"]
+    gate: "Kein confidence>=85 in DecisionResolver. Build gruen."
+  phase_3_guards_and_tests:
+    description: "Guards reparieren und Invarianten absichern"
+    tasks: ["e3-softonly-cap", "e3-ambiguous-guard", "e3-boundary-tests"]
+    gate: "Alle 13+ neuen Tests gruen. Build gruen. SoftOnlyCap < SortThreshold bewiesen."
+
+# ============================================================================
+# CONTRACTS ZWISCHEN TASKS
+# ============================================================================
+contracts:
+  - from_task: "e1-confidence-rating"
+    to_task: "e1-migrate-casts"
+    interface: "ConfidenceRating() Extension existiert und deckt alle 9 DetectionSource-Werte ab"
+    format: "Gruener Build"
+  - from_task: "e1-migrate-casts"
+    to_task: "e2-explicit-gate"
+    interface: "Keine (int)DetectionSource.X Casts mehr — Confidence-Werte sind kalibriert"
+    format: "Gruener Build + grep bestaetigt 0 Casts"
+  - from_task: "e2-explicit-gate"
+    to_task: "e3-softonly-cap"
+    interface: "Confidence hat keinen Decision-Impact mehr — SoftOnlyCap-Aenderung ist sicher"
+    format: "Gruener Build + confidence nicht in DecisionResolver ausgewertet"
+  - from_task: "e1-migrate-casts"
+    to_task: "e3-ambiguous-guard"
+    interface: "Neue Confidence-Werte aktiv — AMBIGUOUS Entry-Guard muss umgestellt werden"
+    format: "Gruener Build"
+  - from_task: "e2-explicit-gate"
+    to_task: "e3-boundary-tests"
+    interface: "Alle Eingriffe abgeschlossen — Invariantentests koennen Endversion pruefen"
+    format: "Gruener Build"
+
+# ============================================================================
+# AKZEPTANZKRITERIEN GESAMT
+# ============================================================================
+final_acceptance:
+  must_pass:
+    - "Build gruen: dotnet build src/Romulus.sln"
+    - "Tests gruen: dotnet test src/Romulus.sln"
+    - "0 (int)DetectionSource.X Casts in Production-Code"
+    - "Kein confidence >= N Check in DecisionResolver (Confidence ist nicht Decision-Input)"
+    - "SoftOnlyCap < SortThreshold (mathematisch bewiesen)"
+    - "AMBIGUOUS Entry-Guard ist Tier-basiert, nicht Confidence-basiert"
+    - "13+ neue Invarianten-/Boundary-/Regressionstests gruen"
+    - "FamilyPipelineSelector Confidence-Bump(92) entfernt"
+    - "Preview/Execute/Report Paritaet: keine fachliche Divergenz"
+  confidence_is_display_only:
+    description: |
+      Nach allen 3 Eingriffen muss gelten:
+      Confidence hat KEINEN Einfluss auf SortDecision.
+      Entscheidungen basieren ausschliesslich auf (Tier, HasConflict, HasHardEvidence, DatAvailable, ConflictType).
+      Confidence ist ein informativer Display-Wert fuer GUI, CLI, API und Reports.
+    test: |
+      Invariantentest: Fuer Tier1 + !conflict + hasHardEvidence:
+        confidence=0  → Sort
+        confidence=50 → Sort
+        confidence=100→ Sort
+      Fuer Tier1 + !conflict + !hasHardEvidence:
+        confidence=0  → Review
+        confidence=50 → Review
+        confidence=100→ Review
+          - scenario: "Identischer Input durch CLI und API"
+            steps:
+              - "CLI-Run mit Sample-Sammlung"
+              - "API-Run mit identischer Sammlung"
+              - "Vergleich der JSON-Outputs"
+            expected_result: "Identische ConsoleKey, Confidence, DecisionClass pro File"
+          - scenario: "GUI zeigt kalibrierte Confidence"
+            steps:
+              - "GUI-Run mit Sample-Sammlung"
+              - "Confidence-Spalte in Ergebnis-Tabelle pruefen"
+            expected_result: "FolderName-Only Files zeigen Confidence <= 50"
+
+planning_pass: 1
+planning_history:
+  - pass: 1
+    reason: "Initialer Sanierungsplan aus Core-Detection-Audit abgeleitet"
+    timestamp: "2026-04-15T23:45:00Z"

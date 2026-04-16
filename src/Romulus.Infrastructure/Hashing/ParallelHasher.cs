@@ -9,10 +9,13 @@ namespace Romulus.Infrastructure.Hashing;
 /// </summary>
 public sealed class ParallelHasher
 {
+    private const int DefaultMaxThreads = 8;
+    private const int SingleThreadBatchThreshold = 4;
+
     /// <summary>
     /// Calculate optimal thread count based on processor count.
     /// </summary>
-    public static int GetOptimalThreadCount(int maxThreads = 8)
+    public static int GetOptimalThreadCount(int maxThreads = DefaultMaxThreads)
         => Math.Max(1, Math.Min(Environment.ProcessorCount, maxThreads));
 
     /// <summary>
@@ -45,7 +48,7 @@ public sealed class ParallelHasher
     public static async Task<ParallelHashResult> HashFilesAsync(
         IReadOnlyList<string> files,
         string algorithm = "SHA1",
-        int maxThreads = 8,
+        int maxThreads = DefaultMaxThreads,
         Action<int, int>? onProgress = null,
         CancellationToken ct = default)
     {
@@ -54,7 +57,7 @@ public sealed class ParallelHasher
 
         var threadCount = GetOptimalThreadCount(maxThreads);
 
-        if (files.Count <= 4 || threadCount <= 1)
+        if (files.Count <= SingleThreadBatchThreshold || threadCount <= 1)
         {
             // Single-threaded for small batches
             return HashFilesSingleThread(files, algorithm, onProgress, ct);
@@ -101,7 +104,7 @@ public sealed class ParallelHasher
     public static ParallelHashResult HashFiles(
         IReadOnlyList<string> files,
         string algorithm = "SHA1",
-        int maxThreads = 8,
+        int maxThreads = DefaultMaxThreads,
         Action<int, int>? onProgress = null)
     {
         return Task.Run(() => HashFilesAsync(files, algorithm, maxThreads, onProgress)).GetAwaiter().GetResult();

@@ -931,7 +931,54 @@ public sealed class RunEnvironmentBuilder
         if (IsRuntimeSentinelConsoleKey(uppercaseKey))
             return null;
 
-        return IsValidRuntimeConsoleKey(uppercaseKey) ? uppercaseKey : null;
+        if (IsValidRuntimeConsoleKey(uppercaseKey))
+            return uppercaseKey;
+
+        // Fallback: sanitize the stem (strip trailing suffixes like dates/versions,
+        // replace invalid chars) so unresolvable DATs stay in the index and remain
+        // available for cross-console hash lookup instead of being silently dropped.
+        var sanitized = SanitizeStemToConsoleKey(trimmedKey);
+        return sanitized;
+    }
+
+    internal static string? SanitizeStemToConsoleKey(string stem)
+    {
+        if (string.IsNullOrWhiteSpace(stem))
+            return null;
+
+        // Strip trailing descriptor suffixes like (date), (TOSEC-version), [format]
+        var stripped = StripTrailingDescriptorSuffixes(stem);
+        if (string.IsNullOrWhiteSpace(stripped))
+            stripped = stem;
+
+        var upper = stripped.ToUpperInvariant();
+
+        // Replace sequences of non-alphanumeric / non-dash / non-underscore with a single underscore
+        var sb = new StringBuilder(upper.Length);
+        var lastWasSeparator = true; // suppress leading separator
+        foreach (var ch in upper)
+        {
+            if (char.IsLetterOrDigit(ch) || ch == '-')
+            {
+                sb.Append(ch);
+                lastWasSeparator = false;
+            }
+            else if (!lastWasSeparator)
+            {
+                sb.Append('_');
+                lastWasSeparator = true;
+            }
+        }
+
+        // Trim trailing separator
+        while (sb.Length > 0 && sb[sb.Length - 1] == '_')
+            sb.Length--;
+
+        if (sb.Length == 0)
+            return null;
+
+        var result = sb.ToString();
+        return IsRuntimeSentinelConsoleKey(result) ? null : result;
     }
 
     private static IEnumerable<string> EnumerateRuntimeConsoleDescriptors(

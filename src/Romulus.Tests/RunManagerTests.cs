@@ -92,7 +92,7 @@ public class RunManagerTests
             Assert.NotNull(first);
             await mgr.WaitForCompletion(first!.RunId, 50);
 
-            await Task.Delay(25);
+            await WaitForClockAdvanceAsync();
 
             var second = mgr.TryCreate(new RunRequest { Roots = new[] { secondRoot }, Mode = "DryRun" }, "DryRun");
             Assert.NotNull(second);
@@ -684,6 +684,13 @@ public class RunManagerTests
         Assert.Equal(RunCreateDisposition.Created, first.Disposition);
         Assert.Equal(RunCreateDisposition.IdempotencyConflict, second.Disposition);
         Assert.Equal(first.Run!.RunId, second.Run!.RunId);
+    }
+
+    private static async Task WaitForClockAdvanceAsync()
+    {
+        var snapshot = DateTime.UtcNow;
+        while (DateTime.UtcNow <= snapshot)
+            await Task.Yield();
     }
 
     private static string GetTestRoot()

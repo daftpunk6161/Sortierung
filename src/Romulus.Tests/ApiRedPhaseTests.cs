@@ -172,18 +172,14 @@ public sealed class ApiRedPhaseTests : IDisposable
             using var createDoc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
             var runId = createDoc.RootElement.GetProperty("run").GetProperty("runId").GetString();
 
-            // F-01: Poll until run has elapsed time > 0 instead of fixed delay
-            JsonDocument statusDoc;
-            for (int attempt = 0; attempt < 20; attempt++)
+            await WaitUntilAsync(async () =>
             {
                 var statusResponse = await client.GetAsync($"/runs/{runId}");
                 Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
-                statusDoc = JsonDocument.Parse(await statusResponse.Content.ReadAsStringAsync());
+                using var statusDoc = JsonDocument.Parse(await statusResponse.Content.ReadAsStringAsync());
                 var run = statusDoc.RootElement.GetProperty("run");
-                if (run.TryGetProperty("elapsedMs", out var el) && el.GetInt64() > 0)
-                    break;
-                await Task.Delay(50);
-            }
+                return run.TryGetProperty("elapsedMs", out var elapsedMs) && elapsedMs.GetInt64() > 0;
+            }, TimeSpan.FromSeconds(2));
 
             // Final read for assertion
             var finalStatusResponse = await client.GetAsync($"/runs/{runId}");
@@ -365,26 +361,22 @@ public sealed class ApiRedPhaseTests : IDisposable
             using var createDoc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
             var runId = createDoc.RootElement.GetProperty("run").GetProperty("runId").GetString()!;
 
-            // F-01: Poll until run starts instead of fixed delay
-            for (int attempt = 0; attempt < 20; attempt++)
+            await WaitUntilAsync(async () =>
             {
                 var statusCheck = await client.GetAsync($"/runs/{runId}");
-                using var sd = JsonDocument.Parse(await statusCheck.Content.ReadAsStringAsync());
-                var status = sd.RootElement.GetProperty("run").GetProperty("status").GetString();
-                if (status is "running") break;
-                await Task.Delay(50);
-            }
+                using var statusDoc = JsonDocument.Parse(await statusCheck.Content.ReadAsStringAsync());
+                var status = statusDoc.RootElement.GetProperty("run").GetProperty("status").GetString();
+                return status is "running";
+            }, TimeSpan.FromSeconds(2));
             await client.PostAsync($"/runs/{runId}/cancel", null);
 
-            // F-01: Poll for cancellation to take effect
-            for (int attempt = 0; attempt < 20; attempt++)
+            await WaitUntilAsync(async () =>
             {
                 var statusCheck = await client.GetAsync($"/runs/{runId}");
-                using var sd = JsonDocument.Parse(await statusCheck.Content.ReadAsStringAsync());
-                var status = sd.RootElement.GetProperty("run").GetProperty("status").GetString();
-                if (status is "cancelled" or "completed" or "failed") break;
-                await Task.Delay(50);
-            }
+                using var statusDoc = JsonDocument.Parse(await statusCheck.Content.ReadAsStringAsync());
+                var status = statusDoc.RootElement.GetProperty("run").GetProperty("status").GetString();
+                return status is "cancelled" or "completed" or "failed";
+            }, TimeSpan.FromSeconds(2));
 
             var resultResponse = await client.GetAsync($"/runs/{runId}/result");
             Assert.Equal(HttpStatusCode.OK, resultResponse.StatusCode);
@@ -423,12 +415,12 @@ public sealed class ApiRedPhaseTests : IDisposable
     [Fact]
     public async Task SSE_Status_Events_Should_Include_ProgressPercent_Issue9()
     {
-        var step = 0;
+        using var runStarted = new ManualResetEventSlim(false);
         var gate = new ManualResetEventSlim(false);
         using var factory = CreateFactory(executor: (run, _, _, ct) =>
         {
             run.ProgressMessage = "Phase 1/3: Scanning...";
-            Interlocked.Exchange(ref step, 1);
+            runStarted.Set();
             gate.Wait(ct);
             return new RunExecutionOutcome("completed", new ApiRunResult
             {
@@ -447,9 +439,8 @@ public sealed class ApiRedPhaseTests : IDisposable
             using var createDoc = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
             var runId = createDoc.RootElement.GetProperty("run").GetProperty("runId").GetString()!;
 
-            // Wait for executor to start
-            while (Interlocked.CompareExchange(ref step, 0, 0) < 1)
-                await Task.Delay(50);
+            Assert.True(runStarted.Wait(TimeSpan.FromSeconds(2)),
+                "Run should have entered execution before status polling.");
 
             // Poll the run — must have progressPercent
             var statusResponse = await client.GetAsync($"/runs/{runId}");
@@ -794,6 +785,20 @@ public sealed class ApiRedPhaseTests : IDisposable
                 Directory.Delete(path, true);
         }
         catch { }
+    }
+
+    private static async Task WaitUntilAsync(Func<Task<bool>> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (await condition())
+                return;
+
+            await Task.Yield();
+        }
+
+        Assert.Fail($"Condition was not satisfied within {timeout.TotalMilliseconds}ms.");
     }
 
     private static async Task<string> ReadSseContentWithTimeout(HttpResponseMessage response, int timeoutMs)

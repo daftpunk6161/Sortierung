@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Romulus.Api;
 using Romulus.Contracts.Models;
+using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Safety;
 using Xunit;
 
@@ -299,30 +300,32 @@ public sealed class ApiCoverageBoostTests : IDisposable
     }
 
     [Fact]
-    public async Task RateLimiter_WindowReset_AllowsNewRequests()
+    public void RateLimiter_WindowReset_AllowsNewRequests()
     {
-        var limiter = new RateLimiter(2, TimeSpan.FromMilliseconds(30));
+        var clock = new TestTimeProvider(new DateTimeOffset(2026, 4, 10, 12, 0, 0, TimeSpan.Zero));
+        var limiter = new RateLimiter(2, TimeSpan.FromMilliseconds(30), clock);
         Assert.True(limiter.TryAcquire("c"));
         Assert.True(limiter.TryAcquire("c"));
         Assert.False(limiter.TryAcquire("c"));
 
-        await Task.Delay(50);
+        clock.Advance(TimeSpan.FromMilliseconds(50));
 
         Assert.True(limiter.TryAcquire("c"));
     }
 
     [Fact]
-    public async Task RateLimiter_EvictStaleBuckets_RemovesExpiredClients()
+    public void RateLimiter_EvictStaleBuckets_RemovesExpiredClients()
     {
         // Use a very short window. Eviction happens when TryAcquire is called
         // and 5 minutes have passed since last eviction.
         // We can't easily test the 5-minute threshold in a unit test,
         // but we can verify window reset behavior which exercises the bucket logic.
-        var limiter = new RateLimiter(1, TimeSpan.FromMilliseconds(10));
+        var clock = new TestTimeProvider(new DateTimeOffset(2026, 4, 10, 12, 0, 0, TimeSpan.Zero));
+        var limiter = new RateLimiter(1, TimeSpan.FromMilliseconds(10), clock);
         Assert.True(limiter.TryAcquire("stale-client"));
         Assert.False(limiter.TryAcquire("stale-client"));
 
-        await Task.Delay(20);
+        clock.Advance(TimeSpan.FromMilliseconds(20));
 
         // After window expires, request succeeds again (window reset path)
         Assert.True(limiter.TryAcquire("stale-client"));
@@ -390,5 +393,17 @@ public sealed class ApiCoverageBoostTests : IDisposable
         Assert.NotNull(result);
         // When datRoot exists but isn't in allowed roots, WithinAllowedRoots should be false
         // When datRoot doesn't exist in settings, WithinAllowedRoots depends on the empty-path check
+    }
+
+    private sealed class TestTimeProvider(DateTimeOffset initialUtcNow) : ITimeProvider
+    {
+        private DateTimeOffset _utcNow = initialUtcNow;
+
+        public DateTimeOffset UtcNow => _utcNow;
+
+        public void Advance(TimeSpan delta)
+        {
+            _utcNow = _utcNow.Add(delta);
+        }
     }
 }

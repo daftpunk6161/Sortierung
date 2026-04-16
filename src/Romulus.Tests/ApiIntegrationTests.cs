@@ -307,9 +307,9 @@ public sealed class ApiIntegrationTests
             }
 
             var firstRunId = await CreateRunAsync(ownerClient, firstRoot);
-            await Task.Delay(25);
+            await WaitForClockAdvanceAsync();
             _ = await CreateRunAsync(otherClient, foreignRoot);
-            await Task.Delay(25);
+            await WaitForClockAdvanceAsync();
             var secondRunId = await CreateRunAsync(ownerClient, secondRoot);
 
             var listResponse = await ownerClient.GetAsync("/runs");
@@ -1871,6 +1871,13 @@ public sealed class ApiIntegrationTests
 
         if (expectedRunId is not null)
             Assert.Equal(expectedRunId, root.GetProperty("runId").GetString());
+    }
+
+    private static async Task WaitForClockAdvanceAsync()
+    {
+        var snapshot = DateTime.UtcNow;
+        while (DateTime.UtcNow <= snapshot)
+            await Task.Yield();
     }
 
     private sealed class FakeCollectionIndex : ICollectionIndex

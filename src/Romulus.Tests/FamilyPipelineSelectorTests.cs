@@ -40,8 +40,9 @@ public sealed class FamilyPipelineSelectorTests
     }
 
     [Fact]
-    public void Apply_DiscHeaderWithoutDat_BoostsConfidence()
+    public void Apply_DiscHeaderWithoutDat_PassesThroughConfidence()
     {
+        // Disc header confidence boost removed — gate is now hasHardEvidence in DecisionResolver.
         var selector = new FamilyPipelineSelector();
         var input = new FamilyPipelineInput(
             DecisionClass: DecisionClass.Review,
@@ -64,7 +65,7 @@ public sealed class FamilyPipelineSelectorTests
 
         var output = selector.Apply(input);
 
-        Assert.True(output.DetectionConfidence >= 92);
+        Assert.Equal(70, output.DetectionConfidence); // no confidence boost
         Assert.Equal(DecisionClass.Review, output.DecisionClass);
     }
 

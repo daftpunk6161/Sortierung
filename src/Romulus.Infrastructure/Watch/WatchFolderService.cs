@@ -9,8 +9,14 @@ namespace Romulus.Infrastructure.Watch;
 /// </summary>
 public sealed class WatchFolderService : IDisposable
 {
-    private static readonly TimeSpan CooldownAfterTrigger = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan RecoveryRetryInterval = TimeSpan.FromSeconds(5);
+    private const int DefaultDebounceSeconds = 5;
+    private const int DefaultMaxWaitSeconds = 30;
+    private const int CooldownAfterTriggerSeconds = 30;
+    private const int RecoveryRetryIntervalSeconds = 5;
+    private const int WatcherInternalBufferSizeBytes = 64 * 1024;
+
+    private static readonly TimeSpan CooldownAfterTrigger = TimeSpan.FromSeconds(CooldownAfterTriggerSeconds);
+    private static readonly TimeSpan RecoveryRetryInterval = TimeSpan.FromSeconds(RecoveryRetryIntervalSeconds);
 
     private readonly object _sync = new();
     private readonly List<FileSystemWatcher> _watchers = new();
@@ -21,8 +27,8 @@ public sealed class WatchFolderService : IDisposable
     private Timer? _recoveryTimer;
     private DateTime _firstChangeUtc = DateTime.MaxValue;
     private DateTime _lastTriggerUtc = DateTime.MinValue;
-    private TimeSpan _debounceInterval = TimeSpan.FromSeconds(5);
-    private TimeSpan _maxWait = TimeSpan.FromSeconds(30);
+    private TimeSpan _debounceInterval = TimeSpan.FromSeconds(DefaultDebounceSeconds);
+    private TimeSpan _maxWait = TimeSpan.FromSeconds(DefaultMaxWaitSeconds);
     private bool _pendingWhileBusy;
     private bool _disposed;
 
@@ -57,8 +63,8 @@ public sealed class WatchFolderService : IDisposable
 
     public int Start(
         IReadOnlyList<string> roots,
-        int debounceSeconds = 5,
-        int maxWaitSeconds = 30)
+        int debounceSeconds = DefaultDebounceSeconds,
+        int maxWaitSeconds = DefaultMaxWaitSeconds)
     {
         ArgumentNullException.ThrowIfNull(roots);
 
@@ -292,7 +298,7 @@ public sealed class WatchFolderService : IDisposable
                 IncludeSubdirectories = true,
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
                 // R7-03: Default 8KB buffer is too small for deep ROM trees; 64KB prevents missed events
-                InternalBufferSize = 65536,
+                InternalBufferSize = WatcherInternalBufferSizeBytes,
                 EnableRaisingEvents = true
             };
 

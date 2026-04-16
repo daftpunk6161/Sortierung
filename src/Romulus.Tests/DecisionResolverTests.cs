@@ -9,7 +9,7 @@ public sealed class DecisionResolverTests
     [Theory]
     [InlineData(EvidenceTier.Tier0_ExactDat, false, 100, DecisionClass.DatVerified)]
     [InlineData(EvidenceTier.Tier0_ExactDat, true, 100, DecisionClass.Review)]
-    [InlineData(EvidenceTier.Tier1_Structural, false, 85, DecisionClass.Sort)]
+    [InlineData(EvidenceTier.Tier1_Structural, false, 85, DecisionClass.Review)]
     [InlineData(EvidenceTier.Tier1_Structural, false, 84, DecisionClass.Review)]
     [InlineData(EvidenceTier.Tier1_Structural, true, 95, DecisionClass.Review)]
     [InlineData(EvidenceTier.Tier2_StrongHeuristic, false, 100, DecisionClass.Review)]
@@ -43,14 +43,25 @@ public sealed class DecisionResolverTests
     }
 
     [Fact]
-    public void Resolve_Tier1_DatNotAvailable_HighConf_ReturnsSort()
+    public void Resolve_Tier1_DatNotAvailable_HardEvidence_ReturnsSort()
     {
-        // Structural evidence, no DAT loaded → original behavior preserved.
+        // Structural evidence with hard evidence flag, no DAT loaded → Sort.
+        var actual = DecisionResolver.Resolve(
+            EvidenceTier.Tier1_Structural, hasConflict: false, confidence: 90,
+            datAvailable: false, conflictType: ConflictType.None, hasHardEvidence: true);
+
+        Assert.Equal(DecisionClass.Sort, actual);
+    }
+
+    [Fact]
+    public void Resolve_Tier1_DatNotAvailable_NoHardEvidence_ReturnsReview()
+    {
+        // Structural tier but no hard evidence flag → conservative Review.
         var actual = DecisionResolver.Resolve(
             EvidenceTier.Tier1_Structural, hasConflict: false, confidence: 90,
             datAvailable: false, conflictType: ConflictType.None);
 
-        Assert.Equal(DecisionClass.Sort, actual);
+        Assert.Equal(DecisionClass.Review, actual);
     }
 
     [Fact]
@@ -137,9 +148,12 @@ public sealed class DecisionResolverTests
     [Fact]
     public void Resolve_BackwardCompatible_3ArgOverload_StillWorks()
     {
-        // Ensure the 3-arg overload (no datAvailable/conflictType) preserves old behavior.
-        Assert.Equal(DecisionClass.Sort,
+        // 3-arg overload defaults hasHardEvidence=false: Tier1 → Review (conservative).
+        Assert.Equal(DecisionClass.Review,
             DecisionResolver.Resolve(EvidenceTier.Tier1_Structural, false, 85));
+        // With hasHardEvidence, Tier1 → Sort.
+        Assert.Equal(DecisionClass.Sort,
+            DecisionResolver.Resolve(EvidenceTier.Tier1_Structural, false, 85, hasHardEvidence: true));
         Assert.Equal(DecisionClass.DatVerified,
             DecisionResolver.Resolve(EvidenceTier.Tier0_ExactDat, false, 100));
         Assert.Equal(DecisionClass.Review,

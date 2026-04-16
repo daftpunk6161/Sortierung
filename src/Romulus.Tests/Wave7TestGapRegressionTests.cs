@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
@@ -249,6 +250,136 @@ public sealed class Wave7TestGapRegressionTests : IDisposable
         var policy = new AllowedRootPathPolicy([root]);
 
         Assert.False(policy.IsPathAllowed(pathViaLink));
+    }
+
+    [Fact]
+    public void F017_FeatureCommandService_ProfileMessages_UseLocalizationKeys()
+    {
+        var source = ReadSource("src/Romulus.UI.Wpf/Services/FeatureCommandService.cs");
+
+        Assert.DoesNotContain("Kein Benutzerprofil ausgewaehlt.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Profil gespeichert:", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Profil konnte nicht gespeichert werden:", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Workflow/Profil geladen:", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"kein Workflow\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"kein Profil\"", source, StringComparison.Ordinal);
+
+        Assert.Contains("_vm.Loc[\"Cmd.ProfileDeleteNoSelection\"]", source, StringComparison.Ordinal);
+        Assert.Contains("_vm.Loc.Format(\"Cmd.ProfileSaved\"", source, StringComparison.Ordinal);
+        Assert.Contains("_vm.Loc.Format(\"Cmd.ProfileSaveFailed\"", source, StringComparison.Ordinal);
+        Assert.Contains("_vm.Loc.Format(\"Cmd.ProfileLoaded\"", source, StringComparison.Ordinal);
+        Assert.Contains("_vm.Loc[\"Cmd.ProfileLoadedNoWorkflow\"]", source, StringComparison.Ordinal);
+        Assert.Contains("_vm.Loc[\"Cmd.ProfileLoadedNoProfile\"]", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void F017_ProfileLocalizationKeys_ArePresentInAllWave7Locales()
+    {
+        var requiredKeys = new[]
+        {
+            "Cmd.ProfileDeleteNoSelection",
+            "Cmd.ProfileSaved",
+            "Cmd.ProfileSaveFailed",
+            "Cmd.ProfileLoaded",
+            "Cmd.ProfileLoadedNoWorkflow",
+            "Cmd.ProfileLoadedNoProfile"
+        };
+
+        foreach (var locale in new[] { "de.json", "en.json", "fr.json" })
+        {
+            var path = Path.Combine(FindRepositoryRoot(), "data", "i18n", locale);
+            var payload = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(File.ReadAllText(path));
+            Assert.NotNull(payload);
+
+            foreach (var key in requiredKeys)
+            {
+                Assert.True(payload!.TryGetValue(key, out var value), $"Missing key '{key}' in locale '{locale}'.");
+                Assert.Equal(JsonValueKind.String, value.ValueKind);
+                Assert.False(string.IsNullOrWhiteSpace(value.GetString()), $"Empty value for key '{key}' in locale '{locale}'.");
+            }
+        }
+    }
+
+    [Fact]
+    public void F018_WatchFolderService_UsesNamedDefaultsAndBufferConstants()
+    {
+        var source = ReadSource("src/Romulus.Infrastructure/Watch/WatchFolderService.cs");
+
+        Assert.Contains("private const int DefaultDebounceSeconds", source, StringComparison.Ordinal);
+        Assert.Contains("private const int DefaultMaxWaitSeconds", source, StringComparison.Ordinal);
+        Assert.Contains("private const int WatcherInternalBufferSizeBytes", source, StringComparison.Ordinal);
+
+        Assert.DoesNotContain("int debounceSeconds = 5", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("int maxWaitSeconds = 30", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("InternalBufferSize = 65536", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void F018_ParallelHasher_UsesNamedThreadAndBatchThresholdConstants()
+    {
+        var source = ReadSource("src/Romulus.Infrastructure/Hashing/ParallelHasher.cs");
+
+        Assert.Contains("private const int DefaultMaxThreads", source, StringComparison.Ordinal);
+        Assert.Contains("private const int SingleThreadBatchThreshold", source, StringComparison.Ordinal);
+
+        Assert.DoesNotContain("int maxThreads = 8", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("files.Count <= 4", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void F018_ScheduleService_UsesNamedDefaultPollIntervalConstant()
+    {
+        var source = ReadSource("src/Romulus.Infrastructure/Watch/ScheduleService.cs");
+
+        Assert.Contains("private const int DefaultPollIntervalSeconds", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("TimeSpan.FromSeconds(15)", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void F016_ApiRedPhaseTests_UseAdaptivePollingInsteadOfFixed50msSleepLoops()
+    {
+        var source = ReadSource("src/Romulus.Tests/ApiRedPhaseTests.cs");
+
+        Assert.DoesNotContain("await Task.Delay(50);", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void F016_TestSuite_DoesNotUseFixedSleepForRateLimiterAndArchiveTimingChecks()
+    {
+        var auditSource = ReadSource("src/Romulus.Tests/AuditFindingsFixTests.cs");
+        var block4Source = ReadSource("src/Romulus.Tests/Block4_RobustnessTests.cs");
+        var coverageSource = ReadSource("src/Romulus.Tests/ApiCoverageBoostTests.cs");
+
+        Assert.DoesNotContain("Thread.Sleep(100);", auditSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Threading.Thread.Sleep(10);", block4Source, StringComparison.Ordinal);
+        Assert.DoesNotContain("await Task.Delay(50);", coverageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("await Task.Delay(20);", coverageSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void F016_RunOrderingTests_AvoidFixed25msDelays()
+    {
+        var apiIntegrationSource = ReadSource("src/Romulus.Tests/ApiIntegrationTests.cs");
+        var runManagerSource = ReadSource("src/Romulus.Tests/RunManagerTests.cs");
+
+        Assert.DoesNotContain("await Task.Delay(25);", apiIntegrationSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("await Task.Delay(25);", runManagerSource, StringComparison.Ordinal);
+    }
+
+    private static string ReadSource(string relativePath)
+    {
+        var root = FindRepositoryRoot();
+        var fullPath = Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        return File.ReadAllText(fullPath);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "AGENTS.md")))
+            dir = dir.Parent;
+
+        return dir?.FullName ?? throw new InvalidOperationException("Could not resolve repository root from test context.");
     }
 
     private static ConversionStep MakeStep(int order, string inputExt, string outputExt, string toolName, bool intermediate = false)

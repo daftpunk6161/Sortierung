@@ -286,16 +286,15 @@ public sealed class AuditFindingsFixTests : IDisposable
     [Fact]
     public void RateLimiter_WindowReset_AllowsNewRequests()
     {
-        // Use a very short window to test reset
-        var limiter = new RateLimiter(maxRequestsPerWindow: 5, window: TimeSpan.FromMilliseconds(50));
+        var clock = new TestTimeProvider(new DateTimeOffset(2026, 4, 10, 12, 0, 0, TimeSpan.Zero));
+        var limiter = new RateLimiter(maxRequestsPerWindow: 5, window: TimeSpan.FromMilliseconds(50), clock);
 
         // Exhaust limit
         for (int i = 0; i < 5; i++)
             Assert.True(limiter.TryAcquire("client"));
         Assert.False(limiter.TryAcquire("client"));
 
-        // Wait for window to expire
-        Thread.Sleep(100);
+        clock.Advance(TimeSpan.FromMilliseconds(100));
 
         // Should be allowed again
         Assert.True(limiter.TryAcquire("client"));
@@ -341,5 +340,17 @@ public sealed class AuditFindingsFixTests : IDisposable
         var sidecarJson = File.ReadAllText(auditPath + ".meta.json");
         Assert.Contains("\"RowCount\"", sidecarJson, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("\"ConsoleSortMoved\"", sidecarJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed class TestTimeProvider(DateTimeOffset initialUtcNow) : ITimeProvider
+    {
+        private DateTimeOffset _utcNow = initialUtcNow;
+
+        public DateTimeOffset UtcNow => _utcNow;
+
+        public void Advance(TimeSpan delta)
+        {
+            _utcNow = _utcNow.Add(delta);
+        }
     }
 }

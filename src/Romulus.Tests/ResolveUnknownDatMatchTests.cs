@@ -249,4 +249,118 @@ public sealed class ResolveUnknownDatMatchTests
 
         Assert.False(result.IsMatch);
     }
+
+    // ═══ TryCrossConsoleDatLookup – Extension Plausibility Guard ═══════
+
+    [Fact]
+    public void TryCrossConsoleDatLookup_N64FileMatchedToNes_RejectedByExtensionGuard()
+    {
+        // Regression: .n64 files were incorrectly assigned to NES via single DAT-hash match
+        var datIndex = new DatIndex();
+        datIndex.Add("NES", "hash_n64_game", "1080 Snowboarding");
+
+        var detector = new ConsoleDetector([
+            new ConsoleInfo(Key: "N64", DisplayName: "Nintendo 64", DiscBased: false,
+                UniqueExts: [".n64", ".z64", ".v64"], AmbigExts: [], FolderAliases: ["N64"],
+                Family: PlatformFamily.NoIntroCartridge),
+            new ConsoleInfo(Key: "NES", DisplayName: "Nintendo Entertainment System", DiscBased: false,
+                UniqueExts: [".nes"], AmbigExts: [], FolderAliases: ["NES"],
+                Family: PlatformFamily.NoIntroCartridge)
+        ]);
+
+        var result = EnrichmentPipelinePhase.TryCrossConsoleDatLookup(
+            datIndex, "hash_n64_game", "UNKNOWN", null,
+            @"C:\roms\1080 TenEighty Snowboarding (Japan, USA) (En,Ja).n64",
+            detector, null);
+
+        Assert.False(result.IsMatch, "DAT match to NES must be rejected when file has .n64 unique extension");
+    }
+
+    [Fact]
+    public void TryCrossConsoleDatLookup_MatchingExtension_Accepted()
+    {
+        var datIndex = new DatIndex();
+        datIndex.Add("NES", "hash_nes_game", "Super Mario Bros");
+
+        var detector = new ConsoleDetector([
+            new ConsoleInfo(Key: "NES", DisplayName: "NES", DiscBased: false,
+                UniqueExts: [".nes"], AmbigExts: [], FolderAliases: ["NES"],
+                Family: PlatformFamily.NoIntroCartridge)
+        ]);
+
+        var result = EnrichmentPipelinePhase.TryCrossConsoleDatLookup(
+            datIndex, "hash_nes_game", "UNKNOWN", null,
+            @"C:\roms\Super Mario Bros (USA).nes",
+            detector, null);
+
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+    }
+
+    [Fact]
+    public void TryCrossConsoleDatLookup_AmbiguousExtension_Accepted()
+    {
+        // .bin is ambiguous (not a uniqueExt), so guard must NOT reject
+        var datIndex = new DatIndex();
+        datIndex.Add("GENESIS", "hash_gen_game", "Sonic");
+
+        var detector = new ConsoleDetector([
+            new ConsoleInfo(Key: "GENESIS", DisplayName: "Genesis", DiscBased: false,
+                UniqueExts: [".md"], AmbigExts: [".bin"], FolderAliases: ["Genesis"],
+                Family: PlatformFamily.NoIntroCartridge),
+            new ConsoleInfo(Key: "PS1", DisplayName: "PlayStation", DiscBased: true,
+                UniqueExts: [".cue"], AmbigExts: [".bin"], FolderAliases: ["PS1"],
+                Family: PlatformFamily.RedumpDisc)
+        ]);
+
+        var result = EnrichmentPipelinePhase.TryCrossConsoleDatLookup(
+            datIndex, "hash_gen_game", "UNKNOWN", null,
+            @"C:\roms\Sonic (USA).bin",
+            detector, null);
+
+        Assert.True(result.IsMatch, "Ambiguous extensions must not be rejected");
+        Assert.Equal("GENESIS", result.ConsoleKey);
+    }
+
+    [Fact]
+    public void TryCrossConsoleDatLookup_NoDetector_FallsThrough()
+    {
+        var datIndex = new DatIndex();
+        datIndex.Add("NES", "hash_n64_game", "1080 Snowboarding");
+
+        var result = EnrichmentPipelinePhase.TryCrossConsoleDatLookup(
+            datIndex, "hash_n64_game", "UNKNOWN", null,
+            @"C:\roms\1080 TenEighty Snowboarding.n64",
+            null, null);
+
+        // Without detector, no extension guard → match accepted (backward compat)
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+    }
+
+    [Fact]
+    public void TryCrossConsoleDatLookup_FastPath_IgnoresExtensionGuard()
+    {
+        // Fast path (consoleKey already known and matches DAT) must NOT apply the guard
+        var datIndex = new DatIndex();
+        datIndex.Add("NES", "hash_game", "Game");
+
+        var detector = new ConsoleDetector([
+            new ConsoleInfo(Key: "NES", DisplayName: "NES", DiscBased: false,
+                UniqueExts: [".nes"], AmbigExts: [], FolderAliases: ["NES"],
+                Family: PlatformFamily.NoIntroCartridge),
+            new ConsoleInfo(Key: "N64", DisplayName: "N64", DiscBased: false,
+                UniqueExts: [".n64"], AmbigExts: [], FolderAliases: ["N64"],
+                Family: PlatformFamily.NoIntroCartridge)
+        ]);
+
+        // File has .n64 ext but consoleKey is explicitly "NES" → fast path should match
+        var result = EnrichmentPipelinePhase.TryCrossConsoleDatLookup(
+            datIndex, "hash_game", "NES", null,
+            @"C:\roms\Game.n64",
+            detector, null);
+
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+    }
 }

@@ -351,19 +351,19 @@ public sealed class ConsoleDetector
         // Method 1: Folder name
         var byFolder = DetectByFolder(filePath, rootPath);
         if (byFolder is not null)
-            hypotheses.Add(new DetectionHypothesis(byFolder, (int)DetectionSource.FolderName,
+            hypotheses.Add(new DetectionHypothesis(byFolder, DetectionSource.FolderName.ConfidenceRating(),
                 DetectionSource.FolderName, $"folder={byFolder}"));
 
         // Method 2: Unique extension
         var byExt = DetectByExtension(ext);
         if (byExt is not null)
-            hypotheses.Add(new DetectionHypothesis(byExt, (int)DetectionSource.UniqueExtension,
+            hypotheses.Add(new DetectionHypothesis(byExt, DetectionSource.UniqueExtension.ConfidenceRating(),
                 DetectionSource.UniqueExtension, $"ext={ext}"));
 
         // Method 3: Ambiguous extension
         var ambig = GetAmbiguousMatches(ext);
         if (ambig.Count == 1)
-            hypotheses.Add(new DetectionHypothesis(ambig[0], (int)DetectionSource.AmbiguousExtension,
+            hypotheses.Add(new DetectionHypothesis(ambig[0], DetectionSource.AmbiguousExtension.ConfidenceRating(),
                 DetectionSource.AmbiguousExtension, $"ambig-ext={ext}"));
 
         // Method 4: Disc header
@@ -378,14 +378,14 @@ public sealed class ConsoleDetector
             if (byHeader is not null)
             {
                 var source = DetectionSource.DiscHeader;
-                var confidence = (int)DetectionSource.DiscHeader;
+                var confidence = DetectionSource.DiscHeader.ConfidenceRating();
 
                 // Generic PS1 header strings can appear in PS2 images without BOOT2 markers.
                 // If folder evidence points to PS2 on disc-like extensions, treat this as soft evidence.
                 if (ShouldDowngradeGenericPs1Header(byFolder, byHeader, discExt))
                 {
                     source = DetectionSource.AmbiguousExtension;
-                    confidence = (int)DetectionSource.AmbiguousExtension;
+                    confidence = DetectionSource.AmbiguousExtension.ConfidenceRating();
                 }
 
                 hypotheses.Add(new DetectionHypothesis(byHeader, confidence,
@@ -396,7 +396,7 @@ public sealed class ConsoleDetector
         // Method 5: Archive interior
         var byArchive = DetectByArchiveContent(filePath, ext);
         if (byArchive is not null)
-            hypotheses.Add(new DetectionHypothesis(byArchive, (int)DetectionSource.ArchiveContent,
+            hypotheses.Add(new DetectionHypothesis(byArchive, DetectionSource.ArchiveContent.ConfidenceRating(),
                 DetectionSource.ArchiveContent, $"archive-inner={byArchive}"));
 
         // Method 6: Cartridge header
@@ -404,7 +404,7 @@ public sealed class ConsoleDetector
         {
             var byCartridge = _cartridgeHeaderDetector.Detect(filePath);
             if (byCartridge is not null)
-                hypotheses.Add(new DetectionHypothesis(byCartridge, (int)DetectionSource.CartridgeHeader,
+                hypotheses.Add(new DetectionHypothesis(byCartridge, DetectionSource.CartridgeHeader.ConfidenceRating(),
                     DetectionSource.CartridgeHeader, $"cartridge-header={byCartridge}"));
         }
 

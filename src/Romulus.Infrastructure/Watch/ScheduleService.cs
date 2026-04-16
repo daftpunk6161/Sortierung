@@ -5,6 +5,8 @@ namespace Romulus.Infrastructure.Watch;
 /// </summary>
 public sealed class ScheduleService : IDisposable
 {
+    private const int DefaultPollIntervalSeconds = 15;
+
     private readonly object _sync = new();
     private readonly Func<DateTime> _nowProvider;
     private readonly TimeSpan _pollInterval;
@@ -19,7 +21,7 @@ public sealed class ScheduleService : IDisposable
     public ScheduleService(Func<DateTime>? nowProvider = null, TimeSpan? pollInterval = null)
     {
         _nowProvider = nowProvider ?? (() => DateTime.Now);
-        _pollInterval = pollInterval ?? TimeSpan.FromSeconds(15);
+        _pollInterval = pollInterval ?? TimeSpan.FromSeconds(DefaultPollIntervalSeconds);
     }
 
     public event Action? Triggered;

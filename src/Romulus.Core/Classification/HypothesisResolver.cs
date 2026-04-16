@@ -10,7 +10,7 @@ namespace Romulus.Core.Classification;
 public static class HypothesisResolver
 {
     /// <summary>Baseline soft-only cap for weak single-source signals.</summary>
-    internal const int SoftOnlyCap = 75;
+    internal const int SoftOnlyCap = 79;
 
     /// <summary>Minimum confidence for Sort decision.</summary>
     internal const int SortThreshold = 85;
@@ -119,13 +119,16 @@ public static class HypothesisResolver
             conflictDetail = $"Conflict: {winner.Key}({winner.Value.TotalConfidence}) vs {runner.Key}({runner.Value.TotalConfidence})";
         }
 
-        // Check for AMBIGUOUS: two strong competing consoles both ≥ 60.
-        // Only trigger when evidence quality is genuinely comparable; a clearly
-        // stronger source class should degrade to Review, not erase the winner.
+        // Check for AMBIGUOUS: two strong competing consoles with comparable evidence quality.
+        // Only trigger when both sides have at least strong-heuristic-tier evidence;
+        // a clearly stronger source class should degrade to Review, not erase the winner.
         if (hasConflict && sorted.Count >= 2)
         {
-            var runnerMax = sorted[1].Value.MaxSingleConfidence;
-            if (winner.Value.MaxSingleConfidence >= 60 && runnerMax >= 60)
+            var winnerBestTier = winner.Value.Items.Min(h => h.Source.ToEvidenceTier());
+            var runnerBestTier = sorted[1].Value.Items.Min(h => h.Source.ToEvidenceTier());
+
+            if (winnerBestTier <= EvidenceTier.Tier2_StrongHeuristic
+                && runnerBestTier <= EvidenceTier.Tier2_StrongHeuristic)
             {
                 var winnerHasHard = winner.Value.Items.Any(h => h.Source.IsHardEvidence());
                 var runnerHasHard = sorted[1].Value.Items.Any(h => h.Source.IsHardEvidence());
@@ -241,7 +244,7 @@ public static class HypothesisResolver
 
         // Derive SortDecision with family-conflict awareness
         var decisionClass = DecisionResolver.Resolve(primaryTier, hasConflict, aggregateConfidence,
-            datAvailable: false, conflictType: conflictType);
+            datAvailable: false, conflictType: conflictType, hasHardEvidence: hasHardEvidence);
         var sortDecision = decisionClass.ToSortDecision();
 
         var matchEvidence = BuildMatchEvidence(
@@ -290,7 +293,7 @@ public static class HypothesisResolver
                     ? EvidenceTier.Tier2_StrongHeuristic
                     : EvidenceTier.Tier3_WeakHeuristic;
 
-        return DetermineSortDecision(tier, confidence, conflict);
+        return DecisionResolver.Resolve(tier, conflict, confidence, hasHardEvidence: hardEvidence).ToSortDecision();
     }
 
     private static int ComputeSoftOnlyCap(IReadOnlyList<DetectionSource> winnerSources)
@@ -306,7 +309,7 @@ public static class HypothesisResolver
 
         // Soft-only detections can become strong enough for review but should not
         // exceed hard-evidence sort confidence without corroboration.
-        return Math.Min(85, strongestSourceCap + multiSourceAgreementBonus);
+        return Math.Min(79, strongestSourceCap + multiSourceAgreementBonus);
     }
 
     private static MatchEvidence BuildMatchEvidence(

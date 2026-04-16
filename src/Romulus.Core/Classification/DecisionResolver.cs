@@ -11,8 +11,8 @@ public static class DecisionResolver
     /// Resolve decision from evidence tier, conflict state, and confidence.
     /// Backward-compatible overload without DAT-gate or family-conflict awareness.
     /// </summary>
-    public static DecisionClass Resolve(EvidenceTier tier, bool hasConflict, int confidence)
-        => Resolve(tier, hasConflict, confidence, datAvailable: false, conflictType: ConflictType.None);
+    public static DecisionClass Resolve(EvidenceTier tier, bool hasConflict, int confidence, bool hasHardEvidence = false)
+        => Resolve(tier, hasConflict, confidence, datAvailable: false, conflictType: ConflictType.None, hasHardEvidence: hasHardEvidence);
 
     /// <summary>
     /// Resolve decision with full DAT-gate and family-conflict awareness.
@@ -34,7 +34,8 @@ public static class DecisionResolver
         bool hasConflict,
         int confidence,
         bool datAvailable,
-        ConflictType conflictType)
+        ConflictType conflictType,
+        bool hasHardEvidence = false)
     {
         // Normalize: if a non-None conflict type is supplied, hasConflict must be true.
         // This prevents callers from accidentally bypassing the cross-family gate
@@ -63,8 +64,8 @@ public static class DecisionResolver
             if (datAvailable)
                 return DecisionClass.Review;
 
-            // Without DAT: structural evidence can reach Sort if high-confidence and no conflict.
-            if (!hasConflict && confidence >= 85)
+            // Without DAT: structural evidence can reach Sort if hard evidence and no conflict.
+            if (!hasConflict && hasHardEvidence)
                 return DecisionClass.Sort;
 
             return DecisionClass.Review;

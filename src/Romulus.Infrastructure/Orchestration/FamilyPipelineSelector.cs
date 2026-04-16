@@ -38,14 +38,6 @@ public sealed class FamilyPipelineSelector : IFamilyPipelineSelector
             };
         }
 
-        // Disc-family structural evidence should not be under-weighted.
-        if (!input.DatMatch
-            && input.ResolvedFamily == PlatformFamily.RedumpDisc
-            && input.FinalMatchKind == MatchKind.DiscHeaderSignature)
-        {
-            detectionConfidence = Math.Max(detectionConfidence, 92);
-        }
-
         // Arcade without DAT should stay conservative.
         if (!input.DatMatch
             && input.ResolvedFamily == PlatformFamily.Arcade

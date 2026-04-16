@@ -291,7 +291,7 @@ public sealed partial class FeatureCommandService
     {
         if (string.IsNullOrWhiteSpace(_vm.SelectedRunProfileId))
         {
-            _vm.AddLog("Kein Benutzerprofil ausgewaehlt.", "WARN");
+            _vm.AddLog(_vm.Loc["Cmd.ProfileDeleteNoSelection"], "WARN");
             return;
         }
 
@@ -328,11 +328,11 @@ public sealed partial class FeatureCommandService
             await _vm.RefreshRunConfigurationCatalogsAsync();
             _vm.RestoreRunConfigurationSelection(_vm.SelectedWorkflowScenarioId, saved.Id);
             _vm.ProfileName = saved.Name;
-            _vm.AddLog($"Profil gespeichert: {saved.Name} ({saved.Id})", "INFO");
+            _vm.AddLog(_vm.Loc.Format("Cmd.ProfileSaved", saved.Name, saved.Id), "INFO");
         }
         catch (InvalidOperationException ex)
         {
-            LogWarning("GUI-PROFILE", $"Profil konnte nicht gespeichert werden: {ex.Message}");
+            LogWarning("GUI-PROFILE", _vm.Loc.Format("Cmd.ProfileSaveFailed", ex.Message));
         }
     }
 
@@ -343,7 +343,9 @@ public sealed partial class FeatureCommandService
             return;
 
         _vm.ApplyMaterializedRunConfiguration(materialized);
-        _vm.AddLog($"Workflow/Profil geladen: {materialized.Workflow?.Name ?? "kein Workflow"} | {materialized.Profile?.Name ?? "kein Profil"}", "INFO");
+        var workflowName = materialized.Workflow?.Name ?? _vm.Loc["Cmd.ProfileLoadedNoWorkflow"];
+        var profileName = materialized.Profile?.Name ?? _vm.Loc["Cmd.ProfileLoadedNoProfile"];
+        _vm.AddLog(_vm.Loc.Format("Cmd.ProfileLoaded", workflowName, profileName), "INFO");
     }
 
     private async Task ProfileImportAsync()

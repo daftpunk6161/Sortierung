@@ -735,9 +735,11 @@ public sealed class DetectionPipelineTests
 
         var result = HypothesisResolver.Resolve(hypotheses);
 
-        // Tied soft-only competing signals → AMBIGUOUS (both FolderName, ratio=1.0)
-        Assert.Equal("AMBIGUOUS", result.ConsoleKey);
+        // Tier3 (FolderName) does not meet AMBIGUOUS threshold (requires ≤ Tier2).
+        // Winner by alphabetical tie-break, conflict flagged, soft-only → Blocked.
+        Assert.Equal("NES", result.ConsoleKey);
         Assert.True(result.HasConflict);
+        Assert.Equal(SortDecision.Blocked, result.SortDecision);
     }
 
     [Fact]
@@ -1117,14 +1119,14 @@ public sealed class DetectionPipelineTests
     [Fact]
     public void Resolver_FolderPlusAmbigExt_SoftOnlyCap65_Blocked()
     {
-        // Folder + AmbiguousExtension = still soft-only → cap 65, blocked
+        // Folder + AmbiguousExtension = still soft-only → multi-source soft cap 79, blocked
         var result = HypothesisResolver.Resolve([
             new("MD", 85, DetectionSource.FolderName, "folder=Genesis"),
             new("MD", 40, DetectionSource.AmbiguousExtension, "ext=.bin")
         ]);
 
         Assert.Equal("MD", result.ConsoleKey);
-        Assert.Equal(85, result.Confidence); // phase-1 soft-only cap with multi-source agreement
+        Assert.Equal(79, result.Confidence); // soft-only multi-source cap: min(79, 80+15)
         Assert.True(result.IsSoftOnly);
         Assert.Equal(SortDecision.Blocked, result.SortDecision);
     }
@@ -1132,14 +1134,14 @@ public sealed class DetectionPipelineTests
     [Fact]
     public void Resolver_FolderPlusKeyword_SoftOnlyCap65_Blocked()
     {
-        // Folder + Keyword = corroborate each other, but still soft-only → cap 65
+        // Folder + Keyword = corroborate each other, but still soft-only → multi-source soft cap 79
         var result = HypothesisResolver.Resolve([
             new("GBA", 85, DetectionSource.FolderName, "folder=GBA"),
             new("GBA", 75, DetectionSource.FilenameKeyword, "[GBA]")
         ]);
 
         Assert.Equal("GBA", result.ConsoleKey);
-        Assert.Equal(85, result.Confidence); // phase-1 soft-only cap with multi-source agreement
+        Assert.Equal(79, result.Confidence); // soft-only multi-source cap: min(79, 80+15)
         Assert.True(result.IsSoftOnly);
         Assert.Equal(SortDecision.Blocked, result.SortDecision);
     }
@@ -1188,9 +1190,9 @@ public sealed class DetectionPipelineTests
     }
 
     [Fact]
-    public void Resolver_SerialOnly_StructuralEvidence_Review()
+    public void Resolver_SerialOnly_StructuralEvidence_Sort()
     {
-        // Serial alone is structural evidence, but single-source confidence cap keeps it in review.
+        // Serial alone is structural hard evidence → Sort via hasHardEvidence gate.
         var result = HypothesisResolver.Resolve([
             new("PS1", 95, DetectionSource.SerialNumber, "serial SLUS-00123")
         ]);
@@ -1199,7 +1201,7 @@ public sealed class DetectionPipelineTests
         Assert.Equal(75, result.Confidence); // single-source cap for serial remains 75
         Assert.True(result.HasHardEvidence);
         Assert.False(result.IsSoftOnly);
-        Assert.Equal(SortDecision.Review, result.SortDecision);
+        Assert.Equal(SortDecision.Sort, result.SortDecision);
     }
 
     [Fact]
@@ -1264,16 +1266,17 @@ public sealed class DetectionPipelineTests
     }
 
     [Fact]
-    public void Resolver_AMBIGUOUS_TwoSoftCompetition()
+    public void Resolver_TwoSoftCompetition_NotAmbiguous_WeakTier()
     {
-        // Two soft-only competing signals with similar strength → AMBIGUOUS
+        // Two Tier3 (FolderName) competing signals: does NOT trigger AMBIGUOUS
+        // because tier-based guard requires both sides ≤ Tier2.
+        // Winner by alphabetical tie-break, conflict flagged, soft-only → Blocked.
         var result = HypothesisResolver.Resolve([
             new("SNES", 85, DetectionSource.FolderName, "folder=SNES"),
             new("NES", 85, DetectionSource.FolderName, "folder=NES"),
         ]);
 
-        Assert.Equal("AMBIGUOUS", result.ConsoleKey);
-        Assert.Equal(0, result.Confidence);
+        Assert.Equal("NES", result.ConsoleKey);
         Assert.True(result.HasConflict);
         Assert.Equal(SortDecision.Blocked, result.SortDecision);
     }
@@ -1333,9 +1336,9 @@ public sealed class DetectionPipelineTests
     [InlineData(95, false, true, SortDecision.Sort)]
     [InlineData(90, false, true, SortDecision.Sort)]
     [InlineData(85, false, true, SortDecision.Sort)]
-    [InlineData(84, false, true, SortDecision.Review)]
-    [InlineData(65, false, true, SortDecision.Review)]
-    [InlineData(64, false, true, SortDecision.Review)]
+    [InlineData(84, false, true, SortDecision.Sort)]
+    [InlineData(65, false, true, SortDecision.Sort)]
+    [InlineData(64, false, true, SortDecision.Sort)]
     [InlineData(85, false, false, SortDecision.Review)]
     [InlineData(85, true, true, SortDecision.Review)]
     [InlineData(85, true, false, SortDecision.Review)]

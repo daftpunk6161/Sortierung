@@ -6,26 +6,26 @@ namespace Romulus.Contracts.Ports;
 /// </summary>
 public interface IDialogService
 {
-    string? BrowseFolder(string title = "Ordner auswählen");
-    string? BrowseFile(string title = "Datei auswählen", string filter = "Alle Dateien|*.*");
-    string? SaveFile(string title = "Speichern unter", string filter = "Alle Dateien|*.*", string? defaultFileName = null);
-    bool Confirm(string message, string title = "Bestätigung");
-    void Info(string message, string title = "Information");
-    void Error(string message, string title = "Fehler");
+    string? BrowseFolder(string title = "");
+    string? BrowseFile(string title = "", string filter = "");
+    string? SaveFile(string title = "", string filter = "", string? defaultFileName = null);
+    bool Confirm(string message, string title = "");
+    void Info(string message, string title = "");
+    void Error(string message, string title = "");
     /// <summary>Returns Yes / No / Cancel as <see cref="ConfirmResult"/>.</summary>
-    ConfirmResult YesNoCancel(string message, string title = "Frage");
+    ConfirmResult YesNoCancel(string message, string title = "");
     /// <summary>Themed input box. Returns user input, or empty string if cancelled.</summary>
-    string ShowInputBox(string prompt, string title = "Eingabe", string defaultValue = "");
+    string ShowInputBox(string prompt, string title = "", string defaultValue = "");
     /// <summary>
     /// Themed multi-line input box. Returns user input, or empty string if cancelled.
     /// Default implementation falls back to the single-line input box for non-WPF test stubs.
     /// </summary>
-    string ShowMultilineInputBox(string prompt, string title = "Eingabe", string defaultValue = "")
+    string ShowMultilineInputBox(string prompt, string title = "", string defaultValue = "")
         => ShowInputBox(prompt, title, defaultValue);
     /// <summary>Show a large text result dialog with Copy/Export buttons.</summary>
     void ShowText(string title, string content);
     /// <summary>GUI-054: Danger-Confirm dialog requiring typed confirmation. Returns true only if confirmed.</summary>
-    bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "Bestätigen");
+    bool DangerConfirm(string title, string message, string confirmText, string buttonLabel = "");
     /// <summary>Shows the conversion review dialog for risky/manual conversion plans.</summary>
     bool ConfirmConversionReview(string title, string summary, IReadOnlyList<Models.ConversionReviewEntry> entries);
     /// <summary>A-22: DatRename preview/confirm dialog. Returns true only when user confirms the rename proposals.</summary>

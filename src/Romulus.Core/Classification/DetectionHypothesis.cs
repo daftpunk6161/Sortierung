@@ -121,6 +121,25 @@ public static class DetectionSourceExtensions
     };
 
     /// <summary>
+    /// Semantic confidence rating for a detection source, decoupled from enum ordinal.
+    /// These values represent how confident we should be that a detection from this
+    /// source is correct, independent of the enum's integer representation.
+    /// </summary>
+    public static int ConfidenceRating(this DetectionSource source) => source switch
+    {
+        DetectionSource.DatHash => 100,
+        DetectionSource.DiscHeader => 95,
+        DetectionSource.CartridgeHeader => 90,
+        DetectionSource.SerialNumber => 80,
+        DetectionSource.UniqueExtension => 80,
+        DetectionSource.ArchiveContent => 60,
+        DetectionSource.FolderName => 45,
+        DetectionSource.FilenameKeyword => 40,
+        DetectionSource.AmbiguousExtension => 25,
+        _ => 0
+    };
+
+    /// <summary>
     /// Maximum confidence when only this single source type is present.
     /// Prevents over-confident sorting from a single weak signal.
     /// </summary>
