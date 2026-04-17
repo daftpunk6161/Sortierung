@@ -23,6 +23,9 @@ public enum MatchKind
     /// <summary>CHD raw SHA1 matches Redump DAT entry.</summary>
     ChdRawDatHash,
 
+    /// <summary>CHD inner data SHA1 (from chdman info) matches No-Intro DAT entry.</summary>
+    ChdDataSha1DatHash,
+
     // --- Tier 1: Structural ---
 
     /// <summary>Disc header binary signature (SEGA, PLAYSTATION, etc.).</summary>
@@ -77,6 +80,7 @@ public static class MatchKindExtensions
         MatchKind.ArchiveInnerExactDat => EvidenceTier.Tier0_ExactDat,
         MatchKind.HeaderlessDatHash => EvidenceTier.Tier0_ExactDat,
         MatchKind.ChdRawDatHash => EvidenceTier.Tier0_ExactDat,
+        MatchKind.ChdDataSha1DatHash => EvidenceTier.Tier0_ExactDat,
 
         MatchKind.DiscHeaderSignature => EvidenceTier.Tier1_Structural,
         MatchKind.CartridgeHeaderMagic => EvidenceTier.Tier1_Structural,

@@ -8,12 +8,15 @@ using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Analysis;
 using Romulus.Infrastructure.Audit;
+using Romulus.Infrastructure.Configuration;
 using Romulus.Infrastructure.Conversion;
 using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.Export;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Logging;
+using Romulus.Infrastructure.Metadata;
+using Romulus.Infrastructure.Monitoring;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
 using Romulus.Infrastructure.Profiles;
@@ -139,6 +142,12 @@ internal static partial class Program
 
                 case CliCommand.Completeness:
                     return await SubcommandCompletenessAsync(result.Options!).ConfigureAwait(false);
+
+                case CliCommand.Enrich:
+                    return await SubcommandEnrichAsync(result.Options!).ConfigureAwait(false);
+
+                case CliCommand.Health:
+                    return await SubcommandHealthAsync(result.Options!).ConfigureAwait(false);
 
                 default:
                     return result.ExitCode;
@@ -1334,6 +1343,145 @@ internal static partial class Program
         services.AddSingleton<IAuditStore>(sp =>
             new AuditCsvStore(sp.GetRequiredService<IFileSystem>(), onWarning));
         return services.BuildServiceProvider();
+    }
+
+    private static async Task<int> SubcommandEnrichAsync(CliRunOptions opts)
+    {
+        var settings = SettingsLoader.Load();
+        var metadataSettings = settings.MetadataProvider;
+        if (metadataSettings is null || string.IsNullOrEmpty(metadataSettings.DevId))
+        {
+            SafeErrorWriteLine("[Error] Metadata provider not configured. Set 'MetadataProvider' in settings.json.");
+            return 1;
+        }
+
+        using var httpClient = new HttpClient();
+        var provider = new ScreenScraperMetadataProvider(metadataSettings, httpClient);
+        var dbPath = CollectionIndexPaths.ResolveDatabasePath(null);
+        var cache = new LiteDbGameMetadataCache(dbPath);
+        var enrichmentService = new MetadataEnrichmentService(cache, [provider]);
+
+        // Build requests from collection index
+        using var index = new LiteDbCollectionIndex(dbPath);
+
+        IReadOnlyList<CollectionIndexEntry> entries;
+        if (!string.IsNullOrWhiteSpace(opts.ConsoleKey))
+        {
+            entries = await index.ListByConsoleAsync(opts.ConsoleKey).ConfigureAwait(false);
+        }
+        else if (opts.Roots.Length > 0)
+        {
+            entries = await index.ListEntriesInScopeAsync(
+                opts.Roots,
+                RunOptions.DefaultExtensions).ConfigureAwait(false);
+        }
+        else
+        {
+            SafeErrorWriteLine("[Error] enrich requires --roots or --console.");
+            return 1;
+        }
+
+        if (entries.Count == 0)
+        {
+            SafeStandardWriteLine("No matching entries found in collection index.");
+            return 0;
+        }
+
+        var limit = opts.HistoryLimit is > 0 ? opts.HistoryLimit.Value : entries.Count;
+        var requests = entries.Take(limit).Select(e =>
+        {
+            var req = new MetadataEnrichmentRequest
+            {
+                ConsoleKey = e.ConsoleKey ?? "",
+                GameKey = e.GameKey ?? ""
+            };
+
+            // Map primary hash to appropriate field based on algorithm
+            if (!string.IsNullOrEmpty(e.PrimaryHash))
+            {
+                switch (e.PrimaryHashType?.ToUpperInvariant())
+                {
+                    case "SHA1": req = req with { Sha1Hash = e.PrimaryHash }; break;
+                    case "MD5": req = req with { Md5Hash = e.PrimaryHash }; break;
+                    case "CRC32": req = req with { Crc32Hash = e.PrimaryHash }; break;
+                }
+            }
+            return req;
+        }).ToList();
+
+        SafeStandardWriteLine($"Enriching {requests.Count} entries (console: {opts.ConsoleKey ?? "all"})...");
+
+        var cts = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+
+        int enriched = 0, cached = 0, failed = 0;
+        var results = await enrichmentService.EnrichBatchAsync(
+            requests,
+            onProgress: (current, total) =>
+            {
+                if (current % 10 == 0 || current == total)
+                    SafeErrorWriteLine($"  [{current}/{total}]");
+            },
+            ct: cts.Token).ConfigureAwait(false);
+
+        foreach (var result in results)
+        {
+            if (result.Found && result.Source == "Cache")
+                cached++;
+            else if (result.Found)
+                enriched++;
+            else
+                failed++;
+        }
+
+        SafeStandardWriteLine($"Done. Enriched: {enriched}, Cached: {cached}, NotFound: {failed}");
+        return 0;
+    }
+
+    private static async Task<int> SubcommandHealthAsync(CliRunOptions opts)
+    {
+        var dbPath = CollectionIndexPaths.ResolveDatabasePath(null);
+        using var index = new LiteDbCollectionIndex(dbPath);
+        var monitor = new CollectionHealthMonitor(index);
+
+        IReadOnlyList<string>? roots = opts.Roots.Length > 0 ? opts.Roots : null;
+        var report = await monitor.GenerateReportAsync(
+            roots: roots,
+            consoleFilter: opts.ConsoleKey).ConfigureAwait(false);
+
+        if (string.Equals(opts.ExportFormat, "json", StringComparison.OrdinalIgnoreCase))
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(report,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            SafeStandardWriteLine(json);
+        }
+        else
+        {
+            var b = report.Breakdown;
+            SafeStandardWriteLine($"Collection Health Report{(report.ConsoleFilter is not null ? $" [{report.ConsoleFilter}]" : "")}");
+            SafeStandardWriteLine(new string('═', 50));
+            SafeStandardWriteLine($"  Score: {report.HealthScore}/100 (Grade: {report.Grade})");
+            SafeStandardWriteLine($"  Files: {b.TotalFiles}  |  Games: {b.Games}");
+            SafeStandardWriteLine($"  Duplicates: {b.Duplicates} ({b.DuplicatePercent:F1}%)");
+            SafeStandardWriteLine($"  Junk: {b.Junk} ({b.JunkPercent:F1}%)");
+            SafeStandardWriteLine($"  DAT Verified: {b.DatVerified} ({b.VerifiedPercent:F1}%)");
+            SafeStandardWriteLine("");
+
+            var integrity = report.Integrity;
+            if (integrity.HasBaseline)
+            {
+                SafeStandardWriteLine("  Integrity:");
+                SafeStandardWriteLine($"    Intact: {integrity.IntactCount}  |  Changed: {integrity.ChangedCount}  |  Missing: {integrity.MissingCount}");
+                if (integrity.BitRotRisk)
+                    SafeStandardWriteLine("    ⚠ Bit-Rot Risk Detected!");
+            }
+            else
+            {
+                SafeStandardWriteLine("  Integrity: No baseline. Run 'romulus integrity baseline' first.");
+            }
+        }
+
+        return 0;
     }
 
     private sealed class RunExecutionMutexLease : IDisposable

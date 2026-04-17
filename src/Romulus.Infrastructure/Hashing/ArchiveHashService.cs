@@ -184,6 +184,7 @@ public sealed class ArchiveHashService
     {
         var hashes = new List<string>();
         using var archive = ZipFile.OpenRead(zipPath);
+        var useZipCrc32FastPath = IsCrcHashType(hashType);
 
         // TASK-150: Sort entries alphabetically for deterministic hash order
         var sortedEntries = archive.Entries
@@ -194,6 +195,15 @@ public sealed class ArchiveHashService
         {
             ct.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(entry.Name)) continue;
+
+            if (useZipCrc32FastPath)
+            {
+                // Fast path: ZIP central directory already stores CRC32 for each entry.
+                // Avoids full stream reads for CRC32-only DAT workflows.
+                hashes.Add(entry.Crc32.ToString("x8"));
+                continue;
+            }
+
             try
             {
                 using var stream = entry.Open();
@@ -206,6 +216,15 @@ public sealed class ArchiveHashService
         }
 
         return hashes.ToArray();
+    }
+
+    private static bool IsCrcHashType(string hashType)
+    {
+        if (string.IsNullOrWhiteSpace(hashType))
+            return false;
+
+        var normalized = hashType.Trim().ToUpperInvariant();
+        return normalized is "CRC" or "CRC32";
     }
 
     // ── 7z: temp extraction + file hashing ──

@@ -259,6 +259,41 @@ public sealed class DatAuditClassifierExpandedTests
     }
 
     [Fact]
+    public void ClassifyFull_ArcadeCloneArchiveNameMatchingGameName_ReturnsHave()
+    {
+        var index = new DatIndex();
+        index.Add("ARCADE", "clone-hash", "sf2ce", "sf2ce.23", parentGameName: "sf2");
+
+        var result = DatAuditClassifier.ClassifyFull("clone-hash", null, "sf2ce.zip", "ARCADE", index);
+
+        Assert.Equal(DatAuditStatus.Have, result.Status);
+        Assert.Equal("sf2ce", result.DatGameName);
+    }
+
+    [Fact]
+    public void ClassifyFull_ArcadeMergedArchiveNameMatchingParent_ReturnsHave()
+    {
+        var index = new DatIndex();
+        index.Add("ARCADE", "clone-hash", "sf2ce", "sf2ce.23", parentGameName: "sf2");
+
+        var result = DatAuditClassifier.ClassifyFull("clone-hash", null, "sf2.zip", "ARCADE", index);
+
+        Assert.Equal(DatAuditStatus.Have, result.Status);
+        Assert.Equal("sf2ce", result.DatGameName);
+    }
+
+    [Fact]
+    public void ClassifyFull_DiscAndTrackSuffixes_AreIgnoredForNameComparison()
+    {
+        var index = new DatIndex();
+        index.Add("PS1", "disc-hash", "Game Title", "Game Title (Track 01).bin");
+
+        var result = DatAuditClassifier.ClassifyFull("disc-hash", null, "Game Title (Disc 1).chd", "PS1", index);
+
+        Assert.Equal(DatAuditStatus.Have, result.Status);
+    }
+
+    [Fact]
     public void ClassifyFull_UnknownConsole_SingleMatch_ResolvesConsoleKey()
     {
         var index = new DatIndex();

@@ -63,6 +63,25 @@ public class ArchiveHashServiceTests : IDisposable
     }
 
     [Fact]
+    public void GetArchiveHashes_ZipCrc32_MatchesCentralDirectoryCrc()
+    {
+        var zip = CreateZipWithEntries("crc-central.zip",
+            ("a.bin", new byte[] { 0x10, 0x20, 0x30, 0x40 }),
+            ("b.bin", new byte[] { 0xAA, 0xBB, 0xCC, 0xDD }));
+
+        using var archive = ZipFile.OpenRead(zip);
+        var expected = archive.Entries
+            .Where(e => !string.IsNullOrEmpty(e.Name))
+            .OrderBy(e => e.FullName, StringComparer.OrdinalIgnoreCase)
+            .Select(e => e.Crc32.ToString("x8"))
+            .ToArray();
+
+        var actual = _service.GetArchiveHashes(zip, "CRC32");
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
     public void GetArchiveHashes_ZipMd5_ReturnsHashes()
     {
         var zip = CreateZipWithEntries("md5.zip",

@@ -8,6 +8,7 @@ using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.Hashing;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using Romulus.Core.SetParsing;
 
 namespace Romulus.Infrastructure.Orchestration;
@@ -15,7 +16,7 @@ namespace Romulus.Infrastructure.Orchestration;
 /// <summary>
 /// Pipeline phase that enriches scanned files into RomCandidate objects.
 /// </summary>
-public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInput, List<RomCandidate>>
+public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInput, List<RomCandidate>>
 {
     private const int ParallelizationThreshold = 4;
     private static readonly IFamilyDatStrategyResolver DefaultFamilyDatStrategyResolver = new FamilyDatStrategyResolver();
@@ -43,7 +44,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                 cancellationToken.ThrowIfCancellationRequested();
                 candidates.Add(MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex,
                     input.HeaderlessHasher, input.KnownBiosHashes, input.FamilyDatStrategyResolver, input.FamilyPipelineSelector,
-                    context, versionScorer, onProgress));
+                    input.ChdTrackHashExtractor, context, versionScorer, onProgress));
             }
 
             return candidates;
@@ -73,6 +74,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                     input.KnownBiosHashes,
                     input.FamilyDatStrategyResolver,
                     input.FamilyPipelineSelector,
+                    input.ChdTrackHashExtractor,
                     context,
                     versionScorers.Value!,
                     onProgress);
@@ -96,7 +98,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                 cancellationToken.ThrowIfCancellationRequested();
                 yield return MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex,
                     input.HeaderlessHasher, input.KnownBiosHashes, input.FamilyDatStrategyResolver, input.FamilyPipelineSelector,
-                    context, versionScorer, onProgress);
+                    input.ChdTrackHashExtractor, context, versionScorer, onProgress);
             }
 
             yield break;
@@ -121,6 +123,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                     input.KnownBiosHashes,
                     input.FamilyDatStrategyResolver,
                     input.FamilyPipelineSelector,
+                    input.ChdTrackHashExtractor,
                     context,
                     versionScorers.Value!,
                     onProgress);
@@ -153,6 +156,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         IReadOnlySet<string>? knownBiosHashes,
         IFamilyDatStrategyResolver? familyDatStrategyResolver,
         IFamilyPipelineSelector? familyPipelineSelector,
+        Contracts.Ports.IChdTrackHashExtractor? chdTrackHashExtractor,
         PipelineContext context,
         VersionScorer versionScorer,
         Action<string>? onProgress)
@@ -211,7 +215,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
 
         var datResult = LookupDat(filePath, ext, sizeBytes, consoleKey, detectionConflict,
             datIndex, hashService, archiveHashService, headerlessHasher, preDetectDatPolicy,
-            detectionResult: null, consoleDetector, context, onProgress);
+            detectionResult: null, consoleDetector, context, onProgress, chdTrackHashExtractor);
 
         // Even with a DAT-first hit, run detector once to gather family/context evidence.
         // This enables post-validation for cross-family mismatches (Phase 4).
@@ -248,7 +252,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
 
             datResult = LookupDat(filePath, ext, sizeBytes, consoleKey, detectionConflict,
                 datIndex, hashService, archiveHashService, headerlessHasher, postDetectDatPolicy,
-                detectionResult, consoleDetector, context, onProgress);
+                detectionResult, consoleDetector, context, onProgress, chdTrackHashExtractor);
         }
 
         consoleKey = datResult.ConsoleKey;
@@ -423,7 +427,8 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         ConsoleDetectionResult? detectionResult,
         ConsoleDetector? consoleDetector,
         PipelineContext context,
-        Action<string>? onProgress)
+        Action<string>? onProgress,
+        Contracts.Ports.IChdTrackHashExtractor? chdTrackHashExtractor = null)
     {
         bool datMatch = false;
         bool datMatchedBios = false;
@@ -452,7 +457,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         // For archives: try inner hashes first (DATs store ROM content hashes, not container hashes)
         if (isArchive && archiveHashService is not null && datPolicy.PreferArchiveInnerHash)
         {
-            var innerHashes = archiveHashService.GetArchiveHashes(filePath, context.Options.HashType);
+            var innerHashes = GetArchiveLookupHashes(filePath, archiveHashService, context.Options.HashType);
             foreach (var innerHash in innerHashes)
             {
                 computedHash ??= innerHash;
@@ -516,10 +521,11 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         // Fallback: try container hash (works for uncompressed ROMs, CHD, ISO, etc.)
         if (!datMatch && datPolicy.UseContainerHash)
         {
-            var hash = hashService.GetHash(filePath, context.Options.HashType);
-            computedHash ??= hash;
-            if (hash is not null)
+            var hashCandidates = GetFileLookupHashes(filePath, hashService, context.Options.HashType);
+            foreach (var hash in hashCandidates)
             {
+                computedHash ??= hash;
+
                 // DAT-first: always try cross-console lookup for container hash too
                 var crossConsoleResult = TryCrossConsoleDatLookup(datIndex, hash, consoleKey, detectionResult, filePath, consoleDetector, onProgress);
                 if (crossConsoleResult.IsMatch)
@@ -536,12 +542,39 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                         detectionConflict = true;
                     }
                     consoleKey = crossConsoleResult.ConsoleKey!;
+                    break;
                 }
                 else if (consoleKey is not "UNKNOWN" and not "" and not "AMBIGUOUS")
                 {
                     var hashHint = hash.Length >= 12 ? hash[..12] : hash;
                     onProgress?.Invoke(
                         $"[DAT] Kein Match: {Path.GetFileName(filePath)} (hash={hashHint})");
+                }
+            }
+        }
+
+        // Stage 3.5: CHD data SHA1 — chdman reports the inner sector-data SHA1 separate from
+        // the container file hash. No-Intro CHDs store the inner data SHA1 in their DATs.
+        if (!datMatch && lowerExt == ".chd" && chdTrackHashExtractor is not null)
+        {
+            var dataSha1 = chdTrackHashExtractor.ExtractDataSha1(filePath);
+            if (dataSha1 is not null)
+            {
+                var crossResult = TryCrossConsoleDatLookup(datIndex, dataSha1, consoleKey, detectionResult, filePath, consoleDetector, onProgress);
+                if (crossResult.IsMatch)
+                {
+                    datMatch = true;
+                    computedHash = dataSha1;
+                    datMatchedBios = crossResult.IsBios;
+                    datResolvedFromAmbiguousCandidates = crossResult.ResolvedFromAmbiguousCandidates;
+                    datGameName = crossResult.DatGameName;
+                    datMatchKind = MatchKind.ChdDataSha1DatHash;
+                    if (!string.Equals(consoleKey, crossResult.ConsoleKey, StringComparison.OrdinalIgnoreCase)
+                        && consoleKey is not "UNKNOWN" and not "" and not "AMBIGUOUS")
+                    {
+                        detectionConflict = true;
+                    }
+                    consoleKey = crossResult.ConsoleKey!;
                 }
             }
         }
@@ -555,6 +588,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
             if (!string.IsNullOrEmpty(stem)
                 && (!datPolicy.RequireStrictNameForNameOnly || IsStrictDatNameCandidate(stem)))
             {
+                var lookupNames = GetStrictDatNameCandidates(stem);
                 if (consoleKey is "UNKNOWN" or "" or "AMBIGUOUS")
                 {
                     // Conservative guard: unknown-console name-only fallback only with detector context.
@@ -566,7 +600,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                     }
                     else
                     {
-                        var nameMatches = datIndex.LookupAllByName(stem);
+                        var nameMatches = LookupAllByNames(datIndex, lookupNames);
                         if (nameMatches.Count == 1)
                         {
                             var candidateConsole = nameMatches[0].ConsoleKey;
@@ -638,7 +672,7 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
                 }
                 else
                 {
-                    var byName = datIndex.LookupByName(consoleKey, stem);
+                    var byName = LookupByNames(datIndex, consoleKey, lookupNames);
                     if (byName is not null)
                     {
                         datMatch = true;
@@ -655,6 +689,79 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
 
         return new DatLookupResult(datMatch, datMatchedBios, datResolvedFromAmbiguousCandidates,
             datNameOnlyMatch, computedHash, computedHeaderlessHash, datGameName, consoleKey, detectionConflict, datMatchKind);
+    }
+
+    internal static IReadOnlyList<string> GetFileLookupHashes(
+        string filePath,
+        FileHashService hashService,
+        string preferredHashType)
+    {
+        var hashes = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var hashType in GetLookupHashTypeOrder(preferredHashType))
+        {
+            var hash = hashService.GetHash(filePath, hashType);
+            if (string.IsNullOrWhiteSpace(hash))
+                continue;
+
+            if (seen.Add(hash))
+                hashes.Add(hash);
+        }
+
+        return hashes;
+    }
+
+    internal static IReadOnlyList<string> GetArchiveLookupHashes(
+        string archivePath,
+        ArchiveHashService archiveHashService,
+        string preferredHashType)
+    {
+        var hashes = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var hashType in GetLookupHashTypeOrder(preferredHashType))
+        {
+            var byType = archiveHashService.GetArchiveHashes(archivePath, hashType);
+            foreach (var hash in byType)
+            {
+                if (string.IsNullOrWhiteSpace(hash))
+                    continue;
+
+                if (seen.Add(hash))
+                    hashes.Add(hash);
+            }
+        }
+
+        return hashes;
+    }
+
+    internal static IReadOnlyList<string> GetLookupHashTypeOrder(string preferredHashType)
+    {
+        var ordered = new List<string>(capacity: 4);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        Add(preferredHashType);
+        Add("SHA1");
+        Add("CRC32");
+        Add("MD5");
+
+        return ordered;
+
+        void Add(string hashType)
+        {
+            if (string.IsNullOrWhiteSpace(hashType))
+                return;
+
+            var normalized = hashType.Trim().ToUpperInvariant() switch
+            {
+                "CRC" => "CRC32",
+                _ => hashType.Trim().ToUpperInvariant()
+            };
+
+            if (seen.Add(normalized))
+                ordered.Add(normalized);
+        }
     }
 
     /// <summary>
@@ -947,6 +1054,67 @@ public sealed class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentPhaseInpu
         return lettersOrDigits >= 3;
     }
 
+    internal static IReadOnlyList<string> GetStrictDatNameCandidates(string stem)
+    {
+        var candidates = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void AddCandidate(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+
+            var normalized = value.Trim();
+            if (normalized.Length == 0)
+                return;
+
+            if (seen.Add(normalized))
+                candidates.Add(normalized);
+        }
+
+        AddCandidate(stem);
+        AddCandidate(DiscSuffixRegex().Replace(stem, string.Empty));
+        AddCandidate(TrackSuffixRegex().Replace(stem, string.Empty));
+
+        return candidates;
+    }
+
+    private static DatIndex.DatIndexEntry? LookupByNames(DatIndex datIndex, string consoleKey, IReadOnlyList<string> lookupNames)
+    {
+        foreach (var name in lookupNames)
+        {
+            var byName = datIndex.LookupByName(consoleKey, name);
+            if (byName is not null)
+                return byName;
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<(string ConsoleKey, DatIndex.DatIndexEntry Entry)> LookupAllByNames(DatIndex datIndex, IReadOnlyList<string> lookupNames)
+    {
+        var results = new List<(string ConsoleKey, DatIndex.DatIndexEntry Entry)>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var name in lookupNames)
+        {
+            foreach (var match in datIndex.LookupAllByName(name))
+            {
+                var key = $"{match.ConsoleKey}|{match.Entry.GameName}|{match.Entry.RomFileName}";
+                if (seen.Add(key))
+                    results.Add(match);
+            }
+        }
+
+        return results;
+    }
+
+    [GeneratedRegex(@"\s*\((disc|disk|cd)\s*\d+\)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex DiscSuffixRegex();
+
+    [GeneratedRegex(@"\s*\(track\s*\d+\)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex TrackSuffixRegex();
+
     internal static int GetParallelismHint(int itemCountHint = int.MaxValue)
     {
         var optimalThreads = ParallelHasher.GetOptimalThreadCount();
@@ -989,7 +1157,8 @@ public sealed record EnrichmentPhaseInput(
     Contracts.Ports.IHeaderlessHasher? HeaderlessHasher = null,
     IReadOnlySet<string>? KnownBiosHashes = null,
     IFamilyDatStrategyResolver? FamilyDatStrategyResolver = null,
-    IFamilyPipelineSelector? FamilyPipelineSelector = null);
+    IFamilyPipelineSelector? FamilyPipelineSelector = null,
+    Contracts.Ports.IChdTrackHashExtractor? ChdTrackHashExtractor = null);
 
 public sealed record EnrichmentPhaseStreamingInput(
     IAsyncEnumerable<ScannedFileEntry> Files,
@@ -1000,4 +1169,5 @@ public sealed record EnrichmentPhaseStreamingInput(
     Contracts.Ports.IHeaderlessHasher? HeaderlessHasher = null,
     IReadOnlySet<string>? KnownBiosHashes = null,
     IFamilyDatStrategyResolver? FamilyDatStrategyResolver = null,
-    IFamilyPipelineSelector? FamilyPipelineSelector = null);
+    IFamilyPipelineSelector? FamilyPipelineSelector = null,
+    Contracts.Ports.IChdTrackHashExtractor? ChdTrackHashExtractor = null);

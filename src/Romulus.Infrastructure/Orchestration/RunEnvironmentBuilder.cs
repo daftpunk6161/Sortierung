@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml;
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
@@ -694,6 +695,7 @@ public sealed class RunEnvironmentBuilder
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         supplementalDats = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var runtimeConsoleDetector = TryLoadConsoleDetector(dataDir);
 
         var catalogPath = Path.Combine(dataDir, "dat-catalog.json");
         List<DatCatalogEntry>? entries = null;
@@ -810,9 +812,28 @@ public sealed class RunEnvironmentBuilder
                 if (mappedPaths.Contains(datFile))
                     continue;
 
-                var stem = Path.GetFileNameWithoutExtension(datFile).ToUpperInvariant();
-                if (!map.ContainsKey(stem))
-                    map[stem] = datFile;
+                var stem = Path.GetFileNameWithoutExtension(datFile);
+                var resolvedKey = ResolveRuntimeDatConsoleKey(stem, datFile, datRoot, runtimeConsoleDetector);
+                if (string.IsNullOrWhiteSpace(resolvedKey))
+                    continue;
+
+                if (!map.ContainsKey(resolvedKey))
+                {
+                    map[resolvedKey] = datFile;
+                    continue;
+                }
+
+                if (string.Equals(map[resolvedKey], datFile, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (!supplementalDats.TryGetValue(resolvedKey, out var list))
+                {
+                    list = new List<string>();
+                    supplementalDats[resolvedKey] = list;
+                }
+
+                if (!list.Contains(datFile, StringComparer.OrdinalIgnoreCase))
+                    list.Add(datFile);
             }
         }
 
@@ -1011,6 +1032,10 @@ public sealed class RunEnvironmentBuilder
         AddDescriptor(fileStem);
         AddDescriptor(StripTrailingDescriptorSuffixes(fileStem));
 
+        var datHeaderName = TryReadDatHeaderName(datPath);
+        AddDescriptor(datHeaderName);
+        AddDescriptor(StripTrailingDescriptorSuffixes(datHeaderName));
+
         var datDirectory = Path.GetDirectoryName(datPath);
         if (!string.IsNullOrWhiteSpace(datDirectory))
         {
@@ -1193,6 +1218,88 @@ public sealed class RunEnvironmentBuilder
         {
             return Path.GetFileName(directoryPath);
         }
+    }
+
+    private static ConsoleDetector? TryLoadConsoleDetector(string dataDir)
+    {
+        if (string.IsNullOrWhiteSpace(dataDir) || !Directory.Exists(dataDir))
+            return null;
+
+        var consolesPath = Path.Combine(dataDir, "consoles.json");
+        if (!File.Exists(consolesPath))
+            return null;
+
+        try
+        {
+            return ConsoleDetector.LoadFromJson(File.ReadAllText(consolesPath));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string? TryReadDatHeaderName(string datPath)
+    {
+        if (string.IsNullOrWhiteSpace(datPath) || !File.Exists(datPath))
+            return null;
+
+        // DAT header extraction is best-effort. Failures keep the existing descriptor heuristics.
+        var strictSettings = new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null,
+            IgnoreComments = true,
+            IgnoreWhitespace = true
+        };
+
+        var relaxedSettings = new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Ignore,
+            XmlResolver = null,
+            IgnoreComments = true,
+            IgnoreWhitespace = true
+        };
+
+        return ReadDatHeaderName(datPath, strictSettings) ?? ReadDatHeaderName(datPath, relaxedSettings);
+    }
+
+    private static string? ReadDatHeaderName(string datPath, XmlReaderSettings settings)
+    {
+        try
+        {
+            using var reader = XmlReader.Create(datPath, settings);
+            while (reader.Read())
+            {
+                if (reader.NodeType != XmlNodeType.Element)
+                    continue;
+
+                if (!reader.LocalName.Equals("header", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                using var headerReader = reader.ReadSubtree();
+                while (headerReader.Read())
+                {
+                    if (headerReader.NodeType != XmlNodeType.Element)
+                        continue;
+
+                    if (!headerReader.LocalName.Equals("name", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    var headerName = headerReader.ReadElementContentAsString()?.Trim();
+                    if (!string.IsNullOrWhiteSpace(headerName))
+                        return headerName;
+                }
+
+                return null;
+            }
+        }
+        catch (Exception ex) when (ex is XmlException or IOException or UnauthorizedAccessException)
+        {
+            // Best-effort only; fallback resolver continues without header hint.
+        }
+
+        return null;
     }
 
     private static bool IsValidRuntimeConsoleKey(string key)

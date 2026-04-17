@@ -8,8 +8,9 @@ namespace Romulus.Infrastructure.Hashing;
 
 /// <summary>
 /// Computes DAT-compatible normalized hashes for ROM files with known normalization rules.
-/// This includes classic header skipping (iNES, SNES copier, Atari 7800/Lynx)
-/// and canonical byte-order normalization for N64 variants.
+/// This includes classic header skipping (iNES, SNES copier, Atari 7800/Lynx),
+/// canonical byte-order normalization for N64 variants, and a pass-through path
+/// for cartridge platforms whose DATs already expect the raw file contents.
 /// Thread-safe, cached via LruCache.
 /// </summary>
 public sealed class HeaderlessHasher : IHeaderlessHasher
@@ -33,7 +34,7 @@ public sealed class HeaderlessHasher : IHeaderlessHasher
         if (string.IsNullOrWhiteSpace(filePath) || string.IsNullOrWhiteSpace(consoleKey))
             return null;
 
-        if (!HasNormalizationStrategy(consoleKey))
+        if (!SupportsHeaderlessHash(consoleKey))
             return null;
 
         var fullPath = Path.GetFullPath(filePath);
@@ -66,7 +67,7 @@ public sealed class HeaderlessHasher : IHeaderlessHasher
         var header = headerBuf[..headerRead];
 
         var skipBytes = HeaderSizeMap.GetSkipBytes(consoleKey, header, fileSize);
-        if (skipBytes <= 0 || fileSize <= skipBytes)
+        if (skipBytes < 0 || fileSize <= skipBytes)
             return null;
 
         // Seek to content start and hash the rest
@@ -130,7 +131,29 @@ public sealed class HeaderlessHasher : IHeaderlessHasher
     private static string NormalizeHashType(string hashType)
         => hashType.ToUpperInvariant().Replace("-", "");
 
-    private static bool HasNormalizationStrategy(string consoleKey)
-        => HeaderSizeMap.HasMapping(consoleKey)
-           || consoleKey.Equals("N64", StringComparison.OrdinalIgnoreCase);
+    private static bool SupportsHeaderlessHash(string consoleKey)
+        => !string.IsNullOrWhiteSpace(consoleKey)
+           && !consoleKey.Equals("UNKNOWN", StringComparison.OrdinalIgnoreCase)
+           && !consoleKey.Equals("AMBIGUOUS", StringComparison.OrdinalIgnoreCase)
+           && !KnownNonHeaderlessPlatforms.Contains(consoleKey);
+
+    private static readonly HashSet<string> KnownNonHeaderlessPlatforms = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "PSX",
+        "PS1",
+        "PS2",
+        "PS3",
+        "PSP",
+        "SAT",
+        "DC",
+        "GC",
+        "WII",
+        "WIIU",
+        "XBOX",
+        "X360",
+        "CDI",
+        "FMTOWNS",
+        "NEOCD",
+        "SCD"
+    };
 }

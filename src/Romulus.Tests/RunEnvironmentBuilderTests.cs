@@ -892,4 +892,128 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
         Assert.Null(RunEnvironmentBuilder.ResolveRuntimeDatConsoleKey(
             "   ", Path.Combine(_datRoot, "space.dat"), _datRoot, null));
     }
+
+        [Fact]
+        public void NormalizeRuntimeDatMappings_UsesDatHeaderName_WhenStemHasNoConsoleHint()
+        {
+                var datPath = Path.Combine(_datRoot, "pack-001.dat");
+                File.WriteAllText(datPath,
+                        """
+                        <?xml version="1.0"?>
+                        <datafile>
+                            <header>
+                                <name>Sony - PlayStation</name>
+                            </header>
+                            <game name="Metal Gear Solid">
+                                <rom name="mgs.bin" sha1="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" />
+                            </game>
+                        </datafile>
+                        """);
+
+                var detector = ConsoleDetector.LoadFromJson(
+                        """
+                        {
+                            "consoles": [
+                                {
+                                    "key": "PS1",
+                                    "displayName": "Sony - PlayStation",
+                                    "discBased": true,
+                                    "uniqueExts": [".chd"],
+                                    "ambigExts": [],
+                                    "folderAliases": ["playstation", "psx"],
+                                    "keywords": []
+                                }
+                            ]
+                        }
+                        """);
+
+                var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                        ["PACK-001"] = datPath
+                };
+                var supplemental = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+                RunEnvironmentBuilder.NormalizeRuntimeDatMappings(
+                        map,
+                        supplemental,
+                        detector,
+                        _datRoot,
+                        onWarning: null);
+
+                Assert.Single(map);
+                Assert.True(map.ContainsKey("PS1"));
+                Assert.Equal(datPath, map["PS1"]);
+                Assert.Empty(supplemental);
+        }
+
+        [Fact]
+        public void NormalizeRuntimeDatMappings_MergesHeaderMatchedVariants_AsSupplemental()
+        {
+                var datPrimary = Path.Combine(_datRoot, "pack-001.dat");
+                var datSupplemental = Path.Combine(_datRoot, "pack-002.dat");
+
+                File.WriteAllText(datPrimary,
+                        """
+                        <?xml version="1.0"?>
+                        <datafile>
+                            <header>
+                                <name>Nintendo - Super Nintendo Entertainment System</name>
+                            </header>
+                            <game name="Super Mario World">
+                                <rom name="smw.sfc" sha1="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" />
+                            </game>
+                        </datafile>
+                        """);
+
+                File.WriteAllText(datSupplemental,
+                        """
+                        <?xml version="1.0"?>
+                        <datafile>
+                            <header>
+                                <name>Nintendo - Super Nintendo Entertainment System</name>
+                            </header>
+                            <game name="The Legend of Zelda">
+                                <rom name="zelda.sfc" sha1="cccccccccccccccccccccccccccccccccccccccc" />
+                            </game>
+                        </datafile>
+                        """);
+
+                var detector = ConsoleDetector.LoadFromJson(
+                        """
+                        {
+                            "consoles": [
+                                {
+                                    "key": "SNES",
+                                    "displayName": "Nintendo - Super Nintendo Entertainment System",
+                                    "discBased": false,
+                                    "uniqueExts": [".sfc"],
+                                    "ambigExts": [],
+                                    "folderAliases": ["snes", "super nintendo"],
+                                    "keywords": []
+                                }
+                            ]
+                        }
+                        """);
+
+                var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                        ["PACK-001"] = datPrimary,
+                        ["PACK-002"] = datSupplemental
+                };
+                var supplemental = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+                RunEnvironmentBuilder.NormalizeRuntimeDatMappings(
+                        map,
+                        supplemental,
+                        detector,
+                        _datRoot,
+                        onWarning: null);
+
+                Assert.Single(map);
+                Assert.True(map.ContainsKey("SNES"));
+                Assert.Equal(datPrimary, map["SNES"]);
+                Assert.True(supplemental.ContainsKey("SNES"));
+                Assert.Single(supplemental["SNES"]);
+                Assert.Equal(datSupplemental, supplemental["SNES"][0]);
+        }
 }

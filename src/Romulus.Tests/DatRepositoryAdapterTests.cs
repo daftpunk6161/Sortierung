@@ -87,6 +87,10 @@ public class DatRepositoryAdapterTests : IDisposable
                 Assert.True(index.HasConsole("ARCADE"));
                 Assert.Equal("sf2", index.Lookup("ARCADE", "mamehash1"));
                 Assert.Equal("sf2ce", index.Lookup("ARCADE", "mamehash2"));
+
+                var cloneEntry = index.LookupWithFilename("ARCADE", "mamehash2");
+                Assert.NotNull(cloneEntry);
+                Assert.Equal("sf2", cloneEntry.Value.ParentGameName);
         }
 
         [Fact]
@@ -381,10 +385,42 @@ public class DatRepositoryAdapterTests : IDisposable
         Assert.Equal(1, index.TotalEntries);
         // SHA1 is the default hash type – should be indexed by SHA1
         Assert.Equal("FullHashGame", index.Lookup("TEST", "abc123"));
-        // CRC32 and MD5 should NOT be used when SHA1 is present
-        Assert.Null(index.Lookup("TEST", "aabbccdd"));
-        Assert.Null(index.Lookup("TEST", "def456"));
+
+        // Multi-hash lookup support: CRC32 and MD5 aliases resolve to the same DAT entry.
+        Assert.Equal("FullHashGame", index.Lookup("TEST", "aabbccdd"));
+        Assert.Equal("FullHashGame", index.Lookup("TEST", "def456"));
+
+        var primaryEntries = index.GetConsoleEntries("TEST");
+        Assert.NotNull(primaryEntries);
+        Assert.Single(primaryEntries!);
     }
+
+        [Fact]
+        public void GetDatIndex_MixedHashes_IndexesAliasHashes_ForLookupFallback()
+        {
+                var datContent = @"<?xml version=""1.0""?>
+<datafile>
+    <game name=""FullHashGame"">
+        <rom name=""full.bin"" size=""100"" sha1=""abc123"" md5=""def456"" crc=""aabbccdd"" />
+    </game>
+</datafile>";
+
+                File.WriteAllText(Path.Combine(_tempDir, "full-alias.dat"), datContent);
+
+                var index = _dat.GetDatIndex(
+                        _tempDir,
+                        new Dictionary<string, string> { ["TEST"] = "full-alias.dat" },
+                        hashType: "SHA1");
+
+                Assert.Equal(1, index.TotalEntries);
+                Assert.Equal("FullHashGame", index.Lookup("TEST", "abc123"));
+                Assert.Equal("FullHashGame", index.Lookup("TEST", "def456"));
+                Assert.Equal("FullHashGame", index.Lookup("TEST", "aabbccdd"));
+
+                var primaryEntries = index.GetConsoleEntries("TEST");
+                Assert.NotNull(primaryEntries);
+                Assert.Single(primaryEntries!);
+        }
 
         [Fact]
         public void GetDatIndex_BillionLaughsPayload_DoesNotExpandEntities_AndReturnsNoEntries_Issue9()

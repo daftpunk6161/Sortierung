@@ -264,6 +264,52 @@ public class EnrichmentPipelinePhaseAuditPhase3And4Tests : IDisposable
         Assert.Equal(SortDecision.DatVerified, candidate.SortDecision);
     }
 
+    [Fact]
+    public void Execute_ChdNameOnlyFallback_StripsDiscSuffix_ForTrackBasedDat()
+    {
+        var root = Path.Combine(_tempDir, "phase4_chd_name_only");
+        var ps1Folder = Path.Combine(root, "PS1");
+        Directory.CreateDirectory(ps1Folder);
+        var filePath = CreateFile(ps1Folder, "Game Title (Disc 1).chd", 128);
+
+        var hashService = new FileHashService();
+        var datIndex = new DatIndex();
+        datIndex.Add("PS1", "different-hash", "Game Title", "Game Title (Track 01).bin");
+
+        var detector = new ConsoleDetector([
+            new ConsoleInfo(
+                Key: "PS1",
+                DisplayName: "PlayStation",
+                DiscBased: true,
+                UniqueExts: ["cue"],
+                AmbigExts: ["bin", "chd"],
+                FolderAliases: ["PS1", "PlayStation"],
+                Family: PlatformFamily.RedumpDisc,
+                HashStrategy: "track-sha1")
+        ]);
+
+        var scan = new[] { new ScannedFileEntry(root, filePath, ".chd") };
+        var options = new RunOptions
+        {
+            Roots = [root],
+            Extensions = [".chd"],
+            Mode = "DryRun",
+            HashType = "SHA1"
+        };
+
+        var phase = new EnrichmentPipelinePhase();
+        var result = phase.Execute(
+            new EnrichmentPhaseInput(scan, detector, hashService, null, datIndex),
+            CreateContext(options),
+            CancellationToken.None);
+
+        var candidate = Assert.Single(result);
+        Assert.True(candidate.DatMatch);
+        Assert.Equal("PS1", candidate.ConsoleKey);
+        Assert.Equal("Game Title", candidate.DatGameName);
+        Assert.Equal(MatchKind.DatNameOnlyMatch, candidate.PrimaryMatchKind);
+    }
+
     private PipelineContext CreateContext(RunOptions options)
     {
         var metrics = new PhaseMetricsCollector();

@@ -7,6 +7,7 @@ using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Hashing;
 using Romulus.Infrastructure.Index;
+using Romulus.Infrastructure.Metadata;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Profiles;
 using Romulus.Infrastructure.Review;
@@ -58,6 +59,15 @@ public static class SharedServiceRegistration
         services.AddSingleton<IPhasePlanBuilder, PhasePlanBuilder>();
         services.AddSingleton<IFamilyDatStrategyResolver, FamilyDatStrategyResolver>();
         services.AddSingleton<IFamilyPipelineSelector, FamilyPipelineSelector>();
+
+        // Metadata enrichment (provider registered only if settings present)
+        services.AddSingleton<IGameMetadataCache>(sp =>
+            new LiteDbGameMetadataCache(CollectionIndexPaths.ResolveDatabasePath(
+                sp.GetRequiredService<CollectionIndexPathOptions>().DatabasePath)));
+        services.AddSingleton<MetadataEnrichmentService>();
+
+        // Health monitoring
+        services.AddSingleton<Monitoring.CollectionHealthMonitor>();
 
         return services;
     }

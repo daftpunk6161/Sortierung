@@ -601,7 +601,9 @@ internal enum CliCommand
     Convert,
     Header,
     JunkReport,
-    Completeness
+    Completeness,
+    Enrich,
+    Health
 }
 
 /// <summary>

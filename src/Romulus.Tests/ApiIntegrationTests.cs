@@ -65,6 +65,37 @@ public sealed class ApiIntegrationTests
     }
 
     [Fact]
+    public async Task HealthCollection_WithoutApiKey_ReturnsUnauthorized()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/health/collection");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        AssertError(doc.RootElement, ApiErrorCodes.AuthUnauthorized, ErrorKind.Critical, "Unauthorized");
+    }
+
+    [Fact]
+    public async Task HealthCollection_WithApiKey_ReturnsReport()
+    {
+        using var factory = CreateFactory();
+        using var client = CreateClientWithApiKey(factory);
+
+        var response = await client.GetAsync("/health/collection?console=snes");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = doc.RootElement;
+        Assert.True(root.TryGetProperty("healthScore", out _));
+        Assert.True(root.TryGetProperty("grade", out _));
+        Assert.True(root.TryGetProperty("breakdown", out _));
+        Assert.True(root.TryGetProperty("integrity", out _));
+        Assert.Equal("snes", root.GetProperty("consoleFilter").GetString());
+    }
+
+    [Fact]
     public async Task Health_WithWrongApiKey_ReturnsUnauthorized()
     {
         using var factory = CreateFactory();

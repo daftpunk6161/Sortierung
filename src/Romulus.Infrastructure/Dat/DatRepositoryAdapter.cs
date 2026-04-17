@@ -63,7 +63,16 @@ public sealed class DatRepositoryAdapter
                             ? IsTruthyFlag(biosFlag)
                             : IsLikelyBiosGameName(game.Key, romFileName);
                         var parentGameName = ResolveParentName(game.Key, parentMap);
-                        index.Add(consoleKey, normalizedHash, game.Key, romFileName, isBios, parentGameName);
+
+                        var aliasHashes = CollectAliasHashes(rom, normalizedHash);
+                        index.AddWithAliases(
+                            consoleKey,
+                            normalizedHash,
+                            aliasHashes,
+                            game.Key,
+                            romFileName,
+                            isBios,
+                            parentGameName);
                     }
                 }
             }
@@ -242,13 +251,23 @@ public sealed class DatRepositoryAdapter
                             var romName = reader.GetAttribute("name");
                             if (romName is not null) rom["name"] = romName;
 
+                            var sha1 = NormalizeHashValue(reader.GetAttribute("sha1"));
+                            var sha256 = NormalizeHashValue(reader.GetAttribute("sha256"));
+                            var md5 = NormalizeHashValue(reader.GetAttribute("md5"));
+                            var crc = NormalizeHashValue(reader.GetAttribute("crc"));
+
+                            if (sha1 is not null) rom["sha1"] = sha1;
+                            if (sha256 is not null) rom["sha256"] = sha256;
+                            if (md5 is not null) rom["md5"] = md5;
+                            if (crc is not null) rom["crc"] = crc;
+
                             var selectedHashType = requestedHashType;
                             var hash = requestedHashType switch
                             {
-                                "SHA256" => reader.GetAttribute("sha256"),
-                                "MD5" => reader.GetAttribute("md5"),
-                                "CRC" or "CRC32" => reader.GetAttribute("crc"),
-                                _ => reader.GetAttribute("sha1") // SHA1 default
+                                "SHA256" => sha256,
+                                "MD5" => md5,
+                                "CRC" or "CRC32" => crc,
+                                _ => sha1 // SHA1 default
                             };
 
                             // Fallback chain: if the preferred hash is absent, try alternatives.
@@ -256,29 +275,29 @@ public sealed class DatRepositoryAdapter
                             // R5-007 FIX: Include SHA1 in fallback (was skipped between SHA256→MD5).
                             if (hash is null && requestedHashType is not "SHA1" and not ("CRC" or "CRC32"))
                             {
-                                hash = reader.GetAttribute("sha1");
+                                hash = sha1;
                                 if (hash is not null)
                                     selectedHashType = "SHA1";
                             }
 
                             if (hash is null && requestedHashType is not ("CRC" or "CRC32"))
                             {
-                                hash = reader.GetAttribute("md5");
+                                hash = md5;
                                 if (hash is not null)
                                     selectedHashType = "MD5";
                             }
 
                             if (hash is null && requestedHashType is not ("CRC" or "CRC32"))
                             {
-                                hash = reader.GetAttribute("crc");
+                                hash = crc;
                                 if (hash is not null)
                                     selectedHashType = "CRC";
                             }
 
                             if (hash is not null)
                             {
-                                var normalizedHash = hash.Trim();
-                                if (normalizedHash.Length > 0)
+                                var normalizedHash = NormalizeHashValue(hash);
+                                if (!string.IsNullOrWhiteSpace(normalizedHash))
                                 {
                                     rom["hash"] = normalizedHash;
                                     if (!fallbackWarningEmitted
@@ -334,6 +353,44 @@ public sealed class DatRepositoryAdapter
             "SHA256" => "SHA256",
             _ => "SHA1"
         };
+    }
+
+    private static string? NormalizeHashValue(string? hashValue)
+    {
+        if (string.IsNullOrWhiteSpace(hashValue))
+            return null;
+
+        var normalized = hashValue.Trim();
+        return normalized.Length == 0 ? null : normalized;
+    }
+
+    private static IReadOnlyCollection<string> CollectAliasHashes(
+        IReadOnlyDictionary<string, string> rom,
+        string primaryHash)
+    {
+        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        AddAlias("sha1");
+        AddAlias("md5");
+        AddAlias("crc");
+        AddAlias("sha256");
+
+        return aliases;
+
+        void AddAlias(string key)
+        {
+            if (!rom.TryGetValue(key, out var hashValue) || string.IsNullOrWhiteSpace(hashValue))
+                return;
+
+            var normalized = hashValue.Trim();
+            if (normalized.Length == 0)
+                return;
+
+            if (string.Equals(normalized, primaryHash, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            aliases.Add(normalized);
+        }
     }
 
     private static bool IsDatGameElement(string localName)

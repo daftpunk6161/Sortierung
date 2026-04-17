@@ -34,6 +34,8 @@ internal static partial class CliArgsParser
             "header" => ParseSingleInputSubcommand(CliCommand.Header, rest),
             "junk-report" => ParseSubcommandWithRoots(CliCommand.JunkReport, rest),
             "completeness" => ParseSubcommandWithRoots(CliCommand.Completeness, rest),
+            "enrich" => ParseEnrichSubcommand(rest),
+            "health" => ParseHealthSubcommand(rest),
             _ => null
         };
     }
@@ -964,5 +966,79 @@ internal static partial class CliArgsParser
         if (string.IsNullOrWhiteSpace(opts.InputPath))
             return CliParseResult.ValidationError([$"[Error] {command} requires --input <path>"]);
         return CliParseResult.Subcommand(command, opts);
+    }
+
+    private static CliParseResult ParseEnrichSubcommand(string[] args)
+    {
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+        for (int i = 0; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--roots" or "-roots":
+                    if (!TryConsumeValue(args, ref i, "--roots", errors, out var rootsRaw)) break;
+                    opts.Roots = rootsRaw.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    break;
+                case "--console" or "-c":
+                    if (!TryConsumeValue(args, ref i, "--console", errors, out var consoleVal)) break;
+                    opts.ConsoleKey = consoleVal;
+                    break;
+                case "--limit":
+                    if (!TryConsumeValue(args, ref i, "--limit", errors, out var limitVal)) break;
+                    if (!int.TryParse(limitVal, out var parsedLimit) || parsedLimit < 1)
+                    {
+                        errors.Add("[Error] enrich --limit must be a positive integer.");
+                        break;
+                    }
+                    opts.HistoryLimit = parsedLimit;
+                    break;
+                default:
+                    errors.Add($"[Error] Unknown flag '{args[i]}' for enrich.");
+                    break;
+            }
+        }
+
+        if (errors.Count > 0)
+            return CliParseResult.ValidationError(errors);
+
+        if (opts.Roots.Length == 0 && string.IsNullOrWhiteSpace(opts.ConsoleKey))
+            return CliParseResult.ValidationError(["[Error] enrich requires --roots <paths> or --console <key>."]);
+
+        return CliParseResult.Subcommand(CliCommand.Enrich, opts);
+    }
+
+    private static CliParseResult ParseHealthSubcommand(string[] args)
+    {
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+        for (int i = 0; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--roots" or "-roots":
+                    if (!TryConsumeValue(args, ref i, "--roots", errors, out var rootsRaw)) break;
+                    opts.Roots = rootsRaw.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    break;
+                case "--console" or "-c":
+                    if (!TryConsumeValue(args, ref i, "--console", errors, out var consoleVal)) break;
+                    opts.ConsoleKey = consoleVal;
+                    break;
+                case "--json":
+                    opts.ExportFormat = "json";
+                    break;
+                default:
+                    errors.Add($"[Error] Unknown flag '{args[i]}' for health.");
+                    break;
+            }
+        }
+
+        if (errors.Count > 0)
+            return CliParseResult.ValidationError(errors);
+
+        if (opts.Roots.Length == 0 && string.IsNullOrWhiteSpace(opts.ConsoleKey))
+            return CliParseResult.ValidationError(["[Error] health requires --roots <paths> or --console <key>."]);
+
+        return CliParseResult.Subcommand(CliCommand.Health, opts);
     }
 }

@@ -14,7 +14,7 @@ public readonly record struct DatAuditClassifyResult(
 /// <summary>
 /// Pure DAT audit status classifier.
 /// </summary>
-public static class DatAuditClassifier
+public static partial class DatAuditClassifier
 {
     /// <summary>
     /// Classifies a ROM against the DAT index and returns matched entry details.
@@ -86,7 +86,7 @@ public static class DatAuditClassifier
                 return new(status, null, null, consoleKey);
             }
 
-            var nameStatus = IsSameFileName(actualFileName, inConsole.Value.RomFileName)
+            var nameStatus = IsSameFileName(actualFileName, inConsole.Value)
                 ? DatAuditStatus.Have
                 : DatAuditStatus.HaveWrongName;
             return new(nameStatus, inConsole.Value.GameName, inConsole.Value.RomFileName, consoleKey);
@@ -102,7 +102,7 @@ public static class DatAuditClassifier
             return new(DatAuditStatus.Ambiguous, null, null, consoleKey);
 
         var single = matches[0];
-        var singleStatus = IsSameFileName(actualFileName, single.Entry.RomFileName)
+        var singleStatus = IsSameFileName(actualFileName, single.Entry)
             ? DatAuditStatus.Have
             : DatAuditStatus.HaveWrongName;
         return new(singleStatus, single.Entry.GameName, single.Entry.RomFileName, single.ConsoleKey);
@@ -117,23 +117,49 @@ public static class DatAuditClassifier
            && !string.Equals(consoleKey, "UNKNOWN", StringComparison.OrdinalIgnoreCase)
            && !string.Equals(consoleKey, "AMBIGUOUS", StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsSameFileName(string actualFileName, string? datRomFileName)
+    private static bool IsSameFileName(string actualFileName, DatIndex.DatIndexEntry entry)
     {
-        if (string.IsNullOrWhiteSpace(datRomFileName))
-            return true;
-
         var actual = Path.GetFileName(actualFileName);
-        var expected = Path.GetFileName(datRomFileName);
+        var actualStem = NormalizeComparableStem(Path.GetFileNameWithoutExtension(actual));
 
-        // Exact match (same name + extension)
-        if (string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
-            return true;
+        foreach (var candidate in GetComparableNames(entry))
+        {
+            if (string.IsNullOrWhiteSpace(candidate))
+                continue;
 
-        // Stem match: handles archive containers ("Game.zip" vs "Game.nes")
-        // and format variants ("Game.chd" vs "Game (Track 01).bin")
-        return string.Equals(
-            Path.GetFileNameWithoutExtension(actual),
-            Path.GetFileNameWithoutExtension(expected),
-            StringComparison.OrdinalIgnoreCase);
+            var expected = Path.GetFileName(candidate);
+            if (string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            var expectedStem = NormalizeComparableStem(Path.GetFileNameWithoutExtension(expected));
+            if (string.Equals(actualStem, expectedStem, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
+
+    private static IEnumerable<string?> GetComparableNames(DatIndex.DatIndexEntry entry)
+    {
+        yield return entry.RomFileName;
+        yield return entry.GameName;
+        yield return entry.ParentGameName;
+    }
+
+    private static string NormalizeComparableStem(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        var normalized = value.Trim();
+        normalized = DiscSuffixRegex().Replace(normalized, string.Empty).Trim();
+        normalized = TrackSuffixRegex().Replace(normalized, string.Empty).Trim();
+        return normalized;
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\s*\((disc|disk|cd)\s*\d+\)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    private static partial System.Text.RegularExpressions.Regex DiscSuffixRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\s*\(track\s*\d+\)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    private static partial System.Text.RegularExpressions.Regex TrackSuffixRegex();
 }

@@ -12,11 +12,15 @@ namespace Romulus.Contracts.Models;
 public sealed class DatIndex
 {
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, DatIndexEntry>> _data = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, DatIndexEntry>> _aliasData = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, DatIndexEntry>> _nameIndex = new(StringComparer.OrdinalIgnoreCase);
     private int _totalEntries;
     private int _droppedByCapacityLimit;
 
-    public readonly record struct DatIndexEntry(string GameName, string? RomFileName, bool IsBios = false, string? ParentGameName = null);
+    public readonly record struct DatIndexEntry(string GameName, string? RomFileName, bool IsBios = false, string? ParentGameName = null)
+    {
+        public bool IsClone => !string.IsNullOrWhiteSpace(ParentGameName);
+    }
 
     /// <summary>Maximum entries per console to prevent OOM from malicious DATs. 0 = unlimited.</summary>
     public int MaxEntriesPerConsole { get; init; }
@@ -68,20 +72,59 @@ public sealed class DatIndex
         nameMap.TryAdd(gameName, newEntry);
     }
 
+    /// <summary>
+    /// Add or update a primary hash mapping plus optional alias hashes for fallback lookup.
+    /// Alias hashes do not increase <see cref="TotalEntries"/> and exist only for lookup compatibility
+    /// (e.g. SHA1 primary with CRC32/MD5 aliases from the same DAT row).
+    /// </summary>
+    public void AddWithAliases(
+        string consoleKey,
+        string primaryHash,
+        IEnumerable<string>? aliasHashes,
+        string gameName,
+        string? romFileName = null,
+        bool isBios = false,
+        string? parentGameName = null)
+    {
+        Add(consoleKey, primaryHash, gameName, romFileName, isBios, parentGameName);
+
+        if (aliasHashes is null)
+            return;
+
+        var aliasMap = _aliasData.GetOrAdd(consoleKey,
+            _ => new ConcurrentDictionary<string, DatIndexEntry>(StringComparer.OrdinalIgnoreCase));
+        var entry = new DatIndexEntry(gameName, romFileName, isBios, parentGameName);
+
+        foreach (var alias in aliasHashes)
+        {
+            if (string.IsNullOrWhiteSpace(alias))
+                continue;
+
+            var normalizedAlias = alias.Trim();
+            if (normalizedAlias.Length == 0)
+                continue;
+
+            if (string.Equals(normalizedAlias, primaryHash, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            aliasMap[normalizedAlias] = entry;
+        }
+    }
+
     /// <summary>Look up a game name by console key and hash.</summary>
     public string? Lookup(string consoleKey, string hash)
     {
-        if (_data.TryGetValue(consoleKey, out var hashMap) &&
-            hashMap.TryGetValue(hash, out var entry))
-            return entry.GameName;
+        var entry = LookupEntry(consoleKey, hash);
+        if (entry is not null)
+            return entry.Value.GameName;
         return null;
     }
 
     /// <summary>Look up game name plus optional DAT ROM filename by console key and hash.</summary>
     public DatIndexEntry? LookupWithFilename(string consoleKey, string hash)
     {
-        if (_data.TryGetValue(consoleKey, out var hashMap) &&
-            hashMap.TryGetValue(hash, out var entry))
+        var entry = LookupEntry(consoleKey, hash);
+        if (entry is not null)
             return entry;
         return null;
     }
@@ -94,11 +137,16 @@ public sealed class DatIndex
     /// </summary>
     public (string ConsoleKey, string GameName)? LookupAny(string hash)
     {
-        foreach (var key in _data.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
+        var allKeys = _data.Keys
+            .Concat(_aliasData.Keys)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(k => k, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var key in allKeys)
         {
-            if (_data.TryGetValue(key, out var hashMap) &&
-                hashMap.TryGetValue(hash, out var entry))
-                return (key, entry.GameName);
+            var entry = LookupEntry(key, hash);
+            if (entry is not null)
+                return (key, entry.Value.GameName);
         }
         return null;
     }
@@ -109,12 +157,17 @@ public sealed class DatIndex
     public IReadOnlyList<(string ConsoleKey, DatIndexEntry Entry)> LookupAllByHash(string hash)
     {
         var results = new List<(string ConsoleKey, DatIndexEntry Entry)>();
-        foreach (var key in _data.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
+        var allKeys = _data.Keys
+            .Concat(_aliasData.Keys)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(k => k, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var key in allKeys)
         {
-            if (_data.TryGetValue(key, out var hashMap) &&
-                hashMap.TryGetValue(hash, out var entry))
+            var entry = LookupEntry(key, hash);
+            if (entry is not null)
             {
-                results.Add((key, entry));
+                results.Add((key, entry.Value));
             }
         }
 
@@ -181,12 +234,34 @@ public sealed class DatIndex
         {
             if (!other._data.TryGetValue(consoleKey, out var otherHashMap))
                 continue;
+
             foreach (var kvp in otherHashMap)
             {
                 Add(consoleKey, kvp.Key, kvp.Value.GameName, kvp.Value.RomFileName,
                     kvp.Value.IsBios, kvp.Value.ParentGameName);
             }
+
+            if (!other._aliasData.TryGetValue(consoleKey, out var otherAliasMap))
+                continue;
+
+            var aliasMap = _aliasData.GetOrAdd(consoleKey,
+                _ => new ConcurrentDictionary<string, DatIndexEntry>(StringComparer.OrdinalIgnoreCase));
+            foreach (var alias in otherAliasMap)
+                aliasMap[alias.Key] = alias.Value;
         }
+    }
+
+    private DatIndexEntry? LookupEntry(string consoleKey, string hash)
+    {
+        if (_data.TryGetValue(consoleKey, out var hashMap) &&
+            hashMap.TryGetValue(hash, out var primaryEntry))
+            return primaryEntry;
+
+        if (_aliasData.TryGetValue(consoleKey, out var aliasMap) &&
+            aliasMap.TryGetValue(hash, out var aliasEntry))
+            return aliasEntry;
+
+        return null;
     }
 
     /// <summary>Get all indexed console keys (snapshot).</summary>

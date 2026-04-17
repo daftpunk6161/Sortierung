@@ -45,15 +45,18 @@ public sealed class HeaderlessHasherTests : IDisposable
     }
 
     [Fact]
-    public void ComputeHeaderlessHash_NES_WithoutInesHeader_ReturnsNull_Issue9()
+    public void ComputeHeaderlessHash_NES_WithoutInesHeader_ReturnsRawHash_Issue9()
     {
-        // ROM without iNES magic → no header to skip
+        // P4-S01: Clean NES ROM without iNES header prefix → skipBytes=0 → hash from position 0.
+        // No-Intro stores the SHA1 of the raw ROM data; a headerless dump matches that directly.
         var raw = new byte[1024];
         Array.Fill(raw, (byte)0xBB);
         var path = WriteFile("noineshdr.nes", raw);
 
         var result = _hasher.ComputeHeaderlessHash(path, "NES", "SHA1");
-        Assert.Null(result);
+
+        Assert.NotNull(result);
+        Assert.Equal(ComputeSha1(raw), result);
     }
 
     // ── SNES (512-byte copier header, conditional) ──────────────────────
@@ -77,15 +80,18 @@ public sealed class HeaderlessHasherTests : IDisposable
     }
 
     [Fact]
-    public void ComputeHeaderlessHash_SNES_WithoutCopierHeader_ReturnsNull_Issue9()
+    public void ComputeHeaderlessHash_SNES_WithoutCopierHeader_ReturnsRawHash_Issue9()
     {
-        // Clean SNES ROM: 32768 bytes (exact multiple of 1024) → no copier header
+        // P4-S01: Clean SNES ROM (exact multiple of 1024 bytes, no copier header) → skipBytes=0 → hash whole file.
+        // No-Intro stores the SHA1 of the raw ROM data without any copier header.
         var rom = new byte[32768];
         Array.Fill(rom, (byte)0xDD);
         var path = WriteFile("snes_clean.sfc", rom);
 
         var result = _hasher.ComputeHeaderlessHash(path, "SNES", "SHA1");
-        Assert.Null(result);
+
+        Assert.NotNull(result);
+        Assert.Equal(ComputeSha1(rom), result);
     }
 
     // ── Atari 7800 (128-byte header) ────────────────────────────────────
@@ -162,18 +168,21 @@ public sealed class HeaderlessHasherTests : IDisposable
         Assert.Equal(ComputeSha1(canonical), normalizedHash);
     }
 
-    // ── Console without mapping → null ──────────────────────────────────
+    // ── Pass-through headerless hashing for cartridge families ──────────
 
     [Theory]
     [InlineData("MD")]
     [InlineData("GBA")]
-    public void ComputeHeaderlessHash_ConsoleWithoutMapping_ReturnsNull_Issue9(string console)
+    [InlineData("GB")]
+    [InlineData("GBC")]
+    public void ComputeHeaderlessHash_CartridgeConsoleWithoutExplicitHeader_UsesWholeFileHash(string console)
     {
         var rom = new byte[1024];
+        Array.Fill(rom, (byte)0x5A);
         var path = WriteFile($"test_{console}.bin", rom);
 
         var result = _hasher.ComputeHeaderlessHash(path, console, "SHA1");
-        Assert.Null(result);
+        Assert.Equal(ComputeSha1(rom), result);
     }
 
     // ── Edge cases ──────────────────────────────────────────────────────
@@ -252,12 +261,12 @@ public sealed class HeaderlessHasherTests : IDisposable
     // ── TASK-015 Regression: Non-headered consoles unaffected ───────────
 
     [Fact]
-    public void Regression_NonHeaderedConsoles_NeverGetHeaderlessHash_Issue9()
+    public void Regression_DiscAndUnknownPlatforms_DoNotGetHeaderlessHash_Issue9()
     {
         var rom = new byte[1024];
         var path = WriteFile("regression.bin", rom);
 
-        foreach (var console in new[] { "MD", "GBA", "GB", "GBC", "PSX", "DC", "UNKNOWN" })
+        foreach (var console in new[] { "PSX", "PS1", "DC", "SAT", "UNKNOWN", "AMBIGUOUS" })
         {
             Assert.Null(_hasher.ComputeHeaderlessHash(path, console));
         }
