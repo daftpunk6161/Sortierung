@@ -312,11 +312,12 @@ public sealed class PureMethodsCoverageTests
     #region HypothesisResolver.DetermineSortDecision
 
     [Fact]
-    public void DetermineSortDecision_HighConfidence_NoConflict_Structural_Sort()
+    public void DetermineSortDecision_HighConfidence_NoConflict_Structural_NoHardEvidence_Review()
     {
+        // Tier1_Structural without hasHardEvidence defaults to Review (conservative gate).
         var decision = HypothesisResolver.DetermineSortDecision(
             EvidenceTier.Tier1_Structural, 95, conflict: false);
-        Assert.Equal(SortDecision.Sort, decision);
+        Assert.Equal(SortDecision.Review, decision);
     }
 
     [Fact]

@@ -25,4 +25,20 @@ Describe 'SecurityEventStream' {
             Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
         }
     }
+
+    It 'recovers when SecurityEvent script state is missing under strict mode' {
+        $events = & {
+            Set-StrictMode -Version Latest
+
+            Remove-Variable -Scope Script -Name SecurityEventLog -ErrorAction SilentlyContinue
+            Remove-Variable -Scope Script -Name SecurityEventPath -ErrorAction SilentlyContinue
+            Remove-Variable -Scope Script -Name SecurityCorrelationId -ErrorAction SilentlyContinue
+            Remove-Variable -Scope Script -Name SecurityEventLogMaxEntries -ErrorAction SilentlyContinue
+
+            Write-SecurityEvent -EventType 'Plugin.Loaded' -Actor 'test' -Target 'plugin.ps1' -Outcome 'Allow' -Detail 'strict-mode-check' -Source 'test' -Severity 'Low'
+            @(Get-SecurityEventLog)
+        }
+
+        @($events).Count | Should -BeGreaterThan 0
+    }
 }

@@ -83,8 +83,8 @@ function Write-SecurityAuditEvent {
     default { 'Security' }
   }
 
-  $eventType = '{0}.{1}' -f $domainPrefix, ([string]$Action -replace '\s+', '')
-  Write-SecurityEvent -EventType $eventType -Actor $Actor -Target $Target -Outcome $Outcome -Detail $Detail -Source $Source -Severity $Severity
+  $securityEventType = '{0}.{1}' -f $domainPrefix, ([string]$Action -replace '\s+', '')
+  Write-SecurityEvent -EventType $securityEventType -Actor $Actor -Target $Target -Outcome $Outcome -Detail $Detail -Source $Source -Severity $Severity
 }
 
 function Write-SecurityEvent {
@@ -131,11 +131,26 @@ function Write-SecurityEvent {
     [string]$Severity = 'Medium'
   )
 
+  # Keep the stream resilient when prior tests/scripts removed script state variables.
+  if (-not (Get-Variable -Scope Script -Name SecurityEventLog -ErrorAction SilentlyContinue)) {
+    $script:SecurityEventLog = $null
+  }
+  if (-not (Get-Variable -Scope Script -Name SecurityEventPath -ErrorAction SilentlyContinue)) {
+    $script:SecurityEventPath = $null
+  }
+  if (-not (Get-Variable -Scope Script -Name SecurityCorrelationId -ErrorAction SilentlyContinue)) {
+    $script:SecurityCorrelationId = $null
+  }
+  $maxEntriesVar = Get-Variable -Scope Script -Name SecurityEventLogMaxEntries -ErrorAction SilentlyContinue
+  if ($null -eq $maxEntriesVar -or [int]$maxEntriesVar.Value -lt 1) {
+    $script:SecurityEventLogMaxEntries = 10000
+  }
+
   if ($null -eq $script:SecurityEventLog -or [string]::IsNullOrWhiteSpace($script:SecurityEventPath)) {
     [void](Initialize-SecurityEventStream)
   }
 
-  $event = [pscustomobject]@{
+  $logEntry = [pscustomobject]@{
     TimestampUtc   = (Get-Date).ToUniversalTime().ToString('o')
     CorrelationId  = if ($script:SecurityCorrelationId) { $script:SecurityCorrelationId } else { '' }
     EventType      = [string]$EventType
@@ -150,7 +165,7 @@ function Write-SecurityEvent {
 
   # In-memory buffer (ring-buffer: trim oldest entries when exceeding max)
   if ($null -ne $script:SecurityEventLog) {
-    [void]$script:SecurityEventLog.Add($event)
+    [void]$script:SecurityEventLog.Add($logEntry)
     if ($script:SecurityEventLog.Count -gt $script:SecurityEventLogMaxEntries) {
       $excess = $script:SecurityEventLog.Count - $script:SecurityEventLogMaxEntries
       $script:SecurityEventLog.RemoveRange(0, $excess)
@@ -160,7 +175,7 @@ function Write-SecurityEvent {
   # Persistent JSONL append
   if (-not [string]::IsNullOrWhiteSpace($script:SecurityEventPath)) {
     try {
-      $json = $event | ConvertTo-Json -Depth 5 -Compress
+      $json = $logEntry | ConvertTo-Json -Depth 5 -Compress
       [System.IO.File]::AppendAllText($script:SecurityEventPath, $json + [Environment]::NewLine)
     } catch {
       Write-Warning ('[SecurityEvent] Failed to persist event: {0}' -f $_.Exception.Message)

@@ -2069,7 +2069,10 @@ public partial class GuiViewModelTests
         try
         {
             var auditPath = Path.Combine(tempDir, "audit.csv");
-            File.WriteAllText(auditPath, "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n", Encoding.UTF8);
+            File.WriteAllText(auditPath,
+                "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n" +
+                $"{tempDir},{tempDir}\\old.bin,{tempDir}\\trash\\old.bin,MOVE,GAME,,dedupe,2026-01-01\n",
+                Encoding.UTF8);
 
             var stub = new StubDialogService();
             stub.ConfirmResponses.Enqueue(true);

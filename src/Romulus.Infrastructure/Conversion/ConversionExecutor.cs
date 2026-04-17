@@ -87,7 +87,7 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
         var currentInputPath = plan.SourcePath;
         var intermediateArtifacts = new List<string>();
         var exitCode = 0;
-        var finalVerification = VerificationStatus.NotAttempted;
+        VerificationStatus? finalVerification = null;
 
         var steps = plan.Steps.OrderBy(s => s.Order).ToArray();
         if (!HasContiguousStepOrder(steps))
@@ -260,7 +260,9 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
 
                     // R5-025 FIX: Keep worst verification status across multi-step conversion.
                     // Without this, a step-2 "Verified" overwrites a step-1 "VerifyNotAvailable".
-                    finalVerification = WorstVerificationStatus(finalVerification, verifyStatus);
+                    finalVerification = finalVerification is null
+                        ? verifyStatus
+                        : WorstVerificationStatus(finalVerification.Value, verifyStatus);
                     currentInputPath = finalOutputPath;
                 }
                 catch (InvalidOperationException ex)
@@ -283,7 +285,7 @@ public sealed class ConversionExecutor(IEnumerable<IToolInvoker> invokers, bool 
                 ConversionOutcome.Success,
                 null,
                 exitCode,
-                finalVerification,
+                finalVerification ?? VerificationStatus.NotAttempted,
                 totalWatch.ElapsedMilliseconds);
         }
         finally

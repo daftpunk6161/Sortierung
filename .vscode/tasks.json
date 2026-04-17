@@ -210,30 +210,7 @@
 			"args": [
 				"-NoProfile",
 				"-Command",
-				"Invoke-Pester -Path './archive/powershell/dev/tests/integration/WpfSmoke.Tests.ps1' -Output Detailed"
-			],
-			"group": "test"
-		},
-		{
-			"label": "tests: smoke-wpf",
-			"type": "shell",
-			"command": "pwsh",
-			"args": [
-				"-NoProfile",
-				"-Command",
-				"& { Invoke-Pester -Path './archive/powershell/dev/tests/integration/WpfSmoke.Tests.ps1' -Output Detailed }"
-			],
-			"group": "test"
-		},
-		{
-			"label": "tests: smoke-wpf",
-			"type": "shell",
-			"command": "Invoke-Pester",
-			"args": [
-				"-Path",
-				"./archive/powershell/dev/tests/integration/WpfSmoke.Tests.ps1",
-				"-Output",
-				"Detailed"
+				"Invoke-Pester -Path \"./archive/powershell/dev/tests/integration/WpfSmoke.Tests.ps1\" -Output Detailed"
 			],
 			"group": "test"
 		},

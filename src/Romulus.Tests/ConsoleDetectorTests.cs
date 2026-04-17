@@ -224,11 +224,12 @@ public class ConsoleDetectorTests
     // ── Full detection pipeline ─────────────────────────────────────────
 
     [Fact]
-    public void Detect_FolderWins_OverExtension()
+    public void Detect_UniqueExtension_WinsOverFolder()
     {
         var detector = CreateDetector();
-        // File in PS1 folder with .nes extension → folder wins
-        Assert.Equal("PS1", detector.Detect(@"D:\Roms\PS1\weird.nes", @"D:\Roms"));
+        // R1-017: Detect() delegates to DetectWithConfidence() which resolves by evidence strength.
+        // UniqueExtension (.nes→NES, priority=3) beats FolderName (PS1, priority=1).
+        Assert.Equal("NES", detector.Detect(@"D:\Roms\PS1\weird.nes", @"D:\Roms"));
     }
 
     [Fact]
@@ -796,7 +797,8 @@ public class ConsoleDetectorTests
         {
             var result = detector.DetectWithConfidence(filePath, tempDir);
             Assert.Equal("NES", result.ConsoleKey);
-            Assert.InRange(result.Confidence, 90, 100);
+            // UniqueExtension alone: ConfidenceRating=80, SingleSourceCap=95 → result=80
+            Assert.InRange(result.Confidence, 75, 85);
         }
         finally
         {
@@ -817,7 +819,8 @@ public class ConsoleDetectorTests
         {
             var result = detector.DetectWithConfidence(filePath, tempDir);
             Assert.Equal("NES", result.ConsoleKey);
-            Assert.InRange(result.Confidence, 90, 100);
+            // UniqueExtension alone: ConfidenceRating=80, SingleSourceCap=95 → result=80
+            Assert.InRange(result.Confidence, 75, 85);
         }
         finally
         {

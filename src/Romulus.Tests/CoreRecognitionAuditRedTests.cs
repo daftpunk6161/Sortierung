@@ -187,6 +187,11 @@ public class CoreRecognitionAuditRedTests
         {
             Assert.Equal(SortDecision.Sort, result.SortDecision);
         }
+        else if (confidence == 75)
+        {
+            // SerialNumber is hard evidence → Tier1_Structural + hasHardEvidence → Sort
+            Assert.Equal(SortDecision.Sort, result.SortDecision);
+        }
         else
         {
             Assert.Equal(SortDecision.Review, result.SortDecision);
@@ -289,8 +294,8 @@ public class CoreRecognitionAuditRedTests
 
         var result = HypothesisResolver.Resolve(hypotheses);
 
-        // SerialNumber cap → 75, no hard evidence, no conflict → should be Review
-        Assert.Equal(SortDecision.Review, result.SortDecision);
+        // SerialNumber is hard evidence → Tier1_Structural + hasHardEvidence + no conflict → Sort
+        Assert.Equal(SortDecision.Sort, result.SortDecision);
         Assert.Equal(75, result.Confidence);
     }
 

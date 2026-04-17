@@ -537,6 +537,14 @@ public sealed class ToolInvokerAdapterCoverageTests : IDisposable
             return NextResult;
         }
 
+        public ToolResult InvokeProcess(string filePath, string[] arguments,
+            Romulus.Contracts.Models.ToolRequirement? requirement, string? errorLabel,
+            TimeSpan? timeout, CancellationToken cancellationToken)
+        {
+            LastArgs = arguments;
+            return NextResult;
+        }
+
         public ToolResult Invoke7z(string sevenZipPath, string[] arguments) => NextResult;
     }
 

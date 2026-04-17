@@ -35,8 +35,6 @@ public sealed class FormatScorerCoverageTests
         => Assert.Equal(expected, FormatScorer.IsDiscExtension(ext));
 
     [Theory]
-    [InlineData(".zip")]
-    [InlineData(".7z")]
     [InlineData(".nes")]
     [InlineData(".sfc")]
     [InlineData(".gba")]

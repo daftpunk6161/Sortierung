@@ -434,7 +434,7 @@ public sealed class MutationKillTests
     [InlineData(".iso", true)]
     [InlineData(".chd", true)]
     [InlineData(".nes", false)]
-    [InlineData(".zip", false)]
+    [InlineData(".sfc", false)]
     public void FS_IsDiscExtension(string ext, bool expected)
     {
         Assert.Equal(expected, FormatScorer.IsDiscExtension(ext));

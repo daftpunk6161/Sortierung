@@ -24,7 +24,7 @@ revision_reason: |
   - Unnoetige Enum-Value-Rewrite (DetectionSource wird nirgends serialisiert)
   - Benchmark-Task nimmt ROM-Dateien an, aber Ground-Truth enthaelt JSONL-Fixtures
   Neue Version: 3 Eingriffe statt 6 Waves. Gleiche Korrektheit, 70% weniger Aufwand.
-status: approved
+status: completed
 research_confidence: high
 
 plan_metrics:
@@ -195,7 +195,7 @@ tasks:
       - "D-001"
       - "S-001"
     priority: critical
-    status: pending
+    status: completed
     dependencies: []
     context_files:
       - path: "src/Romulus.Core/Classification/DetectionHypothesis.cs"
@@ -243,7 +243,7 @@ tasks:
     covers:
       - "D-001"
     priority: critical
-    status: pending
+    status: completed
     dependencies:
       - "e1-confidence-rating"
     context_files:
@@ -327,7 +327,7 @@ tasks:
     covers:
       - "D-003"
     priority: critical
-    status: pending
+    status: completed
     dependencies:
       - "e1-migrate-casts"
     context_files:
@@ -391,7 +391,7 @@ tasks:
     covers:
       - "D-002"
     priority: high
-    status: pending
+    status: completed
     dependencies:
       - "e2-explicit-gate"
     context_files:
@@ -447,7 +447,7 @@ tasks:
     covers:
       - "S-002"
     priority: high
-    status: pending
+    status: completed
     dependencies:
       - "e1-migrate-casts"
     context_files:
@@ -497,7 +497,7 @@ tasks:
     agent: gem-implementer
     covers: []
     priority: high
-    status: pending
+    status: completed
     dependencies:
       - "e2-explicit-gate"
       - "e3-softonly-cap"

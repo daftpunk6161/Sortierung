@@ -1111,7 +1111,7 @@ tasks:
     agent: gem-reviewer
     prototype: false
     priority: high
-    status: pending
+    status: completed
     dependencies:
       - "w1-critical-conversion"
       - "w1-audit-csv-quote"
@@ -1158,7 +1158,7 @@ tasks:
     agent: gem-reviewer
     prototype: false
     priority: medium
-    status: pending
+    status: completed
     dependencies:
       - "w4-settings-parität"
       - "w4-diagnostik-fixes"
@@ -1207,7 +1207,7 @@ tasks:
     agent: gem-reviewer
     prototype: false
     priority: high
-    status: pending
+    status: completed
     dependencies:
       - "w7-testluecken-schliessen"
       - "w7-hygiene-i18n"

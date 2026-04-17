@@ -406,7 +406,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         Assert.True(result.DashboardEnabled);
         Assert.False(result.AllowRemoteClients);
         Assert.True(result.AllowedRootsEnforced);
-        Assert.Equal(2, result.AllowedRoots.Length);
+        Assert.Empty(result.AllowedRoots); // Security: bootstrap never exposes concrete root paths
         Assert.Equal("https://rom.local", result.PublicBaseUrl);
     }
 

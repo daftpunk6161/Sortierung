@@ -167,7 +167,8 @@ public sealed class SafetyIoSecurityPhase1Tests : IDisposable
 
         var csvPath = Path.Combine(_tempDir, "audit-dryrun.csv");
         File.WriteAllText(csvPath,
-            "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n");
+            "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n" +
+            $"{_tempDir},{_tempDir}\\old.bin,{_tempDir}\\new.bin,MOVE,GAME,,dedupe,2026-01-01\n");
 
         // DryRun without sidecar should be blocked (Preview/Execute parity)
         var result = audit.Rollback(csvPath,
