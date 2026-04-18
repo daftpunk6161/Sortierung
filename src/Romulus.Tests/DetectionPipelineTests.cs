@@ -1102,9 +1102,9 @@ public sealed class DetectionPipelineTests
     }
 
     [Fact]
-    public void Resolver_FolderOnly_SoftOnlyCap65_Blocked()
+    public void Resolver_FolderOnly_SoftOnlyCap_Blocked()
     {
-        // Folder-only detection should be capped at 65 and blocked from sorting
+        // Folder-only detection should be capped at SoftOnlyCap (79) and blocked from sorting
         var result = HypothesisResolver.Resolve([
             new("PS1", 85, DetectionSource.FolderName, "folder=PlayStation")
         ]);

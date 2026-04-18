@@ -65,7 +65,7 @@ public static class HypothesisResolver
     /// 2. Highest total confidence wins.
     /// 3. On tie: alphabetical ConsoleKey (deterministic).
     /// 4. If multiple distinct ConsoleKeys have hypotheses, mark as conflict.
-    /// 5. Soft-only detections are capped at 65 (never auto-sortable).
+    /// 5. Soft-only detections are capped at <see cref="SoftOnlyCap"/> (never auto-sortable).
     /// 6. Single-source detections are capped per source type.
     /// 7. AMBIGUOUS is returned when two strong conflicting consoles are equally plausible.
     /// 8. SortDecision is derived from confidence, conflict, and evidence type.
@@ -309,7 +309,7 @@ public static class HypothesisResolver
 
         // Soft-only detections can become strong enough for review but should not
         // exceed hard-evidence sort confidence without corroboration.
-        return Math.Min(79, strongestSourceCap + multiSourceAgreementBonus);
+        return Math.Min(SoftOnlyCap, strongestSourceCap + multiSourceAgreementBonus);
     }
 
     private static MatchEvidence BuildMatchEvidence(

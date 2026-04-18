@@ -217,37 +217,39 @@ public sealed class VersionScorer
 
                 score = SaturatingAdd(score, dottedScore);
             }
-            else if (SafeRegex.IsMatch(RxNumericSuffix, rev))
+            else
             {
+                // B-01 FIX: Use Match() directly instead of IsMatch() + Match() to avoid double
+                // evaluation and remove early returns that skipped version + language scoring
+                // when long.TryParse failed for very large numeric revision values.
                 var numericMatch = SafeRegex.Match(RxNumericSuffix, rev);
-                if (!numericMatch.Success)
-                    return score;
-
-                if (!long.TryParse(numericMatch.Groups[1].Value, out var numeric))
-                    return score;
-                var suffix = numericMatch.Groups[2].Value;
-                long suffixScore = 0;
-                if (!string.IsNullOrWhiteSpace(suffix))
+                if (numericMatch.Success)
                 {
-                    // Clamp to 8 chars to prevent long overflow.
-                    var effectiveSuffix = suffix.Length > 8 ? suffix[..8] : suffix;
-                    foreach (var ch in effectiveSuffix.ToLowerInvariant())
+                    if (long.TryParse(numericMatch.Groups[1].Value, out var numeric))
                     {
-                        suffixScore = (suffixScore * 26) + (ch - 'a' + 1);
+                        var suffix = numericMatch.Groups[2].Value;
+                        long suffixScore = 0;
+                        if (!string.IsNullOrWhiteSpace(suffix))
+                        {
+                            // Clamp to 8 chars to prevent long overflow.
+                            var effectiveSuffix = suffix.Length > 8 ? suffix[..8] : suffix;
+                            foreach (var ch in effectiveSuffix.ToLowerInvariant())
+                            {
+                                suffixScore = (suffixScore * 26) + (ch - 'a' + 1);
+                            }
+                        }
+                        // RxNumericSuffix is anchored (^...$) so no remainder is possible.
+                        score = SaturatingAdd(score, SaturatingAdd(SaturatingMultiply(numeric, 10L), suffixScore));
                     }
+                    // else: revision too large for long — skip revision score, continue to version+lang scoring
                 }
-                // BUG-FIX: Removed dead remainder code — RxNumericSuffix is anchored (^...$)
-                // so numericMatch.Length == rev.Length, meaning remainder was always empty.
-                score = SaturatingAdd(score, SaturatingAdd(SaturatingMultiply(numeric, 10L), suffixScore));
-            }
-            else if (SafeRegex.IsMatch(RxLeadingDigits, rev))
-            {
-                var digitMatch = SafeRegex.Match(RxLeadingDigits, rev);
-                if (!digitMatch.Success)
-                    return score;
-
-                if (long.TryParse(digitMatch.Value, out var leadingDigit))
-                    score = SaturatingAdd(score, SaturatingMultiply(leadingDigit, 10L));
+                else
+                {
+                    var digitMatch = SafeRegex.Match(RxLeadingDigits, rev);
+                    if (digitMatch.Success && long.TryParse(digitMatch.Value, out var leadingDigit))
+                        score = SaturatingAdd(score, SaturatingMultiply(leadingDigit, 10L));
+                    // else: no matching pattern — skip revision score, continue to version+lang scoring
+                }
             }
         }
 

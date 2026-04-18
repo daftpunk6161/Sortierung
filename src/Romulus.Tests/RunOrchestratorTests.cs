@@ -125,6 +125,30 @@ public class RunOrchestratorTests : IDisposable
     }
 
     [Fact]
+    public void Preflight_ReportPath_ExistingEmptyFile_IsNotDeleted()
+    {
+        var reportPath = Path.Combine(_tempDir, "existing-empty-report.json");
+        File.WriteAllText(reportPath, string.Empty);
+
+        var orchestrator = new RunOrchestrator(
+            new Romulus.Infrastructure.FileSystem.FileSystemAdapter(),
+            new FakeAuditStore());
+
+        var options = new RunOptions
+        {
+            Roots = new[] { _tempDir },
+            Extensions = new[] { ".zip" },
+            ReportPath = reportPath
+        };
+
+        var result = orchestrator.Preflight(options);
+
+        Assert.Equal("ok", result.Status);
+        Assert.True(File.Exists(reportPath));
+        Assert.Equal(0, new FileInfo(reportPath).Length);
+    }
+
+    [Fact]
     public void Preflight_ProtectedTrashRoot_ReturnsBlocked()
     {
         if (!OperatingSystem.IsWindows())

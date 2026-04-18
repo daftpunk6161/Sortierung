@@ -182,10 +182,13 @@ public sealed partial class RunOrchestrator : IDisposable
             if (!treatAsDirectory)
             {
                 var normalized = Path.GetFullPath(configuredPath!);
+                var fileExistedBeforeProbe = File.Exists(normalized);
                 using var fs = new FileStream(normalized, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite);
                 fs.Close();
-                // Clean up probe file if we just created it (empty)
-                if (new FileInfo(normalized).Length == 0)
+
+                // Preflight must be side-effect free for existing files.
+                // Only delete the probe file when this method created it.
+                if (!fileExistedBeforeProbe)
                     File.Delete(normalized);
             }
 

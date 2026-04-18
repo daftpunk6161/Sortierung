@@ -213,4 +213,40 @@ public class VersionScorerTests
 
         Assert.Equal(first, second);
     }
+
+    // --- B-01 Regression: large numeric revision must not early-return ---
+
+    [Fact]
+    public void LargeNumericRevision_VersionScoringNotSkipped()
+    {
+        // A 20-digit revision overflows long, so revision score is skipped gracefully.
+        // Before B-01 fix: the method early-returned before scoring the version tag.
+        var withVersion = _sut.GetVersionScore("Game (Rev 99999999999999999999) (v1.0)");
+        var withoutVersion = _sut.GetVersionScore("Game (Rev 99999999999999999999)");
+        Assert.True(withVersion > withoutVersion, "Version tag must contribute even when revision number overflows long.");
+    }
+
+    [Fact]
+    public void LargeNumericRevision_LanguageScoringNotSkipped()
+    {
+        // A 20-digit revision overflows long, so revision score is skipped gracefully.
+        // Before B-01 fix: the method early-returned before scoring the language tag.
+        var withLang = _sut.GetVersionScore("Game (Rev 99999999999999999999) (en)");
+        var withoutLang = _sut.GetVersionScore("Game (Rev 99999999999999999999)");
+        Assert.True(withLang > withoutLang, "Language tag must contribute even when revision number overflows long.");
+    }
+
+    [Fact]
+    public void LargeNumericRevision_CombinedVersionAndLang_BothContribute()
+    {
+        // Verify that both version AND language scoring run after a large-revision parse failure.
+        var withBoth = _sut.GetVersionScore("Game (Rev 99999999999999999999) (v1.0) (en)");
+        var withVersionOnly = _sut.GetVersionScore("Game (Rev 99999999999999999999) (v1.0)");
+        var withLangOnly = _sut.GetVersionScore("Game (Rev 99999999999999999999) (en)");
+        var withNeither = _sut.GetVersionScore("Game (Rev 99999999999999999999)");
+        Assert.True(withBoth > withVersionOnly, "Language must still add bonus beyond version-only.");
+        Assert.True(withBoth > withLangOnly, "Version must still add bonus beyond lang-only.");
+        Assert.True(withVersionOnly > withNeither);
+        Assert.True(withLangOnly > withNeither);
+    }
 }
