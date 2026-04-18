@@ -258,7 +258,9 @@ public sealed class FormatConverterAdapter : IFormatConverter
         if (!plan.IsExecutable)
         {
             // Preserve legacy archive extraction behavior for disc systems when graph data has no archive edge.
+            // Never bypass a planner-side blocked safety decision.
             if (string.Equals(plan.SkipReason, "no-conversion-path", StringComparison.OrdinalIgnoreCase)
+                && plan.Safety != ConversionSafety.Blocked
                 && IsArchiveContainerSource(sourceExt))
             {
                 var fallbackTarget = GetTargetFormat(consoleKey, sourceExt);
@@ -306,6 +308,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
         // Mirror the archive-fallback logic from ConvertForConsole so Preview == Execute.
         if (!plan.IsExecutable
             && string.Equals(plan.SkipReason, "no-conversion-path", StringComparison.OrdinalIgnoreCase)
+            && plan.Safety != ConversionSafety.Blocked
             && IsArchiveContainerSource(sourceExt))
         {
             var fallbackTarget = GetTargetFormat(consoleKey, sourceExt);

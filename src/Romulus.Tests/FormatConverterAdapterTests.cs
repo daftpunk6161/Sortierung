@@ -196,6 +196,41 @@ public class FormatConverterAdapterTests
     }
 
     [Fact]
+    public void ConvertForConsole_NoConversionPath_ZipSource_BlockedSafety_DoesNotFallback()
+    {
+        var zipPath = Path.Combine(Path.GetTempPath(), $"conv_zip_blocked_{Guid.NewGuid():N}.zip");
+        var unexpectedTarget = Path.ChangeExtension(zipPath, ".chd");
+
+        try
+        {
+            using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+            {
+                var cueEntry = archive.CreateEntry("game.cue");
+                using var cueWriter = new StreamWriter(cueEntry.Open());
+                cueWriter.Write("FILE \"game.bin\" BINARY");
+            }
+
+            var converter = new FormatConverterAdapter(
+                _tools,
+                null,
+                registry: null,
+                planner: new NonExecutablePlanner("no-conversion-path", ConversionSafety.Blocked),
+                executor: new ThrowingExecutor());
+
+            var result = converter.ConvertForConsole(zipPath, "PS1");
+
+            Assert.Equal(ConversionOutcome.Blocked, result.Outcome);
+            Assert.Equal("no-conversion-path", result.Reason);
+            Assert.False(File.Exists(unexpectedTarget));
+        }
+        finally
+        {
+            if (File.Exists(zipPath)) File.Delete(zipPath);
+            if (File.Exists(unexpectedTarget)) File.Delete(unexpectedTarget);
+        }
+    }
+
+    [Fact]
     public void PlanForConsole_WithPlanner_ReturnsPlan()
     {
         var isoPath = Path.Combine(Path.GetTempPath(), $"conv_plan_{Guid.NewGuid():N}.iso");
@@ -247,6 +282,39 @@ public class FormatConverterAdapterTests
         finally
         {
             if (File.Exists(isoPath)) File.Delete(isoPath);
+        }
+    }
+
+    [Fact]
+    public void PlanForConsole_NoConversionPath_ZipSource_BlockedSafety_DoesNotCreateFallbackPlan()
+    {
+        var zipPath = Path.Combine(Path.GetTempPath(), $"conv_plan_zip_blocked_{Guid.NewGuid():N}.zip");
+        try
+        {
+            using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+            {
+                var cueEntry = archive.CreateEntry("game.cue");
+                using var cueWriter = new StreamWriter(cueEntry.Open());
+                cueWriter.Write("FILE \"game.bin\" BINARY");
+            }
+
+            var converter = new FormatConverterAdapter(
+                _tools,
+                null,
+                registry: null,
+                planner: new NonExecutablePlanner("no-conversion-path", ConversionSafety.Blocked),
+                executor: new ThrowingExecutor());
+
+            var plan = converter.PlanForConsole(zipPath, "PS1");
+
+            Assert.NotNull(plan);
+            Assert.False(plan!.IsExecutable);
+            Assert.Equal(ConversionSafety.Blocked, plan.Safety);
+            Assert.Equal("no-conversion-path", plan.SkipReason);
+        }
+        finally
+        {
+            if (File.Exists(zipPath)) File.Delete(zipPath);
         }
     }
 
