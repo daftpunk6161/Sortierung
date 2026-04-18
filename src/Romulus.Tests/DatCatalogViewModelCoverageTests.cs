@@ -1,4 +1,5 @@
 using Romulus.Contracts.Models;
+using Romulus.Tests.TestFixtures;
 using Romulus.UI.Wpf.ViewModels;
 using Xunit;
 
@@ -132,6 +133,22 @@ public sealed class DatCatalogViewModelCoverageTests
         Assert.Equal(0, vm.TotalCount);
         Assert.Equal("Alle", vm.SelectedGroupFilter);
         Assert.Equal("Alle", vm.SelectedStatusFilter);
+    }
+
+    [Fact]
+    public void MainViewModel_InjectedDatCatalog_UsesMainDatRootProvider()
+    {
+        var injectedDatCatalog = new DatCatalogViewModel(getDatRoot: () => string.Empty);
+        var vm = new MainViewModel(
+            new StubThemeService(),
+            new StubDialogService(),
+            settings: new StubSettingsService(),
+            datCatalog: injectedDatCatalog);
+
+        var datRoot = Path.GetTempPath();
+        vm.DatRoot = datRoot;
+
+        Assert.Equal(datRoot, injectedDatCatalog.GetDatRoot());
     }
 
     [Fact]

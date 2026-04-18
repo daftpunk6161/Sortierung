@@ -158,3 +158,35 @@ A parallel approach (keep WPF for Windows, add Avalonia for Linux/macOS, share e
 - `CommunityToolkit.Mvvm` 8.4.2 is fully Avalonia-compatible — no ViewModel changes needed for the toolkit itself.
 
 **Risk:** Low. The architecture (MVVM + service interfaces) is already well-prepared. The biggest work is mechanical XAML translation, not logic migration.
+
+---
+
+## 8. Umsetzungstand (2026-04-18)
+
+Die initiale Stufenmigration fuer Avalonia wurde fuer die Kern-Workflows umgesetzt und testseitig abgesichert.
+
+### Abgeschlossene Slices
+
+1. Phase B: Workflow-Grundgeruest in Avalonia ViewModels.
+2. Phase C: Adapter-/Service-Verdrahtung fuer den UI-Startpfad.
+3. Phase D: Root-Auswahl ueber Dialog mit Cancel-/Duplikat-Guards.
+4. Phase E: Asynchrone Folder-Picker-Integration (`AsyncRelayCommand`).
+5. Phase F: Import von Root-Listen ueber File-Picker.
+6. Phase G: Produktiver Summary-Export aus dem Result-Screen.
+7. Phase H: Strukturierter Metrics-CSV-Export inkl. CSV-Escaping und Formel-Praefix-Haertung.
+8. Guard-Slice: Single-Instance-Guard mit Mutex-Acquire-/Release-Verhalten.
+
+### Solution- und Testverdrahtung
+
+- `Romulus.UI.Avalonia` ist in `src/Romulus.sln` enthalten.
+- `Romulus.Tests` referenziert `Romulus.UI.Avalonia` fuer ViewModel-/Runtime-Tests.
+
+### Verifikation
+
+- `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter FullyQualifiedName~AvaloniaPhaseHMetricsCsvExportTests` -> gruen.
+- `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter FullyQualifiedName~Avalonia` -> gruen.
+- `dotnet build src/Romulus.sln` -> gruen.
+
+### Aktueller Zustand
+
+Die Avalonia-Basis fuer Start/Progress/Result inklusive Exportpfaden und Guard-Verhalten ist lauffaehig, testbar und in der Solution integriert. Weitere Arbeit betrifft primär die schrittweise Portierung weiterer WPF-Screens und Themenressourcen gemaess Phase-B/Phase-C-Roadmap.

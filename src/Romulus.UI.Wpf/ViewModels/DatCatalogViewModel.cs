@@ -21,8 +21,21 @@ public sealed partial class DatCatalogViewModel : ObservableObject
     private readonly ILocalizationService _loc;
     private readonly IDialogService _dialog;
     private readonly object _entriesLock = new();
-    private readonly Func<string> _getDatRoot;
-    private readonly Action<string, string> _addLog;
+    private Func<string> _getDatRoot = () => string.Empty;
+    private Action<string, string> _addLog = (_, _) => { };
+
+    /// <summary>Expose the current DAT root path (for auto-load guards in code-behind).</summary>
+    public string GetDatRoot() => _getDatRoot();
+
+    /// <summary>
+    /// Configure runtime context delegates when the ViewModel is composed externally (e.g. DI).
+    /// </summary>
+    public void ConfigureContext(Func<string>? getDatRoot, Action<string, string>? addLog = null)
+    {
+        _getDatRoot = getDatRoot ?? (() => string.Empty);
+        if (addLog is not null)
+            _addLog = addLog;
+    }
 
     public DatCatalogViewModel(
         ILocalizationService? loc = null,
@@ -32,8 +45,7 @@ public sealed partial class DatCatalogViewModel : ObservableObject
     {
         _loc = loc ?? new LocalizationService();
         _dialog = dialog ?? new WpfDialogService();
-        _getDatRoot = getDatRoot ?? (() => "");
-        _addLog = addLog ?? ((_, _) => { });
+        ConfigureContext(getDatRoot, addLog);
 
         BindingOperations.EnableCollectionSynchronization(Entries, _entriesLock);
         EntriesView = CollectionViewSource.GetDefaultView(Entries);
@@ -112,6 +124,7 @@ public sealed partial class DatCatalogViewModel : ObservableObject
     private List<DatCatalogEntry> _builtinCatalog = [];
     private List<DatCatalogEntry> _catalog = [];
     private string _statePath = DatCatalogStateService.GetDefaultStatePath();
+    private string _lastDatRoot = "";
 
     // ═══ COMMANDS ═══════════════════════════════════════════════════════
 
@@ -134,6 +147,7 @@ public sealed partial class DatCatalogViewModel : ObservableObject
                 _catalog = DatCatalogStateService.MergeCatalogs(_builtinCatalog, _state);
 
                 var datRoot = _getDatRoot();
+                _lastDatRoot = datRoot;
                 _state = DatCatalogStateService.FullScan(_catalog, datRoot, _state);
                 DatCatalogStateService.SaveState(_statePath, _state);
             });
@@ -400,6 +414,7 @@ public sealed partial class DatCatalogViewModel : ObservableObject
         IsBusy = true;
         StatusText = "Importiere DATs…";
         var datRoot = _getDatRoot();
+        _lastDatRoot = datRoot;
 
         try
         {
@@ -443,7 +458,7 @@ public sealed partial class DatCatalogViewModel : ObservableObject
 
     private void RebuildEntries()
     {
-        var datRoot = _getDatRoot();
+        var datRoot = _lastDatRoot;
         var statusList = DatCatalogStateService.BuildCatalogStatus(_catalog, datRoot, _state);
 
         // Rebuild group filter options — preserve user selection

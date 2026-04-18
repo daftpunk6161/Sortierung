@@ -113,6 +113,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         CommandPalette = commandPalette ?? MainViewModelChildFactory.CreateCommandPalette(_loc);
         DatAudit = datAudit ?? MainViewModelChildFactory.CreateDatAudit(_loc, _dialog);
         DatCatalog = datCatalog ?? MainViewModelChildFactory.CreateDatCatalog(_loc, _dialog, () => DatRoot, AddLog);
+        DatCatalog.ConfigureContext(() => DatRoot, AddLog);
         ConversionPreview = conversionPreview ?? MainViewModelChildFactory.CreateConversionPreview(_loc);
         InitializeRunConfigurationServices(runProfileService, runConfigurationMaterializer);
 

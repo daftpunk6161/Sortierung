@@ -294,9 +294,14 @@ public class DatCatalogStateServiceTests : IDisposable
         var state = new DatCatalogState();
         var result = DatCatalogStateService.BuildCatalogStatus(catalog, _datRoot, state);
 
-        Assert.Single(result);
-        Assert.Equal(DatInstallStatus.Installed, result[0].Status);
-        Assert.Equal(pathA, result[0].LocalPath, ignoreCase: true);
+        // Catalog entry matches A\dup.dat (alphabetically first). B\dup.dat appears as discovered.
+        var catalogEntry = result.Single(r => r.Id == "dup");
+        Assert.Equal(DatInstallStatus.Installed, catalogEntry.Status);
+        Assert.Equal(pathA, catalogEntry.LocalPath, ignoreCase: true);
+
+        var discovered = result.Single(r => r.Id == "discovered-dup");
+        Assert.Equal(DatInstallStatus.Installed, discovered.Status);
+        Assert.Equal(pathB, discovered.LocalPath, ignoreCase: true);
     }
 
     [Fact]
@@ -322,9 +327,15 @@ public class DatCatalogStateServiceTests : IDisposable
         var state = new DatCatalogState();
         var result = DatCatalogStateService.BuildCatalogStatus(catalog, _datRoot, state);
 
-        Assert.Single(result);
-        Assert.Equal(DatInstallStatus.Installed, result[0].Status);
-        Assert.Equal(older, result[0].LocalPath, ignoreCase: true);
+        // Catalog entry matches the alphabetically first stem (2025-01-01).
+        // The newer (2026-12-31) appears as a discovered entry.
+        var catalogEntry = result.Single(r => r.Id == "nointro-switch-pack");
+        Assert.Equal(DatInstallStatus.Installed, catalogEntry.Status);
+        Assert.Equal(older, catalogEntry.LocalPath, ignoreCase: true);
+
+        var discovered = result.Single(r => r.Id.StartsWith("discovered-"));
+        Assert.Equal(DatInstallStatus.Installed, discovered.Status);
+        Assert.Equal(newer, discovered.LocalPath, ignoreCase: true);
     }
 
     [Fact]
@@ -705,5 +716,133 @@ public class DatCatalogStateServiceTests : IDisposable
         Assert.Equal(hash1, state2.Entries["det-fs"].FileSha256);
         Assert.Equal(date1, state2.Entries["det-fs"].InstalledDate);
         Assert.Equal(path1, state2.Entries["det-fs"].LocalPath);
+    }
+
+    // ═══ DISCOVERY: UNCATALOGED DAT FILES ═══════════════════════════════
+
+    [Fact]
+    public void BuildCatalogStatus_DiscoversUncatalogedDatFiles()
+    {
+        // Create a DAT file on disk that is NOT in the catalog
+        File.WriteAllText(Path.Combine(_datRoot, "unknown-system.dat"), "<xml/>");
+
+        var catalog = new List<DatCatalogEntry>(); // empty catalog
+        var state = new DatCatalogState();
+
+        var result = DatCatalogStateService.BuildCatalogStatus(catalog, _datRoot, state);
+
+        Assert.Single(result);
+        Assert.Equal("discovered-unknown-system", result[0].Id);
+        Assert.Equal("unknown-system", result[0].System);
+        Assert.Equal(DatInstallStatus.Installed, result[0].Status);
+        Assert.NotNull(result[0].LocalPath);
+    }
+
+    [Fact]
+    public void BuildCatalogStatus_DiscoveredDatsNotDuplicated_WhenAlreadyMatched()
+    {
+        // DAT file matches a catalog entry by Id
+        File.WriteAllText(Path.Combine(_datRoot, "fbneo-nes.dat"), "<xml/>");
+
+        var catalog = new List<DatCatalogEntry>
+        {
+            new() { Id = "fbneo-nes", Group = "FBNEO", System = "FBNeo NES", ConsoleKey = "NES", Format = "raw-dat" }
+        };
+        var state = new DatCatalogState();
+
+        var result = DatCatalogStateService.BuildCatalogStatus(catalog, _datRoot, state);
+
+        // Only the catalog entry — no duplicate "discovered" entry
+        Assert.Single(result);
+        Assert.Equal("fbneo-nes", result[0].Id);
+    }
+
+    [Fact]
+    public void BuildCatalogStatus_MixesCatalogAndDiscoveredEntries()
+    {
+        // 1 cataloged DAT + 2 uncataloged DATs
+        File.WriteAllText(Path.Combine(_datRoot, "known.dat"), "<xml/>");
+        File.WriteAllText(Path.Combine(_datRoot, "extra1.dat"), "<xml/>");
+        File.WriteAllText(Path.Combine(_datRoot, "extra2.dat"), "<xml/>");
+
+        var catalog = new List<DatCatalogEntry>
+        {
+            new() { Id = "known", Group = "FBNEO", System = "Known System", ConsoleKey = "KNW", Format = "raw-dat" }
+        };
+        var state = new DatCatalogState();
+
+        var result = DatCatalogStateService.BuildCatalogStatus(catalog, _datRoot, state);
+
+        Assert.Equal(3, result.Count);
+        Assert.Single(result, r => r.Id == "known");
+        Assert.Single(result, r => r.Id == "discovered-extra1");
+        Assert.Single(result, r => r.Id == "discovered-extra2");
+    }
+
+    [Fact]
+    public void BuildCatalogStatus_DiscoveredDats_InferGroupFromSubfolder()
+    {
+        // Create subfolder structure: datRoot/No-Intro/some-system.dat
+        var subDir = Path.Combine(_datRoot, "No-Intro");
+        Directory.CreateDirectory(subDir);
+        File.WriteAllText(Path.Combine(subDir, "Nintendo - Game Boy.dat"), "<xml/>");
+
+        var catalog = new List<DatCatalogEntry>();
+        var state = new DatCatalogState();
+
+        var result = DatCatalogStateService.BuildCatalogStatus(catalog, _datRoot, state);
+
+        Assert.Single(result);
+        Assert.Equal("No-Intro", result[0].Group);
+    }
+
+    [Fact]
+    public void BuildCatalogStatus_DiscoveredDats_NullDatRoot_NoDiscovery()
+    {
+        var catalog = new List<DatCatalogEntry>
+        {
+            new() { Id = "only-catalog", Group = "A", System = "A", ConsoleKey = "A", Format = "raw-dat" }
+        };
+        var state = new DatCatalogState();
+
+        var result = DatCatalogStateService.BuildCatalogStatus(catalog, null, state);
+
+        Assert.Single(result);
+        Assert.Equal("only-catalog", result[0].Id);
+        Assert.Equal(DatInstallStatus.Missing, result[0].Status);
+    }
+
+    // ═══ INFER GROUP FROM PATH ══════════════════════════════════════════
+
+    [Fact]
+    public void InferGroupFromPath_SubfolderReturnsGroupName()
+    {
+        var group = DatCatalogStateService.InferGroupFromPath(
+            @"C:\dat\Redump\Sony - PlayStation.dat", @"C:\dat");
+        Assert.Equal("Redump", group);
+    }
+
+    [Fact]
+    public void InferGroupFromPath_RootFileReturnsLokal()
+    {
+        var group = DatCatalogStateService.InferGroupFromPath(
+            @"C:\dat\standalone.dat", @"C:\dat");
+        Assert.Equal("Lokal", group);
+    }
+
+    [Fact]
+    public void InferGroupFromPath_DeepNestedReturnsFirstFolder()
+    {
+        var group = DatCatalogStateService.InferGroupFromPath(
+            @"C:\dat\TOSEC-ISO\subgroup\deep\file.dat", @"C:\dat");
+        Assert.Equal("TOSEC-ISO", group);
+    }
+
+    [Fact]
+    public void InferGroupFromPath_OutsideRoot_ReturnsLokal()
+    {
+        var group = DatCatalogStateService.InferGroupFromPath(
+            @"D:\other\file.dat", @"C:\dat");
+        Assert.Equal("Lokal", group);
     }
 }

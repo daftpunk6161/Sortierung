@@ -1113,6 +1113,12 @@ public sealed partial class MainViewModel
         }
 
         RefreshStatus();
+
+        // Auto-load DAT catalog after settings are available so DatRoot is populated
+        if (!string.IsNullOrWhiteSpace(DatRoot))
+        {
+            _ = DatCatalog.RefreshCommand.ExecuteAsync(null);
+        }
     }
 
     private void OnAutoSavePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

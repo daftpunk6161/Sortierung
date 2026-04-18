@@ -3,7 +3,7 @@
              xmlns:vm="using:Romulus.UI.Avalonia.ViewModels"
              x:Class="Romulus.UI.Avalonia.Views.ResultView"
              x:DataType="vm:ResultViewModel">
-  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12" Margin="16">
+  <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12" Margin="16">
     <TextBlock Text="Result" FontSize="24" FontWeight="SemiBold" />
 
     <Border Grid.Row="1" Padding="14" CornerRadius="8" BorderBrush="#D0D7DE" BorderThickness="1">
@@ -39,5 +39,11 @@
         </StackPanel>
       </Border>
     </UniformGrid>
+
+    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+      <Button Content="Summary exportieren" Command="{Binding ExportSummaryCommand}" />
+      <Button Content="Metriken CSV exportieren" Command="{Binding ExportMetricsCsvCommand}" />
+      <TextBlock Text="{Binding ExportStatusText}" Opacity="0.75" TextWrapping="Wrap" />
+    </StackPanel>
   </Grid>
 </UserControl>
