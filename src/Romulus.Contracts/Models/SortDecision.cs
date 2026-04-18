@@ -1,8 +1,14 @@
 namespace Romulus.Contracts.Models;
 
 /// <summary>
-/// Sort gate decision — determines whether a file may be automatically sorted.
-/// Computed centrally by HypothesisResolver, consumed by the sorting gate.
+/// Sort gate decision — output-facing alias for <see cref="DecisionClass"/>.
+/// <para>
+/// <b>Architecture note (F-05):</b> <see cref="DecisionClass"/> is the canonical domain model.
+/// <see cref="SortDecision"/> exists as a reporting / sorting-gate alias and mirrors the same
+/// states. Use <see cref="DecisionClassExtensions.ToSortDecision"/> /
+/// <see cref="DecisionClassExtensions.ToDecisionClass"/> for conversion. Do not add new states
+/// here without adding them to <see cref="DecisionClass"/> first.
+/// </para>
 /// </summary>
 public enum SortDecision
 {

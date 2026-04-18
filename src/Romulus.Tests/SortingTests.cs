@@ -420,6 +420,55 @@ public class ConsoleSorterTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_tempDir, "NES", "Default.nes")));
     }
 
+    // ── F-02 Regression: missing sort-decision in provided dict must be Unknown, never Sort ──
+
+    [Fact]
+    public void Sort_EnrichedSortDecisionsProvided_MissingKey_CountsAsUnknown_NotMoved()
+    {
+        // Regression guard for F-02:
+        // When enrichedSortDecisions is non-null (enrichment ran), but a file has no
+        // entry, the file must count as Unknown and not be moved into a console subfolder.
+        var romPath = CreateFile("Orphan.nes", "content");
+        var otherPath = CreateFile("OtherGame.nes", "content");
+        var detector = BuildDetector();
+        var fs = new Romulus.Infrastructure.FileSystem.FileSystemAdapter();
+        var sorter = new ConsoleSorter(fs, detector);
+
+        // enrichedSortDecisions only contains 'otherPath', NOT 'romPath'
+        var result = sorter.Sort(
+            new[] { _tempDir },
+            new[] { ".nes" },
+            dryRun: false,
+            enrichedConsoleKeys: EnrichedKeys((romPath, "NES"), (otherPath, "NES")),
+            enrichedSortDecisions: SortDecisions((otherPath, "Sort")));
+
+        Assert.True(result.Unknown >= 1, "File with missing sort-decision must count as Unknown");
+        Assert.False(File.Exists(Path.Combine(_tempDir, "NES", "Orphan.nes")),
+            "File with missing sort-decision must NOT be moved to console subfolder");
+        Assert.True(File.Exists(romPath), "Source file must still exist (not moved)");
+    }
+
+    [Fact]
+    public void Sort_DatVerifiedDecision_MovesToConsoleSubdir_SameAsSort()
+    {
+        // DatVerified should be treated identically to Sort at the routing level.
+        var romPath = CreateFile("DatGame.nes", "content");
+        var detector = BuildDetector();
+        var fs = new Romulus.Infrastructure.FileSystem.FileSystemAdapter();
+        var sorter = new ConsoleSorter(fs, detector);
+
+        var result = sorter.Sort(
+            new[] { _tempDir },
+            new[] { ".nes" },
+            dryRun: false,
+            enrichedConsoleKeys: EnrichedKeys((romPath, "NES")),
+            enrichedSortDecisions: SortDecisions((romPath, "DatVerified")));
+
+        Assert.Equal(1, result.Moved);
+        Assert.True(File.Exists(Path.Combine(_tempDir, "NES", "DatGame.nes")),
+            "DatVerified must route to console subfolder like Sort");
+    }
+
     [Fact]
     public void Sort_UsesProvidedCandidatePaths_InsteadOfRescanningRoot()
     {

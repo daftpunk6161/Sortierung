@@ -213,7 +213,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         var preDetectHashStrategy = ResolveHashStrategy(consoleDetector, consoleKey, detectionResult);
         var preDetectDatPolicy = familyDatStrategyResolver.ResolvePolicy(preDetectFamily, ext, preDetectHashStrategy);
 
-        var datResult = LookupDat(filePath, ext, sizeBytes, consoleKey, detectionConflict,
+        var datResult = LookupDat(filePath, ext, sizeBytes, consoleKey,
             datIndex, hashService, archiveHashService, headerlessHasher, preDetectDatPolicy,
             detectionResult: null, consoleDetector, context, onProgress, chdTrackHashExtractor);
 
@@ -250,13 +250,15 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
             var postDetectHashStrategy = ResolveHashStrategy(consoleDetector, consoleKey, detectionResult);
             var postDetectDatPolicy = familyDatStrategyResolver.ResolvePolicy(postDetectFamily, ext, postDetectHashStrategy);
 
-            datResult = LookupDat(filePath, ext, sizeBytes, consoleKey, detectionConflict,
+            datResult = LookupDat(filePath, ext, sizeBytes, consoleKey,
                 datIndex, hashService, archiveHashService, headerlessHasher, postDetectDatPolicy,
                 detectionResult, consoleDetector, context, onProgress, chdTrackHashExtractor);
         }
 
         consoleKey = datResult.ConsoleKey;
-        detectionConflict = datResult.DetectionConflict || (detectionResult?.HasConflict ?? false);
+        // F-08: DatConsoleSwitched = DAT lookup changed the console; HasConflict = detector's own signal.
+        // Both contribute to the combined conflict flag used downstream.
+        detectionConflict = datResult.DatConsoleSwitched || (detectionResult?.HasConflict ?? false);
         var computedHash = datResult.ComputedHash;
         var computedHeaderlessHash = datResult.ComputedHeaderlessHash;
 
@@ -279,7 +281,10 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         if (datResult.DatMatch && consoleKey is not "")
         {
             var datTier = datResult.DatMatchKind.GetTier();
-            var datConfidence = datResult.DatNameOnlyMatch ? 85 : 100;
+            // Name-only DAT matches have no hash verification. Confidence must stay below
+            // SortThreshold (85) and SoftOnlyCap (79) to prevent them from being
+            // misinterpreted as verified evidence in any future confidence-based gate.
+            var datConfidence = datResult.DatNameOnlyMatch ? 79 : 100;
             var datDecision = DecisionResolver.Resolve(datTier, detectionConflict, datConfidence,
                 datAvailable: datAvailableForConsole, conflictType: conflictType,
                 hasHardEvidence: datTier <= EvidenceTier.Tier1_Structural);
@@ -414,12 +419,17 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         string? ComputedHeaderlessHash,
         string? DatGameName,
         string ConsoleKey,
-        bool DetectionConflict,
+        /// <summary>True when the DAT lookup switched the console key away from the initial detection result.
+        /// Semantically distinct from the detector's own <see cref="ConsoleDetectionResult.HasConflict"/>.
+        /// Use <c>datResult.DatConsoleSwitched || (detectionResult?.HasConflict ?? false)</c> to derive the
+        /// combined <c>detectionConflict</c> flag.
+        /// </summary>
+        bool DatConsoleSwitched,
         MatchKind DatMatchKind);
 
     private static DatLookupResult LookupDat(
         string filePath, string ext, long sizeBytes,
-        string consoleKey, bool detectionConflict,
+        string consoleKey,
         DatIndex? datIndex, FileHashService? hashService,
         ArchiveHashService? archiveHashService,
         Contracts.Ports.IHeaderlessHasher? headerlessHasher,
@@ -437,10 +447,11 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         string? computedHeaderlessHash = null;
         string? datGameName = null;
         bool datNameOnlyMatch = false;
+        bool datConsoleSwitched = false;
         var datMatchKind = MatchKind.None;
 
         if (datIndex is null || hashService is null)
-            return new DatLookupResult(false, false, false, false, null, null, null, consoleKey, detectionConflict, MatchKind.None);
+            return new DatLookupResult(false, false, false, false, null, null, null, consoleKey, false, MatchKind.None);
 
         if (sizeBytes > 50_000_000)
         {
@@ -476,7 +487,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     if (!string.Equals(consoleKey, crossConsoleResult.ConsoleKey, StringComparison.OrdinalIgnoreCase)
                         && consoleKey is not "UNKNOWN" and not "" and not "AMBIGUOUS")
                     {
-                        detectionConflict = true;
+                        datConsoleSwitched = true;
                     }
                     consoleKey = crossConsoleResult.ConsoleKey!;
                     break;
@@ -510,7 +521,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                         datMatchKind = MatchKind.HeaderlessDatHash;
                         if (!string.Equals(consoleKey, crossConsoleResult.ConsoleKey, StringComparison.OrdinalIgnoreCase))
                         {
-                            detectionConflict = true;
+                            datConsoleSwitched = true;
                         }
                         consoleKey = crossConsoleResult.ConsoleKey!;
                     }
@@ -539,7 +550,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     if (!string.Equals(consoleKey, crossConsoleResult.ConsoleKey, StringComparison.OrdinalIgnoreCase)
                         && consoleKey is not "UNKNOWN" and not "" and not "AMBIGUOUS")
                     {
-                        detectionConflict = true;
+                        datConsoleSwitched = true;
                     }
                     consoleKey = crossConsoleResult.ConsoleKey!;
                     break;
@@ -572,7 +583,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     if (!string.Equals(consoleKey, crossResult.ConsoleKey, StringComparison.OrdinalIgnoreCase)
                         && consoleKey is not "UNKNOWN" and not "" and not "AMBIGUOUS")
                     {
-                        detectionConflict = true;
+                        datConsoleSwitched = true;
                     }
                     consoleKey = crossResult.ConsoleKey!;
                 }
@@ -633,7 +644,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                                     previousConsole != "UNKNOWN" &&
                                     !string.Equals(previousConsole, consoleKey, StringComparison.OrdinalIgnoreCase))
                                 {
-                                    detectionConflict = true;
+                                    datConsoleSwitched = true;
                                 }
 
                                 onProgress?.Invoke(
@@ -667,7 +678,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                                         previousConsole != "UNKNOWN" &&
                                         !string.Equals(previousConsole, consoleKey, StringComparison.OrdinalIgnoreCase))
                                     {
-                                        detectionConflict = true;
+                                        datConsoleSwitched = true;
                                     }
 
                                     onProgress?.Invoke(
@@ -696,7 +707,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         }
 
         return new DatLookupResult(datMatch, datMatchedBios, datResolvedFromAmbiguousCandidates,
-            datNameOnlyMatch, computedHash, computedHeaderlessHash, datGameName, consoleKey, detectionConflict, datMatchKind);
+            datNameOnlyMatch, computedHash, computedHeaderlessHash, datGameName, consoleKey, datConsoleSwitched, datMatchKind);
     }
 
     internal static IReadOnlyList<string> GetFileLookupHashes(

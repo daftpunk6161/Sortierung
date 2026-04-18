@@ -159,4 +159,35 @@ public sealed class DecisionResolverTests
         Assert.Equal(DecisionClass.Review,
             DecisionResolver.Resolve(EvidenceTier.Tier0_ExactDat, true, 100));
     }
+
+    // ──────────────────────────────────────────────────────────────────
+    //  F-01 Regression: DatNameOnlyMatch confidence must be below SortThreshold
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Resolve_DatNameOnlyMatchTier2Confidence79_ReturnsReview_NotSort()
+    {
+        // DatNameOnlyMatch maps to Tier2_StrongHeuristic.
+        // Confidence after fix is 79 (below SortThreshold=85, below SoftOnlyCap=79).
+        // Tier2 always → Review regardless of confidence.
+        // This test is a regression guard: if confidence were erroneously at 85
+        // and Tier2 logic changed, name-only matches must never reach Sort.
+        var actual = DecisionResolver.Resolve(
+            EvidenceTier.Tier2_StrongHeuristic, hasConflict: false, confidence: 79,
+            datAvailable: true, conflictType: ConflictType.None);
+
+        Assert.Equal(DecisionClass.Review, actual);
+    }
+
+    [Fact]
+    public void Resolve_DatNameOnlyMatchTier2AtSortThreshold85_StillReturnsReview()
+    {
+        // Guard against edge case: even if confidence were accidentally set to 85
+        // (old value), Tier2 must still return Review — never Sort.
+        var actual = DecisionResolver.Resolve(
+            EvidenceTier.Tier2_StrongHeuristic, hasConflict: false, confidence: 85,
+            datAvailable: true, conflictType: ConflictType.None);
+
+        Assert.Equal(DecisionClass.Review, actual);
+    }
 }

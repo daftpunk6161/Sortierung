@@ -129,9 +129,24 @@ public sealed class ConsoleSorter
                     continue;
                 }
 
-                // SortDecision routing: determine destination based on enriched decision
-                var sortDecision = enrichedSortDecisions is not null &&
-                    enrichedSortDecisions.TryGetValue(filePath, out var sd) ? sd : null;
+                // SortDecision routing: determine destination based on enriched decision.
+                // When enrichedSortDecisions is provided (enrichment ran) but a file has no
+                // entry, treat it as Unknown — fail-safe: never default to Sort.
+                string? sortDecision;
+                if (enrichedSortDecisions is null)
+                {
+                    sortDecision = null;
+                }
+                else if (enrichedSortDecisions.TryGetValue(filePath, out var sd) && !string.IsNullOrEmpty(sd))
+                {
+                    sortDecision = sd;
+                }
+                else
+                {
+                    unknown++;
+                    IncrementReason(unknownReasons, "missing-sort-decision");
+                    continue;
+                }
                 var sortReason = enrichedSortReasons is not null &&
                     enrichedSortReasons.TryGetValue(filePath, out var sr) ? sr : null;
                 var category = enrichedCategories is not null &&
@@ -149,6 +164,10 @@ public sealed class ConsoleSorter
 
                 var isBlockedDecision = string.Equals(sortDecision, RunConstants.SortDecisions.Blocked, StringComparison.OrdinalIgnoreCase);
                 var isUnknownDecision = string.Equals(sortDecision, RunConstants.SortDecisions.Unknown, StringComparison.OrdinalIgnoreCase);
+                // DatVerified routes identical to Sort (hash-verified, move to console folder).
+                // Normalize here so the Sort path below handles both cases consistently.
+                if (string.Equals(sortDecision, RunConstants.SortDecisions.DatVerified, StringComparison.OrdinalIgnoreCase))
+                    sortDecision = RunConstants.SortDecisions.Sort;
 
                 // Blocked/Unknown routing
                 if (isBlockedDecision || isUnknownDecision)

@@ -362,12 +362,14 @@ public sealed class Phase2HighRiskTests
         var fallbackIdx = source.IndexOf("Fallback chain", StringComparison.Ordinal);
         Assert.True(fallbackIdx > 0, "Fallback chain comment not found");
 
-        // Get the next 600 chars of source after the comment
+        // Get the next 600 chars of source after the comment.
+        // The fallback chain uses a local 'sha1' variable extracted via GetAttribute("sha1")
+        // before the comment. Verify sha1 is actually used within the fallback block.
         var fallbackEnd = Math.Min(source.Length, fallbackIdx + 600);
         var fallbackSection = source[fallbackIdx..fallbackEnd];
 
-        // Must have SHA1 fallback: GetAttribute("sha1") in the fallback section
-        var sha1InFallback = fallbackSection.Contains("GetAttribute(\"sha1\")", StringComparison.Ordinal);
+        // Must have SHA1 fallback: 'hash = sha1' assignment (uses local variable extracted from GetAttribute("sha1"))
+        var sha1InFallback = fallbackSection.Contains("hash = sha1", StringComparison.Ordinal);
         Assert.True(sha1InFallback, "Fallback chain must include SHA1 as fallback option");
     }
 

@@ -57,7 +57,15 @@ public sealed record ConsoleDetectionResult(
 
 
 /// <summary>
-/// Detection method source identifiers, ordered by typical reliability.
+/// Detection method source identifiers.
+/// <para>
+/// <strong>IMPORTANT:</strong> The integer values of these enum members are <em>sort ordinals</em>
+/// used for deterministic tie-breaking and priority ranking — they are <strong>NOT</strong>
+/// confidence ratings. Use <see cref="DetectionSourceExtensions.ConfidenceRating"/> for
+/// the semantic confidence a match from this source should carry, and
+/// <see cref="DetectionSourceExtensions.SingleSourceCap"/> for the maximum confidence
+/// when only this source is present.
+/// </para>
 /// </summary>
 public enum DetectionSource
 {

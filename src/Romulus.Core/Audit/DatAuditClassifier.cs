@@ -119,6 +119,11 @@ public static partial class DatAuditClassifier
 
     private static bool IsSameFileName(string actualFileName, DatIndex.DatIndexEntry entry)
     {
+        // If the DAT entry has no ROM filename, treat any file as a name match.
+        // This occurs for DATs that only record game names without individual ROM filenames.
+        if (string.IsNullOrWhiteSpace(entry.RomFileName))
+            return true;
+
         var actual = Path.GetFileName(actualFileName);
         var actualStem = NormalizeComparableStem(Path.GetFileNameWithoutExtension(actual));
 

@@ -69,4 +69,56 @@ public sealed class ClassificationP2RegressionTests
 
         Assert.True(larger > smaller);
     }
+
+    // ── F-09 Regression: Zero hypotheses → Unknown ──────────────────────────
+
+    [Fact]
+    public void Resolve_ZeroHypotheses_ReturnsUnknown()
+    {
+        // Regression guard for F-09:
+        // When no detection method matches anything, the resolver must return
+        // ConsoleDetectionResult.Unknown — not throw, not return a random console.
+        var result = HypothesisResolver.Resolve([]);
+
+        Assert.Equal("UNKNOWN", result.ConsoleKey);
+        Assert.Equal(0, result.Confidence);
+        Assert.Equal(SortDecision.Unknown, result.SortDecision);
+        Assert.Equal(DecisionClass.Unknown, result.DecisionClass);
+        Assert.Empty(result.Hypotheses);
+        Assert.False(result.HasConflict);
+        Assert.False(result.HasHardEvidence);
+    }
+
+    [Fact]
+    public void Resolve_ZeroHypotheses_MatchEvidence_TierIsUnknown()
+    {
+        // The MatchEvidence on an empty-hypothesis result must reflect Tier4_Unknown.
+        var result = HypothesisResolver.Resolve([]);
+
+        Assert.NotNull(result.MatchEvidence);
+        Assert.Equal(EvidenceTier.Tier4_Unknown, result.MatchEvidence!.Tier);
+        Assert.Equal(MatchKind.None, result.MatchEvidence.PrimaryMatchKind);
+    }
+
+    // ── F-04 Invariant: Soft-only multi-source confidence capped at 79 ────────
+
+    [Theory]
+    [InlineData(DetectionSource.FolderName, DetectionSource.FilenameKeyword)]
+    [InlineData(DetectionSource.FolderName, DetectionSource.AmbiguousExtension)]
+    [InlineData(DetectionSource.FilenameKeyword, DetectionSource.AmbiguousExtension)]
+    public void Resolve_SoftOnlyMultiSource_ConfidenceNeverExceedsSoftOnlyCap(
+        DetectionSource source1, DetectionSource source2)
+    {
+        // Both sources are Tier3 (WeakHeuristic). Even with multi-source agreement bonus,
+        // ComputeSoftOnlyCap hard-clamps at 79. Tier3 routes to Blocked regardless.
+        var result = HypothesisResolver.Resolve([
+            new DetectionHypothesis("NES", source1.ConfidenceRating(), source1, $"source={source1}"),
+            new DetectionHypothesis("NES", source2.ConfidenceRating(), source2, $"source={source2}"),
+        ]);
+
+        Assert.Equal("NES", result.ConsoleKey);
+        Assert.True(result.Confidence <= 79,
+            $"Soft-only multi-source must not exceed SoftOnlyCap(79). Got {result.Confidence}.");
+        Assert.Equal(SortDecision.Blocked, result.SortDecision);
+    }
 }
