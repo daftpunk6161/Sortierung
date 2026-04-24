@@ -358,19 +358,23 @@ public sealed class Phase2HighRiskTests
 
         var source = File.ReadAllText(sourcePath);
 
-        // Find the fallback chain section
-        var fallbackIdx = source.IndexOf("Fallback chain", StringComparison.Ordinal);
-        Assert.True(fallbackIdx > 0, "Fallback chain comment not found");
+        // Locate the canonical fallback ordering helper (definition, not call site).
+        var orderIdx = source.IndexOf("IEnumerable<string> GetFallbackHashTypeOrder", StringComparison.Ordinal);
+        Assert.True(orderIdx > 0, "Fallback ordering helper GetFallbackHashTypeOrder not found");
 
-        // Get the next 600 chars of source after the comment.
-        // The fallback chain uses a local 'sha1' variable extracted via GetAttribute("sha1")
-        // before the comment. Verify sha1 is actually used within the fallback block.
-        var fallbackEnd = Math.Min(source.Length, fallbackIdx + 600);
-        var fallbackSection = source[fallbackIdx..fallbackEnd];
+        // Inspect the body of the helper (next ~600 chars cover the small method).
+        var bodyEnd = Math.Min(source.Length, orderIdx + 600);
+        var body = source[orderIdx..bodyEnd];
 
-        // Must have SHA1 fallback: 'hash = sha1' assignment (uses local variable extracted from GetAttribute("sha1"))
-        var sha1InFallback = fallbackSection.Contains("hash = sha1", StringComparison.Ordinal);
-        Assert.True(sha1InFallback, "Fallback chain must include SHA1 as fallback option");
+        // SHA1 must be explicitly enrolled in the fallback chain.
+        Assert.Contains("Add(\"SHA1\")", body, StringComparison.Ordinal);
+
+        // The selector must consume the chain together with the extracted sha1 attribute.
+        var selectorIdx = source.IndexOf("SelectHashByPreference(", StringComparison.Ordinal);
+        Assert.True(selectorIdx > 0, "SelectHashByPreference dispatcher not found");
+
+        var sha1AttrIdx = source.IndexOf("GetAttribute(\"sha1\")", StringComparison.Ordinal);
+        Assert.True(sha1AttrIdx > 0, "Reader must extract the sha1 attribute for the fallback chain");
     }
 
     // ══════════════════════════════════════════════

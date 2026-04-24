@@ -14,7 +14,8 @@ public sealed class AllowedRootPathPolicy
             .Where(static root => !string.IsNullOrWhiteSpace(root))
             .Select(static root => SafetyValidator.NormalizePath(root))
             .Where(static root => !string.IsNullOrWhiteSpace(root))
-            .Select(static root => root!)
+            .Select(static root => Path.TrimEndingDirectorySeparator(root!))
+            .Where(static root => !string.IsNullOrEmpty(root))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }

@@ -147,8 +147,8 @@ public sealed class Phase8RoundVerificationTests
         Assert.Contains("private static ReadOnlySpan<byte> GenesisMagic1", source);
         Assert.Contains("private static ReadOnlySpan<byte> GenesisMagic2", source);
         Assert.Contains("private static ReadOnlySpan<byte> N64MagicBE", source);
-        Assert.Contains("private static ReadOnlySpan<byte> GbaLogoStart", source);
-        Assert.Contains("private static ReadOnlySpan<byte> GbLogoStart", source);
+        Assert.Contains("private static ReadOnlySpan<byte> GbaNintendoLogo", source);
+        Assert.Contains("private static ReadOnlySpan<byte> GbNintendoLogo", source);
         Assert.Contains("private static ReadOnlySpan<byte> Atari7800Magic", source);
         Assert.Contains("private static ReadOnlySpan<byte> LynxMagic", source);
     }

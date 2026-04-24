@@ -41,14 +41,47 @@ public sealed class HeaderSizeMapTests
         Assert.Equal(0, skip);
     }
 
-    // ── SNES (copier header = 512 bytes, conditional on fileSize % 1024 == 512) ──
+    // ── SNES (copier header = 512 bytes, validated against shifted internal header) ──
+
+    private static byte[] MakeSnesProbe(bool validChecksum = true)
+    {
+        var probe = new byte[HeaderSizeMap.GetProbeByteCount("SNES")];
+        var header = probe.AsSpan(512 + 0x7FC0, 0x20);
+        "SUPER TEST ROM"u8.CopyTo(header);
+        header[0x15] = 0x20;
+        header[0x17] = 0x09;
+        header[0x19] = 0x01;
+        header[0x1B] = 0x00;
+
+        ushort checksum = 0x1234;
+        ushort complement = validChecksum ? (ushort)~checksum : (ushort)0x0000;
+        header[0x1C] = (byte)(complement & 0xFF);
+        header[0x1D] = (byte)(complement >> 8);
+        header[0x1E] = (byte)(checksum & 0xFF);
+        header[0x1F] = (byte)(checksum >> 8);
+        return probe;
+    }
 
     [Fact]
     public void GetSkipBytes_SNES_WithCopierHeader_Returns512_Issue9()
     {
         // File size with SMC copier header: 256KB + 512 = 262656
-        var skip = HeaderSizeMap.GetSkipBytes("SNES", [], 262656);
+        var skip = HeaderSizeMap.GetSkipBytes("SNES", MakeSnesProbe(), 262656);
         Assert.Equal(512, skip);
+    }
+
+    [Fact]
+    public void GetSkipBytes_SNES_SizeHeuristicOnly_Returns0()
+    {
+        var skip = HeaderSizeMap.GetSkipBytes("SNES", new byte[HeaderSizeMap.GetProbeByteCount("SNES")], 262656);
+        Assert.Equal(0, skip);
+    }
+
+    [Fact]
+    public void GetSkipBytes_SNES_InvalidShiftedHeader_Returns0()
+    {
+        var skip = HeaderSizeMap.GetSkipBytes("SNES", MakeSnesProbe(validChecksum: false), 262656);
+        Assert.Equal(0, skip);
     }
 
     [Fact]
@@ -62,7 +95,7 @@ public sealed class HeaderSizeMapTests
     [Fact]
     public void GetSkipBytes_SNES_CaseInsensitive_Issue9()
     {
-        var skip = HeaderSizeMap.GetSkipBytes("snes", [], 262656);
+        var skip = HeaderSizeMap.GetSkipBytes("snes", MakeSnesProbe(), 262656);
         Assert.Equal(512, skip);
     }
 
@@ -159,7 +192,7 @@ public sealed class HeaderSizeMapTests
         for (int i = 0; i < 3; i++)
         {
             Assert.Equal(16, HeaderSizeMap.GetSkipBytes("NES", InesHeader, 256 * 1024));
-            Assert.Equal(512, HeaderSizeMap.GetSkipBytes("SNES", [], 262656));
+            Assert.Equal(512, HeaderSizeMap.GetSkipBytes("SNES", MakeSnesProbe(), 262656));
             Assert.Equal(0, HeaderSizeMap.GetSkipBytes("SNES", [], 262144));
             Assert.Equal(128, HeaderSizeMap.GetSkipBytes("ATARI7800", MakeAtari7800Header(), 128 * 1024));
             Assert.Equal(64, HeaderSizeMap.GetSkipBytes("ATARILYNX", LynxHeader, 64 * 1024));

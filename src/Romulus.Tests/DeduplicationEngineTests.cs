@@ -1,6 +1,5 @@
 using Romulus.Contracts.Models;
 using Romulus.Core.Deduplication;
-using Romulus.Infrastructure.Orchestration;
 using Xunit;
 
 namespace Romulus.Tests;
@@ -124,7 +123,7 @@ public class DeduplicationEngineTests
     // --- Determinism ---
 
     [Fact]
-    public void SelectWinner_IsDeterministic()
+    public void SelectWinner_IsStableAcrossPermutationsAndParallelCalls()
     {
         var items = Enumerable.Range(0, 10)
             .Select(i => MakeCandidate(
@@ -133,12 +132,21 @@ public class DeduplicationEngineTests
                 versionScore: i * 10))
             .ToArray();
 
-        var first = DeduplicationEngine.SelectWinner(items);
-        for (var run = 0; run < 10; run++)
+        var expectedPath = DeduplicationEngine.SelectWinner(items)?.MainPath;
+        Assert.NotNull(expectedPath);
+
+        var permutations = Enumerable.Range(0, items.Length)
+            .Select(i => items.Skip(i).Concat(items.Take(i)).ToArray())
+            .Append(items.Reverse().ToArray())
+            .ToArray();
+
+        foreach (var permutation in permutations)
+            Assert.Equal(expectedPath, DeduplicationEngine.SelectWinner(permutation)?.MainPath);
+
+        Parallel.For(0, 32, _ =>
         {
-            var result = DeduplicationEngine.SelectWinner(items);
-            Assert.Same(first, result);
-        }
+            Assert.Equal(expectedPath, DeduplicationEngine.SelectWinner(items)?.MainPath);
+        });
     }
 
     // --- Deduplicate groups ---
@@ -387,7 +395,7 @@ public class DeduplicationEngineTests
     }
 
     [Fact]
-    public void SelectWinner_UsesRegisteredCustomCategoryRanks()
+    public void SelectWinner_UsesExplicitCustomCategoryRanks()
     {
         var customRanks = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
         {
@@ -418,19 +426,9 @@ public class DeduplicationEngineTests
             FormatScore = 1
         };
 
-        try
-        {
-            DeduplicationEngine.RegisterCategoryRanks(customRanks);
+        var winner = DeduplicationEngine.SelectWinner(new[] { game, unknown }, customRanks);
 
-            var winner = DeduplicationEngine.SelectWinner(new[] { game, unknown });
-
-            Assert.NotNull(winner);
-            Assert.Equal(FileCategory.Unknown, winner!.Category);
-        }
-        finally
-        {
-            // Restore defaults from defaults.json profile for subsequent tests.
-            DefaultsScoringProfile.EnsureRegistered();
-        }
+        Assert.NotNull(winner);
+        Assert.Equal(FileCategory.Unknown, winner!.Category);
     }
 }

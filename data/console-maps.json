@@ -118,6 +118,14 @@
     "lynx": "LYNX",
     "atari st": "ATARIST",
     "atarist": "ATARIST",
+    "a800": "A800",
+    "atari800": "A800",
+    "atari 800": "A800",
+    "atari xl": "A800",
+    "atarixl": "A800",
+    "atari xe": "A800",
+    "atarixe": "A800",
+    "atari 8-bit": "A800",
     "atari jaguar": "JAG",
 
     "colecovision": "COLECO",
@@ -318,7 +326,12 @@
     "photoplay": "PHOTOPLAY",
     "e-amusement": "EAMUSE",
     "eamusement": "EAMUSE",
+    "gameshark-updates": "GSUPD",
+    "gameshark updates": "GSUPD",
+    "playstation gameshark updates": "GSUPD",
     "msx2": "MSX2",
+    "mugen": "MUGEN",
+    "m.u.g.e.n": "MUGEN",
     "megaduck": "MEGADUCK",
     "mega duck": "MEGADUCK",
     "astrocade": "ASTROCADE",
@@ -425,6 +438,9 @@
     ".lnx": "LYNX",
     ".st": "ATARIST",
     ".stx": "ATARIST",
+    ".atr": "A800",
+    ".xex": "A800",
+    ".xfd": "A800",
     ".j64": "JAG",
 
     ".col": "COLECO",
@@ -475,6 +491,10 @@
     {
       "Key": "PS3",
       "Rx": "playstation\\s*3|\\bps3\\b"
+    },
+    {
+      "Key": "GSUPD",
+      "Rx": "gameshark[-\\s]*updates|playstation\\s*gameshark\\s*updates"
     },
     {
       "Key": "PS1",
@@ -645,6 +665,10 @@
       "Rx": "atari\\s*st\\b"
     },
     {
+      "Key": "A800",
+      "Rx": "\\ba800\\b|atari\\s*800|atari\\s*xl|atari\\s*xe|atari\\s*8-bit"
+    },
+    {
       "Key": "COLECO",
       "Rx": "colecovision|\\bcoleco\\b"
     },
@@ -659,6 +683,10 @@
     {
       "Key": "MSX",
       "Rx": "\\bmsx2?\\b"
+    },
+    {
+      "Key": "MUGEN",
+      "Rx": "\\bm\\.?u\\.?g\\.?e\\.?n\\.?\\b|\\bmugen\\b"
     },
     {
       "Key": "AMIGA",
@@ -815,6 +843,10 @@
       "Rx": "playstation\\s*2|\\bps2\\b"
     },
     {
+      "Key": "GSUPD",
+      "Rx": "gameshark[-\\s]*updates|playstation\\s*gameshark\\s*updates"
+    },
+    {
       "Key": "PS1",
       "Rx": "playstation(?!\\s*[2-9]|\\s*p|\\s*v)|\\bps1\\b|\\bpsx\\b"
     },
@@ -959,6 +991,10 @@
       "Rx": "atari\\s*7800|\\ba78\\b"
     },
     {
+      "Key": "A800",
+      "Rx": "\\ba800\\b|atari\\s*800|atari\\s*xl|atari\\s*xe|atari\\s*8-bit"
+    },
+    {
       "Key": "LYNX",
       "Rx": "\\blynx\\b|atari\\s*lynx"
     },
@@ -977,6 +1013,10 @@
     {
       "Key": "MSX",
       "Rx": "\\bmsx2?\\b"
+    },
+    {
+      "Key": "MUGEN",
+      "Rx": "\\bm\\.?u\\.?g\\.?e\\.?n\\.?\\b|\\bmugen\\b"
     },
     {
       "Key": "ARCADE",

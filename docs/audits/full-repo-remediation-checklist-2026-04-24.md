@@ -20,7 +20,7 @@ Keine Teilabnahmen: Ein Finding gilt erst als erledigt, wenn es fachlich, techni
 |-----------------|--------|-------------------|---------------|
 | Welle 0 - Audit-Ledger, Baseline und Gates | Offen | Gesamtsteuerung aller 261 Findings | Build/Test-Baseline, Fix-Matrix, Gate-Regeln |
 | Welle 1 - Safety, I/O, Audit, Atomicity | Fokussiert umgesetzt; Vollsuite-Timeout dokumentiert | Path-, Move-, Audit-, Rollback-, Reparse-, CSV-Safety | Root-Safety, atomare Writes, Rollback-Tests |
-| Welle 2 - Core-Determinismus, Klassifikation, Scoring, DAT | Offen | GameKey, Region, Scoring, Winner, Junk, DAT-Hash | Determinismus-, Invariant- und Regressionstests |
+| Welle 2 - Core-Determinismus, Klassifikation, Scoring, DAT | Fokussiert umgesetzt | GameKey, Region, Scoring, Winner, Junk, DAT-Hash | Build gruen; 910 fokussierte Regressionstests gruen |
 | Welle 3 - Tools, Archive, Conversion, DAT-Import, Hashing | Offen | ToolRunner, Archive, Conversion, DAT-Update, Header-Repair | Fail-closed Verify, Zip-Slip/Bomb, Tool-Hardening |
 | Welle 4 - Orchestration, Statusmodelle, Reports, Exports | Offen | RunOrchestrator, Status, KPIs, Reports, Logs, Exports | Paritaet, deterministische Artefakte, atomic export |
 | Welle 5 - CLI/API/WPF/Avalonia-Paritaet | Offen | Alle Entry Points und UI-/API-/CLI-Findings | Cross-channel parity, API security, UI async/i18n/a11y |
@@ -79,27 +79,27 @@ Keine Teilabnahmen: Ein Finding gilt erst als erledigt, wenn es fachlich, techni
 
 ## Welle 2 - Core-Determinismus, Klassifikation, Scoring, DAT
 
-- [ ] Welle 2 abgeschlossen.
-- [ ] GameKey-Normalisierung erzeugt keine kollidierenden Empty-/Whitespace-Sentinel-Keys.
-- [ ] Region-Erkennung deckt dokumentierte Alias-, Klammer- und Spezialfaelle ab.
-- [ ] Format-/Version-/Region-Scoring ist deterministisch, cache-begrenzt und edge-case-getestet.
-- [ ] Winner-Selection ist unter Permutation und Parallelitaet stabil.
-- [ ] Junk-/BIOS-/NonGame-Entscheidungen kommen ausschliesslich aus Core.
-- [ ] Reports und UI zeigen Core-Reason-Codes statt eigener Pattern-Listen.
-- [ ] False-Positive-Funde fuer Trial/Sampler/SNES/GBA/GB/BMP/MP3 sind regressionsgesichert.
-- [ ] DAT-Index speichert HashType und Lookup erzwingt typgleichen Hash.
-- [ ] CRC32/MD5/SHA1-Fallbacks sind explizit, maschinenlesbar und getestet.
-- [ ] DAT-Kapazitaetslimits und HypothesisResolver-Gates sind fachlich abgesichert.
-- [ ] Determinismus-, Property-, Invariant- und Regressionstests laufen gruen.
-- [ ] Betroffene Detail-Findings im Audit-Dokument sind abgehakt.
+- [x] Welle 2 abgeschlossen.
+- [x] GameKey-Normalisierung erzeugt keine kollidierenden Empty-/Whitespace-Sentinel-Keys.
+- [x] Region-Erkennung deckt dokumentierte Alias-, Klammer- und Spezialfaelle ab.
+- [x] Format-/Version-/Region-Scoring ist deterministisch, cache-begrenzt und edge-case-getestet.
+- [x] Winner-Selection ist unter Permutation und Parallelitaet stabil.
+- [x] Junk-/BIOS-/NonGame-Entscheidungen kommen ausschliesslich aus Core.
+- [x] Reports und UI zeigen Core-Reason-Codes statt eigener Pattern-Listen.
+- [x] False-Positive-Funde fuer Trial/Sampler/SNES/GBA/GB/BMP/MP3 sind regressionsgesichert.
+- [x] DAT-Index speichert HashType und Lookup erzwingt typgleichen Hash.
+- [x] CRC32/MD5/SHA1-Fallbacks sind explizit, maschinenlesbar und getestet.
+- [x] DAT-Kapazitaetslimits und HypothesisResolver-Gates sind fachlich abgesichert.
+- [x] Determinismus-, Property-, Invariant- und Regressionstests laufen gruen.
+- [x] Betroffene Detail-Findings im Audit-Dokument sind abgehakt.
 
 ### Finding-Gruppen
 
-- [ ] GameKey-, Region-, Scoring- und Winner-Findings aus P0/P1/P2/P3.
-- [ ] `R3-A-*` Core-/DAT-/Hash-Type-Findings.
-- [ ] `R5-A-*` Core/Contracts-Findings.
-- [ ] `R6-B-02`, `R6-B-03`, `R6-B-08`, `R6-B-10`.
-- [ ] `R7-B-03` Junk-Report/Core-Paritaet.
+- [x] GameKey-, Region-, Scoring- und Winner-Findings aus P0/P1/P2/P3.
+- [x] Welle-2-relevante `R3-A-*` Core-/DAT-/Hash-Type-Findings.
+- [x] `R5-A-*` Core/Contracts-Findings.
+- [x] `R6-B-02`, `R6-B-03`, `R6-B-08`, `R6-B-10`.
+- [x] `R7-B-03` Junk-Report/Core-Paritaet.
 
 ## Welle 3 - Tools, Archive, Conversion, DAT-Import, Hashing
 

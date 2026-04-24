@@ -82,13 +82,13 @@
 
 ### P0-03 — GameKey „__empty_key_null" kollidiert fuer alle Whitespace-Namen
 **Tags:** Release-Blocker · Data-Integrity Risk · Determinism Risk
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [src/Romulus.Core/GameKeys/GameKeyNormalizer.cs](../../src/Romulus.Core/GameKeys/GameKeyNormalizer.cs#L240-L283)
 - **Problem:** Frueh-Return Z. 241 weist allen Whitespace-Namen denselben Key zu -> unverwandte Files werden gruppiert -> Loser landet in `_TRASH_REGION_DEDUPE`.
 - **Reproduktion:** `   .iso` und `\u3000.chd` -> beide Key `__empty_key_null` -> ein File wird geloescht.
 - **Fix:** Frueh-Pfad ebenfalls hash-suffigieren (analog Spaet-Fallback Z. 280-283) ODER Kandidat aus Gruppierung ausschliessen.
 - **Tests fehlen:**
-  - [ ] Property-Test: `Normalize(a) != Normalize(b)` fuer 2 verschiedene Whitespace-Inputs
+  - [x] Property-Test: `Normalize(a) != Normalize(b)` fuer 2 verschiedene Whitespace-Inputs
 
 ### P0-04 — Cross-Volume-Move nicht atomar (Cancel/IO-Fehler hinterlaesst Partials)
 **Tags:** Release-Blocker · Data-Integrity Risk
@@ -201,7 +201,7 @@
 
 ### P1-08 — `DeduplicationEngine` mit globalem mutable static state
 **Tags:** Architecture Debt Hotspot · Determinism Risk
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [DeduplicationEngine.cs](../../src/Romulus.Core/Deduplication/DeduplicationEngine.cs#L10-L57)
 - **Problem:** `RegisterCategoryRanks()`/`RegisterCategoryRankFactory()` setzen prozessweite Felder. `ResetForTesting()` ist Eingestaendnis. In API+WPF im selben Prozess: letzter Registrant gewinnt.
 - **Fix:** Ranks per ctor-Parameter durchreichen.
@@ -594,7 +594,7 @@
 
 ### P3-07 — Test `SelectWinner_IsDeterministic` ist Alibi-Test
 **Tags:** False Confidence Risk · Test-Hygiene
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [DeduplicationEngineTests.cs](../../src/Romulus.Tests/DeduplicationEngineTests.cs#L127-L143)
 - **Fix:** Echte Permutation einbauen ODER umbenennen `_AreIdempotent`.
 
@@ -613,12 +613,12 @@
 
 ### P3-10 — `FormatScorer.GetRegionScore`: leere/lange `preferOrder` -> Score-Inversion
 **Tags:** False Confidence
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [FormatScorer.cs](../../src/Romulus.Core/Scoring/FormatScorer.cs#L246)
 - **Fix:** `Math.Max(1, 1000 - idx)`. Default-Reihenfolge bei leerem `preferOrder`.
 - **Tests fehlen:**
-  - [ ] `RegionScore_WithEmptyPreferOrder_ReturnsDocumentedDefault`
-  - [ ] `RegionScore_WithMoreThan1000Preferences_NeverGoesNegative`
+  - [x] `RegionScore_WithEmptyPreferOrder_ReturnsDocumentedDefault`
+  - [x] `RegionScore_WithMoreThan1000Preferences_NeverGoesNegative`
 
 ### P3-11 — `/dashboard/bootstrap` anonym (Information Disclosure)
 **Tags:** Security · OWASP A05
@@ -657,22 +657,22 @@
 
 #### R3-A-02 — `ContentSignatureClassifier` markiert ROMs faelschlich als BMP/MP3 (P1)
 **Tags:** Junk-Misclassification · Determinism
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ContentSignatureClassifier.cs](../../src/Romulus.Core/Classification/ContentSignatureClassifier.cs#L46-L53)
 - **Problem:** BMP-Erkennung nur 2 Byte (`0x42 0x4D` = "BM"). MP3 nur Frame-Sync `0xFF (b1 & 0xE0)==0xE0` -> matcht ROMs mit `0xFF`-Padding (typisch SNES/MD).
 - **Fix:** BMP zusaetzlich `BinaryPrimitives.ReadUInt32LE(header[2..6]) == fileSize`. MP3-Sync um Bitrate-/Samplerate-Index validieren.
 - **Tests fehlen:**
-  - [ ] SNES-ROM `0xFF 0xE2 ...` -> nicht MP3
-  - [ ] Property 1000 zufaellige Header -> kein BMP/MP3-Hit
+  - [x] SNES-ROM `0xFF 0xE2 ...` -> nicht MP3
+  - [x] Plausibilitaets-Regression fuer BMP/MP3-Header
 
 #### R3-A-03 — DatIndex mischt heterogene Hash-Typen ohne Tag (P1)
 **Tags:** Determinism · Cross-Console False-Match · Architecture Debt
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **Files:** [DatRepositoryAdapter.cs](../../src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs#L266-L307), [DatIndex.cs](../../src/Romulus.Contracts/Models/DatIndex.cs#L100-L115)
 - **Problem:** Pro ROM-Zeile wird je nach Verfuegbarkeit SHA1 -> MD5 -> CRC32 in dieselbe Map indiziert. `LookupEntry` weiss nicht, was es speichert -> Type-Pollution.
 - **Fix:** `DatIndexEntry.HashType`-Feld + `Lookup(consoleKey, hashType, hash)` filtert auf gleichen Typ.
 - **Tests fehlen:**
-  - [ ] DAT mit MD5(X), andere DAT mit gleichem 32-Hex-String als CRC32 -> getrennte Lookups
+  - [x] DAT mit MD5(X), andere DAT mit gleichem 32-Hex-String als CRC32 -> getrennte Lookups
 
 #### R3-A-04 — `HeaderRepairService` ueberschreibt Backup-Datei mit korruptem Inhalt (P1)
 **Tags:** Data-Integrity · Audit-Luecke
@@ -721,12 +721,12 @@
 
 #### R3-A-09 — `HeaderlessHasher` mappt CRC32 still auf SHA1 (P1)
 **Tags:** Determinism · Verify Fail-Open · DAT-Mismatch
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [HeaderlessHasher.cs](../../src/Romulus.Infrastructure/Hashing/HeaderlessHasher.cs#L116-L122)
 - **Problem:** Switch hat keinen `CRC`/`CRC32`-Branch -> `_ => SHA1.Create()`. Headerless-Anforderung mit CRC32 liefert SHA1-Hex, kein DAT-Match moeglich.
 - **Fix:** `if (NormalizeHashType(hashType) is "CRC" or "CRC32") return Crc32.HashStream(fs);` vor Branch.
 - **Tests fehlen:**
-  - [ ] `ComputeHeaderlessHash(nesFile, "NES", "CRC32")` -> 8-Hex-String
+  - [x] `ComputeHeaderlessHash(nesFile, "NES", "CRC32")` -> 8-Hex-String
 
 #### R3-A-10 — `ToolRunnerAdapter.ReadToEndWithByteBudget` liest weiter nach Truncation, ignoriert CT (P2)
 **Tags:** DoS · Resource Leak · Concurrency
@@ -739,7 +739,7 @@
 
 #### R3-A-11 — DatRepositoryAdapter Fallback-Chain falsch verschachtelt (P2)
 **Tags:** Bug · DAT-Lookup · Determinism
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [DatRepositoryAdapter.cs](../../src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs#L283-L307)
 - **Problem:** `is not` verschachtelte Bedingungen: SHA1-Request bekommt MD5-Eintrag mit `selectedHashType="SHA1"` -> Index semantisch falsch.
 - **Fix:** Klare Tabelle pro `requestedHashType` mit Fallback-Liste; `selectedHashType` korrekt setzen + Warning.
@@ -753,27 +753,27 @@
 
 #### R3-A-13 — `GetDatGameKey` Trim-Reihenfolge bricht Whitespace-Variationen (P3)
 **Tags:** Determinism · Edge Case
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [DatRepositoryAdapter.cs](../../src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs#L88-L92)
 - **Fix:** `$"{console.Trim()}|{gameName.Trim()}".ToLowerInvariant()`.
 
 #### R3-A-14 — SNES-Copier-Detektion via `% 1024 == 512` ohne Header-Validierung (P2)
 **Tags:** Determinism · DAT-Mismatch · Bug
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [HeaderSizeMap.cs](../../src/Romulus.Core/Classification/HeaderSizeMap.cs#L29)
 - **Problem:** Heuristik laesst legitime SNES-ROMs ohne Copier-Header faelschlich Headerless-Skip bekommen -> No-Intro-CRC matcht nicht.
 - **Fix:** SNES-Copier-Check an LoROM/HiROM-Internal-Header-Validierung knuepfen.
 
 #### R3-A-15 — GBA/GB-Detektion auf Basis nur 4 Logo-Bytes (P2)
 **Tags:** False-Classification · Determinism
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [CartridgeHeaderDetector.cs](../../src/Romulus.Core/Classification/CartridgeHeaderDetector.cs#L107-L135)
 - **Problem:** 4-Byte-Match `24 FF AE 51` (GBA) bzw. `CE ED 66 66` (GB) erzeugt False-Positives bei beliebigen .bin-Dateien.
 - **Fix:** Vollstaendige 156-Byte-/48-Byte-Logo-Validierung ODER Nintendo-Pruefsumme `0x134..0x14C`.
 
 #### R3-A-16 — DatRepositoryAdapter waehlt nichtdeterministisch bei mehreren inneren `.dat`/`.xml` (P3)
 **Tags:** Determinism · Bug
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [DatRepositoryAdapter.cs](../../src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs#L548-L555)
 - **Fix:** Multi-DAT mergen ODER explizit warnen.
 
@@ -1435,7 +1435,7 @@
 
 ### R5-A-01 — `\btrial\b` false positive: legitime ROMs als Junk klassifiziert
 **Tags:** `classification` `junk-detection` `false-positive` `P1`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [FileClassifier.cs](../../src/Romulus.Core/Classification/FileClassifier.cs#L91)
 - **Problem:** `RxJunkWords` enthaelt `\btrial\b` als eigenstaendige Alternation. "Trial of Mana" (Square), "The Trial" (Activision), "Field Trial Edition" matchen dieses Pattern. Im Execute-Modus werden betroffene Dateien in den Trash verschoben – Datenverlust-Risiko.
 - **Fix:** `trial` aus unparen­thesierter `RxJunkWords` entfernen; nur `\(trial(?:\s*version)?\)` in parenthesiertem `RxJunkTags`-Pattern erlauben (analog zu `beta`, `alpha`).
@@ -1445,7 +1445,7 @@
 
 ### R5-A-02 — `VersionScorer`-Konstruktor: ungueltige Regex aus rules.json → Startup-Absturz
 **Tags:** `scoring` `resilience` `startup-crash` `P1`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [VersionScorer.cs](../../src/Romulus.Core/Scoring/VersionScorer.cs#L175)
 - **Problem:** Parametrischer Konstruktor ruft `new Regex(verifiedPattern, ...)` ohne try/catch. Beschaedigte/manipulierte `rules.json` fuehrt zu `ArgumentException` → Startup-Absturz aller drei Entry Points.
 - **Fix:** Konstruktor-Body in try/catch einwickeln; bei `ArgumentException` Warnung loggen und Default-Pattern-Fallback nutzen. Alternativ: Pattern-Validierung in Infrastructure vor Factory-Uebergabe.
@@ -1455,7 +1455,7 @@
 
 ### R5-A-03 — `\bsampler\b`: False Positive auf unparenthesierte ROM-Titel
 **Tags:** `classification` `junk-detection` `false-positive` `P1`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [FileClassifier.cs](../../src/Romulus.Core/Classification/FileClassifier.cs#L94)
 - **Problem:** `\bsampler\b` matcht Titelbestandteile wie "Bass Master Sampler Pack" oder "Drum Sampler 64". Diese Titel aus Arcade/Computer-ROM-Sets werden als Junk klassifiziert.
 - **Fix:** `sampler` in `RxJunkWords` durch parenthesisierten Ausdruck in `RxJunkTags` ersetzen: `\((sampler|sampler\s*disc|sampler\s*cd)\)`.
@@ -1465,7 +1465,7 @@
 
 ### R5-A-04 — `DeduplicationEngine.Deduplicate`: leere GameKeys still uebergangen
 **Tags:** `deduplication` `data-loss` `silent-skip` `P1`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [DeduplicationEngine.cs](../../src/Romulus.Core/Deduplication/DeduplicationEngine.cs#L113)
 - **Problem:** Kandidaten mit leerem/whitespace `GameKey` werden still uebersprungen (`if (string.IsNullOrWhiteSpace(c.GameKey)) continue`). Sie erscheinen weder als Winner noch Loser und werden nicht auditiert. Kein Logging, kein Counter.
 - **Fix:** Zaehler fuer uebersprungene Kandidaten fuehren und als Warnung im Run-Ergebnis zurueckgeben. Guard in Pipeline sicherstellen, dass keine Kandidaten mit leerem Key ankommen.
@@ -1475,7 +1475,7 @@
 
 ### R5-A-05 — `GameKeyNormalizer`: `"__empty_key_null"` kollabiert alle leeren Basenames
 **Tags:** `gamekeys` `determinism` `grouping` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [GameKeyNormalizer.cs](../../src/Romulus.Core/GameKeys/GameKeyNormalizer.cs#L239)
 - **Problem:** Alle null/whitespace-Inputs liefern denselben Key `__empty_key_null`. Zwei beschaedigte ZIP-Entries aus derselben Konsole landen in einer Dedup-Gruppe und ein falscher Winner wird gewaehlt.
 - **Fix:** `return "__empty_key_null_" + ComputeStableKeySuffix(baseName ?? "")` statt Konstante; oder beide Leer-Pfade in denselben SHA-256-Fallback fuehren.
@@ -1485,7 +1485,7 @@
 
 ### R5-A-06 — `RegionDetector`: `[NTSC-J]`/`[Brazil]` in eckigen Klammern nicht erkannt
 **Tags:** `region-detection` `scoring` `false-winner` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [RegionDetector.cs](../../src/Romulus.Core/Regions/RegionDetector.cs#L203)
 - **Problem:** `ParenGroupPattern` extrahiert nur runde Klammern. Dateinamen wie `"Game [NTSC-J]"` oder `"Game [Brazil]"` (gaengiges No-Intro/TOSEC-Schema) erhalten `Region: UNKNOWN` → `RegionScore: 100` → potenziell falscher Winner.
 - **Fix:** Zweiten Pattern-Extraktor fuer `\[([^\]]+)\]` einfuehren und beide Ergebnisse dem Token-Resolver uebergeben.
@@ -1495,7 +1495,7 @@
 
 ### R5-A-07 — `DatIndex.MaxEntriesPerConsole` default 0 = unbegrenzt
 **Tags:** `dat` `memory` `dos` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [DatIndex.cs](../../src/Romulus.Contracts/Models/DatIndex.cs#L20)
 - **Problem:** `MaxEntriesPerConsole` default `0` → Kapazitaetsguard inaktiv. Boesartige DAT mit Millionen Eintraegen fuellt Index unbegrenzt → OOM-Exception.
 - **Fix:** Vernuenftigen Default setzen: `MaxEntriesPerConsole = 500_000`.
@@ -1505,7 +1505,7 @@
 
 ### R5-A-08 — `SourceIntegrityClassifier`: `.wud`, `.dax`, `.zso`, `.jso`, `.wux` fehlen
 **Tags:** `conversion` `integrity` `blocked-conversion` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [SourceIntegrityClassifier.cs](../../src/Romulus.Core/Conversion/SourceIntegrityClassifier.cs#L10)
 - **Problem:** `.wud`, `.wux`, `.tgc` (verlustfreie Wii-U/GC-Images) fallen in `Unknown` → Konversion geblockt. `.dax`, `.zso`, `.jso` (komprimierte PSP-Formate) ebenso falsch eingestuft.
 - **Fix:** `LosslessExtensions` um `.wud`, `.wux`, `.tgc` ergaenzen; `LossyExtensions` um `.dax`, `.zso`, `.jso`.
@@ -1515,7 +1515,7 @@
 
 ### R5-A-09 — `HypothesisResolver`: DAT-Gate `datAvailable: false` hardcoded
 **Tags:** `classification` `dat-gate` `adr-0021` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [HypothesisResolver.cs](../../src/Romulus.Core/Classification/HypothesisResolver.cs#L229)
 - **Problem:** `DecisionResolver.Resolve(..., datAvailable: false, ...)` immer fest. Strukturelle Tier-1-Evidenz kann `Sort` erreichen auch wenn ein DAT geladen ist, das die Datei NICHT enthaelt. Das konservative DAT-Gate (ADR-0021 Phase 1) wirkt nur via `EnrichmentPipelinePhase`, nicht bei direktem `DetectWithConfidence`-Aufruf.
 - **Fix:** Dokumentation explizit festhalten dass DAT-Gate NUR via `EnrichmentPipelinePhase` aktiv ist. Alternativ: optionalen `bool datAvailable`-Parameter ergaenzen.
@@ -1525,7 +1525,7 @@
 
 ### R5-A-10 — `ConversionPolicyEvaluator`: `ManualOnly + Unknown` Risikogrund nicht maschinenlesbar
 **Tags:** `conversion` `policy` `ux` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ConversionPolicyEvaluator.cs](../../src/Romulus.Core/Conversion/ConversionPolicyEvaluator.cs#L35)
 - **Problem:** `ManualOnly` + `Unknown`-Integrity → beide `Safety = Risky`. Im Batch-Review-Modus "Alle Risky genehmigen" werden Unknown-Integrity-Dateien ohne Einzelpruefung konvertiert; Unterschied zwischen Policy-Risky und Unknown-Source-Risky geht verloren.
 - **Fix:** `ConversionSafety` um `RiskyUnknownSource` erweitern oder maschinenlesbaren `RiskReason` am Plan anfuegen.
@@ -1535,7 +1535,7 @@
 
 ### R5-A-11 — `RuleEngine._regexCache`: Eviction entfernt FIFO statt LRU
 **Tags:** `performance` `caching` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [RuleEngine.cs](../../src/Romulus.Core/Rules/RuleEngine.cs#L152)
 - **Problem:** `_regexCache.Keys.Take(MaxRegexCacheSize / 4)` auf `ConcurrentDictionary` ohne Ordnungsgarantie → effektiv zufaellige Eviction. Haeufig genutzte Patterns koennen evicted werden.
 - **Fix:** `ConcurrentDictionary` durch `LruCache<string, Regex?>` aus `Romulus.Core.Caching` ersetzen (thread-safe, echter LRU vorhanden).
@@ -1545,7 +1545,7 @@
 
 ### R5-A-12 — `FormatScorer.RegionScoreCache`: unbegrenztes Wachstum
 **Tags:** `scoring` `memory` `api` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [FormatScorer.cs](../../src/Romulus.Core/Scoring/FormatScorer.cs#L253)
 - **Problem:** `RegionScoreCache` (`Dictionary<string, IReadOnlyDictionary<string, int>>`) ohne Size-Limit. Im API-Betrieb mit beliebigen `preferRegions`-Konfigurationen nicht-begrenztes Speicherwachstum moeglich.
 - **Fix:** Cache durch `LruCache<string, IReadOnlyDictionary<string, int>>` mit Groesse 100 ersetzen.
@@ -1555,7 +1555,7 @@
 
 ### R5-A-13 — `IFileSystem.MoveItemSafely(src, dst)`: kein Path-Containment im Contract
 **Tags:** `security` `path-traversal` `contract` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [IFileSystem.cs](../../src/Romulus.Contracts/Ports/IFileSystem.cs#L28)
 - **Problem:** Zweiargumentiger `MoveItemSafely`-Overload ohne `allowedRoot` bietet keinen Contract-Level-Schutz gegen Path Traversal. Callers koennen die sichere dreiargumentige Variante uebersehen.
 - **Fix:** Basis-Overload mit `[Obsolete]`-Annotation und Security-Hinweis markieren. Alternativ: XML-Doc-Kommentar mit explizitem Sicherheitshinweis.
@@ -1565,7 +1565,7 @@
 
 ### R5-A-14 — `DedupeGroup.Winner = null!`: luegt ueber Nullbarkeit
 **Tags:** `contracts` `nullability` `nre-risk` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [RomCandidate.cs](../../src/Romulus.Contracts/Models/RomCandidate.cs#L62)
 - **Problem:** `public RomCandidate Winner { get; init; } = null!;` – `!`-Operator unterdruckt Null-Warning. Direkte Instanziierung ohne `Winner`-Setzen fuehrt zur Laufzeit-NRE.
 - **Fix:** `Winner` als `required` deklarieren oder Typ auf `RomCandidate?` aendern.
@@ -1575,7 +1575,7 @@
 
 ### R5-A-15 — `GameKeyNormalizer.AsciiFold`: NFC/NFD-Kollision undokumentiert
 **Tags:** `gamekeys` `documentation` `P3`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [GameKeyNormalizer.cs](../../src/Romulus.Core/GameKeys/GameKeyNormalizer.cs#L160)
 - **Problem:** NFC/NFD-aequivalente Strings erzeugen absichtlich denselben Key – undokumentiert, wirkt wie Bug.
 - **Fix:** XML-Kommentar bei `AsciiFold`: "NFD/NFC-aequivalente Strings werden absichtlich auf denselben Wert normalisiert."
@@ -1585,7 +1585,7 @@
 
 ### R5-A-16 — `ConversionGraph.GetOutgoingEdges`: Tiebreaker fuer gleiche Kosten nicht stabil
 **Tags:** `conversion` `determinism` `P3`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ConversionGraph.cs](../../src/Romulus.Core/Conversion/ConversionGraph.cs#L110)
 - **Problem:** `enqueueOrder`-Tiebreaker bei identischen Dijkstra-Pfadkosten haengt von `_capabilities`-Reihenfolge ab (keine stabile Ordnung aus IConversionRegistry).
 - **Fix:** Expliziter Tiebreaker auf Ziel-Extension bei gleichem Pfadkosten: alphabetisch kleinsten Target gewinnen lassen.
@@ -1595,7 +1595,7 @@
 
 ### R5-A-17 — `SafeRegex.Replace` ad-hoc Overload in `GameKeyNormalizer`
 **Tags:** `performance` `regex` `P3`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [GameKeyNormalizer.cs](../../src/Romulus.Core/GameKeys/GameKeyNormalizer.cs#L263)
 - **Problem:** `SafeRegex.Replace(key, @"\s+", ...)` bei jedem Aufruf; BCL-Cache nur 15 Patterns. Statisches precompiled-Feld waere sicherer.
 - **Fix:** `private static readonly Regex WhitespaceCollapseRegex = new(@"\s+", RegexOptions.Compiled, DefaultTimeout);` als statisches Feld.
@@ -1605,7 +1605,7 @@
 
 ### R5-A-18 — `FolderKeyNormalizer`: direkte Regex-Calls ohne SafeRegex
 **Tags:** `gamekeys` `consistency` `P3`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [FolderKeyNormalizer.cs](../../src/Romulus.Core/GameKeys/FolderKeyNormalizer.cs#L38)
 - **Problem:** `TrailingBracketPattern.IsMatch/Replace` direkt aufgerufen (nicht ueber `SafeRegex`). Inkonsistent zum Rest des Projekts.
 - **Fix:** Alle Regex-Aufrufe in `FolderKeyNormalizer` ueber `SafeRegex.IsMatch`/`SafeRegex.Replace` fuehren.
@@ -1615,7 +1615,7 @@
 
 ### R5-A-19 — `ConversionConditionEvaluator`: `_ => false` fuer unbekannte Enum-Werte
 **Tags:** `conversion` `fail-fast` `P3`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ConversionConditionEvaluator.cs](../../src/Romulus.Core/Conversion/ConversionConditionEvaluator.cs#L40)
 - **Problem:** Switch mit `_ => false`: neue `ConversionCondition`-Werte ohne Evaluator liefern still `false` statt Fehler → Capability nie aktiviert ohne Hinweis.
 - **Fix:** `_ => throw new NotSupportedException($"ConversionCondition '{condition}' has no evaluator.")` oder zumindest `Trace.TraceWarning`.
@@ -1625,7 +1625,7 @@
 
 ### R5-A-20 — `RegionDetector.NormalizeRegionKey`: `"BR"`, `"AU"`, `"NZ"` undokumentiert passiert
 **Tags:** `region-detection` `documentation` `P3`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [RegionDetector.cs](../../src/Romulus.Core/Regions/RegionDetector.cs#L174)
 - **Problem:** `"BR"` (Brazil), `"AU"` (Australia), `"NZ"` (New Zealand) werden nicht explizit behandelt. Inkonsistent zum EU-Aggregationsmuster. Brasilianische ROMs haeufig im No-Intro-Katalog als `"(Brazil)"`.
 - **Fix:** Kommentar ergaenzen, dass `"BR"` absichtlich als eigene Region behalten wird (korrekte Region, kein Mapping auf US/EU/JP).
@@ -1949,7 +1949,7 @@
 
 ### R6-B-02 — Konsolen ohne `folderAliases` koennen nie aus Folder-Pfaden erkannt werden
 **Tags:** `consoles` `detection` `data-integrity` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [consoles.json](../../data/consoles.json)
 - **Problem:** `A800`, `GSUPD`, `MUGEN` haben weder Eintrag in `console-maps.json/ConsoleFolderMap` noch verwendete `folderAliases`. Folder-basierte Detection und FamilyDatPolicy laufen ins Leere. `dat-catalog.json` fuehrt aber `GSUPD`-Eintraege → stille Fehlklassifikation.
 - **Fix:** `folderAliases` ergaenzen und in `ConsoleFolderMap` referenzieren. Schema `folderAliases: minItems: 1` erzwingen.
@@ -1959,7 +1959,7 @@
 
 ### R6-B-03 — `discExtensions` enthaelt Container- und Patch-Formate
 **Tags:** `format-scores` `dat-fallback` `classification` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [format-scores.json](../../data/format-scores.json#L109)
 - **Problem:** `discExtensions` listet `.zip`, `.7z`, `.rar`, `.ecm`, `.cso`, `.pbp`, `.dax`, `.jso`, `.zso`. Cartridge-ZIP wird als disc-like behandelt → EnrichmentPipelinePhase Stage-4 erlaubt name-only DAT-Fallback fuer UNKNOWN-Console mit Cartridge-ZIP → Redump-Treffer schlaegt Cartridge-Treffer.
 - **Fix:** `discExtensions` strikt auf Disc-Container reduzieren. Container und PSP-Spezialformate ueber separate Felder (`archiveExtensions`, `pspImageExtensions`).
@@ -2009,7 +2009,7 @@
 
 ### R6-B-08 — `rules.schema.json` validiert keine `Key`-Werte fuer Region-Listen
 **Tags:** `schema` `rules` `data-integrity` `P3`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [rules.schema.json](../../data/schemas/rules.schema.json#L13)
 - **Problem:** `RegionOrdered`/`Region2Letter` erlauben beliebige `Key`-Strings. Tippfehler `"WLD"` statt `"WORLD"` faellt nicht auf, kippt `preferredRegions`-Selektion still.
 - **Fix:** Schema um `enum` der zulaessigen Region-Keys ergaenzen (Master-Liste).
@@ -2029,7 +2029,7 @@
 
 ### R6-B-10 — `defaults.json/extensions` als kommaseparierter String statt Array
 **Tags:** `defaults` `schema` `dx` `P3`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [defaults.json](../../data/defaults.json#L6)
 - **Problem:** `extensions` ist String wie `".zip,.7z,.rar,..."`, Schema typisiert nur `string` ohne Pattern. Whitespace/Newline brechen Split, Duplikate nicht erkannt. Inkonsistent zu `preferredRegions` (Array).
 - **Fix:** Auf `string[]` migrieren (Loader akzeptiert beides). Schema `array` mit Pattern `^\.[a-z0-9]+$`, `uniqueItems: true`.
@@ -2273,7 +2273,7 @@
 
 ### R7-B-03 — Junk-Report rekonstruiert Core-Klassifikation mit eigener Pattern-Liste
 **Tags:** `duplicate-logic` `report-parity` `classification` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **Files:** [CollectionExportService.cs](../../src/Romulus.Infrastructure/Analysis/CollectionExportService.cs#L21), [FileClassifier.cs](../../src/Romulus.Core/Classification/FileClassifier.cs#L96)
 - **Problem:** `CollectionExportService.GetJunkReason` fuehrt eigene `JunkPatterns`/`AggressivePatterns`. Die fachliche Junk-Entscheidung kommt aber aus `FileClassifier.Analyze` mit anderen Regexen und Reason-Codes (`junk-tag`, `junk-word`, `junk-aggressive-*`).
 - **Impact:** Reports koennen fuer dieselbe Datei andere Gruende oder Gruppierungen anzeigen als die tatsaechliche Core-Entscheidung. Neue Core-Regeln driften automatisch vom Report ab.
@@ -2386,7 +2386,7 @@ Damit bleiben nach dieser Abschlussrunde keine neuen, belegbaren und nicht-dupli
 ### Sofort (vor jedem weiteren Feature-Commit)
 - [ ] P0-01 Conversion-Verify fail-closed
 - [ ] P0-02 Test invertieren
-- [ ] P0-03 GameKey-Whitespace-Hash
+- [x] P0-03 GameKey-Whitespace-Hash
 - [x] P0-04 Cross-Volume-Move atomar
 - [x] P0-05 Sidecar atomar
 - [x] P0-06 HMAC-Key fail-closed
@@ -2411,9 +2411,9 @@ Damit bleiben nach dieser Abschlussrunde keine neuen, belegbaren und nicht-dupli
 
 1. **Verify-Vertrag fail-open statt fail-closed** -> Symptom in Conversion (P0-01), HMAC (P0-06), Sidecar (P0-05).
 2. **„Eine fachliche Wahrheit" strukturell verletzt** -> Symptom in CSV-Sanitizer (P1-04), DAT-Update (P1-03), RunOrchestrator-Komposition (P1-02), Status-Strings (P2-09), Settings (P2-08).
-3. **Static Mutable State in Core** -> Determinismus-Verletzung (P1-08, P2-06).
+3. **Static Mutable State in Core** -> Determinismus-Verletzung (P1-08 erledigt, P2-06 offen).
 4. **Halbfertige Refactors** -> Schattenlogik (P1-01 Avalonia, P2-10 FeatureService, P1-11 MainViewModel).
-5. **Tests betonieren Bug-Verhalten** (P0-02, P3-07).
+5. **Tests betonieren Bug-Verhalten** (P0-02 offen, P3-07 erledigt).
 6. **Audit-Kette ohne kryptografische Anker** (P1-17, P1-18, P0-06).
 7. **Filesystem-Annahmen luckenhaft** (Cross-Volume P0-04, Hardlinks P1-09, Long-Path P2-02, Free-Space).
 

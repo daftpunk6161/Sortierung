@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Security;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
+using Romulus.Core.Classification;
 using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Reporting;
 
@@ -18,54 +18,16 @@ public static class CollectionExportService
 {
     public static CollectionTabularExportLabels EnglishLabels { get; } = new();
 
-    private static readonly (string pattern, string tag, string reason)[] JunkPatterns =
-    [
-        (@"\(Beta[^)]*\)", "Beta", "Beta version"),
-        (@"\(Proto[^)]*\)", "Proto", "Prototype"),
-        (@"\(Demo[^)]*\)", "Demo", "Demo version"),
-        (@"\(Sample\)", "Sample", "Sample"),
-        (@"\(Homebrew\)", "Homebrew", "Homebrew"),
-        (@"\(Hack\)", "Hack", "ROM hack"),
-        (@"\(Unl\)", "Unlicensed", "Unlicensed"),
-        (@"\(Aftermarket\)", "Aftermarket", "Aftermarket"),
-        (@"\(Pirate\)", "Pirate", "Pirate"),
-        (@"\(Program\)", "Program", "Program/Utility"),
-        (@"\[b\d*\]", "[b]", "Bad dump"),
-        (@"\[h\d*\]", "[h]", "Hack tag"),
-        (@"\[o\d*\]", "[o]", "Overdump"),
-        (@"\[t\d*\]", "[t]", "Trainer"),
-        (@"\[f\d*\]", "[f]", "Fixed"),
-        (@"\[T[\+\-]", "[T]", "Translation")
-    ];
-
-    private static readonly (string pattern, string tag, string reason)[] AggressivePatterns =
-    [
-        (@"\(Alt[^)]*\)", "Alt", "Alternative version"),
-        (@"\(Bonus Disc\)", "Bonus", "Bonus disc"),
-        (@"\(Reprint\)", "Reprint", "Reprint"),
-        (@"\(Virtual Console\)", "VC", "Virtual Console")
-    ];
-
-    private static readonly TimeSpan JunkRxTimeout = TimeSpan.FromMilliseconds(500);
-
     public static JunkReportEntry? GetJunkReason(string baseName, bool aggressive)
     {
-        foreach (var (pattern, tag, reason) in JunkPatterns)
-        {
-            if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase, JunkRxTimeout))
-                return new JunkReportEntry(tag, reason, "standard");
-        }
+        var decision = FileClassifier.Analyze(baseName, aggressive);
+        if (decision.Category != FileCategory.Junk)
+            return null;
 
-        if (aggressive)
-        {
-            foreach (var (pattern, tag, reason) in AggressivePatterns)
-            {
-                if (Regex.IsMatch(baseName, pattern, RegexOptions.IgnoreCase, JunkRxTimeout))
-                    return new JunkReportEntry(tag, reason, "aggressive");
-            }
-        }
-
-        return null;
+        var level = decision.ReasonCode.StartsWith("junk-aggressive", StringComparison.OrdinalIgnoreCase)
+            ? "aggressive"
+            : "standard";
+        return new JunkReportEntry(decision.ReasonCode, decision.ReasonCode, level);
     }
 
     public static string BuildJunkReport(IReadOnlyList<RomCandidate> candidates, bool aggressive)

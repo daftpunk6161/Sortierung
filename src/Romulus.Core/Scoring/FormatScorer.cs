@@ -304,6 +304,12 @@ public static class FormatScorer
         if (state.DiscExtensions.Contains(ext))
             return sizeBytes;
 
+        // Container/package formats (Switch packages, PSP packaged images): the larger
+        // file is the more canonical/complete dump, mirroring disc-image semantics.
+        if (DiscFormats.SwitchPackageExtensions.Contains(ext) ||
+            DiscFormats.PspImageExtensions.Contains(ext))
+            return sizeBytes;
+
         return -1 * sizeBytes;
     }
 

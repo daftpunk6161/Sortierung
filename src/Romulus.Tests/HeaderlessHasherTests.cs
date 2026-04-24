@@ -68,6 +68,7 @@ public sealed class HeaderlessHasherTests : IDisposable
         // Total = 33280, which % 1024 == 512
         var content = new byte[32768];
         Array.Fill(content, (byte)0xCC);
+        WriteSnesInternalHeader(content);
         var copierHeader = new byte[512]; // dummy copier header
         var rom = copierHeader.Concat(content).ToArray();
         var path = WriteFile("snes_copier.sfc", rom);
@@ -258,6 +259,21 @@ public sealed class HeaderlessHasherTests : IDisposable
         Assert.Equal(64, hash!.Length); // SHA256 = 32 bytes = 64 hex chars
     }
 
+    [Fact]
+    public void ComputeHeaderlessHash_CRC32_ProducesValidHeaderlessHash()
+    {
+        var content = new byte[256];
+        Array.Fill(content, (byte)0xAA);
+        var rom = BuildNesRom(content);
+        var path = WriteFile("crc32.nes", rom);
+
+        var hash = _hasher.ComputeHeaderlessHash(path, "NES", "CRC32");
+
+        Assert.NotNull(hash);
+        Assert.Equal(8, hash!.Length);
+        Assert.Equal(Crc32.HashStream(new MemoryStream(content)), hash);
+    }
+
     // ── TASK-015 Regression: Non-headered consoles unaffected ───────────
 
     [Fact]
@@ -282,6 +298,24 @@ public sealed class HeaderlessHasherTests : IDisposable
         header[2] = 0x53; // S
         header[3] = 0x1A; // \x1A
         return header.Concat(content).ToArray();
+    }
+
+    private static void WriteSnesInternalHeader(byte[] content)
+    {
+        var header = content.AsSpan(0x7FC0, 0x20);
+        header.Clear();
+        "SUPER TEST ROM"u8.CopyTo(header);
+        header[0x15] = 0x20;
+        header[0x17] = 0x09;
+        header[0x19] = 0x01;
+        header[0x1B] = 0x00;
+
+        ushort checksum = 0x1234;
+        ushort complement = (ushort)~checksum;
+        header[0x1C] = (byte)(complement & 0xFF);
+        header[0x1D] = (byte)(complement >> 8);
+        header[0x1E] = (byte)(checksum & 0xFF);
+        header[0x1F] = (byte)(checksum >> 8);
     }
 
     private static byte[] BuildAtari7800Rom(byte[] content)

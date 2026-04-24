@@ -18,13 +18,8 @@ public sealed class FormatScorerCoverageTests
     [InlineData(".chd", true)]
     [InlineData(".rvz", true)]
     [InlineData(".gcz", true)]
-    [InlineData(".cso", true)]
-    [InlineData(".pbp", true)]
     [InlineData(".wbfs", true)]
     [InlineData(".m3u", true)]
-    [InlineData(".nsp", true)]
-    [InlineData(".xci", true)]
-    [InlineData(".nsz", true)]
     [InlineData(".wud", true)]
     [InlineData(".wux", true)]
     [InlineData(".cue", true)]
@@ -38,6 +33,19 @@ public sealed class FormatScorerCoverageTests
     [InlineData(".nes")]
     [InlineData(".sfc")]
     [InlineData(".gba")]
+    [InlineData(".zip")]
+    [InlineData(".7z")]
+    [InlineData(".rar")]
+    [InlineData(".ecm")]
+    [InlineData(".cso")]
+    [InlineData(".pbp")]
+    [InlineData(".dax")]
+    [InlineData(".jso")]
+    [InlineData(".zso")]
+    [InlineData(".nsp")]
+    [InlineData(".xci")]
+    [InlineData(".nsz")]
+    [InlineData(".xcz")]
     [InlineData(".txt")]
     [InlineData("")]
     public void IsDiscExtension_NonDisc_ReturnsFalse(string ext)
@@ -229,6 +237,17 @@ public sealed class FormatScorerCoverageTests
     [Fact]
     public void GetRegionScore_EmptyPreferOrder_StillFallsBack()
         => Assert.Equal(200, FormatScorer.GetRegionScore("JP", Array.Empty<string>()));
+
+    [Fact]
+    public void GetRegionScore_LongPreferOrder_NeverGoesNegative()
+    {
+        var order = Enumerable.Range(0, 1_100)
+            .Select(i => "R" + i.ToString("D4"))
+            .Append("TARGET")
+            .ToArray();
+
+        Assert.Equal(1, FormatScorer.GetRegionScore("TARGET", order));
+    }
 
     [Fact]
     public void GetRegionScore_CaseInsensitiveMatch()

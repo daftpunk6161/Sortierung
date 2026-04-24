@@ -52,17 +52,11 @@
                 <Setter Property="Stroke" Value="{DynamicResource BrushBorder}"/>
                 <Setter Property="Fill" Value="Transparent"/>
                 <Style.Triggers>
-                  <DataTrigger Binding="{Binding Shell.WizardStep}">
-                    <DataTrigger.Value>
-                      <sys:Int32>1</sys:Int32>
-                    </DataTrigger.Value>
+                  <DataTrigger Binding="{Binding Shell.WizardStepIs1}" Value="True">
                     <Setter Property="Stroke" Value="{DynamicResource BrushAccentCyan}"/>
                     <Setter Property="Fill" Value="{DynamicResource BrushAccentCyan}"/>
                   </DataTrigger>
-                  <DataTrigger Binding="{Binding Shell.WizardStep}">
-                    <DataTrigger.Value>
-                      <sys:Int32>2</sys:Int32>
-                    </DataTrigger.Value>
+                  <DataTrigger Binding="{Binding Shell.WizardStepIs2}" Value="True">
                     <Setter Property="Stroke" Value="{DynamicResource BrushAccentCyan}"/>
                     <Setter Property="Fill" Value="{DynamicResource BrushAccentCyan}"/>
                   </DataTrigger>
@@ -82,10 +76,7 @@
                 <Setter Property="Stroke" Value="{DynamicResource BrushBorder}"/>
                 <Setter Property="Fill" Value="Transparent"/>
                 <Style.Triggers>
-                  <DataTrigger Binding="{Binding Shell.WizardStep}">
-                    <DataTrigger.Value>
-                      <sys:Int32>2</sys:Int32>
-                    </DataTrigger.Value>
+                  <DataTrigger Binding="{Binding Shell.WizardStepIs2}" Value="True">
                     <Setter Property="Stroke" Value="{DynamicResource BrushAccentCyan}"/>
                     <Setter Property="Fill" Value="{DynamicResource BrushAccentCyan}"/>
                   </DataTrigger>

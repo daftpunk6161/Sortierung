@@ -147,16 +147,31 @@ public sealed class GameKeyNormalizerCoverageTests
     #region Normalize with explicit patterns
 
     [Fact]
-    public void Normalize_EmptyBaseName_ReturnsEmptyKeyNull()
-        => Assert.Equal("__empty_key_null", GameKeyNormalizer.Normalize("", EmptyPatterns, EmptyAliases));
+    public void Normalize_EmptyBaseName_ReturnsStableEmptyKey()
+    {
+        var key = GameKeyNormalizer.Normalize("", EmptyPatterns, EmptyAliases);
+        Assert.StartsWith("__empty_key_", key);
+        Assert.NotEqual("__empty_key_null", key);
+    }
 
     [Fact]
-    public void Normalize_WhitespaceBaseName_ReturnsEmptyKeyNull()
-        => Assert.Equal("__empty_key_null", GameKeyNormalizer.Normalize("   ", EmptyPatterns, EmptyAliases));
+    public void Normalize_WhitespaceBaseName_DoesNotCollideWithEmptyBaseName()
+    {
+        var whitespaceKey = GameKeyNormalizer.Normalize("   ", EmptyPatterns, EmptyAliases);
+        var emptyKey = GameKeyNormalizer.Normalize("", EmptyPatterns, EmptyAliases);
+
+        Assert.StartsWith("__empty_key_", whitespaceKey);
+        Assert.NotEqual("__empty_key_null", whitespaceKey);
+        Assert.NotEqual(emptyKey, whitespaceKey);
+    }
 
     [Fact]
-    public void Normalize_NullBaseName_ReturnsEmptyKeyNull()
-        => Assert.Equal("__empty_key_null", GameKeyNormalizer.Normalize(null!, EmptyPatterns, EmptyAliases));
+    public void Normalize_NullBaseName_ReturnsStableEmptyKey()
+    {
+        var key = GameKeyNormalizer.Normalize(null!, EmptyPatterns, EmptyAliases);
+        Assert.StartsWith("__empty_key_", key);
+        Assert.NotEqual("__empty_key_null", key);
+    }
 
     [Fact]
     public void Normalize_SimpleName_ReturnsLowerNoSpaces()

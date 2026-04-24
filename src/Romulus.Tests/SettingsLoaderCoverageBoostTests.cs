@@ -175,6 +175,15 @@ public sealed class SettingsLoaderCoverageBoostTests : IDisposable
         Assert.Contains(errors, e => e.Contains("aliasEditionKeying"));
     }
 
+    [Fact]
+    public void ValidateSettingsStructure_GeneralExtensionsArray_NoError()
+    {
+        var json = """{"general":{"extensions":[".zip",".7z"]}}""";
+        var errors = SettingsLoader.ValidateSettingsStructure(json);
+
+        Assert.DoesNotContain(errors, e => e.Contains("extensions"));
+    }
+
     // ===== LoadFrom with full merging =====
 
     [Fact]

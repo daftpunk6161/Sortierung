@@ -2,6 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://romulus.local/schemas/rules.schema.json",
   "type": "object",
+  "$defs": {
+    "regionKey": {
+      "type": "string",
+      "enum": [
+        "EU", "US", "JP", "WORLD", "UNKNOWN",
+        "AU", "NZ", "BR", "ASIA", "SCAN", "KR", "CN",
+        "FR", "DE", "ES", "IT", "NL", "SE", "RU", "PL", "CA",
+        "LATAM", "TR", "AE"
+      ]
+    }
+  },
   "required": ["RegionOrdered", "Region2Letter", "regionTokenMap"],
   "properties": {
     "LangPattern": { "type": "string" },
@@ -11,7 +22,7 @@
         "type": "object",
         "required": ["Key", "Pattern"],
         "properties": {
-          "Key": { "type": "string" },
+          "Key": { "$ref": "#/$defs/regionKey" },
           "Pattern": { "type": "string" }
         },
         "additionalProperties": false
@@ -23,7 +34,7 @@
         "type": "object",
         "required": ["Key", "Pattern"],
         "properties": {
-          "Key": { "type": "string" },
+          "Key": { "$ref": "#/$defs/regionKey" },
           "Pattern": { "type": "string" }
         },
         "additionalProperties": false
@@ -31,7 +42,7 @@
     },
     "regionTokenMap": {
       "type": "object",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": { "$ref": "#/$defs/regionKey" }
     },
     "languageCodes": { "type": "array", "items": { "type": "string" } },
     "euLanguageCodes": { "type": "array", "items": { "type": "string" } },

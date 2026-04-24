@@ -122,24 +122,32 @@
     ".wbfs",
     ".wia",
     ".wbf1",
-    ".cso",
-    ".pbp",
     ".nrg",
     ".mdf",
     ".mds",
     ".cdi",
-    ".ecm",
+    ".wud",
+    ".wux"
+  ],
+  "archiveExtensions": [
     ".zip",
     ".7z",
-    ".rar",
-    ".wud",
-    ".wux",
-    ".nsp",
-    ".xci",
-    ".nsz",
-    ".xcz",
+    ".rar"
+  ],
+  "pspImageExtensions": [
+    ".cso",
+    ".pbp",
     ".dax",
     ".jso",
     ".zso"
+  ],
+  "switchPackageExtensions": [
+    ".nsp",
+    ".xci",
+    ".nsz",
+    ".xcz"
+  ],
+  "patchContainerExtensions": [
+    ".ecm"
   ]
 }

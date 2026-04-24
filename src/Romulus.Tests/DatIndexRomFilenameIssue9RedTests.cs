@@ -31,6 +31,19 @@ public sealed class DatIndexRomFilenameIssue9RedTests : IDisposable
     }
 
     [Fact]
+    public void AddWithAliases_TypedLookup_DoesNotMixHashTypes()
+    {
+        var index = new DatIndex();
+        const string sameHex = "0123456789abcdef0123456789abcdef";
+
+        index.Add("NES", sameHex, "MD5 Game", "md5.nes", hashType: "MD5");
+        index.Add("NES", sameHex, "CRC Game", "crc.nes", hashType: "CRC32");
+
+        Assert.Equal("MD5 Game", index.LookupWithFilename("NES", "MD5", sameHex)?.GameName);
+        Assert.Equal("CRC Game", index.LookupWithFilename("NES", "CRC32", sameHex)?.GameName);
+    }
+
+    [Fact]
     public void DatRepositoryAdapter_ShouldPopulateRomFileName_InDatIndex_Issue9A04()
     {
         var datPath = Path.Combine(_tempDir, "nes.dat");

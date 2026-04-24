@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.Win32;
 using Romulus.Contracts;
@@ -144,7 +145,7 @@ public sealed class SettingsLoader
             // FEAT-05: Validate JSON structure before deserializing
             ValidateSettingsStructure(json);
 
-            var settings = JsonSerializer.Deserialize<RomulusSettings>(json, JsonOptions)
+            var settings = JsonSerializer.Deserialize<RomulusSettings>(NormalizeSettingsJsonForContracts(json), JsonOptions)
                    ?? new RomulusSettings();
             var validationErrors = RomulusSettingsValidator.Validate(settings);
             if (validationErrors.Count > 0)
@@ -212,6 +213,7 @@ public sealed class SettingsLoader
                 ValidateFieldType(general, "preferredRegions", JsonValueKind.Array, errors, "general");
                 ValidateFieldType(general, "aggressiveJunk", errors, "general", JsonValueKind.True, JsonValueKind.False);
                 ValidateFieldType(general, "aliasEditionKeying", errors, "general", JsonValueKind.True, JsonValueKind.False);
+                ValidateFieldType(general, "extensions", errors, "general", JsonValueKind.String, JsonValueKind.Array);
             }
 
             // Validate known field types within dat
@@ -266,7 +268,7 @@ public sealed class SettingsLoader
             if (root.TryGetProperty("mode", out var mode))
                 settings.General.Mode = ValidateEnum(mode.GetString(), AllowedModes, settings.General.Mode);
             if (root.TryGetProperty("extensions", out var ext))
-                settings.General.Extensions = ext.GetString() ?? settings.General.Extensions;
+                settings.General.Extensions = ReadExtensionsAsCsv(ext, settings.General.Extensions);
             if (root.TryGetProperty("logLevel", out var ll))
                 settings.General.LogLevel = ValidateEnum(ll.GetString(), AllowedLogLevels, settings.General.LogLevel);
             if (root.TryGetProperty("theme", out var theme))
@@ -333,8 +335,8 @@ public sealed class SettingsLoader
                     settings.General.AggressiveJunk = user.General.AggressiveJunk.Value;
                 if (user.General.AliasEditionKeying.HasValue)
                     settings.General.AliasEditionKeying = user.General.AliasEditionKeying.Value;
-                if (!string.IsNullOrEmpty(user.General.Extensions))
-                    settings.General.Extensions = user.General.Extensions;
+                if (user.General.Extensions.HasValue)
+                    settings.General.Extensions = ReadExtensionsAsCsv(user.General.Extensions.Value, settings.General.Extensions);
                 if (!string.IsNullOrEmpty(user.General.Theme))
                     settings.General.Theme = ResolveThemeSetting(user.General.Theme, settings.General.Theme);
                 if (!string.IsNullOrEmpty(user.General.Locale))
@@ -436,6 +438,67 @@ public sealed class SettingsLoader
     /// <summary>V2-H06: Returns value if it is in allowedValues, otherwise returns fallback.</summary>
     private static string ValidateEnum(string? value, HashSet<string> allowedValues, string fallback)
         => !string.IsNullOrWhiteSpace(value) && allowedValues.Contains(value) ? value : fallback;
+
+    private static string ReadExtensionsAsCsv(JsonElement element, string fallback)
+    {
+        var normalized = element.ValueKind switch
+        {
+            JsonValueKind.String => NormalizeExtensionList(SplitExtensionString(element.GetString())),
+            JsonValueKind.Array => NormalizeExtensionList(element.EnumerateArray()
+                .Where(static item => item.ValueKind == JsonValueKind.String)
+                .Select(static item => item.GetString())),
+            _ => fallback
+        };
+
+        return normalized.Length > 0 ? normalized : fallback;
+    }
+
+    private static IEnumerable<string?> SplitExtensionString(string? value)
+        => string.IsNullOrWhiteSpace(value)
+            ? []
+            : value.Split([',', ';', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static string NormalizeExtensionList(IEnumerable<string?> values)
+    {
+        var normalized = values
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Select(static value => value!.Trim())
+            .Select(static value => value.StartsWith(".", StringComparison.Ordinal) ? value : "." + value)
+            .Where(static value => value.Length > 1)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return normalized.Length == 0
+            ? string.Empty
+            : string.Join(",", normalized);
+    }
+
+    private static string NormalizeSettingsJsonForContracts(string json)
+    {
+        var root = JsonNode.Parse(json, documentOptions: new JsonDocumentOptions
+        {
+            CommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        });
+
+        if (root is not JsonObject rootObject)
+            return json;
+
+        if (rootObject["general"] is JsonObject generalObject
+            && generalObject["extensions"] is JsonNode extensionsNode)
+        {
+            using var extensionsDoc = JsonDocument.Parse(extensionsNode.ToJsonString(), new JsonDocumentOptions
+            {
+                CommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true
+            });
+            var normalizedExtensions = ReadExtensionsAsCsv(extensionsDoc.RootElement, string.Empty);
+            if (!string.IsNullOrWhiteSpace(normalizedExtensions))
+                generalObject["extensions"] = normalizedExtensions;
+        }
+
+        return rootObject.ToJsonString();
+    }
 
     private static void ApplySystemDerivedDefaults(RomulusSettings settings)
     {
@@ -590,7 +653,7 @@ public sealed class SettingsLoader
         public string? Mode { get; set; }
 
         [JsonPropertyName("extensions")]
-        public string? Extensions { get; set; }
+        public JsonElement? Extensions { get; set; }
 
         [JsonPropertyName("theme")]
         public string? Theme { get; set; }

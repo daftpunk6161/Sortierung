@@ -19,7 +19,7 @@ public static partial class FeatureService
 
     // ═══ JUNK REPORT ════════════════════════════════════════════════════
     // Port of JunkReport.ps1
-    // Pattern definitions live in CollectionExportService (single source of truth).
+    // Classification reason codes come from FileClassifier via CollectionExportService.
 
     public static JunkReportEntry? GetJunkReason(string baseName, bool aggressive)
         => CollectionExportService.GetJunkReason(baseName, aggressive);

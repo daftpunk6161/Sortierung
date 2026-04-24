@@ -570,11 +570,22 @@ public sealed class DatRepositoryAdapter
                 return empty;
             }
 
-            var innerDatPath = extractedFiles[0];
-            _log?.Invoke($"[Info] Decompressed 7z DAT '{Path.GetFileName(archivePath)}' → parsing '{Path.GetFileName(innerDatPath)}'");
+            if (extractedFiles.Count == 1)
+            {
+                var innerDatPath = extractedFiles[0];
+                _log?.Invoke($"[Info] Decompressed 7z DAT '{Path.GetFileName(archivePath)}' -> parsing '{Path.GetFileName(innerDatPath)}'");
+                return ParseDatFileInternal(innerDatPath, hashType, settings);
+            }
 
-            // Recursively parse the inner file (it should be plain XML)
-            return ParseDatFileInternal(innerDatPath, hashType, settings);
+            _log?.Invoke($"[Warning] 7z DAT '{archivePath}' contains {extractedFiles.Count} .dat/.xml files. Parsing and merging all entries deterministically.");
+            var merged = new Dictionary<string, List<Dictionary<string, string>>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var innerDatPath in extractedFiles)
+            {
+                _log?.Invoke($"[Info] Decompressed 7z DAT '{Path.GetFileName(archivePath)}' -> parsing '{Path.GetFileName(innerDatPath)}'");
+                MergeParsedDat(merged, ParseDatFileInternal(innerDatPath, hashType, settings));
+            }
+
+            return merged;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -587,6 +598,22 @@ public sealed class DatRepositoryAdapter
                 try { Directory.Delete(tempDir, true); }
                 catch (IOException) { /* Best-effort cleanup */ }
                 catch (UnauthorizedAccessException) { /* Permission denied on cleanup — non-fatal */ }
+        }
+    }
+
+    private static void MergeParsedDat(
+        Dictionary<string, List<Dictionary<string, string>>> target,
+        Dictionary<string, List<Dictionary<string, string>>> source)
+    {
+        foreach (var (gameName, roms) in source.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!target.TryGetValue(gameName, out var targetRoms))
+            {
+                targetRoms = new List<Dictionary<string, string>>();
+                target[gameName] = targetRoms;
+            }
+
+            targetRoms.AddRange(roms);
         }
     }
 }

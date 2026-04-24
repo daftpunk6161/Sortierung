@@ -3,7 +3,17 @@
   "datRoot": "",
   "trashRoot": "",
   "auditRoot": "",
-  "extensions": ".zip,.7z,.rar,.chd,.iso,.bin,.cue,.gdi,.cdi,.ccd,.img,.cso,.ecm,.gcz,.rvz,.wbfs,.pbp,.nes,.fds,.sfc,.smc,.gb,.gbc,.gba,.vb,.n64,.z64,.v64,.nds,.3ds,.cia,.dsi,.nsp,.xci,.wux,.wad,.bs,.rpx,.md,.gen,.sms,.gg,.sg,.sc,.32x,.sgx,.pce,.pcfx,.ngp,.ws,.wsc,.a26,.a52,.a78,.lnx,.j64,.st,.stx,.atr,.xex,.xfd,.col,.int,.o2,.vec,.min,.tgc,.tzx,.adf,.d64,.t64,.mx1,.mx2,.rom,.m3u,.ndd,.pkg,.vpk,.app,.gpe,.st2,.p00,.prc,.pdb,.dmg,.gxb",
+  "extensions": [
+    ".zip", ".7z", ".rar", ".chd", ".iso", ".bin", ".cue", ".gdi", ".cdi", ".ccd", ".img",
+    ".cso", ".ecm", ".gcz", ".rvz", ".wbfs", ".pbp", ".nes", ".fds", ".sfc", ".smc",
+    ".gb", ".gbc", ".gba", ".vb", ".n64", ".z64", ".v64", ".nds", ".3ds", ".cia",
+    ".dsi", ".nsp", ".xci", ".wux", ".wad", ".bs", ".rpx", ".md", ".gen", ".sms",
+    ".gg", ".sg", ".sc", ".32x", ".sgx", ".pce", ".pcfx", ".ngp", ".ws", ".wsc",
+    ".a26", ".a52", ".a78", ".lnx", ".j64", ".st", ".stx", ".atr", ".xex", ".xfd",
+    ".col", ".int", ".o2", ".vec", ".min", ".tgc", ".tzx", ".adf", ".d64", ".t64",
+    ".mx1", ".mx2", ".rom", ".m3u", ".ndd", ".pkg", ".vpk", ".app", ".gpe", ".st2",
+    ".p00", ".prc", ".pdb", ".dmg", ".gxb"
+  ],
   "preferredRegions": ["EU", "US", "JP", "WORLD"],
   "logLevel": "Info",
   "useDat": true,

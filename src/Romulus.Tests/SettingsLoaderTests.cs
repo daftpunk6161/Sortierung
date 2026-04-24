@@ -107,6 +107,41 @@ public class SettingsLoaderTests : IDisposable
     }
 
     [Fact]
+    public void LoadDefaultsOnly_ExtensionsArray_MigratesToCsv()
+    {
+        var defaultsJson = """
+        {
+            "extensions": [".zip", ".7z", ".zip", "gba"],
+            "preferredRegions": ["EU", "US", "JP", "WORLD"]
+        }
+        """;
+        var path = Path.Combine(_tempDir, "defaults-array.json");
+        File.WriteAllText(path, defaultsJson);
+
+        var settings = SettingsLoader.LoadDefaultsOnly(path);
+
+        Assert.Equal(".zip,.7z,.gba", settings.General.Extensions);
+    }
+
+    [Fact]
+    public void LoadFrom_UserExtensionsArray_MigratesToCsv()
+    {
+        var userJson = """
+        {
+            "general": {
+                "extensions": [".zip", ".7z", "gba"]
+            }
+        }
+        """;
+        var path = Path.Combine(_tempDir, "settings-array.json");
+        File.WriteAllText(path, userJson);
+
+        var settings = SettingsLoader.LoadFrom(path);
+
+        Assert.Equal(".zip,.7z,.gba", settings.General.Extensions);
+    }
+
+    [Fact]
     public void Load_WithRepoDefaultsPath_UsesRepoDefaultParity()
     {
         var defaultsPath = SettingsLoader.ResolveDefaultsJsonPath();

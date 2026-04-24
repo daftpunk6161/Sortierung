@@ -9,9 +9,27 @@ public static class DiscFormats
     public static readonly IReadOnlySet<string> AllDiscExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         ".chd", ".iso", ".cue", ".bin", ".img", ".mdf", ".mds", ".ccd", ".sub", ".gdi",
-        ".gcm", ".cso", ".pbp", ".rvz", ".gcz", ".wia", ".wbf1", ".wbfs", ".wud", ".wux",
-        ".nrg", ".ecm", ".zip", ".7z", ".rar", ".nsp", ".xci", ".nsz", ".xcz", ".dax",
-        ".jso", ".zso"
+        ".gcm", ".rvz", ".gcz", ".wia", ".wbf1", ".wbfs", ".wud", ".wux", ".nrg", ".cdi"
+    };
+
+    public static readonly IReadOnlySet<string> ArchiveExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ".zip", ".7z", ".rar"
+    };
+
+    public static readonly IReadOnlySet<string> PspImageExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ".cso", ".pbp", ".dax", ".jso", ".zso"
+    };
+
+    public static readonly IReadOnlySet<string> SwitchPackageExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ".nsp", ".xci", ".nsz", ".xcz"
+    };
+
+    public static readonly IReadOnlySet<string> PatchContainerExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ".ecm"
     };
 
     /// <summary>

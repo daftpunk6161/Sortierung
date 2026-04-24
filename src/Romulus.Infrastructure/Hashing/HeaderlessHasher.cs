@@ -61,10 +61,10 @@ public sealed class HeaderlessHasher : IHeaderlessHasher
         using var fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
         var fileSize = fs.Length;
 
-        // Read header bytes for magic detection
-        Span<byte> headerBuf = stackalloc byte[512];
-        var headerRead = fs.Read(headerBuf);
-        var header = headerBuf[..headerRead];
+        var probeByteCount = HeaderSizeMap.GetProbeByteCount(consoleKey);
+        var probeBuffer = new byte[(int)Math.Min(fileSize, probeByteCount)];
+        var headerRead = ReadProbeBytes(fs, probeBuffer);
+        var header = probeBuffer.AsSpan(0, headerRead);
 
         var skipBytes = HeaderSizeMap.GetSkipBytes(consoleKey, header, fileSize);
         if (skipBytes < 0 || fileSize <= skipBytes)
@@ -140,6 +140,20 @@ public sealed class HeaderlessHasher : IHeaderlessHasher
             "CRC" => "CRC32",
             var normalized => normalized
         };
+
+    private static int ReadProbeBytes(FileStream fs, byte[] buffer)
+    {
+        var totalRead = 0;
+        while (totalRead < buffer.Length)
+        {
+            var read = fs.Read(buffer, totalRead, buffer.Length - totalRead);
+            if (read == 0)
+                break;
+            totalRead += read;
+        }
+
+        return totalRead;
+    }
 
     private static bool SupportsHeaderlessHash(string consoleKey)
         => !string.IsNullOrWhiteSpace(consoleKey)

@@ -787,6 +787,7 @@ public sealed class FeatureServiceTests : IDisposable
     {
         var result = FeatureService.GetJunkReason("Game (Beta)", false);
         Assert.NotNull(result);
+        Assert.Equal("junk-tag", result!.Tag);
     }
 
     [Fact]
