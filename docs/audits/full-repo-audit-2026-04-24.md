@@ -1,6 +1,6 @@
 # Full Repo Audit – Romulus `src/` (2026-04-24)
 
-> **Status:** Tracking-Dokument fuer alle Audit-Findings aus zwei Tiefen-Audit-Runden.
+> **Status:** Tracking-Dokument fuer alle Audit-Findings aus mehreren Tiefen-Audit-Runden (Round 1-8).
 > Jedes Finding hat eine Checkbox, die beim Umsetzen abgehakt werden muss.
 > Quelle: parallele Audits durch `gem-reviewer`, `SE: Architect`, `gem-critic`, `SE: Security`.
 > Scope: ausschliesslich `src/` (alle Projekte). `archive/powershell/` ignoriert.
@@ -9,7 +9,7 @@
 
 ## Executive Verdict
 
-**Repo ist NICHT release-tauglich.** 8 P0-Funde (Datenverlust + Audit-Integritaet + Broken Access Control), 22 P1-Funde, 25+ P2/P3-Funde. Wichtigste systemische Wurzeln:
+**Repo ist NICHT release-tauglich.** Kumulativ 19 P0-Funde (Datenverlust + Audit-Integritaet + Broken Access Control), 74 P1-Funde, 113 P2-Funde und 55 P3-Funde. Wichtigste systemische Wurzeln:
 
 1. **Verify-Vertrag ist fail-open** statt fail-closed (Conversion, HMAC, Sidecar).
 2. **„Eine fachliche Wahrheit" verletzt** an >10 Stellen (CSV-Sanitizer, DAT-Update, RunOrchestrator-Komposition, Status-Strings, Settings-Loader).
@@ -22,19 +22,21 @@
 
 ## Priorisierung & Fortschritt
 
-| Severity | Round 1+2 | Round 3 | Round 4 | Round 5 | Round 6 | Gesamt | Erledigt |
-|----------|----------:|--------:|--------:|--------:|--------:|-------:|---------:|
-| **P0** (Release-Blocker)         |  8 |  1 |  9 |  1 |  0 |  19 | 0 |
-| **P1** (Hohe Risiken)            | 22 | 15 | 17 | 11 |  6 |  71 | 0 |
-| **P2** (Mittlere Risiken)        | 26 | 22 | 22 | 19 | 18 | 107 | 0 |
-| **P3** (Wartbarkeit / niedrig)   | 12 |  6 | 13 |  9 | 12 |  52 | 0 |
-| **Gesamt**                       | 68 | 44 | 61 | 40 | 36 | 249 | 0 |
+| Severity | Round 1+2 | Round 3 | Round 4 | Round 5 | Round 6 | Round 7 | Round 8 | Gesamt | Erledigt |
+|----------|----------:|--------:|--------:|--------:|--------:|--------:|--------:|-------:|---------:|
+| **P0** (Release-Blocker)         |  8 |  1 |  9 |  1 |  0 |  0 |  0 |  19 | 0 |
+| **P1** (Hohe Risiken)            | 22 | 15 | 17 | 11 |  6 |  3 |  0 |  74 | 0 |
+| **P2** (Mittlere Risiken)        | 26 | 22 | 22 | 19 | 18 |  6 |  0 | 113 | 0 |
+| **P3** (Wartbarkeit / niedrig)   | 12 |  6 | 13 |  9 | 12 |  3 |  0 |  55 | 0 |
+| **Gesamt**                       | 68 | 44 | 61 | 40 | 36 | 12 |  0 | 261 | 0 |
 
 > Bitte beim Abhaken die Tabelle hier oben mit aktualisieren.
 > Round-3-Funde: `R3-A-*` (DAT/Hash/Tools), `R3-B-*` (Settings/Loc/UI), `R3-C-*` (API/CLI/Reports/Logging).
 > Round-4-Funde: `R4-A-*` (Avalonia), `R4-B-*` (Tests/Benchmark), `R4-C-*` (Deploy/Safety/Logging/Audit).
 > Round-5-Funde: `R5-A-*` (Core/Contracts), `R5-B-*` (Infrastructure/Orchestration/Reporting), `R5-C-*` (WPF ViewModels/API).
 > Round-6-Funde: `R6-A-*` (CLI/Tools/Hashing/Safety/Sorting), `R6-B-*` (Data/Schemas/i18n/Loader), `R6-C-*` (XAML/Resources/Build/Avalonia).
+> Round-7-Funde: `R7-A-*` (Scanner/Reparse/Conversion), `R7-B-*` (Reports/Exports/Determinismus), `R7-C-*` (GUI-Import/Merge/Profile-Hygiene).
+> Round-8-Abschluss: keine weiteren nicht-duplizierten P3-Funde in den gezielten Rest-Suchen.
 
 ---
 
@@ -48,6 +50,8 @@
 - [Round 4 – Neue Funde](#round-4--neue-funde)
 - [Round 5 – Neue Funde](#round-5--neue-funde)
 - [Round 6 – Neue Funde](#round-6--neue-funde)
+- [Round 7 – Neue Funde](#round-7--neue-funde)
+- [Round 8 – Abschlussrunde ohne neue Funde](#round-8--abschlussrunde-ohne-neue-funde)
 - [Test- & Verifikationsplan](#test---verifikationsplan)
 - [Sanierungsstrategie](#sanierungsstrategie)
 
@@ -2190,6 +2194,168 @@
 - **Problem:** `App.xaml` mergt unconditionally `Themes/SynthwaveDark.xaml`. User-Theme wird erst in `MainWindow.OnLoaded` aktiviert → FOUC. Fuer HighContrast-User UX-Problem.
 - **Fix:** Theme-Auswahl in `App.OnStartup` vor `mainWindow.Show()` aus `ISettingsService` lesen und initial setzen. Default in App.xaml auf neutrales Bridge-Theme reduzieren.
 - **Tests fehlen:** Headless-Smoke-Test mit `Theme=HighContrast` → `BrushBackground` direkt nach `Show()` korrekt.
+
+---
+
+## Round 7 – Neue Funde
+
+> Scope: `R7-A-*` = Scanner/Reparse/Conversion, `R7-B-*` = Reports/Exports/Determinismus, `R7-C-*` = GUI-Import/Merge/Profile-Hygiene.
+> Neue Funde: 0 P0 / 3 P1 / 6 P2 / 3 P3 = 12 gesamt. Kumulativ: 19 P0 / 74 P1 / 113 P2 / 55 P3 = **261 Gesamt**.
+> Abgleich gegen bestehende Findings: keine Wiederholung von bereits dokumentierten R1-R6-Themen; direkte Treffer wurden nur aufgenommen, wenn sie eine neue Code-Stelle oder neue fachliche Divergenz belegen.
+
+---
+
+### R7-A-01 — Standalone-Directory-Conversion folgt Reparse-Points und konvertiert ausserhalb der gewaehlten Root
+**Tags:** `security` `reparse-point` `conversion` `P1`
+- [ ] **Fix umsetzen**
+- **Files:** [StandaloneConversionService.cs](../../src/Romulus.Infrastructure/Conversion/StandaloneConversionService.cs#L117), [FileSystemAdapter.cs](../../src/Romulus.Infrastructure/FileSystem/FileSystemAdapter.cs#L113)
+- **Problem:** `ConvertDirectory(... recursive: true)` nutzt `Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories)`. Damit wird die zentrale sichere Scan-Policy umgangen, die Reparse-Point-Verzeichnisse und Datei-Reparse-Points ueberspringt und deterministisch sortiert. Eine Junction/Symlink unterhalb der gewaehlten Root kann Dateien ausserhalb der erlaubten Root in den mutierenden Conversion-Pfad bringen.
+- **Impact:** Mutierende Conversion kann an Dateien ausserhalb des vom Nutzer gewaehlten Bereichs arbeiten. Preview/Execute-Safety wird durch einen Entry-Point-spezifischen Scanner umgangen.
+- **Fix:** `StandaloneConversionService` ueber `IFileSystem.GetFilesSafe` oder eine zentrale `AllowedRootPathPolicy` enumerieren lassen; Reparse-Point-Warnings in den Report aufnehmen; Reihenfolge deterministisch halten.
+- **Tests fehlen:** Integrationstest mit Junction innerhalb der Input-Root auf externe Datei -> Datei darf nicht in `ConvertFile` landen; Reihenfolge zweier Runs identisch.
+
+---
+
+### R7-A-02 — Completeness-Filesystem-Fallback zaehlt Dateien ausserhalb der Scan-Policy
+**Tags:** `report-parity` `reparse-point` `filesystem` `P2`
+- [ ] **Fix umsetzen**
+- **Files:** [CompletenessReportService.cs](../../src/Romulus.Infrastructure/Analysis/CompletenessReportService.cs#L147), [FileSystemAdapter.cs](../../src/Romulus.Infrastructure/FileSystem/FileSystemAdapter.cs#L113)
+- **Problem:** `BuildFromFileSystem` nutzt `Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)` statt des sicheren Scanners. Reparse-Points, deterministische NFC-Sortierung und Scan-Warnings aus `FileSystemAdapter.GetFilesSafe` greifen hier nicht.
+- **Impact:** Completeness-Reports koennen andere Dateien zaehlen als Preview/Execute. Bei Junctions kann ein Report Besitz/Fehlen fuer Inhalte ausserhalb der Collection ableiten.
+- **Fix:** `IFileSystem` injizieren oder denselben Scan-Adapter verwenden wie Run/Preview. Cancellation in die Enumeration durchreichen.
+- **Tests fehlen:** Completeness-Report mit Root-Junction auf externe Datei -> externe Datei bleibt unberuecksichtigt; Scan-Warning wird sichtbar.
+
+---
+
+### R7-A-03 — CLI-Integrity-Baseline bypassed sichere Root-Enumeration
+**Tags:** `cli` `integrity` `reparse-point` `P2`
+- [ ] **Fix umsetzen**
+- **File:** [Program.cs](../../src/Romulus.CLI/Program.cs#L578)
+- **Problem:** `SubcommandIntegrityBaselineAsync` sammelt Baseline-Dateien mit `Directory.EnumerateFiles(... AllDirectories)`. Damit gelten weder Reparse-Point-Blockade noch deterministische Normalisierung noch Scan-Warnings aus dem zentralen Filesystem-Adapter.
+- **Impact:** Eine Integrity-Baseline kann Dateien ausserhalb der angegebenen Roots aufnehmen. Spaetere Drift-/Bitrot-Warnungen basieren dann auf einer anderen fachlichen Wahrheit als der normale Scan.
+- **Fix:** CLI-Subcommand ueber denselben `IFileSystem.GetFilesSafe`-Pfad wie Run/Preview verdrahten; Warnings in stderr und Report ausgeben.
+- **Tests fehlen:** CLI-Integrationstest mit Junction unter Root -> Baseline enthaelt keine externe Datei; Warning wird ausgegeben.
+
+---
+
+### R7-A-04 — WPF-Helfer-Scans umgehen zentrale Scanner-Policy
+**Tags:** `gui` `scanner-parity` `reparse-point` `P2`
+- [ ] **Fix umsetzen**
+- **Files:** [FeatureCommandService.Conversion.cs](../../src/Romulus.UI.Wpf/Services/FeatureCommandService.Conversion.cs#L71), [FeatureCommandService.cs](../../src/Romulus.UI.Wpf/Services/FeatureCommandService.cs#L670), [MainViewModel.Productization.cs](../../src/Romulus.UI.Wpf/ViewModels/MainViewModel.Productization.cs#L737)
+- **Problem:** `ConversionVerify`, `AutoProfile` und Wizard-Scan verwenden direkte rekursive `Directory.GetFiles`/`Directory.EnumerateFiles`-Aufrufe. Diese GUI-Flows haben dadurch andere Root-/Reparse-/Sortierregeln als Core/Infrastructure-Scans.
+- **Impact:** GUI-Vorschauen und Profil-/Wizard-Ausgaben koennen andere Dateien sehen als CLI/API/Run. Das verletzt GUI-CLI-API-Paritaet und erzeugt Fehlbedienungsrisiko bei Junctions.
+- **Fix:** Gemeinsamen scanbaren Service in Infrastructure nutzen; GUI bekommt nur Projektionen/Warnings und fuehrt keine eigene rekursive Business-Enumeration aus.
+- **Tests fehlen:** ViewModel-/Service-Test mit Fake-Scanner: GUI zeigt exakt die zentral gelieferten Dateien und Warnings; keine direkte `Directory.*AllDirectories`-Enumeration im WPF-Pfad.
+
+---
+
+### R7-B-01 — Reports/Frontend-Exports sind byteweise nicht deterministisch
+**Tags:** `determinism` `reports` `exports` `P2`
+- [ ] **Fix umsetzen**
+- **Files:** [RunReportWriter.cs](../../src/Romulus.Infrastructure/Reporting/RunReportWriter.cs#L116), [ReportGenerator.cs](../../src/Romulus.Infrastructure/Reporting/ReportGenerator.cs#L46), [ReportGenerator.cs](../../src/Romulus.Infrastructure/Reporting/ReportGenerator.cs#L101), [FrontendExportService.cs](../../src/Romulus.Infrastructure/Export/FrontendExportService.cs#L453)
+- **Problem:** Report-/Export-Code nutzt `DateTime.UtcNow` und der HTML-Report generiert pro Lauf einen zufaelligen CSP-Nonce. Bei gleichem Input entstehen dadurch unterschiedliche JSON/HTML/CSV/Frontend-Dateien.
+- **Impact:** Golden-Master-Tests und reproduzierbare Reports sind unmoeglich. "Gleiche Inputs -> gleiche Outputs" gilt fuer Report-Artefakte nicht.
+- **Fix:** Zeitquelle injizieren oder Run-Zeitstempel aus dem fachlichen RunResult uebergeben. CSP-Nonce nur fuer dynamische Auslieferung nutzen oder deterministisch aus Report-Id/Content ableiten; fuer statische Reports optional scriptfrei ausgeben.
+- **Tests fehlen:** Zwei Report-/Export-Generierungen mit identischem Input und fixierter Zeitquelle -> bytegleiche Outputs.
+
+---
+
+### R7-B-02 — Report- und Frontend-Export-Writer schreiben direkt auf finale Pfade
+**Tags:** `data-integrity` `partial-output` `reports` `P2`
+- [ ] **Fix umsetzen**
+- **Files:** [RunReportWriter.cs](../../src/Romulus.Infrastructure/Reporting/RunReportWriter.cs#L172), [ReportGenerator.cs](../../src/Romulus.Infrastructure/Reporting/ReportGenerator.cs#L205), [ReportGenerator.cs](../../src/Romulus.Infrastructure/Reporting/ReportGenerator.cs#L224), [FrontendExportService.cs](../../src/Romulus.Infrastructure/Export/FrontendExportService.cs#L157), [FrontendExportService.cs](../../src/Romulus.Infrastructure/Export/FrontendExportService.cs#L677)
+- **Problem:** CSV/JSON/HTML/Frontend-Exports werden mit `File.WriteAllText`/`File.Create` direkt auf dem Zielpfad erzeugt. Mehrdatei-Exports haben keinen Staging-Ordner, keine atomare Promotion und keinen Cleanup bei Fehler/Cancel.
+- **Impact:** Bei IO-Fehler, Cancel oder Crash bleiben teilgeschriebene Dateien oder halb aktualisierte Export-Sets liegen. Nachfolgende Tools koennen diese Artefakte als gueltig interpretieren.
+- **Fix:** In einen temp-/staging-Pfad unterhalb des Zielordners schreiben, validieren, dann atomar per Replace/Move promoten. Bei Fehlern Staging sauber entfernen und Report-Status mit PartialOutput-Warning ausgeben.
+- **Tests fehlen:** Fake-Filesystem wirft nach erstem Artefakt -> Zielordner enthaelt kein teilpromotetes Export-Set; Fehler wird im Result modelliert.
+
+---
+
+### R7-B-03 — Junk-Report rekonstruiert Core-Klassifikation mit eigener Pattern-Liste
+**Tags:** `duplicate-logic` `report-parity` `classification` `P2`
+- [ ] **Fix umsetzen**
+- **Files:** [CollectionExportService.cs](../../src/Romulus.Infrastructure/Analysis/CollectionExportService.cs#L21), [FileClassifier.cs](../../src/Romulus.Core/Classification/FileClassifier.cs#L96)
+- **Problem:** `CollectionExportService.GetJunkReason` fuehrt eigene `JunkPatterns`/`AggressivePatterns`. Die fachliche Junk-Entscheidung kommt aber aus `FileClassifier.Analyze` mit anderen Regexen und Reason-Codes (`junk-tag`, `junk-word`, `junk-aggressive-*`).
+- **Impact:** Reports koennen fuer dieselbe Datei andere Gruende oder Gruppierungen anzeigen als die tatsaechliche Core-Entscheidung. Neue Core-Regeln driften automatisch vom Report ab.
+- **Fix:** `RomCandidate`/Classification-Projection um den Core-Reason-Code erweitern und Report-Labels nur aus diesem Code mappen. Keine zweite Regex-Liste im Report.
+- **Tests fehlen:** Parametrisierter Test fuer `(Sample)`, `(Sampler)`, `[p]`, aggressive Tags: Classification und Junk-Report muessen dieselben Reason-Codes/Levels verwenden.
+
+---
+
+### R7-C-01 — Rule-Pack-Import akzeptiert syntaktisches JSON und ueberschreibt `rules.json`
+**Tags:** `gui` `config-integrity` `schema` `P1`
+- [ ] **Fix umsetzen**
+- **File:** [FeatureCommandService.Workflow.cs](../../src/Romulus.UI.Wpf/Services/FeatureCommandService.Workflow.cs#L129)
+- **Problem:** `RulePackSharing` prueft beim Import nur `JsonDocument.Parse(json)`, erstellt dann `dataDir` und kopiert die Datei direkt als `rules.json`. Schema, erwartete Sections und Regex-Pattern werden nicht validiert; Write ist nicht atomar.
+- **Impact:** Ein gueltiges, aber fachlich ungueltiges Rule-Pack kann die zentrale Region/GameKey/Version-Konfiguration ersetzen und den naechsten GUI/CLI/API-Start oder Scoring-Lauf kippen. Das ist ein neuer Schreibpfad fuer bereits kritisch sensible Rules.
+- **Fix:** Import ueber denselben `StartupDataSchemaValidator` plus fachliche Loader-Validierung (`GameKeyNormalizationProfile`, `RegionDetectionProfile`, `VersionScoringProfile`) laufen lassen. Danach temp+move mit Backup+Rollback.
+- **Tests fehlen:** Import mit syntaktisch gueltigem JSON, fehlenden Sections oder invalidem Regex -> keine Aenderung an `rules.json`; Backup bleibt konsistent.
+
+---
+
+### R7-C-02 — Collection-Merge verschluckt fehlgeschlagene Rollback-/Cleanup-Operationen
+**Tags:** `data-integrity` `rollback` `audit` `P1`
+- [ ] **Fix umsetzen**
+- **File:** [CollectionMergeService.cs](../../src/Romulus.Infrastructure/Analysis/CollectionMergeService.cs#L556)
+- **Problem:** Nach einem Apply-Fehler ruft `ExecuteMutatingEntryAsync` `TryRevertFailedMutation` auf. Diese Methode loescht Copy-Ziele oder bewegt Move-Ziele zurueck, verschluckt aber jede Exception vollstaendig. Das Apply-Result enthaelt nur `apply-failed`, keine Information, ob Cleanup/Rollback selbst scheiterte.
+- **Impact:** Operator und Report koennen nicht unterscheiden zwischen "Mutation fehlgeschlagen und sauber zurueckgerollt" und "Mutation fehlgeschlagen, Ziel/Quelle in unbekanntem Zustand". Das ist ein Datenintegritaets- und Audit-Risiko.
+- **Fix:** Rollback-Ergebnis modellieren (`RollbackAttempted`, `RollbackSucceeded`, `RollbackError`), in Audit-Metadaten schreiben und bei Fehlschlag als eigener Failure-State zurueckgeben.
+- **Tests fehlen:** Fake-`IFileSystem` wirft beim Revert -> ApplyResult enthaelt Rollback-Failure, Audit-Metadata dokumentiert unsauberen Zustand.
+
+---
+
+### R7-C-03 — Collection-Merge-Default-Auditpfad kollidiert bei zwei Runs in derselben Sekunde
+**Tags:** `audit` `determinism` `P3`
+- [ ] **Fix umsetzen**
+- **File:** [CollectionMergeService.cs](../../src/Romulus.Infrastructure/Analysis/CollectionMergeService.cs#L19)
+- **Problem:** `CreateDefaultAuditPath` erzeugt `collection-merge-{yyyyMMdd-HHmmss}.csv`. Zwei Merge-Applies auf dieselbe Target-Root innerhalb einer Sekunde schreiben denselben Auditpfad.
+- **Impact:** Audit-Dateien koennen kollidieren oder ueberschrieben/vermengt werden, je nach `IAuditStore`-Verhalten. Parallele GUI/CLI/API-Nutzung ist dadurch nicht sauber getrennt.
+- **Fix:** Millisekunden plus RunId/GUID aufnehmen oder Auditpfad zentral ueber `CliOptionsMapper`/Run-Artifact-Service erzeugen.
+- **Tests fehlen:** Zwei Aufrufe mit fixierter Uhrzeit/gleicher TargetRoot -> unterschiedliche Auditpfade.
+
+---
+
+### R7-C-04 — Custom-DAT-Editor dupliziert Append-Logik und hat einen nicht-atomaren Create-Pfad
+**Tags:** `duplicate-logic` `dat` `gui` `P3`
+- [ ] **Fix umsetzen**
+- **Files:** [FeatureCommandService.Dat.cs](../../src/Romulus.UI.Wpf/Services/FeatureCommandService.Dat.cs#L287), [FeatureService.Dat.cs](../../src/Romulus.UI.Wpf/Services/FeatureService.Dat.cs#L52)
+- **Problem:** `CustomDatEditor` baut XML und Append/Create-Logik inline nach, obwohl `FeatureService.Dat.AppendCustomDatEntry` und `BuildCustomDatXmlEntry` existieren. Der Existing-File-Pfad nutzt temp+move, der Create-Pfad schreibt `custom.dat` direkt.
+- **Impact:** Zwei DAT-Append-Wahrheiten koennen bei Header, Description, Escaping und Atomicity auseinanderlaufen. Ein Crash beim erstmaligen Erstellen laesst eine partielle `custom.dat` liegen.
+- **Fix:** Einen gemeinsamen DAT-Writer in Infrastructure/Dat oder einen einzigen WPF-Service-Pfad nutzen; Create und Append atomar ueber temp+move; XML-Erzeugung zentralisieren.
+- **Tests fehlen:** Existing- und New-File-Pfad erzeugen dieselbe XML-Struktur; Crash vor Move hinterlaesst keine partielle `custom.dat`.
+
+---
+
+### R7-C-05 — Profile-Import ueberschreibt Settings direkt und Backup-Namen kollidieren sekundengenau
+**Tags:** `settings` `profile-import` `P3`
+- [ ] **Fix umsetzen**
+- **File:** [ProfileService.cs](../../src/Romulus.UI.Wpf/Services/ProfileService.cs#L100)
+- **Problem:** `ProfileService.Import` legt Backups als `settings.json.{yyyyMMddHHmmss}.bak` an und kopiert danach mit `File.Copy(sourcePath, SettingsPath, overwrite: true)` direkt auf die aktive Settings-Datei. Mehrere Imports in derselben Sekunde kollidieren; ein IO-Fehler waehrend Copy kann die aktive Settings-Datei partiell ersetzen.
+- **Impact:** Profil-Import ist nicht robust genug fuer wiederholte/automatisierte Nutzung und verletzt das Standardmuster "temp -> validate -> promote".
+- **Fix:** Backup-Namen mit Millisekunden/GUID/RunId erzeugen. Import in temp-Datei schreiben, erneut laden/validieren, dann atomar ersetzen; bei Fehler Backup wiederherstellen.
+- **Tests fehlen:** Zwei Imports in derselben Sekunde -> zwei Backups; simulierte Copy-Exception -> aktive Settings bleiben unveraendert.
+
+---
+
+## Round 8 – Abschlussrunde ohne neue Funde
+
+> Scope: gezielte Rest-Suchen nach nicht dokumentierten P3-Themen und Dubletten nach Round 7.
+> Ergebnis: 0 P0 / 0 P1 / 0 P2 / 0 P3 = 0 neue Findings.
+
+Gepruefte Restflaechen:
+- direkte rekursive `Directory.*AllDirectories`-Enumeration in Entry Points, Infrastructure und WPF,
+- direkte finale `File.WriteAllText`/`File.Create`-Writes in Report-/Export-/Settings-Pfaden,
+- lokale Pattern-/Reason-Listen fuer Junk, DAT und Reports,
+- Rule-/Profile-Importpfade,
+- timestampbasierte Artefaktnamen mit Kollisionsrisiko.
+
+Nicht erneut aufgenommen:
+- Treffer, die bereits in R1-R7 dokumentiert sind,
+- kontrollierte temp-Extraktionspfade unter Tool-/DAT-Handling, sofern sie nicht ausserhalb erlaubter Roots mutieren,
+- reine Log-/Metrik-Zeitstempel ohne fachliche Output-Paritaetswirkung,
+- bestehende Build-/Analyzer-Suppressionen, die bereits als Hygiene-Funde erfasst wurden.
+
+Damit bleiben nach dieser Abschlussrunde keine neuen, belegbaren und nicht-duplizierten P3-Funde aus den ausgefuehrten Deep-Dive-Suchen offen. Die offenen P3-Eintraege im Dokument sind die bereits gelisteten Arbeitspositionen.
 
 ---
 

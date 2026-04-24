@@ -220,6 +220,27 @@ public sealed class WpfProductizationTests : IDisposable
     }
 
     [Fact]
+    public void WizardView_StepPanels_AreFailClosedAndMutuallyExclusive()
+    {
+        var wizardXaml = File.ReadAllText(FindUiFile("Views", "WizardView.xaml"));
+
+        Assert.Contains("x:Key=\"WizardStepPanelBase\"", wizardXaml, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"Visibility\" Value=\"Collapsed\"/>", wizardXaml, StringComparison.Ordinal);
+        Assert.Contains("xmlns:sys=\"clr-namespace:System;assembly=System.Runtime\"", wizardXaml, StringComparison.Ordinal);
+        Assert.Contains("<DataTrigger Binding=\"{Binding Shell.WizardStep}\">", wizardXaml, StringComparison.Ordinal);
+        Assert.Contains("<sys:Int32>0</sys:Int32>", wizardXaml, StringComparison.Ordinal);
+        Assert.Contains("<sys:Int32>1</sys:Int32>", wizardXaml, StringComparison.Ordinal);
+        Assert.Contains("<sys:Int32>2</sys:Int32>", wizardXaml, StringComparison.Ordinal);
+        Assert.Contains("<ScrollViewer Grid.Row=\"1\"", wizardXaml, StringComparison.Ordinal);
+
+        Assert.DoesNotContain("Visibility=\"{Binding Shell.WizardStepIs0", wizardXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Visibility=\"{Binding Shell.WizardStepIs1", wizardXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Visibility=\"{Binding Shell.WizardStepIs2", wizardXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("<DataTrigger Binding=\"{Binding Shell.WizardStep}\" Value=\"", wizardXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"Analyse laeuft...\"", wizardXaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task MainViewModel_AnalyzeWizardSetupAsync_PopulatesSummaryAndRecommendation()
     {
         var vm = CreateViewModel();

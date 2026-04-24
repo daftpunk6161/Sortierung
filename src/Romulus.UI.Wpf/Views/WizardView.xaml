@@ -1,6 +1,7 @@
 <UserControl x:Class="Romulus.UI.Wpf.Views.WizardView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
 >
 
   <!-- GUI-081: 3-Step First-Run Wizard overlay -->
@@ -88,10 +89,50 @@
         </StackPanel>
 
         <!-- Step Content -->
-        <Grid Grid.Row="1">
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+        <Grid>
+          <Grid.Resources>
+            <Style x:Key="WizardStepPanelBase" TargetType="StackPanel">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Setter Property="MaxWidth" Value="520"/>
+              <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            </Style>
+            <Style x:Key="WizardStep0PanelStyle" TargetType="StackPanel" BasedOn="{StaticResource WizardStepPanelBase}">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Shell.WizardStep}">
+                  <DataTrigger.Value>
+                    <sys:Int32>0</sys:Int32>
+                  </DataTrigger.Value>
+                  <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+            <Style x:Key="WizardStep1PanelStyle" TargetType="StackPanel" BasedOn="{StaticResource WizardStepPanelBase}">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Shell.WizardStep}">
+                  <DataTrigger.Value>
+                    <sys:Int32>1</sys:Int32>
+                  </DataTrigger.Value>
+                  <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+            <Style x:Key="WizardStep2PanelStyle" TargetType="StackPanel" BasedOn="{StaticResource WizardStepPanelBase}">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Shell.WizardStep}">
+                  <DataTrigger.Value>
+                    <sys:Int32>2</sys:Int32>
+                  </DataTrigger.Value>
+                  <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Grid.Resources>
 
           <!-- Step 0: Choose ROM directories -->
-          <StackPanel Visibility="{Binding Shell.WizardStepIs0, Converter={StaticResource BoolToVis}}">
+          <StackPanel Style="{StaticResource WizardStep0PanelStyle}">
             <TextBlock Text="{Binding Loc[Wizard.Step1Title]}" FontSize="22" FontWeight="Bold"
                        Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center"
                        Margin="0,0,0,8"/>
@@ -108,18 +149,6 @@
             </Button>
             <TextBlock Text="{Binding Roots.Count, StringFormat='{}{0} Ordner ausgewählt'}"
                        Style="{StaticResource CaptionText}" HorizontalAlignment="Center" Margin="0,12,0,0"/>
-                <TextBlock Text="Analyse laeuft..."
-                     Style="{StaticResource CaptionText}"
-                     HorizontalAlignment="Center"
-                     Margin="0,8,0,0"
-                     Visibility="{Binding WizardAnalysisInProgress, Converter={StaticResource BoolToVis}}"/>
-                <TextBlock Text="{Binding WizardAnalysisSummary}"
-                     Style="{StaticResource CaptionText}"
-                     HorizontalAlignment="Center"
-                     Margin="0,8,0,0"
-                     MaxWidth="460"
-                     TextWrapping="Wrap"
-                     TextAlignment="Center"/>
 
             <Border Background="{DynamicResource BrushCard}"
                     BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
@@ -144,7 +173,7 @@
           </StackPanel>
 
           <!-- Step 1: Choose Region -->
-          <StackPanel Visibility="{Binding Shell.WizardStepIs1, Converter={StaticResource BoolToVis}}">
+          <StackPanel Style="{StaticResource WizardStep1PanelStyle}">
             <TextBlock Text="{Binding Loc[Wizard.Step2Title]}" FontSize="22" FontWeight="Bold"
                        Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center"
                        Margin="0,0,0,8"/>
@@ -165,10 +194,23 @@
                         IsChecked="{Binding PreferWORLD}" FontSize="14"
                         AutomationProperties.Name="Region World bevorzugen"/>
             </StackPanel>
+            <StackPanel Margin="0,18,0,0" HorizontalAlignment="Stretch">
+              <ProgressBar Height="4"
+                           IsIndeterminate="True"
+                           Visibility="{Binding WizardAnalysisInProgress, Converter={StaticResource BoolToVis}}"/>
+              <TextBlock Text="{Binding WizardAnalysisSummary}"
+                         Style="{StaticResource CaptionText}"
+                         HorizontalAlignment="Center"
+                         Margin="0,8,0,0"
+                         MaxWidth="460"
+                         TextWrapping="Wrap"
+                         TextAlignment="Center"
+                         Visibility="{Binding WizardHasAnalysis, Converter={StaticResource BoolToVis}}"/>
+            </StackPanel>
           </StackPanel>
 
           <!-- Step 2: Ready (Preview) -->
-          <StackPanel Visibility="{Binding Shell.WizardStepIs2, Converter={StaticResource BoolToVis}}">
+          <StackPanel Style="{StaticResource WizardStep2PanelStyle}">
             <TextBlock Text="{Binding Loc[Wizard.Step3Title]}" FontSize="22" FontWeight="Bold"
                        Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center"
                        Margin="0,0,0,8"/>
@@ -198,6 +240,14 @@
                        TextWrapping="Wrap"
                        MaxWidth="420"
                        TextAlignment="Center"/>
+            <TextBlock Text="{Binding WizardAnalysisSummary}"
+                       Style="{StaticResource CaptionText}"
+                       HorizontalAlignment="Center"
+                       Margin="0,8,0,0"
+                       TextWrapping="Wrap"
+                       MaxWidth="420"
+                       TextAlignment="Center"
+                       Visibility="{Binding WizardHasAnalysis, Converter={StaticResource BoolToVis}}"/>
             <TextBlock Text="{Binding WizardRecommendationSummary}"
                        Style="{StaticResource CaptionText}"
                        HorizontalAlignment="Center"
@@ -207,6 +257,7 @@
                        TextAlignment="Center"/>
           </StackPanel>
         </Grid>
+        </ScrollViewer>
 
         <!-- Navigation buttons -->
         <Grid Grid.Row="2" Margin="0,24,0,0">
