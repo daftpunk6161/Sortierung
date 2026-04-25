@@ -144,6 +144,12 @@ public sealed class ConversionGraph(IReadOnlyList<ConversionCapability> capabili
                 continue;
             }
 
+            if (string.Equals(capability.SourceExtension, "*", StringComparison.OrdinalIgnoreCase)
+                && SourceIntegrityClassifier.IsArchiveExtension(fromExtension))
+            {
+                continue;
+            }
+
             if (capability.ApplicableConsoles is { Count: > 0 }
                 && !capability.ApplicableConsoles.Contains(consoleKey))
             {

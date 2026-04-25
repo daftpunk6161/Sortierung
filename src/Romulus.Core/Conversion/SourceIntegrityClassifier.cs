@@ -18,6 +18,11 @@ public static class SourceIntegrityClassifier
         ".cso", ".pbp", ".cdi", ".dax", ".zso", ".jso"
     };
 
+    private static readonly HashSet<string> ArchiveExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".zip", ".7z", ".rar", ".tar", ".gz", ".tgz", ".bz2", ".xz"
+    };
+
     /// <summary>
     /// Classifies source integrity for conversion planning.
     /// </summary>
@@ -39,4 +44,7 @@ public static class SourceIntegrityClassifier
 
         return SourceIntegrity.Unknown;
     }
+
+    public static bool IsArchiveExtension(string extension)
+        => !string.IsNullOrWhiteSpace(extension) && ArchiveExtensions.Contains(extension.Trim());
 }

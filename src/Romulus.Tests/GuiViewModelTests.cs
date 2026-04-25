@@ -1741,6 +1741,7 @@ public partial class GuiViewModelTests
             vm.Roots.Add(root);
             vm.UseDat = true;
             vm.EnableDatRename = true;
+            vm.DatRoot = datRoot;
 
             var (_, options, _, _) = await new RunService().BuildOrchestratorAsync(vm);
 

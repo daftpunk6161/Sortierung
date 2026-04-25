@@ -240,7 +240,7 @@ public class Phase5AuditRefactorTests
             Assert.False(File.Exists(nesPath + ".tmp"), "Temp file should be cleaned up after rename");
 
             // Verify .bak was created
-            Assert.True(File.Exists(nesPath + ".bak"), "Backup file should exist");
+            Assert.Single(Directory.GetFiles(dir, Path.GetFileName(nesPath) + ".*.bak"));
         }
         finally
         {
@@ -282,7 +282,7 @@ public class Phase5AuditRefactorTests
             Assert.False(File.Exists(snesPath + ".tmp"), "Temp file should be cleaned up after rename");
 
             // Verify .bak was created
-            Assert.True(File.Exists(snesPath + ".bak"), "Backup file should exist");
+            Assert.Single(Directory.GetFiles(dir, Path.GetFileName(snesPath) + ".*.bak"));
         }
         finally
         {

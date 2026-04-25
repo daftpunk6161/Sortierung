@@ -51,10 +51,36 @@ public sealed class FileSystemAdapter : IFileSystem
     /// on HFS+ volumes or USB sticks.
     /// R2-016: Cache results to avoid redundant normalization on hot paths.
     /// </summary>
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _nfcCache = new(StringComparer.OrdinalIgnoreCase);
+    private const int MaxNfcCacheEntries = 8192;
+    private static readonly object NfcCacheLock = new();
+    private static readonly Dictionary<string, string> _nfcCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Queue<string> NfcCacheInsertionOrder = new();
 
     internal static string NormalizePathNfc(string path)
-        => _nfcCache.GetOrAdd(path, static p => Path.GetFullPath(p).Normalize(NormalizationForm.FormC));
+    {
+        lock (NfcCacheLock)
+        {
+            if (_nfcCache.TryGetValue(path, out var cached))
+                return cached;
+        }
+
+        var normalized = Path.GetFullPath(path).Normalize(NormalizationForm.FormC);
+        lock (NfcCacheLock)
+        {
+            if (_nfcCache.TryGetValue(path, out var cached))
+                return cached;
+
+            if (_nfcCache.Count >= MaxNfcCacheEntries && NfcCacheInsertionOrder.Count > 0)
+            {
+                var evicted = NfcCacheInsertionOrder.Dequeue();
+                _nfcCache.Remove(evicted);
+            }
+
+            _nfcCache[path] = normalized;
+            NfcCacheInsertionOrder.Enqueue(path);
+            return normalized;
+        }
+    }
 
     private static bool TryGetFileInformation(string path, out ByHandleFileInformation info)
     {

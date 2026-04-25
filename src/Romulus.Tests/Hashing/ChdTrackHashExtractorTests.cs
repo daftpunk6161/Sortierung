@@ -130,6 +130,14 @@ public sealed class ChdTrackHashExtractorTests
                 ? new ToolResult(0, output, true)
                 : new ToolResult(1, string.Empty, false);
 
+        public ToolResult InvokeProcess(
+            string filePath,
+            string[] arguments,
+            string? errorLabel,
+            TimeSpan? timeout,
+            CancellationToken cancellationToken)
+            => InvokeProcess(filePath, arguments, errorLabel);
+
         public ToolResult Invoke7z(string sevenZipPath, string[] arguments)
             => new(1, string.Empty, false);
     }

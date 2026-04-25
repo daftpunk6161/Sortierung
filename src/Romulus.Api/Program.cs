@@ -166,11 +166,17 @@ app.Use(async (ctx, next) =>
 app.Use(async (ctx, next) =>
 {
     var rawCorrelationId = ctx.Request.Headers["X-Correlation-ID"].FirstOrDefault();
-    var correlationId = SanitizeCorrelationId(rawCorrelationId)
+    var sanitizedCorrelationId = SanitizeCorrelationId(rawCorrelationId);
+    var correlationId = sanitizedCorrelationId
         ?? Guid.NewGuid().ToString("N")[..16];
 
     ctx.Items["CorrelationId"] = correlationId;
     ctx.Response.Headers["X-Correlation-ID"] = correlationId;
+    if (!string.IsNullOrWhiteSpace(rawCorrelationId) && sanitizedCorrelationId is null)
+    {
+        ctx.Response.Headers["X-Correlation-Id-Replaced"] = "1";
+        app.Logger.LogWarning("Rejected unsafe correlation id and issued replacement.");
+    }
 
     await next();
 });

@@ -879,7 +879,7 @@ public partial class Program
             var writer = ctx.Response.Body;
             var encoding = Encoding.UTF8;
         
-            await WriteSseEvent(writer, encoding, "ready", new { runId, utc = timeProvider.UtcNow.ToString("o") });
+            await WriteSseEvent(writer, encoding, "ready", new { runId, utc = timeProvider.UtcNow.ToString("o") }, ctx.RequestAborted);
         
             var timeout = TimeSpan.FromSeconds(sseTimeoutSeconds);
             var start = timeProvider.UtcNow.UtcDateTime;
@@ -902,7 +902,7 @@ public partial class Program
                             "Run not found.",
                             ErrorKind.Recoverable,
                             runId,
-                            instance: $"/runs/{runId}/stream"));
+                            instance: $"/runs/{runId}/stream"), ctx.RequestAborted);
                         break;
                     }
         
@@ -931,16 +931,18 @@ public partial class Program
                                 RunConstants.StatusCompletedWithErrors => RunConstants.StatusCompletedWithErrors,
                                 _ => RunConstants.StatusCompleted
                             };
-                            await WriteSseEvent(writer, encoding, terminalEvent, new { run = current.ToDto(), result = current.Result });
+                            await WriteSseEvent(writer, encoding, terminalEvent, new { run = current.ToDto(), result = current.Result }, ctx.RequestAborted);
                             break;
                         }
-                        await WriteSseEvent(writer, encoding, "status", current.ToDto());
+                        await WriteSseEvent(writer, encoding, "status", current.ToDto(), ctx.RequestAborted);
                     }
                     else if ((timeProvider.UtcNow.UtcDateTime - lastHeartbeat).TotalSeconds >= sseHeartbeatSeconds)
                     {
                         // V2-H05: SSE heartbeat to prevent proxy/browser timeouts
-                        await writer.WriteAsync(encoding.GetBytes(":\n\n"));
-                        await writer.FlushAsync();
+                        using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ctx.RequestAborted);
+                        heartbeatCts.CancelAfter(TimeSpan.FromSeconds(5));
+                        await writer.WriteAsync(encoding.GetBytes(":\n\n"), heartbeatCts.Token);
+                        await writer.FlushAsync(heartbeatCts.Token);
                         lastHeartbeat = timeProvider.UtcNow.UtcDateTime;
                     }
         
@@ -949,7 +951,7 @@ public partial class Program
         
                 if (timeProvider.UtcNow.UtcDateTime - start >= timeout)
                 {
-                    await WriteSseEvent(writer, encoding, "timeout", new { runId, seconds = sseTimeoutSeconds });
+                    await WriteSseEvent(writer, encoding, "timeout", new { runId, seconds = sseTimeoutSeconds }, ctx.RequestAborted);
                 }
             }
             catch (IOException)

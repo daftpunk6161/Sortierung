@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Input;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
+using Romulus.Infrastructure.Configuration;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Reporting;
 using Romulus.Infrastructure.Tools;
@@ -126,8 +127,8 @@ public sealed partial class FeatureCommandService
             if (importPath is null) return;
             try
             {
-                var json = File.ReadAllText(importPath);
-                JsonDocument.Parse(json).Dispose();
+                var schemaPath = Path.Combine(dataDir, "schemas", "rules.schema.json");
+                StartupDataSchemaValidator.ValidateFileAgainstSchema(importPath, schemaPath, "rules.json");
                 Directory.CreateDirectory(dataDir);
                 if (!TryResolveSafeOutputPath(rulesPath, "Regel-Import", out var safeRulesPath))
                     return;
@@ -136,6 +137,7 @@ public sealed partial class FeatureCommandService
                 _vm.AddLog(_vm.Loc.Format("Cmd.RulePackSharing.ImportDone", Path.GetFileName(importPath), safeRulesPath), "INFO");
             }
             catch (JsonException) { LogError("GUI-IMPORT", _vm.Loc["Cmd.RulePackSharing.ImportInvalidJson"], _vm.Loc["Cmd.RulePackSharing.ImportJsonHint"]); }
+            catch (InvalidOperationException ex) { LogError("GUI-IMPORT", _vm.Loc.Format("Cmd.RulePackSharing.ImportFailed", ex.Message)); }
             catch (Exception ex) { LogError("GUI-IMPORT", _vm.Loc.Format("Cmd.RulePackSharing.ImportFailed", ex.Message)); }
         }
     }

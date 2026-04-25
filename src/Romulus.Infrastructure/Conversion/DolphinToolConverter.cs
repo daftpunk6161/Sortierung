@@ -17,7 +17,12 @@ internal sealed class DolphinToolConverter
         _tools = tools ?? throw new ArgumentNullException(nameof(tools));
     }
 
-    public ConversionResult Convert(string sourcePath, string targetPath, string toolPath, string sourceExt)
+    public ConversionResult Convert(
+        string sourcePath,
+        string targetPath,
+        string toolPath,
+        string sourceExt,
+        CancellationToken cancellationToken = default)
     {
         var allowedExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { ".iso", ".gcm", ".wbfs", ".rvz", ".gcz", ".wia" };
@@ -26,7 +31,7 @@ internal sealed class DolphinToolConverter
             return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped, "dolphintool-unsupported-source");
 
         var args = new[] { "convert", "-i", sourcePath, "-o", targetPath, "-f", "rvz", "-c", "zstd", "-l", "5", "-b", "131072" };
-        var result = _tools.InvokeProcess(toolPath, args, DolphinRequirement, "dolphintool", null, CancellationToken.None);
+        var result = _tools.InvokeProcess(toolPath, args, DolphinRequirement, "dolphintool", TimeSpan.FromMinutes(20), cancellationToken);
 
         if (!result.Success)
         {

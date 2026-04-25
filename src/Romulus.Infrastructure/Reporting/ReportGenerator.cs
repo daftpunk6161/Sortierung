@@ -42,6 +42,7 @@ public sealed record ReportEntry
 /// </summary>
 public sealed record ReportSummary
 {
+    public string SchemaVersion { get; init; } = RunConstants.ReportSchemaVersion;
     public string Mode { get; init; } = "DryRun";
     public string RunStatus { get; init; } = RunConstants.StatusOk;
     public DateTime Timestamp { get; init; } = DateTime.UtcNow;
@@ -93,31 +94,35 @@ public sealed record ReportSummary
 /// </summary>
 public static class ReportGenerator
 {
+    private const int MaxReportLocaleBytes = 256 * 1024;
+    private const int MaxReportLocaleCacheEntries = 8;
+
     /// <summary>
     /// Generates a full HTML report.
     /// </summary>
     public static string GenerateHtml(ReportSummary summary, IReadOnlyList<ReportEntry> entries)
     {
         var sb = new StringBuilder(64 * 1024);
-        var nonceBytes = RandomNumberGenerator.GetBytes(16);
-        var nonce = Convert.ToBase64String(nonceBytes);
+        var nonce = GenerateDeterministicNonce(summary, entries);
+        var hasUnknownEntries = entries.Any(e => string.Equals(e.Category, "UNKNOWN", StringComparison.OrdinalIgnoreCase));
 
         sb.AppendLine("<!DOCTYPE html>");
         sb.AppendLine("<html lang=\"de\">");
         sb.AppendLine("<head>");
         sb.AppendLine("<meta charset=\"utf-8\">");
-        sb.AppendLine($"<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'nonce-{Enc(nonce)}'; script-src 'nonce-{Enc(nonce)}'; img-src data:;\">");
+        sb.AppendLine($"<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; style-src 'nonce-{Enc(nonce)}'; script-src 'nonce-{Enc(nonce)}'; img-src data:;\">");
+        sb.AppendLine($"<meta name=\"romulus-schema-version\" content=\"{Enc(summary.SchemaVersion)}\">");
         sb.AppendLine("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
         sb.AppendLine($"<title>Romulus Report \u2014 {Enc(summary.Mode)} \u2014 {summary.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")}</title>");
         sb.AppendLine($"<style nonce=\"{Enc(nonce)}\">");
-        AppendCss(sb);
+        AppendCss(sb, hasUnknownEntries);
         sb.AppendLine("</style>");
         sb.AppendLine("</head>");
         sb.AppendLine("<body>");
 
         // Header
         sb.AppendLine("<header>");
-        sb.AppendLine("<h1>� Romulus Report</h1>");
+        sb.AppendLine("<h1>Romulus Report</h1>");
         sb.AppendLine($"<p>Modus: <strong>{Enc(summary.Mode)}</strong> \u2022 {summary.Timestamp.ToString("dd.MM.yyyy HH:mm:ss")}</p>");
         sb.AppendLine("</header>");
 
@@ -144,11 +149,12 @@ public static class ReportGenerator
         var sb = new StringBuilder();
         // V2-L15: UTF-8 BOM for Excel compatibility
         sb.Append('\uFEFF');
-        sb.AppendLine("GameKey,Action,Category,Region,FilePath,FileName,Extension,SizeBytes,RegionScore,FormatScore,VersionScore,Console,DatMatch,DecisionClass,EvidenceTier,PrimaryMatchKind,PlatformFamily,MatchLevel,MatchReasoning");
+        sb.AppendLine("SchemaVersion,GameKey,Action,Category,Region,FilePath,FileName,Extension,SizeBytes,RegionScore,FormatScore,VersionScore,Console,DatMatch,DecisionClass,EvidenceTier,PrimaryMatchKind,PlatformFamily,MatchLevel,MatchReasoning");
 
         foreach (var e in entries)
         {
             sb.AppendLine(string.Join(",",
+                CsvSafe(RunConstants.ReportSchemaVersion),
                 CsvSafe(e.GameKey),
                 CsvSafe(e.Action),
                 CsvSafe(e.Category),
@@ -180,6 +186,7 @@ public static class ReportGenerator
     {
         var report = new JsonReport
         {
+            SchemaVersion = RunConstants.ReportSchemaVersion,
             Summary = summary,
             Entries = entries
         };
@@ -225,7 +232,7 @@ public static class ReportGenerator
         AtomicFileWriter.WriteAllText(fullPath, html, Encoding.UTF8);
     }
 
-    private static void AppendCss(StringBuilder sb)
+    private static void AppendCss(StringBuilder sb, bool includeUnknownInfo)
     {
         sb.AppendLine(@"
 :root { --bg: #1e1e2e; --surface: #313244; --text: #cdd6f4; --blue: #89b4fa;
@@ -248,6 +255,10 @@ h2 { color: var(--mauve); margin: 1.5rem 0 0.8rem; }
 .bar-row { display: flex; align-items: center; margin: 4px 0; }
 .bar-label { width: 60px; text-align: right; padding-right: 8px; font-size: 0.85rem; }
 .bar { height: 22px; border-radius: 4px; min-width: 2px; transition: width 0.3s; }
+.bar.keep { background: var(--green); }
+.bar.move { background: var(--yellow); }
+.bar.junk { background: var(--red); }
+.bar.bios { background: var(--mauve); }
 .bar-value { padding-left: 8px; font-size: 0.85rem; }
 table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
 th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #45475a; font-size: 0.85rem; }
@@ -259,6 +270,11 @@ tr:hover { background: rgba(137,180,250,0.05); }
 .action-junk { color: var(--red); }
 .action-bios { color: var(--mauve); }
 ");
+        if (includeUnknownInfo)
+            sb.AppendLine(".unknown-info { background: var(--surface); border-left: 4px solid var(--yellow); padding: 12px 16px; margin: 0 0 16px 0; border-radius: 6px; }");
+
+        for (var width = 1; width <= 100; width++)
+            sb.AppendLine($".bar.w-{width} {{ width: {width}%; }}");
     }
 
     private static void AppendSummaryCards(StringBuilder sb, ReportSummary s)
@@ -326,18 +342,19 @@ tr:hover { background: rgba(137,180,250,0.05); }
         sb.AppendLine("<div class=\"bar-chart\">");
 
         int max = Math.Max(1, Math.Max(s.KeepCount, Math.Max(s.MoveCount, Math.Max(s.JunkCount, s.BiosCount))));
-        AppendBar(sb, "Keep", s.KeepCount, max, "var(--green)");
-        AppendBar(sb, "Move", s.MoveCount, max, "var(--yellow)");
-        AppendBar(sb, "Junk", s.JunkCount, max, "var(--red)");
-        AppendBar(sb, "BIOS", s.BiosCount, max, "var(--mauve)");
+        AppendBar(sb, "Keep", s.KeepCount, max, "keep");
+        AppendBar(sb, "Move", s.MoveCount, max, "move");
+        AppendBar(sb, "Junk", s.JunkCount, max, "junk");
+        AppendBar(sb, "BIOS", s.BiosCount, max, "bios");
 
         sb.AppendLine("</div>");
     }
 
-    private static void AppendBar(StringBuilder sb, string label, int count, int max, string color)
+    private static void AppendBar(StringBuilder sb, string label, int count, int max, string colorClass)
     {
         int pct = max > 0 ? (int)(count * 100.0 / max) : 0;
-        sb.AppendLine($"<div class=\"bar-row\"><span class=\"bar-label\">{Enc(label)}</span><div class=\"bar\" style=\"width:{Math.Max(pct, 1)}%;background:{color}\"></div><span class=\"bar-value\">{count}</span></div>");
+        var widthClass = Math.Clamp(pct, 1, 100);
+        sb.AppendLine($"<div class=\"bar-row\"><span class=\"bar-label\">{Enc(label)}</span><div class=\"bar {Enc(colorClass)} w-{widthClass}\"></div><span class=\"bar-value\">{count}</span></div>");
     }
 
     private static void AppendTable(StringBuilder sb, IReadOnlyList<ReportEntry> entries, string nonce)
@@ -346,7 +363,7 @@ tr:hover { background: rgba(137,180,250,0.05); }
         var unknownCount = entries.Count(e => string.Equals(e.Category, "UNKNOWN", StringComparison.OrdinalIgnoreCase));
         if (unknownCount > 0)
         {
-            sb.AppendLine($"<div class=\"unknown-info\" style=\"background:var(--surface-1);border-left:4px solid var(--yellow);padding:12px 16px;margin:0 0 16px 0;border-radius:6px\">");
+            sb.AppendLine("<div class=\"unknown-info\">");
             sb.AppendLine($"<strong>&#9432; {Enc(ReportText("Unknown.BannerTitle", "{0} entry(ies) with UNKNOWN classification", unknownCount))}</strong><br>");
             sb.AppendLine(Enc(ReportText("Unknown.Explain", "UNKNOWN means the file could not be assigned to a known console or category.")) + " ");
             sb.AppendLine(Enc(ReportText("Unknown.Causes", "Hints: non-standard file name, unknown format, or missing DAT coverage.")) + " ");
@@ -430,41 +447,66 @@ tr:hover { background: rgba(137,180,250,0.05); }
     private static string FormatSize(long bytes)
         => Formatting.FormatSize(bytes);
 
+    private static string GenerateDeterministicNonce(ReportSummary summary, IReadOnlyList<ReportEntry> entries)
+    {
+        var canonical = JsonSerializer.Serialize(new JsonReport
+        {
+            SchemaVersion = RunConstants.ReportSchemaVersion,
+            Summary = summary,
+            Entries = entries
+        }, JsonReportContext.Default.JsonReport);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(canonical));
+        return Convert.ToBase64String(hash[..16]);
+    }
+
     /// <summary>Lazily loaded report locale strings from data/i18n/{locale}.json.</summary>
-    private static IReadOnlyDictionary<string, string>? _cachedReportLocale;
-    private static string? _cachedReportLocaleKey;
+    private static readonly Dictionary<string, IReadOnlyDictionary<string, string>> ReportLocaleCache =
+        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly LinkedList<string> ReportLocaleLru = new();
     private static readonly object ReportLocaleLock = new();
 
     private static IReadOnlyDictionary<string, string> LoadReportLocale(string locale)
     {
+        var normalizedLocale = string.IsNullOrWhiteSpace(locale) ? "en" : locale.Trim().ToLowerInvariant();
         lock (ReportLocaleLock)
         {
-            if (_cachedReportLocaleKey is not null
-                && _cachedReportLocaleKey.Equals(locale, StringComparison.OrdinalIgnoreCase)
-                && _cachedReportLocale is not null)
+            if (ReportLocaleCache.TryGetValue(normalizedLocale, out var cached))
             {
-                return _cachedReportLocale;
+                TouchReportLocale(normalizedLocale);
+                return cached;
             }
 
             var dict = new Dictionary<string, string>(StringComparer.Ordinal);
             var dataDir = Orchestration.RunEnvironmentBuilder.TryResolveDataDir();
             if (dataDir is not null)
             {
-                var path = Path.Combine(dataDir, "i18n", $"{locale}.json");
+                var path = Path.Combine(dataDir, "i18n", $"{normalizedLocale}.json");
                 if (File.Exists(path))
                 {
                     try
                     {
-                        var json = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(File.ReadAllText(path));
-                        if (json is not null)
+                        var fileInfo = new FileInfo(path);
+                        if (fileInfo.Length <= MaxReportLocaleBytes)
                         {
-                            foreach (var kv in json)
-                            {
-                                if (kv.Key.StartsWith("Report.", StringComparison.Ordinal)
-                                    && kv.Value.ValueKind == JsonValueKind.String)
+                            using var doc = JsonDocument.Parse(
+                                File.ReadAllText(path),
+                                new JsonDocumentOptions
                                 {
-                                    // Strip "Report." prefix for internal lookup
-                                    dict[kv.Key["Report.".Length..]] = kv.Value.GetString() ?? "";
+                                    MaxDepth = 8,
+                                    CommentHandling = JsonCommentHandling.Skip,
+                                    AllowTrailingCommas = false
+                                });
+
+                            if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                            {
+                                foreach (var property in doc.RootElement.EnumerateObject())
+                                {
+                                    if (property.Name.StartsWith("Report.", StringComparison.Ordinal)
+                                        && property.Value.ValueKind == JsonValueKind.String)
+                                    {
+                                        // Strip "Report." prefix for internal lookup
+                                        dict[property.Name["Report.".Length..]] = property.Value.GetString() ?? "";
+                                    }
                                 }
                             }
                         }
@@ -476,10 +518,33 @@ tr:hover { background: rgba(137,180,250,0.05); }
                 }
             }
 
-            _cachedReportLocale = dict;
-            _cachedReportLocaleKey = locale;
+            ReportLocaleCache[normalizedLocale] = dict;
+            ReportLocaleLru.AddFirst(normalizedLocale);
+            while (ReportLocaleLru.Count > MaxReportLocaleCacheEntries)
+            {
+                var last = ReportLocaleLru.Last;
+                if (last is null)
+                    break;
+
+                ReportLocaleCache.Remove(last.Value);
+                ReportLocaleLru.RemoveLast();
+            }
+
             return dict;
         }
+    }
+
+    private static void TouchReportLocale(string locale)
+    {
+        var node = ReportLocaleLru.Find(locale);
+        if (node is null)
+        {
+            ReportLocaleLru.AddFirst(locale);
+            return;
+        }
+
+        ReportLocaleLru.Remove(node);
+        ReportLocaleLru.AddFirst(node);
     }
 
     private static string ReportText(string key, string fallback, params object[] args)
@@ -532,6 +597,7 @@ tr:hover { background: rgba(137,180,250,0.05); }
 /// </summary>
 public sealed record JsonReport
 {
+    public string SchemaVersion { get; init; } = RunConstants.ReportSchemaVersion;
     public ReportSummary Summary { get; init; } = new();
     public IReadOnlyList<ReportEntry> Entries { get; init; } = [];
 }

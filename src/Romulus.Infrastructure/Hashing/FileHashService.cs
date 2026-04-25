@@ -170,8 +170,37 @@ public sealed class FileHashService : IDisposable
                     .ToList()
             };
 
-            AtomicFileWriter.WriteAllText(_persistentCachePath, JsonSerializer.Serialize(document, PersistentJsonOptions), Encoding.UTF8);
+            try
+            {
+                AtomicFileWriter.WriteAllText(_persistentCachePath, JsonSerializer.Serialize(document, PersistentJsonOptions), Encoding.UTF8);
+            }
+            catch
+            {
+                DeleteAtomicTempFiles(_persistentCachePath);
+                throw;
+            }
+
             _persistentDirty = false;
+        }
+    }
+
+    private static void DeleteAtomicTempFiles(string finalPath)
+    {
+        var directory = Path.GetDirectoryName(Path.GetFullPath(finalPath));
+        if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+            return;
+
+        var pattern = "." + Path.GetFileName(finalPath) + ".*.tmp";
+        foreach (var tempPath in Directory.EnumerateFiles(directory, pattern, SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                File.Delete(tempPath);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Best-effort cleanup; the original flush failure remains the caller-visible error.
+            }
         }
     }
 

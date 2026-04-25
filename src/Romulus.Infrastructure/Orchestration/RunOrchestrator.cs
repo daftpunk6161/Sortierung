@@ -183,7 +183,11 @@ public sealed partial class RunOrchestrator : IDisposable
             {
                 var normalized = Path.GetFullPath(configuredPath!);
                 var fileExistedBeforeProbe = File.Exists(normalized);
-                using var fs = new FileStream(normalized, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite);
+                using var fs = new FileStream(
+                    normalized,
+                    fileExistedBeforeProbe ? FileMode.Open : FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.ReadWrite);
                 fs.Close();
 
                 // Preflight must be side-effect free for existing files.
@@ -213,6 +217,7 @@ public sealed partial class RunOrchestrator : IDisposable
     public async Task<RunResult> ExecuteAsync(RunOptions options, CancellationToken cancellationToken = default)
     {
         var result = new RunResultBuilder();
+        result.StartedUtc = DateTime.UtcNow;
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var pipelineState = new PipelineState();
 
@@ -311,6 +316,7 @@ public sealed partial class RunOrchestrator : IDisposable
         catch (OperationCanceledException)
         {
             sw.Stop();
+            result.CompletedUtc = DateTime.UtcNow;
             result.Status = RunOutcome.Cancelled.ToStatusString();
             result.ExitCode = RunOutcome.Cancelled.ToExitCode();
             result.DurationMs = sw.ElapsedMilliseconds;
@@ -343,6 +349,7 @@ public sealed partial class RunOrchestrator : IDisposable
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
+            result.CompletedUtc = DateTime.UtcNow;
             result.Status = RunOutcome.Failed.ToStatusString();
             result.ExitCode = RunOutcome.Failed.ToExitCode();
             result.DurationMs = sw.ElapsedMilliseconds;

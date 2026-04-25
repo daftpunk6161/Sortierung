@@ -25,7 +25,7 @@ public sealed class PhaseStepResult
         => new() { Status = RunConstants.StatusOk, ItemCount = itemCount, TypedResult = typedResult };
 
     public static PhaseStepResult Skipped(object? typedResult = null)
-        => new() { Status = "skipped", ItemCount = 0, TypedResult = typedResult };
+        => new() { Status = RunConstants.StatusSkipped, ItemCount = 0, TypedResult = typedResult };
 }
 
 public sealed class PipelineState

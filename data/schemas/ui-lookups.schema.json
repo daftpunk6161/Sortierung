@@ -3,7 +3,6 @@
   "$id": "https://romulus.local/schemas/ui-lookups.schema.json",
   "type": "object",
   "required": [
-    "compressionRatios",
     "consoleFormatPriority",
     "genreKeywords",
     "coreMapping",
@@ -11,10 +10,6 @@
     "extensionTargetFormats"
   ],
   "properties": {
-    "compressionRatios": {
-      "type": "object",
-      "additionalProperties": true
-    },
     "consoleFormatPriority": {
       "type": "object",
       "additionalProperties": true

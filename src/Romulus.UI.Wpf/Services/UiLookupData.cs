@@ -52,14 +52,20 @@ public sealed class UiLookupData
     {
         if (data.CompressionRatios.Count == 0)
         {
-            var defaults = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+            foreach (var kv in LoadCompressionEstimatesFromRegistry())
+                data.CompressionRatios[kv.Key] = kv.Value;
+        }
+
+        if (data.CompressionRatios.Count == 0)
+        {
+            var fallback = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
             {
                 ["bin_chd"] = 0.50, ["cue_chd"] = 0.50, ["iso_chd"] = 0.60,
                 ["iso_rvz"] = 0.40, ["gcz_rvz"] = 0.70, ["zip_7z"] = 0.90,
                 ["rar_7z"] = 0.95, ["cso_chd"] = 0.80, ["pbp_chd"] = 0.70,
                 ["iso_cso"] = 0.65, ["wbfs_rvz"] = 0.45, ["nkit_rvz"] = 0.50
             };
-            foreach (var kv in defaults) data.CompressionRatios[kv.Key] = kv.Value;
+            foreach (var kv in fallback) data.CompressionRatios[kv.Key] = kv.Value;
         }
 
         if (data.ExtensionTargetFormats.Count == 0)
@@ -93,6 +99,41 @@ public sealed class UiLookupData
             data.ConsoleFormatPriority["genesis"] = ["zip", "7z", "md", "gen"];
             data.ConsoleFormatPriority["arcade"] = ["zip", "7z"];
         }
+    }
+
+    private static Dictionary<string, double> LoadCompressionEstimatesFromRegistry()
+    {
+        var estimates = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        var dataDir = FeatureService.ResolveDataDirectory()
+                      ?? Path.Combine(Directory.GetCurrentDirectory(), "data");
+        var registryPath = Path.Combine(dataDir, "conversion-registry.json");
+        if (!File.Exists(registryPath))
+            return estimates;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(registryPath));
+            if (!doc.RootElement.TryGetProperty("compressionEstimates", out var element)
+                || element.ValueKind != JsonValueKind.Object)
+            {
+                return estimates;
+            }
+
+            foreach (var property in element.EnumerateObject())
+            {
+                if (property.Value.ValueKind == JsonValueKind.Number
+                    && property.Value.TryGetDouble(out var value))
+                {
+                    estimates[property.Name] = value;
+                }
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            Trace.WriteLine($"[UiLookupData] Failed to load compression estimates from conversion-registry.json: {ex.Message}.");
+        }
+
+        return estimates;
     }
 
     private static readonly Lazy<UiLookupData> _instance = new(Load);

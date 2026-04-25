@@ -24,11 +24,11 @@
 
 | Severity | Round 1+2 | Round 3 | Round 4 | Round 5 | Round 6 | Round 7 | Round 8 | Gesamt | Erledigt |
 |----------|----------:|--------:|--------:|--------:|--------:|--------:|--------:|-------:|---------:|
-| **P0** (Release-Blocker)         |  8 |  1 |  9 |  1 |  0 |  0 |  0 |  19 | 6 |
-| **P1** (Hohe Risiken)            | 22 | 15 | 17 | 11 |  6 |  3 |  0 |  74 | 13 |
-| **P2** (Mittlere Risiken)        | 26 | 22 | 22 | 19 | 18 |  6 |  0 | 113 | 7 |
-| **P3** (Wartbarkeit / niedrig)   | 12 |  6 | 13 |  9 | 12 |  3 |  0 |  55 | 2 |
-| **Gesamt**                       | 68 | 44 | 61 | 40 | 36 | 12 |  0 | 261 | 28 |
+| **P0** (Release-Blocker)         |  8 |  1 |  9 |  1 |  0 |  0 |  0 |  19 | 9 |
+| **P1** (Hohe Risiken)            | 22 | 15 | 17 | 11 |  6 |  3 |  0 |  74 | 24 |
+| **P2** (Mittlere Risiken)        | 26 | 22 | 22 | 19 | 18 |  6 |  0 | 113 | 17 |
+| **P3** (Wartbarkeit / niedrig)   | 12 |  6 | 13 |  9 | 12 |  3 |  0 |  55 | 4 |
+| **Gesamt**                       | 68 | 44 | 61 | 40 | 36 | 12 |  0 | 261 | 54 |
 
 > Bitte beim Abhaken die Tabelle hier oben mit aktualisieren.
 > Round-3-Funde: `R3-A-*` (DAT/Hash/Tools), `R3-B-*` (Settings/Loc/UI), `R3-C-*` (API/CLI/Reports/Logging).
@@ -63,19 +63,19 @@
 
 ### P0-01 — Conversion-Source wandert in Trash ohne echte Verifikation
 **Tags:** Release-Blocker · Data-Integrity Risk · Bug
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **Files:** [src/Romulus.Infrastructure/Orchestration/ConversionVerificationHelpers.cs](../../src/Romulus.Infrastructure/Orchestration/ConversionVerificationHelpers.cs#L21-L46), [ConversionPhaseHelper.cs](../../src/Romulus.Infrastructure/Orchestration/ConversionPhaseHelper.cs#L196), [ChdmanToolConverter.cs](../../src/Romulus.Infrastructure/Conversion/ChdmanToolConverter.cs#L64), [SevenZipToolConverter.cs](../../src/Romulus.Infrastructure/Conversion/SevenZipToolConverter.cs#L38), [FormatConverterAdapter.cs](../../src/Romulus.Infrastructure/Conversion/FormatConverterAdapter.cs#L393)
 - **Problem:** `IsVerificationSuccessful` liefert `true` bei `(NotAttempted, target=null, plan ohne Capability)`. Source landet anschliessend in `_TRASH_PostConversion`, ohne dass `chdman verify`/`7z t` jemals lief.
 - **Reproduktion:** Conversion-Registry nicht ladbar -> `ConvertLegacy`-Pfad -> `ConversionResult.NotAttempted` -> Source weg.
 - **Fix:** `IsVerificationSuccessful` bei `NotAttempted` immer `false`. Pflicht-Verify in `ChdmanToolConverter.Convert` und `SevenZipToolConverter.Convert`. `ConvertLegacy`-Pfad loeschen.
 - **Tests fehlen:**
-  - [ ] Regression `(NotAttempted, target=null) -> false`
-  - [ ] Integration mit Stub-Konverter ohne Verify -> Source bleibt erhalten
-  - [ ] Negative-Test: Mock-chdman exit 0 + zero-byte Output -> kein Source-Move
+  - [x] Regression `(NotAttempted, target=null) -> false`
+  - [x] Integration mit Stub-Konverter ohne Verify -> Source bleibt erhalten
+  - [x] Negative-Test: Mock-chdman exit 0 + zero-byte Output -> kein Source-Move
 
 ### P0-02 — Test zementiert Verify-Bug-Verhalten
 **Tags:** Release-Blocker · False Confidence Risk
-- [ ] **Test invertieren oder loeschen**
+- [x] **Test invertieren oder loeschen**
 - **File:** `src/Romulus.Tests/...IsVerificationSuccessful_NotAttempted_NullTarget_ReturnsTrueForLegacyPath`
 - **Problem:** Bestehender Test fixiert das Bug-Verhalten als „erwartet" und blockiert P0-01.
 - **Fix:** Test umkehren: `NotAttempted_NullTarget_ReturnsFalse` ODER Test entfernen, sobald P0-01 umgesetzt ist.
@@ -409,7 +409,7 @@
 
 ### P2-13 — `FormatConverterAdapter.ConvertLegacy`-Pfad ist Refactor-Ueberbleibsel
 **Tags:** Hygiene · Konsequenz von P0-01
-- [ ] **Loeschen**
+- [x] **Loeschen**
 - **File:** [FormatConverterAdapter.cs](../../src/Romulus.Infrastructure/Conversion/FormatConverterAdapter.cs#L393)
 
 ### P2-14 — CSP `style-src 'nonce-...'` blockiert Inline-`style="..."`-Attribute
@@ -647,13 +647,13 @@
 
 #### R3-A-01 — ZIP CRC32 Fast-Path vertraut zentralem Verzeichnis ungeprueft (P0)
 **Tags:** Release-Blocker · Verify Fail-Open · Determinism
-- [ ] **Fix umsetzen** (gleiche Klasse wie P0-01)
+- [x] **Fix umsetzen** (gleiche Klasse wie P0-01)
 - **File:** [ArchiveHashService.cs](../../src/Romulus.Infrastructure/Hashing/ArchiveHashService.cs#L200-L210) (`HashZipEntries`, `useZipCrc32FastPath`)
 - **Problem:** Bei `hashType == "CRC"|"CRC32"` wird `entry.Crc32` direkt aus dem ZIP-Central-Directory als „Hash" zurueckgegeben, ohne den entpackten Stream je gegen die CRC zu pruefen. Das CRC-Feld ist Metadaten und vom Angreifer frei waehlbar. Gerade MAME/FBNeo-DATs sind CRC32-only -> jede DAT-Match-Entscheidung kann erzwungen werden.
 - **Fix:** Fast-Path entfernen ODER entpackten Stream zusaetzlich gegen `entry.Crc32` validieren.
 - **Tests fehlen:**
-  - [ ] ZIP mit gefaelschter CRC32 im Central-Directory -> `HashZipEntries` darf nicht den Header-Wert zurueckgeben
-  - [ ] Property: `centralDirCrc == StreamCrc`, sonst Reject
+  - [x] ZIP mit gefaelschter CRC32 im Central-Directory -> `HashZipEntries` darf nicht den Header-Wert zurueckgeben
+  - [x] Property: `centralDirCrc == StreamCrc`, sonst Reject
 
 #### R3-A-02 — `ContentSignatureClassifier` markiert ROMs faelschlich als BMP/MP3 (P1)
 **Tags:** Junk-Misclassification · Determinism
@@ -676,48 +676,48 @@
 
 #### R3-A-04 — `HeaderRepairService` ueberschreibt Backup-Datei mit korruptem Inhalt (P1)
 **Tags:** Data-Integrity · Audit-Luecke
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [HeaderRepairService.cs](../../src/Romulus.Infrastructure/Hashing/HeaderRepairService.cs#L48)
 - **Problem:** `CopyFile(path, path+".bak", overwrite:true)` ueberschreibt vorhandenes Backup. Sequenz: erster Repair crasht halb-geschrieben -> zweiter Repair ersetzt Original-`.bak` mit Korruption.
 - **Fix:** Vor Ueberschreiben SHA256-Vergleich; sonst `.bak.{utc}.bak`. Pflicht-Verify nach Schreiben.
 - **Tests fehlen:**
-  - [ ] Zweimal Repair -> `.bak` enthaelt Original
+  - [x] Zweimal Repair -> `.bak` enthaelt Original
 
 #### R3-A-05 — `ChdmanToolConverter.ConvertMultiCueArchive` ignoriert effektives chdman-Subcommand pro Disc (P1)
 **Tags:** Conversion-Bug · Determinism · Parity
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ChdmanToolConverter.cs](../../src/Romulus.Infrastructure/Conversion/ChdmanToolConverter.cs#L210-L235)
 - **Problem:** Single-CUE-Pfad nutzt `ResolveEffectiveChdmanCommand`, Multi-CUE-Pfad nicht -> Mischarchive (PSX-CD + PS2-DVD) werden mit falschem Subcommand verarbeitet.
 - **Fix:** `effectiveCommand` in der `for`-Schleife pro CUE neu aufloesen.
 - **Tests fehlen:**
-  - [ ] Multi-CUE mit gemischtem Disc-Typ
+  - [x] Multi-CUE mit gemischtem Disc-Typ
 
 #### R3-A-06 — `ConversionOutputValidator.ValidateMagicHeader` nie aufgerufen (P1)
 **Tags:** Verify Fail-Open · Hygiene
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ConversionOutputValidator.cs](../../src/Romulus.Infrastructure/Conversion/ConversionOutputValidator.cs#L88-L112)
 - **Problem:** Magic-Tabelle existiert, wird aber von `TryValidateCreatedOutput` nie aufgerufen -> 6-Byte-Output mit Muell-Inhalt gilt als „valid".
 - **Fix:** In `TryValidateCreatedOutput` Magic-Check ergaenzen, Mindest-Header-Bytes hochziehen.
 - **Tests fehlen:**
-  - [ ] 6-Byte `00`-Output bei `.zip` -> false
+  - [x] 6-Byte `00`-Output bei `.zip` -> false
 
 #### R3-A-07 — DatRepositoryAdapter 7z-Extraktion folgt Junctions in Sub-Verzeichnissen (P1)
 **Tags:** Security · Path Traversal · OWASP A01
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [DatRepositoryAdapter.cs](../../src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs#L539-L560) (`TryParse7zDat`)
 - **Problem:** `Directory.GetFiles(tempDir, ..., AllDirectories)` ohne Reparse-Point-Pre-Check, anders als `ArchiveHashService`. Junction-Eintrag im 7z laesst Walk nach `C:\` rekursieren.
 - **Fix:** Pre-Walk auf Reparse-Points; ODER `7z -snl-`.
 - **Tests fehlen:**
-  - [ ] 7z mit Verzeichnis-Junction -> Parse leer
+  - [x] 7z mit Verzeichnis-Junction -> Parse leer
 
 #### R3-A-08 — `ExtractZipSafe` Zip-Bomb-Pruefung trustet `entry.Length` (P1)
 **Tags:** Security · DoS · OWASP A05
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ChdmanToolConverter.cs](../../src/Romulus.Infrastructure/Conversion/ChdmanToolConverter.cs#L264-L295) (`ExtractZipSafe`)
 - **Problem:** Compression-Ratio-Check + `totalUncompressed` basieren auf Central-Directory-Werten (Angreifer-kontrolliert). Bombs mit gefaelschter `Length` umgehen Cap.
 - **Fix:** Stream-Extraktion mit Live-Bytecounter + harter Cap.
 - **Tests fehlen:**
-  - [ ] Bomb mit `centralDir.uncompressed_size = 1024` aber 1 GB Output -> Abbruch
+  - [x] Bomb mit `centralDir.uncompressed_size = 1024` aber 1 GB Output -> Abbruch
 
 #### R3-A-09 — `HeaderlessHasher` mappt CRC32 still auf SHA1 (P1)
 **Tags:** Determinism · Verify Fail-Open · DAT-Mismatch
@@ -730,12 +730,12 @@
 
 #### R3-A-10 — `ToolRunnerAdapter.ReadToEndWithByteBudget` liest weiter nach Truncation, ignoriert CT (P2)
 **Tags:** DoS · Resource Leak · Concurrency
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ToolRunnerAdapter.cs](../../src/Romulus.Infrastructure/Tools/ToolRunnerAdapter.cs#L535-L580)
 - **Problem:** Nach Truncation `continue;` ohne `ct.IsCancellationRequested`-Check -> Reader-Task verschlingt unbegrenzt Bytes; blockiert `Process.Dispose`.
 - **Fix:** CancellationToken in Methodensignatur, im Inner-Loop pruefen, bei `2*maxBytes` `Process.Kill(entireProcessTree:true)`.
 - **Tests fehlen:**
-  - [ ] Tool emittiert 1 GB stdout -> Reader < 5s nach Cancel
+  - [x] Tool emittiert 1 GB stdout -> Reader < 5s nach Cancel
 
 #### R3-A-11 — DatRepositoryAdapter Fallback-Chain falsch verschachtelt (P2)
 **Tags:** Bug · DAT-Lookup · Determinism
@@ -746,7 +746,7 @@
 
 #### R3-A-12 — `ToolRunnerAdapter.RunProcess` ignoriert `WaitForExit(10s)`-Returnwert (P2)
 **Tags:** Bug · Concurrency
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ToolRunnerAdapter.cs](../../src/Romulus.Infrastructure/Tools/ToolRunnerAdapter.cs#L468-L483)
 - **Problem:** Bool-Return ignoriert -> `process.ExitCode` wirft `InvalidOperationException` wenn Child detacht.
 - **Fix:** `if (!process.WaitForExit(10_000)) { TryTerminate(...); return BuildFailureOutput(...); }`.
@@ -1635,31 +1635,31 @@
 
 ### R5-B-01 — Zip-Slip in TryParse7zDat: Extraktion unkontrolliert
 **Tags:** `security` `zip-slip` `dat` `P1`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [DatRepositoryAdapter.cs](../../src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs#L536)
 - **Problem:** `TryParse7zDat` extrahiert mit `7z x -y -o{tempDir} {archivePath}`. Post-hoc-Validierung filtert nur welche Dateien gelesen werden – nicht welche 7z tatsaechlich geschrieben hat. Archiv mit `../`-Sequenzen kann Dateien ausserhalb `tempDir` platzieren.
 - **Fix:** Nach Extraktion alle Files mit `GetFiles(tempDir, "*", AllDirectories)` enumerieren und `Path.GetFullPath(f).StartsWith(normalizedTemp)` fuer ALLE pruefen. Alternativ 7z mit `-snl` aufrufen.
-- **Tests fehlen:** Crafted 7z mit `../../evil.bat` → kein File ausserhalb tempDir.
+- **Tests fehlen:** [x] Crafted 7z mit `../../evil.bat` → kein File ausserhalb tempDir.
 
 ---
 
 ### R5-B-02 — Unendliche Rekursion in TryParse7zDat bei geschachteltem 7z
 **Tags:** `security` `stack-overflow` `dat` `P1`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [DatRepositoryAdapter.cs](../../src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs#L556)
 - **Problem:** `ParseDatFileInternal` → `TryParse7zDat` → `ParseDatFileInternal(innerDatPath)`. Ist die extrahierte Datei ebenfalls ein 7z-Archiv, entsteht unbegrenzte Rekursion → `StackOverflowException` crasht den Host-Prozess.
 - **Fix:** `depth`-Parameter zu `ParseDatFileInternal` hinzufuegen (max Tiefe 1 oder 2); oder in `TryParse7zDat` pruefen `if (Is7zFile(innerDatPath)) { log; return empty; }`.
-- **Tests fehlen:** 7z-DAT das intern ein weiteres 7z enthaelt → kein StackOverflow, leere Results + Warning.
+- **Tests fehlen:** [x] 7z-DAT das intern ein weiteres 7z enthaelt → kein StackOverflow, leere Results + Warning.
 
 ---
 
 ### R5-B-03 — `ValidateMagicHeader` nie im Produktionspfad aufgerufen
 **Tags:** `conversion` `validation` `data-loss` `P1`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ConversionOutputValidator.cs](../../src/Romulus.Infrastructure/Conversion/ConversionOutputValidator.cs#L84)
 - **Problem:** `ValidateMagicHeader` prueft Magic Bytes fuer .zip, .7z, .rvz, .gcz, .wbfs, .cso – wird aber in `TryValidateCreatedOutput` NICHT aufgerufen. Nur Dateigroesse wird geprueft. Eine Konversion die eine Fehlermeldung als .rvz ausgibt besteht die Validierung; Source wird in Trash verschoben.
 - **Fix:** `ValidateMagicHeader` direkt in `TryValidateCreatedOutput` nach der Groessenprufung integrieren (Pflicht fuer Final-Outputs).
-- **Tests fehlen:** Konversion produziert Datei mit falschem Magic-Header → `TryValidateCreatedOutput` gibt `false` zurueck.
+- **Tests fehlen:** [x] Konversion produziert Datei mit falschem Magic-Header → `TryValidateCreatedOutput` gibt `false` zurueck.
 
 ---
 
@@ -1839,61 +1839,61 @@
 
 ### R6-A-01 — 7z-Extraktion ohne Cancellation waehrend Long-Run-Teil
 **Tags:** `cancellation` `tool-integration` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ArchiveHashService.cs](../../src/Romulus.Infrastructure/Hashing/ArchiveHashService.cs#L240)
 - **Problem:** `Hash7zEntries` ruft `_toolRunner.InvokeProcess(...)` ueber Ueberladung mit `CancellationToken.None`. Cancel/Ctrl+C blockiert bis Default-Timeout (30 min). Auch `ListArchiveEntries`-Vorschau und `GetArchiveEntryNames` nicht abbrechbar.
 - **Fix:** `IToolRunner.InvokeProcess`-Ueberladung mit `CancellationToken` plus Timeout (10 min) verwenden und `ct` durchreichen.
-- **Tests fehlen:** Cancellation-Test waehrend laufender 7z-Extraktion → `OperationCanceledException` innerhalb < 1 s.
+- **Tests fehlen:** [x] Cancellation-Test waehrend laufender 7z-Extraktion → `OperationCanceledException` innerhalb < 1 s.
 
 ---
 
 ### R6-A-02 — ChdTrackHashExtractor ohne Cancellation und Timeout-Override
 **Tags:** `cancellation` `tool-integration` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ChdTrackHashExtractor.cs](../../src/Romulus.Infrastructure/Hashing/ChdTrackHashExtractor.cs#L29)
 - **Problem:** `ExtractDataSha1` ruft `chdman info` ohne `CancellationToken` und ohne `timeout`. Korrupte CHDs koennen Pipeline bis 30 min blockieren.
 - **Fix:** Signatur `ExtractDataSha1(string chdPath, CancellationToken ct = default)`; Aufrufer durchreichen; `TimeSpan.FromMinutes(2)` als Timeout.
-- **Tests fehlen:** Cancel-Test mit fake `IToolRunner`, der Cancel-Token respektiert.
+- **Tests fehlen:** [x] Cancel-Test mit fake `IToolRunner`, der Cancel-Token respektiert.
 
 ---
 
 ### R6-A-03 — Decompression-Bomb-Schutz fehlt fuer 7z-Archive
 **Tags:** `security` `dos` `disk-exhaustion` `P1`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ArchiveHashService.cs](../../src/Romulus.Infrastructure/Hashing/ArchiveHashService.cs#L99)
 - **Problem:** Nur `_maxArchiveSizeBytes` (Default 500 MB) auf KOMPRIMIERTE Datei geprueft. 7z mit hoher Kompression (100:1) kann aus 100 MB > 10 GB in `Path.GetTempPath()` schreiben → Disk voll → parallele Move-Phasen scheitern → Datenverlust-Risiko.
 - **Fix:** Vor `7z x` per `7z l -slt` Summe der `Size`-Felder parsen. Wenn > unkomprimierter Limit (z.B. 2 GB) abbrechen. Zusaetzlich `DriveInfo(tempDir).AvailableFreeSpace` pruefen. Analog fuer `.zip`.
-- **Tests fehlen:** Zip mit Entries `Length` > Limit → leeres Hash-Array, keine Datei in tempDir.
+- **Tests fehlen:** [x] Zip/7z mit Entries ueber Limit → leeres Hash-Array, keine Datei in tempDir.
 
 ---
 
 ### R6-A-04 — `ROMULUS_CONVERSION_TOOLS_ROOT`-Override ohne Pfad-Sicherheit
 **Tags:** `security` `tool-hijack` `path-validation` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ToolRunnerAdapter.cs](../../src/Romulus.Infrastructure/Tools/ToolRunnerAdapter.cs#L242)
 - **Problem:** `ResolveConversionToolsRoot` liest Env-Variable ungeprueft und setzt sie VOR `ProgramFiles`. Kein Check gegen Reparse-Points/UNC/Drive-Roots. Angreifer mit Env-Setzrecht kann Tool-Discovery in `\\evil-host\share\chdman.exe` umleiten. Hash-Verify mitigiert nur partiell.
 - **Fix:** Override-Pfad durch `SafetyValidator.NormalizePath` schicken; ablehnen wenn UNC/Drive-Root/Reparse-Point. Audit-Log emittieren wenn aktiv. Optional zusaetzlich `ROMULUS_ALLOW_TOOL_ROOT_OVERRIDE=1` verlangen.
-- **Tests fehlen:** Override mit `\\evil\share` → `FindTool` darf UNC nicht zurueckgeben.
+- **Tests fehlen:** [x] Override mit `\\evil\share` → `FindTool` darf UNC nicht zurueckgeben.
 
 ---
 
 ### R6-A-05 — HeaderRepairService: `.bak`-Dateien akkumulieren unbegrenzt
 **Tags:** `data-hygiene` `disk-leak` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [HeaderRepairService.cs](../../src/Romulus.Infrastructure/Hashing/HeaderRepairService.cs#L53)
 - **Problem:** `RepairNesHeader`/`RemoveCopierHeader` erzeugen `path + ".bak"` mit `overwrite: true`. Wiederholte Reparaturen ueberschreiben Backup → Original-Stand verloren. Keine Audit-/Trash-/Undo-Integration. Re-Scans erfassen `.bak` nicht als Junk.
 - **Fix:** Backup in Trash-Root mit eindeutigem Namen (`<original>.<timestamp>.headerrepair.bak`) verschieben. Audit-Eintrag (`HEADER_REPAIR`) schreiben. Hygiene-Cleanup-Job ergaenzen.
-- **Tests fehlen:** Doppelte Reparatur derselben Datei → erstes `.bak` bleibt erhalten; Audit-Row geschrieben.
+- **Tests fehlen:** [x] Doppelte Reparatur derselben Datei → erstes `.bak` bleibt erhalten; Audit-Row geschrieben.
 
 ---
 
 ### R6-A-06 — HeaderRepairService nicht parallelisierungssicher (Race auf `.tmp`/`.bak`)
 **Tags:** `race-condition` `concurrency` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [HeaderRepairService.cs](../../src/Romulus.Infrastructure/Hashing/HeaderRepairService.cs#L48)
 - **Problem:** `path + ".tmp"` und `path + ".bak"` deterministisch ohne PID/GUID. Parallele Reparaturen kollidieren → `IOException` und halbgeschriebene `.tmp`-Reste. Crashed-Reste nach Restart koennen `File.Move(overwrite:true)` falsch interpretieren.
 - **Fix:** Per-Datei-Lock (`ConcurrentDictionary<string, SemaphoreSlim>` keyed auf `Path.GetFullPath`); eindeutige `.tmp`-Namen mit PID + GUID; verwaiste Romulus-Repair-Tmps (>5 min alt) beim Start aufraeumen.
-- **Tests fehlen:** Parallel-Test: zweimal `RemoveCopierHeader` auf dieselbe Datei aus zwei Tasks → genau eine Reparatur erfolgreich, keine Reste.
+- **Tests fehlen:** [x] Parallel-Test: zweimal `RemoveCopierHeader` auf dieselbe Datei aus zwei Tasks → genau eine Reparatur erfolgreich, keine Reste.
 
 ---
 
@@ -1919,11 +1919,11 @@
 
 ### R6-A-09 — `IsRetryableProcessFailure` matcht "Win32" als Substring → falsche Retries
 **Tags:** `tool-integration` `false-positive` `P3`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ToolRunnerAdapter.cs](../../src/Romulus.Infrastructure/Tools/ToolRunnerAdapter.cs#L348)
 - **Problem:** `output.Contains("Win32", OrdinalIgnoreCase)` matcht harmloses Tool-Output (Banner, Logs, Pfade mit "Win32"). Loest unnoetige Retry-Schleifen aus, idempotenz-unsichere Operationen koennten wiederholt werden.
 - **Fix:** Praezisere Pattern: nur `Win32Exception:`, `error code 0x80...`, oder Exit-Code `-1` PLUS `failed to start process`. "Win32"-Substring-Branch entfernen.
-- **Tests fehlen:** ToolResult `(ExitCode=1, Output="Win32 GDI module loaded")` → `IsRetryableProcessFailure=false`.
+- **Tests fehlen:** [x] ToolResult `(ExitCode=1, Output="Win32 GDI module loaded")` → `IsRetryableProcessFailure=false`.
 
 ---
 
@@ -1939,11 +1939,11 @@
 
 ### R6-B-01 — Tool-Hashes-Loader stuerzt bei nicht-String Werten in `Tools`
 **Tags:** `tool-hashes` `crash` `schema` `P1`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [ToolRunnerAdapter.cs](../../src/Romulus.Infrastructure/Tools/ToolRunnerAdapter.cs#L784)
 - **Problem:** `EnsureToolHashesLoaded` ruft `prop.Value.GetString()` ohne Kind-Pruefung. Schema erlaubt `additionalProperties: true`. Korrupte/feindliche `tool-hashes.json` (z.B. `"7z.exe": 1`) wirft `InvalidOperationException` – Catch fileart nur `IOException`/`JsonException`. Kompletter Run crasht. Zusaetzlich keine Hex-Validierung.
 - **Fix:** Schema haerten: `additionalProperties: { type: "string", pattern: "^[a-fA-F0-9]{64}$" }`. Loader: pro Eintrag `JsonValueKind.String` pruefen, regex-validieren, ungueltige Eintraege loggen+ueberspringen. `InvalidOperationException` in Catch.
-- **Tests fehlen:** Mixed `tool-hashes.json` (Zahl, Objekt, leerer String, gueltiger Hex) → Loader wirft nicht, nur gueltige Eintraege im Cache.
+- **Tests fehlen:** [x] Mixed `tool-hashes.json` (Zahl, Objekt, leerer String, gueltiger Hex) → Loader wirft nicht, nur gueltige Eintraege im Cache.
 
 ---
 
@@ -1969,21 +1969,21 @@
 
 ### R6-B-04 — Doppelte Compression-Ratios in `ui-lookups.json` und `conversion-registry.json`
 **Tags:** `single-source-of-truth` `conversion` `ui` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [conversion-registry.json](../../data/conversion-registry.json#L329)
 - **Problem:** Beide Dateien fuehren parallele `compressionEstimates`/`compressionRatios` mit teils abweichenden Werten. UI und Engine laufen auf zwei Wahrheiten → Drift-Vektor.
 - **Fix:** `conversion-registry.json/compressionEstimates` als Quelle behalten; `ui-lookups.json/compressionRatios` loeschen oder dynamisch ableiten.
-- **Tests fehlen:** Cleanup-Test: `compressionRatios` in `ui-lookups.json` nicht mehr existent (oder Cross-Check erzwungen).
+- **Tests fehlen:** [x] Cleanup-Test: `compressionRatios` in `ui-lookups.json` nicht mehr existent (oder Cross-Check erzwungen).
 
 ---
 
 ### R6-B-05 — `createdvd` fuer XBOX/X360 erzeugt nicht abspielbare CHD-Dateien
 **Tags:** `conversion` `usability` `data-loss-risk` `P2`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [conversion-registry.json](../../data/conversion-registry.json#L60)
 - **Problem:** `iso→chd` mit `command: createdvd` listet `applicableConsoles: ["PS2", "XBOX", "X360"]`. XBOX/X360-ISOs sind XGD/XGD3 – chdman packt bit-getreu, aber kein XBOX/X360-Emulator (xemu, xenia) liest CHD-DVD. Default-UX laeuft in Sackgasse, Originale wandern in Trash.
 - **Fix:** XBOX/X360 aus `applicableConsoles` entfernen oder per Condition ausschliessen; alternativ `conversionPolicy: ManualOnly` und UI-Hinweis "nicht empfohlen".
-- **Tests fehlen:** ConversionPlanner schlaegt fuer XBOX/X360-ISO keine Auto-Capability vor.
+- **Tests fehlen:** [x] ConversionPlanner schlaegt fuer XBOX/X360-ISO keine Auto-Capability vor.
 
 ---
 
@@ -2049,11 +2049,11 @@
 
 ### R6-B-12 — Wildcard `sourceExtension: "*"` re-archiviert bestehende Archive
 **Tags:** `conversion` `idempotency` `P3`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [conversion-registry.json](../../data/conversion-registry.json#L246)
 - **Problem:** ZIP-Normalisierungseintrag (`"sourceExtension": "*"` → `.zip`) matcht auch `.zip`/`.7z`. `Game.zip` → `Game.zip.zip` moeglich, Verify schlaegt fehl.
 - **Fix:** Capability-Match: source-extension darf nicht gleich target-extension sein. Oder Schema-Erweiterung um `excludedSourceExtensions: [".zip"]`.
-- **Tests fehlen:** Planer fuer `Tetris.zip` (NES) → keine `*→.zip`-Capability vorgeschlagen, fuer `Tetris.7z` schon.
+- **Tests fehlen:** [x] Planer fuer `Tetris.zip`/`Tetris.7z` (NES) → keine `*→.zip`-Capability vorgeschlagen.
 
 ---
 
@@ -2284,12 +2284,12 @@
 
 ### R7-C-01 — Rule-Pack-Import akzeptiert syntaktisches JSON und ueberschreibt `rules.json`
 **Tags:** `gui` `config-integrity` `schema` `P1`
-- [ ] **Fix umsetzen**
+- [x] **Fix umsetzen**
 - **File:** [FeatureCommandService.Workflow.cs](../../src/Romulus.UI.Wpf/Services/FeatureCommandService.Workflow.cs#L129)
 - **Problem:** `RulePackSharing` prueft beim Import nur `JsonDocument.Parse(json)`, erstellt dann `dataDir` und kopiert die Datei direkt als `rules.json`. Schema, erwartete Sections und Regex-Pattern werden nicht validiert; Write ist nicht atomar.
 - **Impact:** Ein gueltiges, aber fachlich ungueltiges Rule-Pack kann die zentrale Region/GameKey/Version-Konfiguration ersetzen und den naechsten GUI/CLI/API-Start oder Scoring-Lauf kippen. Das ist ein neuer Schreibpfad fuer bereits kritisch sensible Rules.
 - **Fix:** Import ueber denselben `StartupDataSchemaValidator` plus fachliche Loader-Validierung (`GameKeyNormalizationProfile`, `RegionDetectionProfile`, `VersionScoringProfile`) laufen lassen. Danach temp+move mit Backup+Rollback.
-- **Tests fehlen:** Import mit syntaktisch gueltigem JSON, fehlenden Sections oder invalidem Regex -> keine Aenderung an `rules.json`; Backup bleibt konsistent.
+- **Tests fehlen:** [x] Import mit syntaktisch gueltigem JSON, fehlenden Sections oder invalidem Regex -> keine Aenderung an `rules.json`; Backup bleibt konsistent.
 
 ---
 
@@ -2322,7 +2322,7 @@
 - **Problem:** `CustomDatEditor` baut XML und Append/Create-Logik inline nach, obwohl `FeatureService.Dat.AppendCustomDatEntry` und `BuildCustomDatXmlEntry` existieren. Der Existing-File-Pfad nutzt temp+move, der Create-Pfad schreibt `custom.dat` direkt.
 - **Impact:** Zwei DAT-Append-Wahrheiten koennen bei Header, Description, Escaping und Atomicity auseinanderlaufen. Ein Crash beim erstmaligen Erstellen laesst eine partielle `custom.dat` liegen.
 - **Fix:** Einen gemeinsamen DAT-Writer in Infrastructure/Dat oder einen einzigen WPF-Service-Pfad nutzen; Create und Append atomar ueber temp+move; XML-Erzeugung zentralisieren.
-- **Tests fehlen:** Existing- und New-File-Pfad erzeugen dieselbe XML-Struktur; Crash vor Move hinterlaesst keine partielle `custom.dat`.
+- **Tests fehlen:** [x] Existing- und New-File-Pfad erzeugen dieselbe XML-Struktur; Crash vor Move hinterlaesst keine partielle `custom.dat`.
 
 ---
 
@@ -2384,8 +2384,8 @@ Damit bleiben nach dieser Abschlussrunde keine neuen, belegbaren und nicht-dupli
 ## Sanierungsstrategie
 
 ### Sofort (vor jedem weiteren Feature-Commit)
-- [ ] P0-01 Conversion-Verify fail-closed
-- [ ] P0-02 Test invertieren
+- [x] P0-01 Conversion-Verify fail-closed
+- [x] P0-02 Test invertieren
 - [x] P0-03 GameKey-Whitespace-Hash
 - [x] P0-04 Cross-Volume-Move atomar
 - [x] P0-05 Sidecar atomar

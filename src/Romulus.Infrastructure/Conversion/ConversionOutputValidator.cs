@@ -11,10 +11,11 @@ internal static class ConversionOutputValidator
             [".bin"] = 16,
             [".img"] = 16,
             [".cso"] = 16,
+            [".chd"] = 16,
             [".wbfs"] = 16,
             [".gcz"] = 16,
             [".rvz"] = 4,
-            [".zip"] = 4,
+            [".zip"] = 22,
             [".7z"] = 6
         };
 
@@ -25,6 +26,7 @@ internal static class ConversionOutputValidator
     private static readonly IReadOnlyDictionary<string, byte[]> MagicHeaderByExtension =
         new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
         {
+            [".chd"] = [0x4D, 0x43, 0x6F, 0x6D, 0x70, 0x72, 0x48, 0x44], // MComprHD
             [".zip"] = [0x50, 0x4B],           // PK
             [".7z"] = [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C], // 7z signature
             [".rvz"] = [0x52, 0x56, 0x5A, 0x01], // RVZ\x01
@@ -63,6 +65,12 @@ internal static class ConversionOutputValidator
                 if (length < minimumExpectedBytes)
                 {
                     failureReason = "output-too-small";
+                    return false;
+                }
+
+                if (!ValidateMagicHeader(targetPath))
+                {
+                    failureReason = "output-magic-header-mismatch";
                     return false;
                 }
             }

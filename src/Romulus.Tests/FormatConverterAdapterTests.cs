@@ -135,7 +135,7 @@ public class FormatConverterAdapterTests
     }
 
     [Fact]
-    public void ConvertForConsole_NoConversionPath_ZipSource_FallsBackToLegacyConversion()
+    public void ConvertForConsole_NoConversionPath_ZipSource_DoesNotFallback()
     {
         var zipPath = Path.Combine(Path.GetTempPath(), $"conv_zip_fallback_{Guid.NewGuid():N}.zip");
         var expectedTarget = Path.ChangeExtension(zipPath, ".chd");
@@ -158,9 +158,9 @@ public class FormatConverterAdapterTests
 
             var result = converter.ConvertForConsole(zipPath, "PS1");
 
-            Assert.Equal(ConversionOutcome.Success, result.Outcome);
-            Assert.Equal(expectedTarget, result.TargetPath);
-            Assert.True(File.Exists(expectedTarget));
+            Assert.Equal(ConversionOutcome.Skipped, result.Outcome);
+            Assert.Equal("no-conversion-path", result.Reason);
+            Assert.False(File.Exists(expectedTarget));
         }
         finally
         {
@@ -516,12 +516,24 @@ public class FormatConverterAdapterTests
                     }
                     else
                     {
-                        File.WriteAllBytes(outputPath, [1, 2, 3, 4]);
+                        File.WriteAllBytes(outputPath, CreateValidOutputBytes(outputPath));
                     }
                 }
             }
 
             return LastInvocation;
+        }
+
+        private static byte[] CreateValidOutputBytes(string outputPath)
+        {
+            return Path.GetExtension(outputPath).ToLowerInvariant() switch
+            {
+                ".chd" => [0x4D, 0x43, 0x6F, 0x6D, 0x70, 0x72, 0x48, 0x44, 0, 0, 0, 0, 0, 0, 0, 0],
+                ".rvz" => [0x52, 0x56, 0x5A, 0x01],
+                ".zip" => [0x50, 0x4B, 0x05, 0x06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ".7z" => [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C],
+                _ => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+            };
         }
 
         public ToolResult Invoke7z(string sevenZipPath, string[] arguments)

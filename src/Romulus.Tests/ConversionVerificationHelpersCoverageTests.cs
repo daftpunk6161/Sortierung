@@ -59,14 +59,14 @@ public sealed class ConversionVerificationHelpersCoverageTests
     }
 
     [Fact]
-    public void IsVerificationSuccessful_NotAttempted_NullTarget_ReturnsTrueForLegacyPath()
+    public void IsVerificationSuccessful_NotAttempted_NullTarget_ReturnsFalseFailClosed()
     {
         var result = new ConversionResult("source.zip", "target.chd", ConversionOutcome.Success)
         {
             VerificationResult = VerificationStatus.NotAttempted
         };
 
-        Assert.True(ConversionVerificationHelpers.IsVerificationSuccessful(
+        Assert.False(ConversionVerificationHelpers.IsVerificationSuccessful(
             result, new FakeConverter(true), null));
     }
 

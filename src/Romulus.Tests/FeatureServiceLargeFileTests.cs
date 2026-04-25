@@ -58,6 +58,6 @@ public sealed class FeatureServiceLargeFileTests : IDisposable
         Assert.Equal(0x00, afterHeader[14]);
         Assert.Equal(0x00, afterHeader[15]);
 
-        Assert.True(File.Exists(path + ".bak"));
+        Assert.Single(Directory.GetFiles(_tempDir, Path.GetFileName(path) + ".*.bak"));
     }
 }

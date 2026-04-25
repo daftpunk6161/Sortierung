@@ -28,6 +28,9 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
             Directory.Delete(_tempDir, true);
     }
 
+    private string CollectionDatabasePath(string name)
+        => Path.Combine(_tempDir, $"{name}-{Guid.NewGuid():N}.db");
+
     [Fact]
     public void BuildConsoleMap_UsesCatalogEntries_WhenMappedDatExists()
     {
@@ -255,7 +258,13 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
         };
         var settings = new RomulusSettings();
 
-        using var env = RunEnvironmentBuilder.Build(options, settings, _dataDir, warnings.Add);
+        using var env = RunEnvironmentBuilder.Build(
+            options,
+            settings,
+            _dataDir,
+            warnings.Add,
+            CollectionDatabasePath("missing-dat"),
+            Path.Combine(_tempDir, "missing-dat-state.json"));
 
         Assert.NotNull(env.FileSystem);
         Assert.NotNull(env.Audit);
@@ -278,7 +287,12 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
         };
         var settings = new RomulusSettings();
 
-        using var env = RunEnvironmentBuilder.Build(options, settings, _dataDir, warnings.Add);
+        using var env = RunEnvironmentBuilder.Build(
+            options,
+            settings,
+            _dataDir,
+            warnings.Add,
+            CollectionDatabasePath("dat-enabled"));
 
         Assert.NotNull(env.HashService);
         Assert.True(env.HashService!.IsPersistent);
@@ -298,7 +312,11 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
         };
         var settings = new RomulusSettings();
 
-        using var env = RunEnvironmentBuilder.Build(options, settings, _dataDir);
+        using var env = RunEnvironmentBuilder.Build(
+            options,
+            settings,
+            _dataDir,
+            collectionDatabasePath: CollectionDatabasePath("convert"));
 
         Assert.NotNull(env.Converter);
     }
@@ -314,7 +332,12 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
             SortConsole = true
         };
 
-        using var env = RunEnvironmentBuilder.Build(options, new RomulusSettings(), _dataDir, warnings.Add);
+        using var env = RunEnvironmentBuilder.Build(
+            options,
+            new RomulusSettings(),
+            _dataDir,
+            warnings.Add,
+            CollectionDatabasePath("missing-consoles"));
 
         Assert.Null(env.ConsoleDetector);
         Assert.Contains(warnings, w => w.Contains("consoles.json", StringComparison.OrdinalIgnoreCase));

@@ -145,9 +145,10 @@ public sealed class FrontendExportRegressionTests : IDisposable
         Assert.Single(result.Artifacts);
 
         var lines = await File.ReadAllLinesAsync(outputPath);
-        Assert.Equal(2, lines.Length);
+        Assert.Equal(3, lines.Length);
 
-        var dataLine = lines[1];
+        Assert.StartsWith("# schemaVersion=romulus-frontend-export-v1;", lines[0], StringComparison.Ordinal);
+        var dataLine = lines[2];
         Assert.StartsWith("'=2+3.zip;", dataLine, StringComparison.Ordinal);
         Assert.EndsWith(";'=2+3.zip", dataLine, StringComparison.Ordinal);
     }

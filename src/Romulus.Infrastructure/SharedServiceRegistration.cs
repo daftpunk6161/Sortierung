@@ -26,6 +26,7 @@ public static class SharedServiceRegistration
             StartupDataSchemaValidator.ValidateRequiredFiles(dataDir);
 
         services.AddSingleton(new CollectionIndexPathOptions());
+        services.AddSingleton(new DatCatalogStatePathOptions());
         services.AddSingleton(new RunProfilePathOptions());
         services.AddSingleton<ISetParserIo, IO.SetParserIo>();
         services.AddSingleton<IClassificationIo, IO.ClassificationIo>();

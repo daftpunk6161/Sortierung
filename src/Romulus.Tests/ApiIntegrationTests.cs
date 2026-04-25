@@ -380,6 +380,7 @@ public sealed class ApiIntegrationTests
             new CollectionRunSnapshot
             {
                 RunId = "run-new",
+                OwnerClientId = "history-owner",
                 StartedUtc = new DateTime(2026, 4, 1, 10, 0, 0, DateTimeKind.Utc),
                 CompletedUtc = new DateTime(2026, 4, 1, 10, 1, 0, DateTimeKind.Utc),
                 Mode = "Move",
@@ -402,6 +403,7 @@ public sealed class ApiIntegrationTests
             new CollectionRunSnapshot
             {
                 RunId = "run-old",
+                OwnerClientId = "history-owner",
                 StartedUtc = new DateTime(2026, 3, 31, 10, 0, 0, DateTimeKind.Utc),
                 CompletedUtc = new DateTime(2026, 3, 31, 10, 1, 0, DateTimeKind.Utc),
                 Mode = "DryRun",
@@ -425,6 +427,7 @@ public sealed class ApiIntegrationTests
 
         using var factory = CreateFactory(collectionIndex: fakeIndex);
         using var client = CreateClientWithApiKey(factory);
+        client.DefaultRequestHeaders.Add("X-Client-Id", "history-owner");
 
         var response = await client.GetAsync("/runs/history?offset=0&limit=1");
 
@@ -499,6 +502,7 @@ public sealed class ApiIntegrationTests
             new CollectionRunSnapshot
             {
                 RunId = "run-new",
+                OwnerClientId = "compare-owner",
                 CompletedUtc = new DateTime(2026, 4, 1, 10, 1, 0, DateTimeKind.Utc),
                 Status = "completed_with_errors",
                 TotalFiles = 100,
@@ -516,6 +520,7 @@ public sealed class ApiIntegrationTests
             new CollectionRunSnapshot
             {
                 RunId = "run-old",
+                OwnerClientId = "compare-owner",
                 CompletedUtc = new DateTime(2026, 3, 31, 10, 1, 0, DateTimeKind.Utc),
                 Status = "ok",
                 TotalFiles = 50,
@@ -534,6 +539,7 @@ public sealed class ApiIntegrationTests
 
         using var factory = CreateFactory(collectionIndex: fakeIndex);
         using var client = CreateClientWithApiKey(factory);
+        client.DefaultRequestHeaders.Add("X-Client-Id", "compare-owner");
 
         var response = await client.GetAsync("/runs/compare?runId=run-new&compareToRunId=run-old");
 
@@ -620,6 +626,7 @@ public sealed class ApiIntegrationTests
             new CollectionRunSnapshot
             {
                 RunId = "run-old",
+                OwnerClientId = "trends-owner",
                 CompletedUtc = new DateTime(2026, 3, 31, 10, 1, 0, DateTimeKind.Utc),
                 TotalFiles = 50,
                 CollectionSizeBytes = 111000000,
@@ -630,6 +637,7 @@ public sealed class ApiIntegrationTests
             new CollectionRunSnapshot
             {
                 RunId = "run-new",
+                OwnerClientId = "trends-owner",
                 CompletedUtc = new DateTime(2026, 4, 1, 10, 1, 0, DateTimeKind.Utc),
                 TotalFiles = 100,
                 CollectionSizeBytes = 333000000,
@@ -641,6 +649,7 @@ public sealed class ApiIntegrationTests
 
         using var factory = CreateFactory(collectionIndex: fakeIndex);
         using var client = CreateClientWithApiKey(factory);
+        client.DefaultRequestHeaders.Add("X-Client-Id", "trends-owner");
 
         var response = await client.GetAsync("/runs/trends?limit=30");
 

@@ -27,11 +27,11 @@ public static class StartupDataSchemaValidator
         {
             var dataPath = Path.Combine(dataDirectory, dataFile);
             var schemaPath = Path.Combine(dataDirectory, "schemas", schemaFile);
-            ValidateSingleFile(dataPath, schemaPath, dataFile);
+            ValidateFileAgainstSchema(dataPath, schemaPath, dataFile);
         }
     }
 
-    private static void ValidateSingleFile(string dataPath, string schemaPath, string displayName)
+    public static void ValidateFileAgainstSchema(string dataPath, string schemaPath, string displayName)
     {
         if (!File.Exists(dataPath))
             throw new InvalidOperationException($"Schema validation failed for '{displayName}': data file is missing.");
@@ -192,11 +192,21 @@ public static class StartupDataSchemaValidator
         if (errors.Count > 0)
             return;
 
+        var additionalPropertySchema = ReadAdditionalPropertySchema(schema);
         var allowAdditional = ReadAllowAdditionalProperties(schema);
         foreach (var property in value.EnumerateObject())
         {
             if (!properties.TryGetValue(property.Name, out var propertySchema))
             {
+                if (additionalPropertySchema.HasValue)
+                {
+                    ValidateNode(property.Value, additionalPropertySchema.Value, $"{path}.{property.Name}", errors);
+                    if (errors.Count > 0)
+                        return;
+
+                    continue;
+                }
+
                 if (!allowAdditional)
                 {
                     errors.Add($"{path}.{property.Name} is not allowed by schema.");
@@ -261,6 +271,16 @@ public static class StartupDataSchemaValidator
             return false;
 
         return true;
+    }
+
+    private static JsonElement? ReadAdditionalPropertySchema(JsonElement schema)
+    {
+        if (!schema.TryGetProperty("additionalProperties", out var additionalPropertiesElement))
+            return null;
+
+        return additionalPropertiesElement.ValueKind == JsonValueKind.Object
+            ? additionalPropertiesElement
+            : null;
     }
 
     private static void ValidateArray(JsonElement value, JsonElement schema, string path, List<string> errors)

@@ -53,7 +53,14 @@ public sealed record FrontendExportRequest(
     string OutputPath,
     string CollectionName,
     IReadOnlyList<string> Roots,
-    IReadOnlyList<string> Extensions);
+    IReadOnlyList<string> Extensions)
+{
+    /// <summary>
+    /// Optional canonical timestamp for deterministic export generation.
+    /// When absent, the exporter captures one timestamp at export start.
+    /// </summary>
+    public DateTime? GeneratedUtc { get; init; }
+}
 
 public sealed record FrontendExportArtifact(string Path, string Label, int ItemCount);
 

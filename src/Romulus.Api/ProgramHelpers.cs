@@ -87,14 +87,16 @@ public partial class Program
         }
     }
 
-    internal static async Task WriteSseEvent(Stream stream, Encoding encoding, string eventName, object data)
+    internal static async Task WriteSseEvent(Stream stream, Encoding encoding, string eventName, object data, CancellationToken cancellationToken = default)
     {
         // SEC: Prevent SSE event injection via newlines in event name
         var safeEventName = SanitizeSseEventName(eventName);
         var json = SerializeApiJson(data);
         var payload = $"event: {safeEventName}\ndata: {json}\n\n";
-        await stream.WriteAsync(encoding.GetBytes(payload));
-        await stream.FlushAsync();
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+        await stream.WriteAsync(encoding.GetBytes(payload), timeoutCts.Token);
+        await stream.FlushAsync(timeoutCts.Token);
     }
 
     internal static string? SanitizeCorrelationId(string? raw)

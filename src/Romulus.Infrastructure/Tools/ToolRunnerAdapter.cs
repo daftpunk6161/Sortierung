@@ -159,7 +159,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
 
         foreach (var c in candidates)
         {
-            if (File.Exists(c))
+            if (File.Exists(c) && IsSafeToolExecutablePath(c))
                 return c;
         }
 
@@ -264,7 +264,92 @@ public sealed class ToolRunnerAdapter : IToolRunner
     {
         var overrideRoot = Environment.GetEnvironmentVariable(ConversionToolsRootOverrideEnvVar);
         hasExplicitOverride = !string.IsNullOrWhiteSpace(overrideRoot);
-        return hasExplicitOverride ? overrideRoot!.Trim() : DefaultConversionToolsRoot;
+        if (!hasExplicitOverride)
+            return DefaultConversionToolsRoot;
+
+        var trimmed = overrideRoot!.Trim();
+        return IsSafeConversionToolsRootOverride(trimmed) ? Path.GetFullPath(trimmed) : string.Empty;
+    }
+
+    internal static bool IsSafeConversionToolsRootOverride(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path.Trim());
+            if (!Path.IsPathFullyQualified(fullPath))
+                return false;
+
+            var root = Path.GetPathRoot(fullPath);
+            if (string.IsNullOrWhiteSpace(root))
+                return false;
+
+            if (root.StartsWith(@"\\", StringComparison.Ordinal))
+                return false;
+
+            var normalizedFull = fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var normalizedRoot = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (string.Equals(normalizedFull, normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (!Directory.Exists(fullPath))
+                return false;
+
+            var current = new DirectoryInfo(fullPath);
+            while (current is not null)
+            {
+                if ((current.Attributes & FileAttributes.ReparsePoint) != 0)
+                    return false;
+
+                current = current.Parent;
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    internal static bool IsSafeToolExecutablePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (!Path.IsPathFullyQualified(fullPath))
+                return false;
+
+            var root = Path.GetPathRoot(fullPath);
+            if (string.IsNullOrWhiteSpace(root) || root.StartsWith(@"\\", StringComparison.Ordinal))
+                return false;
+
+            if (!File.Exists(fullPath))
+                return false;
+
+            if ((File.GetAttributes(fullPath) & FileAttributes.ReparsePoint) != 0)
+                return false;
+
+            var directory = new FileInfo(fullPath).Directory;
+            while (directory is not null)
+            {
+                if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
+                    return false;
+
+                directory = directory.Parent;
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            return false;
+        }
     }
 
     public ToolResult InvokeProcess(string filePath, string[] arguments, string? errorLabel = null)
@@ -351,9 +436,11 @@ public sealed class ToolRunnerAdapter : IToolRunner
             return false;
 
         var output = result.Output ?? string.Empty;
-        return output.Contains("failed to start process", StringComparison.OrdinalIgnoreCase)
-            || output.Contains("timed out", StringComparison.OrdinalIgnoreCase)
-            || output.Contains("Win32", StringComparison.OrdinalIgnoreCase);
+        return output.Contains("ERROR_SHARING_VIOLATION", StringComparison.OrdinalIgnoreCase)
+            || output.Contains("sharing violation", StringComparison.OrdinalIgnoreCase)
+            || output.Contains("temporarily unavailable", StringComparison.OrdinalIgnoreCase)
+            || output.Contains("Win32Exception: The process cannot access the file", StringComparison.OrdinalIgnoreCase)
+            || output.Contains("Win32Exception (32)", StringComparison.OrdinalIgnoreCase);
     }
 
     private ToolResult RunProcess(
@@ -417,11 +504,21 @@ public sealed class ToolRunnerAdapter : IToolRunner
             // both processes deadlock indefinitely.
             stderrTask = Task.Run(() =>
             {
-                stderr = ReadToEndWithByteBudget(process.StandardError, MaxToolOutputBytes, out _);
+                stderr = ReadToEndWithByteBudget(
+                    process.StandardError,
+                    MaxToolOutputBytes,
+                    out _,
+                    cancellationToken,
+                    () => ExternalProcessGuard.TryTerminate(process, label, TimeSpan.FromSeconds(5), _log));
             });
             stdoutTask = Task.Run(() =>
             {
-                stdout = ReadToEndWithByteBudget(process.StandardOutput, MaxToolOutputBytes, out _);
+                stdout = ReadToEndWithByteBudget(
+                    process.StandardOutput,
+                    MaxToolOutputBytes,
+                    out _,
+                    cancellationToken,
+                    () => ExternalProcessGuard.TryTerminate(process, label, TimeSpan.FromSeconds(5), _log));
             });
 
             var effectiveTimeout = timeout ?? TimeSpan.FromMinutes(_timeoutMinutes);
@@ -465,7 +562,14 @@ public sealed class ToolRunnerAdapter : IToolRunner
                     false);
             }
 
-            process.WaitForExit(10_000);
+            if (!process.WaitForExit(10_000))
+            {
+                ExternalProcessGuard.TryTerminate(process, label, TimeSpan.FromSeconds(5), _log);
+                return new ToolResult(
+                    -1,
+                    BuildFailureOutput(label, "process did not exit cleanly after output streams completed", invocation, stdout, stderr),
+                    false);
+            }
 
             var output = CombineToolOutput(stdout, stderr);
             if (cancellationToken.IsCancellationRequested)
@@ -530,6 +634,21 @@ public sealed class ToolRunnerAdapter : IToolRunner
     }
 
     internal static string ReadToEndWithByteBudget(StreamReader reader, int maxBytes, out bool wasTruncated)
+        => ReadToEndWithByteBudget(reader, maxBytes, out wasTruncated, CancellationToken.None);
+
+    internal static string ReadToEndWithByteBudget(
+        StreamReader reader,
+        int maxBytes,
+        out bool wasTruncated,
+        CancellationToken cancellationToken)
+        => ReadToEndWithByteBudget(reader, maxBytes, out wasTruncated, cancellationToken, onBudgetExceeded: null);
+
+    internal static string ReadToEndWithByteBudget(
+        StreamReader reader,
+        int maxBytes,
+        out bool wasTruncated,
+        CancellationToken cancellationToken,
+        Action? onBudgetExceeded)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
@@ -537,9 +656,20 @@ public sealed class ToolRunnerAdapter : IToolRunner
         var builder = new StringBuilder();
         var writtenBytes = 0;
         wasTruncated = false;
+        var signaledBudgetExceeded = false;
+
+        void SignalBudgetExceeded()
+        {
+            if (signaledBudgetExceeded)
+                return;
+
+            signaledBudgetExceeded = true;
+            onBudgetExceeded?.Invoke();
+        }
 
         while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var read = reader.Read(buffer, 0, buffer.Length);
             if (read <= 0)
                 break;
@@ -547,7 +677,8 @@ public sealed class ToolRunnerAdapter : IToolRunner
             if (writtenBytes >= maxBytes)
             {
                 wasTruncated = true;
-                continue;
+                SignalBudgetExceeded();
+                break;
             }
 
             var chunk = new string(buffer, 0, read);
@@ -572,6 +703,8 @@ public sealed class ToolRunnerAdapter : IToolRunner
             }
 
             wasTruncated = true;
+            SignalBudgetExceeded();
+            break;
         }
 
         if (wasTruncated)
@@ -800,6 +933,12 @@ public sealed class ToolRunnerAdapter : IToolRunner
                 {
                     foreach (var prop in toolsElement.EnumerateObject())
                     {
+                        if (prop.Value.ValueKind != JsonValueKind.String)
+                        {
+                            _log?.Invoke($"[SECURITY] Invalid non-string tool hash for {prop.Name}; entry ignored");
+                            continue;
+                        }
+
                         var value = prop.Value.GetString();
                         if (value is not null)
                             hashes[prop.Name.ToLowerInvariant()] = value;
@@ -808,7 +947,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
 
                 _toolHashes = hashes;
             }
-            catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException)
+            catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or InvalidOperationException)
             {
                 _toolHashes = new Dictionary<string, string>();
             }
@@ -827,7 +966,7 @@ public sealed class ToolRunnerAdapter : IToolRunner
                 continue;
 
             var fullPath = Path.Combine(dir.Trim(), exeName);
-            if (File.Exists(fullPath))
+            if (File.Exists(fullPath) && IsSafeToolExecutablePath(fullPath))
                 return fullPath;
         }
 

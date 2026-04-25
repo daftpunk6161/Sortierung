@@ -2,6 +2,10 @@ using System.IO;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Romulus.Contracts;
+using Romulus.Contracts.Models;
+using Romulus.Infrastructure.FileSystem;
+using Romulus.Infrastructure.Orchestration;
 using Romulus.UI.Avalonia.Services;
 
 namespace Romulus.UI.Avalonia.ViewModels;
@@ -82,16 +86,25 @@ public sealed class ResultViewModel : ObservableObject
 
     public void ApplyFromPreview(int rootCount)
     {
-        var games = Math.Max(1, rootCount * 120);
-        var dupes = rootCount * 14;
-        var junk = rootCount * 6;
-        var health = Math.Max(0, 100 - dupes / 2 - junk / 3);
+        ApplyRunResult(new RunResult
+        {
+            Status = RunConstants.StatusOk,
+            TotalFilesScanned = 0,
+            StartedUtc = DateTime.UtcNow,
+            CompletedUtc = DateTime.UtcNow
+        });
+    }
 
-        DashGames = games.ToString();
-        DashDupes = dupes.ToString();
-        DashJunk = junk.ToString();
-        HealthScore = health.ToString();
-        RunSummaryText = $"Preview abgeschlossen: {games} Kandidaten, {dupes} Duplikate, {junk} Junk.";
+    public void ApplyRunResult(RunResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        var projection = RunProjectionFactory.Create(result);
+        DashGames = projection.Games.ToString();
+        DashDupes = projection.Dupes.ToString();
+        DashJunk = projection.Junk.ToString();
+        HealthScore = projection.HealthScore.ToString();
+        RunSummaryText = $"Preview abgeschlossen: {projection.Candidates} Kandidaten, {projection.Dupes} Duplikate, {projection.Junk} Junk.";
         ExportStatusText = string.Empty;
     }
 
@@ -107,7 +120,7 @@ public sealed class ResultViewModel : ObservableObject
         try
         {
             var summary = BuildExportSummary();
-            await File.WriteAllTextAsync(targetFile, summary, Encoding.UTF8);
+            AtomicFileWriter.WriteAllText(targetFile, summary, Encoding.UTF8);
             ExportStatusText = $"Exportiert: {targetFile}";
         }
         catch (Exception ex)
@@ -131,7 +144,7 @@ public sealed class ResultViewModel : ObservableObject
         try
         {
             var csv = BuildMetricsCsv();
-            await File.WriteAllTextAsync(targetFile, csv, Encoding.UTF8);
+            AtomicFileWriter.WriteAllText(targetFile, csv, Encoding.UTF8);
             ExportStatusText = $"CSV exportiert: {targetFile}";
         }
         catch (Exception ex)
@@ -144,6 +157,7 @@ public sealed class ResultViewModel : ObservableObject
     {
         var builder = new StringBuilder();
         builder.AppendLine("Romulus Preview Summary");
+        builder.AppendLine($"SchemaVersion: {RunConstants.ReportSchemaVersion}");
         builder.AppendLine(RunSummaryText);
         builder.AppendLine($"Games: {DashGames}");
         builder.AppendLine($"Dupes: {DashDupes}");
@@ -155,7 +169,9 @@ public sealed class ResultViewModel : ObservableObject
     private string BuildMetricsCsv()
     {
         var builder = new StringBuilder();
-        builder.AppendLine("summary,games,dupes,junk,health");
+        builder.AppendLine("schemaVersion,summary,games,dupes,junk,health");
+        builder.Append(EscapeCsvField(RunConstants.ReportSchemaVersion));
+        builder.Append(',');
         builder.Append(EscapeCsvField(RunSummaryText));
         builder.Append(',').Append(EscapeCsvField(DashGames));
         builder.Append(',').Append(EscapeCsvField(DashDupes));

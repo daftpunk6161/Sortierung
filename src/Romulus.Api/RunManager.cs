@@ -173,13 +173,13 @@ public sealed class RunManager : IDisposable, IAsyncDisposable
 
         run.CoreRunResult = result;
         var projection = RunProjectionFactory.Create(result);
-        var status = RunOutcomeExtensions.ParseRunOutcome(result.Status) switch
+        var status = RunConstants.ToLifecycleStatus(result.Status) switch
         {
-            RunOutcome.Ok => RunConstants.StatusCompleted,
-            RunOutcome.CompletedWithErrors => RunConstants.StatusCompletedWithErrors,
-            RunOutcome.Cancelled => RunConstants.StatusCancelled,
-            RunOutcome.Blocked => RunConstants.StatusBlocked,
-            RunOutcome.Failed => RunConstants.StatusFailed,
+            RunLifecycleStatus.Completed => RunConstants.StatusCompleted,
+            RunLifecycleStatus.CompletedWithErrors => RunConstants.StatusCompletedWithErrors,
+            RunLifecycleStatus.Cancelled => RunConstants.StatusCancelled,
+            RunLifecycleStatus.Blocked => RunConstants.StatusBlocked,
+            RunLifecycleStatus.Failed => RunConstants.StatusFailed,
             _ => result.ExitCode == 0 ? RunConstants.StatusCompleted : RunConstants.StatusFailed
         };
 

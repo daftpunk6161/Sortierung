@@ -92,7 +92,7 @@ public class RunReportWriterTests
             AllCandidates = new[] { winner, loser }
         };
 
-        Assert.Throws<InvalidOperationException>(() => RunReportWriter.BuildSummary(result, "DryRun"));
+        Assert.ThrowsAny<InvalidOperationException>(() => RunReportWriter.BuildSummary(result, "DryRun"));
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class RunReportWriterTests
             AllCandidates = new[] { winner, loser, unknown }
         };
 
-        Assert.Throws<InvalidOperationException>(() => RunReportWriter.BuildSummary(result, "DryRun"));
+        Assert.ThrowsAny<InvalidOperationException>(() => RunReportWriter.BuildSummary(result, "DryRun"));
     }
 
     [Fact]

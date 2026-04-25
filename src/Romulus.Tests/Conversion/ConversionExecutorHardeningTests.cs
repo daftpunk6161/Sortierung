@@ -574,7 +574,7 @@ public sealed class ConversionExecutorHardeningTests
 
         public ToolInvocationResult Invoke(string sourcePath, string targetPath, ConversionCapability capability, CancellationToken cancellationToken = default)
         {
-            File.Copy(sourcePath, targetPath, overwrite: false);
+            WriteValidConvertedOutput(sourcePath, targetPath);
             return new ToolInvocationResult(true, targetPath, 0, "ok", null, 1, VerificationStatus.NotAttempted);
         }
 
@@ -591,7 +591,7 @@ public sealed class ConversionExecutorHardeningTests
             if (string.Equals(capability.Command, commandToThrow, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("forced");
 
-            File.Copy(sourcePath, targetPath, overwrite: false);
+            WriteValidConvertedOutput(sourcePath, targetPath);
             return new ToolInvocationResult(true, targetPath, 0, "ok", null, 1, VerificationStatus.NotAttempted);
         }
 
@@ -605,7 +605,7 @@ public sealed class ConversionExecutorHardeningTests
 
         public ToolInvocationResult Invoke(string sourcePath, string targetPath, ConversionCapability capability, CancellationToken cancellationToken = default)
         {
-            File.Copy(sourcePath, targetPath, overwrite: false);
+            WriteValidConvertedOutput(sourcePath, targetPath);
             return new ToolInvocationResult(true, targetPath, 0, "ok", null, 1, VerificationStatus.NotAttempted);
         }
 
@@ -633,7 +633,7 @@ public sealed class ConversionExecutorHardeningTests
 
         public ToolInvocationResult Invoke(string sourcePath, string targetPath, ConversionCapability capability, CancellationToken cancellationToken = default)
         {
-            File.Copy(sourcePath, targetPath, overwrite: false);
+            WriteValidConvertedOutput(sourcePath, targetPath);
 
             var finalPath = targetPath.Replace(".tmp.final.step1", string.Empty, StringComparison.OrdinalIgnoreCase);
             File.WriteAllText(finalPath, "race-final");
@@ -661,5 +661,30 @@ public sealed class ConversionExecutorHardeningTests
         if (File.Exists(source)) File.Delete(source);
         var target = Path.ChangeExtension(source, targetExtension);
         if (File.Exists(target)) File.Delete(target);
+    }
+
+    private static void WriteValidConvertedOutput(string sourcePath, string targetPath)
+    {
+        var extension = Path.GetExtension(targetPath).ToLowerInvariant();
+        if (extension is ".iso" or ".bin" or ".img")
+        {
+            File.Copy(sourcePath, targetPath, overwrite: false);
+            return;
+        }
+
+        var data = new byte[64];
+        var header = extension switch
+        {
+            ".chd" => "MComprHD"u8.ToArray(),
+            ".rvz" => new byte[] { (byte)'R', (byte)'V', (byte)'Z', 0x01 },
+            ".gcz" => new byte[] { (byte)'G', (byte)'C', (byte)'Z' },
+            ".wbfs" => new byte[] { (byte)'W', (byte)'B', (byte)'F', (byte)'S' },
+            ".zip" => new byte[] { (byte)'P', (byte)'K', 0x05, 0x06 },
+            ".7z" => new byte[] { 0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C },
+            _ => [0x01, 0x02, 0x03, 0x04]
+        };
+
+        header.CopyTo(data, 0);
+        File.WriteAllBytes(targetPath, data);
     }
 }

@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.FileSystem;
@@ -531,22 +532,13 @@ public sealed partial class FeatureCommandService
                         "Bytes 12-15 auf 0x00 setzen?\n(Backup wird erstellt)", "Header-Reparatur");
                     if (confirm)
                     {
-                        var backupPath = path + $".{DateTime.UtcNow:yyyyMMddHHmmssfff}.{Guid.NewGuid():N}.bak";
-                        AtomicFileWriter.CopyFile(path, backupPath, overwrite: false);
-                        _vm.AddLog(_vm.Loc.Format("Cmd.HeaderRepair.BackupCreated", backupPath), "INFO");
-                        try
+                        if (_headerRepairService.RepairNesHeader(path))
                         {
-                            using var patchFs = File.OpenWrite(path);
-                            patchFs.Seek(12, SeekOrigin.Begin);
-                            patchFs.Write(new byte[4], 0, 4);
+                            TryAppendHeaderRepairAudit(path, "nes-header");
                             _vm.AddLog(_vm.Loc["Cmd.HeaderRepair.NesFixed"], "INFO");
                         }
-                        catch
-                        {
-                            AtomicFileWriter.CopyFile(backupPath, path, overwrite: true);
+                        else
                             _vm.AddLog(_vm.Loc["Cmd.HeaderRepair.RestoreFromBackupFailedFix"], "ERROR");
-                            throw;
-                        }
                     }
                 }
                 else
@@ -570,22 +562,13 @@ public sealed partial class FeatureCommandService
                         "Copier-Header (erste 512 Bytes) entfernen?\n(Backup wird erstellt)", "Header-Reparatur");
                     if (confirm)
                     {
-                        var backupPath = path + $".{DateTime.UtcNow:yyyyMMddHHmmssfff}.{Guid.NewGuid():N}.bak";
-                        AtomicFileWriter.CopyFile(path, backupPath, overwrite: false);
-                        _vm.AddLog(_vm.Loc.Format("Cmd.HeaderRepair.BackupCreated", backupPath), "INFO");
-                        try
+                        if (_headerRepairService.RemoveCopierHeader(path))
                         {
-                            var data = File.ReadAllBytes(path);
-                            var trimmed = data[512..];
-                            AtomicFileWriter.WriteAllBytes(path, trimmed);
-                            _vm.AddLog(_vm.Loc.Format("Cmd.HeaderRepair.SnesHeaderRemoved", fileInfo.Length, trimmed.Length), "INFO");
+                            TryAppendHeaderRepairAudit(path, "snes-copier-header");
+                            _vm.AddLog(_vm.Loc.Format("Cmd.HeaderRepair.SnesHeaderRemoved", fileInfo.Length, fileInfo.Length - 512), "INFO");
                         }
-                        catch
-                        {
-                            AtomicFileWriter.CopyFile(backupPath, path, overwrite: true);
+                        else
                             _vm.AddLog(_vm.Loc["Cmd.HeaderRepair.RestoreFromBackupFailedFix"], "ERROR");
-                            throw;
-                        }
                     }
                 }
                 else
@@ -596,6 +579,29 @@ public sealed partial class FeatureCommandService
         }
 
         _dialog.ShowText(_vm.Loc["Cmd.HeaderRepair.Title"], _vm.Loc.Format("Cmd.HeaderRepair.GenericInfo", Path.GetFileName(path), header.Platform, header.Format, header.Details));
+    }
+
+    private void TryAppendHeaderRepairAudit(string path, string reason)
+    {
+        try
+        {
+            var rootPath = Path.GetDirectoryName(path) ?? Directory.GetCurrentDirectory();
+            var auditDir = !string.IsNullOrWhiteSpace(_vm.AuditRoot)
+                ? _vm.AuditRoot
+                : _vm.Roots.Count > 0
+                    ? ArtifactPathResolver.GetArtifactDirectory(_vm.Roots, AppIdentity.ArtifactDirectories.AuditLogs)
+                    : Path.Combine(rootPath, AppIdentity.ArtifactDirectories.AuditLogs);
+
+            Directory.CreateDirectory(auditDir);
+            var auditPath = Path.Combine(auditDir, $"header-repair-{DateTime.UtcNow:yyyyMMdd-HHmmssfff}.csv");
+            _auditStore.AppendAuditRows(
+                auditPath,
+                [new AuditAppendRow(rootPath, path, path, "HEADER_REPAIR", "GAME", "", reason)]);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            LogWarning("HEADER-REPAIR-AUDIT", $"Header-Repair-Audit konnte nicht geschrieben werden: {ex.Message}");
+        }
     }
 
     private static string? ResolvePatchFormatForDialog(string patchPath)

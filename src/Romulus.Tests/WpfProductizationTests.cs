@@ -158,7 +158,7 @@ public sealed class WpfProductizationTests : IDisposable
 
         var fileSystem = new FileSystemAdapter();
         var auditStore = new AuditCsvStore(fileSystem, _ => { }, Path.Combine(_tempRoot, "audit-signing.key"));
-        var sut = new FeatureCommandService(vm, new StubSettingsService(), dialog, fileSystem, auditStore);
+        var sut = new FeatureCommandService(vm, new StubSettingsService(), dialog, fileSystem, auditStore, new Romulus.Infrastructure.Hashing.HeaderRepairService(fileSystem));
         sut.RegisterCommands();
 
         await ExecuteCommandAsync(vm.FeatureCommands[FeatureCommandKeys.ProfileSave]);

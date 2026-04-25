@@ -297,7 +297,8 @@ public sealed class RunEnvironmentBuilderCoverageBoostTests : IDisposable
 
         var env = RunEnvironmentBuilder.Build(options, settings, _dataDir,
             w => warnings.Add(w),
-            collectionDatabasePath: Path.Combine(_tempDir, "test.db"));
+            collectionDatabasePath: Path.Combine(_tempDir, "test.db"),
+            datCatalogStatePath: Path.Combine(_tempDir, "missing-dat-state.json"));
 
         Assert.True(
             warnings.Any(w => w.Contains("DAT enabled but DatRoot not set", StringComparison.OrdinalIgnoreCase))

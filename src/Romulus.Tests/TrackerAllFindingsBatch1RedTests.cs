@@ -1,11 +1,15 @@
 using System.Text.Json;
-using Romulus.Contracts.Models;
 using Romulus.Infrastructure.Configuration;
 using Romulus.UI.Wpf.Services;
 using Xunit;
 
 namespace Romulus.Tests;
 
+/// <summary>
+/// Behavior- and data-validation tests retained from the historical "tracker batch 1" set.
+/// Source-mirror and reflection-existence assertions were removed in Block A
+/// of test-suite-remediation-plan-2026-04-25.md.
+/// </summary>
 public sealed class TrackerAllFindingsBatch1RedTests
 {
     [Fact]
@@ -61,40 +65,12 @@ public sealed class TrackerAllFindingsBatch1RedTests
     }
 
     [Fact]
-    public void Data10_RomulusSettings_ExposesRulesSection()
-    {
-        var rulesProperty = typeof(RomulusSettings).GetProperty("Rules");
-        Assert.NotNull(rulesProperty);
-    }
-
-    [Fact]
     public void Data12_I18nFallback_UsesEnglishBaseForUnknownLocale()
     {
         var service = new LocalizationService();
         service.SetLocale("zz");
 
         Assert.Equal("Romulus is running in the background", service["App.TrayRunning"]);
-    }
-
-    [Fact]
-    public void Di02_RollbackEndpoints_MustUseInjectedAuditSigningService()
-    {
-        var program = File.ReadAllText(FindRepoFile("src", "Romulus.Api", "Program.cs"));
-        var runEndpoints = File.ReadAllText(FindRepoFile("src", "Romulus.Api", "Program.RunWatchEndpoints.cs"));
-
-        Assert.DoesNotContain("new AuditSigningService(", program, StringComparison.Ordinal);
-        Assert.DoesNotContain("new AuditSigningService(", runEndpoints, StringComparison.Ordinal);
-        Assert.Contains("AuditSigningService", program, StringComparison.Ordinal);
-        Assert.Contains("AuditSigningService", runEndpoints, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Di03_ProgramHelpers_MustUseInjectedRunEnvironmentFactory()
-    {
-        var helpers = File.ReadAllText(FindRepoFile("src", "Romulus.Api", "ProgramHelpers.cs"));
-
-        Assert.DoesNotContain("new RunEnvironmentFactory().Create(", helpers, StringComparison.Ordinal);
-        Assert.Contains("runEnvironmentFactory.Create(", helpers, StringComparison.Ordinal);
     }
 
     private static string FindRepoFile(params string[] segments)

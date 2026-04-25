@@ -106,6 +106,43 @@ public static class RunConstants
     /// <summary>Run failed with fatal error.</summary>
     public const string StatusFailed = "failed";
 
+    /// <summary>Phase was intentionally skipped.</summary>
+    public const string StatusSkipped = "skipped";
+
+    /// <summary>Schema version for generated run reports.</summary>
+    public const string ReportSchemaVersion = "romulus-report-v1";
+
+    /// <summary>Schema version for Romulus-owned frontend export artifacts.</summary>
+    public const string FrontendExportSchemaVersion = "romulus-frontend-export-v1";
+
+    /// <summary>Schema version for CLI JSON output artifacts.</summary>
+    public const string CliOutputSchemaVersion = "romulus-cli-output-v1";
+
+    public static string ToWireStatus(this RunLifecycleStatus status)
+        => status switch
+        {
+            RunLifecycleStatus.Running => StatusRunning,
+            RunLifecycleStatus.Completed => StatusCompleted,
+            RunLifecycleStatus.CompletedWithErrors => StatusCompletedWithErrors,
+            RunLifecycleStatus.Blocked => StatusBlocked,
+            RunLifecycleStatus.Cancelled => StatusCancelled,
+            RunLifecycleStatus.Failed => StatusFailed,
+            _ => StatusFailed
+        };
+
+    public static RunLifecycleStatus ToLifecycleStatus(string? status)
+        => status switch
+        {
+            { } value when value.Equals(StatusRunning, StringComparison.OrdinalIgnoreCase) => RunLifecycleStatus.Running,
+            { } value when value.Equals(StatusCompleted, StringComparison.OrdinalIgnoreCase) => RunLifecycleStatus.Completed,
+            { } value when value.Equals(StatusOk, StringComparison.OrdinalIgnoreCase) => RunLifecycleStatus.Completed,
+            { } value when value.Equals(StatusCompletedWithErrors, StringComparison.OrdinalIgnoreCase) => RunLifecycleStatus.CompletedWithErrors,
+            { } value when value.Equals(StatusBlocked, StringComparison.OrdinalIgnoreCase) => RunLifecycleStatus.Blocked,
+            { } value when value.Equals(StatusCancelled, StringComparison.OrdinalIgnoreCase) => RunLifecycleStatus.Cancelled,
+            { } value when value.Equals(StatusFailed, StringComparison.OrdinalIgnoreCase) => RunLifecycleStatus.Failed,
+            _ => RunLifecycleStatus.Failed
+        };
+
     /// <summary>
     /// Canonical sort-decision names used across enrichment, sorting, and projections.
     /// </summary>
@@ -157,6 +194,7 @@ public static class RunConstants
         public const string DatRenamePending = "DAT_RENAME_PENDING";
         public const string DatRename = "DAT_RENAME";
         public const string DatRenameFailed = "DAT_RENAME_FAILED";
+        public const string ConsoleSortWarning = "CONSOLE_SORT_WARNING";
     }
 
     // ── Well-known folder names ─────────────────────────────────────
@@ -208,4 +246,18 @@ public static class RunConstants
         /// <summary>Backup directory.</summary>
         public const string Backup = "_BACKUP";
     }
+}
+
+/// <summary>
+/// Canonical lifecycle status for API jobs, CLI summaries, UI projections and reports.
+/// Wire values stay in <see cref="RunConstants"/> for backward compatibility.
+/// </summary>
+public enum RunLifecycleStatus
+{
+    Running,
+    Completed,
+    CompletedWithErrors,
+    Blocked,
+    Cancelled,
+    Failed
 }

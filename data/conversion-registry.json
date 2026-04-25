@@ -62,7 +62,7 @@
       "targetExtension": ".chd",
       "tool": { "toolName": "chdman" },
       "command": "createdvd",
-      "applicableConsoles": ["PS2", "XBOX", "X360"],
+      "applicableConsoles": ["PS2"],
       "requiredSourceIntegrity": null,
       "resultIntegrity": "Lossless",
       "lossless": true,

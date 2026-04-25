@@ -185,7 +185,8 @@ public sealed class FrontendExportCoverageTests : IDisposable
         Assert.Equal(FrontendExportTargets.Json, result.Frontend);
         Assert.Single(result.Artifacts);
         using var json = JsonDocument.Parse(await File.ReadAllTextAsync(output));
-        Assert.Single(json.RootElement.EnumerateArray());
+        Assert.Equal("romulus-frontend-export-v1", json.RootElement.GetProperty("schemaVersion").GetString());
+        Assert.Single(json.RootElement.GetProperty("games").EnumerateArray());
     }
 
     [Fact]

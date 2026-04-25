@@ -50,7 +50,7 @@ public sealed class ConverterAndValidatorCoverageTests : IDisposable
     public void OutputValidator_NonEmptyFile_ReturnsTrue()
     {
         var path = Path.Combine(_tempDir, "valid.chd");
-        File.WriteAllBytes(path, [0x01, 0x02, 0x03]);
+        WriteValidOutput(path);
         var ok = ConversionOutputValidator.TryValidateCreatedOutput(path, out var reason);
         Assert.True(ok);
         Assert.Equal("", reason);
@@ -139,7 +139,7 @@ public sealed class ConverterAndValidatorCoverageTests : IDisposable
     public void DolphinConvert_ToolSucceeds_OutputPresent_ReturnsSuccess()
     {
         var targetPath = Path.Combine(_tempDir, "success.rvz");
-        File.WriteAllBytes(targetPath, new byte[100]);
+        WriteValidOutput(targetPath);
         var tools = new StubToolRunner { NextProcess = new ToolResult(0, "ok", true) };
         var converter = new DolphinToolConverter(tools);
 
@@ -159,7 +159,7 @@ public sealed class ConverterAndValidatorCoverageTests : IDisposable
     public void DolphinConvert_AllowedExtension_InvokesTool(string ext)
     {
         var targetPath = Path.Combine(_tempDir, $"game_{ext.TrimStart('.')}.rvz");
-        File.WriteAllBytes(targetPath, new byte[100]);
+        WriteValidOutput(targetPath);
         var tools = new StubToolRunner { NextProcess = new ToolResult(0, "ok", true) };
         var converter = new DolphinToolConverter(tools);
 
@@ -188,7 +188,7 @@ public sealed class ConverterAndValidatorCoverageTests : IDisposable
     public void SevenZipConvert_ToolSucceeds_OutputPresent_ReturnsSuccess()
     {
         var targetPath = Path.Combine(_tempDir, "game.zip");
-        File.WriteAllBytes(targetPath, new byte[50]);
+        WriteValidOutput(targetPath);
         var tools = new StubToolRunner { NextProcess = new ToolResult(0, "ok", true) };
         var converter = new SevenZipToolConverter(tools);
 
@@ -262,7 +262,7 @@ public sealed class ConverterAndValidatorCoverageTests : IDisposable
     public void PsxtractConvert_ToolSucceeds_OutputPresent_ReturnsSuccess()
     {
         var targetPath = Path.Combine(_tempDir, "ps1.chd");
-        File.WriteAllBytes(targetPath, new byte[100]);
+        WriteValidOutput(targetPath);
         var tools = new StubToolRunner { NextProcess = new ToolResult(0, "ok", true) };
         var converter = new PsxtractToolConverter(tools);
 
@@ -378,6 +378,24 @@ public sealed class ConverterAndValidatorCoverageTests : IDisposable
     }
 
     // ═══ Helpers ════════════════════════════════════════════════════
+
+    private static void WriteValidOutput(string path)
+    {
+        var data = new byte[64];
+        var header = Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".chd" => "MComprHD"u8.ToArray(),
+            ".rvz" => new byte[] { (byte)'R', (byte)'V', (byte)'Z', 0x01 },
+            ".gcz" => new byte[] { (byte)'G', (byte)'C', (byte)'Z' },
+            ".wbfs" => new byte[] { (byte)'W', (byte)'B', (byte)'F', (byte)'S' },
+            ".zip" => new byte[] { (byte)'P', (byte)'K', 0x05, 0x06 },
+            ".7z" => new byte[] { 0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C },
+            _ => [0x01, 0x02, 0x03, 0x04]
+        };
+
+        header.CopyTo(data, 0);
+        File.WriteAllBytes(path, data);
+    }
 
     private static byte[] BuildPbpHeader(uint dataPspOffset, bool encrypted, bool includePspMagic)
     {

@@ -48,7 +48,7 @@ public sealed class Block2_SecurityHardeningTests : IDisposable
         var source = Path.Combine(_tempDir, "game.iso");
         var target = Path.Combine(_tempDir, "game.chd");
         File.WriteAllBytes(source, new byte[1024 * 1024]);
-        File.WriteAllBytes(target, new byte[1024]);
+        WriteValidChd(target);
 
         var runner = new RequirementCapturingToolRunner();
         var sut = new ChdmanToolConverter(runner);
@@ -115,6 +115,13 @@ public sealed class Block2_SecurityHardeningTests : IDisposable
         Assert.False(tools.TryGetProperty("unecm.exe", out _), "unecm.exe must stay disabled until a verified production hash is available.");
         Assert.False(tools.TryGetProperty("flips.exe", out _), "flips.exe must stay disabled until a verified production hash is available.");
         Assert.False(tools.TryGetProperty("xdelta3.exe", out _), "xdelta3.exe must stay disabled until a verified production hash is available.");
+    }
+
+    private static void WriteValidChd(string path)
+    {
+        var bytes = new byte[1024];
+        "MComprHD"u8.CopyTo(bytes);
+        File.WriteAllBytes(path, bytes);
     }
 
     [Fact]

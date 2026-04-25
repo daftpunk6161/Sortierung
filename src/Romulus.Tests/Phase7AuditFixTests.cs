@@ -74,9 +74,9 @@ public sealed class Phase7AuditFixTests : IDisposable
 
         _ = SettingsLoader.LoadFromSafe(path);
 
-        var bakPath = path + ".bak";
-        Assert.True(File.Exists(bakPath), ".bak file should be created for corrupt settings");
-        Assert.Equal(corruptContent, File.ReadAllText(bakPath));
+        var backup = Directory.GetFiles(_tempDir, "settings.json.*.bak").SingleOrDefault();
+        Assert.False(string.IsNullOrWhiteSpace(backup), ".bak file should be created for corrupt settings");
+        Assert.Equal(corruptContent, File.ReadAllText(backup));
     }
 
     [Fact]

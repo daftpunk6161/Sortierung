@@ -297,6 +297,7 @@ public static class DatAnalysisService
 
     public static string ImportDatFileToRoot(string sourcePath, string datRoot)
     {
+        DatXmlValidator.ValidateLogiqxXmlFile(sourcePath);
         var safeName = Path.GetFileName(sourcePath);
         var targetPath = Path.GetFullPath(Path.Combine(datRoot, safeName));
         if (!targetPath.StartsWith(Path.GetFullPath(datRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))

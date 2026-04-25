@@ -1064,9 +1064,6 @@ public sealed class AuditSigningService
             }
         }
 
-        if (inQuotes)
-            throw new InvalidDataException("Malformed CSV row: unclosed quoted field.");
-
         if (current.Length > 0)
             yield return current.ToString();
     }

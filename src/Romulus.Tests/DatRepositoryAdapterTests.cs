@@ -512,6 +512,18 @@ public class DatRepositoryAdapterTests : IDisposable
         public Romulus.Contracts.Ports.ToolResult InvokeProcess(
             string filePath, string[] arguments, string? errorLabel = null)
         {
+            if (arguments.Length > 0 && arguments[0] == "l")
+            {
+                var output = string.Join('\n',
+                    "Listing archive: mame.dat",
+                    "",
+                    "----------",
+                    "Path = mame.xml",
+                    $"Size = {_xmlContent.Length}",
+                    "");
+                return new Romulus.Contracts.Ports.ToolResult(0, output, true);
+            }
+
             // Parse -o<dir> from arguments and write the XML there
             var outDir = arguments.FirstOrDefault(a => a.StartsWith("-o"))?[2..];
             if (outDir is not null)
@@ -521,6 +533,15 @@ public class DatRepositoryAdapterTests : IDisposable
             }
             return new Romulus.Contracts.Ports.ToolResult(0, "Everything is Ok", true);
         }
+
+        public Romulus.Contracts.Ports.ToolResult InvokeProcess(
+            string filePath,
+            string[] arguments,
+            Romulus.Contracts.Models.ToolRequirement? requirement,
+            string? errorLabel,
+            TimeSpan? timeout,
+            CancellationToken cancellationToken)
+            => InvokeProcess(filePath, arguments, errorLabel);
 
         public Romulus.Contracts.Ports.ToolResult Invoke7z(string sevenZipPath, string[] arguments)
             => InvokeProcess(sevenZipPath, arguments);

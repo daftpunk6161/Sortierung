@@ -259,7 +259,7 @@ public sealed class ReportGeneratorHtmlCoverageTests
         var entry = CreateEntry(category: "GAME");
         var html = ReportGenerator.GenerateHtml(CreateSummary(), [entry]);
 
-        Assert.DoesNotContain("unknown-info", html);
+        Assert.DoesNotContain("<div class=\"unknown-info\">", html);
     }
 
     [Fact]

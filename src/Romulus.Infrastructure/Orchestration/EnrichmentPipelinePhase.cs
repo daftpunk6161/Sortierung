@@ -44,7 +44,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                 cancellationToken.ThrowIfCancellationRequested();
                 candidates.Add(MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex,
                     input.HeaderlessHasher, input.KnownBiosHashes, input.FamilyDatStrategyResolver, input.FamilyPipelineSelector,
-                    input.ChdTrackHashExtractor, context, versionScorer, onProgress));
+                    input.ChdTrackHashExtractor, context, versionScorer, onProgress, cancellationToken));
             }
 
             return candidates;
@@ -77,7 +77,8 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     input.ChdTrackHashExtractor,
                     context,
                     versionScorers.Value!,
-                    onProgress);
+                    onProgress,
+                    cancellationToken);
             });
 
         return results.ToList();
@@ -98,7 +99,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                 cancellationToken.ThrowIfCancellationRequested();
                 yield return MapToCandidate(file, input.ConsoleDetector, input.HashService, input.ArchiveHashService, input.DatIndex,
                     input.HeaderlessHasher, input.KnownBiosHashes, input.FamilyDatStrategyResolver, input.FamilyPipelineSelector,
-                    input.ChdTrackHashExtractor, context, versionScorer, onProgress);
+                    input.ChdTrackHashExtractor, context, versionScorer, onProgress, cancellationToken);
             }
 
             yield break;
@@ -126,7 +127,8 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     input.ChdTrackHashExtractor,
                     context,
                     versionScorers.Value!,
-                    onProgress);
+                    onProgress,
+                    cancellationToken);
             }, cancellationToken);
         }
 
@@ -159,7 +161,8 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         Contracts.Ports.IChdTrackHashExtractor? chdTrackHashExtractor,
         PipelineContext context,
         VersionScorer versionScorer,
-        Action<string>? onProgress)
+        Action<string>? onProgress,
+        CancellationToken cancellationToken)
     {
         familyDatStrategyResolver ??= DefaultFamilyDatStrategyResolver;
         familyPipelineSelector ??= DefaultFamilyPipelineSelector;
@@ -215,7 +218,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
 
         var datResult = LookupDat(filePath, ext, sizeBytes, consoleKey,
             datIndex, hashService, archiveHashService, headerlessHasher, preDetectDatPolicy,
-            detectionResult: null, consoleDetector, context, onProgress, chdTrackHashExtractor);
+            detectionResult: null, consoleDetector, context, onProgress, chdTrackHashExtractor, cancellationToken);
 
         // Even with a DAT-first hit, run detector once to gather family/context evidence.
         // This enables post-validation for cross-family mismatches (Phase 4).
@@ -252,7 +255,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
 
             datResult = LookupDat(filePath, ext, sizeBytes, consoleKey,
                 datIndex, hashService, archiveHashService, headerlessHasher, postDetectDatPolicy,
-                detectionResult, consoleDetector, context, onProgress, chdTrackHashExtractor);
+                detectionResult, consoleDetector, context, onProgress, chdTrackHashExtractor, cancellationToken);
         }
 
         consoleKey = datResult.ConsoleKey;
@@ -440,7 +443,8 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         ConsoleDetector? consoleDetector,
         PipelineContext context,
         Action<string>? onProgress,
-        Contracts.Ports.IChdTrackHashExtractor? chdTrackHashExtractor = null)
+        Contracts.Ports.IChdTrackHashExtractor? chdTrackHashExtractor = null,
+        CancellationToken cancellationToken = default)
     {
         bool datMatch = false;
         bool datMatchedBios = false;
@@ -561,7 +565,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         // the container file hash. No-Intro CHDs store the inner data SHA1 in their DATs.
         if (!datMatch && lowerExt == ".chd" && chdTrackHashExtractor is not null)
         {
-            var dataSha1 = chdTrackHashExtractor.ExtractDataSha1(filePath);
+            var dataSha1 = chdTrackHashExtractor.ExtractDataSha1(filePath, cancellationToken: cancellationToken);
             if (dataSha1 is not null)
             {
                 var policyResult = TryPolicyAwareDatLookup(datIndex, new DatLookupHash("SHA1", dataSha1), consoleKey, datPolicy,

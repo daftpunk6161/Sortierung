@@ -34,7 +34,7 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
         _vm = new MainViewModel(new StubTheme(), _dialog, _settings);
         var fileSystem = new FileSystemAdapter();
         var auditStore = new AuditCsvStore(fileSystem, _ => { }, Path.Combine(_tempDir, "audit-signing.key"));
-        _sut = new FeatureCommandService(_vm, _settings, _dialog, fileSystem, auditStore);
+        _sut = new FeatureCommandService(_vm, _settings, _dialog, fileSystem, auditStore, new Romulus.Infrastructure.Hashing.HeaderRepairService(fileSystem));
         _sut.RegisterCommands();
         PopulateVmWithTestData();
     }

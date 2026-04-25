@@ -46,6 +46,8 @@ public sealed class RunResultBuilder
     public int DatRenameSkippedCount { get; set; }
     public int DatRenameFailedCount { get; set; }
     public IReadOnlyList<PathMutation> DatRenamePathMutations { get; set; } = Array.Empty<PathMutation>();
+    public DateTime? StartedUtc { get; set; }
+    public DateTime? CompletedUtc { get; set; }
     public long DurationMs { get; set; }
     public string? ReportPath { get; set; }
     public IReadOnlyList<RomCandidate> AllCandidates { get; set; } = Array.Empty<RomCandidate>();
@@ -104,6 +106,8 @@ public sealed class RunResultBuilder
         DatRenameSkippedCount = DatRenameSkippedCount,
         DatRenameFailedCount = DatRenameFailedCount,
         DatRenamePathMutations = DatRenamePathMutations,
+        StartedUtc = StartedUtc,
+        CompletedUtc = CompletedUtc,
         DurationMs = DurationMs,
         ReportPath = ReportPath,
         AllCandidates = AllCandidates,

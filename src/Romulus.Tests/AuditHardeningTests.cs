@@ -223,7 +223,11 @@ public sealed class AuditHardeningTests : IDisposable
             RemoveJunk = false
         };
 
-        var env = RunEnvironmentBuilder.Build(options, settings, dataDir);
+        using var env = RunEnvironmentBuilder.Build(
+            options,
+            settings,
+            dataDir,
+            collectionDatabasePath: Path.Combine(_tempDir, "report-collection.db"));
         var orchestrator = new RunOrchestrator(
             env.FileSystem, env.Audit, env.ConsoleDetector,
             env.HashService, env.Converter, env.DatIndex);

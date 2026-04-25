@@ -13,5 +13,8 @@ public interface IChdTrackHashExtractor
     /// Returns null if chdman is unavailable, the file is missing,
     /// the file is not a valid CHD, or extraction fails.
     /// </summary>
-    string? ExtractDataSha1(string chdPath);
+    string? ExtractDataSha1(
+        string chdPath,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
 }

@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Romulus.Contracts\Romulus.Contracts.csproj" />
     <ProjectReference Include="..\Romulus.Core\Romulus.Core.csproj" />
+    <ProjectReference Include="..\Romulus.Infrastructure\Romulus.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

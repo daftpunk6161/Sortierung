@@ -10,16 +10,22 @@ namespace Romulus.Infrastructure.Conversion;
 internal sealed class PsxtractToolConverter
 {
     private readonly IToolRunner _tools;
+    private static readonly ToolRequirement PsxtractRequirement = new() { ToolName = "psxtract" };
 
     public PsxtractToolConverter(IToolRunner tools)
     {
         _tools = tools ?? throw new ArgumentNullException(nameof(tools));
     }
 
-    public ConversionResult Convert(string sourcePath, string targetPath, string toolPath, string command)
+    public ConversionResult Convert(
+        string sourcePath,
+        string targetPath,
+        string toolPath,
+        string command,
+        CancellationToken cancellationToken = default)
     {
         var args = new[] { command, "-i", sourcePath, "-o", targetPath };
-        var result = _tools.InvokeProcess(toolPath, args, "psxtract");
+        var result = _tools.InvokeProcess(toolPath, args, PsxtractRequirement, "psxtract", TimeSpan.FromMinutes(20), cancellationToken);
 
         if (!result.Success)
         {

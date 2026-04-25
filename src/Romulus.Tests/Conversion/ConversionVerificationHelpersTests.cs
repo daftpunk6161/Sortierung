@@ -55,11 +55,11 @@ public sealed class ConversionVerificationHelpersTests
     }
 
     [Fact]
-    public void IsVerificationSuccessful_NotAttempted_NullTarget_NoPlan_ReturnsTrueForLegacyConverter()
+    public void IsVerificationSuccessful_NotAttempted_NullTarget_NoPlan_ReturnsFalseFailClosed()
     {
         var result = MakeResult(targetPath: "/some/path.chd", verification: VerificationStatus.NotAttempted);
 
-        Assert.True(ConversionVerificationHelpers.IsVerificationSuccessful(
+        Assert.False(ConversionVerificationHelpers.IsVerificationSuccessful(
             result, new StubConverter(verifyReturns: true), null));
     }
 

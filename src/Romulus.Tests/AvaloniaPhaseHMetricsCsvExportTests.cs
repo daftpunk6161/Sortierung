@@ -24,9 +24,10 @@ public sealed class AvaloniaPhaseHMetricsCsvExportTests
         Assert.True(File.Exists(exportPath));
 
         var csv = await File.ReadAllTextAsync(exportPath);
-        Assert.Contains("summary,games,dupes,junk,health", csv);
+        Assert.Contains("schemaVersion,summary,games,dupes,junk,health", csv);
+        Assert.Contains("romulus-report-v1", csv);
         Assert.Contains("\"Preview abgeschlossen:", csv);
-        Assert.Contains(",\"240\",\"28\",\"12\",\"82\"", csv);
+        Assert.DoesNotContain("\"240\",\"28\",\"12\",\"82\"", csv);
 
         File.Delete(exportPath);
     }

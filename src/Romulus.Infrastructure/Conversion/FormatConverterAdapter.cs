@@ -206,10 +206,10 @@ public sealed class FormatConverterAdapter : IFormatConverter
 
         return target.ToolName.ToLowerInvariant() switch
         {
-            "chdman" => _chdman.Convert(sourcePath, targetPath, toolPath, target.Command),
-            "dolphintool" => _dolphin.Convert(sourcePath, targetPath, toolPath, sourceExt),
-            "7z" => _sevenZip.Convert(sourcePath, targetPath, toolPath),
-            "psxtract" => _psxtract.Convert(sourcePath, targetPath, toolPath, target.Command),
+            "chdman" => _chdman.Convert(sourcePath, targetPath, toolPath, target.Command, cancellationToken),
+            "dolphintool" => _dolphin.Convert(sourcePath, targetPath, toolPath, sourceExt, cancellationToken),
+            "7z" => _sevenZip.Convert(sourcePath, targetPath, toolPath, cancellationToken),
+            "psxtract" => _psxtract.Convert(sourcePath, targetPath, toolPath, target.Command, cancellationToken),
             _ => new ConversionResult(sourcePath, null, ConversionOutcome.Error, $"unknown-tool:{target.ToolName}")
         };
     }
@@ -257,20 +257,6 @@ public sealed class FormatConverterAdapter : IFormatConverter
 
         if (!plan.IsExecutable)
         {
-            // Preserve legacy archive extraction behavior for disc systems when graph data has no archive edge.
-            // Never bypass a planner-side blocked safety decision.
-            if (string.Equals(plan.SkipReason, "no-conversion-path", StringComparison.OrdinalIgnoreCase)
-                && plan.Safety != ConversionSafety.Blocked
-                && IsArchiveContainerSource(sourceExt))
-            {
-                var fallbackTarget = GetTargetFormat(consoleKey, sourceExt);
-                if (fallbackTarget is not null)
-                {
-                    EmitConvertStartProgress(onProgress, sourcePath, fallbackTarget.Extension);
-                    return ConvertLegacy(sourcePath, fallbackTarget, cancellationToken);
-                }
-            }
-
             var outcome = plan.Safety == ConversionSafety.Blocked
                 ? ConversionOutcome.Blocked
                 : ConversionOutcome.Skipped;
@@ -295,7 +281,6 @@ public sealed class FormatConverterAdapter : IFormatConverter
     /// <summary>
     /// Returns the planner-generated conversion plan for preview/review UI flows.
     /// Returns null when no planner is configured or source file does not exist.
-    /// Includes archive-fallback parity with ConvertForConsole to ensure Preview == Execute.
     /// </summary>
     public ConversionPlan? PlanForConsole(string sourcePath, string consoleKey)
     {
@@ -305,61 +290,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
         var sourceExt = SourcePathFormatDetector.ResolveSourceExtension(sourcePath);
         var plan = _planner.Plan(sourcePath, consoleKey, sourceExt);
 
-        // Mirror the archive-fallback logic from ConvertForConsole so Preview == Execute.
-        if (!plan.IsExecutable
-            && string.Equals(plan.SkipReason, "no-conversion-path", StringComparison.OrdinalIgnoreCase)
-            && plan.Safety != ConversionSafety.Blocked
-            && IsArchiveContainerSource(sourceExt))
-        {
-            var fallbackTarget = GetTargetFormat(consoleKey, sourceExt);
-            if (fallbackTarget is not null)
-            {
-                var capability = new ConversionCapability
-                {
-                    SourceExtension = sourceExt,
-                    TargetExtension = fallbackTarget.Extension,
-                    Tool = new ToolRequirement { ToolName = fallbackTarget.ToolName },
-                    Command = fallbackTarget.Command,
-                    ApplicableConsoles = null,
-                    RequiredSourceIntegrity = null,
-                    ResultIntegrity = SourceIntegrityClassifier.Classify(sourceExt, Path.GetFileName(sourcePath)),
-                    Lossless = fallbackTarget.ToolName is "7z" or "chdman" or "dolphintool",
-                    Cost = 0,
-                    Verification = GetVerificationForExtension(fallbackTarget.Extension),
-                    Description = "archive-legacy-fallback",
-                    Condition = ConversionCondition.None
-                };
-
-                return new ConversionPlan
-                {
-                    SourcePath = sourcePath,
-                    ConsoleKey = consoleKey,
-                    Policy = plan.Policy,
-                    SourceIntegrity = plan.SourceIntegrity,
-                    Safety = ConversionSafety.Acceptable,
-                    Steps =
-                    [
-                        new ConversionStep
-                        {
-                            Order = 0,
-                            InputExtension = sourceExt,
-                            OutputExtension = fallbackTarget.Extension,
-                            Capability = capability,
-                            IsIntermediate = false
-                        }
-                    ],
-                    SkipReason = null
-                };
-            }
-        }
-
         return plan;
-    }
-
-    private static bool IsArchiveContainerSource(string extension)
-    {
-        return string.Equals(extension, ".zip", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(extension, ".7z", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void EmitConvertStartProgress(Action<string>? onProgress, string sourcePath, string? targetExtension)
@@ -390,41 +321,6 @@ public sealed class FormatConverterAdapter : IFormatConverter
         };
     }
 
-    private ConversionResult ConvertLegacy(string sourcePath, ConversionTarget target, CancellationToken cancellationToken)
-    {
-        if (!File.Exists(sourcePath))
-            return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "source-not-found");
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var toolPath = _tools.FindTool(target.ToolName);
-        if (toolPath is null)
-            return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped, $"tool-not-found:{target.ToolName}");
-
-        var sourceExt = SourcePathFormatDetector.ResolveSourceExtension(sourcePath);
-        var dir = Path.GetDirectoryName(sourcePath)!;
-        var baseName = Path.GetFileNameWithoutExtension(sourcePath);
-        var targetPath = Path.Combine(dir, baseName + target.Extension);
-
-        if (IsBlockedLegacyLossyPair(sourcePath, sourceExt, target.Extension))
-            return new ConversionResult(sourcePath, null, ConversionOutcome.Blocked, "lossy-to-lossy-blocked-legacy");
-
-        if (string.Equals(sourceExt, target.Extension, StringComparison.OrdinalIgnoreCase))
-            return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped, "already-target-format");
-
-        if (File.Exists(targetPath))
-            return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped, "target-exists");
-
-        return target.ToolName.ToLowerInvariant() switch
-        {
-            "chdman" => _chdman.Convert(sourcePath, targetPath, toolPath, target.Command),
-            "dolphintool" => _dolphin.Convert(sourcePath, targetPath, toolPath, sourceExt),
-            "7z" => _sevenZip.Convert(sourcePath, targetPath, toolPath),
-            "psxtract" => _psxtract.Convert(sourcePath, targetPath, toolPath, target.Command),
-            _ => new ConversionResult(sourcePath, null, ConversionOutcome.Error, $"unknown-tool:{target.ToolName}")
-        };
-    }
-
     private ConversionTarget? TryGetRegistryTarget(string consoleKey, string sourceExtension)
     {
         if (_registry is null)
@@ -445,7 +341,8 @@ public sealed class FormatConverterAdapter : IFormatConverter
                 .Where(c => string.Equals(c.TargetExtension, targetExtension, StringComparison.OrdinalIgnoreCase))
                 .Where(c => c.Condition == ConversionCondition.None)
                 .Where(c => string.Equals(c.SourceExtension, sourceExtension, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(c.SourceExtension, "*", StringComparison.OrdinalIgnoreCase))
+                    || (string.Equals(c.SourceExtension, "*", StringComparison.OrdinalIgnoreCase)
+                        && !SourceIntegrityClassifier.IsArchiveExtension(sourceExtension)))
                 .Where(c => c.ApplicableConsoles is null || c.ApplicableConsoles.Count == 0 || c.ApplicableConsoles.Contains(consoleKey))
                 .OrderBy(c => c.Cost)
                 .FirstOrDefault();
@@ -614,7 +511,7 @@ public sealed class FormatConverterAdapter : IFormatConverter
             "chdman" => DiscFormats.IsChdmanSupportedSourceExtension(sourceExt),
             "dolphintool" => DiscFormats.IsDolphinSupportedSourceExtension(sourceExt),
             "psxtract" => sourceExt == ".pbp",
-            "7z" => true,
+            "7z" => !SourceIntegrityClassifier.IsArchiveExtension(sourceExt),
             _ => false
         };
     }

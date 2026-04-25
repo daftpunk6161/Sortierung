@@ -16,9 +16,12 @@ public sealed class DatRepositoryAdapter
 {
     /// <summary>Maximum DAT file size to parse (100 MB).</summary>
     private const long MaxDatFileSizeBytes = 100 * 1024 * 1024;
+    private const long MaxSevenZipExtractedTotalBytes = 512 * 1024 * 1024;
+    private const int MaxSevenZipEntryCount = 256;
 
     /// <summary>7z magic bytes: '7' 'z' 0xBC 0xAF 0x27 0x1C.</summary>
     private static readonly byte[] SevenZipMagic = { 0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C };
+    private static readonly ToolRequirement SevenZipRequirement = new() { ToolName = "7z" };
 
     private readonly Action<string>? _log;
     private readonly IToolRunner? _toolRunner;
@@ -181,10 +184,10 @@ public sealed class DatRepositoryAdapter
     }
 
     private Dictionary<string, List<Dictionary<string, string>>> ParseDatFile(string datPath, string hashType)
-        => ParseDatFileInternal(datPath, hashType, CreateSecureXmlSettings());
+        => ParseDatFileInternal(datPath, hashType, CreateSecureXmlSettings(), archiveDepth: 0);
 
     private Dictionary<string, List<Dictionary<string, string>>> ParseDatFileInternal(
-        string datPath, string hashType, XmlReaderSettings settings)
+        string datPath, string hashType, XmlReaderSettings settings, int archiveDepth)
     {
         var games = new Dictionary<string, List<Dictionary<string, string>>>(StringComparer.OrdinalIgnoreCase);
         var requestedHashType = NormalizeHashType(hashType);
@@ -205,7 +208,13 @@ public sealed class DatRepositoryAdapter
         // Detect 7z-compressed DAT files and decompress transparently
         if (Is7zFile(datPath))
         {
-            return TryParse7zDat(datPath, hashType, settings);
+            if (archiveDepth > 0)
+            {
+                _log?.Invoke($"[Warning] Nested 7z DAT '{datPath}' is not allowed. Skipped.");
+                return games;
+            }
+
+            return TryParse7zDat(datPath, hashType, settings, archiveDepth);
         }
 
         // Pre-check: reject empty or obviously non-XML files before parsing
@@ -306,7 +315,7 @@ public sealed class DatRepositoryAdapter
         {
             // SEC-XML-01 fallback: real DATs with DOCTYPE → retry with Ignore
             _log?.Invoke($"[Info] DAT file '{datPath}' triggered DTD prohibition. Retrying with DtdProcessing.Ignore.");
-            return ParseDatFileInternal(datPath, hashType, CreateFallbackXmlSettings());
+            return ParseDatFileInternal(datPath, hashType, CreateFallbackXmlSettings(), archiveDepth);
         }
         catch (XmlException ex)
         {
@@ -524,7 +533,10 @@ public sealed class DatRepositoryAdapter
     /// and parses it. Requires an IToolRunner with 7z support.
     /// </summary>
     private Dictionary<string, List<Dictionary<string, string>>> TryParse7zDat(
-        string archivePath, string hashType, XmlReaderSettings settings)
+        string archivePath,
+        string hashType,
+        XmlReaderSettings settings,
+        int archiveDepth)
     {
         var empty = new Dictionary<string, List<Dictionary<string, string>>>(StringComparer.OrdinalIgnoreCase);
 
@@ -541,13 +553,32 @@ public sealed class DatRepositoryAdapter
             return empty;
         }
 
+        var entries = ListSevenZipEntries(archivePath, sevenZipPath);
+        if (!ValidateSevenZipEntryList(entries, out var totalDeclaredBytes, out var entryFailureReason))
+        {
+            _log?.Invoke($"[Warning] 7z DAT '{archivePath}' rejected before extraction: {entryFailureReason}.");
+            return empty;
+        }
+
         var tempDir = Path.Combine(Path.GetTempPath(), "romulus_dat7z_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(tempDir);
 
         try
         {
+            if (!HasAvailableTempSpace(tempDir, totalDeclaredBytes))
+            {
+                _log?.Invoke($"[Warning] 7z DAT '{archivePath}' rejected: not enough temporary disk space.");
+                return empty;
+            }
+
             var outArg = $"-o{tempDir}";
-            var result = _toolRunner.InvokeProcess(sevenZipPath, new[] { "x", "-y", outArg, archivePath });
+            var result = _toolRunner.InvokeProcess(
+                sevenZipPath,
+                new[] { "x", "-y", "-snl-", outArg, archivePath },
+                SevenZipRequirement,
+                "7z DAT extract",
+                TimeSpan.FromMinutes(10),
+                CancellationToken.None);
             if (!result.Success)
             {
                 _log?.Invoke($"[Warning] Failed to decompress 7z DAT '{archivePath}': exit code {result.ExitCode}. Skipped.");
@@ -557,6 +588,11 @@ public sealed class DatRepositoryAdapter
             // Security: validate extracted paths stay within tempDir
             var normalizedTemp = Path.GetFullPath(tempDir).TrimEnd(Path.DirectorySeparatorChar)
                                  + Path.DirectorySeparatorChar;
+            if (!ValidateExtractedTree(tempDir, normalizedTemp))
+            {
+                _log?.Invoke($"[Warning] 7z DAT '{archivePath}' produced unsafe extracted contents. Skipped.");
+                return empty;
+            }
 
             // Find the first .dat or .xml file inside the extracted contents
             var extractedFiles = new FileSystemAdapter().GetFilesSafe(tempDir, [".dat", ".xml"])
@@ -574,7 +610,7 @@ public sealed class DatRepositoryAdapter
             {
                 var innerDatPath = extractedFiles[0];
                 _log?.Invoke($"[Info] Decompressed 7z DAT '{Path.GetFileName(archivePath)}' -> parsing '{Path.GetFileName(innerDatPath)}'");
-                return ParseDatFileInternal(innerDatPath, hashType, settings);
+                return ParseDatFileInternal(innerDatPath, hashType, settings, archiveDepth + 1);
             }
 
             _log?.Invoke($"[Warning] 7z DAT '{archivePath}' contains {extractedFiles.Count} .dat/.xml files. Parsing and merging all entries deterministically.");
@@ -582,7 +618,7 @@ public sealed class DatRepositoryAdapter
             foreach (var innerDatPath in extractedFiles)
             {
                 _log?.Invoke($"[Info] Decompressed 7z DAT '{Path.GetFileName(archivePath)}' -> parsing '{Path.GetFileName(innerDatPath)}'");
-                MergeParsedDat(merged, ParseDatFileInternal(innerDatPath, hashType, settings));
+                MergeParsedDat(merged, ParseDatFileInternal(innerDatPath, hashType, settings, archiveDepth + 1));
             }
 
             return merged;
@@ -616,4 +652,205 @@ public sealed class DatRepositoryAdapter
             targetRoms.AddRange(roms);
         }
     }
+
+    private List<SevenZipEntryInfo> ListSevenZipEntries(string archivePath, string sevenZipPath)
+    {
+        var result = _toolRunner!.InvokeProcess(
+            sevenZipPath,
+            new[] { "l", "-slt", archivePath },
+            SevenZipRequirement,
+            "7z DAT list",
+            TimeSpan.FromMinutes(5),
+            CancellationToken.None);
+        if (!result.Success)
+            return [];
+
+        var entries = new List<SevenZipEntryInfo>();
+        var archiveName = Path.GetFileName(archivePath);
+        var pastSeparator = false;
+        string? currentPath = null;
+        long currentSize = 0;
+
+        void FlushCurrent()
+        {
+            if (string.IsNullOrWhiteSpace(currentPath))
+                return;
+
+            if (!currentPath.Equals(archiveName, StringComparison.OrdinalIgnoreCase))
+                entries.Add(new SevenZipEntryInfo(currentPath, currentSize));
+
+            currentPath = null;
+            currentSize = 0;
+        }
+
+        foreach (var line in (result.Output ?? string.Empty).Split('\n', StringSplitOptions.TrimEntries))
+        {
+            if (line.StartsWith("-----", StringComparison.Ordinal))
+            {
+                pastSeparator = true;
+                continue;
+            }
+
+            if (!pastSeparator)
+                continue;
+
+            if (line.StartsWith("Path = ", StringComparison.OrdinalIgnoreCase))
+            {
+                FlushCurrent();
+                currentPath = line["Path = ".Length..].Trim();
+                currentSize = 0;
+                continue;
+            }
+
+            if (currentPath is not null
+                && line.StartsWith("Size = ", StringComparison.OrdinalIgnoreCase)
+                && long.TryParse(line["Size = ".Length..].Trim(), out var parsedSize))
+            {
+                currentSize = parsedSize;
+            }
+        }
+
+        FlushCurrent();
+        entries.Sort(static (left, right) => string.Compare(left.Path, right.Path, StringComparison.OrdinalIgnoreCase));
+        return entries;
+    }
+
+    private static bool ValidateSevenZipEntryList(
+        IReadOnlyList<SevenZipEntryInfo> entries,
+        out long totalDeclaredBytes,
+        out string failureReason)
+    {
+        totalDeclaredBytes = 0;
+        failureReason = string.Empty;
+
+        if (entries.Count == 0)
+        {
+            failureReason = "archive-empty-or-unlisted";
+            return false;
+        }
+
+        if (entries.Count > MaxSevenZipEntryCount)
+        {
+            failureReason = "archive-too-many-entries";
+            return false;
+        }
+
+        foreach (var entry in entries)
+        {
+            if (!IsSafeArchiveEntryPath(entry.Path))
+            {
+                failureReason = "archive-path-traversal-detected";
+                return false;
+            }
+
+            if (entry.Size < 0)
+            {
+                failureReason = "archive-entry-size-invalid";
+                return false;
+            }
+
+            totalDeclaredBytes += entry.Size;
+            if (totalDeclaredBytes > MaxSevenZipExtractedTotalBytes)
+            {
+                failureReason = "archive-extraction-size-exceeded";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsSafeArchiveEntryPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        if (Path.IsPathRooted(path))
+            return false;
+
+        var parts = path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+        return parts.All(static part => part is not "." and not "..");
+    }
+
+    private static bool ValidateExtractedTree(string tempDir, string normalizedTemp)
+    {
+        foreach (var dir in EnumerateDirectoriesWithoutFollowingReparsePoints(tempDir))
+        {
+            if (!Path.GetFullPath(dir).StartsWith(normalizedTemp, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if ((File.GetAttributes(dir) & FileAttributes.ReparsePoint) != 0)
+                return false;
+        }
+
+        foreach (var file in Directory.EnumerateFiles(tempDir, "*", SearchOption.AllDirectories))
+        {
+            if (!Path.GetFullPath(file).StartsWith(normalizedTemp, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
+                return false;
+        }
+
+        return true;
+    }
+
+    private static IEnumerable<string> EnumerateDirectoriesWithoutFollowingReparsePoints(string root)
+    {
+        var stack = new Stack<string>();
+        stack.Push(root);
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            string[] children;
+            try
+            {
+                children = Directory.GetDirectories(current);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                yield break;
+            }
+
+            Array.Sort(children, StringComparer.OrdinalIgnoreCase);
+            foreach (var child in children)
+            {
+                yield return child;
+                FileAttributes attrs;
+                try
+                {
+                    attrs = File.GetAttributes(child);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    continue;
+                }
+
+                if ((attrs & FileAttributes.ReparsePoint) == 0)
+                    stack.Push(child);
+            }
+        }
+    }
+
+    private static bool HasAvailableTempSpace(string tempDir, long requiredBytes)
+    {
+        if (requiredBytes <= 0)
+            return true;
+
+        try
+        {
+            var root = Path.GetPathRoot(Path.GetFullPath(tempDir));
+            if (string.IsNullOrWhiteSpace(root))
+                return false;
+
+            var drive = new DriveInfo(root);
+            return drive.AvailableFreeSpace > requiredBytes;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    private sealed record SevenZipEntryInfo(string Path, long Size);
 }

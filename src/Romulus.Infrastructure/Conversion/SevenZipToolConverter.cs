@@ -17,10 +17,14 @@ internal sealed class SevenZipToolConverter
         _tools = tools ?? throw new ArgumentNullException(nameof(tools));
     }
 
-    public ConversionResult Convert(string sourcePath, string targetPath, string toolPath)
+    public ConversionResult Convert(
+        string sourcePath,
+        string targetPath,
+        string toolPath,
+        CancellationToken cancellationToken = default)
     {
         var args = new[] { "a", "-tzip", "-y", targetPath, sourcePath };
-        var result = _tools.InvokeProcess(toolPath, args, SevenZipRequirement, "7z", null, CancellationToken.None);
+        var result = _tools.InvokeProcess(toolPath, args, SevenZipRequirement, "7z", TimeSpan.FromMinutes(10), cancellationToken);
 
         if (!result.Success)
         {

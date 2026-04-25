@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using System.Text.RegularExpressions;
@@ -42,8 +43,14 @@ public static class FrontendExportService
         if (!FrontendExportTargets.All.Contains(normalizedFrontend))
             throw new InvalidOperationException($"Unsupported frontend '{request.Frontend}'.");
 
+        var generatedUtc = request.GeneratedUtc ?? DateTime.UtcNow;
+        var stagingScope = TryCreateStagingScope(normalizedFrontend, request.OutputPath);
+        var effectiveRequest = stagingScope is null
+            ? request
+            : request with { OutputPath = stagingScope.StagingRoot };
+
         var loaded = await LoadGamesAsync(
-            request,
+            effectiveRequest,
             fileSystem,
             collectionIndex,
             enrichmentFingerprint,
@@ -51,24 +58,44 @@ public static class FrontendExportService
             runCandidates,
             ct).ConfigureAwait(false);
 
-        var artifacts = normalizedFrontend switch
+        IReadOnlyList<FrontendExportArtifact> artifacts;
+        try
         {
-            FrontendExportTargets.RetroArch => WriteRetroArchArtifacts(loaded.Games, request.OutputPath, request.CollectionName),
-            FrontendExportTargets.M3u => WriteM3uArtifacts(loaded.Games, request.OutputPath, request.CollectionName),
-            FrontendExportTargets.LaunchBox => WriteLaunchBoxArtifacts(loaded.Games, request.OutputPath),
-            FrontendExportTargets.EmulationStation => WriteEmulationStationArtifacts(loaded.Games, request.OutputPath),
-            FrontendExportTargets.Playnite => WritePlayniteArtifacts(loaded.Games, request.OutputPath),
-            FrontendExportTargets.MiSTer => WriteMiSTerArtifacts(loaded.Games, request.OutputPath),
-            FrontendExportTargets.AnaloguePocket => WriteAnaloguePocketArtifacts(loaded.Games, request.OutputPath),
-            FrontendExportTargets.OnionOs => WriteOnionOsArtifacts(loaded.Games, request.OutputPath),
-            FrontendExportTargets.Csv => WriteSingleArtifact(request.OutputPath, "Collection CSV", CollectionExportService.ExportCollectionCsv(loaded.Candidates)),
-            FrontendExportTargets.Json => WriteSingleArtifact(
-                request.OutputPath,
-                "Collection JSON",
-                JsonSerializer.Serialize(loaded.Games, new JsonSerializerOptions { WriteIndented = true })),
-            FrontendExportTargets.Excel => WriteSingleArtifact(request.OutputPath, "Collection Excel XML", CollectionExportService.ExportExcelXml(loaded.Candidates)),
-            _ => throw new InvalidOperationException($"Unsupported frontend '{request.Frontend}'.")
-        };
+            artifacts = normalizedFrontend switch
+            {
+                FrontendExportTargets.RetroArch => WriteRetroArchArtifacts(loaded.Games, effectiveRequest.OutputPath, effectiveRequest.CollectionName, generatedUtc),
+                FrontendExportTargets.M3u => WriteM3uArtifacts(loaded.Games, effectiveRequest.OutputPath, effectiveRequest.CollectionName, generatedUtc),
+                FrontendExportTargets.LaunchBox => WriteLaunchBoxArtifacts(loaded.Games, effectiveRequest.OutputPath, generatedUtc),
+                FrontendExportTargets.EmulationStation => WriteEmulationStationArtifacts(loaded.Games, effectiveRequest.OutputPath, generatedUtc),
+                FrontendExportTargets.Playnite => WritePlayniteArtifacts(loaded.Games, effectiveRequest.OutputPath, generatedUtc),
+                FrontendExportTargets.MiSTer => WriteMiSTerArtifacts(loaded.Games, effectiveRequest.OutputPath, generatedUtc),
+                FrontendExportTargets.AnaloguePocket => WriteAnaloguePocketArtifacts(loaded.Games, effectiveRequest.OutputPath, generatedUtc),
+                FrontendExportTargets.OnionOs => WriteOnionOsArtifacts(loaded.Games, effectiveRequest.OutputPath, generatedUtc),
+                FrontendExportTargets.Csv => WriteSingleArtifact(
+                    effectiveRequest.OutputPath,
+                    "Collection CSV",
+                    BuildSchemaPrefixedCsv(CollectionExportService.ExportCollectionCsv(loaded.Candidates), generatedUtc)),
+                FrontendExportTargets.Json => WriteSingleArtifact(
+                    effectiveRequest.OutputPath,
+                    "Collection JSON",
+                    SerializeIndented(new
+                    {
+                        schemaVersion = RunConstants.FrontendExportSchemaVersion,
+                        generatedUtc,
+                        games = loaded.Games
+                    })),
+                FrontendExportTargets.Excel => WriteSingleArtifact(effectiveRequest.OutputPath, "Collection Excel XML", CollectionExportService.ExportExcelXml(loaded.Candidates)),
+                _ => throw new InvalidOperationException($"Unsupported frontend '{request.Frontend}'.")
+            };
+
+            if (stagingScope is not null)
+                artifacts = PromoteStagedDirectory(stagingScope, artifacts);
+        }
+        finally
+        {
+            if (stagingScope is not null && Directory.Exists(stagingScope.StagingRoot))
+                Directory.Delete(stagingScope.StagingRoot, recursive: true);
+        }
 
         return new FrontendExportResult(normalizedFrontend, loaded.Source, loaded.Games.Count, artifacts);
     }
@@ -140,13 +167,14 @@ public static class FrontendExportService
     private static IReadOnlyList<FrontendExportArtifact> WriteM3uArtifacts(
         IReadOnlyList<ExportableGame> games,
         string outputPath,
-        string collectionName)
+        string collectionName,
+        DateTime generatedUtc)
     {
         var playlists = BuildMultiDiscPlaylists(games);
 
         if (HasFileExtension(outputPath))
         {
-            var content = BuildMergedM3uContent(playlists, games, collectionName);
+            var content = BuildMergedM3uContent(playlists, games, collectionName, generatedUtc);
             return WriteSingleArtifact(outputPath, "M3U playlist", content);
         }
 
@@ -155,7 +183,7 @@ public static class FrontendExportService
         {
             var fallbackFileName = SanitizeFileNameSegment(collectionName) + ".m3u";
             var fallbackPath = EnsureChildPath(root, fallbackFileName);
-            AtomicFileWriter.WriteAllText(fallbackPath, BuildM3uContent(collectionName, OrderPlaylistEntries(games)), Encoding.UTF8);
+            AtomicFileWriter.WriteAllText(fallbackPath, BuildM3uContent(collectionName, OrderPlaylistEntries(games), generatedUtc), Encoding.UTF8);
             return [new FrontendExportArtifact(fallbackPath, collectionName, games.Count)];
         }
 
@@ -168,7 +196,7 @@ public static class FrontendExportService
                 var fileName = SanitizeFileNameSegment(playlist.PlaylistName) + ".m3u";
                 var targetPath = EnsureChildPath(consoleRoot, fileName);
 
-                AtomicFileWriter.WriteAllText(targetPath, BuildM3uContent(playlist.PlaylistName, playlist.Entries), Encoding.UTF8);
+                AtomicFileWriter.WriteAllText(targetPath, BuildM3uContent(playlist.PlaylistName, playlist.Entries, generatedUtc), Encoding.UTF8);
                 return new FrontendExportArtifact(targetPath, $"{playlist.ConsoleLabel}: {playlist.PlaylistName}", playlist.Entries.Count);
             })
             .ToArray();
@@ -243,17 +271,20 @@ public static class FrontendExportService
     private static string BuildMergedM3uContent(
         IReadOnlyList<M3uPlaylistGroup> playlists,
         IReadOnlyList<ExportableGame> allGames,
-        string collectionName)
+        string collectionName,
+        DateTime generatedUtc)
     {
         if (playlists.Count == 1)
-            return BuildM3uContent(playlists[0].PlaylistName, playlists[0].Entries);
+            return BuildM3uContent(playlists[0].PlaylistName, playlists[0].Entries, generatedUtc);
 
         if (playlists.Count == 0)
-            return BuildM3uContent(collectionName, OrderPlaylistEntries(allGames));
+            return BuildM3uContent(collectionName, OrderPlaylistEntries(allGames), generatedUtc);
 
         var lines = new List<string>
         {
             "#EXTM3U",
+            $"#ROMULUS-SCHEMA-VERSION:{RunConstants.FrontendExportSchemaVersion}",
+            $"#ROMULUS-GENERATED-UTC:{generatedUtc:o}",
             $"#PLAYLIST:{SanitizeM3uDisplayText(collectionName, "Collection")}"
         };
 
@@ -268,11 +299,13 @@ public static class FrontendExportService
         return string.Join(Environment.NewLine, lines);
     }
 
-    private static string BuildM3uContent(string playlistName, IReadOnlyList<ExportableGame> entries)
+    private static string BuildM3uContent(string playlistName, IReadOnlyList<ExportableGame> entries, DateTime generatedUtc)
     {
         var lines = new List<string>
         {
             "#EXTM3U",
+            $"#ROMULUS-SCHEMA-VERSION:{RunConstants.FrontendExportSchemaVersion}",
+            $"#ROMULUS-GENERATED-UTC:{generatedUtc:o}",
             $"#PLAYLIST:{SanitizeM3uDisplayText(playlistName, "Collection")}"
         };
 
@@ -349,11 +382,12 @@ public static class FrontendExportService
     private static IReadOnlyList<FrontendExportArtifact> WriteRetroArchArtifacts(
         IReadOnlyList<ExportableGame> games,
         string outputPath,
-        string collectionName)
+        string collectionName,
+        DateTime generatedUtc)
     {
         if (HasFileExtension(outputPath))
         {
-            var content = BuildRetroArchContent(games, collectionName);
+            var content = BuildRetroArchContent(games, collectionName, generatedUtc);
             return WriteSingleArtifact(outputPath, "RetroArch playlist", content);
         }
 
@@ -365,17 +399,19 @@ public static class FrontendExportService
             {
                 var safeName = SanitizeFileNameSegment(group.Key) + ".lpl";
                 var targetPath = EnsureChildPath(root, safeName);
-                AtomicFileWriter.WriteAllText(targetPath, BuildRetroArchContent(group, group.Key), Encoding.UTF8);
+                AtomicFileWriter.WriteAllText(targetPath, BuildRetroArchContent(group, group.Key, generatedUtc), Encoding.UTF8);
                 return new FrontendExportArtifact(targetPath, group.Key, group.Count());
             })
             .ToArray();
     }
 
-    private static string BuildRetroArchContent(IEnumerable<ExportableGame> games, string collectionName)
+    private static string BuildRetroArchContent(IEnumerable<ExportableGame> games, string collectionName, DateTime generatedUtc)
     {
         return JsonSerializer.Serialize(new
         {
             version = "1.5",
+            romulus_schema_version = RunConstants.FrontendExportSchemaVersion,
+            generated_utc = generatedUtc,
             default_core_path = string.Empty,
             default_core_name = string.Empty,
             items = games.Select(game =>
@@ -395,11 +431,12 @@ public static class FrontendExportService
 
     private static IReadOnlyList<FrontendExportArtifact> WriteLaunchBoxArtifacts(
         IReadOnlyList<ExportableGame> games,
-        string outputPath)
+        string outputPath,
+        DateTime generatedUtc)
     {
         if (HasFileExtension(outputPath))
         {
-            SaveXml(outputPath, BuildLaunchBoxDocument("Collection", games));
+            SaveXml(outputPath, BuildLaunchBoxDocument("Collection", games, generatedUtc));
             return [new FrontendExportArtifact(Path.GetFullPath(outputPath), "LaunchBox", games.Count)];
         }
 
@@ -411,7 +448,7 @@ public static class FrontendExportService
             {
                 var safeName = SanitizeFileNameSegment(group.Key) + ".xml";
                 var targetPath = EnsureChildPath(root, safeName);
-                SaveXml(targetPath, BuildLaunchBoxDocument(group.Key, group));
+                SaveXml(targetPath, BuildLaunchBoxDocument(group.Key, group, generatedUtc));
                 return new FrontendExportArtifact(targetPath, group.Key, group.Count());
             })
             .ToArray();
@@ -419,11 +456,12 @@ public static class FrontendExportService
 
     private static IReadOnlyList<FrontendExportArtifact> WriteEmulationStationArtifacts(
         IReadOnlyList<ExportableGame> games,
-        string outputPath)
+        string outputPath,
+        DateTime generatedUtc)
     {
         if (HasFileExtension(outputPath))
         {
-            SaveXml(outputPath, BuildEmulationStationDocument(games));
+            SaveXml(outputPath, BuildEmulationStationDocument(games, generatedUtc));
             return [new FrontendExportArtifact(Path.GetFullPath(outputPath), "EmulationStation", games.Count)];
         }
 
@@ -436,7 +474,7 @@ public static class FrontendExportService
                 var directory = EnsureChildPath(root, SanitizeFileNameSegment(group.Key));
                 Directory.CreateDirectory(directory);
                 var targetPath = EnsureChildPath(directory, "gamelist.xml");
-                SaveXml(targetPath, BuildEmulationStationDocument(group));
+                SaveXml(targetPath, BuildEmulationStationDocument(group, generatedUtc));
                 return new FrontendExportArtifact(targetPath, group.Key, group.Count());
             })
             .ToArray();
@@ -444,15 +482,17 @@ public static class FrontendExportService
 
     private static IReadOnlyList<FrontendExportArtifact> WritePlayniteArtifacts(
         IReadOnlyList<ExportableGame> games,
-        string outputPath)
+        string outputPath,
+        DateTime generatedUtc)
     {
         if (HasFileExtension(outputPath))
         {
             var payload = JsonSerializer.Serialize(new
             {
+                schemaVersion = RunConstants.FrontendExportSchemaVersion,
                 format = "playnite-library",
-                generatedUtc = DateTime.UtcNow,
-                games = games.Select(BuildPlaynitePayload).ToArray()
+                generatedUtc,
+                games = games.Select(game => BuildPlaynitePayload(game, generatedUtc)).ToArray()
             }, new JsonSerializerOptions { WriteIndented = true });
             return WriteSingleArtifact(outputPath, "Playnite library", payload);
         }
@@ -463,7 +503,7 @@ public static class FrontendExportService
         {
             var fileName = SanitizeFileNameSegment(BuildStableId(game)) + ".json";
             var targetPath = EnsureChildPath(root, fileName);
-            var payload = JsonSerializer.Serialize(BuildPlaynitePayload(game), new JsonSerializerOptions { WriteIndented = true });
+            var payload = JsonSerializer.Serialize(BuildPlaynitePayload(game, generatedUtc), new JsonSerializerOptions { WriteIndented = true });
             AtomicFileWriter.WriteAllText(targetPath, payload, Encoding.UTF8);
             artifacts.Add(new FrontendExportArtifact(targetPath, game.DisplayName, 1));
         }
@@ -473,18 +513,20 @@ public static class FrontendExportService
 
     private static IReadOnlyList<FrontendExportArtifact> WriteMiSTerArtifacts(
         IReadOnlyList<ExportableGame> games,
-        string outputPath)
+        string outputPath,
+        DateTime generatedUtc)
     {
         if (HasFileExtension(outputPath))
         {
             var payload = SerializeIndented(new
             {
+                schemaVersion = RunConstants.FrontendExportSchemaVersion,
                 format = "mister-library",
-                generatedUtc = DateTime.UtcNow,
+                generatedUtc,
                 systems = games
                     .GroupBy(static game => game.ConsoleLabel, StringComparer.OrdinalIgnoreCase)
                     .OrderBy(static group => group.Key, StringComparer.OrdinalIgnoreCase)
-                    .Select(group => BuildMiSTerSystemPayload(group.Key, group))
+                    .Select(group => BuildMiSTerSystemPayload(group.Key, group, generatedUtc))
                     .ToArray()
             });
 
@@ -500,7 +542,7 @@ public static class FrontendExportService
                 var consoleRoot = EnsureChildPath(root, SanitizeFileNameSegment(group.Key));
                 Directory.CreateDirectory(consoleRoot);
                 var targetPath = EnsureChildPath(consoleRoot, "_romulus-index.json");
-                AtomicFileWriter.WriteAllText(targetPath, SerializeIndented(BuildMiSTerSystemPayload(group.Key, group)), Encoding.UTF8);
+                AtomicFileWriter.WriteAllText(targetPath, SerializeIndented(BuildMiSTerSystemPayload(group.Key, group, generatedUtc)), Encoding.UTF8);
                 return new FrontendExportArtifact(targetPath, group.Key, group.Count());
             })
             .ToArray();
@@ -508,14 +550,16 @@ public static class FrontendExportService
 
     private static IReadOnlyList<FrontendExportArtifact> WriteAnaloguePocketArtifacts(
         IReadOnlyList<ExportableGame> games,
-        string outputPath)
+        string outputPath,
+        DateTime generatedUtc)
     {
         if (HasFileExtension(outputPath))
         {
             var payload = SerializeIndented(new
             {
+                schemaVersion = RunConstants.FrontendExportSchemaVersion,
                 format = "analogue-pocket-library",
-                generatedUtc = DateTime.UtcNow,
+                generatedUtc,
                 assets = games.Select(BuildAnaloguePocketGamePayload).ToArray()
             });
             return WriteSingleArtifact(outputPath, "Analogue Pocket manifest", payload);
@@ -532,7 +576,9 @@ public static class FrontendExportService
                 var targetPath = EnsureChildPath(consoleRoot, "library.json");
                 var payload = SerializeIndented(new
                 {
+                    schemaVersion = RunConstants.FrontendExportSchemaVersion,
                     format = "analogue-pocket-system",
+                    generatedUtc,
                     system = group.Key,
                     games = group.Select(BuildAnaloguePocketGamePayload).ToArray()
                 });
@@ -544,14 +590,16 @@ public static class FrontendExportService
 
     private static IReadOnlyList<FrontendExportArtifact> WriteOnionOsArtifacts(
         IReadOnlyList<ExportableGame> games,
-        string outputPath)
+        string outputPath,
+        DateTime generatedUtc)
     {
         if (HasFileExtension(outputPath))
         {
             var payload = SerializeIndented(new
             {
+                schemaVersion = RunConstants.FrontendExportSchemaVersion,
                 format = "onionos-library",
-                generatedUtc = DateTime.UtcNow,
+                generatedUtc,
                 roms = games.Select(BuildOnionOsGamePayload).ToArray()
             });
             return WriteSingleArtifact(outputPath, "OnionOS manifest", payload);
@@ -568,7 +616,9 @@ public static class FrontendExportService
                 var targetPath = EnsureChildPath(consoleRoot, "romlist.json");
                 var payload = SerializeIndented(new
                 {
+                    schemaVersion = RunConstants.FrontendExportSchemaVersion,
                     format = "onionos-system",
+                    generatedUtc,
                     system = group.Key,
                     roms = group.Select(BuildOnionOsGamePayload).ToArray()
                 });
@@ -578,10 +628,11 @@ public static class FrontendExportService
             .ToArray();
     }
 
-    private static object BuildPlaynitePayload(ExportableGame game)
+    private static object BuildPlaynitePayload(ExportableGame game, DateTime generatedUtc)
     {
         return new
         {
+            schemaVersion = RunConstants.FrontendExportSchemaVersion,
             gameId = BuildStableId(game),
             name = game.DisplayName,
             platform = game.ConsoleLabel,
@@ -591,17 +642,19 @@ public static class FrontendExportService
             extension = game.Extension,
             sizeBytes = game.SizeBytes,
             datVerified = game.DatVerified,
-            addedUtc = DateTime.UtcNow
+            addedUtc = generatedUtc
         };
     }
 
-    private static object BuildMiSTerSystemPayload(string system, IEnumerable<ExportableGame> games)
+    private static object BuildMiSTerSystemPayload(string system, IEnumerable<ExportableGame> games, DateTime generatedUtc)
     {
         var core = CollectionAnalysisService.DefaultCoreMapping.GetValueOrDefault(system.ToLowerInvariant(), string.Empty);
         return new
         {
+            schemaVersion = RunConstants.FrontendExportSchemaVersion,
             system,
             core,
+            generatedUtc,
             games = games.Select(game => new
             {
                 title = game.DisplayName,
@@ -643,29 +696,112 @@ public static class FrontendExportService
         };
     }
 
-    private static XDocument BuildLaunchBoxDocument(string platform, IEnumerable<ExportableGame> games)
+    private static XDocument BuildLaunchBoxDocument(string platform, IEnumerable<ExportableGame> games, DateTime generatedUtc)
     {
         return new XDocument(
             new XDeclaration("1.0", "utf-8", null),
             new XElement("LaunchBox",
+                new XAttribute("romulusSchemaVersion", RunConstants.FrontendExportSchemaVersion),
+                new XAttribute("generatedUtc", generatedUtc.ToString("o")),
                 games.Select(game => new XElement("Game",
                     new XElement("Title", game.DisplayName),
                     new XElement("ApplicationPath", game.SourcePath),
                     new XElement("Platform", platform),
                     new XElement("Region", game.Region),
-                    new XElement("DateAdded", DateTime.UtcNow.ToString("o"))))));
+                    new XElement("DateAdded", generatedUtc.ToString("o"))))));
     }
 
-    private static XDocument BuildEmulationStationDocument(IEnumerable<ExportableGame> games)
+    private static XDocument BuildEmulationStationDocument(IEnumerable<ExportableGame> games, DateTime generatedUtc)
     {
         return new XDocument(
             new XDeclaration("1.0", "utf-8", null),
             new XElement("gameList",
+                new XAttribute("romulusSchemaVersion", RunConstants.FrontendExportSchemaVersion),
+                new XAttribute("generatedUtc", generatedUtc.ToString("o")),
                 games.Select(game => new XElement("game",
                     new XElement("path", game.SourcePath),
                     new XElement("name", game.DisplayName),
                     new XElement("region", game.Region),
                     new XElement("platform", game.ConsoleLabel)))));
+    }
+
+    private static string BuildSchemaPrefixedCsv(string csv, DateTime generatedUtc)
+    {
+        var bom = csv.StartsWith('\uFEFF') ? "\uFEFF" : string.Empty;
+        var body = bom.Length == 0 ? csv : csv[1..];
+        return bom
+               + $"# schemaVersion={RunConstants.FrontendExportSchemaVersion};generatedUtc={generatedUtc:o}"
+               + Environment.NewLine
+               + body;
+    }
+
+    private static ExportStagingScope? TryCreateStagingScope(string frontend, string outputPath)
+    {
+        if (HasFileExtension(outputPath))
+            return null;
+
+        if (frontend is FrontendExportTargets.Csv or FrontendExportTargets.Json or FrontendExportTargets.Excel)
+            return null;
+
+        var finalRoot = ValidateOutputPath(outputPath);
+        var trimmedFinalRoot = finalRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var parent = Path.GetDirectoryName(trimmedFinalRoot);
+        if (string.IsNullOrWhiteSpace(parent))
+            throw new InvalidOperationException("Directory export cannot be staged at a volume root.");
+
+        Directory.CreateDirectory(parent);
+        var leafName = Path.GetFileName(trimmedFinalRoot);
+        var stagingRoot = Path.Combine(parent, $"__romulus_staging_{leafName}_{Environment.ProcessId}_{Guid.NewGuid():N}");
+        return new ExportStagingScope(finalRoot, stagingRoot);
+    }
+
+    private static IReadOnlyList<FrontendExportArtifact> PromoteStagedDirectory(
+        ExportStagingScope scope,
+        IReadOnlyList<FrontendExportArtifact> stagedArtifacts)
+    {
+        var stagingRoot = Path.GetFullPath(scope.StagingRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var finalRoot = Path.GetFullPath(scope.FinalRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        foreach (var artifact in stagedArtifacts)
+        {
+            var fullArtifactPath = Path.GetFullPath(artifact.Path);
+            if (!IsSameOrNestedPath(fullArtifactPath, stagingRoot) || !File.Exists(fullArtifactPath))
+                throw new InvalidOperationException("Staged export validation failed.");
+        }
+
+        var parent = Path.GetDirectoryName(finalRoot)
+            ?? throw new InvalidOperationException("Directory export has no parent directory.");
+        var leafName = Path.GetFileName(finalRoot);
+        var backupRoot = Path.Combine(parent, $"__romulus_backup_{leafName}_{Environment.ProcessId}_{Guid.NewGuid():N}");
+        var hasBackup = false;
+
+        try
+        {
+            if (Directory.Exists(finalRoot))
+            {
+                Directory.Move(finalRoot, backupRoot);
+                hasBackup = true;
+            }
+
+            Directory.Move(stagingRoot, finalRoot);
+            if (hasBackup)
+                Directory.Delete(backupRoot, recursive: true);
+        }
+        catch
+        {
+            if (!Directory.Exists(finalRoot) && hasBackup && Directory.Exists(backupRoot))
+                Directory.Move(backupRoot, finalRoot);
+
+            throw;
+        }
+
+        return stagedArtifacts
+            .Select(artifact =>
+            {
+                var relative = Path.GetRelativePath(stagingRoot, artifact.Path);
+                return artifact with { Path = Path.GetFullPath(Path.Combine(finalRoot, relative)) };
+            })
+            .ToArray();
     }
 
     private static void SaveXml(string outputPath, XDocument doc)
@@ -717,6 +853,15 @@ public static class FrontendExportService
     private static bool HasFileExtension(string path)
         => !string.IsNullOrWhiteSpace(Path.GetExtension(path));
 
+    private static bool IsSameOrNestedPath(string candidatePath, string rootPath)
+    {
+        var candidate = Path.GetFullPath(candidatePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var root = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        return string.Equals(candidate, root, StringComparison.OrdinalIgnoreCase)
+               || candidate.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string SanitizeFileNameSegment(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -750,4 +895,6 @@ public static class FrontendExportService
         string ConsoleLabel,
         string PlaylistName,
         IReadOnlyList<ExportableGame> Entries);
+
+    private sealed record ExportStagingScope(string FinalRoot, string StagingRoot);
 }

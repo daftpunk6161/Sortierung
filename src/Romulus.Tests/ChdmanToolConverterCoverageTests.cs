@@ -38,8 +38,7 @@ public sealed class ChdmanToolConverterCoverageTests : IDisposable
         stub.RegisterTool("chdman", "chdman.exe");
         stub.NextResult = new ToolResult(0, "ok", true);
 
-        // ConversionOutputValidator expects the file to exist and have size > 0
-        File.WriteAllBytes(target, new byte[1024]);
+        WriteValidChd(target);
 
         var converter = new ChdmanToolConverter(stub);
         var result = converter.Convert(source, target, "chdman.exe", "createdvd");
@@ -59,7 +58,7 @@ public sealed class ChdmanToolConverterCoverageTests : IDisposable
         var stub = new TrackingToolRunner();
         stub.RegisterTool("chdman", "chdman.exe");
         stub.NextResult = new ToolResult(0, "ok", true);
-        File.WriteAllBytes(target, new byte[1024]);
+        WriteValidChd(target);
 
         var converter = new ChdmanToolConverter(stub);
         var result = converter.Convert(source, target, "chdman.exe", "createdvd");
@@ -81,7 +80,7 @@ public sealed class ChdmanToolConverterCoverageTests : IDisposable
         var stub = new TrackingToolRunner();
         stub.RegisterTool("chdman", "chdman.exe");
         stub.NextResult = new ToolResult(0, "ok", true);
-        File.WriteAllBytes(target, new byte[1024]);
+        WriteValidChd(target);
 
         var converter = new ChdmanToolConverter(stub);
         var result = converter.Convert(source, target, "chdman.exe", "createdvd");
@@ -146,7 +145,7 @@ public sealed class ChdmanToolConverterCoverageTests : IDisposable
 
         var stub = new TrackingToolRunner();
         stub.NextResult = new ToolResult(0, "", true);
-        File.WriteAllBytes(target, new byte[1024]);
+        WriteValidChd(target);
 
         var converter = new ChdmanToolConverter(stub);
         var result = converter.Convert(source, target, "chdman.exe", "createcd");
@@ -162,7 +161,7 @@ public sealed class ChdmanToolConverterCoverageTests : IDisposable
 
         var stub = new TrackingToolRunner();
         stub.NextResult = new ToolResult(0, "", true);
-        File.WriteAllBytes(target, new byte[1024]);
+        WriteValidChd(target);
 
         var converter = new ChdmanToolConverter(stub);
         var result = converter.Convert(source, target, "chdman.exe", "createcd");
@@ -178,7 +177,7 @@ public sealed class ChdmanToolConverterCoverageTests : IDisposable
 
         var stub = new TrackingToolRunner();
         stub.NextResult = new ToolResult(0, "", true);
-        File.WriteAllBytes(target, new byte[1024]);
+        WriteValidChd(target);
 
         var converter = new ChdmanToolConverter(stub);
         var result = converter.Convert(source, target, "chdman.exe", "createcd");
@@ -194,7 +193,7 @@ public sealed class ChdmanToolConverterCoverageTests : IDisposable
 
         var stub = new TrackingToolRunner();
         stub.NextResult = new ToolResult(0, "", true);
-        File.WriteAllBytes(target, new byte[1024]);
+        WriteValidChd(target);
 
         var converter = new ChdmanToolConverter(stub);
         var result = converter.Convert(source, target, "chdman.exe", "createdvd");
@@ -212,7 +211,7 @@ public sealed class ChdmanToolConverterCoverageTests : IDisposable
 
         var stub = new TrackingToolRunner();
         stub.NextResult = new ToolResult(0, "", true);
-        File.WriteAllBytes(target, new byte[1024]);
+        WriteValidChd(target);
 
         var converter = new ChdmanToolConverter(stub);
         var result = converter.Convert(source, target, "chdman.exe", "createcd");
@@ -272,8 +271,7 @@ public sealed class ChdmanToolConverterCoverageTests : IDisposable
         var stub = new TrackingToolRunner();
         stub.NextResult = new ToolResult(0, "ok", true);
 
-        // Create target to pass validation
-        File.WriteAllBytes(target, new byte[1024]);
+        WriteValidChd(target);
 
         var converter = new ChdmanToolConverter(stub);
         var result = converter.Convert(zipPath, target, "chdman.exe", "createcd");
@@ -297,7 +295,7 @@ public sealed class ChdmanToolConverterCoverageTests : IDisposable
         var stub = new TrackingToolRunner();
         stub.RegisterTool("chdman", "chdman.exe");
         stub.NextResult = new ToolResult(0, "ok", true);
-        File.WriteAllBytes(target, new byte[1024]);
+        WriteValidChd(target);
 
         var converter = new ChdmanToolConverter(stub);
         var result = converter.Convert(zipPath, target, "chdman.exe", "createdvd");
@@ -493,6 +491,13 @@ public sealed class ChdmanToolConverterCoverageTests : IDisposable
 
     private string CreateZipWithCue(string zipName, params (string Name, string Content)[] entries)
         => CreateZipWithEntries(zipName, entries);
+
+    private static void WriteValidChd(string path)
+    {
+        var bytes = new byte[1024];
+        "MComprHD"u8.CopyTo(bytes);
+        File.WriteAllBytes(path, bytes);
+    }
 
     /// <summary>
     /// Tracking IToolRunner that records invocations and allows configuring results.

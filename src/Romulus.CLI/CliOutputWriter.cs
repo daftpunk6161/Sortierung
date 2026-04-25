@@ -105,7 +105,7 @@ internal static class CliOutputWriter
             ConversionBlocked = BuildConversionBlocked(conversionReport)
         };
 
-        var json = JsonSerializer.Serialize(output, JsonOptions);
+        var json = JsonSerializer.Serialize(output, CliJsonSerializerContext.Default.CliDryRunOutput);
         return json;
     }
 
@@ -215,7 +215,7 @@ Exit codes:
     }
 
     internal static string FormatRunHistoryJson(CollectionRunHistoryPage page)
-        => JsonSerializer.Serialize(page, JsonOptions);
+        => JsonSerializer.Serialize(page, CliJsonSerializerContext.Default.CollectionRunHistoryPage);
 
     internal static string SerializeJson<T>(T value)
         => JsonSerializer.Serialize(value, JsonOptions);
@@ -261,6 +261,7 @@ Exit codes:
 /// </summary>
 internal sealed class CliDryRunOutput
 {
+    public string SchemaVersion { get; init; } = RunConstants.CliOutputSchemaVersion;
     public string Status { get; init; } = "";
     public int ExitCode { get; init; }
     public string Mode { get; init; } = "DryRun";
@@ -350,4 +351,14 @@ internal sealed class CliConversionBlocked
     public string SourcePath { get; init; } = "";
     public string Reason { get; init; } = "";
     public string Safety { get; init; } = "";
+}
+
+[JsonSourceGenerationOptions(
+    WriteIndented = true,
+    DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+    GenerationMode = JsonSourceGenerationMode.Metadata)]
+[JsonSerializable(typeof(CliDryRunOutput))]
+[JsonSerializable(typeof(CollectionRunHistoryPage))]
+internal partial class CliJsonSerializerContext : JsonSerializerContext
+{
 }

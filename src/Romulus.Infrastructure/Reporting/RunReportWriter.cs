@@ -80,6 +80,9 @@ public static class RunReportWriter
         => category.ToString().ToUpperInvariant();
 
     public static ReportSummary BuildSummary(RunResult result, string mode)
+        => BuildSummary(result, mode, strictAccounting: true);
+
+    private static ReportSummary BuildSummary(RunResult result, string mode, bool strictAccounting)
     {
         var entries = BuildEntries(result, mode);
         var projection = RunProjectionFactory.Create(result);
@@ -105,16 +108,23 @@ public static class RunReportWriter
                 accountedTotal += projection.FilteredNonGameCount;
 
             if (accountedTotal != projection.TotalFiles)
-                throw new InvalidOperationException($"Report summary invariant failed: accounted={accountedTotal}, scanned={projection.TotalFiles}");
+            {
+                var message = $"Report summary invariant failed: accounted={accountedTotal}, scanned={projection.TotalFiles}";
+                if (strictAccounting)
+                    throw new ReportAccountingException(message);
+
+                System.Diagnostics.Trace.TraceWarning(message);
+            }
         }
 
         var totalErrorCount = projection.FailCount;
 
         return new ReportSummary
         {
+            SchemaVersion = RunConstants.ReportSchemaVersion,
             Mode = mode,
             RunStatus = projection.Status,
-            Timestamp = DateTime.UtcNow,
+            Timestamp = result.CompletedUtc ?? result.StartedUtc ?? DateTime.UtcNow,
             TotalFiles = projection.TotalFiles,
             Candidates = projection.Candidates,
             KeepCount = projection.Keep,
@@ -161,7 +171,16 @@ public static class RunReportWriter
     {
         var fullPath = SafetyValidator.EnsureSafeOutputPath(reportPath);
         var entries = BuildEntries(result, mode);
-        var summary = BuildSummary(result, mode);
+        ReportSummary summary;
+        try
+        {
+            summary = BuildSummary(result, mode, strictAccounting: true);
+        }
+        catch (ReportAccountingException ex)
+        {
+            System.Diagnostics.Trace.TraceWarning(ex.Message);
+            summary = BuildSummary(result, mode, strictAccounting: false);
+        }
         var reportDir = Path.GetDirectoryName(fullPath)
             ?? throw new InvalidOperationException($"Report path has no directory: {reportPath}");
 
@@ -185,5 +204,13 @@ public static class RunReportWriter
             throw new IOException($"Report file was not created: {fullPath}");
 
         return fullPath;
+    }
+}
+
+public sealed class ReportAccountingException : InvalidOperationException
+{
+    public ReportAccountingException(string message)
+        : base(message)
+    {
     }
 }

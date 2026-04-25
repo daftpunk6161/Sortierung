@@ -1,10 +1,4 @@
 {
-  "compressionRatios": {
-    "bin_chd": 0.50, "cue_chd": 0.50, "iso_chd": 0.60,
-    "iso_rvz": 0.40, "gcz_rvz": 0.70, "zip_7z": 0.90,
-    "rar_7z": 0.95, "cso_chd": 0.80, "pbp_chd": 0.70,
-    "iso_cso": 0.65, "wbfs_rvz": 0.45, "nkit_rvz": 0.50
-  },
   "consoleFormatPriority": {
     "ps1": ["chd", "bin/cue", "pbp", "cso", "iso"],
     "ps2": ["chd", "iso"],

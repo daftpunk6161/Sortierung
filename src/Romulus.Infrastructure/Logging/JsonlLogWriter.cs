@@ -11,6 +11,9 @@ namespace Romulus.Infrastructure.Logging;
 /// </summary>
 public sealed class StructuredLogEntry
 {
+    [JsonPropertyName("schemaVersion")]
+    public string SchemaVersion { get; set; } = "romulus-jsonl-log-v1";
+
     [JsonPropertyName("ts")]
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
@@ -61,6 +64,9 @@ public enum LogLevel
 /// </summary>
 public sealed class JsonlLogWriter : IDisposable
 {
+    private const int MaxStringFieldChars = 8192;
+    private const int MaxRootFieldChars = 4096;
+
     private readonly string _logPath;
     private readonly string _correlationId;
     private readonly LogLevel _minLevel;
@@ -99,16 +105,19 @@ public sealed class JsonlLogWriter : IDisposable
 
         var entry = new StructuredLogEntry
         {
+            SchemaVersion = "romulus-jsonl-log-v1",
             Timestamp = DateTime.UtcNow,
             CorrelationId = _correlationId,
             Level = level.ToString(),
-            Phase = phase,
-            Module = module,
-            Action = action,
-            Message = message,
-            Root = root,
-            ErrorClass = errorClass,
-            Metrics = metrics
+            Phase = LimitField(phase, MaxStringFieldChars),
+            Module = LimitField(module, MaxStringFieldChars),
+            Action = LimitField(action, MaxStringFieldChars),
+            Message = LimitField(message, MaxStringFieldChars),
+            // Root is an explicit log field and is intentionally allowed by policy;
+            // arbitrary paths in messages still get bounded by MaxStringFieldChars.
+            Root = LimitField(root, MaxRootFieldChars),
+            ErrorClass = string.IsNullOrEmpty(errorClass) ? null : LimitField(errorClass, MaxStringFieldChars),
+            Metrics = LimitMetrics(metrics)
         };
 
         var json = JsonSerializer.Serialize(entry, JsonOpts);
@@ -169,6 +178,33 @@ public sealed class JsonlLogWriter : IDisposable
             _writer = null;
         }
     }
+
+    private static string LimitField(string? value, int maxChars)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        return value.Length <= maxChars
+            ? value
+            : value[..maxChars] + "...[truncated]";
+    }
+
+    private static Dictionary<string, object>? LimitMetrics(Dictionary<string, object>? metrics)
+    {
+        if (metrics is null || metrics.Count == 0)
+            return metrics;
+
+        var sanitized = new Dictionary<string, object>(metrics.Count, StringComparer.Ordinal);
+        foreach (var (key, value) in metrics)
+        {
+            var safeKey = LimitField(key, 256);
+            sanitized[safeKey] = value is string text
+                ? LimitField(text, MaxStringFieldChars)
+                : value;
+        }
+
+        return sanitized;
+    }
 }
 
 /// <summary>
@@ -177,6 +213,8 @@ public sealed class JsonlLogWriter : IDisposable
 /// </summary>
 public static class JsonlLogRotation
 {
+    private static long s_rotationCounter;
+
     /// <summary>
     /// Rotates the log file if it exceeds maxBytes.
     /// Archives with timestamp, optionally compresses with GZIP.
@@ -193,9 +231,7 @@ public static class JsonlLogRotation
 
         var dir = fi.DirectoryName ?? ".";
         var baseName = Path.GetFileNameWithoutExtension(fi.Name);
-        var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
-        var archiveName = $"{baseName}-{stamp}-{Guid.NewGuid():N}.jsonl";
-        var archivePath = Path.Combine(dir, archiveName);
+        var archivePath = BuildUniqueArchivePath(dir, baseName, gzip);
 
         try
         {
@@ -204,6 +240,7 @@ public static class JsonlLogRotation
         catch (IOException)
         {
             // File is still held open by a writer — skip rotation
+            System.Diagnostics.Trace.TraceWarning($"JSONL rotation skipped because the log is locked: {fullPath}");
             return;
         }
 
@@ -217,8 +254,16 @@ public static class JsonlLogRotation
             {
                 sourceStream.CopyTo(gzStream);
             }
-            File.Move(gzTempPath, gzPath, overwrite: false);
-            File.Delete(archivePath);
+            try
+            {
+                File.Move(gzTempPath, gzPath, overwrite: false);
+                File.Delete(archivePath);
+            }
+            catch (IOException ex)
+            {
+                System.Diagnostics.Trace.TraceWarning($"JSONL gzip promotion failed: {ex.Message}");
+                throw;
+            }
         }
 
         // Prune old archives
@@ -232,5 +277,21 @@ public static class JsonlLogRotation
         {
             File.Delete(archives[i]);
         }
+    }
+
+    private static string BuildUniqueArchivePath(string dir, string baseName, bool gzip)
+    {
+        for (var attempt = 0; attempt < 1024; attempt++)
+        {
+            var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
+            var counter = Interlocked.Increment(ref s_rotationCounter);
+            var archiveName = $"{baseName}-{stamp}-{Environment.ProcessId}-{counter:D8}.jsonl";
+            var archivePath = Path.Combine(dir, archiveName);
+            var finalPath = gzip ? archivePath + ".gz" : archivePath;
+            if (!File.Exists(archivePath) && !File.Exists(finalPath))
+                return archivePath;
+        }
+
+        throw new IOException("Could not allocate a collision-free JSONL archive path.");
     }
 }

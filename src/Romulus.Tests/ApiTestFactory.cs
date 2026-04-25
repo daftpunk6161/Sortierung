@@ -27,6 +27,7 @@ internal static class ApiTestFactory
         private readonly ICollectionIndex? _collectionIndex;
         private readonly string _tempDir;
         private readonly string _databasePath;
+        private readonly string _datCatalogStatePath;
         private readonly string _profileDirectory;
 
         public IsolatedApiFactory(
@@ -39,6 +40,7 @@ internal static class ApiTestFactory
             _collectionIndex = collectionIndex;
             _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_ApiFactory_" + Guid.NewGuid().ToString("N"));
             _databasePath = Path.Combine(_tempDir, "collection.db");
+            _datCatalogStatePath = Path.Combine(_tempDir, "dat-catalog-state.json");
             _profileDirectory = Path.Combine(_tempDir, "profiles");
             Directory.CreateDirectory(_tempDir);
         }
@@ -61,6 +63,12 @@ internal static class ApiTestFactory
                 services.AddSingleton(new CollectionIndexPathOptions
                 {
                     DatabasePath = _databasePath
+                });
+
+                services.RemoveAll<DatCatalogStatePathOptions>();
+                services.AddSingleton(new DatCatalogStatePathOptions
+                {
+                    StatePath = _datCatalogStatePath
                 });
 
                 services.RemoveAll<RunProfilePathOptions>();

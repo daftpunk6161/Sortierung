@@ -238,7 +238,7 @@ public class ConsoleSorterTests : IDisposable
         var result = sorter.Sort(new[] { _tempDir }, new[] { ".nes" }, dryRun: true);
 
         Assert.Equal(1, result.Skipped);
-        Assert.Contains(audit.Rows, r => r.action == "CONSOLE_SORT" && r.reason == "missing-enriched-console-keys");
+        Assert.Contains(audit.Rows, r => r.action == "CONSOLE_SORT_WARNING" && r.reason == "missing-enriched-console-keys");
     }
 
     private sealed class RecordingAuditStore : IAuditStore

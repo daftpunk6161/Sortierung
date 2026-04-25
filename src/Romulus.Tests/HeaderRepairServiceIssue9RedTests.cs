@@ -33,7 +33,7 @@ public sealed class HeaderRepairServiceIssue9RedTests : IDisposable
         IHeaderRepairService sut = new HeaderRepairService(new FileSystemAdapter());
 
         Assert.True(sut.RepairNesHeader(path));
-        Assert.True(File.Exists(path + ".bak"));
+        Assert.Single(Directory.GetFiles(_tempDir, Path.GetFileName(path) + ".*.bak"));
 
         var buf = new byte[16];
         using var verify = File.OpenRead(path);
@@ -60,7 +60,7 @@ public sealed class HeaderRepairServiceIssue9RedTests : IDisposable
         IHeaderRepairService sut = new HeaderRepairService(new FileSystemAdapter());
 
         Assert.True(sut.RemoveCopierHeader(path));
-        Assert.True(File.Exists(path + ".bak"));
+        Assert.Single(Directory.GetFiles(_tempDir, Path.GetFileName(path) + ".*.bak"));
 
         var newContent = File.ReadAllBytes(path);
         Assert.Equal(1024, newContent.Length);

@@ -240,7 +240,7 @@ public sealed class RunEnvironmentBuilder
 
         foreach (var candidate in EnumerateStateBackedDatRootCandidates(statePath))
         {
-            if (!DirectoryHasDatCandidates(candidate))
+            if (!Directory.Exists(candidate))
                 continue;
 
             datRoot = candidate;
@@ -445,7 +445,8 @@ public sealed class RunEnvironmentBuilder
     /// </summary>
     public static RunEnvironment Build(RunOptions runOptions, RomulusSettings settings,
         string dataDir, Action<string>? onWarning = null,
-        string? collectionDatabasePath = null)
+        string? collectionDatabasePath = null,
+        string? datCatalogStatePath = null)
     {
         var classificationIo = new IO.ClassificationIo();
 
@@ -528,7 +529,9 @@ public sealed class RunEnvironmentBuilder
         IHeaderlessHasher? headerlessHasher = null;
         ICollectionIndex? collectionIndex = null;
         var knownBiosHashes = LoadKnownBiosHashes(dataDir, onWarning);
-        var datRootResolution = ResolveEffectiveDatRoot(runOptions, settings, dataDir);
+        var datRootResolution = string.IsNullOrWhiteSpace(datCatalogStatePath)
+            ? ResolveEffectiveDatRoot(runOptions, settings, dataDir)
+            : ResolveEffectiveDatRoot(runOptions.DatRoot, settings.Dat.DatRoot, dataDir, datCatalogStatePath);
         var effectiveDatRoot = datRootResolution.Path;
         Dictionary<string, string>? datConsoleMap = null;
 

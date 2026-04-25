@@ -324,7 +324,11 @@ public sealed class AuditFindingsFixTests : IDisposable
             AuditPath = auditPath
         };
 
-        var env = RunEnvironmentBuilder.Build(options, settings, dataDir);
+        using var env = RunEnvironmentBuilder.Build(
+            options,
+            settings,
+            dataDir,
+            collectionDatabasePath: Path.Combine(_tempDir, "sort-collection.db"));
         var orchestrator = new RunOrchestrator(env.FileSystem, env.Audit, env.ConsoleDetector, env.HashService, env.Converter, env.DatIndex);
 
         var result = orchestrator.Execute(options);

@@ -30,13 +30,19 @@ internal sealed class ChdmanToolConverter
         _tools = tools ?? throw new ArgumentNullException(nameof(tools));
     }
 
-    public ConversionResult Convert(string sourcePath, string targetPath, string toolPath, string command)
+    public ConversionResult Convert(
+        string sourcePath,
+        string targetPath,
+        string toolPath,
+        string command,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var sourceExt = Path.GetExtension(sourcePath).ToLowerInvariant();
 
         // ZIP/7Z containing .cue/.bin → extract first, then convert the .cue
         if (DiscFormats.IsChdmanArchiveExtension(sourceExt))
-            return ConvertArchiveToChdman(sourcePath, targetPath, toolPath, command, sourceExt);
+            return ConvertArchiveToChdman(sourcePath, targetPath, toolPath, command, sourceExt, cancellationToken);
 
         // chdman only accepts .cue, .gdi, .iso, .bin as direct input
         if (!DiscFormats.ChdmanDirectInputExtensions.Contains(sourceExt))
@@ -46,7 +52,7 @@ internal sealed class ChdmanToolConverter
         var effectiveCommand = ToolInvokers.ToolInvokerSupport.ResolveEffectiveChdmanCommand(command, sourcePath);
 
         var args = new[] { effectiveCommand, "-i", sourcePath, "-o", targetPath };
-        var result = _tools.InvokeProcess(toolPath, args, ChdmanRequirement, "chdman", null, CancellationToken.None);
+        var result = _tools.InvokeProcess(toolPath, args, ChdmanRequirement, "chdman", TimeSpan.FromMinutes(30), cancellationToken);
 
         if (!result.Success)
         {
@@ -80,7 +86,12 @@ internal sealed class ChdmanToolConverter
     /// SEC-CONV-02/03: Entry count + total size limits to block zip bombs.
     /// </summary>
     private ConversionResult ConvertArchiveToChdman(
-        string sourcePath, string targetPath, string toolPath, string command, string sourceExt)
+        string sourcePath,
+        string targetPath,
+        string toolPath,
+        string command,
+        string sourceExt,
+        CancellationToken cancellationToken)
     {
         var dir = Path.GetDirectoryName(sourcePath)!;
         var baseName = Path.GetFileNameWithoutExtension(sourcePath);
@@ -92,7 +103,7 @@ internal sealed class ChdmanToolConverter
             // Step 1: Extract archive with Zip-Slip protection
             if (sourceExt == ".zip")
             {
-                var extractError = ExtractZipSafe(sourcePath, extractDir);
+                var extractError = ExtractZipSafe(sourcePath, extractDir, cancellationToken);
                 if (extractError is not null)
                     return new ConversionResult(sourcePath, null, ConversionOutcome.Error, extractError);
             }
@@ -105,7 +116,11 @@ internal sealed class ChdmanToolConverter
 
                 Directory.CreateDirectory(extractDir);
                 var extractResult = _tools.InvokeProcess(sevenZipPath,
-                    new[] { "x", "-y", $"-o{extractDir}", sourcePath }, SevenZipRequirement, "7z extract", null, CancellationToken.None);
+                    new[] { "x", "-y", "-snl-", $"-o{extractDir}", sourcePath },
+                    SevenZipRequirement,
+                    "7z extract",
+                    TimeSpan.FromMinutes(10),
+                    cancellationToken);
                 if (!extractResult.Success)
                     return new ConversionResult(sourcePath, null, ConversionOutcome.Error, "7z-extract-failed");
 
@@ -147,7 +162,7 @@ internal sealed class ChdmanToolConverter
             // TASK-012: Multi-CUE atomicity — if multiple .cue files exist, each needs conversion.
             if (safeCueFiles.Length > 1)
             {
-                return ConvertMultiCueArchive(sourcePath, safeCueFiles, dir, toolPath, command);
+                return ConvertMultiCueArchive(sourcePath, safeCueFiles, dir, toolPath, command, cancellationToken);
             }
 
             string? inputFile = null;
@@ -165,7 +180,7 @@ internal sealed class ChdmanToolConverter
             // Step 3: Convert via chdman
             var effectiveCommand = ToolInvokers.ToolInvokerSupport.ResolveEffectiveChdmanCommand(command, inputFile);
             var args = new[] { effectiveCommand, "-i", inputFile, "-o", targetPath };
-            var result = _tools.InvokeProcess(toolPath, args, ChdmanRequirement, "chdman", null, CancellationToken.None);
+            var result = _tools.InvokeProcess(toolPath, args, ChdmanRequirement, "chdman", TimeSpan.FromMinutes(30), cancellationToken);
 
             if (!result.Success)
             {
@@ -209,17 +224,24 @@ internal sealed class ChdmanToolConverter
     /// All must succeed or the entire conversion is rolled back.
     /// </summary>
     private ConversionResult ConvertMultiCueArchive(
-        string sourcePath, string[] cueFiles, string outputDir, string toolPath, string command)
+        string sourcePath,
+        string[] cueFiles,
+        string outputDir,
+        string toolPath,
+        string command,
+        CancellationToken cancellationToken)
     {
         var outputs = new List<string>();
 
         for (int i = 0; i < cueFiles.Length; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var cueBaseName = Path.GetFileNameWithoutExtension(cueFiles[i]);
             var targetPath = Path.Combine(outputDir, cueBaseName + ".chd");
 
-            var args = new[] { command, "-i", cueFiles[i], "-o", targetPath };
-            var result = _tools.InvokeProcess(toolPath, args, ChdmanRequirement, "chdman", null, CancellationToken.None);
+            var effectiveCommand = ToolInvokers.ToolInvokerSupport.ResolveEffectiveChdmanCommand(command, cueFiles[i]);
+            var args = new[] { effectiveCommand, "-i", cueFiles[i], "-o", targetPath };
+            var result = _tools.InvokeProcess(toolPath, args, ChdmanRequirement, "chdman", TimeSpan.FromMinutes(30), cancellationToken);
 
             if (!result.Success)
             {
@@ -255,7 +277,7 @@ internal sealed class ChdmanToolConverter
     /// <summary>
     /// SEC-CONV-01: Safe per-entry ZIP extraction with Zip-Slip protection.
     /// </summary>
-    internal static string? ExtractZipSafe(string zipPath, string extractDir)
+    internal static string? ExtractZipSafe(string zipPath, string extractDir, CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(extractDir);
         var normalizedBase = Path.GetFullPath(extractDir) + Path.DirectorySeparatorChar;
@@ -265,20 +287,18 @@ internal sealed class ChdmanToolConverter
         if (archive.Entries.Count > MaxZipEntryCount)
             return $"archive-too-many-entries:{archive.Entries.Count}";
 
-        long totalUncompressed = 0;
         foreach (var entry in archive.Entries)
         {
-            totalUncompressed += entry.Length;
-            if (totalUncompressed > MaxExtractedTotalBytes)
-                return "archive-extraction-size-exceeded";
-
             if (entry.CompressedLength > 0 && entry.Length > 1_048_576 &&
                 entry.Length / (double)entry.CompressedLength > MaxCompressionRatio)
                 return "archive-compression-ratio-exceeded";
         }
 
+        long totalExtractedBytes = 0;
+        var buffer = new byte[81920];
         foreach (var entry in archive.Entries)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(entry.Name))
                 continue;
 
@@ -291,10 +311,26 @@ internal sealed class ChdmanToolConverter
             if (!string.IsNullOrEmpty(entryDir))
                 Directory.CreateDirectory(entryDir);
 
-            entry.ExtractToFile(destPath, overwrite: false);
+            using var source = entry.Open();
+            using var target = new FileStream(destPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, buffer.Length);
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var read = source.Read(buffer, 0, buffer.Length);
+                if (read <= 0)
+                    break;
+
+                totalExtractedBytes += read;
+                if (totalExtractedBytes > MaxExtractedTotalBytes)
+                    return "archive-extraction-size-exceeded";
+
+                target.Write(buffer, 0, read);
+            }
         }
 
-        return null;
+        return ValidateExtractedContents(extractDir)
+            ? null
+            : "archive-path-traversal-detected";
     }
 
     /// <summary>

@@ -1,13 +1,18 @@
 using System.IO.Compression;
 using System.Reflection;
 using Romulus.Contracts.Ports;
+using Romulus.Core.GameKeys;
 using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Hashing;
-using Romulus.Core.GameKeys;
 using Xunit;
 
 namespace Romulus.Tests;
 
+/// <summary>
+/// Behavioral tests retained from the historical "tracker batch 2" set.
+/// Reflection-existence assertions were removed in Block A
+/// of test-suite-remediation-plan-2026-04-25.md.
+/// </summary>
 public sealed class TrackerAllFindingsBatch2RedTests : IDisposable
 {
     private readonly string _tempDir;
@@ -16,19 +21,6 @@ public sealed class TrackerAllFindingsBatch2RedTests : IDisposable
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_Batch2_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
-    }
-
-    [Fact]
-    public void Th13_Crc32_MustExposeCancellationAwareHashStreamOverload()
-    {
-        var method = typeof(Crc32).GetMethod(
-            "HashStream",
-            BindingFlags.Public | BindingFlags.Static,
-            binder: null,
-            types: [typeof(Stream), typeof(CancellationToken)],
-            modifiers: null);
-
-        Assert.NotNull(method);
     }
 
     [Fact]

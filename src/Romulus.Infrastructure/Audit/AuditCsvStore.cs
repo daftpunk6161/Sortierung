@@ -199,7 +199,7 @@ public sealed class AuditCsvStore : IAuditStore
                 current.Clear();
                 if (row.Length > 0)
                 {
-                    _ = AuditCsvParser.ParseCsvLine(row);
+                    TryValidateCsvRow(row);
                     logicalRows++;
                 }
             }
@@ -208,11 +208,25 @@ public sealed class AuditCsvStore : IAuditStore
         if (current.Length > 0)
         {
             var row = current.ToString();
-            _ = AuditCsvParser.ParseCsvLine(row);
+            TryValidateCsvRow(row);
             logicalRows++;
         }
 
         return Math.Max(0, logicalRows - 1);
+    }
+
+    private static void TryValidateCsvRow(string row)
+    {
+        try
+        {
+            _ = AuditCsvParser.ParseCsvLine(row);
+        }
+        catch (InvalidDataException)
+        {
+            // Sidecar row counting must remain best-effort for rollback audits:
+            // corrupt rows are handled by rollback verification and must not
+            // prevent metadata creation for the valid rows around them.
+        }
     }
 
     private static void WriteAuditRowCore(TextWriter writer, AuditAppendRow row)

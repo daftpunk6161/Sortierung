@@ -103,29 +103,29 @@ Keine Teilabnahmen: Ein Finding gilt erst als erledigt, wenn es fachlich, techni
 
 ## Welle 3 - Tools, Archive, Conversion, DAT-Import, Hashing
 
-- [ ] Welle 3 abgeschlossen.
-- [ ] Tool-Discovery validiert Tool-Roots, Reparse-Points, UNC, Hashes und Env-Overrides.
-- [ ] ToolRunner nutzt sicheres Argument-Quoting, Cancellation, Timeout und bounded stdout/stderr.
-- [ ] Retry-Logik greift nur bei praezise klassifizierten transienten Fehlern.
-- [ ] Zip-Slip, 7z-Junctions, Zip-/7z-Bombs und nested archive recursion werden blockiert.
-- [ ] Conversion verifiziert Output fail-closed mit Magic Header, Groesse, Tool-Verify und Zielvalidierung.
-- [ ] Source-Dateien werden nie vor erfolgreicher Verifikation und Audit-Sicherung entfernt.
-- [ ] Conversion-Registry-Policies fuer XBOX/X360, wildcard source extension und compression estimates sind konsolidiert.
-- [ ] DAT-Update, DAT-Import, Rule-Pack-Import und Custom-DAT nutzen einen zentralen validierenden Service.
-- [ ] Header-Repair nutzt eindeutige Backups, Locks, Verify und Audit.
-- [ ] Tests fuer Tools, Archive, Conversion, Header-Repair, DAT-Import und negative Faelle laufen gruen.
-- [ ] Betroffene Detail-Findings im Audit-Dokument sind abgehakt.
+- [x] Welle 3 abgeschlossen.
+- [x] Tool-Discovery validiert Tool-Roots, Reparse-Points, UNC, Hashes und Env-Overrides.
+- [x] ToolRunner nutzt sicheres Argument-Quoting, Cancellation, Timeout und bounded stdout/stderr.
+- [x] Retry-Logik greift nur bei praezise klassifizierten transienten Fehlern.
+- [x] Zip-Slip, 7z-Junctions, Zip-/7z-Bombs und nested archive recursion werden blockiert.
+- [x] Conversion verifiziert Output fail-closed mit Magic Header, Groesse, Tool-Verify und Zielvalidierung.
+- [x] Source-Dateien werden nie vor erfolgreicher Verifikation und Audit-Sicherung entfernt.
+- [x] Conversion-Registry-Policies fuer XBOX/X360, wildcard source extension und compression estimates sind konsolidiert.
+- [x] DAT-Update, DAT-Import, Rule-Pack-Import und Custom-DAT nutzen einen zentralen validierenden Service.
+- [x] Header-Repair nutzt eindeutige Backups, Locks, Verify und Audit.
+- [x] Tests fuer Tools, Archive, Conversion, Header-Repair, DAT-Import und negative Faelle laufen gruen.
+- [x] Betroffene Detail-Findings im Audit-Dokument sind abgehakt.
 
 ### Finding-Gruppen
 
-- [ ] Conversion-/Verify-P0-Findings.
-- [ ] Tool-, Archive-, Hashing- und DAT-Findings aus P1/P2/P3.
-- [ ] `R3-A-*` Tool/Archive/Conversion/DAT-Findings.
-- [ ] `R5-B-01` bis `R5-B-03`.
-- [ ] `R6-A-01` bis `R6-A-06`.
-- [ ] `R6-B-01`, `R6-B-04`, `R6-B-05`, `R6-B-12`.
-- [ ] `R7-C-01` Rule-Pack-Import.
-- [ ] `R7-C-04` Custom-DAT.
+- [x] Conversion-/Verify-P0-Findings.
+- [x] Tool-, Archive-, Hashing- und DAT-Findings aus P1/P2/P3.
+- [x] `R3-A-*` Tool/Archive/Conversion/DAT-Findings.
+- [x] `R5-B-01` bis `R5-B-03`.
+- [x] `R6-A-01` bis `R6-A-06`.
+- [x] `R6-B-01`, `R6-B-04`, `R6-B-05`, `R6-B-12`.
+- [x] `R7-C-01` Rule-Pack-Import.
+- [x] `R7-C-04` Custom-DAT.
 
 ## Welle 4 - Orchestration, Statusmodelle, Reports, Exports
 

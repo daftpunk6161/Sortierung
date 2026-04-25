@@ -367,9 +367,25 @@ public sealed class ConversionFacadeRegressionTests : IDisposable
                 if (!string.IsNullOrEmpty(dir))
                     Directory.CreateDirectory(dir);
                 if (!File.Exists(outputPath))
-                    File.WriteAllBytes(outputPath, [1, 2, 3, 4]);
+                    File.WriteAllBytes(outputPath, BuildToolOutput(outputPath));
             }
             return new ToolResult(0, "OK", true);
+        }
+
+        private static byte[] BuildToolOutput(string outputPath)
+        {
+            var output = new byte[1024];
+            if (Path.GetExtension(outputPath).Equals(".chd", StringComparison.OrdinalIgnoreCase))
+            {
+                "MComprHD"u8.CopyTo(output);
+                return output;
+            }
+
+            output[0] = 1;
+            output[1] = 2;
+            output[2] = 3;
+            output[3] = 4;
+            return output;
         }
 
         public ToolResult Invoke7z(string sevenZipPath, string[] arguments) => new(0, "OK", true);

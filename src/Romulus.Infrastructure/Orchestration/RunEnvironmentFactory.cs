@@ -27,13 +27,22 @@ public interface IRunEnvironmentFactory
     IRunEnvironment Create(RunOptions options, Action<string>? onWarning = null);
 }
 
+public sealed class DatCatalogStatePathOptions
+{
+    public string? StatePath { get; init; }
+}
+
 public sealed class RunEnvironmentFactory : IRunEnvironmentFactory
 {
     private readonly string? _collectionDatabasePath;
+    private readonly string? _datCatalogStatePath;
 
-    public RunEnvironmentFactory(CollectionIndexPathOptions? collectionIndexPathOptions = null)
+    public RunEnvironmentFactory(
+        CollectionIndexPathOptions? collectionIndexPathOptions = null,
+        DatCatalogStatePathOptions? datCatalogStatePathOptions = null)
     {
         _collectionDatabasePath = collectionIndexPathOptions?.DatabasePath;
+        _datCatalogStatePath = datCatalogStatePathOptions?.StatePath;
     }
 
     public IRunEnvironment Create(RunOptions options, Action<string>? onWarning = null)
@@ -52,6 +61,7 @@ public sealed class RunEnvironmentFactory : IRunEnvironmentFactory
             settings,
             dataDir,
             onWarning,
-            _collectionDatabasePath);
+            _collectionDatabasePath,
+            _datCatalogStatePath);
     }
 }

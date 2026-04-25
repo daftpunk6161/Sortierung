@@ -9,7 +9,8 @@ public static class DiscFormats
     public static readonly IReadOnlySet<string> AllDiscExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         ".chd", ".iso", ".cue", ".bin", ".img", ".mdf", ".mds", ".ccd", ".sub", ".gdi",
-        ".gcm", ".rvz", ".gcz", ".wia", ".wbf1", ".wbfs", ".wud", ".wux", ".nrg", ".cdi"
+        ".gcm", ".rvz", ".gcz", ".wia", ".wbf1", ".wbfs", ".wud", ".wux", ".nrg", ".cdi",
+        ".cso", ".pbp", ".dax", ".jso", ".zso"
     };
 
     public static readonly IReadOnlySet<string> ArchiveExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

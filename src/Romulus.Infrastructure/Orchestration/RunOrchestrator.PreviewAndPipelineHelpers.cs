@@ -76,15 +76,20 @@ public sealed partial class RunOrchestrator
         CancellationToken cancellationToken)
     {
         sw.Stop();
+        result.CompletedUtc = DateTime.UtcNow;
         result.DurationMs = sw.ElapsedMilliseconds;
         result.PhaseMetrics = metrics.GetMetrics();
 
         var runOutcome = ResolveRunOutcome(result);
-        if (!TryGenerateRequestedReport(result, options, pipelineState, cancellationToken) && runOutcome == RunOutcome.Ok)
-            runOutcome = RunOutcome.CompletedWithErrors;
-
         result.Status = runOutcome.ToStatusString();
         result.ExitCode = runOutcome.ToExitCode();
+
+        if (!TryGenerateRequestedReport(result, options, pipelineState, cancellationToken) && runOutcome == RunOutcome.Ok)
+        {
+            runOutcome = RunOutcome.CompletedWithErrors;
+            result.Status = runOutcome.ToStatusString();
+            result.ExitCode = runOutcome.ToExitCode();
+        }
 
         try
         {

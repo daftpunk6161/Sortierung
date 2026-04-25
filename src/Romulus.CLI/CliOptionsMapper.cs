@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Infrastructure.Orchestration;
@@ -21,7 +22,43 @@ internal static class CliOptionsMapper
         CliRunOptions cli,
         RomulusSettings settings,
         string? dataDir = null)
-        => MapAsync(cli, settings, dataDir).Result;
+    {
+        (RunOptions? runOptions, IReadOnlyList<string>? errors) mapped = default;
+        ExceptionDispatchInfo? capturedException = null;
+        using var completed = new ManualResetEventSlim(false);
+
+        var worker = new Thread(() =>
+        {
+            RunOnWorkerAsync();
+
+            async void RunOnWorkerAsync()
+            {
+                try
+                {
+                    mapped = await MapAsync(cli, settings, dataDir).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    capturedException = ExceptionDispatchInfo.Capture(ex);
+                }
+                finally
+                {
+                    completed.Set();
+                }
+            }
+
+            completed.Wait();
+        })
+        {
+            IsBackground = true,
+            Name = "Romulus.CLI.CliOptionsMapper.Map"
+        };
+
+        worker.Start();
+        worker.Join();
+        capturedException?.Throw();
+        return mapped;
+    }
 
     internal static async Task<(RunOptions? runOptions, IReadOnlyList<string>? errors)> MapAsync(
         CliRunOptions cli,

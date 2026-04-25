@@ -275,7 +275,7 @@ public sealed class DeepBughuntRegressionTests : IDisposable
     // ═══════════════════════════════════════════════════════════════
 
     [Fact]
-    public void F6_PlanForConsole_ArchiveFallback_ReturnsSyntheticPlan()
+    public void F6_PlanForConsole_ArchiveFallback_RemainsNonExecutable()
     {
         var zipPath = Path.Combine(_tempDir, "game.zip");
         File.WriteAllBytes(zipPath, [1, 2, 3]);
@@ -301,10 +301,9 @@ public sealed class DeepBughuntRegressionTests : IDisposable
         var plan = converter.PlanForConsole(zipPath, "NES");
 
         Assert.NotNull(plan);
-        Assert.True(plan!.IsExecutable, "Fallback plan should be executable");
-        Assert.Null(plan.SkipReason);
-        Assert.Single(plan.Steps);
-        Assert.Equal(".zip", plan.Steps[0].OutputExtension);
+        Assert.False(plan!.IsExecutable);
+        Assert.Equal("no-conversion-path", plan.SkipReason);
+        Assert.Empty(plan.Steps);
     }
 
     [Fact]
@@ -394,7 +393,7 @@ public sealed class DeepBughuntRegressionTests : IDisposable
     }
 
     [Fact]
-    public void F7_IsVerificationSuccessful_NullTarget_NoPlan_ReturnsTrueForLegacyPath()
+    public void F7_IsVerificationSuccessful_NullTarget_NoPlan_ReturnsFalseFailClosed()
     {
         var result = new ConversionResult("/x.iso", "/x.chd", ConversionOutcome.Success)
         {
@@ -405,7 +404,7 @@ public sealed class DeepBughuntRegressionTests : IDisposable
         var verifyResult = ConversionVerificationHelpers.IsVerificationSuccessful(
             result, new StubConverter(verifyReturns: true), target: null);
 
-        Assert.True(verifyResult);
+        Assert.False(verifyResult);
     }
 
     // ═══════════════════════════════════════════════════════════════

@@ -10,7 +10,10 @@
     },
     "Tools": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 64
+      }
     }
   },
   "additionalProperties": false

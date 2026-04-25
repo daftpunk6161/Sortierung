@@ -814,7 +814,7 @@ public sealed class ConsoleSorter
             return;
 
         _audit.AppendAuditRow(_auditPath, root, oldPath, newPath,
-            "CONSOLE_SORT", "GAME", "", $"console-sort:{reasonTag}");
+            RunConstants.AuditActions.ConsoleSort, "GAME", "", $"console-sort:{reasonTag}");
     }
 
     /// <summary>
@@ -848,8 +848,8 @@ public sealed class ConsoleSorter
         if (_audit is null || string.IsNullOrEmpty(_auditPath))
             return;
 
-        _audit.AppendAuditRow(_auditPath, root, root, root,
-            "CONSOLE_SORT", "SYSTEM", "", reason);
+        _audit.AppendAuditRow(_auditPath, root, string.Empty, string.Empty,
+            RunConstants.AuditActions.ConsoleSortWarning, "WARNING", "", reason);
     }
 
     private static void IncrementReason(Dictionary<string, int> reasons, string reason)

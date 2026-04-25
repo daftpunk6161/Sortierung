@@ -8,6 +8,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Romulus.Contracts.Models;
 using Romulus.Infrastructure.Analysis;
+using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Tools;
@@ -52,6 +53,8 @@ public static partial class FeatureService
     /// </summary>
     public static void AppendCustomDatEntry(string datRoot, string xmlEntry, string description = "Benutzerdefinierte DAT-Einträge")
     {
+        DatXmlValidator.ValidateLogiqxXmlContent(BuildCustomDatDocument(xmlEntry, description), "custom.dat");
+
         var customDatPath = Path.Combine(datRoot, "custom.dat");
         if (File.Exists(customDatPath))
         {
@@ -61,22 +64,28 @@ public static partial class FeatureService
             content = idx >= 0
                 ? content[..idx] + xmlEntry + "\n" + closeTag
                 : content + "\n" + xmlEntry;
+            DatXmlValidator.ValidateLogiqxXmlContent(content, "custom.dat");
             AtomicFileWriter.WriteAllText(customDatPath, content, Encoding.UTF8);
         }
         else
         {
-            var escapedDescription = SecurityElement.Escape(description);
-            var fullXml = "<?xml version=\"1.0\"?>\n" +
-                          "<!DOCTYPE datafile SYSTEM \"http://www.logiqx.com/Dats/datafile.dtd\">\n" +
-                          "<datafile>\n" +
-                          "  <header>\n" +
-                          "    <name>Custom DAT</name>\n" +
-                          $"    <description>{escapedDescription}</description>\n" +
-                          "  </header>\n" +
-                          xmlEntry + "\n" +
-                          "</datafile>";
+            var fullXml = BuildCustomDatDocument(xmlEntry, description);
             AtomicFileWriter.WriteAllText(customDatPath, fullXml, Encoding.UTF8);
         }
+    }
+
+    private static string BuildCustomDatDocument(string xmlEntry, string description)
+    {
+        var escapedDescription = SecurityElement.Escape(description);
+        return "<?xml version=\"1.0\"?>\n" +
+               "<!DOCTYPE datafile SYSTEM \"http://www.logiqx.com/Dats/datafile.dtd\">\n" +
+               "<datafile>\n" +
+               "  <header>\n" +
+               "    <name>Custom DAT</name>\n" +
+               $"    <description>{escapedDescription}</description>\n" +
+               "  </header>\n" +
+               xmlEntry + "\n" +
+               "</datafile>";
     }
 
 
@@ -191,6 +200,7 @@ public static partial class FeatureService
     /// <summary>Import a DAT file into datRoot with path-traversal protection.</summary>
     public static string ImportDatFileToRoot(string sourcePath, string datRoot)
     {
+        DatXmlValidator.ValidateLogiqxXmlFile(sourcePath);
         var safeName = Path.GetFileName(sourcePath);
         var targetPath = Path.GetFullPath(Path.Combine(datRoot, safeName));
         if (!targetPath.StartsWith(Path.GetFullPath(datRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))

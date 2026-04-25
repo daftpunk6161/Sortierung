@@ -120,6 +120,8 @@ public sealed class RunResult
     public int DatRenameSkippedCount { get; init; }
     public int DatRenameFailedCount { get; init; }
     public IReadOnlyList<PathMutation> DatRenamePathMutations { get; init; } = Array.Empty<PathMutation>();
+    public DateTime? StartedUtc { get; init; }
+    public DateTime? CompletedUtc { get; init; }
     public long DurationMs { get; init; }
     public string? ReportPath { get; init; }
 

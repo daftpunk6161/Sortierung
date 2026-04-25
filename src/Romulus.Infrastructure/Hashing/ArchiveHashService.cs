@@ -15,6 +15,9 @@ namespace Romulus.Infrastructure.Hashing;
 /// </summary>
 public sealed class ArchiveHashService
 {
+    private static readonly Romulus.Contracts.Models.ToolRequirement SevenZipRequirement = new() { ToolName = "7z" };
+    private const long MaxSevenZipExtractedTotalBytes = 10L * 1024 * 1024 * 1024;
+
     private static readonly Regex RxPathEntry = new(@"^Path = (.+)$",
         RegexOptions.Compiled | RegexOptions.Multiline,
         TimeSpan.FromMilliseconds(500));
@@ -185,8 +188,6 @@ public sealed class ArchiveHashService
     {
         var hashes = new List<string>();
         using var archive = ZipFile.OpenRead(zipPath);
-        var useZipCrc32FastPath = IsCrcHashType(hashType);
-
         // TASK-150: Sort entries alphabetically for deterministic hash order
         var sortedEntries = archive.Entries
             .OrderBy(e => e.FullName, StringComparer.OrdinalIgnoreCase)
@@ -196,14 +197,6 @@ public sealed class ArchiveHashService
         {
             ct.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(entry.Name)) continue;
-
-            if (useZipCrc32FastPath)
-            {
-                // Fast path: ZIP central directory already stores CRC32 for each entry.
-                // Avoids full stream reads for CRC32-only DAT workflows.
-                hashes.Add(entry.Crc32.ToString("x8"));
-                continue;
-            }
 
             try
             {
@@ -219,15 +212,6 @@ public sealed class ArchiveHashService
         return hashes.ToArray();
     }
 
-    private static bool IsCrcHashType(string hashType)
-    {
-        if (string.IsNullOrWhiteSpace(hashType))
-            return false;
-
-        var normalized = hashType.Trim().ToUpperInvariant();
-        return normalized is "CRC" or "CRC32";
-    }
-
     // ── 7z: temp extraction + file hashing ──
 
     private string[] Hash7zEntries(string archivePath, string hashType,
@@ -241,17 +225,42 @@ public sealed class ArchiveHashService
             return Array.Empty<string>();
 
         // Pre-check entry paths for Zip-Slip (fail-closed: empty listing = reject)
-        var entryPaths = ListArchiveEntries(archivePath, sevenZipPath);
+        var entries = ListArchiveEntriesDetailed(archivePath, sevenZipPath, ct);
+        var entryPaths = entries.Select(static entry => entry.Path).ToList();
+        if (entryPaths.Count == 0)
+            return Array.Empty<string>();
+
         if (!AreEntryPathsSafe(entryPaths))
             return Array.Empty<string>();
+
+        var declaredTotalSize = 0L;
+        foreach (var entry in entries)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (entry.Size < 0)
+                return Array.Empty<string>();
+
+            declaredTotalSize += entry.Size;
+            if (declaredTotalSize > MaxSevenZipExtractedTotalBytes)
+                return Array.Empty<string>();
+        }
 
         var tempDir = Path.Combine(Path.GetTempPath(), "romulus_7z_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
 
         try
         {
+            if (!HasAvailableTempSpace(tempDir, declaredTotalSize))
+                return Array.Empty<string>();
+
             var outArg = $"-o{tempDir}";
-            var result = _toolRunner.InvokeProcess(sevenZipPath, new[] { "x", "-y", outArg, archivePath });
+            var result = _toolRunner.InvokeProcess(
+                sevenZipPath,
+                new[] { "x", "-y", "-snl-", outArg, archivePath },
+                SevenZipRequirement,
+                "7z extract",
+                TimeSpan.FromMinutes(10),
+                ct);
             if (result.ExitCode != 0)
                 return Array.Empty<string>();
 
@@ -312,17 +321,46 @@ public sealed class ArchiveHashService
     }
 
     private List<string> ListArchiveEntries(string archivePath, string sevenZipPath)
-    {
-        var result = _toolRunner!.InvokeProcess(sevenZipPath, new[] { "l", "-slt", archivePath });
-        if (result.ExitCode != 0)
-            return new List<string>();
+        => ListArchiveEntriesDetailed(archivePath, sevenZipPath, CancellationToken.None)
+            .Select(static entry => entry.Path)
+            .ToList();
 
-        var paths = new List<string>();
+    private List<SevenZipEntryInfo> ListArchiveEntriesDetailed(
+        string archivePath,
+        string sevenZipPath,
+        CancellationToken cancellationToken)
+    {
+        var result = _toolRunner!.InvokeProcess(
+            sevenZipPath,
+            new[] { "l", "-slt", archivePath },
+            SevenZipRequirement,
+            "7z list",
+            TimeSpan.FromMinutes(5),
+            cancellationToken);
+        if (result.ExitCode != 0)
+            return [];
+
+        var entries = new List<SevenZipEntryInfo>();
         var archiveName = Path.GetFileName(archivePath);
         bool pastSeparator = false;
+        string? currentPath = null;
+        long currentSize = 0;
+
+        void FlushCurrent()
+        {
+            if (string.IsNullOrWhiteSpace(currentPath))
+                return;
+
+            if (!currentPath.Equals(archiveName, StringComparison.OrdinalIgnoreCase))
+                entries.Add(new SevenZipEntryInfo(currentPath, currentSize));
+
+            currentPath = null;
+            currentSize = 0;
+        }
 
         foreach (var line in (result.Output ?? "").Split('\n', StringSplitOptions.TrimEntries))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (line.StartsWith("-----"))
             {
                 pastSeparator = true;
@@ -330,20 +368,29 @@ public sealed class ArchiveHashService
             }
 
             var match = RxPathEntry.Match(line);
-            if (!match.Success) continue;
-            if (!pastSeparator) continue;
+            if (match.Success && pastSeparator)
+            {
+                FlushCurrent();
+                currentPath = match.Groups[1].Value.Trim();
+                currentSize = 0;
+                continue;
+            }
 
-            var entryPath = match.Groups[1].Value.Trim();
-            // Skip the archive's own metadata entry
-            if (entryPath.Equals(archiveName, StringComparison.OrdinalIgnoreCase))
+            if (!pastSeparator || currentPath is null)
                 continue;
 
-            paths.Add(entryPath);
+            if (line.StartsWith("Size = ", StringComparison.OrdinalIgnoreCase)
+                && long.TryParse(line["Size = ".Length..].Trim(), out var parsedSize))
+            {
+                currentSize = parsedSize;
+            }
         }
 
+        FlushCurrent();
+
         // TASK-150: Sort entries alphabetically for deterministic order
-        paths.Sort(StringComparer.OrdinalIgnoreCase);
-        return paths;
+        entries.Sort(static (left, right) => string.Compare(left.Path, right.Path, StringComparison.OrdinalIgnoreCase));
+        return entries;
     }
 
     private static readonly Regex RxDotDotTraversal = new(
@@ -419,4 +466,26 @@ public sealed class ArchiveHashService
         var bytes = algo.ComputeHash(stream);
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
+
+    private static bool HasAvailableTempSpace(string tempDir, long requiredBytes)
+    {
+        if (requiredBytes <= 0)
+            return true;
+
+        try
+        {
+            var root = Path.GetPathRoot(Path.GetFullPath(tempDir));
+            if (string.IsNullOrWhiteSpace(root))
+                return false;
+
+            var drive = new DriveInfo(root);
+            return drive.AvailableFreeSpace > requiredBytes;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    private sealed record SevenZipEntryInfo(string Path, long Size);
 }

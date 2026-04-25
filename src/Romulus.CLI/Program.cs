@@ -192,7 +192,19 @@ internal static partial class Program
             if (!ConsoleOverrideEnabled.Value)
             {
                 SafeErrorWriteLine($"{RunConstants.Phases.Move} Execute mode will move files. Continue? (y/N)");
+                if (IsInputRedirectedForConfirmation())
+                {
+                    SafeErrorWriteLine("[Error] Move confirmation requires interactive stdin or --yes.");
+                    return 3;
+                }
+
                 var response = Console.ReadLine();
+                if (response is null)
+                {
+                    SafeErrorWriteLine("[Error] Move confirmation requires interactive stdin or --yes.");
+                    return 3;
+                }
+
                 if (!string.Equals(response?.Trim(), "y", StringComparison.OrdinalIgnoreCase))
                 {
                     SafeErrorWriteLine($"{RunConstants.Phases.Move} Aborted by user.");
@@ -237,8 +249,15 @@ internal static partial class Program
             JsonlLogWriter? log = null;
             if (!string.IsNullOrEmpty(cliOpts.LogPath))
             {
-                var logLevel = Enum.Parse<LogLevel>(cliOpts.LogLevel, ignoreCase: true);
-                log = new JsonlLogWriter(cliOpts.LogPath, logLevel);
+                if (!Enum.TryParse<LogLevel>(cliOpts.LogLevel, ignoreCase: true, out var logLevel)
+                    || !Enum.IsDefined(logLevel))
+                {
+                    SafeErrorWriteLine($"[Error] Invalid log level '{cliOpts.LogLevel}'. Must be one of: Debug, Info, Warning, Error.");
+                    return 3;
+                }
+
+                var safeLogPath = SafetyValidator.EnsureSafeOutputPath(cliOpts.LogPath);
+                log = new JsonlLogWriter(safeLogPath, logLevel);
             }
 
             var dataDir = RunEnvironmentBuilder.ResolveDataDir();
@@ -481,7 +500,19 @@ internal static partial class Program
             }
 
             SafeErrorWriteLine("[Rollback] Execute mode will restore files. Continue? (y/N)");
+            if (IsInputRedirectedForConfirmation())
+            {
+                SafeErrorWriteLine("[Error] Rollback confirmation requires interactive stdin or --yes.");
+                return 3;
+            }
+
             var response = Console.ReadLine();
+            if (response is null)
+            {
+                SafeErrorWriteLine("[Error] Rollback confirmation requires interactive stdin or --yes.");
+                return 3;
+            }
+
             if (!string.Equals(response?.Trim(), "y", StringComparison.OrdinalIgnoreCase))
             {
                 SafeErrorWriteLine("[Rollback] Aborted by user.");
@@ -1148,20 +1179,32 @@ internal static partial class Program
             var stderrOverride = StderrOverride.Value;
             var overrideEnabled = ConsoleOverrideEnabled.Value;
 
+            using var completed = new ManualResetEventSlim(false);
             var worker = new Thread(() =>
             {
                 StdoutOverride.Value = stdoutOverride;
                 StderrOverride.Value = stderrOverride;
                 ConsoleOverrideEnabled.Value = overrideEnabled;
 
-                try
+                RunOnWorkerAsync();
+
+                async void RunOnWorkerAsync()
                 {
-                    exitCode = RunAsync(opts).ConfigureAwait(false).GetAwaiter().GetResult();
+                    try
+                    {
+                        exitCode = await RunAsync(opts).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        capturedException = ExceptionDispatchInfo.Capture(ex);
+                    }
+                    finally
+                    {
+                        completed.Set();
+                    }
                 }
-                catch (Exception ex)
-                {
-                    capturedException = ExceptionDispatchInfo.Capture(ex);
-                }
+
+                completed.Wait();
             })
             {
                 IsBackground = true,
@@ -1341,6 +1384,11 @@ internal static partial class Program
 
         return Console.IsInputRedirected || !Environment.UserInteractive;
     }
+
+    private static bool IsInputRedirectedForConfirmation()
+        => NonInteractiveOverride.Value is false
+            ? false
+            : Console.IsInputRedirected;
 
     private static IDisposable? TryAcquireRunExecutionLease(CliRunOptions cliOpts)
     {
