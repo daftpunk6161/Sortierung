@@ -122,7 +122,7 @@ public class VersionScorerTests
     // --- Overflow Protection ---
 
     [Fact]
-    public void DottedRevision_ExtremeNumbers_DoesNotThrow()
+    public void DottedRevision_ExtremeNumbers_ScoresDeterministically()
     {
         var first = _sut.GetVersionScore("Game (Rev 9999999999.1.1)");
         var second = _sut.GetVersionScore("Game (Rev 9999999999.1.1)");
@@ -132,7 +132,7 @@ public class VersionScorerTests
     }
 
     [Fact]
-    public void NumericRevision_ExtremeNumber_DoesNotThrow()
+    public void NumericRevision_ExtremeNumber_ScoresDeterministically()
     {
         var first = _sut.GetVersionScore("Game (Rev 99999999999)");
         var second = _sut.GetVersionScore("Game (Rev 99999999999)");

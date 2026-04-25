@@ -2192,7 +2192,8 @@ public partial class GuiViewModelTests
         Directory.CreateDirectory(datRoot);
         // Create a source file in a parent directory (simulating attempted traversal)
         var parentFile = Path.Combine(tmpDir, "escape.dat");
-        File.WriteAllText(parentFile, "test-content");
+        var datContent = CreateValidLogiqxDatContent();
+        File.WriteAllText(parentFile, datContent);
         try
         {
             // Source path with ".." — the method strips path and copies just the filename
@@ -2201,7 +2202,7 @@ public partial class GuiViewModelTests
             // Target MUST be within datRoot (path traversal protection)
             Assert.StartsWith(Path.GetFullPath(datRoot), target);
             Assert.True(File.Exists(target));
-            Assert.Equal("test-content", File.ReadAllText(target));
+            Assert.Equal(datContent, File.ReadAllText(target));
         }
         finally
         {
@@ -2219,16 +2220,20 @@ public partial class GuiViewModelTests
         Directory.CreateDirectory(datRoot);
         try
         {
-            File.WriteAllText(source, "<datafile/>");
+            var datContent = CreateValidLogiqxDatContent();
+            File.WriteAllText(source, datContent);
             var target = FeatureService.ImportDatFileToRoot(source, datRoot);
             Assert.True(File.Exists(target));
-            Assert.Equal("<datafile/>", File.ReadAllText(target));
+            Assert.Equal(datContent, File.ReadAllText(target));
         }
         finally
         {
             Directory.Delete(tmpDir, true);
         }
     }
+
+    private static string CreateValidLogiqxDatContent()
+        => "<datafile><game name=\"game\"><description>Game</description><rom name=\"game.rom\" size=\"1\" crc=\"00000000\" /></game></datafile>";
 
     [Fact]
     public void FeatureService_BuildFtpSourceReport_ValidSftp()

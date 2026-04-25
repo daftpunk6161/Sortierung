@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Text.RegularExpressions;
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
@@ -11,6 +10,12 @@ using Xunit;
 
 namespace Romulus.Tests;
 
+/// <summary>
+/// Behavioral end-to-end tests retained from the historical Audit A/B set.
+/// Source-mirror assertions (A01/B01/B04/B05) were removed in Block A
+/// of test-suite-remediation-plan-2026-04-25.md and are reintroduced
+/// as proper behavioural coverage in Blocks B and C.
+/// </summary>
 public sealed class AuditABEndToEndRedTests : IDisposable
 {
     private readonly string _tempDir;
@@ -32,15 +37,6 @@ public sealed class AuditABEndToEndRedTests : IDisposable
         {
             // best-effort cleanup
         }
-    }
-
-    [Fact]
-    public void A01_ConsoleSortDryRunPathMutationGuard_MustNotSkipStateMutation()
-    {
-        var source = ReadSource("src/Romulus.Infrastructure/Orchestration/RunOrchestrator.StandardPhaseSteps.cs");
-
-        Assert.DoesNotContain("if (!dryRunSort && result.ConsoleSortResult?.PathMutations is { Count: > 0 } pathMutations)", source);
-        Assert.Contains("if (result.ConsoleSortResult?.PathMutations is { Count: > 0 } pathMutations)", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -109,15 +105,6 @@ public sealed class AuditABEndToEndRedTests : IDisposable
     }
 
     [Fact]
-    public void B01_ApiUnhandledExceptionHandler_DoesNotLogRawExceptionMessage()
-    {
-        var source = ReadSource("src/Romulus.Api/Program.cs");
-
-        Assert.DoesNotContain("exceptionFeature.Error.Message", source, StringComparison.Ordinal);
-        Assert.Contains("Unhandled exception", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void B02_OutputValidator_OneByteOutput_IsRejectedAsTooSmall()
     {
         var path = Path.Combine(_tempDir, "tiny-output.chd");
@@ -146,29 +133,6 @@ public sealed class AuditABEndToEndRedTests : IDisposable
         Assert.DoesNotContain(".bin", exts);
     }
 
-    [Fact]
-    public void B04_CliRunForTests_MustNotUseTaskRunResultWrapper()
-    {
-        var source = ReadSource("src/Romulus.CLI/Program.cs");
-
-        Assert.DoesNotContain("Task.Run(() => RunAsync(opts)).Result", source, StringComparison.Ordinal);
-        Assert.Contains("RunAsync(opts)", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void B05_RunOrchestrator_MustFlushHashCacheBeforePartialSidecar()
-    {
-        var source = ReadSource("src/Romulus.Infrastructure/Orchestration/RunOrchestrator.cs");
-
-        Assert.Matches(
-            new Regex(@"catch \(OperationCanceledException\)[\s\S]*?TryFlushHashCache\(\);[\s\S]*?WritePartialAuditSidecar\(", RegexOptions.Singleline),
-            source);
-
-        Assert.Matches(
-            new Regex(@"catch \(Exception ex\) when \(ex is not OperationCanceledException\)[\s\S]*?TryFlushHashCache\(\);[\s\S]*?WritePartialAuditSidecar\(", RegexOptions.Singleline),
-            source);
-    }
-
     private static string CaptureTrace(Action action)
     {
         using var writer = new StringWriter();
@@ -189,22 +153,6 @@ public sealed class AuditABEndToEndRedTests : IDisposable
             System.Diagnostics.Trace.AutoFlush = previousAutoFlush;
             listeners.Remove(listener);
         }
-    }
-
-    private static string ReadSource(string relativePath)
-    {
-        var root = FindRepositoryRoot();
-        var fullPath = Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
-        return File.ReadAllText(fullPath);
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "AGENTS.md")))
-            dir = dir.Parent;
-
-        return dir?.FullName ?? throw new InvalidOperationException("Could not resolve repository root from test context.");
     }
 
     private sealed class NullAuditStore : IAuditStore

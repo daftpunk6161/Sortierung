@@ -91,9 +91,10 @@ public sealed class AuditHardeningTests : IDisposable
             ["name"] = new string('a', 30) + "!"
         };
 
-        // Must not throw — timeout should be caught internally
-        var ex = Record.Exception(() => RuleEngine.Evaluate(rules, item));
-        Assert.Null(ex);
+        // ReDoS pattern must be caught by RegexMatchTimeout → rule does not match
+        var result = RuleEngine.Evaluate(rules, item);
+        Assert.NotNull(result);
+        Assert.False(result.Matched);
     }
 
     // ════════════════════════════════════════════════════════════════════

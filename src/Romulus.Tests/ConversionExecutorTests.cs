@@ -102,8 +102,24 @@ public sealed class ConversionExecutorTests : IDisposable
                 return _invokeFunc(sourcePath, targetPath, capability, ct);
 
             // Default: create a real output file so validation passes
-            File.WriteAllText(targetPath, "CONVERTED_" + Path.GetFileName(sourcePath));
+            File.WriteAllBytes(targetPath, BuildValidOutputBytes(targetPath));
             return new ToolInvocationResult(true, targetPath, 0, "ok", null, 100, VerificationStatus.NotAttempted);
+        }
+
+        private static byte[] BuildValidOutputBytes(string targetPath)
+        {
+            var output = new byte[1024];
+            if (Path.GetExtension(targetPath).Equals(".chd", StringComparison.OrdinalIgnoreCase))
+            {
+                "MComprHD"u8.CopyTo(output);
+                return output;
+            }
+
+            output[0] = (byte)'R';
+            output[1] = (byte)'O';
+            output[2] = (byte)'M';
+            output[3] = (byte)'U';
+            return output;
         }
 
         public VerificationStatus Verify(string targetPath, ConversionCapability capability)

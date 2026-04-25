@@ -143,7 +143,7 @@ public sealed class FileHashServiceCoverageTests : IDisposable
     // =================================================================
 
     [Fact]
-    public void Constructor_MalformedPersistentCache_DoesNotThrow()
+    public void Constructor_MalformedPersistentCache_StartsWithEmptyCache()
     {
         var cachePath = CreateTextFile("bad-cache.json", "NOT-VALID-JSON{{{");
 
@@ -153,7 +153,7 @@ public sealed class FileHashServiceCoverageTests : IDisposable
     }
 
     [Fact]
-    public void Constructor_EmptyPersistentCache_DoesNotThrow()
+    public void Constructor_EmptyPersistentCache_StartsWithEmptyCache()
     {
         var cachePath = CreateTextFile("empty-cache.json", "{}");
 
@@ -162,7 +162,7 @@ public sealed class FileHashServiceCoverageTests : IDisposable
     }
 
     [Fact]
-    public void Constructor_PersistentCacheWithNullEntries_DoesNotThrow()
+    public void Constructor_PersistentCacheWithNullEntries_StartsWithEmptyCache()
     {
         var cachePath = CreateTextFile("null-entries.json", """{"Entries": null}""");
 
@@ -211,11 +211,12 @@ public sealed class FileHashServiceCoverageTests : IDisposable
     }
 
     [Fact]
-    public void Dispose_CalledTwice_DoesNotThrow()
+    public void Dispose_CalledTwice_IsIdempotent()
     {
         var svc = new FileHashService();
         svc.Dispose();
-        svc.Dispose(); // second call → no-op
+        svc.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => svc.GetHash("test.rom"));
     }
 
     // =================================================================

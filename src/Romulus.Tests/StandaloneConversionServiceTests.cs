@@ -297,11 +297,13 @@ public sealed class StandaloneConversionServiceTests : IDisposable
     }
 
     [Fact]
-    public void Dispose_NullLifetime_DoesNotThrow()
+    public void Dispose_NullLifetime_DisposesGracefully()
     {
         var converter = new FakeFormatConverter(("PSX", ".bin"), new ConversionTarget(".chd", "chdman", "createcd"));
         var service = new StandaloneConversionService(converter, lifetime: null);
-        service.Dispose(); // should not throw
+        service.Dispose();
+        // second call must remain idempotent and not throw ObjectDisposedException
+        service.Dispose();
     }
 
     private string CreateFile(string path)

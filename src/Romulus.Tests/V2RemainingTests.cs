@@ -205,7 +205,7 @@ public sealed class V2RemainingTests : IDisposable
     // ═══════════════════════════════════════════════════════════════════
 
     [Fact]
-    public void Normalize_VeryLongFilename_DoesNotThrow()
+    public void Normalize_VeryLongFilename_StripsTagsAndKeepsTitle()
     {
         var longName = new string('A', 200) + " (USA) (Rev 2) [!]";
         var key = GameKeyNormalizer.Normalize(longName);
@@ -215,7 +215,7 @@ public sealed class V2RemainingTests : IDisposable
     }
 
     [Fact]
-    public void AsciiFold_VeryLongString_DoesNotThrow()
+    public void AsciiFold_VeryLongString_FoldsAllUmlauts()
     {
         var input = string.Concat(Enumerable.Repeat("Ärger ", 100));
         var result = GameKeyNormalizer.AsciiFold(input);

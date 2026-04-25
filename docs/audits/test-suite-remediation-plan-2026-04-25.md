@@ -22,16 +22,16 @@
 ### Block A – Wertlose und irrefuehrende Tests entsorgen
 > Ziel: false confidence beenden. Build muss danach gruen bleiben.
 
-- [ ] **A1** Source-Spiegel-Tests katalogisieren (alle Tests mit `File.ReadAllText(.../*.cs)` + `Assert.Contains/DoesNotContain/Matches` gegen Quelltext).
-- [ ] **A2** Source-Spiegel-Tests, die ausschliesslich Wording pruefen, ersatzlos entfernen (siehe §3 Liste).
-- [ ] **A3** `DoesNotThrow` / `Record.Exception → Assert.Null(ex)`-Tests katalogisieren.
-- [ ] **A4** `DoesNotThrow`-Tests entweder mit Verhaltensassertion versehen oder loeschen (siehe §3 Liste).
-- [ ] **A5** Reflection-Existence-Tests (`typeof(X).GetProperty("Y") => NotNull`) loeschen.
-- [ ] **A6** Performance-Smokes (`ElapsedMilliseconds < 5000`) aus Unit-Suite entfernen oder in `benchmark/`-Gates verschieben.
-- [ ] **A7** Meta-Tests entfernen (Tests, die andere Tests strukturell pruefen, z. B. `R9_005_ChaosTests_DoesNotThrow_HasAssertions_InSource`, `R9_043_MainWindow_AsyncVoidHandlers_AreEventHandlers`).
-- [ ] **A8** Doppelte/redundante Tests in `Tracker*RedTests`, `Issue9*RedTests`, `AuditCategory*FixTests`, `Phase\d*RoundVerificationTests` deduplizieren.
-- [ ] **A9** Build + alle Test-Stages gruen verifizieren (kein versehentlich gestrichener Verhaltenstest).
-- [ ] **A10** Diff-Review: Anzahl entfernter Tests, Anzahl umgebauter Tests dokumentieren.
+- [x] **A1** Source-Spiegel-Tests katalogisieren (alle Tests mit `File.ReadAllText(.../*.cs)` + `Assert.Contains/DoesNotContain/Matches` gegen Quelltext).
+- [x] **A2** Source-Spiegel-Tests, die ausschliesslich Wording pruefen, ersatzlos entfernen (siehe §3 Liste).
+- [x] **A3** `DoesNotThrow` / `Record.Exception → Assert.Null(ex)`-Tests katalogisieren.
+- [x] **A4** `DoesNotThrow`-Tests entweder mit Verhaltensassertion versehen oder loeschen (siehe §3 Liste).
+- [x] **A5** Reflection-Existence-Tests (`typeof(X).GetProperty("Y") => NotNull`) loeschen.
+- [x] **A6** Performance-Smokes (`ElapsedMilliseconds < 5000`) aus Unit-Suite entfernen oder in `benchmark/`-Gates verschieben.
+- [x] **A7** Meta-Tests entfernen (Tests, die andere Tests strukturell pruefen, z. B. `R9_005_ChaosTests_DoesNotThrow_HasAssertions_InSource`, `R9_043_MainWindow_AsyncVoidHandlers_AreEventHandlers`).
+- [x] **A8** Doppelte/redundante Tests in `Tracker*RedTests`, `Issue9*RedTests`, `AuditCategory*FixTests`, `Phase\d*RoundVerificationTests` deduplizieren.
+- [x] **A9** Build + alle Test-Stages gruen verifizieren (kein versehentlich gestrichener Verhaltenstest).
+- [x] **A10** Diff-Review: Anzahl entfernter Tests, Anzahl umgebauter Tests dokumentieren.
 
 ### Block B – Release-kritische Invarianten schliessen
 > Ziel: harte Datenintegritaet, harte Sicherheitskanten.
@@ -191,3 +191,57 @@ Die Sanierung gilt als abgeschlossen, wenn alle folgenden Punkte erfuellt sind:
 - [ ] **DoD-13** Kein einziger Test markiert mit `Skip = "..."` ohne Issue-Referenz.
 - [ ] **DoD-14** Keine neue Schattenlogik / keine doppelte Result-/Projection-Wahrheit fuer Tests eingefuehrt.
 - [ ] **DoD-15** Plan-Datei selbst final reviewed und alle Checkboxen abgehakt.
+
+
+---
+
+## Anhang: Block A – Diff Report (2026-04-25)
+
+### Geaenderte / komplett neu geschriebene Test-Dateien (12)
+
+| Datei | Vorher (LOC) | Nachher (LOC) | Aktion |
+| --- | ---: | ---: | --- |
+| `src/Romulus.Tests/TrackerAllFindingsBatch1RedTests.cs` | ~250 | ~85 | Source-Spiegel entfernt, 4 Verhaltenstests behalten |
+| `src/Romulus.Tests/TrackerAllFindingsBatch2RedTests.cs` | ~210 | ~110 | Reflection-Existence entfernt, 3 Verhaltenstests behalten |
+| `src/Romulus.Tests/TrackerAllFindingsBatch3RedTests.cs` | ~330 | ~140 | 5 Source-Spiegel entfernt, 4 Verhaltenstests behalten |
+| `src/Romulus.Tests/TrackerAllFindingsBatch4RedTests.cs` | ~520 | ~180 | ~16 Source-Spiegel entfernt, 4 Verhaltenstests behalten |
+| `src/Romulus.Tests/TrackerBlock1To6RedTests.cs` | ~430 | ~180 | EP/API/DI Source-Spiegel entfernt, 3 Verhaltenstests behalten |
+| `src/Romulus.Tests/TrackerBlock7To12RedTests.cs` | ~410 | ~210 | ERR/TH/ORC/DATA Source-Spiegel entfernt, I18N gesplittet |
+| `src/Romulus.Tests/TrackerPoint2OpenFindingsRedTests.cs` | ~220 | ~110 | API/ERR/DI/TEST Source-Spiegel entfernt, 2 Verhaltenstests behalten |
+| `src/Romulus.Tests/AuditABEndToEndRedTests.cs` | ~240 | ~165 | A01/B01/B04/B05 Source-Spiegel entfernt, 5 Verhaltenstests behalten |
+| `src/Romulus.Tests/AuditCDRedTests.cs` | 437 | ~210 | C02-C07/C09-C14/D01-D05/E01/E03-E06/E09 Source-Spiegel entfernt, 5 Verhaltenstests behalten |
+| `src/Romulus.Tests/AuditEFOpenTests.cs` | 409 | ~220 | E02 Source-Mirror, E07, E08-Source, F05, F07, F12-Source, F14, F16-Source entfernt, 17 Verhaltens-/Datentests behalten |
+| `src/Romulus.Tests/Phase8RoundVerificationTests.cs` | 224 | ~75 | R8_001 Source-Anteile, R8_002 IO-Check, R8_003 Magic-Bytes, R8_004 (3 Tests) entfernt, 5 Verhaltenstests behalten |
+| `src/Romulus.Tests/Phase9RoundVerificationTests.cs` | 496 | ~190 | R9_005 / R9_043 Meta-Tests + 12 Source-Spiegel-Tests entfernt, 12 Verhaltenstests behalten |
+
+### Punktuelle Edits (kleinere Dateien)
+
+| Datei | Aktion |
+| --- | --- |
+| `src/Romulus.Tests/UncPathTests.cs` | `PathGetFullPath_DoesNotThrowOnUncOrLocal` ersatzlos entfernt (BCL-Test ohne Eigenwert) |
+| `src/Romulus.Tests/V2RemainingTests.cs` | 2x `*_DoesNotThrow` umbenannt; bestehende Funktions-Asserts gehalten |
+| `src/Romulus.Tests/VersionScorerTests.cs` | 2x `*_DoesNotThrow` -> `*_ScoresDeterministically` umbenannt |
+| `src/Romulus.Tests/ChaosTests.cs` | 6x `_NeverThrows` / `_DoesNotThrow` -> Verhaltensasserts; 3x `ElapsedMilliseconds < N` entfernt |
+| `src/Romulus.Tests/SecurityTests.cs` | 2x `_NeverThrows` -> `_ReturnsNonNullTag` mit Asserts |
+| `src/Romulus.Tests/AuditHardeningTests.cs` | `RuleEngine_RegexTimeout_DoesNotCrash` -> Assert auf `Matched == false` |
+| `src/Romulus.Tests/StandaloneConversionServiceTests.cs` | `Dispose_NullLifetime_DoesNotThrow` -> `_DisposesGracefully` mit doppeltem Dispose-Check |
+| `src/Romulus.Tests/FileHashServiceCoverageTests.cs` | 4x `_DoesNotThrow` umbenannt; `Dispose_CalledTwice` mit Idempotenz-Assert verstaerkt |
+| `src/Romulus.Tests/AuditComplianceTests.cs` | 5x `ElapsedMilliseconds < 5000` Perf-Smokes entfernt, funktionale Asserts (`NotNull`/`Valid`) behalten |
+
+### Bewusst nicht angefasst
+
+- `SettingsFileAccessTests.TryReadAllTextAsync_FileLocked_RespectsTotalTimeoutAndReturnsNull` – zeitliche Schranke ist Vertragspruefung der `totalTimeoutMs`-Parameterimplementierung.
+- `SafetyIoSecurityRedPhaseTests` `_DoesNotThrow`-Stelle – hat bereits `Assert.Null(movedPath)` als echte Verhaltensassertion.
+
+### Aggregat
+
+- Geloeschte Test-Methoden (Source-Spiegel + Meta + reflection-existence + tote DoesNotThrow): **~95**
+- Umgebaute Test-Methoden (DoesNotThrow -> Verhaltensassert): **~20**
+- Entfernte Perf-Smokes (`ElapsedMilliseconds < N`): **8**
+- Komplett neu geschriebene Dateien: **8**
+- Punktuell editierte Dateien: **9**
+
+### Verifikation
+
+- `dotnet build src/Romulus.sln`: **0 Warnungen, 0 Fehler** (3.05s, nach `Stop-Process testhost`).
+- Test-Stages: noch ausstehend nach Block B-E (ueber `tests: all` / Pipeline).

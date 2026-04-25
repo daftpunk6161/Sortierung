@@ -33,6 +33,49 @@ public static class RollbackService
         }
     }
 
+    private static int CountSignedRollbackRows(string auditPath)
+        => TryReadSignedRowCount(auditPath, out var rowCount)
+            ? rowCount
+            : CountAffectedRollbackRows(auditPath);
+
+    private static bool TryReadSignedRowCount(string auditPath, out int rowCount)
+    {
+        rowCount = 0;
+        var metaPath = auditPath + ".meta.json";
+        if (!File.Exists(metaPath))
+            return false;
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(metaPath));
+            if (!TryGetRowCount(document.RootElement, out rowCount))
+                return false;
+
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryGetRowCount(JsonElement root, out int rowCount)
+    {
+        rowCount = 0;
+        if (root.ValueKind != JsonValueKind.Object)
+            return false;
+
+        if (!root.TryGetProperty("RowCount", out var property)
+            && !root.TryGetProperty("rowCount", out property))
+        {
+            return false;
+        }
+
+        return property.ValueKind == JsonValueKind.Number
+               && property.TryGetInt32(out rowCount)
+               && rowCount >= 0;
+    }
+
     private static AuditRollbackRootSet ResolveRootSet(string auditPath, IReadOnlyList<string> fallbackRoots)
     {
         var resolved = AuditRollbackRootResolver.Resolve(auditPath);
@@ -71,7 +114,7 @@ public static class RollbackService
                 return new AuditRollbackResult
                 {
                     AuditCsvPath = auditPath,
-                    Failed = CountAffectedRollbackRows(auditPath),
+                    Failed = CountSignedRollbackRows(auditPath),
                     DryRun = false,
                     Tampered = true,
                     IntegrityError = "AUDIT_INTEGRITY_BROKEN"

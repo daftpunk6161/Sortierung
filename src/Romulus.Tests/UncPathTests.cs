@@ -140,17 +140,7 @@ public sealed class UncPathTests
     }
 
     [Theory]
-    [InlineData(@"\\server\share\roms")]
-    [InlineData(@"\\192.168.1.10\data\games")]
-    [InlineData(@"C:\Roms")]
-    public void PathGetFullPath_DoesNotThrowOnUncOrLocal(string path)
-    {
-        // Path.GetFullPath must not throw on UNC paths
-        var ex = Record.Exception(() => Path.GetFullPath(path));
-        Assert.Null(ex);
-    }
 
-    [Theory]
     [InlineData(@"\\server\share")]
     [InlineData(@"\\server\share\")]
     [InlineData(@"C:\")]

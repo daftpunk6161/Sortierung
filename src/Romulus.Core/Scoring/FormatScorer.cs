@@ -142,7 +142,9 @@ public static class FormatScorer
         };
 
     private static readonly IReadOnlySet<string> FallbackDiscExtensions =
-        new HashSet<string>(DiscFormats.AllDiscExtensions, StringComparer.OrdinalIgnoreCase);
+        new HashSet<string>(
+            DiscFormats.AllDiscExtensions.Except(DiscFormats.PspImageExtensions, StringComparer.OrdinalIgnoreCase),
+            StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Resets all registered state. For test isolation only – never call in production.

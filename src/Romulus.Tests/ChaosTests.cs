@@ -40,21 +40,22 @@ public sealed class ChaosTests : IDisposable
     [InlineData("Spiel (Germany) 🎮")]
     [InlineData("Jogo (Brazil) [!]")]
     [InlineData("Pokémon Édition Spéciale (France)")]
-    public void Unicode_GameKey_NeverThrows(string input)
+    public void Unicode_GameKey_ProducesNonEmptyKey(string input)
     {
-        var ex = Record.Exception(() => GameKeyNormalizer.Normalize(input));
-        Assert.Null(ex);
-        Assert.NotNull(GameKeyNormalizer.Normalize(input));
+        var key = GameKeyNormalizer.Normalize(input);
+        Assert.False(string.IsNullOrWhiteSpace(key));
+        Assert.DoesNotContain("(", key);
+        Assert.DoesNotContain(")", key);
     }
 
     [Theory]
     [InlineData("ゲーム (Japan)")]
     [InlineData("Игра (Russia)")]
     [InlineData("Pokémon (Europe)")]
-    public void Unicode_RegionDetector_NeverThrows(string input)
+    public void Unicode_RegionDetector_ReturnsNonNullTag(string input)
     {
-        var ex = Record.Exception(() => RegionDetector.GetRegionTag(input));
-        Assert.Null(ex);
+        var tag = RegionDetector.GetRegionTag(input);
+        Assert.False(string.IsNullOrWhiteSpace(tag));
     }
 
     // ── TEST-CHAOS-02: Random region tags ──
@@ -74,7 +75,7 @@ public sealed class ChaosTests : IDisposable
     // ── TEST-CHAOS-03: Corrupt DAT file handling ──
 
     [Fact]
-    public void CorruptDat_BinaryGarbage_DoesNotThrow()
+    public void CorruptDat_BinaryGarbage_ReturnsEmptyIndex()
     {
         var datPath = Path.Combine(_tempDir, "corrupt.dat");
         var random = new Random(42);
@@ -89,7 +90,7 @@ public sealed class ChaosTests : IDisposable
     }
 
     [Fact]
-    public void CorruptDat_EmptyFile_DoesNotThrow()
+    public void CorruptDat_EmptyFile_ReturnsEmptyIndex()
     {
         File.WriteAllText(Path.Combine(_tempDir, "empty.dat"), "");
 
@@ -101,7 +102,7 @@ public sealed class ChaosTests : IDisposable
     }
 
     [Fact]
-    public void CorruptDat_PartialXml_DoesNotThrow()
+    public void CorruptDat_PartialXml_ReturnsEmptyIndex()
     {
         File.WriteAllText(Path.Combine(_tempDir, "partial.dat"),
             "<?xml version=\"1.0\"?><datafile><game name=\"test\">");
@@ -110,35 +111,30 @@ public sealed class ChaosTests : IDisposable
         var index = dat.GetDatIndex(_tempDir,
             new Dictionary<string, string> { ["TEST"] = "partial.dat" });
         Assert.NotNull(index);
+        Assert.Equal(0, index.TotalEntries);
     }
 
     // ── TEST-CHAOS-04: ReDoS regression — very long (…) groups ──
 
     [Fact]
-    public void RegionDetector_LongParens_CompletesQuickly()
+    public void RegionDetector_LongParens_CompletesWithoutHang()
     {
         // Create a filename with deeply nested/long parenthesized groups
         var longContent = "Game " + string.Join(" ", Enumerable.Range(0, 100).Select(i => $"(Tag{i})"));
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
         var result = RegionDetector.GetRegionTag(longContent);
-        sw.Stop();
 
         Assert.NotNull(result);
-        Assert.True(sw.ElapsedMilliseconds < 5000, $"Took {sw.ElapsedMilliseconds}ms — possible ReDoS");
     }
 
     [Fact]
-    public void GameKeyNormalizer_LongInput_CompletesQuickly()
+    public void GameKeyNormalizer_LongInput_CompletesWithoutHang()
     {
         var longInput = "Game " + string.Join(" ", Enumerable.Range(0, 100).Select(i => $"(Region{i})"));
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
         var result = GameKeyNormalizer.Normalize(longInput);
-        sw.Stop();
 
         Assert.NotNull(result);
-        Assert.True(sw.ElapsedMilliseconds < 5000, $"Took {sw.ElapsedMilliseconds}ms — possible ReDoS");
     }
 
     // ── TEST-CHAOS-05: Zero-byte files ──
@@ -169,16 +165,16 @@ public sealed class ChaosTests : IDisposable
     [InlineData("PRN")]
     [InlineData("COM1")]
     [InlineData(@"\\server\share\game.zip")]
-    public void AdversarialPaths_GameKey_NeverThrows(string input)
+    public void AdversarialPaths_GameKey_ProducesNormalizedKey(string input)
     {
-        var ex = Record.Exception(() => GameKeyNormalizer.Normalize(input));
-        Assert.Null(ex);
+        var key = GameKeyNormalizer.Normalize(input);
+        Assert.NotNull(key);
     }
 
     // ── TEST-CHAOS-07: Very large candidate list for dedup ──
 
     [Fact]
-    public void Dedup_LargeGroup_CompletesQuickly()
+    public void Dedup_LargeGroup_SelectsSingleWinner()
     {
         var candidates = Enumerable.Range(0, 1000).Select(i => new RomCandidate
         {
@@ -189,13 +185,10 @@ public sealed class ChaosTests : IDisposable
             FormatScore = 500
         }).ToArray();
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
         var results = DeduplicationEngine.Deduplicate(candidates);
-        sw.Stop();
 
         Assert.Single(results);
         Assert.Equal(999, results[0].Losers.Count);
-        Assert.True(sw.ElapsedMilliseconds < 2000, $"Took {sw.ElapsedMilliseconds}ms");
     }
 
     // ── TEST-CHAOS-08: Report with adversarial entries ──

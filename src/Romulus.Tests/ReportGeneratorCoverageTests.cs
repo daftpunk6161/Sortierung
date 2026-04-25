@@ -103,7 +103,7 @@ public sealed class ReportGeneratorCoverageTests
     public void GenerateCsv_ContainsHeader()
     {
         var csv = ReportGenerator.GenerateCsv([MakeEntry()]);
-        Assert.StartsWith("GameKey", csv);
+        Assert.StartsWith("SchemaVersion,GameKey", csv.TrimStart('\uFEFF'));
     }
 
     [Fact]

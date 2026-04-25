@@ -150,17 +150,17 @@ public sealed class SecurityTests : IDisposable
     [Theory]
     [InlineData("Game (\0\0\0)")]
     [InlineData("Game (\t\r\n) (USA)")]
-    public void RegionDetector_AdversarialInput_NeverThrows(string input)
+    public void RegionDetector_AdversarialInput_ReturnsNonNullTag(string input)
     {
-        var ex = Record.Exception(() => RegionDetector.GetRegionTag(input));
-        Assert.Null(ex);
+        var tag = RegionDetector.GetRegionTag(input);
+        Assert.False(string.IsNullOrEmpty(tag));
     }
 
     [Fact]
-    public void RegionDetector_VeryLongInput_NeverThrows()
+    public void RegionDetector_VeryLongInput_ReturnsNonNullTag()
     {
         var longInput = "Game (" + new string('A', 10000) + ")";
-        var ex = Record.Exception(() => RegionDetector.GetRegionTag(longInput));
-        Assert.Null(ex);
+        var tag = RegionDetector.GetRegionTag(longInput);
+        Assert.False(string.IsNullOrEmpty(tag));
     }
 }
