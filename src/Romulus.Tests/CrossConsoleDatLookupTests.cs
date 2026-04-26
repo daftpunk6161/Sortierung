@@ -77,6 +77,10 @@ public sealed class CrossConsoleDatLookupTests : IDisposable
         Assert.Equal("PS1", candidate.ConsoleKey);
         Assert.Equal(SortDecision.Blocked, candidate.SortDecision);
         Assert.Equal(DecisionClass.Blocked, candidate.DecisionClass);
+        // F-DAT-02: Cross-console hash match must be reported via the CrossConsole* MatchKind variant
+        // (still Tier-0, but distinguishable from a within-console exact match).
+        Assert.Equal(MatchKind.CrossConsoleExactDatHash, candidate.PrimaryMatchKind);
+        Assert.Equal(EvidenceTier.Tier0_ExactDat, candidate.PrimaryMatchKind.GetTier());
     }
 
     [Fact]

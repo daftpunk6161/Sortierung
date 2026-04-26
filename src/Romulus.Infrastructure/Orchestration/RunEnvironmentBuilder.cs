@@ -479,6 +479,7 @@ public sealed class RunEnvironmentBuilder
                         new DolphinToolInvoker(toolRunner),
                         new SevenZipInvoker(toolRunner),
                         new PsxtractInvoker(toolRunner),
+                        new CisoInvoker(toolRunner),
                         new EcmInvoker(toolRunner),
                         new NkitInvoker(toolRunner)
                     };

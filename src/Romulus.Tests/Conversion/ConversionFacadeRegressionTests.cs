@@ -298,6 +298,22 @@ public sealed class ConversionFacadeRegressionTests : IDisposable
         _tempFiles.Add(secondary);
     }
 
+    [Fact]
+    public void Convert_BinOnlyArchive_UsesBinAsDeterministicChdInput()
+    {
+        var sourceZip = CreateBinOnlyArchive();
+        var adapter = new FormatConverterAdapter(new StubToolRunner());
+
+        var result = adapter.Convert(sourceZip, new ConversionTarget(".chd", "chdman", "createcd"));
+
+        Assert.Equal(ConversionOutcome.Success, result.Outcome);
+        Assert.NotNull(result.TargetPath);
+        Assert.EndsWith(".chd", result.TargetPath, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(result.TargetPath));
+
+        _tempFiles.Add(result.TargetPath!);
+    }
+
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
@@ -333,6 +349,21 @@ public sealed class ConversionFacadeRegressionTests : IDisposable
         _tempFiles.Add(zipPath);
         _tempFiles.Add(Path.Combine(Path.GetDirectoryName(zipPath)!, "Disc 1.chd"));
         _tempFiles.Add(Path.Combine(Path.GetDirectoryName(zipPath)!, "Disc 2.chd"));
+        return zipPath;
+    }
+
+    private string CreateBinOnlyArchive()
+    {
+        var zipPath = Path.Combine(Path.GetTempPath(), $"binonly_{Guid.NewGuid():N}.zip");
+        using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+        {
+            var entry = archive.CreateEntry("Only.bin");
+            using var stream = entry.Open();
+            stream.Write([1, 2, 3, 4]);
+        }
+
+        _tempFiles.Add(zipPath);
+        _tempFiles.Add(Path.ChangeExtension(zipPath, ".chd"));
         return zipPath;
     }
 

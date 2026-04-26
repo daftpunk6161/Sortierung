@@ -239,6 +239,7 @@ internal static class ToolInvokerSupport
             "dolphintool" => TimeSpan.FromMinutes(20),
             "psxtract" => TimeSpan.FromMinutes(20),
             "nkit" => TimeSpan.FromMinutes(30),
+            "ciso" => TimeSpan.FromMinutes(20),
             "unecm" => TimeSpan.FromMinutes(10),
             _ => TimeSpan.FromMinutes(15)
         };

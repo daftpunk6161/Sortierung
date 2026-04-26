@@ -412,7 +412,8 @@ internal static partial class Program
         int skippedExisting = 0;
         int downloaded = 0;
         int failed = 0;
-        var strictSidecarValidation = settings?.Dat?.StrictSidecarValidation ?? false;
+        // F-DAT-01: When settings cannot be loaded, prefer strict validation (fail closed).
+        var strictSidecarValidation = settings?.Dat?.StrictSidecarValidation ?? true;
 
         using (var datHttpClient = DatSourceService.CreateConfiguredHttpClient())
         using (var datService = new DatSourceService(datRoot, datHttpClient, strictSidecarValidation: strictSidecarValidation))

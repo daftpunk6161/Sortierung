@@ -66,6 +66,27 @@ public sealed class ConversionPolicyEvaluatorTests
     }
 
     [Fact]
+    public void EvaluateSafety_LosslessSourceThroughLossyPath_IsRisky()
+    {
+        var lossyEdge = new ConversionCapability
+        {
+            SourceExtension = ".iso",
+            TargetExtension = ".cso",
+            Tool = new ToolRequirement { ToolName = "ciso" },
+            Command = "compress",
+            ResultIntegrity = SourceIntegrity.Lossy,
+            Lossless = false,
+            Cost = 5,
+            Verification = VerificationMethod.FileExistenceCheck,
+            Condition = ConversionCondition.None
+        };
+
+        var safety = _sut.EvaluateSafety(ConversionPolicy.Auto, SourceIntegrity.Lossless, [lossyEdge], allToolsAvailable: true);
+
+        Assert.Equal(ConversionSafety.Risky, safety);
+    }
+
+    [Fact]
     public void EvaluateSafety_LossyIntegrity_IsAcceptable()
     {
         var safety = _sut.EvaluateSafety(ConversionPolicy.Auto, SourceIntegrity.Lossy, [], allToolsAvailable: true);

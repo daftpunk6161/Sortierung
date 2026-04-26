@@ -1,6 +1,7 @@
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
+using Romulus.Core.Conversion;
 using Romulus.Infrastructure.Conversion;
 using Romulus.Infrastructure.Safety;
 using System.Collections.Concurrent;
@@ -182,9 +183,6 @@ internal static class ConversionPhaseHelper
         bool trackSetMembers,
         CancellationToken cancellationToken)
     {
-        if (string.Equals(options.Mode, RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase))
-            return null;
-
         if (!AllowedRootPathPolicy.Validate(filePath, options.Roots))
         {
             counters.Blocked++;
@@ -195,6 +193,9 @@ internal static class ConversionPhaseHelper
         var ext = Path.GetExtension(filePath).ToLowerInvariant();
         ConversionTarget? target = null;
         ConversionResult convResult;
+
+        if (string.Equals(options.Mode, RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase))
+            return BuildDryRunPreviewResult(filePath, consoleKey, converter);
 
         if (converter is FormatConverterAdapter advancedConverter)
         {
@@ -218,6 +219,76 @@ internal static class ConversionPhaseHelper
 
         convResult = ProcessConversionResult(convResult, filePath, target, converter, options, context, counters, trackSetMembers, ext);
         return convResult;
+    }
+
+    private static ConversionResult? BuildDryRunPreviewResult(
+        string filePath,
+        string consoleKey,
+        IFormatConverter converter)
+    {
+        var sourceExt = SourcePathFormatDetector.ResolveSourceExtension(filePath);
+
+        if (converter is FormatConverterAdapter advancedConverter)
+        {
+            var plan = advancedConverter.PlanForConsole(filePath, consoleKey);
+            if (plan is null)
+                return null;
+
+            if (!plan.IsExecutable)
+            {
+                var outcome = plan.Safety == ConversionSafety.Blocked
+                    ? ConversionOutcome.Blocked
+                    : ConversionOutcome.Skipped;
+
+                return new ConversionResult(filePath, null, outcome, plan.SkipReason)
+                {
+                    Plan = plan,
+                    SourceIntegrity = plan.SourceIntegrity,
+                    Safety = plan.Safety,
+                    VerificationResult = VerificationStatus.NotAttempted
+                };
+            }
+
+            var targetPath = BuildDryRunTargetPath(filePath, plan.FinalTargetExtension);
+            return new ConversionResult(filePath, targetPath, ConversionOutcome.Skipped, "dry-run-planned")
+            {
+                Plan = plan,
+                SourceIntegrity = plan.SourceIntegrity,
+                Safety = plan.Safety,
+                VerificationResult = VerificationStatus.NotAttempted
+            };
+        }
+
+        var target = converter.GetTargetFormat(consoleKey, sourceExt);
+        if (target is null)
+            return null;
+
+        if (string.Equals(sourceExt, target.Extension, StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        return new ConversionResult(
+            filePath,
+            BuildDryRunTargetPath(filePath, target.Extension),
+            ConversionOutcome.Skipped,
+            "dry-run-planned")
+        {
+            SourceIntegrity = SourceIntegrityClassifier.Classify(sourceExt, Path.GetFileName(filePath)),
+            Safety = ConversionSafety.Safe,
+            VerificationResult = VerificationStatus.NotAttempted
+        };
+    }
+
+    private static string? BuildDryRunTargetPath(string sourcePath, string? targetExtension)
+    {
+        if (string.IsNullOrWhiteSpace(targetExtension))
+            return null;
+
+        var directory = Path.GetDirectoryName(sourcePath);
+        if (string.IsNullOrWhiteSpace(directory))
+            return null;
+
+        var baseName = Path.GetFileNameWithoutExtension(sourcePath);
+        return Path.Combine(directory, baseName + targetExtension);
     }
 
     private static ConversionResult ProcessConversionResult(

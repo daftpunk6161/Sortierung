@@ -26,6 +26,27 @@ public enum MatchKind
     /// <summary>CHD inner data SHA1 (from chdman info) matches No-Intro DAT entry.</summary>
     ChdDataSha1DatHash,
 
+    // --- Tier 0: DAT-verified, but resolved across consoles ---
+    // F-DAT-02: Cross-console variants surface that the matched DAT entry belongs to a
+    // different console than the caller's pre-DAT detection (or the console was unknown
+    // on entry). The match itself is still hash-exact (Tier 0), but downstream consumers
+    // must be able to tell them apart for trust calibration, audit and reporting.
+
+    /// <summary>Exact DAT hash match resolved via cross-console lookup (or from UNKNOWN/AMBIGUOUS).</summary>
+    CrossConsoleExactDatHash,
+
+    /// <summary>Archive inner exact DAT hash match resolved via cross-console lookup.</summary>
+    CrossConsoleArchiveInnerExactDat,
+
+    /// <summary>Headerless DAT hash match resolved via cross-console lookup.</summary>
+    CrossConsoleHeaderlessDatHash,
+
+    /// <summary>CHD raw SHA1 DAT hash match resolved via cross-console lookup.</summary>
+    CrossConsoleChdRawDatHash,
+
+    /// <summary>CHD inner data SHA1 DAT hash match resolved via cross-console lookup.</summary>
+    CrossConsoleChdDataSha1DatHash,
+
     // --- Tier 1: Structural ---
 
     /// <summary>Disc header binary signature (SEGA, PLAYSTATION, etc.).</summary>
@@ -81,6 +102,14 @@ public static class MatchKindExtensions
         MatchKind.HeaderlessDatHash => EvidenceTier.Tier0_ExactDat,
         MatchKind.ChdRawDatHash => EvidenceTier.Tier0_ExactDat,
         MatchKind.ChdDataSha1DatHash => EvidenceTier.Tier0_ExactDat,
+
+        // F-DAT-02: cross-console hash matches stay Tier 0 (still hash-exact) but are
+        // distinguishable for downstream trust calibration / reporting.
+        MatchKind.CrossConsoleExactDatHash => EvidenceTier.Tier0_ExactDat,
+        MatchKind.CrossConsoleArchiveInnerExactDat => EvidenceTier.Tier0_ExactDat,
+        MatchKind.CrossConsoleHeaderlessDatHash => EvidenceTier.Tier0_ExactDat,
+        MatchKind.CrossConsoleChdRawDatHash => EvidenceTier.Tier0_ExactDat,
+        MatchKind.CrossConsoleChdDataSha1DatHash => EvidenceTier.Tier0_ExactDat,
 
         MatchKind.DiscHeaderSignature => EvidenceTier.Tier1_Structural,
         MatchKind.CartridgeHeaderMagic => EvidenceTier.Tier1_Structural,

@@ -304,6 +304,7 @@ public sealed class DatAuditStatusToBrushConverter : IValueConverter
         {
             DatAuditStatus.Have => Have,
             DatAuditStatus.HaveWrongName => WrongName,
+            DatAuditStatus.HaveByName => WrongName,
             DatAuditStatus.Miss => Miss,
             DatAuditStatus.Unknown => Unknown,
             DatAuditStatus.Ambiguous => Ambiguous,
@@ -332,6 +333,7 @@ public sealed class DatAuditStatusToGlyphConverter : IValueConverter
         {
             DatAuditStatus.Have => "\uE73E",          // CheckMark
             DatAuditStatus.HaveWrongName => "\uE7BA", // Warning
+            DatAuditStatus.HaveByName => "\uE82F",    // Manage / lower trust glyph
             DatAuditStatus.Miss => "\uE711",          // Cancel
             DatAuditStatus.Unknown => "\uE946",       // Info
             DatAuditStatus.Ambiguous => "\uE783",     // Important (exclamation, distinct from Warning)
@@ -352,6 +354,7 @@ public sealed class DatAuditStatusToLabelConverter : IValueConverter
         {
             DatAuditStatus.Have => "Have",
             DatAuditStatus.HaveWrongName => "Wrong Name",
+            DatAuditStatus.HaveByName => "Name Only",
             DatAuditStatus.Miss => "Miss",
             DatAuditStatus.Unknown => "Unknown",
             DatAuditStatus.Ambiguous => "Ambiguous",

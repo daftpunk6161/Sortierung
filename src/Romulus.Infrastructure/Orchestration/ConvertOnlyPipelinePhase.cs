@@ -22,8 +22,7 @@ public sealed class ConvertOnlyPipelinePhase : IPipelinePhase<ConvertOnlyPhaseIn
                 Index: index,
                 FilePath: candidate.MainPath,
                 ConsoleKey: candidate.ConsoleKey ?? string.Empty,
-                // R4-009 FIX: ConvertOnly must not track set members to avoid orphaned .bin files.
-                TrackSetMembers: false,
+                TrackSetMembers: true,
                 SkipBeforeConversion: !context.FileSystem.FileExists(candidate.MainPath)))
             .ToArray();
 

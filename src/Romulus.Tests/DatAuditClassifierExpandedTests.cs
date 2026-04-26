@@ -301,7 +301,8 @@ public sealed class DatAuditClassifierExpandedTests
 
         var result = DatAuditClassifier.ClassifyFull("no-match", null, "Game Title (Disc 1).chd", "PS1", index);
 
-        Assert.Equal(DatAuditStatus.Have, result.Status);
+        // F-DAT-03: optical name fallback is name-only (no hash verification).
+        Assert.Equal(DatAuditStatus.HaveByName, result.Status);
         Assert.Equal("PS1", result.ResolvedConsoleKey);
         Assert.Equal("Game Title", result.DatGameName);
     }
@@ -314,7 +315,8 @@ public sealed class DatAuditClassifierExpandedTests
 
         var result = DatAuditClassifier.ClassifyFull("no-match", null, "Ridge Racer (Disc 1).chd", "UNKNOWN", index);
 
-        Assert.Equal(DatAuditStatus.Have, result.Status);
+        // F-DAT-03: cross-console optical name fallback is name-only (no hash verification).
+        Assert.Equal(DatAuditStatus.HaveByName, result.Status);
         Assert.Equal("PS1", result.ResolvedConsoleKey);
         Assert.Equal("Ridge Racer", result.DatGameName);
     }

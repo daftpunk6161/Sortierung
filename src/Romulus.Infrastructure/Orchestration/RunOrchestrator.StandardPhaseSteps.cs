@@ -270,7 +270,7 @@ public sealed partial class RunOrchestrator
         PhaseMetricsCollector metrics,
         CancellationToken cancellationToken)
     {
-        if (options.ConvertFormat is null || options.Mode != RunConstants.ModeMove || _converter is null)
+        if (options.ConvertFormat is null || _converter is null)
             return PhaseStepResult.Skipped();
 
         ExecuteWinnerConversionPhase(

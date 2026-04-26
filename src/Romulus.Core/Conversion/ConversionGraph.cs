@@ -59,17 +59,19 @@ public sealed class ConversionGraph(IReadOnlyList<ConversionCapability> capabili
 
         var source = sourceExtension.Trim().ToLowerInvariant();
         var target = targetExtension.Trim().ToLowerInvariant();
-        var queue = new PriorityQueue<(string Ext, int Depth), (int Cost, int Order)>();
-        var distances = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        var startState = new SearchState(source, sourceIntegrity);
+        var targetState = default(SearchState?);
+        var queue = new PriorityQueue<(SearchState State, int Depth), (int Cost, int Order)>();
+        var distances = new Dictionary<SearchState, int>
         {
-            [source] = 0
+            [startState] = 0
         };
-        var previous = new Dictionary<string, (string PrevExt, ConversionCapability Edge)>(StringComparer.OrdinalIgnoreCase);
+        var previous = new Dictionary<SearchState, (SearchState PreviousState, ConversionCapability Edge)>();
 
         var enqueueOrder = 0;
         var maxSearchDepth = ResolveMaxSearchDepth();
         var emittedDepthWarning = false;
-        queue.Enqueue((source, 0), (0, enqueueOrder++));
+        queue.Enqueue((startState, 0), (0, enqueueOrder++));
 
         while (queue.TryDequeue(out var current, out var currentPriority))
         {
@@ -89,38 +91,42 @@ public sealed class ConversionGraph(IReadOnlyList<ConversionCapability> capabili
                 continue;
             }
 
-            if (!distances.TryGetValue(current.Ext, out var knownCost) || currentCost > knownCost)
+            if (!distances.TryGetValue(current.State, out var knownCost) || currentCost > knownCost)
                 continue;
 
-            if (string.Equals(current.Ext, target, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(current.State.Extension, target, StringComparison.OrdinalIgnoreCase))
+            {
+                targetState = current.State;
                 break;
+            }
 
-            foreach (var edge in GetOutgoingEdges(current.Ext, consoleKey, conditionEvaluator, sourceIntegrity))
+            foreach (var edge in GetOutgoingEdges(current.State.Extension, consoleKey, conditionEvaluator, current.State.Integrity))
             {
                 var nextExt = edge.TargetExtension.ToLowerInvariant();
+                var nextState = new SearchState(nextExt, edge.ResultIntegrity);
                 var nextCost = currentCost + Math.Max(edge.Cost, 0);
 
-                if (distances.TryGetValue(nextExt, out var best) && nextCost >= best)
+                if (distances.TryGetValue(nextState, out var best) && nextCost >= best)
                     continue;
 
-                distances[nextExt] = nextCost;
-                previous[nextExt] = (current.Ext, edge);
-                queue.Enqueue((nextExt, current.Depth + 1), (nextCost, enqueueOrder++));
+                distances[nextState] = nextCost;
+                previous[nextState] = (current.State, edge);
+                queue.Enqueue((nextState, current.Depth + 1), (nextCost, enqueueOrder++));
             }
         }
 
-        if (!previous.ContainsKey(target))
+        if (targetState is null || !previous.ContainsKey(targetState.Value))
             return null;
 
         var path = new List<ConversionCapability>();
-        var cursor = target;
-        while (!string.Equals(cursor, source, StringComparison.OrdinalIgnoreCase))
+        var cursor = targetState.Value;
+        while (!cursor.Equals(startState))
         {
             if (!previous.TryGetValue(cursor, out var prev))
                 return null;
 
             path.Add(prev.Edge);
-            cursor = prev.PrevExt;
+            cursor = prev.PreviousState;
         }
 
         path.Reverse();
@@ -173,4 +179,6 @@ public sealed class ConversionGraph(IReadOnlyList<ConversionCapability> capabili
             yield return capability;
         }
     }
+
+    private readonly record struct SearchState(string Extension, SourceIntegrity Integrity);
 }

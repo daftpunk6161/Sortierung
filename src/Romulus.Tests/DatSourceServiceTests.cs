@@ -98,7 +98,8 @@ public class DatSourceServiceTests : IDisposable
 
         var handler = new DelayedOkHandler(TimeSpan.FromSeconds(5));
         using var httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
-        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+        // Permissive mode is opt-in (F-DAT-01) — this test asserts the legacy "trust HTTPS on cancel" branch.
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient, strictSidecarValidation: false);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 
@@ -232,7 +233,8 @@ public class DatSourceServiceTests : IDisposable
 
         var handler = new FixedStatusHandler(HttpStatusCode.NotFound);
         using var httpClient = new HttpClient(handler);
-        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+        // Permissive mode is now opt-in (F-DAT-01).
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient, strictSidecarValidation: false);
 
         // Missing sidecar -> allow (HTTPS already provides integrity)
         Assert.True(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
@@ -246,10 +248,37 @@ public class DatSourceServiceTests : IDisposable
 
         var handler = new FixedStatusHandler(HttpStatusCode.InternalServerError);
         using var httpClient = new HttpClient(handler);
-        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+        // Permissive mode is now opt-in (F-DAT-01).
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient, strictSidecarValidation: false);
 
         // Sidecar endpoint error -> allow (HTTPS provides integrity)
         Assert.True(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
+    }
+
+    // F-DAT-01 RED -> GREEN: default constructor must be strict (fail closed when sidecar absent).
+    [Fact]
+    public async Task VerifyDatSignature_DefaultConstructor_NoSidecar_ReturnsFalse()
+    {
+        var path = Path.Combine(_tempDir, "default-strict.dat");
+        File.WriteAllText(path, "content");
+
+        var handler = new FixedStatusHandler(HttpStatusCode.NotFound);
+        using var httpClient = new HttpClient(handler);
+        // No explicit strictSidecarValidation argument: must default to strict (true).
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+
+        Assert.False(await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat"));
+    }
+
+    [Fact]
+    public async Task VerifyDatSignature_DefaultConstructor_NoUrl_ReturnsFalse()
+    {
+        var path = Path.Combine(_tempDir, "default-strict-no-url.dat");
+        File.WriteAllText(path, "content");
+
+        // Default ctor (no httpClient, no strict flag) — must fail closed without sidecar/URL.
+        using var svc = new DatSourceService(_tempDir);
+        Assert.False(await svc.VerifyDatSignatureAsync(path, sourceUrl: "", expectedSha256: null));
     }
 
     [Fact]

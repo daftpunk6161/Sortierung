@@ -12,15 +12,18 @@ public sealed class DatAuditPhase1CompletionTests
     // ── DatAuditStatus enum completeness ──────────────────────────
 
     [Fact]
-    public void DatAuditStatus_HasExactlyFiveMembers()
+    public void DatAuditStatus_HasExactlySixMembers()
     {
+        // F-DAT-03: HaveByName added as a distinct, lower-trust status for
+        // optical-disc name-only fallback matches (no hash verification).
         var values = Enum.GetValues<DatAuditStatus>();
-        Assert.Equal(5, values.Length);
+        Assert.Equal(6, values.Length);
     }
 
     [Theory]
     [InlineData(DatAuditStatus.Have)]
     [InlineData(DatAuditStatus.HaveWrongName)]
+    [InlineData(DatAuditStatus.HaveByName)]
     [InlineData(DatAuditStatus.Miss)]
     [InlineData(DatAuditStatus.Unknown)]
     [InlineData(DatAuditStatus.Ambiguous)]

@@ -23,11 +23,11 @@ public sealed class EnrichmentPipelinePhaseHashFallbackTests : IDisposable
     }
 
     [Fact]
-    public void GetLookupHashTypeOrder_DefaultChain_IsSha1ThenCrc32ThenMd5()
+    public void GetLookupHashTypeOrder_DefaultChain_IsSha1ThenCrc32ThenMd5ThenSha256()
     {
         var order = EnrichmentPipelinePhase.GetLookupHashTypeOrder("SHA1");
 
-        Assert.Equal(["SHA1", "CRC32", "MD5"], order);
+        Assert.Equal(["SHA1", "CRC32", "MD5", "SHA256"], order);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class EnrichmentPipelinePhaseHashFallbackTests : IDisposable
     {
         var order = EnrichmentPipelinePhase.GetLookupHashTypeOrder("crc");
 
-        Assert.Equal(["CRC32", "SHA1", "MD5"], order);
+        Assert.Equal(["CRC32", "SHA1", "MD5", "SHA256"], order);
     }
 
     [Fact]
@@ -49,11 +49,11 @@ public sealed class EnrichmentPipelinePhaseHashFallbackTests : IDisposable
 
         var expectedSha1 = Convert.ToHexString(SHA1.HashData(File.ReadAllBytes(filePath))).ToLowerInvariant();
 
-        Assert.Equal(3, hashes.Count);
+        Assert.Equal(4, hashes.Count);
         Assert.Equal("SHA1", hashes[0].HashType);
         Assert.Equal(expectedSha1, hashes[0].Hash);
         Assert.All(hashes, h => Assert.False(string.IsNullOrWhiteSpace(h.Hash)));
-        Assert.Equal(["SHA1", "CRC32", "MD5"], hashes.Select(h => h.HashType).ToArray());
+        Assert.Equal(["SHA1", "CRC32", "MD5", "SHA256"], hashes.Select(h => h.HashType).ToArray());
     }
 
     [Fact]
@@ -70,8 +70,8 @@ public sealed class EnrichmentPipelinePhaseHashFallbackTests : IDisposable
         var archiveHashService = new ArchiveHashService();
         var hashes = EnrichmentPipelinePhase.GetArchiveLookupHashes(zipPath, archiveHashService, "SHA1");
 
-        Assert.Equal(3, hashes.Count);
+        Assert.Equal(4, hashes.Count);
         Assert.All(hashes, h => Assert.False(string.IsNullOrWhiteSpace(h.Hash)));
-        Assert.Equal(["SHA1", "CRC32", "MD5"], hashes.Select(h => h.HashType).ToArray());
+        Assert.Equal(["SHA1", "CRC32", "MD5", "SHA256"], hashes.Select(h => h.HashType).ToArray());
     }
 }

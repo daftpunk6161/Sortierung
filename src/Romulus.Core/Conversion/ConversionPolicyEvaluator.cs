@@ -39,6 +39,9 @@ public sealed class ConversionPolicyEvaluator
         if (policy == ConversionPolicy.ManualOnly)
             return ConversionSafety.Risky;
 
+        if (integrity == SourceIntegrity.Lossless && pathCapabilities.Any(c => !c.Lossless))
+            return ConversionSafety.Risky;
+
         if (integrity == SourceIntegrity.Unknown && pathCapabilities.Any(c => !c.Lossless))
             return ConversionSafety.Blocked;
 

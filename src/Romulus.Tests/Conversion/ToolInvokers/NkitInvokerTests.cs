@@ -113,25 +113,57 @@ public sealed class NkitInvokerTests : IDisposable
     public void Invoke_SuccessWithOutput_ReturnsVerifiedAndUsesExpectedArgs()
     {
         var sourcePath = Path.Combine(_root, "game.nkit.iso");
-        var targetPath = Path.Combine(_root, "out", "game.iso");
+        var targetPath = Path.Combine(_root, "out", "requested.iso");
         File.WriteAllText(sourcePath, "nkit");
 
         var runner = new TestToolRunner(new Dictionary<string, string?> { ["nkit"] = _toolPath });
         runner.Enqueue(new ToolResult(0, "ok", true));
+        runner.OnInvoke = (_, args) =>
+        {
+            var outIndex = Array.IndexOf(args, "-out");
+            Assert.True(outIndex >= 0);
+            var stagingDirectory = args[outIndex + 1];
+            Directory.CreateDirectory(stagingDirectory);
+            File.WriteAllText(Path.Combine(stagingDirectory, "game.iso"), "expanded");
+        };
 
         var sut = new NkitInvoker(runner);
-
-        var targetDir = Path.GetDirectoryName(targetPath)!;
-        Directory.CreateDirectory(targetDir);
-        File.WriteAllText(targetPath, "expanded");
 
         var result = sut.Invoke(sourcePath, targetPath, Capability("nkit", ".nkit.iso"));
 
         Assert.True(result.Success);
         Assert.Equal(VerificationStatus.Verified, result.Verification);
+        Assert.True(File.Exists(targetPath));
+        Assert.Equal("expanded", File.ReadAllText(targetPath));
         Assert.NotNull(runner.LastArguments);
         Assert.Equal("-task", runner.LastArguments![0]);
         Assert.Equal("expand", runner.LastArguments![1]);
+    }
+
+    [Fact]
+    public void Invoke_SuccessCleansIsolatedStagingDirectory()
+    {
+        var sourcePath = Path.Combine(_root, "cleanup.nkit.iso");
+        var targetPath = Path.Combine(_root, "out", "cleanup.iso");
+        File.WriteAllText(sourcePath, "nkit");
+
+        string? stagingDirectory = null;
+        var runner = new TestToolRunner(new Dictionary<string, string?> { ["nkit"] = _toolPath });
+        runner.Enqueue(new ToolResult(0, "ok", true));
+        runner.OnInvoke = (_, args) =>
+        {
+            var outIndex = Array.IndexOf(args, "-out");
+            stagingDirectory = args[outIndex + 1];
+            Directory.CreateDirectory(stagingDirectory);
+            File.WriteAllText(Path.Combine(stagingDirectory, "cleanup.iso"), "expanded");
+        };
+
+        var sut = new NkitInvoker(runner);
+        var result = sut.Invoke(sourcePath, targetPath, Capability("nkit", ".nkit.iso"));
+
+        Assert.True(result.Success);
+        Assert.NotNull(stagingDirectory);
+        Assert.False(Directory.Exists(stagingDirectory));
     }
 
     [Fact]

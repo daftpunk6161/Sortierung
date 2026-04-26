@@ -845,4 +845,50 @@ public class DatCatalogStateServiceTests : IDisposable
             @"D:\other\file.dat", @"C:\dat");
         Assert.Equal("Lokal", group);
     }
+
+    // ═══ F-DAT-04: System prefix-match boundary ══════════════════════════
+
+    [Theory]
+    [InlineData("Sega - Mega Drive", "Sega - Mega Drive", true)]                       // exact match
+    [InlineData("Sega - Mega Drive (20240101)", "Sega - Mega Drive", true)]            // boundary: space
+    [InlineData("Sega - Mega Drive - Datfile (20240101)", "Sega - Mega Drive", true)]  // boundary: ' -'
+    [InlineData("Sega - Mega Drive_v2", "Sega - Mega Drive", true)]                    // boundary: '_'
+    [InlineData("Sega - Mega Drive.dat-fragment", "Sega - Mega Drive", true)]          // boundary: '.'
+    [InlineData("Sega - Mega Drive(2024)", "Sega - Mega Drive", true)]                 // boundary: '('
+    [InlineData("Sega - Mega Drive[Beta]", "Sega - Mega Drive", true)]                 // boundary: '['
+    [InlineData("Sega - Mega Drive 32X (20240101)", "Sega - Mega Drive", false)]       // longer system name
+    [InlineData("Sega - Mega Drive32X", "Sega - Mega Drive", false)]                   // alphanumeric continuation
+    [InlineData("Sega - Mega DriveCD", "Sega - Mega Drive", false)]                    // alphanumeric continuation
+    [InlineData("Nintendo", "Nintendo - Game Boy", false)]                             // shorter than system
+    [InlineData("", "Sega - Mega Drive", false)]                                       // empty stem
+    [InlineData("Sega - Mega Drive", "", false)]                                       // empty system
+    public void HasSystemPrefixWithBoundary_RespectsTokenBoundary(string stem, string system, bool expected)
+    {
+        Assert.Equal(expected, DatCatalogStateService.HasSystemPrefixWithBoundary(stem, system));
+    }
+
+    [Fact]
+    public void BuildCatalogStatus_DoesNotCrossMatchLongerSystemName()
+    {
+        // Regression for F-DAT-04: a "Sega - Mega Drive 32X" file must not be claimed
+        // by the "Sega - Mega Drive" catalog entry.
+        var datPath = Path.Combine(_datRoot, "Sega - Mega Drive 32X - Datfile (20240101).dat");
+        File.WriteAllText(datPath, "<xml/>");
+        File.SetLastWriteTimeUtc(datPath, DateTime.UtcNow.AddDays(-5));
+
+        var catalog = new List<DatCatalogEntry>
+        {
+            new() { Id = "no-intro-megadrive", Group = "No-Intro", System = "Sega - Mega Drive",
+                    ConsoleKey = "MEGADRIVE", Format = "raw-dat", Url = "https://example.com" }
+        };
+
+        var result = DatCatalogStateService.BuildCatalogStatus(catalog, _datRoot, new DatCatalogState());
+
+        var megadriveEntry = result.First(r => r.Id == "no-intro-megadrive");
+        Assert.Equal(DatInstallStatus.Missing, megadriveEntry.Status);
+        Assert.True(string.IsNullOrEmpty(megadriveEntry.LocalPath));
+
+        // The 32X file must be surfaced as a discovered/uncataloged DAT instead.
+        Assert.Contains(result, r => r.LocalPath == datPath);
+    }
 }

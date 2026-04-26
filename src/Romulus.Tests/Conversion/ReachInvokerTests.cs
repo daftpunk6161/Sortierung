@@ -73,7 +73,9 @@ public sealed class ReachInvokerTests : IDisposable
         Assert.Equal("-task", runner.LastArguments[0]);
         Assert.Contains("-verify", runner.LastArguments);
         Assert.Contains(sourcePath, runner.LastArguments);
-        Assert.Contains(Path.GetDirectoryName(targetPath)!, runner.LastArguments);
+        Assert.Contains(
+            runner.LastArguments,
+            arg => arg.StartsWith(Path.GetDirectoryName(targetPath)!, StringComparison.OrdinalIgnoreCase));
     }
 
     private string CreateFile(string name)
@@ -108,8 +110,18 @@ public sealed class ReachInvokerTests : IDisposable
         public ToolResult InvokeProcess(string filePath, string[] arguments, string? errorLabel = null)
         {
             LastArguments = arguments;
-            Directory.CreateDirectory(Path.GetDirectoryName(_expectedTargetPath)!);
-            File.WriteAllText(_expectedTargetPath, "converted");
+            var outIndex = Array.IndexOf(arguments, "-out");
+            if (outIndex >= 0 && outIndex < arguments.Length - 1)
+            {
+                var outDir = arguments[outIndex + 1];
+                Directory.CreateDirectory(outDir);
+                File.WriteAllText(Path.Combine(outDir, Path.GetFileName(_expectedTargetPath)), "converted");
+            }
+            else
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_expectedTargetPath)!);
+                File.WriteAllText(_expectedTargetPath, "converted");
+            }
             return new ToolResult(0, "ok", true);
         }
 

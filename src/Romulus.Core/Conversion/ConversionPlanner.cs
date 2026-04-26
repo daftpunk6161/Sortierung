@@ -38,6 +38,12 @@ public sealed class ConversionPlanner(
         if (policy == ConversionPolicy.None)
             return BlockedPlan(sourcePath, normalizedConsole, sourceIntegrity, $"policy-none:{normalizedConsole}");
 
+        if (string.Equals(normalizedExt, ".pbp", StringComparison.OrdinalIgnoreCase)
+            && _encryptedPbpDetector?.Invoke(sourcePath) == true)
+        {
+            return BlockedPlan(sourcePath, normalizedConsole, sourceIntegrity, "encrypted-pbp");
+        }
+
         var preferredTarget = _registry.GetPreferredTarget(normalizedConsole);
         if (string.IsNullOrWhiteSpace(preferredTarget))
             return BlockedPlan(sourcePath, normalizedConsole, sourceIntegrity, $"no-target-defined:{normalizedConsole}");

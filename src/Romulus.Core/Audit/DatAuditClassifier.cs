@@ -44,7 +44,7 @@ public static partial class DatAuditClassifier
         if (!string.IsNullOrWhiteSpace(headerlessHash))
         {
             var result = ClassifyWithHashFull(headerlessHash, actualFileName, consoleKey, datIndex, hashType);
-            if (result.Status is DatAuditStatus.Have or DatAuditStatus.HaveWrongName or DatAuditStatus.Ambiguous)
+            if (result.Status is DatAuditStatus.Have or DatAuditStatus.HaveWrongName or DatAuditStatus.HaveByName or DatAuditStatus.Ambiguous)
                 return result;
             // On Miss or Unknown: fall through to try regular (headered) hash,
             // because the DAT may store headered SHA1 rather than headerless SHA1.
@@ -91,10 +91,8 @@ public static partial class DatAuditClassifier
             {
                 if (TryOpticalNameFallbackForConsole(consoleKey!, actualFileName, datIndex, out var fallbackMatch))
                 {
-                    var fallbackStatus = IsSameFileName(actualFileName, fallbackMatch)
-                        ? DatAuditStatus.Have
-                        : DatAuditStatus.HaveWrongName;
-                    return new(fallbackStatus, fallbackMatch.GameName, fallbackMatch.RomFileName, consoleKey);
+                    // F-DAT-03: optical name fallback never verified the hash; surface as HaveByName.
+                    return new(DatAuditStatus.HaveByName, fallbackMatch.GameName, fallbackMatch.RomFileName, consoleKey);
                 }
 
                 // Miss = DAT loaded for this console but hash not found
@@ -118,10 +116,8 @@ public static partial class DatAuditClassifier
         {
             if (TryOpticalNameFallbackCrossConsole(actualFileName, datIndex, out var fallbackConsole, out var fallbackEntry))
             {
-                var fallbackStatus = IsSameFileName(actualFileName, fallbackEntry)
-                    ? DatAuditStatus.Have
-                    : DatAuditStatus.HaveWrongName;
-                return new(fallbackStatus, fallbackEntry.GameName, fallbackEntry.RomFileName, fallbackConsole);
+                // F-DAT-03: cross-console optical name fallback also lacks hash verification.
+                return new(DatAuditStatus.HaveByName, fallbackEntry.GameName, fallbackEntry.RomFileName, fallbackConsole);
             }
 
             return new(DatAuditStatus.Unknown, null, null, consoleKey);

@@ -7,6 +7,12 @@ public enum DatAuditStatus
 {
     Have,
     HaveWrongName,
+    /// <summary>
+    /// F-DAT-03: Match established only via filename heuristics (optical/name fallback) without
+    /// a hash verification. Lower trust than <see cref="Have"/> / <see cref="HaveWrongName"/> and
+    /// must not be counted as "DAT-verified" in completeness KPIs.
+    /// </summary>
+    HaveByName,
     Miss,
     Unknown,
     Ambiguous
@@ -40,13 +46,15 @@ public sealed record DatAuditEntry(
 /// <param name="MissCount">Count of Miss entries.</param>
 /// <param name="UnknownCount">Count of Unknown entries.</param>
 /// <param name="AmbiguousCount">Count of Ambiguous entries.</param>
+/// <param name="HaveByNameCount">Count of HaveByName entries (name-only fallback, no hash verification).</param>
 public sealed record DatAuditResult(
     IReadOnlyList<DatAuditEntry> Entries,
     int HaveCount,
     int HaveWrongNameCount,
     int MissCount,
     int UnknownCount,
-    int AmbiguousCount);
+    int AmbiguousCount,
+    int HaveByNameCount = 0);
 
 /// <summary>
 /// DAT-driven rename proposal.

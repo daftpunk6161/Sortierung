@@ -48,24 +48,33 @@ public sealed class NkitInvoker(IToolRunner tools) : IToolInvoker
             return new ToolInvocationResult(false, targetPath, -1, null, "invalid-target-directory", 0, VerificationStatus.NotAttempted);
 
         Directory.CreateDirectory(targetDirectory);
+        var stagingDirectory = Path.Combine(targetDirectory, $".romulus-nkit-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(stagingDirectory);
 
-        var watch = Stopwatch.StartNew();
-        var result = _tools.InvokeProcess(
-            toolPath,
-            ["-task", "expand", "-verify", "y", "-in", sourcePath, "-out", targetDirectory],
-            capability.Tool,
-            "nkit",
-            ToolInvokerSupport.ResolveToolTimeout("nkit"),
-            cancellationToken);
-        watch.Stop();
+        try
+        {
+            var watch = Stopwatch.StartNew();
+            var result = _tools.InvokeProcess(
+                toolPath,
+                ["-task", "expand", "-verify", "y", "-in", sourcePath, "-out", stagingDirectory],
+                capability.Tool,
+                "nkit",
+                ToolInvokerSupport.ResolveToolTimeout("nkit"),
+                cancellationToken);
+            watch.Stop();
 
-        if (!result.Success)
-            return new ToolInvocationResult(false, targetPath, result.ExitCode, result.Output, result.Output, watch.ElapsedMilliseconds, VerificationStatus.NotAttempted);
+            if (!result.Success)
+                return new ToolInvocationResult(false, targetPath, result.ExitCode, result.Output, result.Output, watch.ElapsedMilliseconds, VerificationStatus.NotAttempted);
 
-        if (!File.Exists(targetPath))
-            return new ToolInvocationResult(false, targetPath, result.ExitCode, result.Output, "nkit-output-not-found", watch.ElapsedMilliseconds, VerificationStatus.VerifyFailed);
+            if (!TryPromoteExpandedOutput(sourcePath, stagingDirectory, targetPath, out var failureReason))
+                return new ToolInvocationResult(false, targetPath, result.ExitCode, result.Output, failureReason, watch.ElapsedMilliseconds, VerificationStatus.VerifyFailed);
 
-        return new ToolInvocationResult(true, targetPath, result.ExitCode, result.Output, null, watch.ElapsedMilliseconds, VerificationStatus.Verified);
+            return new ToolInvocationResult(true, targetPath, result.ExitCode, result.Output, null, watch.ElapsedMilliseconds, VerificationStatus.Verified);
+        }
+        finally
+        {
+            TryDeleteDirectory(stagingDirectory);
+        }
     }
 
     public VerificationStatus Verify(string targetPath, ConversionCapability capability)
@@ -120,6 +129,93 @@ public sealed class NkitInvoker(IToolRunner tools) : IToolInvoker
         catch (UnauthorizedAccessException)
         {
             return false;
+        }
+    }
+
+    private static bool TryPromoteExpandedOutput(
+        string sourcePath,
+        string stagingDirectory,
+        string targetPath,
+        out string failureReason)
+    {
+        failureReason = "nkit-output-not-found";
+
+        var candidates = EnumerateExpectedOutputCandidates(sourcePath, stagingDirectory)
+            .Where(File.Exists)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (candidates.Length == 0)
+        {
+            candidates = Directory.GetFiles(stagingDirectory, "*.iso", SearchOption.TopDirectoryOnly)
+                .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        if (candidates.Length != 1)
+        {
+            failureReason = candidates.Length == 0
+                ? "nkit-output-not-found"
+                : "nkit-output-ambiguous";
+            return false;
+        }
+
+        var sourceOutput = candidates[0];
+        try
+        {
+            if (File.Exists(targetPath))
+            {
+                failureReason = "target-exists";
+                return false;
+            }
+
+            var targetDirectory = Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrWhiteSpace(targetDirectory))
+                Directory.CreateDirectory(targetDirectory);
+
+            File.Move(sourceOutput, targetPath);
+            failureReason = string.Empty;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            failureReason = "nkit-output-promote-failed";
+            return false;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateExpectedOutputCandidates(string sourcePath, string stagingDirectory)
+    {
+        var fileName = Path.GetFileName(sourcePath);
+        if (fileName.EndsWith(".nkit.iso", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return Path.Combine(stagingDirectory, fileName[..^".nkit.iso".Length] + ".iso");
+            yield return Path.Combine(stagingDirectory, fileName[..^".nkit.iso".Length] + ".dec.iso");
+            yield break;
+        }
+
+        if (fileName.EndsWith(".nkit.gcz", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return Path.Combine(stagingDirectory, fileName[..^".nkit.gcz".Length] + ".iso");
+            yield return Path.Combine(stagingDirectory, fileName[..^".nkit.gcz".Length] + ".dec.iso");
+            yield break;
+        }
+
+        yield return Path.Combine(stagingDirectory, Path.GetFileNameWithoutExtension(sourcePath) + ".iso");
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 }

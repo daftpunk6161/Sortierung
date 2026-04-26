@@ -7,8 +7,8 @@ namespace Romulus.Infrastructure.Orchestration;
 
 /// <summary>
 /// Pipeline phase that converts winner files after deduplication.
-/// Uses shared ConversionPhaseHelper — no set-member tracking needed
-/// because MovePipelinePhase already handled set members for winners.
+/// Uses shared ConversionPhaseHelper with set-member tracking so descriptor
+/// conversions trash CUE/GDI/CCD sidecars atomically after verification.
 /// </summary>
 public sealed class WinnerConversionPipelinePhase : IPipelinePhase<WinnerConversionPhaseInput, WinnerConversionPhaseOutput>
 {
@@ -31,7 +31,7 @@ public sealed class WinnerConversionPipelinePhase : IPipelinePhase<WinnerConvers
                     Index: index,
                     FilePath: winnerPath,
                     ConsoleKey: group.Winner.ConsoleKey ?? string.Empty,
-                    TrackSetMembers: false,
+                    TrackSetMembers: true,
                     SkipBeforeConversion: skipBeforeConversion);
             })
             .ToArray();

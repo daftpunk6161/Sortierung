@@ -199,6 +199,32 @@ public sealed class PreviewExecuteParityTests : IDisposable
         Assert.Equal(dry.ConvertErrorCount, execute.ConvertErrorCount);
     }
 
+    [Fact]
+    public void DryRunWithConvertFormat_ReportsConversionPlanWithoutExecutingConverter()
+    {
+        var root = Path.Combine(_tempDir, "dry-convert-plan");
+        Directory.CreateDirectory(root);
+        File.WriteAllText(Path.Combine(root, "Alpha.iso"), "a");
+
+        var converter = new ThrowingConvertFormatConverter();
+        var result = new RunOrchestrator(new FileSystemAdapter(), new NullAuditStore(), consoleDetector: BuildDiscDetector(), converter: converter)
+            .Execute(new RunOptions
+            {
+                Roots = new[] { root },
+                Mode = "DryRun",
+                Extensions = new[] { ".iso" },
+                ConvertFormat = "chd",
+                RemoveJunk = false
+            });
+
+        Assert.False(converter.ConvertCalled);
+        Assert.NotNull(result.ConversionReport);
+        var conversion = Assert.Single(result.ConversionReport!.Results);
+        Assert.Equal(ConversionOutcome.Skipped, conversion.Outcome);
+        Assert.Equal("dry-run-planned", conversion.Reason);
+        Assert.EndsWith(".chd", conversion.TargetPath, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static void SeedDataset(string root)
     {
         File.WriteAllText(Path.Combine(root, "Mega Game (US).zip"), "us");
@@ -214,6 +240,14 @@ public sealed class PreviewExecuteParityTests : IDisposable
         ]);
     }
 
+    private static ConsoleDetector BuildDiscDetector()
+    {
+        return new ConsoleDetector(
+        [
+            new ConsoleInfo("PS1", "PlayStation", true, [".iso"], Array.Empty<string>(), ["PS1"])
+        ]);
+    }
+
     private sealed class NoOpFormatConverter : IFormatConverter
     {
         public ConversionTarget? GetTargetFormat(string consoleKey, string sourceExtension)
@@ -221,6 +255,22 @@ public sealed class PreviewExecuteParityTests : IDisposable
 
         public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
             => new(sourcePath, sourcePath, ConversionOutcome.Skipped, "noop");
+
+        public bool Verify(string targetPath, ConversionTarget target) => true;
+    }
+
+    private sealed class ThrowingConvertFormatConverter : IFormatConverter
+    {
+        public bool ConvertCalled { get; private set; }
+
+        public ConversionTarget? GetTargetFormat(string consoleKey, string sourceExtension)
+            => new(".chd", "noop", "noop");
+
+        public ConversionResult Convert(string sourcePath, ConversionTarget target, CancellationToken cancellationToken = default)
+        {
+            ConvertCalled = true;
+            throw new InvalidOperationException("DryRun must not execute conversion.");
+        }
 
         public bool Verify(string targetPath, ConversionTarget target) => true;
     }

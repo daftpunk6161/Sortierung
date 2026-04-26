@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Romulus.Contracts.Hashing;
 
 namespace Romulus.Contracts.Models;
 
@@ -372,19 +373,7 @@ public sealed class DatIndex
     }
 
     private static string NormalizeHashType(string? hashType)
-    {
-        if (string.IsNullOrWhiteSpace(hashType))
-            return DefaultHashType;
-
-        return hashType.Trim().ToUpperInvariant() switch
-        {
-            "CRC" => "CRC32",
-            "CRC32" => "CRC32",
-            "MD5" => "MD5",
-            "SHA256" => "SHA256",
-            _ => DefaultHashType
-        };
-    }
+        => HashTypeNormalizer.Normalize(hashType);
 
     /// <summary>Get all indexed console keys (snapshot).</summary>
     public IReadOnlyCollection<string> ConsoleKeys => _data.Keys.ToArray();

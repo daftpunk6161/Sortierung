@@ -163,10 +163,13 @@ public sealed class DatCatalogStateService
                 // Match by System name prefix (e.g., entry.System = "Acorn - Archimedes")
                 if (!string.IsNullOrWhiteSpace(entry.System))
                 {
+                    // F-DAT-04: prefix-match must respect a token boundary so that
+                    // entry.System = "Sega - Mega Drive" does NOT match a local file stem
+                    // "Sega - Mega Drive 32X (...)" or any other longer-name superset.
                     // Deterministic policy: choose the alphabetically first stem, then path.
                     // This keeps repeated scans stable across runs and machines.
                     var systemMatch = localFiles
-                        .Where(pair => pair.Key.StartsWith(entry.System, StringComparison.OrdinalIgnoreCase))
+                        .Where(pair => HasSystemPrefixWithBoundary(pair.Key, entry.System))
                         .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
                         .ThenBy(pair => pair.Value.Path, StringComparer.OrdinalIgnoreCase)
                         .Select(pair => pair.Value)
@@ -269,6 +272,26 @@ public sealed class DatCatalogStateService
         }
 
         return result;
+    }
+
+    // F-DAT-04: Token-boundary aware prefix match. The local file stem must either equal
+    // the system name exactly, or continue with a non-alphanumeric separator so that
+    // longer system names (e.g. "Sega - Mega Drive 32X") cannot be silently swallowed
+    // by shorter prefixes (e.g. "Sega - Mega Drive").
+    internal static bool HasSystemPrefixWithBoundary(string stem, string system)
+    {
+        if (string.IsNullOrEmpty(stem) || string.IsNullOrEmpty(system))
+            return false;
+
+        if (!stem.StartsWith(system, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (stem.Length == system.Length)
+            return true;
+
+        var next = stem[system.Length];
+        // Allowed boundary characters used by Redump / No-Intro filename conventions.
+        return next is ' ' or '-' or '_' or '.' or '(' or '[';
     }
 
     /// <summary>

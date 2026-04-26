@@ -249,9 +249,27 @@ public class DatRepositoryAdapterTests : IDisposable
             ["b"] = "a" // cycle
         };
 
-        // Should not infinite-loop — returns whatever it reached last
+        // F-DAT-11: cycle in the parent chain must surface as "no resolvable parent"
+        // (return null), not as the last-walked node, so callers don't promote a
+        // bogus parent into the DAT index.
         var result = _dat.ResolveParentName("a", parentMap);
-        Assert.NotNull(result);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ResolveParentName_DepthBeyondLimit_ReturnsNull()
+    {
+        // F-DAT-11: a parent chain longer than the internal MaxDepth must not silently
+        // surface the deepest hop as the "parent" — it has to be reported as
+        // unresolvable so the DAT index does not record an unverified parent.
+        var parentMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < 20; i++)
+        {
+            parentMap[$"g{i}"] = $"g{i + 1}";
+        }
+
+        var result = _dat.ResolveParentName("g0", parentMap);
+        Assert.Null(result);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using Romulus.Contracts;
+using Romulus.Contracts.Hashing;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Core.Classification;
@@ -488,7 +489,10 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     datMatchedBios = policyResult.IsBios;
                     datResolvedFromAmbiguousCandidates = policyResult.ResolvedFromAmbiguousCandidates;
                     datGameName = policyResult.DatGameName;
-                    datMatchKind = MatchKind.ArchiveInnerExactDat;
+                    var crossConsole = IsCrossConsoleResolution(consoleKey, policyResult.ConsoleKey);
+                    datMatchKind = crossConsole
+                        ? MatchKind.CrossConsoleArchiveInnerExactDat
+                        : MatchKind.ArchiveInnerExactDat;
                     if (!string.Equals(consoleKey, policyResult.ConsoleKey, StringComparison.OrdinalIgnoreCase)
                         && consoleKey is not "UNKNOWN" and not "" and not "AMBIGUOUS")
                     {
@@ -516,7 +520,10 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     datMatchedBios = policyResult.IsBios;
                     datResolvedFromAmbiguousCandidates = policyResult.ResolvedFromAmbiguousCandidates;
                     datGameName = policyResult.DatGameName;
-                    datMatchKind = MatchKind.HeaderlessDatHash;
+                    var crossConsole = IsCrossConsoleResolution(consoleKey, policyResult.ConsoleKey);
+                    datMatchKind = crossConsole
+                        ? MatchKind.CrossConsoleHeaderlessDatHash
+                        : MatchKind.HeaderlessDatHash;
                     if (!string.Equals(consoleKey, policyResult.ConsoleKey, StringComparison.OrdinalIgnoreCase))
                     {
                         datConsoleSwitched = true;
@@ -543,7 +550,10 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     datMatchedBios = policyResult.IsBios;
                     datResolvedFromAmbiguousCandidates = policyResult.ResolvedFromAmbiguousCandidates;
                     datGameName = policyResult.DatGameName;
-                    datMatchKind = lowerExt == ".chd" ? MatchKind.ChdRawDatHash : MatchKind.ExactDatHash;
+                    var crossConsole = IsCrossConsoleResolution(consoleKey, policyResult.ConsoleKey);
+                    datMatchKind = lowerExt == ".chd"
+                        ? (crossConsole ? MatchKind.CrossConsoleChdRawDatHash : MatchKind.ChdRawDatHash)
+                        : (crossConsole ? MatchKind.CrossConsoleExactDatHash : MatchKind.ExactDatHash);
                     if (!string.Equals(consoleKey, policyResult.ConsoleKey, StringComparison.OrdinalIgnoreCase)
                         && consoleKey is not "UNKNOWN" and not "" and not "AMBIGUOUS")
                     {
@@ -577,7 +587,10 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     datMatchedBios = policyResult.IsBios;
                     datResolvedFromAmbiguousCandidates = policyResult.ResolvedFromAmbiguousCandidates;
                     datGameName = policyResult.DatGameName;
-                    datMatchKind = MatchKind.ChdDataSha1DatHash;
+                    var crossConsole = IsCrossConsoleResolution(consoleKey, policyResult.ConsoleKey);
+                    datMatchKind = crossConsole
+                        ? MatchKind.CrossConsoleChdDataSha1DatHash
+                        : MatchKind.ChdDataSha1DatHash;
                     if (!string.Equals(consoleKey, policyResult.ConsoleKey, StringComparison.OrdinalIgnoreCase)
                         && consoleKey is not "UNKNOWN" and not "" and not "AMBIGUOUS")
                     {
@@ -823,6 +836,10 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
 
     internal static IReadOnlyList<string> GetLookupHashTypeOrder(string preferredHashType)
     {
+        // F-DAT-13: SHA256 must be reachable so DAT entries indexed under SHA256
+        // (modern No-Intro / Redump publications) can be matched. SHA256 is
+        // appended at the end of the chain to keep the cheap-hash-first cost
+        // profile for the dominant SHA1 case.
         var ordered = new List<string>(capacity: 4);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -830,6 +847,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         Add("SHA1");
         Add("CRC32");
         Add("MD5");
+        Add("SHA256");
 
         return ordered;
 
@@ -846,18 +864,26 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
     }
 
     private static string NormalizeLookupHashType(string? hashType)
-    {
-        if (string.IsNullOrWhiteSpace(hashType))
-            return "SHA1";
+        => HashTypeNormalizer.Normalize(hashType);
 
-        return hashType.Trim().ToUpperInvariant() switch
+    // F-DAT-02: A DAT lookup is "cross-console" when the resolved console differs from
+    // the caller's incoming consoleKey, OR when the caller had no real console context
+    // on entry (UNKNOWN/AMBIGUOUS/empty) and the DAT lookup itself supplied the console.
+    // Both cases warrant a distinct CrossConsole* MatchKind so downstream reporting can
+    // surface the lower-trust console assignment without losing Tier-0 hash certainty.
+    private static bool IsCrossConsoleResolution(string? originalConsoleKey, string? resolvedConsoleKey)
+    {
+        if (string.IsNullOrWhiteSpace(resolvedConsoleKey))
+            return false;
+
+        if (string.IsNullOrWhiteSpace(originalConsoleKey)
+            || string.Equals(originalConsoleKey, "UNKNOWN", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(originalConsoleKey, "AMBIGUOUS", StringComparison.OrdinalIgnoreCase))
         {
-            "CRC" => "CRC32",
-            "CRC32" => "CRC32",
-            "MD5" => "MD5",
-            "SHA256" => "SHA256",
-            _ => "SHA1"
-        };
+            return true;
+        }
+
+        return !string.Equals(originalConsoleKey, resolvedConsoleKey, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

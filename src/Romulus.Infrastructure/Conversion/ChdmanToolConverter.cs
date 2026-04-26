@@ -142,10 +142,11 @@ internal sealed class ChdmanToolConverter
             }
 
             // Step 2: Find the .cue file (preferred) or .gdi, or fall back to .iso/.bin
-            var extractedDiscFiles = new FileSystemAdapter().GetFilesSafe(extractDir, [".cue", ".gdi", ".iso"]);
+            var extractedDiscFiles = new FileSystemAdapter().GetFilesSafe(extractDir, [".cue", ".gdi", ".iso", ".bin"]);
             var cueFiles = extractedDiscFiles.Where(static file => file.EndsWith(".cue", StringComparison.OrdinalIgnoreCase)).ToArray();
             var gdiFiles = extractedDiscFiles.Where(static file => file.EndsWith(".gdi", StringComparison.OrdinalIgnoreCase)).ToArray();
             var isoFiles = extractedDiscFiles.Where(static file => file.EndsWith(".iso", StringComparison.OrdinalIgnoreCase)).ToArray();
+            var binFiles = extractedDiscFiles.Where(static file => file.EndsWith(".bin", StringComparison.OrdinalIgnoreCase)).ToArray();
 
             // Path traversal guard: Ensure selected files are within extractDir
             static bool IsWithinDir(string filePath, string baseDir)
@@ -158,6 +159,7 @@ internal sealed class ChdmanToolConverter
             var safeCueFiles = cueFiles.Where(f => IsWithinDir(f, extractDir)).ToArray();
             var safeGdiFiles = gdiFiles.Where(f => IsWithinDir(f, extractDir)).ToArray();
             var safeIsoFiles = isoFiles.Where(f => IsWithinDir(f, extractDir)).ToArray();
+            var safeBinFiles = binFiles.Where(f => IsWithinDir(f, extractDir)).ToArray();
 
             // TASK-012: Multi-CUE atomicity — if multiple .cue files exist, each needs conversion.
             if (safeCueFiles.Length > 1)
@@ -172,6 +174,8 @@ internal sealed class ChdmanToolConverter
                 inputFile = safeGdiFiles[0];
             else if (safeIsoFiles.Length > 0)
                 inputFile = safeIsoFiles[0];
+            else if (safeBinFiles.Length > 0)
+                inputFile = safeBinFiles[0];
 
             if (inputFile is null)
                 return new ConversionResult(sourcePath, null, ConversionOutcome.Skipped,

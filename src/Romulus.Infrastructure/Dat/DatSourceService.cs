@@ -43,11 +43,14 @@ public sealed class DatSourceService : IDisposable
         "example.invalid"
     ];
 
+    // F-DAT-01: Strict sidecar validation is now ON by default (release-grade integrity).
+    // Callers that need the legacy permissive behaviour (allow missing/unparseable .sha256
+    // sidecars and trust HTTPS transport-level integrity only) must opt-in explicitly.
     public DatSourceService(
         string datRoot,
         HttpClient httpClient,
         IToolRunner? tools = null,
-        bool strictSidecarValidation = false,
+        bool strictSidecarValidation = true,
         ILogger<DatSourceService>? logger = null)
     {
         _datRoot = datRoot ?? throw new ArgumentNullException(nameof(datRoot));
@@ -60,7 +63,7 @@ public sealed class DatSourceService : IDisposable
     public DatSourceService(
         string datRoot,
         IToolRunner? tools = null,
-        bool strictSidecarValidation = false,
+        bool strictSidecarValidation = true,
         ILogger<DatSourceService>? logger = null)
         : this(datRoot, SharedHttpClient.Value, tools, strictSidecarValidation, logger)
     {

@@ -17,6 +17,7 @@ public sealed class DatAuditPipelinePhase : IPipelinePhase<DatAuditInput, DatAud
         var entries = new List<DatAuditEntry>(input.Candidates.Count);
         var have = 0;
         var haveWrongName = 0;
+        var haveByName = 0;
         var miss = 0;
         var unknown = 0;
         var ambiguous = 0;
@@ -50,6 +51,9 @@ public sealed class DatAuditPipelinePhase : IPipelinePhase<DatAuditInput, DatAud
                 case DatAuditStatus.HaveWrongName:
                     haveWrongName++;
                     break;
+                case DatAuditStatus.HaveByName:
+                    haveByName++;
+                    break;
                 case DatAuditStatus.Miss:
                     miss++;
                     break;
@@ -70,7 +74,8 @@ public sealed class DatAuditPipelinePhase : IPipelinePhase<DatAuditInput, DatAud
             HaveWrongNameCount: haveWrongName,
             MissCount: miss,
             UnknownCount: unknown,
-            AmbiguousCount: ambiguous);
+            AmbiguousCount: ambiguous,
+            HaveByNameCount: haveByName);
     }
 
     private static int ToConfidence(DatAuditStatus status)
@@ -78,6 +83,8 @@ public sealed class DatAuditPipelinePhase : IPipelinePhase<DatAuditInput, DatAud
         {
             DatAuditStatus.Have => 100,
             DatAuditStatus.HaveWrongName => 95,
+            // F-DAT-03: name-only match has no hash backing — lower trust than HaveWrongName.
+            DatAuditStatus.HaveByName => 80,
             DatAuditStatus.Miss => 90,
             DatAuditStatus.Ambiguous => 70,
             DatAuditStatus.Unknown => 60,

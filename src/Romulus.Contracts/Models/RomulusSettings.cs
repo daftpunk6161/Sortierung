@@ -78,8 +78,10 @@ public sealed class DatSettings
     [JsonPropertyName("datFallback")]
     public bool DatFallback { get; set; } = true;
 
+    // F-DAT-01: Strict sidecar validation defaults to true so DAT downloads fail closed
+    // when the .sha256 sidecar is missing/unparseable. Users may opt-out via settings.
     [JsonPropertyName("strictSidecarValidation")]
-    public bool StrictSidecarValidation { get; set; }
+    public bool StrictSidecarValidation { get; set; } = true;
 }
 
 public static class RomulusSettingsValidator

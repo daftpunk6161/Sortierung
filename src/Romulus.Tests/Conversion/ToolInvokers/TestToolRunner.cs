@@ -15,6 +15,7 @@ internal sealed class TestToolRunner : IToolRunner
     public string? LastFilePath { get; private set; }
     public string[]? LastArguments { get; private set; }
     public string? LastErrorLabel { get; private set; }
+    public Action<string, string[]>? OnInvoke { get; set; }
 
     public void Enqueue(ToolResult result) => _results.Enqueue(result);
 
@@ -26,6 +27,7 @@ internal sealed class TestToolRunner : IToolRunner
         LastFilePath = filePath;
         LastArguments = arguments;
         LastErrorLabel = errorLabel;
+        OnInvoke?.Invoke(filePath, arguments);
 
         return _results.Count > 0
             ? _results.Dequeue()

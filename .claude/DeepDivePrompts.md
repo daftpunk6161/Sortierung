@@ -1,29 +1,39 @@
-# Romulus – Kompromisslose Deep-Dive Bughunting Prompt-Sammlung V2
+# Romulus – Autarke Deep-Dive Einzelprompts
 
-Diese Datei enthält vollständig integrierte, kompromisslose Deep-Dive-Prompts für Romulus.
-
-Ziel:
-- extrem detailliertes Bughunting
-- technische Schulden finden
-- Dubletten und Schattenlogik finden
-- Code-Hygiene-Probleme aufdecken
-- Testlücken und falsche Sicherheit identifizieren
-- jeden Bereich so lange in Runden untersuchen, bis in einer Runde keine neuen relevanten Findings mehr auftauchen
-- offene Restbereiche niemals auslagern, solange sie logisch noch im Scope des aktuellen Bereichs liegen
-- nach den Findings die vollständige Umsetzung erzwingen
-- Red -> Green -> Refactor
-- keine Teilumsetzungen
-- keine halben Fixes
-- keine kosmetischen Ausreden
-- danach eine bereichsübergreifende Abschlussverifikation durchführen
+Jeder Prompt in dieser Datei ist **vollständig eigenständig**.  
+Du musst keinen globalen Regelblock mehr zusätzlich mitkopieren.
 
 ---
 
-## Globale Grundregeln für alle Deep Dives
+# 1. AUTARKER PROMPT – Recognition / Classification / Sorting
+
+Du arbeitest als **Principal Bug Hunter, Domain Auditor, Root-Cause-Investigator und Sanierungsarchitekt** für den Bereich **Recognition / Classification / Sorting** in **Romulus**.
+
+## Kontext
+
+Romulus ist ein produktionsnahes C# .NET 10 Tool mit:
+- WPF GUI
+- CLI
+- REST API
+
+Kernbereiche:
+- ROM-Erkennung / Klassifikation
+- DAT-Verifizierung
+- Deduplizierung
+- Sortierung
+- Conversion
+- Audit / Undo / Rollback / Reports
+
+Aktive Entwicklung nur in `src/`.
+`archive/powershell/` ist nur Legacy-Referenz.
+
+---
+
+## Grundhaltung
 
 Arbeite kompromisslos, detailorientiert und fehlersuchend.
 
-Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
+Das Ziel ist **nicht** ein freundliches Review, sondern ein echter Deep Dive auf:
 - Bugs
 - technische Schulden
 - Dubletten
@@ -56,305 +66,12 @@ In jeder Runde prüfe explizit:
 5. Code Hygiene / tote Pfade / verwaiste Registrierungen / ungenutzte Hilfen
 6. Testlücken / falsche Sicherheit / schwache Tests
 
-Beurteile nicht nach Stil, sondern nach technischem Risiko und Schutzwert.
-Keine Schönfärberei.
+Beurteile nicht nach Stil, sondern nach technischem Risiko und Schutzwert. Keine Schönfärberei.
 
 ---
-
-## Globale Abschlussbedingung für jeden Bereich
-
-Ein Bereichsaudit darf erst enden, wenn:
-- keine offenen Restbereiche mehr benannt werden
-- keine „nicht vollständig abgedeckt“-Liste mehr übrig ist
-- in der letzten Runde keine neuen relevanten Findings mehr gefunden wurden
-- keine relevanten Dubletten / Schattenlogik / Hygieneprobleme / Testlücken mehr neu auftauchen
-- keine relevanten Cross-Pfad-Risiken innerhalb des Bereichs offen bleiben
-
-Falls du doch noch offene Restbereiche benennst, musst du automatisch in die nächste Runde gehen.
-
----
-
-## Verpflichtende Anschlussphase – kompromisslose vollständige Umsetzung aller Findings
-
-WICHTIG:
-Die Analyse ist nicht das Endergebnis.
-
-Sobald Findings gefunden werden, folgt verpflichtend eine vollständige technische Umsetzung.
-
-Es gilt ausdrücklich:
-- keine Teilumsetzungen
-- keine halben Fixes
-- keine kosmetischen Scheinlösungen
-- keine Umgehung der eigentlichen Ursache
-- keine TODO-/Placeholder-/Follow-up-Ausreden
-- keine lokale Symptombehandlung, wenn das Grundproblem bestehen bleibt
-- keine “good enough”-Antwort
-- keine stillen Restfehler
-- keine absichtliche Verschiebung wesentlicher Teile
-- keine neue Schattenlogik
-- keine neue doppelte Geschäftslogik
-- keine neue konkurrierende Wahrheit
-- keine reine Schönheitsbereinigung ohne funktionale Sanierung
-
-Wenn ein Problem gefunden wird, muss es:
-1. vollständig verstanden
-2. über Red-Tests reproduzierbar gemacht
-3. vollständig behoben
-4. sauber refactored
-5. mit Regressionstests abgesichert
-6. auf Hygiene, Dubletten und Nebeneffekte geprüft
-7. gegen den gesamten Bereich rückverifiziert
-werden.
-
----
-
-## Verpflichtendes Vorgehen pro Finding-Block
-
-Für jeden priorisierten Problemblock gilt strikt:
-
-### Phase 1 – RED
-Zuerst müssen die Probleme sichtbar gemacht werden.
-
-Pflicht:
-- echte Red-Tests schreiben oder bestehende Tests so verschärfen, dass der Fehler wirklich sichtbar wird
-- Fehlerpfade, Invarianten, Edge Cases und Seiteneffekte explizit absichern
-- keine Alibi-Tests
-- keine tautologischen Assertions
-- keine no-crash-only Tests
-- keine weich formulierten Erwartungen
-- keine Tests, die nur zufällig grün werden
-
-Wenn ein Bug, eine technische Schuld oder eine Dublette nicht testbar sichtbar gemacht werden kann, muss das Problem der Testbarkeit explizit benannt und minimal sauber gelöst werden.
-
-### Phase 2 – GREEN
-Danach:
-- die minimal nötige, aber vollständige und saubere produktive Änderung implementieren
-- die Red-Tests auf grün bringen
-- die eigentliche Ursache beheben, nicht nur Symptome
-- alle relevanten Codepfade konsistent anpassen
-- betroffene Entry Points, Projection-Pfade, Result-Modelle, Statusmodelle und Fehlerpfade vollständig mitziehen
-
-WICHTIG:
-Ein Fix ist nicht akzeptabel, wenn:
-- nur ein Teilpfad angepasst wurde
-- GUI korrigiert wurde, aber CLI/API/Report weiter abweichen
-- Preview korrigiert wurde, Execute aber nicht
-- Execute korrigiert wurde, Report aber nicht
-- lokale Sonderlogik hinzugefügt wurde statt zentral sauber zu lösen
-- eine Dublette bestehen bleibt
-- die eigentliche Ursache unberührt bleibt
-
-### Phase 3 – REFACTOR / CLEANUP
-Wenn die Tests grün sind:
-- technische Schulden im betroffenen Scope abbauen
-- Dubletten entfernen
-- Schattenlogik entfernen
-- tote Pfade entfernen oder klar markieren
-- verwaiste Registrierungen / i18n / Commands / Helper bereinigen
-- Naming verbessern, wenn es zur fachlichen Klarheit nötig ist
-- kleine testbarkeitsfördernde Refactors durchführen, wenn nötig
-- aber keine unnötigen Massenumbauten ausserhalb des betroffenen Problems
-
----
-
-## Was zusätzlich immer mitgeprüft werden muss
-
-Bei jedem umgesetzten Finding muss zusätzlich geprüft werden:
-
-### 1. Parität
-- Preview / Execute / Report konsistent?
-- GUI / CLI / API / Reports konsistent?
-- Projection / Result / Dashboard / Output konsistent?
-
-### 2. Determinismus
-- gleiche Inputs -> gleiche Outputs?
-- stabile Tie-Breaker?
-- keine reihenfolgeabhängigen Zufallseffekte?
-- keine versteckten OrderBy-/First()-Probleme?
-
-### 3. Datenintegrität
-- kein Datenverlust?
-- Source-Dateien nie vor erfolgreicher Verifikation entfernt?
-- partielle Outputs sauber behandelt?
-- Rollback / Audit / Sidecars vollständig und korrekt?
-
-### 4. Sicherheit
-- Path Traversal nicht aufgeweicht?
-- Root Containment weiter korrekt?
-- Reparse / Zip-Slip / temp / cleanup weiter sauber?
-- Tool-Invocation sicher?
-
-### 5. Hygiene
-- keine neue Dublette entstanden?
-- keine verwaisten Reste hinterlassen?
-- keine halbfertige Übergangslösung eingebaut?
-- keine neue tote Logik entstanden?
-
-### 6. Tests
-- Regressionstest vorhanden?
-- Fehlerpfad-Test vorhanden?
-- Invariantentest vorhanden, wenn fachlich relevant?
-- Schutzwert der Tests hoch genug?
-
----
-
-## Vollständigkeitsregel
-
-Ein Finding gilt nur dann als erledigt, wenn alle folgenden Punkte erfüllt sind:
-- Ursache klar identifiziert
-- Red-Test vorhanden
-- Green-Fix vollständig implementiert
-- Refactor / Cleanup im Scope durchgeführt
-- keine konkurrierenden Restpfade mehr vorhanden
-- keine Dublette des Problems mehr vorhanden
-- keine relevante Paritätsabweichung mehr vorhanden
-- keine neue Schattenlogik entstanden
-- Regressionstests vorhanden
-- Bereich intern erneut überprüft
-- keine offensichtlichen Restfehler mehr offen
-
-Wenn einer dieser Punkte fehlt, ist das Finding nicht abgeschlossen.
-
----
-
-## Mehr-Runden-Umsetzung
-
-Wenn nach der Umsetzung noch eines der folgenden Dinge auftritt:
-- neue Bugs
-- Restfehler
-- unvollständige Pfade
-- Paritätsabweichungen
-- Hygieneprobleme
-- neue Dubletten
-- neue Testlücken
-- lokale Fixes ohne zentrale Konsolidierung
-
-dann muss sofort eine weitere Umsetzungsrunde gestartet werden.
-
-Es gilt:
-
-### Runde A
-- Findings aus der Analyse umsetzen
-
-### Runde B
-- Restfehler der Umsetzung finden
-- unvollständige Stellen nachziehen
-- Hygiene und Dubletten bereinigen
-
-### Runde C+
-- solange weitere Umsetzungsrunden machen, bis in einer Runde keine neuen relevanten Bugs, Restfehler, Dubletten, Hygieneprobleme oder Testlücken mehr gefunden werden
-
----
-
-## Keine künstliche Verkleinerung des Scopes
-
-Der Scope darf nicht künstlich verkleinert werden, nur um schneller “fertig” zu wirken.
-
-Wenn ein Problem technisch mehrere Schichten betrifft, dann müssen diese auch vollständig mitgezogen werden, zum Beispiel:
-- Core
-- Infrastructure
-- CLI
-- API
-- GUI
-- Reports
-- Audit
-- Tests
-- Mappings
-- Projections
-- Settings / Defaults / Validation
-
-Wenn ein Fix nur in einer Schicht passiert, obwohl das Problem fachlich mehrere Schichten betrifft, ist die Umsetzung unvollständig und nicht akzeptabel.
-
----
-
-## Ausgabeformat für die Umsetzung
-
-Nach den Findings muss die Ausgabe zwingend um einen vollständigen Umsetzungsblock erweitert werden.
-
-## X. Vollständige Umsetzung aller Findings
-
-### 1. Priorisierte Umsetzungsblöcke
-Für jeden Block:
-- Titel
-- Priorität
-- betroffene Dateien
-- welche Findings damit vollständig erledigt werden
-
-### 2. RED
-Für jeden Block:
-- welche Red-Tests neu geschrieben oder verschärft werden
-- welche Fehler, Invarianten und Edge Cases damit sichtbar gemacht werden
-
-### 3. GREEN
-Für jeden Block:
-- welche produktiven Änderungen vollständig umgesetzt werden
-- warum diese die Ursache vollständig beheben
-- welche Schichten / Pfade mitgezogen werden
-
-### 4. REFACTOR / CLEANUP
-Für jeden Block:
-- welche Dubletten entfernt wurden
-- welche Schattenlogik entfernt wurde
-- welche Hygieneprobleme bereinigt wurden
-- welche verwaisten Reste entfernt wurden
-
-### 5. Verifikation
-Für jeden Block:
-- welche Tests laufen
-- welche Parität geprüft wurde
-- welche Invarianten jetzt abgesichert sind
-- warum das Finding jetzt wirklich geschlossen ist
-
-### 6. Restpunkte
-Nur echte, unvermeidbare Restpunkte aufführen.
-Keine künstlichen „später machen“-Ausreden.
-Wenn etwas offen bleibt, muss klar begründet werden:
-- warum es nicht im aktuellen Block gelöst werden konnte
-- warum es kein halber Fix ist
-- welche nächste zwingende Umsetzungsrunde folgt
-
----
-
-## Abschlussregel
-
-Das Ziel ist nicht:
-- ein schöner Bericht
-- eine teilweise Verbesserung
-- ein grünerer Zustand
-- ein kosmetisch besserer Eindruck
-
-Das Ziel ist:
-- vollständige, kompromisslose, technisch saubere Sanierung des gefundenen Problemraums
-
-Wenn die Findings zeigen, dass ein Bereich konzeptionell kaputt ist, dann muss die Umsetzung auch konzeptionell sauber erfolgen.
-Nicht flicken, wenn Neuaufsetzung nötig ist.
-
-Wenn etwas nur mit einer echten Neuaufsetzung sauber lösbar ist, dann muss das klar gesagt und entsprechend vollständig geplant und umgesetzt werden.
-
----
-
-# 1. Deep Dive – Recognition / Classification / Sorting
-
-Du arbeitest als Principal Bug Hunter und Domain Auditor für den Bereich Recognition / Classification / Sorting in Romulus.
-
-## Auftrag
-Arbeite kompromisslos, detailorientiert und fehlersuchend.
-
-Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
-- Bugs
-- technische Schulden
-- Dubletten
-- Schattenlogik
-- tote Pfade
-- fragile Stellen
-- Testlücken
-- falsche Sicherheit
-- konkurrierende Wahrheiten
-- Release-Risiken
-- Datenintegritätsrisiken
-- Paritätsrisiken
 
 ## Fokusbereich
+
 Analysiere extrem detailliert und kompromisslos:
 - ROM-Erkennung
 - Konsolenerkennung
@@ -369,6 +86,7 @@ Analysiere extrem detailliert und kompromisslos:
 - deterministische Tie-Breaker
 
 ## Suche gezielt nach
+
 - False Positives
 - False Negatives / Misses
 - falscher Priorisierung von Header / Folder / Extension / Filename / Serial / DAT
@@ -384,6 +102,7 @@ Analysiere extrem detailliert und kompromisslos:
 - wertlosen oder zu schwachen Tests in diesem Bereich
 
 ## Besonders prüfen
+
 - GameKeyNormalizer
 - RegionDetector
 - FormatScore
@@ -398,7 +117,10 @@ Analysiere extrem detailliert und kompromisslos:
 - CrossRootDeduplicator
 - alle Result-/Projection-/Decision-Pfade
 
-## Rundenlogik
+---
+
+## Rundenzwang
+
 Führe die Analyse in Runden durch.
 
 ### Runde 1
@@ -420,13 +142,93 @@ Führe die Analyse in Runden durch.
 - erneut enger und tiefer prüfen
 - solange wiederholen, bis in einer Runde keine neuen relevanten Findings mehr auftauchen
 
-## Verbotene Ausweichbewegungen
-- keine offenen Restbereiche als „späterer Audit“
-- keine „dedizierter Audit wäre sinnvoll“-Ausrede
-- keine oberflächliche Arcade-/BIOS-/Multi-Disc-/DAT-Abdeckung
-- keine künstliche Auslagerung von Randfällen, solange sie logisch in diesen Bereich gehören
+Der Audit darf erst enden, wenn:
+- keine offenen Restbereiche mehr benannt werden
+- keine „nicht vollständig abgedeckt“-Liste mehr übrig ist
+- in der letzten Runde keine neuen relevanten Findings mehr gefunden wurden
+
+---
+
+## Verpflichtende Anschlussphase – vollständige Umsetzung aller Findings
+
+WICHTIG:
+Die Analyse ist **nicht** das Endergebnis.
+
+Sobald Findings gefunden werden, folgt verpflichtend eine **vollständige technische Umsetzung**.
+
+Es gilt ausdrücklich:
+- keine Teilumsetzungen
+- keine halben Fixes
+- keine kosmetischen Scheinlösungen
+- keine Umgehung der eigentlichen Ursache
+- keine TODO-/Placeholder-/Follow-up-Ausreden
+- keine lokale Symptombehandlung, wenn das Grundproblem bestehen bleibt
+- keine neue Schattenlogik
+- keine neue doppelte Geschäftslogik
+- keine neue konkurrierende Wahrheit
+
+### Phase 1 – RED
+- echte Red-Tests schreiben oder bestehende Tests so verschärfen, dass der Fehler wirklich sichtbar wird
+- Fehlerpfade, Invarianten, Edge Cases und Seiteneffekte explizit absichern
+- keine Alibi-Tests
+- keine tautologischen Assertions
+- keine no-crash-only Tests
+
+### Phase 2 – GREEN
+- die minimal nötige, aber vollständige und saubere produktive Änderung implementieren
+- die Red-Tests auf grün bringen
+- die eigentliche Ursache beheben, nicht nur Symptome
+- alle relevanten Codepfade konsistent anpassen
+
+Ein Fix ist nicht akzeptabel, wenn:
+- nur ein Teilpfad angepasst wurde
+- GUI korrigiert wurde, aber CLI/API/Report weiter abweichen
+- Preview korrigiert wurde, Execute aber nicht
+- Execute korrigiert wurde, Report aber nicht
+- lokale Sonderlogik hinzugefügt wurde statt zentral sauber zu lösen
+- eine Dublette bestehen bleibt
+- die eigentliche Ursache unberührt bleibt
+
+### Phase 3 – REFACTOR / CLEANUP
+Wenn die Tests grün sind:
+- technische Schulden im betroffenen Scope abbauen
+- Dubletten entfernen
+- Schattenlogik entfernen
+- tote Pfade entfernen oder klar markieren
+- verwaiste Registrierungen / i18n / Commands / Helper bereinigen
+- kleine testbarkeitsfördernde Refactors durchführen, wenn nötig
+
+---
+
+## Pflicht-Verifikation pro Finding
+
+Bei jedem umgesetzten Finding zusätzlich prüfen:
+- Preview / Execute / Report konsistent?
+- GUI / CLI / API / Reports konsistent?
+- gleiche Inputs -> gleiche Outputs?
+- stabile Tie-Breaker?
+- kein Datenverlust?
+- keine neue Dublette?
+- Regressionstest vorhanden?
+- Fehlerpfad-Test vorhanden?
+- Invariantentest vorhanden, wenn fachlich relevant?
+
+Ein Finding gilt nur dann als erledigt, wenn:
+- Ursache klar identifiziert
+- Red-Test vorhanden
+- Green-Fix vollständig implementiert
+- Refactor / Cleanup im Scope durchgeführt
+- keine konkurrierenden Restpfade mehr vorhanden
+- keine relevante Paritätsabweichung mehr vorhanden
+- keine neue Schattenlogik entstanden
+- Regressionstests vorhanden
+- Bereich intern erneut überprüft
+- keine offensichtlichen Restfehler mehr offen
+
+---
 
 ## Ausgabeformat
+
 # Deep Dive Audit – Recognition / Classification / Sorting
 
 ## 1. Executive Verdict
@@ -440,7 +242,7 @@ Für jede Runde:
 ## 3. Findings
 Für jedes Finding:
 - Titel
-- Schweregrad (P0/P1/P2/P3)
+- Schweregrad (P0 / P1 / P2 / P3)
 - Typ (Bug / Debt / Duplication / Shadow Logic / Hygiene / Test Gap)
 - Impact
 - betroffene Datei(en)
@@ -456,12 +258,12 @@ Für jedes Finding:
 ## 6. Kritische Testlücken
 
 ## 7. Vollständige Umsetzung aller Findings
-- Priorisierte Umsetzungsblöcke
-- RED
-- GREEN
-- REFACTOR / CLEANUP
-- Verifikation
-- echte Restpunkte
+### 1. Priorisierte Umsetzungsblöcke
+### 2. RED
+### 3. GREEN
+### 4. REFACTOR / CLEANUP
+### 5. Verifikation
+### 6. echte Restpunkte
 
 ## 8. Schlussurteil
 - ist der Bereich jetzt wirklich ausgeschöpft?
@@ -470,11 +272,32 @@ Für jedes Finding:
 
 ---
 
-# 2. Deep Dive – DAT Matching / Verification
+# 2. AUTARKER PROMPT – DAT Matching / Verification
 
-Du arbeitest als Principal Bug Hunter und Verification Auditor für den Bereich DAT Matching / Verification in Romulus.
+Du arbeitest als **Principal Bug Hunter, Verification Auditor, Root-Cause-Investigator und Sanierungsarchitekt** für den Bereich **DAT Matching / Verification** in **Romulus**.
 
-## Auftrag
+## Kontext
+
+Romulus ist ein produktionsnahes C# .NET 10 Tool mit:
+- WPF GUI
+- CLI
+- REST API
+
+Kernbereiche:
+- ROM-Erkennung / Klassifikation
+- DAT-Verifizierung
+- Deduplizierung
+- Sortierung
+- Conversion
+- Audit / Undo / Rollback / Reports
+
+Aktive Entwicklung nur in `src/`.
+`archive/powershell/` ist nur Legacy-Referenz.
+
+---
+
+## Grundhaltung
+
 Arbeite kompromisslos, detailorientiert und fehlersuchend.
 
 Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
@@ -491,7 +314,26 @@ Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
 - Datenintegritätsrisiken
 - Paritätsrisiken
 
+WICHTIG:
+- Suche nicht nur nach offensichtlichen Bugs
+- Suche auch nach stillen Fehlern, schwachen Invarianten, falscher Modellierung, konkurrierenden Wahrheiten, fragilen Fehlerpfaden und falscher Sicherheit
+- Wenn du in einer Runde Findings findest, musst du danach automatisch eine weitere Suchrunde im selben Bereich machen
+- Erst wenn in einer Runde keine neuen relevanten Findings mehr gefunden werden, gilt der Bereich als vorläufig ausgeschöpft
+- Wenn du selbst Bereiche nennst, die nicht vollständig abgedeckt wurden, dann ist die Auditrunde NICHT abgeschlossen und du musst automatisch in die nächste Runde gehen
+- Es ist ausdrücklich verboten, offene Restbereiche als „separater Audit sinnvoll“ auszulagern, solange sie logisch noch im Scope des aktuellen Bereichs liegen
+
+In jeder Runde prüfe explizit:
+1. harte Bugs
+2. Sicherheits- und Datenintegritätsrisiken
+3. technische Schulden mit Release-Risiko
+4. doppelte Logik / Schattenlogik / konkurrierende Wahrheiten
+5. Code Hygiene / tote Pfade / verwaiste Registrierungen / ungenutzte Hilfen
+6. Testlücken / falsche Sicherheit / schwache Tests
+
+---
+
 ## Fokusbereich
+
 Analysiere bis ins kleinste Detail:
 - DAT-Katalog
 - DAT-Quellen
@@ -505,8 +347,10 @@ Analysiere bis ins kleinste Detail:
 - BIOS-/Parent-/Clone-/Set-Abgleich
 - DAT-basierte Entscheidungsgewichte
 - Resolver-Output und dessen Konsistenz in Folgepfaden
+- DAT-Source-spezifische Match-Level-Wahl
 
 ## Suche gezielt nach
+
 - falschem Match-Level
 - falschem Hash-Level
 - Cross-System-False-Confidence
@@ -519,47 +363,74 @@ Analysiere bis ins kleinste Detail:
 - GUI/CLI/API unterschiedliche DAT-Interpretation
 - falschen Defaults / Fallbacks
 - Resolver-Output, der in späteren Pfaden falsch verwendet oder falsch interpretiert wird
+- Reports/Audit-Konsistenz mit Resolver-Output, soweit logisch im Scope
 - wertlosen oder zu schwachen DAT-Tests
 
 ## Besonders prüfen
+
 - DatSourceService
 - Dat-Matcher / Resolver / Loader
 - ArchiveHashService
 - CHD-Hash-Pfade
 - LookupAny-/Fallback-Pfade
 - alle Result-/Projection-Felder mit DAT-Bezug
-- Reports/Audit-Konsistenz mit Resolver-Output, soweit logisch in diesem Bereich
 
-## Rundenlogik
-Suche in mehreren Runden weiter, bis eine Runde keine neuen Findings bringt.
+---
 
-## Verbotene Ausweichbewegungen
-- keine DAT-Source-spezifische Match-Level-Wahl als separater Audit auslagern
-- keine Resolver-/Output-Konsistenz wegdelegieren
-- keine offenen Match-Level-Randfälle verschieben, solange sie im Scope dieses Bereichs liegen
+## Rundenzwang
+
+Führe die Analyse in Runden durch, bis keine neuen relevanten Findings mehr auftauchen.
+
+Der Audit darf erst enden, wenn:
+- keine offenen Restbereiche mehr benannt werden
+- keine „nicht vollständig abgedeckt“-Liste mehr übrig ist
+- in der letzten Runde keine neuen relevanten Findings mehr gefunden wurden
+
+---
+
+## Verpflichtende Anschlussphase – vollständige Umsetzung aller Findings
+
+Sobald Findings gefunden werden, folgt verpflichtend:
+- RED
+- GREEN
+- REFACTOR / CLEANUP
+- vollständige Verifikation
+
+Es gilt:
+- keine Teilumsetzungen
+- keine halben Fixes
+- keine lokale Symptombehandlung
+- keine neue Schattenlogik
+- keine neue doppelte Geschäftslogik
+
+### RED
+- echte Red-Tests
+- Fehlerpfade, Invarianten, Edge Cases
+- keine Alibi-Tests
+
+### GREEN
+- Ursache vollständig beheben
+- alle relevanten Pfade mitziehen
+- Match-/Resolver-/Projection-/Report-Pfade konsistent anpassen
+
+### REFACTOR / CLEANUP
+- Dubletten entfernen
+- Schattenlogik entfernen
+- tote Pfade bereinigen
+- verwaiste Helper / Registrierungen bereinigen
+- testbarkeitsfördernde Refactors, wenn nötig
+
+---
 
 ## Ausgabeformat
+
 # Deep Dive Audit – DAT Matching / Verification
 
 ## 1. Executive Verdict
 
 ## 2. Rundenzusammenfassung
-Für jede Runde:
-- was geprüft wurde
-- neue Findings
-- ob weitere Runde nötig ist
 
 ## 3. Findings
-Für jedes Finding:
-- Titel
-- Schweregrad (P0/P1/P2/P3)
-- Typ (Bug / Debt / Duplication / Shadow Logic / Hygiene / Test Gap)
-- Impact
-- betroffene Datei(en)
-- Reproduktion / Beispiel
-- Ursache
-- Fix
-- Testabsicherung
 
 ## 4. Dubletten / Schattenlogik
 
@@ -568,25 +439,43 @@ Für jedes Finding:
 ## 6. Kritische Testlücken
 
 ## 7. Vollständige Umsetzung aller Findings
-- Priorisierte Umsetzungsblöcke
-- RED
-- GREEN
-- REFACTOR / CLEANUP
-- Verifikation
-- echte Restpunkte
+### 1. Priorisierte Umsetzungsblöcke
+### 2. RED
+### 3. GREEN
+### 4. REFACTOR / CLEANUP
+### 5. Verifikation
+### 6. echte Restpunkte
 
 ## 8. Schlussurteil
-- ist der Bereich jetzt wirklich ausgeschöpft?
-- falls nein: warum nicht?
-- falls noch Restbereiche auftauchen, sofort nächste Runde starten
 
 ---
 
-# 3. Deep Dive – Conversion Engine
+# 3. AUTARKER PROMPT – Conversion Engine
 
-Du arbeitest als Principal Bug Hunter und Conversion Reliability Auditor für den Bereich Conversion Engine in Romulus.
+Du arbeitest als **Principal Bug Hunter, Conversion Reliability Auditor, Root-Cause-Investigator und Sanierungsarchitekt** für den Bereich **Conversion Engine** in **Romulus**.
 
-## Auftrag
+## Kontext
+
+Romulus ist ein produktionsnahes C# .NET 10 Tool mit:
+- WPF GUI
+- CLI
+- REST API
+
+Kernbereiche:
+- ROM-Erkennung / Klassifikation
+- DAT-Verifizierung
+- Deduplizierung
+- Sortierung
+- Conversion
+- Audit / Undo / Rollback / Reports
+
+Aktive Entwicklung nur in `src/`.
+`archive/powershell/` ist nur Legacy-Referenz.
+
+---
+
+## Grundhaltung
+
 Arbeite kompromisslos, detailorientiert und fehlersuchend.
 
 Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
@@ -603,7 +492,24 @@ Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
 - Datenintegritätsrisiken
 - Paritätsrisiken
 
+WICHTIG:
+- mehrere Runden
+- keine Rest-Scope-Auslagerung
+- keine halben Fixes
+- keine Schönfärberei
+
+In jeder Runde prüfe:
+1. harte Bugs
+2. Sicherheits- und Datenintegritätsrisiken
+3. technische Schulden mit Release-Risiko
+4. doppelte Logik / Schattenlogik / konkurrierende Wahrheiten
+5. Code Hygiene / tote Pfade / verwaiste Registrierungen / ungenutzte Hilfen
+6. Testlücken / falsche Sicherheit / schwache Tests
+
+---
+
 ## Fokusbereich
+
 Analysiere kompromisslos:
 - ConversionPolicy
 - ConversionPlanner
@@ -617,6 +523,7 @@ Analysiere kompromisslos:
 - atomische oder nicht atomische Pfade
 
 ## Suche gezielt nach
+
 - Source wird zu früh entfernt
 - Verify-Failure hinterlässt Datenverlust
 - partielle Outputs bleiben liegen
@@ -632,6 +539,7 @@ Analysiere kompromisslos:
 - wertlose Tests oder fehlende Error-Path-Tests
 
 ## Besonders prüfen
+
 - FormatConverterAdapter
 - ConversionPlanner
 - ConversionRegistryLoader
@@ -641,77 +549,84 @@ Analysiere kompromisslos:
 - Verify-Helfer
 - Cleanup- und Rollback-Pfade
 
-## Verbotene Ausweichbewegungen
-- keine Multi-File-/Multi-Disc-Sonderfälle als später auslagern
-- keine Verifikationsschwächen als „kann später härter werden“ stehen lassen
-- keine Counter-/Projection-Probleme nur lokal beheben
+---
 
-## Ausgabeformat
-# Deep Dive Audit – Conversion Engine
+## Rundenzwang
 
-## 1. Executive Verdict
+Suche in Runden weiter, bis in einer Runde keine neuen relevanten Findings mehr auftreten.
 
-## 2. Rundenzusammenfassung
-Für jede Runde:
-- was geprüft wurde
-- neue Findings
-- ob weitere Runde nötig ist
-
-## 3. Findings
-Für jedes Finding:
-- Titel
-- Schweregrad (P0/P1/P2/P3)
-- Typ (Bug / Debt / Duplication / Shadow Logic / Hygiene / Test Gap)
-- Impact
-- betroffene Datei(en)
-- Reproduktion / Beispiel
-- Ursache
-- Fix
-- Testabsicherung
-
-## 4. Dubletten / Schattenlogik
-
-## 5. Hygiene-Probleme
-
-## 6. Kritische Testlücken
-
-## 7. Vollständige Umsetzung aller Findings
-- Priorisierte Umsetzungsblöcke
-- RED
-- GREEN
-- REFACTOR / CLEANUP
-- Verifikation
-- echte Restpunkte
-
-## 8. Schlussurteil
-- ist der Bereich jetzt wirklich ausgeschöpft?
-- falls nein: warum nicht?
-- falls noch Restbereiche auftauchen, sofort nächste Runde starten
+Wenn du Rest-Scope benennst, ist der Audit nicht abgeschlossen und muss weiterlaufen.
 
 ---
 
-# 4. Deep Dive – Orchestration / Run Lifecycle / Phase Planning
+## Verpflichtende Anschlussphase – vollständige Umsetzung aller Findings
 
-Du arbeitest als Principal Bug Hunter und Run Lifecycle Auditor für Orchestration / Run Lifecycle / Phase Planning in Romulus.
+### RED
+- echte Red-Tests
+- Multi-File, Verify-Failure, Cleanup, Counters, Lossy-Pfade, Error-Paths
 
-## Auftrag
+### GREEN
+- vollständige Ursache beheben
+- alle betroffenen Schichten und Ausgabepfade mitziehen
+
+### REFACTOR / CLEANUP
+- Dubletten entfernen
+- halbfertige Pfade bereinigen
+- Schattenlogik beseitigen
+- testbarkeitsfördernde Refactors wenn nötig
+
+Keine Teilumsetzungen. Keine halben Fixes.
+
+---
+
+## Ausgabeformat
+
+# Deep Dive Audit – Conversion Engine
+
+## 1. Executive Verdict
+## 2. Rundenzusammenfassung
+## 3. Findings
+## 4. Dubletten / Schattenlogik
+## 5. Hygiene-Probleme
+## 6. Kritische Testlücken
+## 7. Vollständige Umsetzung aller Findings
+## 8. Schlussurteil
+
+---
+
+# 4. AUTARKER PROMPT – Orchestration / Run Lifecycle / Phase Planning
+
+Du arbeitest als **Principal Bug Hunter, Run Lifecycle Auditor, Root-Cause-Investigator und Sanierungsarchitekt** für den Bereich **Orchestration / Run Lifecycle / Phase Planning** in **Romulus**.
+
+## Kontext
+
+Romulus ist ein produktionsnahes C# .NET 10 Tool mit:
+- WPF GUI
+- CLI
+- REST API
+
+Kernbereiche:
+- ROM-Erkennung / Klassifikation
+- DAT-Verifizierung
+- Deduplizierung
+- Sortierung
+- Conversion
+- Audit / Undo / Rollback / Reports
+
+Aktive Entwicklung nur in `src/`.
+`archive/powershell/` ist nur Legacy-Referenz.
+
+---
+
+## Grundhaltung
+
 Arbeite kompromisslos, detailorientiert und fehlersuchend.
+Keine Schönfärberei. Keine Rest-Scope-Auslagerung. Keine halben Fixes.
 
-Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
-- Bugs
-- technische Schulden
-- Dubletten
-- Schattenlogik
-- tote Pfade
-- fragile Stellen
-- Testlücken
-- falsche Sicherheit
-- konkurrierende Wahrheiten
-- Release-Risiken
-- Datenintegritätsrisiken
-- Paritätsrisiken
+---
 
 ## Fokusbereich
+
 Analysiere extrem detailliert:
 - RunOrchestrator
 - PhasePlanning / PhasePlanBuilder
@@ -725,6 +640,7 @@ Analysiere extrem detailliert:
 - Environment / Settings / Defaults
 
 ## Suche gezielt nach
+
 - falscher Statusmodellierung
 - konkurrierenden Status-/Result-Modellen
 - falschen Error-Flags
@@ -738,6 +654,7 @@ Analysiere extrem detailliert:
 - ungetestete Fehler- und State-Pfade
 
 ## Besonders prüfen
+
 - RunOrchestrator
 - RunOrchestrator.PreviewAndPipelineHelpers
 - PhasePlanning
@@ -746,77 +663,70 @@ Analysiere extrem detailliert:
 - RunEnvironmentBuilder
 - DashboardProjection / StatusProjection / ähnliche Modelle
 
-## Verbotene Ausweichbewegungen
-- keine State-/Outcome-Probleme als GUI- oder Report-Einzelthema auslagern
-- keine hasErrors-/Projection-Themen später verschieben
-- keine DryRun-/Planungs-Probleme nur dokumentieren statt vollständig analysieren
+---
 
-## Ausgabeformat
-# Deep Dive Audit – Orchestration / Run Lifecycle
+## Rundenzwang
 
-## 1. Executive Verdict
-
-## 2. Rundenzusammenfassung
-Für jede Runde:
-- was geprüft wurde
-- neue Findings
-- ob weitere Runde nötig ist
-
-## 3. Findings
-Für jedes Finding:
-- Titel
-- Schweregrad (P0/P1/P2/P3)
-- Typ (Bug / Debt / Duplication / Shadow Logic / Hygiene / Test Gap)
-- Impact
-- betroffene Datei(en)
-- Reproduktion / Beispiel
-- Ursache
-- Fix
-- Testabsicherung
-
-## 4. Dubletten / Schattenlogik
-
-## 5. Hygiene-Probleme
-
-## 6. Kritische Testlücken
-
-## 7. Vollständige Umsetzung aller Findings
-- Priorisierte Umsetzungsblöcke
-- RED
-- GREEN
-- REFACTOR / CLEANUP
-- Verifikation
-- echte Restpunkte
-
-## 8. Schlussurteil
-- ist der Bereich jetzt wirklich ausgeschöpft?
-- falls nein: warum nicht?
-- falls noch Restbereiche auftauchen, sofort nächste Runde starten
+Mehrere Runden, bis keine neuen relevanten Findings mehr auftreten.
+Wenn du Restbereiche nennst, sofort nächste Runde.
 
 ---
 
-# 5. Deep Dive – Reports / Audit / Rollback / Metrics
+## Verpflichtende Anschlussphase – vollständige Umsetzung aller Findings
 
-Du arbeitest als Principal Bug Hunter und Forensic Reliability Auditor für Reports / Audit / Rollback / Metrics in Romulus.
+### RED
+- echte Status-, Cancel-, Error-, DryRun-, Outcome-, Projection- und Paritätstests
 
-## Auftrag
-Arbeite kompromisslos, detailorientiert und fehlersuchend.
+### GREEN
+- vollständige Korrektur aller betroffenen Zustands-, Result- und Planungswege
 
-Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
-- Bugs
-- technische Schulden
-- Dubletten
-- Schattenlogik
-- tote Pfade
-- fragile Stellen
-- Testlücken
-- falsche Sicherheit
-- konkurrierende Wahrheiten
-- Release-Risiken
-- Datenintegritätsrisiken
-- Paritätsrisiken
+### REFACTOR / CLEANUP
+- konkurrierende Statusmodelle abbauen
+- Dubletten / Schattenlogik entfernen
+- Hygiene im Scope bereinigen
+
+Keine Teilumsetzungen.
+
+---
+
+## Ausgabeformat
+
+# Deep Dive Audit – Orchestration / Run Lifecycle
+
+## 1. Executive Verdict
+## 2. Rundenzusammenfassung
+## 3. Findings
+## 4. Dubletten / Schattenlogik
+## 5. Hygiene-Probleme
+## 6. Kritische Testlücken
+## 7. Vollständige Umsetzung aller Findings
+## 8. Schlussurteil
+
+---
+
+# 5. AUTARKER PROMPT – Reports / Audit / Rollback / Metrics
+
+Du arbeitest als **Principal Bug Hunter, Forensic Reliability Auditor, Root-Cause-Investigator und Sanierungsarchitekt** für den Bereich **Reports / Audit / Rollback / Metrics** in **Romulus**.
+
+## Kontext
+
+Romulus ist ein produktionsnahes C# .NET 10 Tool mit:
+- WPF GUI
+- CLI
+- REST API
+
+Aktive Entwicklung nur in `src/`.
+
+---
+
+## Grundhaltung
+
+Kompromisslos, mehrstufig, kein Auslagern, keine halben Fixes.
+
+---
 
 ## Fokusbereich
+
 Analysiere kompromisslos:
 - Report Writer
 - HTML / CSV / JSON / Sidecar
@@ -828,8 +738,10 @@ Analysiere kompromisslos:
 - ReportSummary
 - Move-/Action-Markierung
 - Completed / Failed / Partial Sichtbarkeit
+- Reports/Audit-Konsistenz mit Resolver-Output
 
 ## Suche gezielt nach
+
 - Report zählt anders als Execute
 - Sidecar-Status falsch
 - Move-then-Audit nicht atomisch
@@ -842,88 +754,79 @@ Analysiere kompromisslos:
 - falsches oder unvollständiges Rollback-Verhalten
 - HMAC-/Integrity-Probleme
 - fehlende Error-Path-Tests
-- Reports/Audit-Konsistenz mit Resolver-Output
 
 ## Besonders prüfen
+
 - RunReportWriter
 - AuditSigningService
 - AuditCsvStore / Audit Store
 - HealthScorer
 - Metrics-/Projection-Aggregation
 - Rollback-Trails / Sidecars
-- Resolver-/Output-Konsistenz, soweit logisch in diesem Bereich
-
-## Verbotene Ausweichbewegungen
-- keine Report-/Audit-Konsistenz als späterer Spezialaudit
-- keine KPI-Abweichungen nur dokumentieren
-- keine DryRun-/MOVE-Diskrepanzen nur oberflächlich behandeln
-
-## Ausgabeformat
-# Deep Dive Audit – Reports / Audit / Rollback / Metrics
-
-## 1. Executive Verdict
-
-## 2. Rundenzusammenfassung
-Für jede Runde:
-- was geprüft wurde
-- neue Findings
-- ob weitere Runde nötig ist
-
-## 3. Findings
-Für jedes Finding:
-- Titel
-- Schweregrad (P0/P1/P2/P3)
-- Typ (Bug / Debt / Duplication / Shadow Logic / Hygiene / Test Gap)
-- Impact
-- betroffene Datei(en)
-- Reproduktion / Beispiel
-- Ursache
-- Fix
-- Testabsicherung
-
-## 4. Dubletten / Schattenlogik
-
-## 5. Hygiene-Probleme
-
-## 6. Kritische Testlücken
-
-## 7. Vollständige Umsetzung aller Findings
-- Priorisierte Umsetzungsblöcke
-- RED
-- GREEN
-- REFACTOR / CLEANUP
-- Verifikation
-- echte Restpunkte
-
-## 8. Schlussurteil
-- ist der Bereich jetzt wirklich ausgeschöpft?
-- falls nein: warum nicht?
-- falls noch Restbereiche auftauchen, sofort nächste Runde starten
 
 ---
 
-# 6. Deep Dive – Safety / FileSystem / Security
+## Rundenzwang
 
-Du arbeitest als Principal Bug Hunter und Security Auditor für Safety / FileSystem / Security in Romulus.
+Mehrere Runden bis keine neuen relevanten Findings mehr kommen.
+Keine Auslagerung.
 
-## Auftrag
-Arbeite kompromisslos, detailorientiert und fehlersuchend.
+---
 
-Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
-- Bugs
-- technische Schulden
-- Dubletten
-- Schattenlogik
-- tote Pfade
-- fragile Stellen
-- Testlücken
-- falsche Sicherheit
-- konkurrierende Wahrheiten
-- Release-Risiken
-- Datenintegritätsrisiken
-- Paritätsrisiken
+## Verpflichtende Anschlussphase – vollständige Umsetzung aller Findings
+
+### RED
+- echte Report-/Audit-/Rollback-/KPI-/DryRun-/Sidecar-Tests
+
+### GREEN
+- alle Ergebnis-, Audit-, Sidecar-, Health- und Reportpfade vollständig korrigieren
+
+### REFACTOR / CLEANUP
+- Dubletten, Schattenlogik, verwaiste Outputpfade bereinigen
+
+Keine Teilumsetzungen.
+
+---
+
+## Ausgabeformat
+
+# Deep Dive Audit – Reports / Audit / Rollback / Metrics
+
+## 1. Executive Verdict
+## 2. Rundenzusammenfassung
+## 3. Findings
+## 4. Dubletten / Schattenlogik
+## 5. Hygiene-Probleme
+## 6. Kritische Testlücken
+## 7. Vollständige Umsetzung aller Findings
+## 8. Schlussurteil
+
+---
+
+# 6. AUTARKER PROMPT – Safety / FileSystem / Security
+
+Du arbeitest als **Principal Bug Hunter, Security Auditor, Root-Cause-Investigator und Sanierungsarchitekt** für den Bereich **Safety / FileSystem / Security** in **Romulus**.
+
+## Kontext
+
+Romulus ist ein produktionsnahes C# .NET 10 Tool mit:
+- WPF GUI
+- CLI
+- REST API
+
+Aktive Entwicklung nur in `src/`.
+
+---
+
+## Grundhaltung
+
+Kompromisslos, tief, mehrstufig, kein Verharmlosen.
+Keine Rest-Scope-Auslagerung. Keine halben Fixes.
+
+---
 
 ## Fokusbereich
+
 Analysiere penibel:
 - Path Normalization
 - Root Containment
@@ -941,6 +844,7 @@ Analysiere penibel:
 - archive extraction safety
 
 ## Suche gezielt nach
+
 - Path Traversal
 - unsafe normalize paths
 - extended path prefix handling
@@ -956,83 +860,76 @@ Analysiere penibel:
 - fehlende Security-Tests
 
 ## Besonders prüfen
+
 - SafetyValidator
 - FileSystemAdapter
 - extraction / archive helpers
 - Audit rollback safety checks
 - tool execution wrappers
 
-## Verbotene Ausweichbewegungen
-- keine Safety-Randfälle später schieben
-- keine „nur theoretischen“ Traversal-/Cleanup-/Rollback-Themen kleinreden
-- keine Security- oder Datenintegritätslücken nur als Debt labeln, wenn sie echte Risiken sind
+---
 
-## Ausgabeformat
-# Deep Dive Audit – Safety / FileSystem / Security
+## Rundenzwang
 
-## 1. Executive Verdict
-
-## 2. Rundenzusammenfassung
-Für jede Runde:
-- was geprüft wurde
-- neue Findings
-- ob weitere Runde nötig ist
-
-## 3. Findings
-Für jedes Finding:
-- Titel
-- Schweregrad (P0/P1/P2/P3)
-- Typ (Bug / Debt / Duplication / Shadow Logic / Hygiene / Test Gap)
-- Impact
-- betroffene Datei(en)
-- Reproduktion / Beispiel
-- Ursache
-- Fix
-- Testabsicherung
-
-## 4. Dubletten / Schattenlogik
-
-## 5. Hygiene-Probleme
-
-## 6. Kritische Testlücken
-
-## 7. Vollständige Umsetzung aller Findings
-- Priorisierte Umsetzungsblöcke
-- RED
-- GREEN
-- REFACTOR / CLEANUP
-- Verifikation
-- echte Restpunkte
-
-## 8. Schlussurteil
-- ist der Bereich jetzt wirklich ausgeschöpft?
-- falls nein: warum nicht?
-- falls noch Restbereiche auftauchen, sofort nächste Runde starten
+Mehrere Runden bis nichts Relevantes mehr gefunden wird.
 
 ---
 
-# 7. Deep Dive – GUI / WPF / ViewModels / UX States
+## Verpflichtende Anschlussphase – vollständige Umsetzung aller Findings
 
-Du arbeitest als Principal Bug Hunter und UX State Auditor für GUI / WPF / ViewModels / UX States in Romulus.
+### RED
+- echte Traversal-, Root-, Reparse-, ADS-, temp-, rollback-, tool-, cleanup- und extraction-Tests
 
-## Auftrag
-Arbeite kompromisslos, detailorientiert und fehlersuchend.
+### GREEN
+- vollständige Schließung der Risiken
+- keine lokale Symptombehandlung
 
-Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
-- Bugs
-- technische Schulden
-- Dubletten
-- Schattenlogik
-- tote Pfade
-- fragile Stellen
-- Testlücken
-- falsche Sicherheit
-- konkurrierende Wahrheiten
-- Release-Risiken
-- Datenintegritätsrisiken
-- Paritätsrisiken
+### REFACTOR / CLEANUP
+- Dubletten in safety-kritischen Helfern abbauen
+- Hygiene in kritischen Pfaden säubern
+
+Keine Teilumsetzungen.
+
+---
+
+## Ausgabeformat
+
+# Deep Dive Audit – Safety / FileSystem / Security
+
+## 1. Executive Verdict
+## 2. Rundenzusammenfassung
+## 3. Findings
+## 4. Dubletten / Schattenlogik
+## 5. Hygiene-Probleme
+## 6. Kritische Testlücken
+## 7. Vollständige Umsetzung aller Findings
+## 8. Schlussurteil
+
+---
+
+# 7. AUTARKER PROMPT – GUI / WPF / ViewModels / UX States
+
+Du arbeitest als **Principal Bug Hunter, UX State Auditor, Root-Cause-Investigator und Sanierungsarchitekt** für den Bereich **GUI / WPF / ViewModels / UX States** in **Romulus**.
+
+## Kontext
+
+Romulus ist ein produktionsnahes C# .NET 10 Tool mit:
+- WPF GUI
+- CLI
+- REST API
+
+Aktive Entwicklung nur in `src/`.
+
+---
+
+## Grundhaltung
+
+Kompromisslos, tief, mehrstufig, kein Auslagern, keine halben Fixes.
+
+---
 
 ## Fokusbereich
+
 Analysiere kompromisslos:
 - MainViewModel
 - Setup / Config / Run / Tools / Dashboard ViewModels
@@ -1046,6 +943,7 @@ Analysiere kompromisslos:
 - Dispatcher / Threading / UI-Freeze-Risiken
 
 ## Suche gezielt nach
+
 - Businesslogik im Code-Behind
 - zu grosse ViewModels
 - konkurrierende lokale Berechnungen statt Projection
@@ -1059,6 +957,7 @@ Analysiere kompromisslos:
 - fehlende ViewModel-Tests
 
 ## Besonders prüfen
+
 - MainViewModel
 - RunStateMachine
 - DashboardProjection und verwandte Modelle
@@ -1066,77 +965,68 @@ Analysiere kompromisslos:
 - SettingsLoader / SettingsService
 - kritische Code-Behind-Dateien
 
-## Verbotene Ausweichbewegungen
-- keine GUI-State-Probleme als reines UX-Thema verharmlosen
-- keine lokalen Dashboard-/Status-Abweichungen später verschieben
-- keine Fake-Features oder Tool-Katalog-Probleme ohne Tiefenprüfung stehen lassen
+---
 
-## Ausgabeformat
-# Deep Dive Audit – GUI / WPF / ViewModels / UX States
+## Rundenzwang
 
-## 1. Executive Verdict
-
-## 2. Rundenzusammenfassung
-Für jede Runde:
-- was geprüft wurde
-- neue Findings
-- ob weitere Runde nötig ist
-
-## 3. Findings
-Für jedes Finding:
-- Titel
-- Schweregrad (P0/P1/P2/P3)
-- Typ (Bug / Debt / Duplication / Shadow Logic / Hygiene / Test Gap)
-- Impact
-- betroffene Datei(en)
-- Reproduktion / Beispiel
-- Ursache
-- Fix
-- Testabsicherung
-
-## 4. Dubletten / Schattenlogik
-
-## 5. Hygiene-Probleme
-
-## 6. Kritische Testlücken
-
-## 7. Vollständige Umsetzung aller Findings
-- Priorisierte Umsetzungsblöcke
-- RED
-- GREEN
-- REFACTOR / CLEANUP
-- Verifikation
-- echte Restpunkte
-
-## 8. Schlussurteil
-- ist der Bereich jetzt wirklich ausgeschöpft?
-- falls nein: warum nicht?
-- falls noch Restbereiche auftauchen, sofort nächste Runde starten
+Mehrere Runden bis nichts Relevantes mehr gefunden wird.
 
 ---
 
-# 8. Deep Dive – CLI / API / Entry-Point Parity
+## Verpflichtende Anschlussphase – vollständige Umsetzung aller Findings
 
-Du arbeitest als Principal Bug Hunter und Entry-Point Parity Auditor für CLI / API / Entry-Point Parity in Romulus.
+### RED
+- echte ViewModel-, State-, Dashboard-, Banner-, Settings-, Tool-Katalog- und Code-Behind-Risikotests
 
-## Auftrag
-Arbeite kompromisslos, detailorientiert und fehlersuchend.
+### GREEN
+- vollständige Korrektur aller relevanten Zustands- und Anzeigeprobleme
 
-Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
-- Bugs
-- technische Schulden
-- Dubletten
-- Schattenlogik
-- tote Pfade
-- fragile Stellen
-- Testlücken
-- falsche Sicherheit
-- konkurrierende Wahrheiten
-- Release-Risiken
-- Datenintegritätsrisiken
-- Paritätsrisiken
+### REFACTOR / CLEANUP
+- Businesslogik aus falschen Orten ziehen
+- Schattenlogik / Dubletten / verwaiste UI-Elemente bereinigen
+
+Keine Teilumsetzungen.
+
+---
+
+## Ausgabeformat
+
+# Deep Dive Audit – GUI / WPF / ViewModels / UX States
+
+## 1. Executive Verdict
+## 2. Rundenzusammenfassung
+## 3. Findings
+## 4. Dubletten / Schattenlogik
+## 5. Hygiene-Probleme
+## 6. Kritische Testlücken
+## 7. Vollständige Umsetzung aller Findings
+## 8. Schlussurteil
+
+---
+
+# 8. AUTARKER PROMPT – CLI / API / Entry-Point Parity
+
+Du arbeitest als **Principal Bug Hunter, Entry-Point Parity Auditor, Root-Cause-Investigator und Sanierungsarchitekt** für den Bereich **CLI / API / Entry-Point Parity** in **Romulus**.
+
+## Kontext
+
+Romulus ist ein produktionsnahes C# .NET 10 Tool mit:
+- WPF GUI
+- CLI
+- REST API
+
+Aktive Entwicklung nur in `src/`.
+
+---
+
+## Grundhaltung
+
+Kompromisslos, tief, kein Auslagern, keine halben Fixes.
+
+---
 
 ## Fokusbereich
+
 Analysiere extrem detailliert:
 - CLI parsing / output / exit codes
 - API request / response / defaults / validation
@@ -1146,6 +1036,7 @@ Analysiere extrem detailliert:
 - Settings-Laden je Entry Point
 
 ## Suche gezielt nach
+
 - unterschiedliche Defaults
 - unterschiedliche Normalisierung
 - ConvertFormat/PreferRegions/OnlyGames Divergenz
@@ -1157,83 +1048,75 @@ Analysiere extrem detailliert:
 - fehlende Entry-Point-Paritätstests
 
 ## Besonders prüfen
+
 - CLI Program / Parser / Output Writer
 - API Program / Mapper / Request/Response Modelle
 - RunOptionsBuilder
 - RunEnvironmentBuilder
 - RunProjection Mapping
 
-## Verbotene Ausweichbewegungen
-- keine Default-/Normalize-/Mapping-Probleme auf andere Bereiche abwälzen
-- keine Entry-Point-Abweichungen nur dokumentieren
-- keine CLI/API/GUI-Divergenz als tolerierbar darstellen
+---
 
-## Ausgabeformat
-# Deep Dive Audit – CLI / API / Entry-Point Parity
+## Rundenzwang
 
-## 1. Executive Verdict
-
-## 2. Rundenzusammenfassung
-Für jede Runde:
-- was geprüft wurde
-- neue Findings
-- ob weitere Runde nötig ist
-
-## 3. Findings
-Für jedes Finding:
-- Titel
-- Schweregrad (P0/P1/P2/P3)
-- Typ (Bug / Debt / Duplication / Shadow Logic / Hygiene / Test Gap)
-- Impact
-- betroffene Datei(en)
-- Reproduktion / Beispiel
-- Ursache
-- Fix
-- Testabsicherung
-
-## 4. Dubletten / Schattenlogik
-
-## 5. Hygiene-Probleme
-
-## 6. Kritische Testlücken
-
-## 7. Vollständige Umsetzung aller Findings
-- Priorisierte Umsetzungsblöcke
-- RED
-- GREEN
-- REFACTOR / CLEANUP
-- Verifikation
-- echte Restpunkte
-
-## 8. Schlussurteil
-- ist der Bereich jetzt wirklich ausgeschöpft?
-- falls nein: warum nicht?
-- falls noch Restbereiche auftauchen, sofort nächste Runde starten
+Mehrere Runden bis nichts Relevantes mehr gefunden wird.
 
 ---
 
-# 9. Deep Dive – Tool-Katalog / Features / Integrationen
+## Verpflichtende Anschlussphase – vollständige Umsetzung aller Findings
 
-Du arbeitest als Principal Bug Hunter und Feature Catalog Auditor für Tool-Katalog / Features / Integrationen in Romulus.
+### RED
+- echte Default-, Normalize-, Mapping-, Output-, Exit-Code- und Paritätstests
 
-## Auftrag
-Arbeite kompromisslos, detailorientiert und fehlersuchend.
+### GREEN
+- vollständige Harmonisierung aller relevanten Entry-Point-Pfade
 
-Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
-- Bugs
-- technische Schulden
-- Dubletten
-- Schattenlogik
-- tote Pfade
-- fragile Stellen
-- Testlücken
-- falsche Sicherheit
-- konkurrierende Wahrheiten
-- Release-Risiken
-- Datenintegritätsrisiken
-- Paritätsrisiken
+### REFACTOR / CLEANUP
+- doppelte Entry-Point-Logik abbauen
+- verwaiste Mapping-/Outputpfade säubern
+
+Keine Teilumsetzungen.
+
+---
+
+## Ausgabeformat
+
+# Deep Dive Audit – CLI / API / Entry-Point Parity
+
+## 1. Executive Verdict
+## 2. Rundenzusammenfassung
+## 3. Findings
+## 4. Dubletten / Schattenlogik
+## 5. Hygiene-Probleme
+## 6. Kritische Testlücken
+## 7. Vollständige Umsetzung aller Findings
+## 8. Schlussurteil
+
+---
+
+# 9. AUTARKER PROMPT – Tool-Katalog / Features / Integrationen
+
+Du arbeitest als **Principal Bug Hunter, Feature Catalog Auditor, Root-Cause-Investigator und Sanierungsarchitekt** für den Bereich **Tool-Katalog / Features / Integrationen** in **Romulus**.
+
+## Kontext
+
+Romulus ist ein produktionsnahes C# .NET 10 Tool mit:
+- WPF GUI
+- CLI
+- REST API
+
+Aktive Entwicklung nur in `src/`.
+
+---
+
+## Grundhaltung
+
+Kompromisslos, tief, kein Auslagern, keine halben Fixes.
+
+---
 
 ## Fokusbereich
+
 Analysiere kachelweise und codebasiert:
 - sichtbare Tools / Karten
 - FeatureCommandService
@@ -1245,6 +1128,7 @@ Analysiere kachelweise und codebasiert:
 - tatsächliche technische Tiefe hinter jeder Kachel
 
 ## Suche gezielt nach
+
 - sichtbare Fake-Features
 - Stub-/Coming-Soon-/Planned-Blendwerk
 - redundante Werkzeuge
@@ -1257,77 +1141,67 @@ Analysiere kachelweise und codebasiert:
 - doppelte Funktionalität unter mehreren Namen
 - fehlende Tests für reale Tool-Interaktion
 
-## Verbotene Ausweichbewegungen
-- keine sichtbaren Fake-Features auf später verschieben
-- keine redundanten Werkzeuge nur dokumentieren
-- keine falschen Namen / irreführenden Karten tolerieren, wenn sie Release-Risiko oder User-Irritation erzeugen
+---
 
-## Ausgabeformat
-# Deep Dive Audit – Tool-Katalog / Features / Integrationen
+## Rundenzwang
 
-## 1. Executive Verdict
-
-## 2. Rundenzusammenfassung
-Für jede Runde:
-- was geprüft wurde
-- neue Findings
-- ob weitere Runde nötig ist
-
-## 3. Findings
-Für jedes Finding:
-- Titel
-- Schweregrad (P0/P1/P2/P3)
-- Typ (Bug / Debt / Duplication / Shadow Logic / Hygiene / Test Gap)
-- Impact
-- betroffene Datei(en)
-- Reproduktion / Beispiel
-- Ursache
-- Fix
-- Testabsicherung
-
-## 4. Dubletten / Schattenlogik
-
-## 5. Hygiene-Probleme
-
-## 6. Kritische Testlücken
-
-## 7. Vollständige Umsetzung aller Findings
-- Priorisierte Umsetzungsblöcke
-- RED
-- GREEN
-- REFACTOR / CLEANUP
-- Verifikation
-- echte Restpunkte
-
-## 8. Schlussurteil
-- ist der Bereich jetzt wirklich ausgeschöpft?
-- falls nein: warum nicht?
-- falls noch Restbereiche auftauchen, sofort nächste Runde starten
+Mehrere Runden bis nichts Relevantes mehr gefunden wird.
 
 ---
 
-# 10. Deep Dive – Testsuite / QA / Schutzwert
+## Verpflichtende Anschlussphase – vollständige Umsetzung aller Findings
 
-Du arbeitest als Principal Bug Hunter und Test Value Auditor für die gesamte Testsuite / QA-Architektur von Romulus.
+### RED
+- echte Tests für Tool-Registrierung, Handler, Sichtbarkeit, Konsolidierung, echte Funktionstiefe
 
-## Auftrag
-Arbeite kompromisslos, detailorientiert und fehlersuchend.
+### GREEN
+- vollständige Beseitigung von Fake-Features, Dubletten, irreführenden Namen und kaputten Registrierungen
 
-Das Ziel ist nicht ein freundliches Review, sondern ein echter Deep Dive auf:
-- Bugs
-- technische Schulden
-- Dubletten
-- Schattenlogik
-- tote Pfade
-- fragile Stellen
-- Testlücken
-- falsche Sicherheit
-- konkurrierende Wahrheiten
-- Release-Risiken
-- Datenintegritätsrisiken
-- Paritätsrisiken
+### REFACTOR / CLEANUP
+- verwaiste Commands / i18n / Pinned Keys / Handler / Service-Reste bereinigen
+
+Keine Teilumsetzungen.
+
+---
+
+## Ausgabeformat
+
+# Deep Dive Audit – Tool-Katalog / Features / Integrationen
+
+## 1. Executive Verdict
+## 2. Rundenzusammenfassung
+## 3. Findings
+## 4. Dubletten / Schattenlogik
+## 5. Hygiene-Probleme
+## 6. Kritische Testlücken
+## 7. Vollständige Umsetzung aller Findings
+## 8. Schlussurteil
+
+---
+
+# 10. AUTARKER PROMPT – Testsuite / QA / Schutzwert
+
+Du arbeitest als **Principal Bug Hunter, Test Value Auditor, Root-Cause-Investigator und Sanierungsarchitekt** für die **gesamte Testsuite / QA-Architektur** von **Romulus**.
+
+## Kontext
+
+Romulus ist ein produktionsnahes C# .NET 10 Tool mit:
+- WPF GUI
+- CLI
+- REST API
+
+Aktive Entwicklung nur in `src/`.
+
+---
+
+## Grundhaltung
+
+Kompromisslos, tief, kein Auslagern, keine halben Fixes.
+
+---
 
 ## Fokusbereich
+
 Analysiere kompromisslos:
 - Schutzwert der Tests
 - falsche Sicherheit
@@ -1341,6 +1215,7 @@ Analysiere kompromisslos:
 - Coverage mit oder ohne echten Nutzen
 
 ## Suche gezielt nach
+
 - Low-Value Tests
 - False Confidence Tests
 - schwache Benchmarks
@@ -1350,61 +1225,57 @@ Analysiere kompromisslos:
 - fehlende GUI/CLI/API/Report-Parität
 - fehlende Safety-, Rollback-, Conversion- und Recognition-Invarianten
 
-## Verbotene Ausweichbewegungen
-- keine Coverage-Schönfärberei
-- keine grüne, aber wertlose Testsuite als akzeptabel behandeln
-- keine Low-Value-Tests aus Schonung stehen lassen
+---
 
-## Ausgabeformat
-# Deep Dive Audit – Testsuite / QA / Schutzwert
+## Rundenzwang
 
-## 1. Executive Verdict
-
-## 2. Rundenzusammenfassung
-Für jede Runde:
-- was geprüft wurde
-- neue Findings
-- ob weitere Runde nötig ist
-
-## 3. Findings
-Für jedes Finding:
-- Titel
-- Schweregrad (P0/P1/P2/P3)
-- Typ (Bug / Debt / Duplication / Shadow Logic / Hygiene / Test Gap)
-- Impact
-- betroffene Datei(en)
-- Reproduktion / Beispiel
-- Ursache
-- Fix
-- Testabsicherung
-
-## 4. Dubletten / Schattenlogik
-
-## 5. Hygiene-Probleme
-
-## 6. Kritische Testlücken
-
-## 7. Vollständige Umsetzung aller Findings
-- Priorisierte Umsetzungsblöcke
-- RED
-- GREEN
-- REFACTOR / CLEANUP
-- Verifikation
-- echte Restpunkte
-
-## 8. Schlussurteil
-- ist der Bereich jetzt wirklich ausgeschöpft?
-- falls nein: warum nicht?
-- falls noch Restbereiche auftauchen, sofort nächste Runde starten
+Mehrere Runden bis nichts Relevantes mehr gefunden wird.
 
 ---
 
-# 11. Final Verification – Bereichsübergreifend prüfen, dass nichts Relevantes mehr gefunden wird
+## Verpflichtende Anschlussphase – vollständige Umsetzung aller Findings
 
-Du arbeitest als Final Verification Auditor für Romulus.
+### RED
+- schwache Tests sichtbar machen
+- fehlende kritische Tests identifizieren und rot schreiben
+- keine Alibi-Tests
+
+### GREEN
+- starke Schutzwert-Tests implementieren
+- falsche Sicherheit abbauen
+- Regressionen und Invarianten absichern
+
+### REFACTOR / CLEANUP
+- wertlose Tests entfernen oder ersetzen
+- Test-Dubletten bereinigen
+- Testarchitektur im Scope verbessern
+
+Keine Teilumsetzungen.
+
+---
+
+## Ausgabeformat
+
+# Deep Dive Audit – Testsuite / QA / Schutzwert
+
+## 1. Executive Verdict
+## 2. Rundenzusammenfassung
+## 3. Findings
+## 4. Dubletten / Schattenlogik
+## 5. Hygiene-Probleme
+## 6. Kritische Testlücken
+## 7. Vollständige Umsetzung aller Findings
+## 8. Schlussurteil
+
+---
+
+# 11. AUTARKER PROMPT – Final Verification (bereichsübergreifend)
+
+Du arbeitest als **Final Verification Auditor, Cross-Cutting Bug Hunter und Abschluss-Sanierungsarchitekt** für **Romulus**.
 
 ## Kontext
-Für die folgenden Bereiche wurden bereits kompromisslose Deep-Dive-Audits durchgeführt und Sanierungen umgesetzt:
+
+Für die folgenden Bereiche wurden bereits Deep-Dive-Audits durchgeführt und Sanierungen umgesetzt:
 - Recognition / Classification / Sorting
 - DAT Matching / Verification
 - Conversion Engine
@@ -1416,8 +1287,21 @@ Für die folgenden Bereiche wurden bereits kompromisslose Deep-Dive-Audits durch
 - Tool-Katalog / Features / Integrationen
 - Testsuite / QA / Schutzwert
 
+---
+
+## Grundhaltung
+
+Kompromisslos, bereichsübergreifend, mehrstufig.
+Keine Schönfärberei.
+Keine voreilige Freigabe.
+Wenn noch etwas Relevantes gefunden wird, ist der Abschluss nicht gültig.
+
+---
+
 ## Ziel
-Führe jetzt eine bereichsübergreifende Gesamtverifikation durch, um zu prüfen, ob:
+
+Führe eine bereichsübergreifende Gesamtverifikation durch, um zu prüfen, ob:
+
 1. in den Einzelbereichen wirklich keine relevanten Findings mehr offen sind
 2. zwischen den Bereichen noch versteckte Cross-Cutting-Bugs existieren
 3. es noch Paritäts-, Projektions-, Status-, Report-, Safety- oder Integrationsprobleme gibt
@@ -1425,20 +1309,8 @@ Führe jetzt eine bereichsübergreifende Gesamtverifikation durch, um zu prüfen
 5. noch technische Schulden mit Release-Risiko übrig sind
 6. noch Dubletten, Schattenlogik, tote Pfade oder falsche Sicherheit existieren
 
-## WICHTIG
-Das ist kein normaler Abschlussbericht.
-
-Das Ziel ist:
-- alles nochmals gegen den Strich bürsten
-- Cross-Bereich-Risiken finden
-- letzte konkurrierende Wahrheiten finden
-- prüfen, ob wirklich nichts mehr Relevantes gefunden wurde
-
-Wenn du doch noch Findings findest:
-- muss der jeweilige Bereich wieder geöffnet werden
-- und es gilt NICHT als abgeschlossen
-
 ## Prüfschwerpunkte
+
 Suche besonders nach:
 - Preview / Execute / Report Divergenz über Bereichsgrenzen
 - GUI / CLI / API / Report / Dashboard Parität
@@ -1451,8 +1323,9 @@ Suche besonders nach:
 - tote oder verwaiste Pfade nach Refactors
 - Testsuite grün, aber mit verbleibender False Confidence
 
-## Verifikationslogik
-Führe die Gesamtverifikation ebenfalls in Runden durch.
+---
+
+## Rundenzwang
 
 ### Runde 1
 - globale Integrationssicht
@@ -1467,6 +1340,29 @@ Führe die Gesamtverifikation ebenfalls in Runden durch.
 
 ### Runde 3+
 - solange fortsetzen, bis eine Runde keine neuen relevanten Findings mehr liefert
+
+Wenn du neue Findings findest:
+- muss der jeweilige Bereich wieder geöffnet werden
+- und es gilt NICHT als abgeschlossen
+
+---
+
+## Verpflichtende Anschlussphase – vollständige Umsetzung aller neuen Findings
+
+### RED
+- neue Cross-Cutting-Red-Tests
+- Paritäts-, Integrations-, Status-, Projection-, Safety- und False-Confidence-Tests
+
+### GREEN
+- vollständige Korrektur aller neuen Cross-Cutting-Probleme
+
+### REFACTOR / CLEANUP
+- Dubletten / Schattenlogik / tote Reste bereinigen
+- Rückwirkungen auf betroffene Bereiche sauber auflösen
+
+Keine Teilumsetzungen.
+
+---
 
 ## Ausgabeformat
 
@@ -1500,31 +1396,15 @@ Für jedes Finding:
 
 ## 6. Verbleibende False-Confidence-Risiken
 
-## 7. Verpflichtende vollständige Umsetzung aller neuen Findings
-- Priorisierte Umsetzungsblöcke
-- RED
-- GREEN
-- REFACTOR / CLEANUP
-- Verifikation
-- echte Restpunkte
+## 7. Vollständige Umsetzung aller neuen Findings
+### 1. Priorisierte Umsetzungsblöcke
+### 2. RED
+### 3. GREEN
+### 4. REFACTOR / CLEANUP
+### 5. Verifikation
+### 6. echte Restpunkte
 
 ## 8. Schlussurteil
 - wirklich abgeschlossen?
 - falls nein: welche Bereiche müssen zurück in den Deep Dive?
 - falls Restbereiche genannt werden, automatisch nächste Verifikationsrunde starten
-
----
-
-# Empfohlene Reihenfolge der Ausführung
-
-1. Deep Dive – Recognition / Classification / Sorting
-2. Deep Dive – DAT Matching / Verification
-3. Deep Dive – Conversion Engine
-4. Deep Dive – Orchestration / Run Lifecycle / Phase Planning
-5. Deep Dive – Reports / Audit / Rollback / Metrics
-6. Deep Dive – Safety / FileSystem / Security
-7. Deep Dive – GUI / WPF / ViewModels / UX States
-8. Deep Dive – CLI / API / Entry-Point Parity
-9. Deep Dive – Tool-Katalog / Features / Integrationen
-10. Deep Dive – Testsuite / QA / Schutzwert
-11. Final Verification – Bereichsübergreifend prüfen, dass nichts Relevantes mehr gefunden wird

@@ -218,6 +218,7 @@ public sealed partial class DatAuditViewModel : ObservableObject
             {
                 "Have" => DatAuditStatus.Have,
                 "Wrong Name" => DatAuditStatus.HaveWrongName,
+                "Name Only" => DatAuditStatus.HaveByName,
                 "Miss" => DatAuditStatus.Miss,
                 "Unknown" => DatAuditStatus.Unknown,
                 "Ambiguous" => DatAuditStatus.Ambiguous,

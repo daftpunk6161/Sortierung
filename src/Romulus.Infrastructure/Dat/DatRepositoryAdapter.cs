@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
+using Romulus.Contracts.Hashing;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.FileSystem;
@@ -164,22 +165,37 @@ public sealed class DatRepositoryAdapter
         var current = gameName;
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { current };
         const int maxDepth = 10;
+        var cycleDetected = false;
+        var depthExceeded = true;
 
         for (int i = 0; i < maxDepth; i++)
         {
             if (parentMap.TryGetValue(current, out var parent))
             {
                 if (!visited.Add(parent))
+                {
+                    cycleDetected = true;
+                    depthExceeded = false;
                     break; // cycle detected
+                }
                 current = parent;
             }
             else
             {
+                depthExceeded = false;
                 break;
             }
         }
 
-        // V2-BUG-M01: Return deepest resolved parent (current) instead of null at MaxDepth
+        // F-DAT-11: a cycle or an over-deep chain (> maxDepth hops without termination)
+        // means the parent is not trustworthy — surface as null so callers do not
+        // promote a bogus parent into the DAT index.
+        if (cycleDetected || depthExceeded)
+        {
+            _log?.Invoke($"[Warning] ResolveParentName: parent chain unresolvable for '{gameName}' ({(cycleDetected ? "cycle" : "max depth exceeded")}). Returning null.");
+            return null;
+        }
+
         return string.Equals(current, gameName, StringComparison.OrdinalIgnoreCase) ? null : current;
     }
 
@@ -327,20 +343,7 @@ public sealed class DatRepositoryAdapter
     }
 
     private static string NormalizeHashType(string hashType)
-    {
-        if (string.IsNullOrWhiteSpace(hashType))
-            return "SHA1";
-
-        return hashType.Trim().ToUpperInvariant() switch
-        {
-            "CRC32" => "CRC32",
-            "CRC" => "CRC32",
-            "MD5" => "MD5",
-            "SHA256" => "SHA256",
-            "SHA1" => "SHA1",
-            _ => "SHA1"
-        };
-    }
+        => HashTypeNormalizer.Normalize(hashType);
 
     private static (string HashType, string? Hash) SelectHashByPreference(
         string requestedHashType,
@@ -368,14 +371,18 @@ public sealed class DatRepositoryAdapter
 
     private static IEnumerable<string> GetFallbackHashTypeOrder(string requestedHashType)
     {
+        // F-DAT-13: after the caller-requested type, prefer the cryptographically
+        // strongest hashes first so DAT rows publishing SHA256 are indexed under
+        // SHA256 instead of being demoted to SHA1 just because SHA1 was the
+        // requested fallback default.
         var ordered = new List<string>(capacity: 4);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         Add(requestedHashType);
+        Add("SHA256");
         Add("SHA1");
         Add("MD5");
         Add("CRC32");
-        Add("SHA256");
 
         return ordered;
 

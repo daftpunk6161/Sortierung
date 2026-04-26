@@ -48,7 +48,7 @@ public sealed class ConversionPhaseHelperCoverageBoostTests : IDisposable
     }
 
     [Fact]
-    public void ExecuteBatch_DryRun_AllItemsReturnNull()
+    public void ExecuteBatch_DryRun_CollectsPreviewResultWithoutCountingConversion()
     {
         var converter = new SkippingConverter();
         var options = MakeOptions(RunConstants.ModeDryRun);
@@ -62,9 +62,9 @@ public sealed class ConversionPhaseHelperCoverageBoostTests : IDisposable
         var result = ConversionPhaseHelper.ExecuteBatch(
             items, converter, options, CreateContext(RunConstants.ModeDryRun), "files", CancellationToken.None);
 
-        // DryRun → ConvertSingleFile returns null → no results collected
         Assert.Equal(0, result.Converted);
-        Assert.Empty(result.Results);
+        Assert.Single(result.Results);
+        Assert.Equal("dry-run-planned", result.Results[0].Reason);
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public sealed class ConversionPhaseHelperCoverageBoostTests : IDisposable
     // ══════ ConvertSingleFile ═══════════════════════════════════════
 
     [Fact]
-    public void ConvertSingleFile_DryRun_ReturnsNull()
+    public void ConvertSingleFile_DryRun_ReturnsPreviewResultWithoutCallingConvert()
     {
         var converter = new SkippingConverter();
         var options = MakeOptions(RunConstants.ModeDryRun);
@@ -160,7 +160,11 @@ public sealed class ConversionPhaseHelperCoverageBoostTests : IDisposable
         var result = ConversionPhaseHelper.ConvertSingleFile(
             CreateFile("test.iso"), "PS1", converter, options, ctx, counters, false, CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal(ConversionOutcome.Skipped, result!.Outcome);
+        Assert.Equal("dry-run-planned", result.Reason);
+        Assert.Equal(0, counters.Converted);
+        Assert.Equal(0, counters.Skipped);
     }
 
     [Fact]

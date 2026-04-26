@@ -134,6 +134,28 @@ public sealed class ConversionPlannerTests
         Assert.Equal("createdvd", plan.Steps[0].Capability.Command);
     }
 
+    [Fact]
+    public void Plan_EncryptedPbp_IsBlockedBeforePathSelection()
+    {
+        var registry = CreateRegistry(
+        [
+            Cap(".pbp", ".chd", "psxtract", 1, "pbp2chd", "PSP")
+        ],
+        ConversionPolicy.Auto,
+        ".chd");
+        var planner = new ConversionPlanner(
+            registry,
+            _ => "C:\\tools\\psxtract.exe",
+            _ => 1024,
+            encryptedPbpDetector: _ => true);
+
+        var plan = planner.Plan("C:\\roms\\encrypted.pbp", "PSP", ".pbp");
+
+        Assert.Equal(ConversionSafety.Blocked, plan.Safety);
+        Assert.Equal("encrypted-pbp", plan.SkipReason);
+        Assert.Empty(plan.Steps);
+    }
+
     private static ConversionPlanner CreatePlanner(IConversionRegistry registry, Func<string, string?> toolFinder)
     {
         return new ConversionPlanner(registry, toolFinder, _ => 1024);

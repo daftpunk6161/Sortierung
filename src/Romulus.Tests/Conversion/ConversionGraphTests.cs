@@ -62,6 +62,33 @@ public sealed class ConversionGraphTests
     }
 
     [Fact]
+    public void FindPath_PropagatesIntermediateIntegrity_WhenCheckingNextEdgeRequirements()
+    {
+        var graph = new ConversionGraph([
+            Edge(".raw", ".mid", "lossy-step", 1, lossless: false, resultIntegrity: SourceIntegrity.Lossy),
+            Edge(".mid", ".final", "lossy-only-step", 1, requiredIntegrity: SourceIntegrity.Lossy)
+        ]);
+
+        var path = graph.FindPath(".raw", ".final", "TEST", _ => true, SourceIntegrity.Lossless);
+
+        Assert.NotNull(path);
+        Assert.Equal(2, path!.Count);
+    }
+
+    [Fact]
+    public void FindPath_BlocksSecondLossyStep_AfterIntermediateBecameLossy()
+    {
+        var graph = new ConversionGraph([
+            Edge(".raw", ".mid", "lossy-step", 1, lossless: false, resultIntegrity: SourceIntegrity.Lossy),
+            Edge(".mid", ".final", "second-lossy-step", 1, lossless: false, resultIntegrity: SourceIntegrity.Lossy)
+        ]);
+
+        var path = graph.FindPath(".raw", ".final", "TEST", _ => true, SourceIntegrity.Lossless);
+
+        Assert.Null(path);
+    }
+
+    [Fact]
     public void FindPath_SourceEqualsTarget_ReturnsEmptyPath()
     {
         var graph = new ConversionGraph([Edge(".iso", ".chd", "chdman", 1)]);
@@ -102,7 +129,9 @@ public sealed class ConversionGraphTests
         int cost,
         IReadOnlySet<string>? applicableConsoles = null,
         ConversionCondition condition = ConversionCondition.None,
-        SourceIntegrity? requiredIntegrity = null)
+        SourceIntegrity? requiredIntegrity = null,
+        bool lossless = true,
+        SourceIntegrity resultIntegrity = SourceIntegrity.Lossless)
     {
         return new ConversionCapability
         {
@@ -112,8 +141,8 @@ public sealed class ConversionGraphTests
             Command = "convert",
             ApplicableConsoles = applicableConsoles,
             RequiredSourceIntegrity = requiredIntegrity,
-            ResultIntegrity = SourceIntegrity.Lossless,
-            Lossless = true,
+            ResultIntegrity = resultIntegrity,
+            Lossless = lossless,
             Cost = cost,
             Verification = VerificationMethod.FileExistenceCheck,
             Condition = condition

@@ -75,10 +75,116 @@ public sealed class ConversionPhaseHelperRegressionTests : IDisposable
             trackSetMembers: false,
             CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal(ConversionOutcome.Skipped, result!.Outcome);
+        Assert.Equal("dry-run-planned", result.Reason);
+        Assert.Equal(Path.Combine(_root, "preview.chd"), result.TargetPath);
         Assert.False(converter.ConvertCalled);
         Assert.Equal(0, counters.Converted);
         Assert.Equal(0, counters.Errors);
+    }
+
+    [Fact]
+    public void ConvertOnlyPhase_SuccessfulCueConversion_MovesDescriptorAndSetMembersToConvertedTrash()
+    {
+        var sourcePath = Path.Combine(_root, "game.cue");
+        var trackPath = Path.Combine(_root, "track01.bin");
+        File.WriteAllText(sourcePath, "FILE \"track01.bin\" BINARY");
+        File.WriteAllBytes(trackPath, [1, 2, 3, 4]);
+
+        var targetPath = Path.Combine(_root, "game.chd");
+        var converter = new SuccessfulConverter(targetPath);
+        var options = new RunOptions
+        {
+            Roots = [_root],
+            Mode = RunConstants.ModeMove,
+            ConvertOnly = true,
+            ConvertFormat = "chd",
+            Extensions = [".cue", ".bin"]
+        };
+
+        var result = new ConvertOnlyPipelinePhase().Execute(
+            new ConvertOnlyPhaseInput(
+                [new RomCandidate { MainPath = sourcePath, ConsoleKey = "PS1", Extension = ".cue", Category = FileCategory.Game, GameKey = "game" }],
+                options,
+                converter),
+            CreateContext(RunConstants.ModeMove, [".cue", ".bin"]),
+            CancellationToken.None);
+
+        Assert.Equal(1, result.Converted);
+        Assert.False(File.Exists(sourcePath));
+        Assert.False(File.Exists(trackPath));
+        Assert.True(File.Exists(Path.Combine(_root, RunConstants.WellKnownFolders.TrashConverted, "game.cue")));
+        Assert.True(File.Exists(Path.Combine(_root, RunConstants.WellKnownFolders.TrashConverted, "track01.bin")));
+    }
+
+    [Fact]
+    public void WinnerConversionPhase_SuccessfulCueConversion_MovesDescriptorAndSetMembersToConvertedTrash()
+    {
+        var sourcePath = Path.Combine(_root, "winner.cue");
+        var trackPath = Path.Combine(_root, "winner-track.bin");
+        File.WriteAllText(sourcePath, "FILE \"winner-track.bin\" BINARY");
+        File.WriteAllBytes(trackPath, [1, 2, 3, 4]);
+
+        var targetPath = Path.Combine(_root, "winner.chd");
+        var converter = new SuccessfulConverter(targetPath);
+        var options = new RunOptions
+        {
+            Roots = [_root],
+            Mode = RunConstants.ModeMove,
+            ConvertFormat = "chd",
+            Extensions = [".cue", ".bin"]
+        };
+        var group = new DedupeGroup
+        {
+            GameKey = "winner",
+            Winner = new RomCandidate { MainPath = sourcePath, ConsoleKey = "PS1", Extension = ".cue", Category = FileCategory.Game, GameKey = "winner" },
+            Losers = []
+        };
+
+        var result = new WinnerConversionPipelinePhase().Execute(
+            new WinnerConversionPhaseInput([group], options, new HashSet<string>(StringComparer.OrdinalIgnoreCase), converter),
+            CreateContext(RunConstants.ModeMove, [".cue", ".bin"]),
+            CancellationToken.None);
+
+        Assert.Equal(1, result.Converted);
+        Assert.False(File.Exists(sourcePath));
+        Assert.False(File.Exists(trackPath));
+        Assert.True(File.Exists(Path.Combine(_root, RunConstants.WellKnownFolders.TrashConverted, "winner.cue")));
+        Assert.True(File.Exists(Path.Combine(_root, RunConstants.WellKnownFolders.TrashConverted, "winner-track.bin")));
+    }
+
+    [Fact]
+    public void WinnerConversionPhase_DryRun_ReportsPlanWithoutCallingConvert()
+    {
+        var sourcePath = Path.Combine(_root, "dryrun.iso");
+        File.WriteAllBytes(sourcePath, [1, 2, 3, 4]);
+
+        var converter = new RecordingConverter();
+        var options = new RunOptions
+        {
+            Roots = [_root],
+            Mode = RunConstants.ModeDryRun,
+            ConvertFormat = "chd",
+            Extensions = [".iso"]
+        };
+        var group = new DedupeGroup
+        {
+            GameKey = "dryrun",
+            Winner = new RomCandidate { MainPath = sourcePath, ConsoleKey = "PS1", Extension = ".iso", Category = FileCategory.Game, GameKey = "dryrun" },
+            Losers = []
+        };
+
+        var result = new WinnerConversionPipelinePhase().Execute(
+            new WinnerConversionPhaseInput([group], options, new HashSet<string>(StringComparer.OrdinalIgnoreCase), converter),
+            CreateContext(RunConstants.ModeDryRun, [".iso"]),
+            CancellationToken.None);
+
+        Assert.Equal(0, result.Converted);
+        Assert.Single(result.ConversionResults);
+        Assert.Equal("dry-run-planned", result.ConversionResults[0].Reason);
+        Assert.False(converter.ConvertCalled);
+        Assert.True(File.Exists(sourcePath));
     }
 
     [Fact]

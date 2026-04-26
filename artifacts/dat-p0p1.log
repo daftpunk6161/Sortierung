@@ -1,0 +1,113 @@
+Testlauf f├╝r "C:\Code\Sortierung\src\Romulus.Tests\bin\Debug\net10.0-windows\Romulus.Tests.dll" (.NETCoreApp,Version=v10.0)
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster ├╝berein.
+[xUnit.net 00:00:03.52]     Romulus.Tests.Phase6QualityAssuranceTests.PhasePlanBuilder_ConvertWithoutMove_Excluded [FAIL]
+  Fehler Romulus.Tests.Phase6QualityAssuranceTests.PhasePlanBuilder_ConvertWithoutMove_Excluded [4 ms]
+  Fehlermeldung:
+   Assert.DoesNotContain() Failure: Item found in collection
+                                           Ôåô (pos 2)
+Collection: ["Deduplicate", "JunkRemoval", "WinnerConversion"]
+Found:      "WinnerConversion"
+  Stapelverfolgung:
+     at Romulus.Tests.Phase6QualityAssuranceTests.PhasePlanBuilder_ConvertWithoutMove_Excluded() in C:\Code\Sortierung\src\Romulus.Tests\Phase6QualityAssuranceTests.cs:line 221
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:03.58]     Romulus.Tests.Phase6QualityAssuranceTests.PhasePlanBuilder_DatRenameInDryRun_Excluded [FAIL]
+  Fehler Romulus.Tests.Phase6QualityAssuranceTests.PhasePlanBuilder_DatRenameInDryRun_Excluded [< 1 ms]
+  Fehlermeldung:
+   Assert.DoesNotContain() Failure: Item found in collection
+                                                                      Ôåô (pos 4)
+Collection: ["DatAudit", "Deduplicate", "JunkRemoval", "ConsoleSort", "WinnerConversion"]
+Found:      "WinnerConversion"
+  Stapelverfolgung:
+     at Romulus.Tests.Phase6QualityAssuranceTests.PhasePlanBuilder_DatRenameInDryRun_Excluded() in C:\Code\Sortierung\src\Romulus.Tests\Phase6QualityAssuranceTests.cs:line 189
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:14.85]     Romulus.Tests.Phase3ImportantBugTests.R4_009_ConvertOnlyPipelinePhase_TrackSetMembers_False [FAIL]
+  Fehler Romulus.Tests.Phase3ImportantBugTests.R4_009_ConvertOnlyPipelinePhase_TrackSetMembers_False [1 ms]
+  Fehlermeldung:
+   Assert.Contains() Failure: Sub-string not found
+String:    "{\r\n        context.Metrics.StartPhase(Nam"┬À┬À┬À
+Not found: "TrackSetMembers: false"
+  Stapelverfolgung:
+     at Romulus.Tests.Phase3ImportantBugTests.R4_009_ConvertOnlyPipelinePhase_TrackSetMembers_False() in C:\Code\Sortierung\src\Romulus.Tests\Phase3ImportantBugTests.cs:line 289
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:30.85]     Romulus.Tests.DatCatalogStateServiceTests.HasSystemPrefixWithBoundary_RespectsTokenBoundary(stem: "Sega - Mega Drive 32X (20240101)", system: "Sega - Mega Drive", expected: False) [FAIL]
+  Fehler Romulus.Tests.DatCatalogStateServiceTests.HasSystemPrefixWithBoundary_RespectsTokenBoundary(stem: "Sega - Mega Drive 32X (20240101)", system: "Sega - Mega Drive", expected: False) [2 ms]
+  Fehlermeldung:
+   Assert.Equal() Failure: Values differ
+Expected: False
+Actual:   True
+  Stapelverfolgung:
+     at Romulus.Tests.DatCatalogStateServiceTests.HasSystemPrefixWithBoundary_RespectsTokenBoundary(String stem, String system, Boolean expected) in C:\Code\Sortierung\src\Romulus.Tests\DatCatalogStateServiceTests.cs:line 867
+   at InvokeStub_DatCatalogStateServiceTests.HasSystemPrefixWithBoundary_RespectsTokenBoundary(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:31.05]     Romulus.Tests.DatCatalogStateServiceTests.BuildCatalogStatus_DoesNotCrossMatchLongerSystemName [FAIL]
+  Fehler Romulus.Tests.DatCatalogStateServiceTests.BuildCatalogStatus_DoesNotCrossMatchLongerSystemName [4 ms]
+  Fehlermeldung:
+   Assert.Equal() Failure: Values differ
+Expected: Missing
+Actual:   Installed
+  Stapelverfolgung:
+     at Romulus.Tests.DatCatalogStateServiceTests.BuildCatalogStatus_DoesNotCrossMatchLongerSystemName() in C:\Code\Sortierung\src\Romulus.Tests\DatCatalogStateServiceTests.cs:line 888
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:01:20.70]     Romulus.Tests.Phase5BPipelineInvariantTests.PhasePlanBuilder_DryRunMode_ExcludesMoveAndConvert_ButKeepsConsoleSortForParity [FAIL]
+  Fehler Romulus.Tests.Phase5BPipelineInvariantTests.PhasePlanBuilder_DryRunMode_ExcludesMoveAndConvert_ButKeepsConsoleSortForParity [3 ms]
+  Fehlermeldung:
+   Assert.Equal() Failure: Collections differ
+Expected: ["DatAudit", "Deduplicate", "JunkRemoval", "ConsoleSort"]
+Actual:   ["DatAudit", "Deduplicate", "JunkRemoval", "ConsoleSort", "WinnerConversion"]
+                                                                    Ôåæ (pos 4)
+  Stapelverfolgung:
+     at Romulus.Tests.Phase5BPipelineInvariantTests.PhasePlanBuilder_DryRunMode_ExcludesMoveAndConvert_ButKeepsConsoleSortForParity() in C:\Code\Sortierung\src\Romulus.Tests\Phase5BPipelineInvariantTests.cs:line 236
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:02:23.45]     Romulus.Tests.DatAuditClassifierExpandedTests.ClassifyFull_KnownConsole_CsoMiss_UsesUniqueNameFallback [FAIL]
+  Fehler Romulus.Tests.DatAuditClassifierExpandedTests.ClassifyFull_KnownConsole_CsoMiss_UsesUniqueNameFallback [3 ms]
+  Fehlermeldung:
+   Assert.Equal() Failure: Values differ
+Expected: Have
+Actual:   HaveByName
+  Stapelverfolgung:
+     at Romulus.Tests.DatAuditClassifierExpandedTests.ClassifyFull_KnownConsole_CsoMiss_UsesUniqueNameFallback() in C:\Code\Sortierung\src\Romulus.Tests\DatAuditClassifierExpandedTests.cs:line 337
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:02:23.45]     Romulus.Tests.DatAuditClassifierExpandedTests.ClassifyFull_UnknownConsole_CsoUnknown_UsesUniqueCrossConsoleNameFallback [FAIL]
+  Fehler Romulus.Tests.DatAuditClassifierExpandedTests.ClassifyFull_UnknownConsole_CsoUnknown_UsesUniqueCrossConsoleNameFallback [< 1 ms]
+  Fehlermeldung:
+   Assert.Equal() Failure: Values differ
+Expected: Have
+Actual:   HaveByName
+  Stapelverfolgung:
+     at Romulus.Tests.DatAuditClassifierExpandedTests.ClassifyFull_UnknownConsole_CsoUnknown_UsesUniqueCrossConsoleNameFallback() in C:\Code\Sortierung\src\Romulus.Tests\DatAuditClassifierExpandedTests.cs:line 355
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:03:04.03]     Romulus.Tests.DatSourceServiceTests.DownloadDatAsync_TextPlain_Succeeds_GitHubRawUrl [FAIL]
+[xUnit.net 00:03:04.12]     Romulus.Tests.DatSourceServiceTests.DownloadDatAsync_TextXml_Succeeds [FAIL]
+  Fehler Romulus.Tests.DatSourceServiceTests.DownloadDatAsync_TextPlain_Succeeds_GitHubRawUrl [8 ms]
+  Fehlermeldung:
+   Assert.NotNull() Failure: Value is null
+  Stapelverfolgung:
+     at Romulus.Tests.DatSourceServiceTests.DownloadDatAsync_TextPlain_Succeeds_GitHubRawUrl() in C:\Code\Sortierung\src\Romulus.Tests\DatSourceServiceTests.cs:line 676
+--- End of stack trace from previous location ---
+  Fehler Romulus.Tests.DatSourceServiceTests.DownloadDatAsync_TextXml_Succeeds [45 ms]
+  Fehlermeldung:
+   Assert.NotNull() Failure: Value is null
+  Stapelverfolgung:
+     at Romulus.Tests.DatSourceServiceTests.DownloadDatAsync_TextXml_Succeeds() in C:\Code\Sortierung\src\Romulus.Tests\DatSourceServiceTests.cs:line 689
+--- End of stack trace from previous location ---
+[xUnit.net 00:03:05.27]     Romulus.Tests.DatSourceServiceTests.VerifyDatSignature_NoHashNoUrl_ReturnsTrue_HttpsIntegrity [FAIL]
+  Fehler Romulus.Tests.DatSourceServiceTests.VerifyDatSignature_NoHashNoUrl_ReturnsTrue_HttpsIntegrity [4 ms]
+  Fehlermeldung:
+   Assert.True() Failure
+Expected: True
+Actual:   False
+  Stapelverfolgung:
+     at Romulus.Tests.DatSourceServiceTests.VerifyDatSignature_NoHashNoUrl_ReturnsTrue_HttpsIntegrity() in C:\Code\Sortierung\src\Romulus.Tests\DatSourceServiceTests.cs:line 67
+--- End of stack trace from previous location ---
