@@ -95,12 +95,15 @@ public sealed class FilenameConsoleAnalyzer
     /// <summary>
     /// Try to detect console from serial number patterns in the filename.
     /// Returns (consoleKey, confidence) or null if no match.
-    /// Serial numbers are high-confidence (95).
+    /// Confidence is sourced from <see cref="DetectionSourceExtensions.ConfidenceRating"/>
+    /// for <see cref="DetectionSource.SerialNumber"/> — single source of truth (F2).
     /// </summary>
     public static (string ConsoleKey, int Confidence)? DetectBySerial(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
             return null;
+
+        var confidence = DetectionSource.SerialNumber.ConfidenceRating();
 
         // Keep deterministic first-match behavior for overlapping serial families.
         foreach (var (pattern, key) in SerialPatterns)
@@ -108,7 +111,7 @@ public sealed class FilenameConsoleAnalyzer
             try
             {
                 if (pattern.IsMatch(fileName))
-                    return (key, 95);
+                    return (key, confidence);
             }
             catch (RegexMatchTimeoutException) { }
         }
@@ -119,19 +122,22 @@ public sealed class FilenameConsoleAnalyzer
     /// <summary>
     /// Try to detect console from system keyword tags in the filename (e.g. "[PS1]", "(GBA)").
     /// Returns (consoleKey, confidence) or null if no match.
-    /// Keywords are medium-confidence (75).
+    /// Confidence is sourced from <see cref="DetectionSourceExtensions.ConfidenceRating"/>
+    /// for <see cref="DetectionSource.FilenameKeyword"/> — single source of truth (F2).
     /// </summary>
     public static (string ConsoleKey, int Confidence)? DetectByKeyword(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
             return null;
 
+        var confidence = DetectionSource.FilenameKeyword.ConfidenceRating();
+
         foreach (var (pattern, key) in KeywordPatterns)
         {
             try
             {
                 if (pattern.IsMatch(fileName))
-                    return (key, 75);
+                    return (key, confidence);
             }
             catch (RegexMatchTimeoutException) { }
         }

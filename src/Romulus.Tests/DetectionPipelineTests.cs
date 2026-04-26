@@ -382,7 +382,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectBySerial(fileName);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value.ConsoleKey);
-        Assert.Equal(95, result.Value.Confidence);
+        Assert.Equal(DetectionSource.SerialNumber.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Theory]
@@ -392,7 +392,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectBySerial(fileName);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value.ConsoleKey);
-        Assert.Equal(95, result.Value.Confidence);
+        Assert.Equal(DetectionSource.SerialNumber.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Theory]
@@ -404,7 +404,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectBySerial(fileName);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value.ConsoleKey);
-        Assert.Equal(95, result.Value.Confidence);
+        Assert.Equal(DetectionSource.SerialNumber.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Theory]
@@ -415,7 +415,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectBySerial(fileName);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value.ConsoleKey);
-        Assert.Equal(95, result.Value.Confidence);
+        Assert.Equal(DetectionSource.SerialNumber.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Theory]
@@ -426,7 +426,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectBySerial(fileName);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value.ConsoleKey);
-        Assert.Equal(95, result.Value.Confidence);
+        Assert.Equal(DetectionSource.SerialNumber.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Fact]
@@ -435,7 +435,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectBySerial("NTR-ABCD-EUR Title.nds");
         Assert.NotNull(result);
         Assert.Equal("NDS", result.Value.ConsoleKey);
-        Assert.Equal(95, result.Value.Confidence);
+        Assert.Equal(DetectionSource.SerialNumber.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Fact]
@@ -444,7 +444,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectBySerial("CTR-ABCD-EUR Title.3ds");
         Assert.NotNull(result);
         Assert.Equal("3DS", result.Value.ConsoleKey);
-        Assert.Equal(95, result.Value.Confidence);
+        Assert.Equal(DetectionSource.SerialNumber.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Fact]
@@ -453,7 +453,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectBySerial("T-123A Title.bin");
         Assert.NotNull(result);
         Assert.Equal("SAT", result.Value.ConsoleKey);
-        Assert.Equal(95, result.Value.Confidence);
+        Assert.Equal(DetectionSource.SerialNumber.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Fact]
@@ -490,7 +490,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectByKeyword(fileName);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value.ConsoleKey);
-        Assert.Equal(75, result.Value.Confidence);
+        Assert.Equal(DetectionSource.FilenameKeyword.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Theory]
@@ -502,7 +502,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectByKeyword(fileName);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value.ConsoleKey);
-        Assert.Equal(75, result.Value.Confidence);
+        Assert.Equal(DetectionSource.FilenameKeyword.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Theory]
@@ -514,7 +514,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectByKeyword(fileName);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value.ConsoleKey);
-        Assert.Equal(75, result.Value.Confidence);
+        Assert.Equal(DetectionSource.FilenameKeyword.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Theory]
@@ -526,7 +526,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectByKeyword(fileName);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value.ConsoleKey);
-        Assert.Equal(75, result.Value.Confidence);
+        Assert.Equal(DetectionSource.FilenameKeyword.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Theory]
@@ -544,7 +544,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.DetectByKeyword(fileName);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value.ConsoleKey);
-        Assert.Equal(75, result.Value.Confidence);
+        Assert.Equal(DetectionSource.FilenameKeyword.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Fact]
@@ -581,7 +581,7 @@ public sealed class DetectionPipelineTests
         Assert.NotNull(result);
         // Serial match (PS1, confidence=95) should win over keyword (GBA, confidence=75)
         Assert.Equal("PS1", result.Value.ConsoleKey);
-        Assert.Equal(95, result.Value.Confidence);
+        Assert.Equal(DetectionSource.SerialNumber.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Fact]
@@ -590,7 +590,7 @@ public sealed class DetectionPipelineTests
         var result = FilenameConsoleAnalyzer.Detect("[GBA] Metroid Fusion.gba");
         Assert.NotNull(result);
         Assert.Equal("GBA", result.Value.ConsoleKey);
-        Assert.Equal(75, result.Value.Confidence);
+        Assert.Equal(DetectionSource.FilenameKeyword.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Fact]

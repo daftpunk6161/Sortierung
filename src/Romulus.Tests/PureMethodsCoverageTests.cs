@@ -399,15 +399,15 @@ public sealed class PureMethodsCoverageTests
             HypothesisResolver.ClassifyConflictType(groups, FamilyLookup));
     }
 
-    private static List<KeyValuePair<string, (int TotalConfidence, int MaxSingleConfidence, List<DetectionHypothesis> Items, int MaxSourcePriority)>> MakeGroupList(
+    private static List<KeyValuePair<string, (int TotalConfidence, int MaxSingleConfidence, List<DetectionHypothesis> Items, EvidenceTier BestEvidenceTier)>> MakeGroupList(
         params (string Key, DetectionSource Source, int Confidence)[] entries)
     {
         return entries.Select(e =>
-            new KeyValuePair<string, (int, int, List<DetectionHypothesis>, int)>(
+            new KeyValuePair<string, (int, int, List<DetectionHypothesis>, EvidenceTier)>(
                 e.Key,
                 (e.Confidence, e.Confidence,
                  new List<DetectionHypothesis> { new(e.Key, e.Confidence, e.Source, "test") },
-                 (int)e.Source)))
+                 e.Source.ToEvidenceTier())))
             .ToList();
     }
 

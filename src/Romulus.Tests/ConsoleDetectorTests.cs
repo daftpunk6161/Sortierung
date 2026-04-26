@@ -904,7 +904,7 @@ public class ConsoleDetectorTests
         var result = detector.DetectByKeywordDynamic(fileName);
         Assert.NotNull(result);
         Assert.Equal(expectedKey, result.Value.ConsoleKey);
-        Assert.Equal(75, result.Value.Confidence);
+        Assert.Equal(DetectionSource.FilenameKeyword.ConfidenceRating(), result.Value.Confidence);
     }
 
     [Theory]

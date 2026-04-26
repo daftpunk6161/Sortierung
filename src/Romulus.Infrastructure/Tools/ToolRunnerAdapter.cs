@@ -877,8 +877,12 @@ public sealed class ToolRunnerAdapter : IToolRunner
             if (_hashCache.TryGetValue(fullPath, out var cached))
             {
                 var cachedLastWrite = File.GetLastWriteTimeUtc(fullPath);
-                using var cachedStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1, FileOptions.SequentialScan);
-                var cachedLength = cachedStream.Length;
+                // F22: Use FileInfo.Length instead of opening a separate FileStream
+                // just to read .Length — avoids a redundant file handle for the
+                // cache-hit fast path. The subsequent main hash open below uses
+                // FileShare.Read and re-validates Length+LastWrite under the
+                // hash handle for TOCTOU detection (TH-04).
+                var cachedLength = new FileInfo(fullPath).Length;
 
                 if (cached.LastWriteUtc == cachedLastWrite && cached.Length == cachedLength)
                     return ToolInvokerSupport.FixedTimeHashEquals(cached.Hash, expectedHash);

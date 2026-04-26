@@ -245,8 +245,11 @@ public static class GameKeyNormalizer
 
         var s = AsciiFold(baseName);
 
-        // DOS-specific: strip trailing metadata tags
-        if (string.Equals(consoleType?.Trim(), "DOS", StringComparison.OrdinalIgnoreCase))
+        // F21: DOS-family stripping must not depend on the exact literal "DOS".
+        // Console keys may arrive as "DOS", "MSDOS", "MS-DOS", "PC-DOS", or
+        // "PC" depending on console map source. All belong to the MS-DOS family
+        // and require the same trailing-metadata cleanup.
+        if (IsDosFamilyConsole(consoleType))
         {
             s = RemoveMsDosMetadataTags(s);
         }
@@ -276,10 +279,12 @@ public static class GameKeyNormalizer
             editionAliasMap.TryGetValue(key, out var editionAliased))
             key = editionAliased;
 
-        // Fallback for empty keys
-        if (string.IsNullOrWhiteSpace(key))
-            key = baseName.Trim().ToLowerInvariant();
-
+        // Fallback for empty keys: use deterministic per-input sentinel.
+        // F14: Do NOT re-introduce the unstripped baseName as the key —
+        // that would defeat tag-stripping and cause unrelated titles with
+        // identical tag-only content (e.g., "(USA)" vs "(EUR)" stripped by
+        // an aggressive pattern) to share a key. The sentinel embeds a
+        // hash of the original baseName so distinct inputs stay distinct.
         if (string.IsNullOrWhiteSpace(key))
             key = "__empty_key_" + ComputeStableKeySuffix(baseName);
 
@@ -290,6 +295,22 @@ public static class GameKeyNormalizer
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
         return Convert.ToHexString(bytes.AsSpan(0, 4)).ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// F21: Centralised DOS-family detection. Recognises common console-key
+    /// variants that all map to the same MS-DOS metadata-tag conventions.
+    /// </summary>
+    internal static bool IsDosFamilyConsole(string? consoleType)
+    {
+        if (string.IsNullOrWhiteSpace(consoleType))
+            return false;
+        var trimmed = consoleType.Trim();
+        return string.Equals(trimmed, "DOS", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trimmed, "MSDOS", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trimmed, "MS-DOS", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trimmed, "PC-DOS", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trimmed, "PCDOS", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeTitleVariants(string value)

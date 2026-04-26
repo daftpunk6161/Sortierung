@@ -110,12 +110,15 @@ public sealed class ConsoleDetector
     /// <summary>
     /// Detect console from keyword tags in filename (e.g. "[PS1]", "(GBA)").
     /// Uses dynamic patterns built from consoles.json keywords, with fallback to hardcoded patterns.
-    /// Returns (consoleKey, confidence=75) or null.
+    /// Confidence is sourced from <see cref="DetectionSourceExtensions.ConfidenceRating"/>
+    /// for <see cref="DetectionSource.FilenameKeyword"/> — single source of truth (F2).
     /// </summary>
     internal (string ConsoleKey, int Confidence)? DetectByKeywordDynamic(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))
             return null;
+
+        var confidence = DetectionSource.FilenameKeyword.ConfidenceRating();
 
         // Dynamic patterns from consoles.json (preferred — Single Source of Truth)
         foreach (var (pattern, key) in _keywordPatterns)
@@ -123,7 +126,7 @@ public sealed class ConsoleDetector
             try
             {
                 if (pattern.IsMatch(fileName))
-                    return (key, 75);
+                    return (key, confidence);
             }
             catch (RegexMatchTimeoutException)
             {

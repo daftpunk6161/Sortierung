@@ -1,0 +1,72 @@
+Testlauf f├╝r "C:\Code\Sortierung\src\Romulus.Tests\bin\Debug\net10.0-windows\Romulus.Tests.dll" (.NETCoreApp,Version=v10.0)
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster ├╝berein.
+[xUnit.net 00:03:55.41]     Romulus.Tests.FreshAuditRound9RedTests.F5_CrossRootDeduplicator_MustNotRecomputeScores_WhenAlreadySet [FAIL]
+  Fehler Romulus.Tests.FreshAuditRound9RedTests.F5_CrossRootDeduplicator_MustNotRecomputeScores_WhenAlreadySet [4 ms]
+  Fehlermeldung:
+   Assert.Contains() Failure: Sub-string not found
+String:    "using Romulus.Contracts.Models;\r\nusing Ro"┬À┬À┬À
+Not found: "file.RegionScore != 0"
+  Stapelverfolgung:
+     at Romulus.Tests.FreshAuditRound9RedTests.F5_CrossRootDeduplicator_MustNotRecomputeScores_WhenAlreadySet() in C:\Code\Sortierung\src\Romulus.Tests\FreshAuditRound9RedTests.cs:line 203
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:19:40.37]     Romulus.Tests.Benchmark.QualityGateTests.QualityGates_HardFail_AlwaysEnforced [FAIL]
+  Fehler Romulus.Tests.Benchmark.QualityGateTests.QualityGates_HardFail_AlwaysEnforced [1 m 28 s]
+  Fehlermeldung:
+   M6 hard-fail: 75.0000% > 5.0%
+  Stapelverfolgung:
+     at Romulus.Tests.Benchmark.QualityGateTests.QualityGates_HardFail_AlwaysEnforced() in C:\Code\Sortierung\src\Romulus.Tests\Benchmark\QualityGateTests.cs:line 125
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Standardausgabemeldungen:
+ M4  wrongMatchRate        = 0.1520%
+ M6  falseConfidenceRate   = 75.0000%
+ M7  unsafeSortRate        = 0.0000%
+ M9a gameAsJunkRate        = 0.0453%
+ M13 ambiguousMatchRate    = 4.6733%
+
+
+Der aktive Testlauf wurde abgebrochen. Grund: Der Testhostprozess ist abgest├╝rzt. : [Error] Unknown flag '--unknownflag'. Use --help for usage.
+[Error] Root directory not found: C:\Users\Cemal\AppData\Local\Temp\nonexistent_88c1f170f9f04ef4bf38a78852ca427a
+[Error] Root directory is in a protected system path: C:\WINDOWS
+[Error] Root directory is in a protected system path: C:\Program Files
+[Preflight] Voraussetzungen pruefen...
+[Preflight] OK - 1 Root(s), 86 Extension(s), Modus: DryRun
+[Scan] Scanne 1 Root-Ordner...
+[Scan] Root: {0}
+[Scan] {0}: Erfassung laeuft...
+[Scan] {0}: {1} Dateien gefunden
+[DAT] Kein Match fuer UNKNOWN-Konsole: Game (USA).zip
+[Scan] Done: 1 files in 296ms
+[FolderDedupe] Auto-dedupe: no roots detected that need folder-level deduplication
+[FolderDedupe] Preview: 0 Analyse-Ergebnis(se), PS3-Roots=0, BaseName-Roots=0
+[Quarantine] Preview-Sampling: 1/1 Kandidaten (Limit=2000)
+[Quarantine] Preview: 0 verdaechtige Datei(en) im Sample von 1 Kandidaten
+[Hardlink] NTFS-Hardlink support: 1/1 Root(s)
+[Plan] Phase: Deduplicate
+[Dedupe] Gruppiere 1 Dateien nach GameKey...
+[Dedupe] Done in 0ms: 1 groups, Keep=1, Move=0, Junk=0
+[Plan] Phase: JunkRemoval
+[Junk] Entferne Junk-Dateien...
+[Junk] 0 Junk-Datei(en) entfernt
+[Audit] Schreibe Audit-Sidecar...
+[Fertig] Pipeline done in 297ms - 1 files, 1 groups
+[Error] Invalid mode 'Delete'. Must be DryRun or Move.
+[ERROR] Run 6e871c88527941459db3e0b5444807d8 failed: System.InvalidOperationException: trashRoot must not be inside any configured root path.
+   at Romulus.Infrastructure.Orchestration.RunOptionsFactory.Create(IRunOptionsSource source, String auditPath, String reportPath) in C:\Code\Sortierung\src\Romulus.Infrastructure\Orchestration\RunOptionsFactory.cs:line 69
+   at Romulus.Api.RunManager.ExecuteWithOrchestratorAsync(RunRecord run, IFileSystem fs, IAuditStore audit, CancellationToken ct) in C:\Code\Sortierung\src\Romulus.Api\RunManager.cs:line 120
+   at Romulus.Api.RunLifecycleManager.ExecuteRunAsync(RunRecord run) in C:\Code\Sortierung\src\Romulus.Api\RunLifecycleManager.cs:line 298
+[ERROR] Run 293ec92f728e424b84d4f967800a7a47 failed: System.InvalidOperationException: Simulated pipeline failure
+   at Romulus.Tests.ApiRedPhaseTests.<>c.<Failed_Result_Error_Should_Be_StructuredObject_Issue9>b__9_0(RunRecord _, IFileSystem _, IAuditStore _, CancellationToken _) in C:\Code\Sortierung\src\Romulus.Tests\ApiRedPhaseTests.cs:line 312
+   at Romulus.Api.RunManager.<>c__DisplayClass7_0.<.ctor>b__0(RunRecord run, IFileSystem fileSystem, IAuditStore auditStore, CancellationToken cancellationToken) in C:\Code\Sortierung\src\Romulus.Api\RunManager.cs:line 47
+   at Romulus.Api.RunLifecycleManager.ExecuteRunAsync(RunRecord run) in C:\Code\Sortierung\src\Romulus.Api\RunLifecycleManager.cs:line 298
+[ERROR] Run 325f1142578f45a786e839e1e4271f39 failed: System.InvalidOperationException: Secret DB password is XYZ123!
+   at Romulus.Tests.ApiSecurityTests.<>c.<FailedRun_ErrorMessage_DoesNotLeakExceptionDetails>b__15_0(RunRecord _, IFileSystem _, IAuditStore _, CancellationToken _) in C:\Code\Sortierung\src\Romulus.Tests\ApiSecurityTests.cs:line 265
+   at Romulus.Api.RunManager.<>c__DisplayClass7_0.<.ctor>b__0(RunRecord run, IFileSystem fileSystem, IAuditStore auditStore, CancellationToken cancellationToken) in C:\Code\Sortierung\src\Romulus.Api\RunManager.cs:line 47
+   at Romulus.Api.RunLifecycleManager.ExecuteRunAsync(RunRecord run) in C:\Code\Sortierung\src\Romulus.Api\RunLifecycleManager.cs:line 298
+
+
+Fehler!      : Fehler:     2, erfolgreich:  9508, ├╝bersprungen:     0, gesamt:  9510, Dauer: 21 m 41 s - Romulus.Tests.dll (net10.0)
+Testlauf abgebrochen.

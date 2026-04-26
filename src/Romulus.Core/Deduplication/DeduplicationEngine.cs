@@ -159,7 +159,24 @@ public static class DeduplicationEngine
     {
         var consoleKey = NormalizeConsoleKey(candidate.ConsoleKey);
 
-        return $"{consoleKey}\0{candidate.GameKey}";
+        // F11/F12: For UNKNOWN console (or BIOS with UNKNOWN region — which CandidateFactory
+        // encodes as "__BIOS__UNKNOWN__..." in the GameKey) the GameKey alone cannot identify
+        // the same content: two unrelated files (different real consoles, or a name collision
+        // like "tetris") would otherwise be collapsed into one dedupe group and one would be
+        // flagged as a duplicate loser → silent data loss.
+        // Fix: when a content hash is available, append it to the group key. This keeps
+        // identical-content files (same hash from multiple roots) grouped, while distinct
+        // content stays separated. When no hash is available we cannot prove distinctness,
+        // so we keep the legacy grouping behaviour to avoid mass-segregation regressions.
+        var needsContentDiscriminator =
+            (string.Equals(consoleKey, "UNKNOWN", StringComparison.Ordinal) ||
+             (candidate.GameKey is { } gk && gk.StartsWith("__BIOS__UNKNOWN__", StringComparison.Ordinal)))
+            && !string.IsNullOrWhiteSpace(candidate.Hash);
+
+        if (!needsContentDiscriminator)
+            return $"{consoleKey}\0{candidate.GameKey}";
+
+        return $"{consoleKey}\0{candidate.GameKey}\0{candidate.Hash}";
     }
 
     private static string NormalizeConsoleKey(string? consoleKey)

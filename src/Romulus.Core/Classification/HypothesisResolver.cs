@@ -79,15 +79,18 @@ public static class HypothesisResolver
         if (hypotheses.Count == 0)
             return ConsoleDetectionResult.Unknown;
 
-        // Group by ConsoleKey and sum confidence
-        var groups = new Dictionary<string, (int TotalConfidence, int MaxSingleConfidence, List<DetectionHypothesis> Items, int MaxSourcePriority)>(
+        // Group by ConsoleKey and sum confidence.
+        // BestEvidenceTier uses Source.ToEvidenceTier() as the single source of truth
+        // for source reliability ordering (lower tier number = stronger evidence).
+        // Replaces the legacy GetWinnerPriority table (F2/F8 consolidation).
+        var groups = new Dictionary<string, (int TotalConfidence, int MaxSingleConfidence, List<DetectionHypothesis> Items, EvidenceTier BestEvidenceTier)>(
             StringComparer.OrdinalIgnoreCase);
 
         foreach (var h in hypotheses)
         {
             if (!groups.TryGetValue(h.ConsoleKey, out var group))
             {
-                group = (0, 0, new List<DetectionHypothesis>(), 0);
+                group = (0, 0, new List<DetectionHypothesis>(), EvidenceTier.Tier4_Unknown);
                 groups[h.ConsoleKey] = group;
             }
 
@@ -96,15 +99,16 @@ public static class HypothesisResolver
             if (h.Confidence > group.MaxSingleConfidence)
                 group.MaxSingleConfidence = h.Confidence;
 
-            var sourcePriority = GetWinnerPriority(h.Source);
-            if (sourcePriority > group.MaxSourcePriority)
-                group.MaxSourcePriority = sourcePriority;
+            var hypTier = h.Source.ToEvidenceTier();
+            if (hypTier < group.BestEvidenceTier)
+                group.BestEvidenceTier = hypTier;
             groups[h.ConsoleKey] = group;
         }
 
-        // Sort by winner source reliability first, then by confidence for deterministic tie-breaking.
+        // Sort by best evidence tier (ascending: Tier0 wins), then by aggregate confidence,
+        // then by max single confidence, finally alphabetical for determinism.
         var sorted = groups
-            .OrderByDescending(g => g.Value.MaxSourcePriority)
+            .OrderBy(g => g.Value.BestEvidenceTier)
             .ThenByDescending(g => g.Value.TotalConfidence)
             .ThenByDescending(g => g.Value.MaxSingleConfidence)
             .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
@@ -133,23 +137,29 @@ public static class HypothesisResolver
             {
                 var winnerHasHard = winner.Value.Items.Any(h => h.Source.IsHardEvidence());
                 var runnerHasHard = sorted[1].Value.Items.Any(h => h.Source.IsHardEvidence());
-                var winnerPriority = winner.Value.MaxSourcePriority;
-                var runnerPriority = sorted[1].Value.MaxSourcePriority;
+                var winnerTier = winner.Value.BestEvidenceTier;
+                var runnerTier = sorted[1].Value.BestEvidenceTier;
 
                 // Only AMBIGUOUS when evidence quality is comparable:
                 // both have hard evidence, or neither has hard evidence
-                // and the strongest source tier is the same on both sides.
-                if (winnerHasHard == runnerHasHard && winnerPriority == runnerPriority)
+                // and the strongest evidence tier is identical on both sides.
+                if (winnerHasHard == runnerHasHard && winnerTier == runnerTier)
                 {
                     var ratio = (double)sorted[1].Value.TotalConfidence / winner.Value.TotalConfidence;
                     if (ratio >= 0.7)
                     {
+                        // F7: Preserve hard-evidence flag when both competing
+                        // candidates have hard evidence. A hard-vs-hard
+                        // ambiguity is fundamentally different from a
+                        // soft-only ambiguity for downstream consumers
+                        // (audit, reporting, conflict-resolution UI).
+                        var preservedHardEvidence = winnerHasHard;
                         var ambiguousEvidence = new MatchEvidence
                         {
                             Level = MatchLevel.Ambiguous,
                             Reasoning = conflictDetail ?? "Ambiguous competing hypotheses.",
                             Sources = hypotheses.Select(h => h.Source.ToString()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
-                            HasHardEvidence = false,
+                            HasHardEvidence = preservedHardEvidence,
                             HasConflict = true,
                             DatVerified = false,
                             Tier = EvidenceTier.Tier4_Unknown,
@@ -158,7 +168,8 @@ public static class HypothesisResolver
 
                         return new ConsoleDetectionResult(
                             "AMBIGUOUS", 0, hypotheses, true, conflictDetail,
-                            HasHardEvidence: false, IsSoftOnly: true,
+                            HasHardEvidence: preservedHardEvidence,
+                            IsSoftOnly: !preservedHardEvidence,
                             SortDecision: SortDecision.Blocked,
                             DecisionClass: DecisionClass.Blocked,
                             MatchEvidence: ambiguousEvidence);
@@ -172,9 +183,10 @@ public static class HypothesisResolver
             .Distinct()
             .ToList();
 
+        // F8: tiebreaker uses EvidenceTier (lower = stronger), not enum ordinal.
         var primarySource = winner.Value.Items
             .OrderByDescending(h => h.Confidence)
-            .ThenByDescending(h => (int)h.Source)
+            .ThenBy(h => h.Source.ToEvidenceTier())
             .ThenBy(h => h.ConsoleKey, StringComparer.OrdinalIgnoreCase)
             .Select(h => h.Source)
             .First();
@@ -184,11 +196,17 @@ public static class HypothesisResolver
         var hasHardEvidence = winnerSources.Any(s => s.IsHardEvidence());
         var runnerHasHardEvidence = hasConflict && sorted[1].Value.Items.Any(h => h.Source.IsHardEvidence());
 
-        // Aggregate confidence: use the max single confidence from the winner.
-        var aggregateConfidence = winner.Value.MaxSingleConfidence;
-        if (winner.Value.Items.Count > 1)
+        // F20: rename from `aggregateConfidence` (misleading) to `winnerConfidence` —
+        // this value is the winner's max single confidence, possibly bonus-adjusted and capped.
+        // It is NOT a sum/aggregate of all hypotheses.
+        var winnerConfidence = winner.Value.MaxSingleConfidence;
+
+        // F16: multi-source agreement bonus only on DISTINCT sources.
+        // Two hypotheses from the same source class (e.g. two FolderName matches in nested
+        // folders) are not orthogonal evidence and must not earn the bonus.
+        if (winnerSources.Count > 1)
         {
-            aggregateConfidence = Math.Min(100, aggregateConfidence + MultiSourceAgreementBonus);
+            winnerConfidence = Math.Min(100, winnerConfidence + MultiSourceAgreementBonus);
         }
 
         // Penalize if there's a strong competing hypothesis.
@@ -197,8 +215,8 @@ public static class HypothesisResolver
         if (hasConflict)
         {
             var runnerConfidence = sorted[1].Value.MaxSingleConfidence;
-            var winnerConfidence = winner.Value.MaxSingleConfidence;
-            var confidenceDelta = winnerConfidence - runnerConfidence;
+            var winnerMax = winner.Value.MaxSingleConfidence;
+            var confidenceDelta = winnerMax - runnerConfidence;
 
             var effectivePenalty = 0;
             if (runnerConfidence >= 80)
@@ -218,7 +236,7 @@ public static class HypothesisResolver
                     : (confidenceDelta >= 10 ? 0 : 5);
             }
 
-            aggregateConfidence = Math.Max(30, aggregateConfidence - effectivePenalty);
+            winnerConfidence = Math.Max(30, winnerConfidence - effectivePenalty);
         }
         var isSoftOnly = !hasHardEvidence;
 
@@ -227,13 +245,13 @@ public static class HypothesisResolver
         // may raise confidence into Review territory.
         if (isSoftOnly)
         {
-            aggregateConfidence = Math.Min(aggregateConfidence, ComputeSoftOnlyCap(winnerSources));
+            winnerConfidence = Math.Min(winnerConfidence, ComputeSoftOnlyCap(winnerSources));
         }
 
         // Single-source cap: one signal type alone is capped per its reliability
         if (winnerSources.Count == 1)
         {
-            aggregateConfidence = Math.Min(aggregateConfidence, winnerSources[0].SingleSourceCap());
+            winnerConfidence = Math.Min(winnerConfidence, winnerSources[0].SingleSourceCap());
         }
 
         // Classify conflict type using platform family information
@@ -244,12 +262,12 @@ public static class HypothesisResolver
         }
 
         // Derive SortDecision with family-conflict awareness
-        var decisionClass = DecisionResolver.Resolve(primaryTier, hasConflict, aggregateConfidence,
+        var decisionClass = DecisionResolver.Resolve(primaryTier, hasConflict, winnerConfidence,
             datAvailable: datAvailable, conflictType: conflictType, hasHardEvidence: hasHardEvidence);
         var sortDecision = decisionClass.ToSortDecision();
 
         var matchEvidence = BuildMatchEvidence(
-            aggregateConfidence,
+            winnerConfidence,
             sortDecision,
             hasHardEvidence,
             hasConflict,
@@ -260,7 +278,7 @@ public static class HypothesisResolver
 
         return new ConsoleDetectionResult(
             winner.Key,
-            aggregateConfidence,
+            winnerConfidence,
             hypotheses,
             hasConflict,
             conflictDetail,
@@ -374,27 +392,13 @@ public static class HypothesisResolver
         _ => MatchKind.None,
     };
 
-    private static int GetWinnerPriority(DetectionSource source) => source switch
-    {
-        DetectionSource.DatHash => 5,
-        DetectionSource.DiscHeader => 4,
-        DetectionSource.CartridgeHeader => 4,
-        DetectionSource.UniqueExtension => 3,
-        DetectionSource.SerialNumber => 2,
-        DetectionSource.ArchiveContent => 2,
-        DetectionSource.FolderName => 1,
-        DetectionSource.FilenameKeyword => 1,
-        DetectionSource.AmbiguousExtension => 0,
-        _ => 0,
-    };
-
     /// <summary>
     /// Classify whether a conflict is intra-family or cross-family.
     /// Cross-family = different platform families (e.g. PS1/RedumpDisc vs Vita/Hybrid).
     /// Intra-family = same family (e.g. PS1 vs PS2, both RedumpDisc).
     /// </summary>
     internal static ConflictType ClassifyConflictType(
-        List<KeyValuePair<string, (int TotalConfidence, int MaxSingleConfidence, List<DetectionHypothesis> Items, int MaxSourcePriority)>> sortedGroups,
+        List<KeyValuePair<string, (int TotalConfidence, int MaxSingleConfidence, List<DetectionHypothesis> Items, EvidenceTier BestEvidenceTier)>> sortedGroups,
         Func<string, PlatformFamily> familyLookup)
     {
         if (sortedGroups.Count < 2)

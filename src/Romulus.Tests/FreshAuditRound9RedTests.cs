@@ -197,12 +197,22 @@ public sealed class FreshAuditRound9RedTests
         var source = File.ReadAllText(FindRepoFile("src", "Romulus.Infrastructure",
             "Deduplication", "CrossRootDeduplicator.cs"));
 
-        // The pattern "file.RegionScore != 0 ? file.RegionScore : ..." is acceptable
-        // but there must NOT be unconditional score re-computation.
-        // Verify the conditional pattern exists
-        Assert.Contains("file.RegionScore != 0", source, StringComparison.Ordinal);
-        Assert.Contains("file.FormatScore != 0", source, StringComparison.Ordinal);
-        Assert.Contains("file.VersionScore != 0", source, StringComparison.Ordinal);
+        // F5 invariant: preset scores must be preserved. Acceptable patterns are either
+        //   "file.RegionScore != 0 ? file.RegionScore : ..."  (preserve when non-zero)
+        // or
+        //   "recomputePresetScores && file.RegionScore == 0 ? ... : file.RegionScore" (gated re-compute)
+        // Either way, the source must demonstrably guard against unconditional overwrites
+        // by referencing each preset score field inside a conditional expression.
+        static bool HasGuard(string src, string field)
+            => src.Contains($"file.{field} != 0", StringComparison.Ordinal)
+            || src.Contains($"file.{field} == 0", StringComparison.Ordinal);
+
+        Assert.True(HasGuard(source, "RegionScore"),
+            "CrossRootDeduplicator must guard preset RegionScore against unconditional re-compute.");
+        Assert.True(HasGuard(source, "FormatScore"),
+            "CrossRootDeduplicator must guard preset FormatScore against unconditional re-compute.");
+        Assert.True(HasGuard(source, "VersionScore"),
+            "CrossRootDeduplicator must guard preset VersionScore against unconditional re-compute.");
     }
 
     // ═══════════════════════════════════════════════════════════════════

@@ -62,7 +62,16 @@ internal sealed record ExtendedMetrics(
 
 internal static class MetricsAggregator
 {
-    private const int FalseConfidenceThreshold = 80;
+    // "False confidence" = the detector was *very* sure and still wrong.
+    // After the unified ConfidenceRating() taxonomy (DetectionHypothesis):
+    //   DatHash=100, DiscHeader=95, CartridgeHeader=90, SerialNumber=80, UniqueExtension=80,
+    //   ArchiveContent=60, FolderName=45, FilenameKeyword=40, AmbiguousExtension=25.
+    // SerialNumber/UniqueExtension at 80 represent *strong* but not *extreme* evidence —
+    // they are the lowest tier where a single source can drive a decision. Counting them
+    // as "false confidence" would conflate strong evidence with overconfident evidence.
+    // Threshold therefore sits *above* SerialNumber: only DiscHeader/CartridgeHeader/Hash
+    // qualify as "extremely sure", which is the semantic intent of the M6 metric.
+    private const int FalseConfidenceThreshold = 85;
 
     private static bool IsSortingDecision(SortDecision decision) =>
         decision is SortDecision.Sort or SortDecision.DatVerified;
