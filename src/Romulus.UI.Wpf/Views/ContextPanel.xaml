@@ -8,6 +8,7 @@
           Padding="14,14,14,12">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <StackPanel>
+        <!-- ═════ HEADER: Inspector title + close ════════════════════════ -->
         <DockPanel Margin="0,0,0,12">
           <Button DockPanel.Dock="Right" Content="✕" Padding="6,2"
                   Command="{Binding Shell.ToggleContextWingCommand}"
@@ -21,29 +22,19 @@
           </StackPanel>
         </DockPanel>
 
+        <!-- ═════ KOMPAKT-CARD: Workspace + Status (vereint) ═════════════ -->
+        <!-- C1: status detail is allowed only in CommandBar + Context Wing -->
         <Border Style="{StaticResource SectionCard}">
           <StackPanel>
-            <TextBlock Text="Arbeitsbereich" FontWeight="SemiBold"
-                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
             <TextBlock Text="{Binding Shell.CurrentWorkspaceTitle}"
                        Foreground="{DynamicResource BrushTextPrimary}" FontSize="16" FontWeight="SemiBold"/>
             <TextBlock Text="{Binding Shell.CurrentWorkspaceSection}"
                        Style="{StaticResource CaptionText}" Margin="0,2,0,10"/>
-            <TextBlock Text="{Binding SelectedWorkflowName}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
-            <TextBlock Text="{Binding SelectedRunProfileName}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
-            <TextBlock Foreground="{DynamicResource BrushTextMuted}">
-              <Run Text="Modus: "/><Run Text="{Binding CurrentUiModeLabel}"/>
-            </TextBlock>
-          </StackPanel>
-        </Border>
 
-        <!-- C1: status detail is allowed only in CommandBar + Context Wing -->
-        <Border Style="{StaticResource SectionCard}">
-          <StackPanel>
-            <TextBlock Text="Status" FontWeight="SemiBold"
-                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
+            <!-- Status pill: glyph + dot + label/runtime -->
             <Border Style="{StaticResource AccentHeaderChip}"
-                    AutomationProperties.LiveSetting="Polite">
+                    AutomationProperties.LiveSetting="Polite"
+                    Margin="0,0,0,10">
               <StackPanel Orientation="Horizontal">
                 <TextBlock Text="{Binding ReadyStatusLevel, Converter={StaticResource StatusToGlyph}}"
                            FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"
@@ -52,11 +43,24 @@
                         CornerRadius="2"
                         Background="{Binding ReadyStatusLevel, Converter={StaticResource StatusToBrush}}"/>
                 <StackPanel>
-                  <TextBlock Text="{Binding StatusReady}" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold"/>
-                  <TextBlock Text="{Binding StatusRuntime}" Style="{StaticResource CaptionText}"/>
+                  <TextBlock Text="{Binding StatusReady, FallbackValue=–, TargetNullValue=–}"
+                             Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding StatusRuntime, FallbackValue=–, TargetNullValue=–}"
+                             Style="{StaticResource CaptionText}"/>
                 </StackPanel>
               </StackPanel>
             </Border>
+
+            <!-- Profile / Workflow / Modus -->
+            <TextBlock Foreground="{DynamicResource BrushTextMuted}" FontSize="11">
+              <Run Text="Workflow: "/><Run Text="{Binding SelectedWorkflowName, FallbackValue=–}" Foreground="{DynamicResource BrushTextPrimary}"/>
+            </TextBlock>
+            <TextBlock Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0">
+              <Run Text="Profil: "/><Run Text="{Binding SelectedRunProfileName, FallbackValue=–}" Foreground="{DynamicResource BrushTextPrimary}"/>
+            </TextBlock>
+            <TextBlock Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0">
+              <Run Text="Modus: "/><Run Text="{Binding CurrentUiModeLabel, FallbackValue=–}" Foreground="{DynamicResource BrushTextPrimary}"/>
+            </TextBlock>
           </StackPanel>
         </Border>
 
@@ -99,19 +103,37 @@
           </StackPanel>
         </Border>
 
+        <!-- ═════ CONTEXT-CARDS: nur eine zur Zeit, abhaengig von SubTab ═══ -->
+
         <!-- Mission Control / Dashboard -->
         <Border Style="{StaticResource SectionCard}"
                 Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Dashboard}">
           <StackPanel>
             <TextBlock Text="Naechster sinnvoller Schritt" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
-            <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
-              <Run Text="System Health: "/><Run Text="{Binding Run.HealthScore}"/>
-            </TextBlock>
-            <TextBlock Text="{Binding Loc[Context.StartHint1]}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
-            <TextBlock Text="{Binding Loc[Context.StartHint2]}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,8"/>
-            <Button Content="{Binding Loc[Context.RunPreview]}" Command="{Binding QuickPreviewCommand}"
-                    AutomationProperties.Name="{Binding Loc[Context.RunPreview]}"/>
+
+            <!-- Empty-state: noch keine Run-Daten -->
+            <StackPanel Visibility="{Binding Run.HasRunData, Converter={StaticResource InverseBoolToVis}}">
+              <TextBlock Text="Noch kein Run abgeschlossen."
+                         Style="{StaticResource CaptionText}" Margin="0,0,0,4"/>
+              <TextBlock Text="{Binding Loc[Context.StartHint1]}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Loc[Context.StartHint2]}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+              <Button Content="{Binding Loc[Context.RunPreview]}" Command="{Binding QuickPreviewCommand}"
+                      AutomationProperties.Name="{Binding Loc[Context.RunPreview]}"/>
+            </StackPanel>
+
+            <!-- Run-Daten vorhanden -->
+            <StackPanel Visibility="{Binding Run.HasRunData, Converter={StaticResource BoolToVis}}">
+              <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
+                <Run Text="System Health: "/><Run Text="{Binding Run.HealthScore, FallbackValue=–}"/>
+              </TextBlock>
+              <TextBlock Foreground="{DynamicResource BrushTextMuted}" Style="{StaticResource CaptionText}" Margin="0,0,0,8">
+                <Run Text="Spiele: "/><Run Text="{Binding Run.DashGames, FallbackValue=–}"/>
+                <Run Text="  ·  Dauer: "/><Run Text="{Binding Run.DashDuration, FallbackValue=00:00}"/>
+              </TextBlock>
+              <Button Content="{Binding Loc[Report.OpenReportLog]}" Command="{Binding OpenReportCommand}"
+                      AutomationProperties.Name="{Binding Loc[Report.OpenReportLog]}"/>
+            </StackPanel>
           </StackPanel>
         </Border>
 
@@ -121,13 +143,22 @@
           <StackPanel>
             <TextBlock Text="Root-Detail" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
-            <TextBlock Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap">
-              <Run Text="Ausgewaehlter Root: "/>
-              <Run Text="{Binding SelectedRoot}"/>
-            </TextBlock>
-            <TextBlock Foreground="{DynamicResource BrushTextMuted}" Style="{StaticResource CaptionText}" Margin="0,6,0,0">
-              <Run Text="Konfigurierte Roots: "/><Run Text="{Binding Roots.Count}"/>
-            </TextBlock>
+
+            <!-- Empty-state -->
+            <TextBlock Text="Noch keine Roots konfiguriert."
+                       Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                       Visibility="{Binding Roots.Count, Converter={StaticResource CountToInverseVis}, FallbackValue=Visible}"/>
+
+            <!-- Mit Roots -->
+            <StackPanel Visibility="{Binding Roots.Count, Converter={StaticResource CountToVis}, FallbackValue=Collapsed}">
+              <TextBlock Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap">
+                <Run Text="Ausgewaehlt: "/>
+                <Run Text="{Binding SelectedRoot, FallbackValue=–, TargetNullValue=–}"/>
+              </TextBlock>
+              <TextBlock Foreground="{DynamicResource BrushTextMuted}" Style="{StaticResource CaptionText}" Margin="0,6,0,0">
+                <Run Text="Konfigurierte Roots: "/><Run Text="{Binding Roots.Count}"/>
+              </TextBlock>
+            </StackPanel>
           </StackPanel>
         </Border>
 
@@ -137,24 +168,50 @@
           <StackPanel>
             <TextBlock Text="Score-Breakdown" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
-            <Expander Header="Run-Score aufklappen" IsExpanded="False">
-              <StackPanel Margin="0,8,0,0">
-                <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
-                  <Run Text="Winners: "/><Run Text="{Binding Run.KeepCount}"/>
-                </TextBlock>
-                <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
-                  <Run Text="Dupes: "/><Run Text="{Binding Run.MoveCount}"/>
-                </TextBlock>
-                <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,8">
-                  <Run Text="Junk: "/><Run Text="{Binding Run.JunkCount}"/>
-                </TextBlock>
-                <ProgressBar Minimum="0" Maximum="1" Value="{Binding Run.KeepFraction}" Height="8" Margin="0,0,0,4"/>
-                <ProgressBar Minimum="0" Maximum="1" Value="{Binding Run.MoveFraction}" Height="8" Margin="0,0,0,4"/>
-                <ProgressBar Minimum="0" Maximum="1" Value="{Binding Run.JunkFraction}" Height="8"/>
-              </StackPanel>
-            </Expander>
-            <Button Content="{Binding Loc[Report.OpenReportLog]}" Command="{Binding OpenReportCommand}" Margin="0,10,0,0"
-                    AutomationProperties.Name="{Binding Loc[Report.OpenReportLog]}"/>
+
+            <!-- Empty-state -->
+            <TextBlock Text="Noch kein Run-Ergebnis verfuegbar."
+                       Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                       Visibility="{Binding Run.HasRunData, Converter={StaticResource InverseBoolToVis}}"/>
+
+            <!-- Mit Daten -->
+            <StackPanel Visibility="{Binding Run.HasRunData, Converter={StaticResource BoolToVis}}">
+              <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Winners" Foreground="{DynamicResource BrushTextPrimary}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Run.KeepCount, FallbackValue=0}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource BrushTextPrimary}"/>
+              </Grid>
+              <ProgressBar Minimum="0" Maximum="1" Value="{Binding Run.KeepFraction, FallbackValue=0}" Height="6" Margin="0,0,0,8"/>
+
+              <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Dupes" Foreground="{DynamicResource BrushTextPrimary}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Run.MoveCount, FallbackValue=0}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource BrushTextPrimary}"/>
+              </Grid>
+              <ProgressBar Minimum="0" Maximum="1" Value="{Binding Run.MoveFraction, FallbackValue=0}" Height="6" Margin="0,0,0,8"/>
+
+              <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Junk" Foreground="{DynamicResource BrushTextPrimary}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Run.JunkCount, FallbackValue=0}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource BrushTextPrimary}"/>
+              </Grid>
+              <ProgressBar Minimum="0" Maximum="1" Value="{Binding Run.JunkFraction, FallbackValue=0}" Height="6" Margin="0,0,0,10"/>
+
+              <Button Content="{Binding Loc[Report.OpenReportLog]}" Command="{Binding OpenReportCommand}"
+                      AutomationProperties.Name="{Binding Loc[Report.OpenReportLog]}"/>
+            </StackPanel>
           </StackPanel>
         </Border>
 
@@ -164,17 +221,28 @@
           <StackPanel>
             <TextBlock Text="Winner-Vergleich" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
-            <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
-              <Run Text="Winner insgesamt: "/><Run Text="{Binding Run.DashWinners}"/>
-            </TextBlock>
-            <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
-              <Run Text="Dupe-Gruppen: "/><Run Text="{Binding Run.DedupeGroupItems.Count}"/>
-            </TextBlock>
+
+            <!-- Empty-state -->
+            <TextBlock Text="Noch keine Entscheidungen vorhanden."
+                       Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                       Visibility="{Binding Run.HasRunData, Converter={StaticResource InverseBoolToVis}}"/>
+
+            <!-- Mit Daten -->
+            <StackPanel Visibility="{Binding Run.HasRunData, Converter={StaticResource BoolToVis}}">
+              <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
+                <Run Text="Winner insgesamt: "/><Run Text="{Binding Run.DashWinners, FallbackValue=–}" FontWeight="SemiBold"/>
+              </TextBlock>
+              <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10">
+                <Run Text="Dupe-Gruppen: "/><Run Text="{Binding Run.DedupeGroupItems.Count, FallbackValue=0}" FontWeight="SemiBold"/>
+              </TextBlock>
+            </StackPanel>
+
+            <!-- Status-Legende: immer sichtbar als Referenz -->
             <TextBlock Text="Status-Legende" FontWeight="SemiBold"
-                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,8,0,6"/>
-            <TextBlock Text="Clear: eindeutiger Winner" Style="{StaticResource CaptionText}"/>
-            <TextBlock Text="Review: manuelle Pruefung empfohlen" Style="{StaticResource CaptionText}"/>
-            <TextBlock Text="Blocked/Unknown: keine sichere Auto-Entscheidung" Style="{StaticResource CaptionText}"/>
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,4,0,6"/>
+            <TextBlock Text="Clear · eindeutiger Winner" Style="{StaticResource CaptionText}"/>
+            <TextBlock Text="Review · manuelle Pruefung empfohlen" Style="{StaticResource CaptionText}"/>
+            <TextBlock Text="Blocked / Unknown · keine Auto-Entscheidung" Style="{StaticResource CaptionText}"/>
           </StackPanel>
         </Border>
 
@@ -184,17 +252,25 @@
           <StackPanel>
             <TextBlock Text="Safety-Detail" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
-            <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
-              <Run Text="Blockiert: "/><Run Text="{Binding SafetyBlockedCount}"/>
-            </TextBlock>
-            <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
-              <Run Text="Review: "/><Run Text="{Binding SafetyReviewCount}"/>
-            </TextBlock>
-            <TextBlock Foreground="{DynamicResource BrushTextPrimary}">
-              <Run Text="Unknown: "/><Run Text="{Binding SafetyUnknownCount}"/>
-            </TextBlock>
-            <TextBlock Text="Empfehlung: erst Decisions pruefen, dann Move bestaetigen."
-                       Style="{StaticResource CaptionText}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+
+            <!-- Empty-state -->
+            <TextBlock Text="Noch kein Safety-Ergebnis verfuegbar."
+                       Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                       Visibility="{Binding Run.HasRunData, Converter={StaticResource InverseBoolToVis}}"/>
+
+            <StackPanel Visibility="{Binding Run.HasRunData, Converter={StaticResource BoolToVis}}">
+              <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
+                <Run Text="Blockiert: "/><Run Text="{Binding SafetyBlockedCount, FallbackValue=0}" FontWeight="SemiBold"/>
+              </TextBlock>
+              <TextBlock Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4">
+                <Run Text="Review: "/><Run Text="{Binding SafetyReviewCount, FallbackValue=0}" FontWeight="SemiBold"/>
+              </TextBlock>
+              <TextBlock Foreground="{DynamicResource BrushTextPrimary}">
+                <Run Text="Unknown: "/><Run Text="{Binding SafetyUnknownCount, FallbackValue=0}" FontWeight="SemiBold"/>
+              </TextBlock>
+              <TextBlock Text="Empfehlung: erst Decisions pruefen, dann Move bestaetigen."
+                         Style="{StaticResource CaptionText}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
           </StackPanel>
         </Border>
 
@@ -222,8 +298,8 @@
           <StackPanel>
             <TextBlock Text="Conversion-Context" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
-            <TextBlock Text="Flow: Preview -> Review -> Execute" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
-            <TextBlock Text="Risiko: Source-Dateien werden erst nach erfolgreicher Verifikation entfernt."
+            <TextBlock Text="Flow: Preview → Review → Execute" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
+            <TextBlock Text="Source-Dateien werden erst nach erfolgreicher Verifikation entfernt."
                        Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10"/>
             <WrapPanel>
               <Button Content="Preview" Command="{Binding QuickPreviewCommand}" Margin="0,0,6,6"/>
@@ -245,19 +321,47 @@
                        Style="{StaticResource CaptionText}" Margin="0,0,0,6"
                        Visibility="{Binding Tools.IsToolDocOpen, Converter={StaticResource BoolToVis}}"/>
             <TextBlock Text="Waehle im Tool-Katalog ein Werkzeug und oeffne die Doku (Info-Button)."
-                       Style="{StaticResource CaptionText}"
+                       Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                        Visibility="{Binding Tools.IsToolDocOpen, Converter={StaticResource InverseBoolToVis}}"/>
             <Button Content="{Binding Loc[Tools.OpenCatalog]}" Command="{Binding GoToToolsCommand}" Margin="0,8,0,0"
                     AutomationProperties.Name="{Binding Loc[Tools.OpenCatalog]}"/>
           </StackPanel>
         </Border>
 
-        <!-- Global safety hint -->
+        <!-- System / Appearance -->
+        <Border Style="{StaticResource SectionCard}"
+                Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Appearance}">
+          <StackPanel>
+            <TextBlock Text="Darstellung" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
+            <TextBlock Foreground="{DynamicResource BrushTextMuted}" FontSize="11">
+              <Run Text="Theme: "/><Run Text="{Binding CurrentThemeName, FallbackValue=–}" Foreground="{DynamicResource BrushTextPrimary}"/>
+            </TextBlock>
+            <TextBlock Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="0,4,0,0">
+              <Run Text="Modus: "/><Run Text="{Binding CurrentUiModeLabel, FallbackValue=–}" Foreground="{DynamicResource BrushTextPrimary}"/>
+            </TextBlock>
+            <TextBlock Text="Aenderungen werden sofort angewendet und in den Settings gespeichert."
+                       Style="{StaticResource CaptionText}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Border>
+
+        <!-- System / About -->
+        <Border Style="{StaticResource SectionCard}"
+                Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=About}">
+          <StackPanel>
+            <TextBlock Text="Audit &amp; System" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
+            <TextBlock Text="Hier findest du Build-Info, Lizenz, Audit-Logs und System-Health-Checks."
+                       Style="{StaticResource CaptionText}" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Border>
+
+        <!-- ═════ FOOTER: Move-Sicherheit (immer sichtbar) ═══════════════ -->
         <Border Style="{StaticResource SectionCard}">
           <StackPanel>
             <TextBlock Text="Move-Sicherheit" FontWeight="SemiBold"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8"/>
-            <TextBlock Text="{Binding MoveApplyGateText}" TextWrapping="Wrap"
+            <TextBlock Text="{Binding MoveApplyGateText, FallbackValue=Standard: Move zu Trash mit Undo.}" TextWrapping="Wrap"
                        Foreground="{DynamicResource BrushTextPrimary}" FontSize="12"/>
           </StackPanel>
         </Border>

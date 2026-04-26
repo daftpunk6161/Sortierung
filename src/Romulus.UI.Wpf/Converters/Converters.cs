@@ -386,3 +386,13 @@ public sealed class IntToVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+
+/// <summary>Inverse of IntToVisibilityConverter: int == 0 (or non-int) -> Visible, else Collapsed. Used for empty-state hints.</summary>
+public sealed class InverseIntToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is int i and > 0 ? Visibility.Collapsed : Visibility.Visible;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}

@@ -168,30 +168,30 @@
 
 Die Sanierung gilt als abgeschlossen, wenn alle folgenden Punkte erfuellt sind:
 
-- [x] **DoD-1** Keine Source-Spiegel-Tests mehr (`File.ReadAllText("*.cs")` + `Assert.Contains/Matches/DoesNotContain`) ausser dokumentierten Sonderfaelle. _(Verbleibende 13 Treffer sind alle XAML/MVVM-Bindungs-Vertragspruefungen in `WpfProductizationTests.cs` (12) + `GuiViewModelTests.AccessibilityAndRedTests.cs` (1) und gelten als dokumentierte Sonderfaelle: sie validieren dass Resource-Keys, DynamicResource-Bindings und ICommand-Properties existieren \u2013 ein WPF-Runtime-Verhaltenstest dafuer braucht STA-Thread + Theme-Dictionary-Loading und ist im Unit-Test-Kontext fragiler als der Vertragstest.)_\n
-- [x] **DoD-2** Keine `DoesNotThrow`-/`Record.Exception \u2192 Assert.Null(ex)`-Tests ohne fachliche Folgeassertion. _(Restliche `*_DoesNotThrow`-Namen wurden geprueft und entweder mit Verhaltensassertion versehen (`Normalize_WhenTagPatternTimesOut_StillProducesNonEmptyKey`, `SEC002_PreflightToIdle_TransitionsToIdleState`, `CancelCommand_MultipleCalls_StaysCancelledAndDoesNotResetState`, `ValidateRequiredFiles_ValidData_PassesWithoutException`, `GetDatIndex_MalformedXml_ReturnsEmptyIndexAndCountsZero`, `ResolveDataDir_ReturnsExistingNonEmptyDirectory`) oder hatten bereits eine Folgeassertion (`ValidTransition_DoesNotThrow` -> `Assert.Equal(to, vm.CurrentRunState)`, `Move_SetMemberRollbackRestoreFailure_DoesNotThrowAndCountsFailure` -> `failures`-Count, `BuildSummary_*_DoesNotThrow*` -> Summary-Werte).)_\n
-- [x] **DoD-3** Keine Performance-Smokes in der Unit-Suite (Zeitgrenzen leben in `benchmark/`). _(Einziger verbleibender Treffer `SettingsFileAccessTests.cs:36` ist Vertragspruefung des `totalTimeoutMs`-Parameters und in Block-A-Anhang explizit als \u201ebewusst nicht angefasst\u201c dokumentiert.)_\n
-- [x] **DoD-4** Alle Tests aus \u00a73.1 entfernt, alle Tests aus \u00a73.2 umgebaut. _(Siehe Block-A-Diff-Anhang: ~95 Tests entfernt, ~20 umgebaut, 8 Perf-Smokes entfernt.)_\n
-- [x] **DoD-5** Alle neuen Tests aus \u00a74 (N1\u2013N15) gruen und deterministisch.\n
-- [x] **DoD-6** Refactors R1\u2013R6 umgesetzt; R7 entschieden (umgesetzt oder explizit verworfen). _(R1\u2013R6 erledigt via Block D1\u2013D6 + R3-Komplettierung; R7 explizit verworfen, siehe \u00a75.)_\n
-- [ ] **DoD-7** Test-Ordnerstruktur nach Domaenen umgesetzt (Block E1). _(Deferred wie Block E1; siehe Block-E-Anhang. Fuer Release nicht kritisch, hoher Diff-Churn ohne Verhaltensaenderung.)_\n
+- [x] **DoD-1** Keine Source-Spiegel-Tests mehr (`File.ReadAllText("*.cs")` + `Assert.Contains/Matches/DoesNotContain`) ausser dokumentierten Sonderfaelle. _(Verbleibende 13 Treffer sind alle XAML/MVVM-Bindungs-Vertragspruefungen in `WpfProductizationTests.cs` (12) + `GuiViewModelTests.AccessibilityAndRedTests.cs` (1) und gelten als dokumentierte Sonderfaelle: sie validieren dass Resource-Keys, DynamicResource-Bindings und ICommand-Properties existieren \u2013 ein WPF-Runtime-Verhaltenstest dafuer braucht STA-Thread + Theme-Dictionary-Loading und ist im Unit-Test-Kontext fragiler als der Vertragstest.)
+- [x] **DoD-2** Keine `DoesNotThrow`-/`Record.Exception \u2192 Assert.Null(ex)`-Tests ohne fachliche Folgeassertion. _(Restliche `*_DoesNotThrow`-Namen wurden geprueft und entweder mit Verhaltensassertion versehen (`Normalize_WhenTagPatternTimesOut_StillProducesNonEmptyKey`, `SEC002_PreflightToIdle_TransitionsToIdleState`, `CancelCommand_MultipleCalls_StaysCancelledAndDoesNotResetState`, `ValidateRequiredFiles_ValidData_PassesWithoutException`, `GetDatIndex_MalformedXml_ReturnsEmptyIndexAndCountsZero`, `ResolveDataDir_ReturnsExistingNonEmptyDirectory`) oder hatten bereits eine Folgeassertion (`ValidTransition_DoesNotThrow` -> `Assert.Equal(to, vm.CurrentRunState)`, `Move_SetMemberRollbackRestoreFailure_DoesNotThrowAndCountsFailure` -> `failures`-Count, `BuildSummary_*_DoesNotThrow*` -> Summary-Werte).)
+- [x] **DoD-3** Keine Performance-Smokes in der Unit-Suite (Zeitgrenzen leben in `benchmark/`). _(Einziger verbleibender Treffer `SettingsFileAccessTests.cs:36` ist Vertragspruefung des `totalTimeoutMs`-Parameters und in Block-A-Anhang explizit als \u201ebewusst nicht angefasst\u201c dokumentiert.)
+- [x] **DoD-4** Alle Tests aus \u00a73.1 entfernt, alle Tests aus \u00a73.2 umgebaut. _(Siehe Block-A-Diff-Anhang: ~95 Tests entfernt, ~20 umgebaut, 8 Perf-Smokes entfernt.)
+- [x] **DoD-5** Alle neuen Tests aus \u00a74 (N1\u2013N15) gruen und deterministisch.
+- [x] **DoD-6** Refactors R1\u2013R6 umgesetzt; R7 entschieden (umgesetzt oder explizit verworfen). _(R1\u2013R6 erledigt via Block D1\u2013D6 + R3-Komplettierung; R7 explizit verworfen, siehe \u00a75.)
+- [ ] **DoD-7** Test-Ordnerstruktur nach Domaenen umgesetzt (Block E1). _(Deferred wie Block E1; siehe Block-E-Anhang. Fuer Release nicht kritisch, hoher Diff-Churn ohne Verhaltensaenderung.)
 - [ ] **DoD-8** Gott-Testdateien (Block E2) gesplittet. _(Deferred wie Block E2; siehe Block-E-Anhang.)_\n- 
-- [x] **DoD-9** Build gruen, alle Test-Stages (`unit`, `integration`, `e2e`) gruen. _(Verifiziert via `dotnet build src/Romulus.sln` (0 Warn / 0 Err) + `dotnet test src/Romulus.Tests/Romulus.Tests.csproj` Komplettlauf der Solution-Tests \u2013 siehe Section-5+6-Diff-Anhang am Ende des Dokuments.)_\n
-- [x] **DoD-10** Benchmark-Gates (`tests: benchmark gate`) gruen. _(Kein bestehender Benchmark-Gate-Bruch identifiziert; Section-5-Refactors aendern keine Benchmark-Pfade. Status zur Sicherheit im Anhang dokumentiert.)_\n
-- [x] **DoD-11** Kerninvarianten dokumentiert (kurze Liste mit Test-Referenz):\n
-  - [x] Source-Persistence in Conversion \u2192 [`Conversion/SourcePreservationInvariantTests.cs`](../../src/Romulus.Tests/Conversion/SourcePreservationInvariantTests.cs) (7 Tests)\n  
-  - [x] Move/Rollback Round-Trip \u2192 [`Audit/MoveRollbackRoundTripTests.cs`](../../src/Romulus.Tests/Audit/MoveRollbackRoundTripTests.cs) (2 Tests)\n  
-  - [x] Move-Outside-Roots \u2192 [`Safety/MoveOutsideRootsPropertyTests.cs`](../../src/Romulus.Tests/Safety/MoveOutsideRootsPropertyTests.cs) (7 Tests) + Validator [`TestFixtures/RootBoundaryValidator.cs`](../../src/Romulus.Tests/TestFixtures/RootBoundaryValidator.cs)\n
+- [x] **DoD-9** Build gruen, alle Test-Stages (`unit`, `integration`, `e2e`) gruen. _(Verifiziert via `dotnet build src/Romulus.sln` (0 Warn / 0 Err) + `dotnet test src/Romulus.Tests/Romulus.Tests.csproj` Komplettlauf der Solution-Tests \u2013 siehe Section-5+6-Diff-Anhang am Ende des Dokuments.)
+- [x] **DoD-10** Benchmark-Gates (`tests: benchmark gate`) gruen. _(Kein bestehender Benchmark-Gate-Bruch identifiziert; Section-5-Refactors aendern keine Benchmark-Pfade. Status zur Sicherheit im Anhang dokumentiert.)
+- [x] **DoD-11** Kerninvarianten dokumentiert (kurze Liste mit Test-Referenz):
+  - [x] Source-Persistence in Conversion \u2192 [`Conversion/SourcePreservationInvariantTests.cs`](../../src/Romulus.Tests/Conversion/SourcePreservationInvariantTests.cs) (7 Tests)
+  - [x] Move/Rollback Round-Trip \u2192 [`Audit/MoveRollbackRoundTripTests.cs`](../../src/Romulus.Tests/Audit/MoveRollbackRoundTripTests.cs) (2 Tests)
+  - [x] Move-Outside-Roots \u2192 [`Safety/MoveOutsideRootsPropertyTests.cs`](../../src/Romulus.Tests/Safety/MoveOutsideRootsPropertyTests.cs) (7 Tests) + Validator [`TestFixtures/RootBoundaryValidator.cs`](../../src/Romulus.Tests/TestFixtures/RootBoundaryValidator.cs)
   - [x] Multi-Disc/Arcade/BIOS Set-Integritaet \u2192 [`Sorting/MultiDiscSetIntegrityTests.cs`](../../src/Romulus.Tests/Sorting/MultiDiscSetIntegrityTests.cs), [`Sorting/ArcadeSetIntegrityTests.cs`](../../src/Romulus.Tests/Sorting/ArcadeSetIntegrityTests.cs), [`Sorting/BiosEndToEndTests.cs`](../../src/Romulus.Tests/Sorting/BiosEndToEndTests.cs)
-  - [x] Cross-Console-DAT-Policy \u2192 [`Recognition/CrossConsoleDatPolicyTests.cs`](../../src/Romulus.Tests/Recognition/CrossConsoleDatPolicyTests.cs) (3 Tests) + Container-Stage in [`EnrichmentPipelinePhaseAuditPhase3And4Tests.cs`](../../src/Romulus.Tests/EnrichmentPipelinePhaseAuditPhase3And4Tests.cs)\n  
-  - [x] EntryPoint-Paritaet (Counts + Reasons) \u2192 [`EntryPointParity/DecisionReasonParityTests.cs`](../../src/Romulus.Tests/EntryPointParity/DecisionReasonParityTests.cs), [`EntryPointParity/FailedStateParityTests.cs`](../../src/Romulus.Tests/EntryPointParity/FailedStateParityTests.cs), [`EntryPointParity/UnknownReviewBlockedRoutingTests.cs`](../../src/Romulus.Tests/EntryPointParity/UnknownReviewBlockedRoutingTests.cs), Helper [`TestFixtures/RunResultProjection.cs`](../../src/Romulus.Tests/TestFixtures/RunResultProjection.cs)\n  
-  - [x] Determinismus (zentral) \u2192 [`Determinism/RunDeterminismPropertyTests.cs`](../../src/Romulus.Tests/Determinism/RunDeterminismPropertyTests.cs) (1 Test, 25 Iterationen)\n  
-  - [x] Cancellation-Datenintegritaet \u2192 [`Audit/CancellationDataIntegrityTests.cs`](../../src/Romulus.Tests/Audit/CancellationDataIntegrityTests.cs) (2 Tests)\n  
-  - [x] Audit-Sidecar Round-Trip \u2192 [`Audit/AuditSidecarRoundTripTests.cs`](../../src/Romulus.Tests/Audit/AuditSidecarRoundTripTests.cs) (3 Tests)\n- 
-- [x] **DoD-12** Diff-Report: Anzahl entfernter, umgebauter, neu hinzugefuegter Tests dokumentiert; Netto-Anzahl Tests darf sinken. _(Block-A-, Block-B-, Block-C- und Section-5/6-Diff-Anhaenge enthalten alle drei Zaehler. Netto: ~95 entfernt, ~20+6 (DoD-2-Korrekturen) umgebaut, 35+13+7 (R3-Doubles) neu \u2192 Netto-Saldo deutlich negativ wie gefordert.)_\n
-- [x] **DoD-13** Kein einziger Test markiert mit `Skip = "..."` ohne Issue-Referenz. _(Repository-weite Pruefung: 0 Treffer fuer `Skip\\s*=\\s*"` im gesamten Tests-Projekt.)_\n
-- [x] **DoD-14** Keine neue Schattenlogik / keine doppelte Result-/Projection-Wahrheit fuer Tests eingefuehrt. _(Block-D-Fixtures sind dokumentiert als duenne Wrapper um Produktionstypen (`PipelineContext`, `FileSystemAdapter`, `AuditCsvStore`, `RomCandidate`) ohne fachliche Logik. R7 wurde explizit verworfen, um keine Test-only Trace-Tokens in den Conversion-Pfad zu zementieren. R3 ersetzt Inline-Doubles 1:1 ohne neue Behavior-Surface.)_\n
-- [x] **DoD-15** Plan-Datei selbst final reviewed und alle Checkboxen abgehakt. _(Reviewed; verbleibende offene Boxen sind ausschliesslich Block E1/E2/E3 (DoD-7/DoD-8) und mit Begruendung deferred.)_
+  - [x] Cross-Console-DAT-Policy \u2192 [`Recognition/CrossConsoleDatPolicyTests.cs`](../../src/Romulus.Tests/Recognition/CrossConsoleDatPolicyTests.cs) (3 Tests) + Container-Stage in [`EnrichmentPipelinePhaseAuditPhase3And4Tests.cs`](../../src/Romulus.Tests/EnrichmentPipelinePhaseAuditPhase3And4Tests.cs)
+  - [x] EntryPoint-Paritaet (Counts + Reasons) \u2192 [`EntryPointParity/DecisionReasonParityTests.cs`](../../src/Romulus.Tests/EntryPointParity/DecisionReasonParityTests.cs), [`EntryPointParity/FailedStateParityTests.cs`](../../src/Romulus.Tests/EntryPointParity/FailedStateParityTests.cs), [`EntryPointParity/UnknownReviewBlockedRoutingTests.cs`](../../src/Romulus.Tests/EntryPointParity/UnknownReviewBlockedRoutingTests.cs), Helper [`TestFixtures/RunResultProjection.cs`](../../src/Romulus.Tests/TestFixtures/RunResultProjection.cs)
+  - [x] Determinismus (zentral) \u2192 [`Determinism/RunDeterminismPropertyTests.cs`](../../src/Romulus.Tests/Determinism/RunDeterminismPropertyTests.cs) (1 Test, 25 Iterationen)
+  - [x] Cancellation-Datenintegritaet \u2192 [`Audit/CancellationDataIntegrityTests.cs`](../../src/Romulus.Tests/Audit/CancellationDataIntegrityTests.cs) (2 Tests)
+  - [x] Audit-Sidecar Round-Trip \u2192 [`Audit/AuditSidecarRoundTripTests.cs`](../../src/Romulus.Tests/Audit/AuditSidecarRoundTripTests.cs) (3 Tests)
+- [x] **DoD-12** Diff-Report: Anzahl entfernter, umgebauter, neu hinzugefuegter Tests dokumentiert; Netto-Anzahl Tests darf sinken. _(Block-A-, Block-B-, Block-C- und Section-5/6-Diff-Anhaenge enthalten alle drei Zaehler. Netto: ~95 entfernt, ~20+6 (DoD-2-Korrekturen) umgebaut, 35+13+7 (R3-Doubles) neu \u2192 Netto-Saldo deutlich negativ wie gefordert.)
+- [x] **DoD-13** Kein einziger Test markiert mit `Skip = "..."` ohne Issue-Referenz. _(Repository-weite Pruefung: 0 Treffer fuer `Skip\\s*=\\s*"` im gesamten Tests-Projekt.)
+- [x] **DoD-14** Keine neue Schattenlogik / keine doppelte Result-/Projection-Wahrheit fuer Tests eingefuehrt. _(Block-D-Fixtures sind dokumentiert als duenne Wrapper um Produktionstypen (`PipelineContext`, `FileSystemAdapter`, `AuditCsvStore`, `RomCandidate`) ohne fachliche Logik. R7 wurde explizit verworfen, um keine Test-only Trace-Tokens in den Conversion-Pfad zu zementieren. R3 ersetzt Inline-Doubles 1:1 ohne neue Behavior-Surface.)
+- [x] **DoD-15** Plan-Datei selbst final reviewed und alle Checkboxen abgehakt. _(Reviewed; verbleibende offene Boxen sind ausschliesslich Block E1/E2/E3 (DoD-7/DoD-8) und mit Begruendung deferred.)
 
 
 ---
@@ -465,15 +465,53 @@ Empfehlung: nach Release in einem dedizierten Cleanup-Branch ausfuehren.
 - Regression: `dotnet test --no-build --filter "FullyQualifiedName~BlockE_|...~BlockD_|...~Block2_|...~Block3_|...~Block4_|...~Block56_|...~Phase10|...~FreshAuditRound9|...~Tracker"` -> **82/82 gruen**.
 - Block-E-Verifikationstests in `BlockE_RepoPathsTests` decken `RepoPaths.RepoFile` und `RepoPaths.SrcRoot` ab.
 
-
 ---
 
-## Block E - Naming, Strukturierung & Konsolidierung (Appendix)
+## Section 5 + Section 6 - Diff Appendix (2026-04-25)
 
-### Status
+### Neue Dateien
 
-- E1 (Domaenen-Ordner): **Deferred mit Begruendung** (siehe unten).
-- E2 (Gott-Testdateien splitten): **Deferred mit Begruendung** (siehe unten).
+| Datei | Zweck |
+|---|---|
+| `src/Romulus.Tests/Conversion/TestDoubles/FakeToolInvokers.cs` | R3-Sammlung: `Crash`, `EmptyOutput`, `HashMismatch`, `CancelOnTool`, `DiskFull`, `Success`, `SuccessThenFail` (alle `IToolInvoker`). |
+
+### Geaenderte Dateien
+
+| Datei | Aenderung |
+|---|---|
+| `src/Romulus.Tests/Conversion/SourcePreservationInvariantTests.cs` | 7 inline private `IToolInvoker`-Klassen entfernt; Tests nutzen jetzt `FakeToolInvokers.*`. |
+| `src/Romulus.Tests/BlockD_TestabilityFixturesTests.cs` | +6 R3-Vertragstests + `MakeCapability(string toolName)` Helper. |
+| `src/Romulus.Tests/GameKeyNormalizerTests.cs` | DoD-2: `_DoesNotThrow` -> `_StillProducesNonEmptyKey` mit Non-Empty-Assertion. |
+| `src/Romulus.Tests/GuiViewModelTests.AccessibilityAndRedTests.cs` | DoD-2: `SEC002_PreflightToIdle_DoesNotThrow` -> `_TransitionsToIdleState`; `CancelCommand_MultipleCalls_NoThrow` -> `_StaysCancelledAndDoesNotResetState`. |
+| `src/Romulus.Tests/StartupDataSchemaValidatorTests.cs` | DoD-2: `_DoesNotThrow` -> `_PassesWithoutException` mit File-Existenz-Asserts. |
+| `src/Romulus.Tests/DatRepositoryAdapterTests.cs` | DoD-2: `_DoesNotThrow` -> `_ReturnsEmptyIndexAndCountsZero`. |
+| `src/Romulus.Tests/RunEnvironmentBuilderBatch4Tests.cs` | DoD-2: `_DoesNotThrow` -> `_ReturnsExistingNonEmptyDirectory`. |
+
+### Zaehler
+
+| Kategorie | Anzahl |
+|---|---|
+| Neue Dateien | 1 |
+| Modifizierte Dateien | 7 |
+| Entfernte Inline-Doubles | -7 |
+| Neue Tests (R3-Vertragspruefung) | +6 |
+| Umbenannte/aufgewertete Tests (DoD-2) | 6 |
+| Netto-Test-Saldo dieser Section | +6 |
+
+### Verifikation
+
+- `dotnet build src/Romulus.sln` -> 0 Warnungen, 0 Fehler.
+- `dotnet test --filter SourcePreservationInvariantTests` -> 7/7 gruen (70 ms).
+- `dotnet test --filter BlockD_TestabilityFixtures` -> 29/29 gruen (243 ms).
+- `dotnet test --filter "Normalize_WhenTagPatternTimesOut|SEC002_PreflightToIdle|CancelCommand_MultipleCalls|ValidateRequiredFiles_ValidData|GetDatIndex_MalformedXml|ResolveDataDir"` -> 10/10 gruen (552 ms).
+
+### Findings waehrend Section-5/6-Implementierung
+
+- **R3 Compile-Drift**: Initial referenzierte `BlockD_TestabilityFixturesTests` `result.ErrorMessage` auf `ToolInvocationResult`. Tatsaechliches Feld ist `result.StdErr` (siehe `src/Romulus.Contracts/Models/ConversionModels.cs:124`). Korrigiert ohne API-Aenderung.
+- **R7 Verworfen**: Conversion-Trace-Tokens nur fuer Tests waeren Schattenlogik im Produktionspfad. Bestehende `onStepComplete`-Callbacks plus Verhaltenstests (`ConversionExecutorTests`, `ConversionExecutorHardeningTests`, `SourcePreservationInvariantTests`) decken die Schritt-Reihenfolge bereits ab.
+- **DoD-2 Sweep**: 9 `*_DoesNotThrow*`-Treffer geprueft. 6 aufgewertet, 3 hatten bereits Folgeassertionen (`ValidTransition_DoesNotThrow` -> Equal-State, `Move_SetMemberRollbackRestoreFailure_*` -> Failure-Count, `BuildSummary_*_DoesNotThrow*` -> Summary-Werte).
+- **DoD-1 Sonderfaelle**: 13 verbleibende `File.ReadAllText("*.cs")`-Treffer alle in `WpfProductizationTests.cs` (12) + `GuiViewModelTests.AccessibilityAndRedTests.cs:1051` (1). Pruefen XAML-Resource-Keys/DynamicResource-Bindings/ICommand-Properties; kein WPF-Runtime-Test moeglich ohne STA-Theme-Loader.
+- **DoD-3 Sonderfall**: `SettingsFileAccessTests:36` ist Vertragspruefung des `totalTimeoutMs`-Parameters, nicht Performance-Smoke (in Block-A-Anhang dokumentiert).
 - E3 (Phase/Wave/Round/Tracker/Block-Naming aufloesen): **Deferred mit Begruendung** (siehe unten).
 - E4 (`FindSrcRoot` / `FindRepoFile`-Konsolidierung): **Erledigt**.
 - E5 (Naming-Konvention dokumentieren): **Erledigt**.

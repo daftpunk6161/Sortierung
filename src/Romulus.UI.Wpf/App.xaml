@@ -26,6 +26,8 @@
       <conv:FractionToWidthConverter x:Key="FractionToWidth"/>
       <conv:FractionToGridLengthConverter x:Key="FractionToGridLength"/>
       <conv:IntToVisibilityConverter x:Key="IntToVis"/>
+      <conv:IntToVisibilityConverter x:Key="CountToVis"/>
+      <conv:InverseIntToVisibilityConverter x:Key="CountToInverseVis"/>
 
       <Style x:Key="BaseDialogWindowStyle" TargetType="Window">
         <Setter Property="FontFamily" Value="Segoe UI"/>
