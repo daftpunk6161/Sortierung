@@ -5,6 +5,7 @@ using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Sorting;
+using Romulus.Tests.TestHelpers;
 using Xunit;
 
 namespace Romulus.Tests;
@@ -65,7 +66,7 @@ public sealed class TrackerAllFindingsBatch3RedTests : IDisposable
         File.WriteAllText(cue2, "FILE \"disc2.bin\" BINARY");
 
         var sorter = new ConsoleSorter(new FileSystemAdapter(), LoadDetector());
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [root],
             [".m3u", ".cue"],
             dryRun: false,
@@ -102,7 +103,7 @@ public sealed class TrackerAllFindingsBatch3RedTests : IDisposable
         File.WriteAllText(setB, "shared.cue\r\n");
 
         var sorter = new ConsoleSorter(new FileSystemAdapter(), LoadDetector());
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [root],
             [".m3u", ".cue"],
             dryRun: false,

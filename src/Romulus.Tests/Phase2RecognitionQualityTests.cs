@@ -3,6 +3,7 @@ using Romulus.Contracts.Ports;
 using Romulus.Core.Classification;
 using Romulus.Infrastructure.Sorting;
 using Romulus.Tests.Benchmark;
+using Romulus.Tests.TestHelpers;
 using Xunit;
 
 namespace Romulus.Tests;
@@ -268,7 +269,7 @@ public class Phase2RecognitionQualityTests : IDisposable
         var fs = new Romulus.Infrastructure.FileSystem.FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, detector);
 
-        var result = sorter.Sort(new[] { _tempDir }, new[] { ".nes" }, dryRun: true);
+        var result = sorter.SortWithAutoSortDecisions(new[] { _tempDir }, new[] { ".nes" }, dryRun: true);
 
         Assert.Equal(0, result.Total); // _REVIEW should be excluded
     }
@@ -282,7 +283,7 @@ public class Phase2RecognitionQualityTests : IDisposable
         var fs = new Romulus.Infrastructure.FileSystem.FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, detector);
 
-        var result = sorter.Sort(new[] { _tempDir }, new[] { ".nes" }, dryRun: true);
+        var result = sorter.SortWithAutoSortDecisions(new[] { _tempDir }, new[] { ".nes" }, dryRun: true);
 
         Assert.Equal(0, result.Total); // _BLOCKED/_UNKNOWN should be excluded
     }

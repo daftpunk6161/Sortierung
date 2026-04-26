@@ -60,9 +60,11 @@ public sealed class ConsoleSorter
     /// If this map is missing, files are skipped with an audit warning.
     /// </param>
     /// <param name="enrichedSortDecisions">
-    /// Optional: pre-enriched SortDecision mappings (filePath → Sort/Review/Blocked/DatVerified).
-    /// When provided, controls routing: Review → _REVIEW/{ConsoleKey}/,
-    /// Blocked → _BLOCKED/{Reason}/, Unknown → _UNKNOWN/.
+    /// Pre-enriched SortDecision mappings (filePath → Sort/Review/Blocked/DatVerified/Unknown).
+    /// Required (non-null) — controls routing: Sort/DatVerified → {ConsoleKey}/,
+    /// Review → _REVIEW/{ConsoleKey}/, Blocked → _BLOCKED/{Reason}/, Unknown → _UNKNOWN/.
+    /// If this map is missing, files are skipped with an audit warning to enforce the
+    /// Phase-2 single-source-of-truth contract.
     /// </param>
     /// <param name="enrichedSortReasons">
     /// Optional: pre-enriched reason tag mappings (filePath → reason).
@@ -117,6 +119,20 @@ public sealed class ConsoleSorter
                 continue;
             }
 
+            if (enrichedSortDecisions is null)
+            {
+                // Phase-2 contract (F1 hardening): the sort phase is decision-driven.
+                // Without enriched decisions there is no fachliche Wahrheit on whether
+                // a file should be Sort/Review/Blocked/Unknown — defaulting to Sort
+                // would silently bypass every decision gate and risk routing a file
+                // that should have been blocked. Skip safely with audit warning.
+                total += files.Count;
+                skipped += files.Count;
+                IncrementReason(unknownReasons, "missing-enriched-sort-decisions");
+                WriteAuditWarning(root, "missing-enriched-sort-decisions");
+                continue;
+            }
+
             foreach (var filePath in files)
             {
                 if (cancellationToken.IsCancellationRequested) break;
@@ -130,14 +146,11 @@ public sealed class ConsoleSorter
                 }
 
                 // SortDecision routing: determine destination based on enriched decision.
-                // When enrichedSortDecisions is provided (enrichment ran) but a file has no
-                // entry, treat it as Unknown — fail-safe: never default to Sort.
+                // enrichedSortDecisions is guaranteed non-null at this point (checked above).
+                // A missing per-file entry means enrichment ran but produced no decision —
+                // fail-safe: treat as Unknown rather than implicit Sort.
                 string? sortDecision;
-                if (enrichedSortDecisions is null)
-                {
-                    sortDecision = null;
-                }
-                else if (enrichedSortDecisions.TryGetValue(filePath, out var sd) && !string.IsNullOrEmpty(sd))
+                if (enrichedSortDecisions.TryGetValue(filePath, out var sd) && !string.IsNullOrEmpty(sd))
                 {
                     sortDecision = sd;
                 }

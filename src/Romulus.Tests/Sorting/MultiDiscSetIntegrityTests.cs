@@ -4,6 +4,7 @@ using Romulus.Core.Classification;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Sorting;
 using Romulus.Tests.TestFixtures;
+using Romulus.Tests.TestHelpers;
 using Xunit;
 
 namespace Romulus.Tests.Sorting;
@@ -55,7 +56,7 @@ public sealed class MultiDiscSetIntegrityTests : IDisposable
         var fs = new FailOnSpecificMoveFileSystem(new FileSystemAdapter(), failOnSourceContaining: "Disc 2");
 
         var sorter = new ConsoleSorter(fs, LoadConsoleDetector());
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [root],
             [".m3u", ".cue"],
             dryRun: false,
@@ -109,7 +110,7 @@ public sealed class MultiDiscSetIntegrityTests : IDisposable
         File.WriteAllText(disc2, "FILE \"disc2.bin\" BINARY");
 
         var sorter = new ConsoleSorter(new FileSystemAdapter(), LoadConsoleDetector());
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [root],
             [".m3u", ".cue"],
             dryRun: false,
@@ -150,7 +151,7 @@ public sealed class MultiDiscSetIntegrityTests : IDisposable
         File.WriteAllBytes(bin, [0x42, 0x43, 0x44]);
 
         var sorter = new ConsoleSorter(new FileSystemAdapter(), LoadConsoleDetector());
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [root],
             [".cue", ".bin"],
             dryRun: false,
@@ -190,7 +191,7 @@ public sealed class MultiDiscSetIntegrityTests : IDisposable
         File.WriteAllBytes(binB, [0xBB]);
 
         var sorter = new ConsoleSorter(new FileSystemAdapter(), LoadConsoleDetector());
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [root],
             [".cue", ".bin"],
             dryRun: false,

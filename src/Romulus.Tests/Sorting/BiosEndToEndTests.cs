@@ -4,6 +4,7 @@ using Romulus.Core.Deduplication;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Sorting;
 using Romulus.Tests.TestFixtures;
+using Romulus.Tests.TestHelpers;
 using Xunit;
 
 namespace Romulus.Tests.Sorting;
@@ -108,7 +109,7 @@ public sealed class BiosEndToEndTests : IDisposable
         File.WriteAllBytes(biosPath, new byte[1024]);
 
         var sorter = new ConsoleSorter(new FileSystemAdapter(), LoadConsoleDetector());
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [root],
             [".bin"],
             dryRun: false,

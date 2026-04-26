@@ -167,7 +167,8 @@ public sealed class ConsoleSorterCoverageBoostTests : IDisposable
         var result = sorter.Sort(
             roots: [_tempDir],
             dryRun: true,
-            enrichedConsoleKeys: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+            enrichedConsoleKeys: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            enrichedSortDecisions: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 
         Assert.True(result.Unknown > 0);
     }
@@ -184,7 +185,9 @@ public sealed class ConsoleSorterCoverageBoostTests : IDisposable
             roots: [_tempDir],
             dryRun: true,
             enrichedConsoleKeys: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                { [file] = "invalid key!" }); // spaces/special chars fail RxValidConsoleKey
+                { [file] = "invalid key!" }, // spaces/special chars fail RxValidConsoleKey
+            enrichedSortDecisions: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                { [file] = "Sort" });
 
         Assert.True(result.Unknown > 0);
     }
@@ -205,6 +208,11 @@ public sealed class ConsoleSorterCoverageBoostTests : IDisposable
             {
                 [cue] = "SNES",
                 [bin] = "SNES"
+            },
+            enrichedSortDecisions: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [cue] = "Sort",
+                [bin] = "Sort"
             });
 
         // Primary + member both counted
@@ -227,6 +235,11 @@ public sealed class ConsoleSorterCoverageBoostTests : IDisposable
             {
                 [cue] = "SNES",
                 [bin] = "SNES"
+            },
+            enrichedSortDecisions: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [cue] = "Sort",
+                [bin] = "Sort"
             });
 
         Assert.True(result.Moved > 0);
@@ -254,11 +267,13 @@ public sealed class ConsoleSorterCoverageBoostTests : IDisposable
         Assert.True(Directory.Exists(Path.Combine(_tempDir, "NES")));
     }
 
-    // ===== No sort decision → default sort =====
+    // ===== No sort decision dict → fail-safe skip with audit warning (F1) =====
 
     [Fact]
-    public void Sort_NoSortDecision_DefaultsToStandardSort()
+    public void Sort_NoSortDecision_SkipsWithoutMoving()
     {
+        // F1 hardening: enrichedSortDecisions is required. Null means no enrichment ran,
+        // so we must not infer Sort and bypass decision gates.
         var file = CreateFile("game.nes");
         var sorter = CreateSorter();
 
@@ -268,7 +283,9 @@ public sealed class ConsoleSorterCoverageBoostTests : IDisposable
             enrichedConsoleKeys: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 { [file] = "NES" });
 
-        Assert.True(result.Moved > 0);
+        Assert.Equal(0, result.Moved);
+        Assert.True(result.Skipped > 0);
+        Assert.True(File.Exists(file));
     }
 
     // ===== Non-existent root → skipped =====
@@ -299,7 +316,9 @@ public sealed class ConsoleSorterCoverageBoostTests : IDisposable
             roots: [_tempDir],
             dryRun: false,
             enrichedConsoleKeys: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                { [file] = "NES" });
+                { [file] = "NES" },
+            enrichedSortDecisions: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                { [file] = "Sort" });
 
         Assert.True(result.Skipped > 0);
         Assert.True(File.Exists(file)); // not moved
@@ -317,7 +336,9 @@ public sealed class ConsoleSorterCoverageBoostTests : IDisposable
             roots: [_tempDir],
             dryRun: false,
             enrichedConsoleKeys: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                { [file] = "NES" });
+                { [file] = "NES" },
+            enrichedSortDecisions: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                { [file] = "Sort" });
 
         var pathMutations = result.PathMutations;
         Assert.NotNull(pathMutations);

@@ -9,6 +9,7 @@ using Romulus.Contracts.Ports;
 using Romulus.Core.Classification;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Sorting;
+using Romulus.Tests.TestHelpers;
 using Xunit;
 
 namespace Romulus.Tests;
@@ -57,7 +58,7 @@ public sealed class TrackerBlock1To6RedTests : IDisposable
         var detector = BuildDetector();
         var sorter = new ConsoleSorter(fs, detector);
 
-        var dry = sorter.Sort(
+        var dry = sorter.SortWithAutoSortDecisions(
             new[] { dryRoot },
             new[] { ".cue" },
             dryRun: true,
@@ -67,7 +68,7 @@ public sealed class TrackerBlock1To6RedTests : IDisposable
             },
             candidatePaths: new[] { dryCue });
 
-        var execute = sorter.Sort(
+        var execute = sorter.SortWithAutoSortDecisions(
             new[] { moveRoot },
             new[] { ".cue" },
             dryRun: false,

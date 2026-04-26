@@ -5,12 +5,13 @@ using Romulus.Core.Classification;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Safety;
 using Romulus.Infrastructure.Sorting;
+using Romulus.Tests.TestHelpers;
 using Xunit;
 
 namespace Romulus.Tests;
 
 /// <summary>
-/// Coverage tests for ConsoleSorter.Sort() edge cases not yet tested 
+/// Coverage tests for ConsoleSorter.SortWithAutoSortDecisions() edge cases not yet tested 
 /// and DashboardDataBuilder.BuildBootstrap.
 /// </summary>
 public sealed class SortAndDashboardCoverageTests : IDisposable
@@ -71,10 +72,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort(
-            [_tempDir], [".nes"], dryRun: false,
-            enrichedConsoleKeys: Keys((romPath, "NES")),
-            enrichedSortDecisions: Decisions((romPath, "Unknown")));
+        var result = sorter.Sort([_tempDir], [".nes"], dryRun: false, enrichedConsoleKeys: Keys((romPath, "NES")), enrichedSortDecisions: Decisions((romPath, "Unknown")));
 
         Assert.Equal(1, result.Unknown);
         Assert.Equal(0, result.Moved);
@@ -88,10 +86,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort(
-            [_tempDir], [".nes"], dryRun: true,
-            enrichedConsoleKeys: Keys((romPath, "NES")),
-            enrichedSortDecisions: Decisions((romPath, "Unknown")));
+        var result = sorter.Sort([_tempDir], [".nes"], dryRun: true, enrichedConsoleKeys: Keys((romPath, "NES")), enrichedSortDecisions: Decisions((romPath, "Unknown")));
 
         Assert.Equal(1, result.Unknown);
         Assert.True(File.Exists(romPath), "File should stay in place during DryRun");
@@ -110,7 +105,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var auditPath = Path.Combine(_tempDir, "audit.csv");
         var sorter = new ConsoleSorter(fs, BuildDetector(), audit, auditPath);
 
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [_tempDir], [".nes"], dryRun: false,
             enrichedConsoleKeys: Keys((romPath, "NES")),
             enrichedSortReasons: Reasons((romPath, "dat-hash-match")));
@@ -132,10 +127,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort(
-            [_tempDir], [".nes"], dryRun: false,
-            enrichedConsoleKeys: Keys((romPath, "NES")),
-            enrichedSortDecisions: Decisions((romPath, "Blocked")),
+        var result = sorter.Sort([_tempDir], [".nes"], dryRun: false, enrichedConsoleKeys: Keys((romPath, "NES")), enrichedSortDecisions: Decisions((romPath, "Blocked")),
             enrichedSortReasons: Reasons((romPath, "low-confidence")),
             enrichedCategories: Cats((romPath, "Game")));
 
@@ -158,7 +150,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [_tempDir], [".gdi"], dryRun: false,
             enrichedConsoleKeys: Keys((gdiPath, "SNES")),
             candidatePaths: [gdiPath,
@@ -187,7 +179,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [_tempDir], [".m3u"], dryRun: false,
             enrichedConsoleKeys: Keys((m3uPath, "PS1")),
             candidatePaths: [m3uPath,
@@ -212,7 +204,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [_tempDir], [".ccd"], dryRun: false,
             enrichedConsoleKeys: Keys((ccdPath, "PS1")),
             candidatePaths: [ccdPath,
@@ -237,7 +229,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [_tempDir], [".mds"], dryRun: false,
             enrichedConsoleKeys: Keys((mdsPath, "PS1")),
             candidatePaths: [mdsPath, Path.Combine(_tempDir, "Game.mdf")]);
@@ -259,7 +251,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [_tempDir], [".nes"], dryRun: false,
             enrichedConsoleKeys: Keys((romPath, "NES")));
 
@@ -280,7 +272,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort([_tempDir], [".nes"], dryRun: true, enrichedConsoleKeys: null);
+        var result = sorter.SortWithAutoSortDecisions([_tempDir], [".nes"], dryRun: true, enrichedConsoleKeys: null);
 
         Assert.True(result.Skipped >= 1);
         Assert.True(result.UnknownReasons.ContainsKey("missing-enriched-console-keys"));
@@ -297,7 +289,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [_tempDir], [".nes"], dryRun: false,
             enrichedConsoleKeys: Keys((romPath, "UNKNOWN")));
 
@@ -318,7 +310,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [_tempDir], [".nes"], dryRun: false,
             enrichedConsoleKeys: Keys((romPath, "")));
 
@@ -338,7 +330,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [_tempDir], [".nes"], dryRun: false,
             enrichedConsoleKeys: Keys((rom1, "NES"), (rom2, "NES"), (rom3, "NES")));
 
@@ -359,7 +351,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort([_tempDir], [".nes"], dryRun: true);
+        var result = sorter.SortWithAutoSortDecisions([_tempDir], [".nes"], dryRun: true);
         Assert.Equal(0, result.Total);
     }
 
@@ -370,7 +362,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort([_tempDir], [".nes"], dryRun: true);
+        var result = sorter.SortWithAutoSortDecisions([_tempDir], [".nes"], dryRun: true);
         Assert.Equal(0, result.Total);
     }
 
@@ -381,7 +373,7 @@ public sealed class SortAndDashboardCoverageTests : IDisposable
         var fs = new FileSystemAdapter();
         var sorter = new ConsoleSorter(fs, BuildDetector());
 
-        var result = sorter.Sort([_tempDir], [".nes"], dryRun: true);
+        var result = sorter.SortWithAutoSortDecisions([_tempDir], [".nes"], dryRun: true);
         Assert.Equal(0, result.Total);
     }
 

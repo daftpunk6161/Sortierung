@@ -4,6 +4,7 @@ using Romulus.Contracts.Ports;
 using Romulus.Core.Classification;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Sorting;
+using Romulus.Tests.TestHelpers;
 using Xunit;
 
 namespace Romulus.Tests;
@@ -342,7 +343,7 @@ public class Phase6QualityAssuranceTests
             var detector = CreateEmptyDetector();
             var sorter = new ConsoleSorter(fs, detector);
 
-            var result = sorter.Sort(
+            var result = sorter.SortWithAutoSortDecisions(
                 roots: [dir],
                 extensions: [".cue", ".bin"],
                 dryRun: false,
@@ -388,7 +389,7 @@ public class Phase6QualityAssuranceTests
             var detector = CreateEmptyDetector();
             var sorter = new ConsoleSorter(fs, detector);
 
-            var result = sorter.Sort(
+            var result = sorter.SortWithAutoSortDecisions(
                 roots: [dir],
                 extensions: [".cue", ".bin"],
                 dryRun: true,
@@ -426,7 +427,7 @@ public class Phase6QualityAssuranceTests
             var detector = CreateEmptyDetector();
             var sorter = new ConsoleSorter(fs, detector);
 
-            var result = sorter.Sort(
+            var result = sorter.SortWithAutoSortDecisions(
                 roots: [dir],
                 extensions: [".chd"],
                 dryRun: false,
@@ -462,7 +463,7 @@ public class Phase6QualityAssuranceTests
             var detector = CreateEmptyDetector();
             var sorter = new ConsoleSorter(fs, detector);
 
-            var result = sorter.Sort(
+            var result = sorter.SortWithAutoSortDecisions(
                 roots: [dir],
                 extensions: [".chd"],
                 dryRun: false,
@@ -497,7 +498,7 @@ public class Phase6QualityAssuranceTests
             var detector = CreateEmptyDetector();
             var sorter = new ConsoleSorter(fs, detector);
 
-            var result = sorter.Sort(
+            var result = sorter.SortWithAutoSortDecisions(
                 roots: [dir],
                 extensions: [".chd"],
                 dryRun: false,
@@ -528,7 +529,7 @@ public class Phase6QualityAssuranceTests
             var detector = CreateEmptyDetector();
             var sorter = new ConsoleSorter(fs, detector);
 
-            var result = sorter.Sort(
+            var result = sorter.SortWithAutoSortDecisions(
                 roots: [dir],
                 extensions: [".chd"],
                 dryRun: false);

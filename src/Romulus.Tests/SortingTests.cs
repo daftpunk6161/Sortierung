@@ -62,7 +62,8 @@ public class ConsoleSorterTests : IDisposable
             new[] { _tempDir },
             new[] { ".nes" },
             dryRun: true,
-            enrichedConsoleKeys: EnrichedKeys((nesFile, "NES")));
+            enrichedConsoleKeys: EnrichedKeys((nesFile, "NES")),
+            enrichedSortDecisions: SortDecisions((nesFile, "Sort")));
 
         Assert.Equal(1, result.Total);
         Assert.Equal(1, result.Moved);
@@ -82,7 +83,8 @@ public class ConsoleSorterTests : IDisposable
             new[] { _tempDir },
             new[] { ".nes" },
             dryRun: false,
-            enrichedConsoleKeys: EnrichedKeys((romPath, "NES")));
+            enrichedConsoleKeys: EnrichedKeys((romPath, "NES")),
+            enrichedSortDecisions: SortDecisions((romPath, "Sort")));
 
         Assert.Equal(1, result.Moved);
         Assert.True(File.Exists(Path.Combine(_tempDir, "NES", "Game.nes")));
@@ -103,6 +105,7 @@ public class ConsoleSorterTests : IDisposable
             new[] { ".nes" },
             dryRun: false,
             enrichedConsoleKeys: EnrichedKeys((source, "NES")),
+            enrichedSortDecisions: SortDecisions((source, "Sort")),
             candidatePaths: new[] { source },
             conflictPolicy: "Overwrite");
 
@@ -125,7 +128,8 @@ public class ConsoleSorterTests : IDisposable
             new[] { _tempDir },
             new[] { ".nes" },
             dryRun: false,
-            enrichedConsoleKeys: EnrichedKeys((romPath, "NES")));
+            enrichedConsoleKeys: EnrichedKeys((romPath, "NES")),
+            enrichedSortDecisions: SortDecisions((romPath, "Sort")));
 
         Assert.Equal(1, result.Skipped);
         Assert.Equal(0, result.Moved);
@@ -144,7 +148,8 @@ public class ConsoleSorterTests : IDisposable
             new[] { _tempDir },
             new[] { ".xyz" },
             dryRun: true,
-            enrichedConsoleKeys: EnrichedKeys((romPath, "UNKNOWN")));
+            enrichedConsoleKeys: EnrichedKeys((romPath, "UNKNOWN")),
+            enrichedSortDecisions: SortDecisions((romPath, "Sort")));
 
         Assert.Equal(1, result.Unknown);
         Assert.True(result.UnknownReasons.ContainsKey("no-match"));
@@ -203,7 +208,10 @@ public class ConsoleSorterTests : IDisposable
             dryRun: false,
             enrichedConsoleKeys: EnrichedKeys(
                 (Path.Combine(root1, "Game1.nes"), "NES"),
-                (Path.Combine(root2, "Game2.sfc"), "SNES")));
+                (Path.Combine(root2, "Game2.sfc"), "SNES")),
+            enrichedSortDecisions: SortDecisions(
+                (Path.Combine(root1, "Game1.nes"), "Sort"),
+                (Path.Combine(root2, "Game2.sfc"), "Sort")));
 
         Assert.Equal(2, result.Moved);
         Assert.True(File.Exists(Path.Combine(root1, "NES", "Game1.nes")));
@@ -403,12 +411,18 @@ public class ConsoleSorterTests : IDisposable
     }
 
     [Fact]
-    public void Sort_NoSortDecision_DefaultsToStandardMove()
+    public void Sort_NoSortDecision_SkipsAllFilesAndWritesAuditWarning()
     {
+        // F1 hardening: when enrichedSortDecisions is null (no enrichment ran),
+        // the sort phase MUST refuse to move any file — defaulting to Sort would
+        // silently bypass every decision gate (Review/Blocked/Unknown). Phase-2
+        // contract: enrichment is the single source of truth.
         var romPath = CreateFile("Default.nes", "content");
         var detector = BuildDetector();
         var fs = new Romulus.Infrastructure.FileSystem.FileSystemAdapter();
-        var sorter = new ConsoleSorter(fs, detector);
+        var audit = new RecordingAuditStore();
+        var auditPath = Path.Combine(_tempDir, "audit.csv");
+        var sorter = new ConsoleSorter(fs, detector, audit, auditPath);
 
         var result = sorter.Sort(
             new[] { _tempDir },
@@ -416,8 +430,15 @@ public class ConsoleSorterTests : IDisposable
             dryRun: false,
             enrichedConsoleKeys: EnrichedKeys((romPath, "NES")));
 
-        Assert.Equal(1, result.Moved);
-        Assert.True(File.Exists(Path.Combine(_tempDir, "NES", "Default.nes")));
+        Assert.Equal(0, result.Moved);
+        Assert.Equal(1, result.Skipped);
+        Assert.True(result.UnknownReasons.ContainsKey("missing-enriched-sort-decisions"),
+            "Skip reason must explicitly identify the missing-decisions contract violation");
+        Assert.True(File.Exists(romPath), "Source file must still exist (never moved)");
+        Assert.False(File.Exists(Path.Combine(_tempDir, "NES", "Default.nes")),
+            "File must NOT be routed to console subfolder without an explicit decision");
+        Assert.Contains(audit.Rows,
+            r => r.action == "CONSOLE_SORT_WARNING" && r.reason == "missing-enriched-sort-decisions");
     }
 
     // ── F-02 Regression: missing sort-decision in provided dict must be Unknown, never Sort ──
@@ -484,6 +505,7 @@ public class ConsoleSorterTests : IDisposable
             new[] { ".nes" },
             dryRun: true,
             enrichedConsoleKeys: EnrichedKeys((planned, "NES")),
+            enrichedSortDecisions: SortDecisions((planned, "Sort")),
             candidatePaths: new[] { planned });
 
         Assert.Equal(1, result.Total);
@@ -505,6 +527,7 @@ public class ConsoleSorterTests : IDisposable
             new[] { ".cue" },
             dryRun: false,
             enrichedConsoleKeys: EnrichedKeys((cuePath, "PS1")),
+            enrichedSortDecisions: SortDecisions((cuePath, "Sort")),
             candidatePaths: new[] { cuePath });
 
         Assert.Equal(2, result.Failed);
@@ -526,7 +549,8 @@ public class ConsoleSorterTests : IDisposable
             new[] { _tempDir },
             new[] { ".cue" },
             dryRun: false,
-            enrichedConsoleKeys: EnrichedKeys((cuePath, "PS1")));
+            enrichedConsoleKeys: EnrichedKeys((cuePath, "PS1")),
+            enrichedSortDecisions: SortDecisions((cuePath, "Sort")));
 
         Assert.Equal(1, result.Moved);
         Assert.True(result.SetMembersMoved >= 1, "BIN should move with CUE");

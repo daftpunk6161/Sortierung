@@ -2,6 +2,7 @@ using Romulus.Core.Classification;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Sorting;
 using Romulus.Tests.TestFixtures;
+using Romulus.Tests.TestHelpers;
 using Xunit;
 
 namespace Romulus.Tests.Sorting;
@@ -51,7 +52,7 @@ public sealed class ArcadeSetIntegrityTests : IDisposable
         var originalLength = new FileInfo(setZip).Length;
 
         var sorter = new ConsoleSorter(new FileSystemAdapter(), LoadConsoleDetector());
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [root],
             [".zip"],
             dryRun: false,
@@ -106,7 +107,7 @@ public sealed class ArcadeSetIntegrityTests : IDisposable
         File.WriteAllBytes(zipB, [0xB1, 0xB2, 0xB3]);
 
         var sorter = new ConsoleSorter(new FileSystemAdapter(), LoadConsoleDetector());
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             [root],
             [".zip"],
             dryRun: false,

@@ -14,6 +14,7 @@ using Romulus.Infrastructure.Metrics;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Sorting;
 using Romulus.Tests.TestFixtures;
+using Romulus.Tests.TestHelpers;
 using Xunit;
 using CliProgram = Romulus.CLI.Program;
 
@@ -431,7 +432,7 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
         var sorter = new ConsoleSorter(new FileSystemAdapter(), detector, new AuditCsvStore(), null);
         var originalPath = Path.Combine(root, "Metroid.nes");
         var movedPath = Path.Combine(root, "NES", "Metroid.nes");
-        var first = sorter.Sort(
+        var first = sorter.SortWithAutoSortDecisions(
             new[] { root },
             new[] { ".nes" },
             dryRun: false,
@@ -439,7 +440,7 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
             {
                 [originalPath] = "NES"
             });
-        var second = sorter.Sort(
+        var second = sorter.SortWithAutoSortDecisions(
             new[] { root },
             new[] { ".nes" },
             dryRun: false,
@@ -464,7 +465,7 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
         var detector = BuildDetector(Array.Empty<ConsoleInfo>());
         var sorter = new ConsoleSorter(new FileSystemAdapter(), detector);
 
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             new[] { root },
             new[] { ".xyz" },
             dryRun: true,
@@ -490,7 +491,7 @@ public sealed class HardCoreInvariantRegressionSuiteTests : IDisposable
         });
 
         var sorter = new ConsoleSorter(new FileSystemAdapter(), detector);
-        var result = sorter.Sort(
+        var result = sorter.SortWithAutoSortDecisions(
             new[] { root },
             new[] { ".nes" },
             dryRun: true,

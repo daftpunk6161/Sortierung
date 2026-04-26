@@ -9,6 +9,7 @@ using Romulus.Tests.TestFixtures;
 using Romulus.UI.Wpf.Services;
 using Romulus.UI.Wpf.Models;
 using Romulus.UI.Wpf.ViewModels;
+using Romulus.Tests.TestHelpers;
 using Xunit;
 using CliProgram = Romulus.CLI.Program;
 
@@ -680,7 +681,7 @@ public sealed class HardRegressionInvariantTests : IDisposable
         var auditPath = Path.Combine(root, "audit.csv");
 
         var sorter = new Romulus.Infrastructure.Sorting.ConsoleSorter(fs, detector, audit, auditPath);
-        var sortResult = sorter.Sort(
+        var sortResult = sorter.SortWithAutoSortDecisions(
             new[] { root },
             new[] { ".sfc" },
             dryRun: false,

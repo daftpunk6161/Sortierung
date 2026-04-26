@@ -4,6 +4,7 @@ using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Sorting;
 using Romulus.UI.Wpf.ViewModels;
+using Romulus.Tests.TestHelpers;
 using Xunit;
 
 namespace Romulus.Tests;
@@ -122,7 +123,7 @@ public sealed class AuditCDRedTests
             File.WriteAllText(cueSecondary, "FILE \"disc1-alt.bin\" BINARY");
 
             var sorter = new ConsoleSorter(new FileSystemAdapter(), LoadDetector());
-            var result = sorter.Sort(
+            var result = sorter.SortWithAutoSortDecisions(
                 [root],
                 [".m3u", ".cue"],
                 dryRun: false,
