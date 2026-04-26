@@ -53,9 +53,14 @@ public sealed class StartupDataSchemaValidatorTests : IDisposable
     }
 
     [Fact]
-    public void ValidateRequiredFiles_ValidData_DoesNotThrow()
+    public void ValidateRequiredFiles_ValidData_PassesWithoutException()
     {
+        // Verhalten: Valides Datenset darf nicht werfen UND alle Pflichtdateien
+        // muessen tatsaechlich existieren (Pre-Condition fuer den Validator).
         StartupDataSchemaValidator.ValidateRequiredFiles(_tempDataDir);
+
+        Assert.True(File.Exists(Path.Combine(_tempDataDir, "defaults.json")));
+        Assert.True(File.Exists(Path.Combine(_tempDataDir, "consoles.json")));
     }
 
     [Fact]

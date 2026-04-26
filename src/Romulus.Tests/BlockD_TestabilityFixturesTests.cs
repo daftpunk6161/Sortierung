@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
+using Romulus.Infrastructure.Conversion;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Tests.Benchmark.Infrastructure;
+using Romulus.Tests.Conversion.TestDoubles;
 using Romulus.Tests.TestFixtures;
 using Xunit;
 
@@ -162,6 +164,93 @@ public sealed class BlockD_TestabilityFixturesTests : IDisposable
         var result = runner.InvokeProcess("any.exe", []);
         Assert.True(result.Success);
     }
+
+    // ── D3 / R3: FakeToolInvokers (IToolInvoker test doubles) ─────────
+
+    [Fact]
+    public void R3_FakeToolInvokers_Crash_ReturnsFailureWithProvidedExitCode()
+    {
+        var capability = MakeCapability("tool-crash");
+        var result = new FakeToolInvokers.Crash(exitCode: 137)
+            .Invoke("src", "tgt", capability, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal(137, result.ExitCode);
+    }
+
+    [Fact]
+    public void R3_FakeToolInvokers_EmptyOutput_WritesZeroByteFile()
+    {
+        var target = Path.Combine(_tempDir, "empty.bin");
+        var capability = MakeCapability("tool-empty");
+
+        var result = new FakeToolInvokers.EmptyOutput()
+            .Invoke("src", target, capability, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.True(File.Exists(target));
+        Assert.Equal(0, new FileInfo(target).Length);
+    }
+
+    [Fact]
+    public void R3_FakeToolInvokers_HashMismatch_VerifyReturnsVerifyFailed()
+    {
+        var target = Path.Combine(_tempDir, "mismatch.bin");
+        var capability = MakeCapability("tool-mismatch");
+        var sut = new FakeToolInvokers.HashMismatch();
+
+        var invoke = sut.Invoke("src", target, capability, CancellationToken.None);
+        var verify = sut.Verify(target, capability);
+
+        Assert.True(invoke.Success);
+        Assert.Equal(VerificationStatus.VerifyFailed, verify);
+    }
+
+    [Fact]
+    public void R3_FakeToolInvokers_CancelOnTool_TriggersOperationCanceledForMatchingTool()
+    {
+        using var cts = new CancellationTokenSource();
+        var capability = MakeCapability("tool-cancel");
+        var sut = new FakeToolInvokers.CancelOnTool(cts, "tool-cancel");
+
+        Assert.Throws<OperationCanceledException>(() =>
+            sut.Invoke("src", Path.Combine(_tempDir, "x.bin"), capability, cts.Token));
+        Assert.True(cts.IsCancellationRequested);
+    }
+
+    [Fact]
+    public void R3_FakeToolInvokers_DiskFull_ReportsFailureWithDiskFullStderr()
+    {
+        var capability = MakeCapability("tool-diskfull");
+        var result = new FakeToolInvokers.DiskFull()
+            .Invoke("src", "tgt", capability, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("not enough space", result.StdErr, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void R3_FakeToolInvokers_SuccessThenFail_FailsOnlyOnConfiguredToolName()
+    {
+        var sut = new FakeToolInvokers.SuccessThenFail("tool-fail");
+        var stepOk = sut.Invoke("src", Path.Combine(_tempDir, "ok.bin"), MakeCapability("tool-ok"), CancellationToken.None);
+        var stepFail = sut.Invoke("src", Path.Combine(_tempDir, "fail.bin"), MakeCapability("tool-fail"), CancellationToken.None);
+
+        Assert.True(stepOk.Success);
+        Assert.False(stepFail.Success);
+    }
+
+    private static ConversionCapability MakeCapability(string toolName) => new()
+    {
+        SourceExtension = ".iso",
+        TargetExtension = ".chd",
+        Tool = new ToolRequirement { ToolName = toolName },
+        Command = "convert",
+        Verification = VerificationMethod.FileExistenceCheck,
+        Lossless = true,
+        ResultIntegrity = SourceIntegrity.Lossless,
+        Cost = 1
+    };
 
     // ── D4: RunResultProjection ───────────────────────────────────────
 

@@ -119,16 +119,20 @@ public class GameKeyNormalizerTests
     }
 
     [Fact]
-    public void Normalize_WhenTagPatternTimesOut_DoesNotThrow()
+    public void Normalize_WhenTagPatternTimesOut_StillProducesNonEmptyKey()
     {
         var timeoutPattern = new Regex("(a+)+$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(1));
         var tagPatterns = new[] { timeoutPattern };
         var aliases = new Dictionary<string, string>();
         var input = new string('a', 8000) + "!";
 
-        var ex = Record.Exception(() => GameKeyNormalizer.Normalize(input, tagPatterns, aliases));
+        // Verhalten: Bei Regex-Timeout muss Normalize einen deterministischen,
+        // nicht-leeren Schluessel zurueckliefern (Fallback-Pfad), nicht crashen.
+        string? key = null;
+        var ex = Record.Exception(() => key = GameKeyNormalizer.Normalize(input, tagPatterns, aliases));
 
         Assert.Null(ex);
+        Assert.False(string.IsNullOrEmpty(key), "Normalize must yield a non-empty fallback key on regex timeout.");
     }
 
     // --- ASCII Folding ---

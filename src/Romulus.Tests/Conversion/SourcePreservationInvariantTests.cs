@@ -1,6 +1,7 @@
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Conversion;
+using Romulus.Tests.Conversion.TestDoubles;
 using Xunit;
 
 namespace Romulus.Tests.Conversion;
@@ -39,7 +40,7 @@ public sealed class SourcePreservationInvariantTests : IDisposable
     {
         var src = WriteSource("crash.cso", payload: "SRC-CRASH");
         var plan = SingleStepPlan(src, ".cso", ".chd", "tool-crash");
-        var sut = new ConversionExecutor([new CrashingInvoker(exitCode: 137)]);
+        var sut = new ConversionExecutor([new FakeToolInvokers.Crash(exitCode: 137)]);
 
         var result = sut.Execute(plan);
 
@@ -57,7 +58,7 @@ public sealed class SourcePreservationInvariantTests : IDisposable
     {
         var src = WriteSource("empty.iso", payload: "SRC-EMPTY");
         var plan = SingleStepPlan(src, ".iso", ".chd", "tool-empty");
-        var sut = new ConversionExecutor([new EmptyOutputInvoker()]);
+        var sut = new ConversionExecutor([new FakeToolInvokers.EmptyOutput()]);
 
         var result = sut.Execute(plan);
 
@@ -79,7 +80,7 @@ public sealed class SourcePreservationInvariantTests : IDisposable
     {
         var src = WriteSource("verify.xyz", payload: "SRC-VERIFY");
         var plan = SingleStepPlan(src, ".xyz", ".zzz", "tool-verify");
-        var sut = new ConversionExecutor([new VerifyFailingInvoker()]);
+        var sut = new ConversionExecutor([new FakeToolInvokers.HashMismatch()]);
 
         var result = sut.Execute(plan);
 
@@ -101,7 +102,7 @@ public sealed class SourcePreservationInvariantTests : IDisposable
         var plan = TwoStepPlan(src, ".cso", ".iso", ".chd", "tool-step1", "tool-cancel");
 
         using var cts = new CancellationTokenSource();
-        var sut = new ConversionExecutor([new CancelOnSecondStepInvoker(cts)]);
+        var sut = new ConversionExecutor([new FakeToolInvokers.CancelOnTool(cts, "tool-cancel")]);
 
         // Executor propagates OperationCanceledException from invokers; the outer
         // try/finally still cleans intermediates and never touches the source.
@@ -127,7 +128,7 @@ public sealed class SourcePreservationInvariantTests : IDisposable
         File.WriteAllText(finalTarget, "PRE-EXISTING-TARGET");
 
         var plan = SingleStepPlan(src, ".iso", ".chd", "tool-ok");
-        var sut = new ConversionExecutor([new SuccessfulInvoker()]);
+        var sut = new ConversionExecutor([new FakeToolInvokers.Success()]);
 
         var result = sut.Execute(plan);
 
@@ -147,7 +148,7 @@ public sealed class SourcePreservationInvariantTests : IDisposable
     {
         var src = WriteSource("diskfull.iso", payload: "SRC-DISKFULL");
         var plan = SingleStepPlan(src, ".iso", ".chd", "tool-diskfull");
-        var sut = new ConversionExecutor([new DiskFullInvoker()]);
+        var sut = new ConversionExecutor([new FakeToolInvokers.DiskFull()]);
 
         var result = sut.Execute(plan);
 
@@ -166,7 +167,7 @@ public sealed class SourcePreservationInvariantTests : IDisposable
     {
         var src = WriteSource("multistep.cso", payload: "SRC-MULTI");
         var plan = TwoStepPlan(src, ".cso", ".iso", ".chd", "tool-ok", "tool-fail");
-        var sut = new ConversionExecutor([new SuccessThenFailInvoker()]);
+        var sut = new ConversionExecutor([new FakeToolInvokers.SuccessThenFail("tool-fail")]);
 
         var result = sut.Execute(plan);
 
@@ -241,87 +242,4 @@ public sealed class SourcePreservationInvariantTests : IDisposable
                 Cost = 1
             }
         };
-
-    // ───────── Test invokers ─────────
-
-    private sealed class CrashingInvoker(int exitCode) : IToolInvoker
-    {
-        public bool CanHandle(ConversionCapability cap) => true;
-        public ToolInvocationResult Invoke(string s, string t, ConversionCapability c, CancellationToken ct)
-            => new(false, null, exitCode, null, "tool-crashed", 5, VerificationStatus.NotAttempted);
-        public VerificationStatus Verify(string t, ConversionCapability c) => VerificationStatus.NotAttempted;
-    }
-
-    private sealed class EmptyOutputInvoker : IToolInvoker
-    {
-        public bool CanHandle(ConversionCapability cap) => true;
-        public ToolInvocationResult Invoke(string s, string targetPath, ConversionCapability c, CancellationToken ct)
-        {
-            // Produce a zero-byte output so ConversionOutputValidator rejects it.
-            File.WriteAllBytes(targetPath, []);
-            return new(true, targetPath, 0, "ok", null, 5, VerificationStatus.NotAttempted);
-        }
-        public VerificationStatus Verify(string t, ConversionCapability c) => VerificationStatus.NotAttempted;
-    }
-
-    private sealed class VerifyFailingInvoker : IToolInvoker
-    {
-        public bool CanHandle(ConversionCapability cap) => true;
-        public ToolInvocationResult Invoke(string s, string targetPath, ConversionCapability c, CancellationToken ct)
-        {
-            File.WriteAllText(targetPath, "PRODUCED-BUT-INVALID");
-            return new(true, targetPath, 0, "ok", null, 5, VerificationStatus.NotAttempted);
-        }
-        public VerificationStatus Verify(string t, ConversionCapability c) => VerificationStatus.VerifyFailed;
-    }
-
-    private sealed class CancelOnSecondStepInvoker(CancellationTokenSource cts) : IToolInvoker
-    {
-        public bool CanHandle(ConversionCapability cap) => true;
-        public ToolInvocationResult Invoke(string s, string targetPath, ConversionCapability c, CancellationToken ct)
-        {
-            if (c.Tool.ToolName.Equals("tool-cancel", StringComparison.OrdinalIgnoreCase))
-            {
-                cts.Cancel();
-                ct.ThrowIfCancellationRequested();
-            }
-
-            File.WriteAllText(targetPath, "step1-output");
-            return new(true, targetPath, 0, "ok", null, 5, VerificationStatus.NotAttempted);
-        }
-        public VerificationStatus Verify(string t, ConversionCapability c) => VerificationStatus.Verified;
-    }
-
-    private sealed class SuccessfulInvoker : IToolInvoker
-    {
-        public bool CanHandle(ConversionCapability cap) => true;
-        public ToolInvocationResult Invoke(string s, string targetPath, ConversionCapability c, CancellationToken ct)
-        {
-            File.WriteAllText(targetPath, "ok");
-            return new(true, targetPath, 0, "ok", null, 5, VerificationStatus.Verified);
-        }
-        public VerificationStatus Verify(string t, ConversionCapability c) => VerificationStatus.Verified;
-    }
-
-    private sealed class DiskFullInvoker : IToolInvoker
-    {
-        public bool CanHandle(ConversionCapability cap) => true;
-        public ToolInvocationResult Invoke(string s, string targetPath, ConversionCapability c, CancellationToken ct)
-            => new(false, null, -1, null, "There is not enough space on the disk.", 5, VerificationStatus.NotAttempted);
-        public VerificationStatus Verify(string t, ConversionCapability c) => VerificationStatus.NotAttempted;
-    }
-
-    private sealed class SuccessThenFailInvoker : IToolInvoker
-    {
-        public bool CanHandle(ConversionCapability cap) => true;
-        public ToolInvocationResult Invoke(string s, string targetPath, ConversionCapability c, CancellationToken ct)
-        {
-            if (c.Tool.ToolName.Equals("tool-fail", StringComparison.OrdinalIgnoreCase))
-                return new(false, null, 1, null, "step-2-failure", 5, VerificationStatus.NotAttempted);
-
-            File.WriteAllText(targetPath, "step1-output");
-            return new(true, targetPath, 0, "ok", null, 5, VerificationStatus.Verified);
-        }
-        public VerificationStatus Verify(string t, ConversionCapability c) => VerificationStatus.Verified;
-    }
 }

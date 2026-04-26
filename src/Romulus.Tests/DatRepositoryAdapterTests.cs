@@ -262,7 +262,7 @@ public class DatRepositoryAdapterTests : IDisposable
     }
 
     [Fact]
-    public void GetDatIndex_MalformedXml_DoesNotThrow()
+    public void GetDatIndex_MalformedXml_ReturnsEmptyIndexAndCountsZero()
     {
         File.WriteAllText(Path.Combine(_tempDir, "bad.dat"), "<not valid xml");
 
@@ -270,8 +270,10 @@ public class DatRepositoryAdapterTests : IDisposable
             _tempDir,
             new Dictionary<string, string> { ["TEST"] = "bad.dat" });
 
-        // Should return empty or partial, not throw
+        // Verhalten: kaputtes DAT darf nicht werfen, Index muss vorhanden sein
+        // und keine Eintraege liefern (kein Partial-Eintrag, deterministisch leer).
         Assert.NotNull(index);
+        Assert.Equal(0, index.TotalEntries);
     }
 
     // ── Hash fallback chain tests ──

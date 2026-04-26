@@ -261,9 +261,10 @@ public sealed class RunEnvironmentBuilderBatch4Tests : IDisposable
     }
 
     [Fact]
-    public void ResolveDataDir_DoesNotThrow()
+    public void ResolveDataDir_ReturnsExistingNonEmptyDirectory()
     {
         var result = RunEnvironmentBuilder.ResolveDataDir();
+        Assert.False(string.IsNullOrEmpty(result));
         Assert.True(Directory.Exists(result));
     }
 }

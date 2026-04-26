@@ -633,16 +633,18 @@ public partial class GuiViewModelTests
     }
 
     [Fact]
-    public void CancelCommand_MultipleCalls_NoThrow()
+    public void CancelCommand_MultipleCalls_StaysCancelledAndDoesNotResetState()
     {
         var vm = new MainViewModel();
         var ct = vm.CreateRunCancellation();
         SetRunStateViaValidPath(vm, RunState.Scanning);
 
         vm.CancelCommand.Execute(null);
-        // Second cancel attempt — should be safe
+        // Second cancel attempt - must remain idempotent and keep Cancelled state.
         var ex = Record.Exception(() => vm.CancelCommand.Execute(null));
         Assert.Null(ex);
+        Assert.True(ct.IsCancellationRequested);
+        Assert.Equal(RunState.Cancelled, vm.CurrentRunState);
     }
 
     // ═══ TEST-008 supplement: Rollback file restoration ═════════════════
@@ -2401,14 +2403,16 @@ public partial class GuiViewModelTests
     }
 
     [Fact]
-    public void SEC002_PreflightToIdle_DoesNotThrow()
+    public void SEC002_PreflightToIdle_TransitionsToIdleState()
     {
         var vm = new MainViewModel();
         vm.CurrentRunState = RunState.Preflight;
 
-        // This must not throw InvalidOperationException (SEC-001 fix)
+        // SEC-001-Fix Verhalten: Preflight -> Idle ist eine erlaubte Transition
+        // und der State muss nach Zuweisung exakt Idle sein.
         var ex = Record.Exception(() => vm.CurrentRunState = RunState.Idle);
         Assert.Null(ex);
+        Assert.Equal(RunState.Idle, vm.CurrentRunState);
     }
 
     [Fact]
