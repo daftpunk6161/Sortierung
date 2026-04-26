@@ -3,27 +3,28 @@ using Romulus.Contracts.Ports;
 using Romulus.Core.Classification;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Sorting;
+using Romulus.Tests.TestFixtures;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.Sorting;
 
 /// <summary>
-/// Block B4 - Multi-disc / set-integrity invariants for the sorting pipeline.
+/// Multi-disc / set-integrity invariants for the sorting pipeline.
 ///
 /// Invariants:
-///  B4.1  All-or-nothing: when any set member fails to move, the primary file
+///  1.  All-or-nothing: when any set member fails to move, the primary file
 ///        (.cue / .m3u) and any earlier members must be rolled back to source.
-///  B4.2  M3U rewrite preserves every input line including '#' comments and
+///  2.  M3U rewrite preserves every input line including '#' comments and
 ///        blank lines; only renamed entries are substituted.
-///  B4.3  CUE/BIN sets co-move together; rolling-back behavior matches B4.1.
-///  B4.4  Two sets with identical primary file name but different content
+///  3.  CUE/BIN sets co-move together; rolling-back behavior matches invariant 1.
+///  4.  Two sets with identical primary file name but different content
 ///        do not silently overwrite each other (DUP-suffix collision policy).
 /// </summary>
-public sealed class BlockB4_MultiDiscSetIntegrityTests : IDisposable
+public sealed class MultiDiscSetIntegrityTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockB4_MultiDiscSetIntegrityTests()
+    public MultiDiscSetIntegrityTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_B4_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -35,9 +36,8 @@ public sealed class BlockB4_MultiDiscSetIntegrityTests : IDisposable
         catch { /* best-effort */ }
     }
 
-    // ─── B4.1 All-or-nothing for M3U set ────────────────────────────────
     [Fact]
-    public void B4_01_M3uMemberMoveFails_PrimaryAndPriorMembersRolledBackToSource()
+    public void ConsoleSorter_M3uMemberMoveFails_RollsBackPrimaryAndPriorMembersToSource()
     {
         var root = Path.Combine(_tempDir, "root");
         var input = Path.Combine(root, "Input");
@@ -83,9 +83,8 @@ public sealed class BlockB4_MultiDiscSetIntegrityTests : IDisposable
         Assert.True(result.Failed >= 1, "Sorter must report at least one failure for the partial set.");
     }
 
-    // ─── B4.2 M3U rewrite preserves every input line ────────────────────
     [Fact]
-    public void B4_02_M3uRewrite_PreservesCommentsAndBlankLines_AfterMove()
+    public void ConsoleSorter_M3uRewriteAfterMove_PreservesCommentsBlankLinesAndEntries()
     {
         var root = Path.Combine(_tempDir, "root");
         var input = Path.Combine(root, "Input");
@@ -138,9 +137,8 @@ public sealed class BlockB4_MultiDiscSetIntegrityTests : IDisposable
         Assert.Equal("disc2.cue", actual[5]);
     }
 
-    // ─── B4.3 CUE/BIN co-move ───────────────────────────────────────────
     [Fact]
-    public void B4_03_CueBinSet_CoMovesAtomically()
+    public void ConsoleSorter_CueBinSet_CoMovesMembersAtomically()
     {
         var root = Path.Combine(_tempDir, "root");
         var input = Path.Combine(root, "Input");
@@ -172,9 +170,8 @@ public sealed class BlockB4_MultiDiscSetIntegrityTests : IDisposable
         Assert.False(File.Exists(bin));
     }
 
-    // ─── B4.4 Two same-named sets distinct content -> DUP collision ─────
     [Fact]
-    public void B4_04_TwoSetsSameNameDifferentContent_BothPreservedViaDupSuffix()
+    public void ConsoleSorter_SameNamedSetsWithDifferentContent_PreservesBothViaDupSuffix()
     {
         var root = Path.Combine(_tempDir, "root");
         var inputA = Path.Combine(root, "RegionA");
@@ -225,11 +222,7 @@ public sealed class BlockB4_MultiDiscSetIntegrityTests : IDisposable
 
     private static ConsoleDetector LoadConsoleDetector()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "AGENTS.md")))
-            dir = dir.Parent;
-        var repoRoot = dir?.FullName ?? throw new InvalidOperationException("repo root not found");
-        var consolesPath = Path.Combine(repoRoot, "data", "consoles.json");
+        var consolesPath = RepoPaths.RepoFile("data", "consoles.json");
         return ConsoleDetector.LoadFromJson(File.ReadAllText(consolesPath));
     }
 

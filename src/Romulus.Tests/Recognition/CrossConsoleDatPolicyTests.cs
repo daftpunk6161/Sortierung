@@ -3,32 +3,30 @@ using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Core.Classification;
 using Romulus.Infrastructure.Hashing;
-using Romulus.Infrastructure.Metrics;
 using Romulus.Infrastructure.Orchestration;
-using Romulus.Infrastructure.FileSystem;
-using Romulus.Infrastructure.Audit;
+using Romulus.Tests.TestFixtures;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.Recognition;
 
 /// <summary>
-/// Block C1 - Cross-Console-DAT-Policy switch (FamilyDatPolicy.EnableCrossConsoleLookup)
+/// Cross-Console-DAT-Policy switch (FamilyDatPolicy.EnableCrossConsoleLookup)
 /// gap coverage for ALL hash stages.
 ///
 /// Existing coverage: container stage (Stage 3) is verified by
 /// EnrichmentPipelinePhaseAuditPhase3And4Tests.Execute_KnownConsoleHash_WithCrossConsoleLookupDisabled.
 ///
 /// This suite closes the remaining stage gaps:
-///  C1.1  Stage 1 (Archive inner hash, .zip)        - cross-console disabled = no DAT match
-///  C1.2  Stage 2 (Headerless hash, NES/SNES style) - cross-console disabled = no DAT match
-///  C1.3  Stage 4 (Name-only fallback)              - cross-console disabled = no DAT match
+///  1.  Stage 1 (Archive inner hash, .zip)        - cross-console disabled = no DAT match
+///  2.  Stage 2 (Headerless hash, NES/SNES style) - cross-console disabled = no DAT match
+///  3.  Stage 4 (Name-only fallback)              - cross-console disabled = no DAT match
 ///        even when the family policy explicitly allows name-only matching.
 /// </summary>
-public sealed class BlockC1_CrossConsoleDatPolicyStageGapTests : IDisposable
+public sealed class CrossConsoleDatPolicyTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockC1_CrossConsoleDatPolicyStageGapTests()
+    public CrossConsoleDatPolicyTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_C1_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -41,7 +39,7 @@ public sealed class BlockC1_CrossConsoleDatPolicyStageGapTests : IDisposable
     }
 
     [Fact]
-    public void C1_01_ArchiveInnerHashStage_CrossConsoleDisabled_DoesNotMatchOtherConsole()
+    public void EnrichmentPipeline_ArchiveInnerHashStageWithCrossConsoleDisabled_DoesNotMatchOtherConsole()
     {
         // Build a real ZIP with a single inner ROM. DAT entry is registered ONLY
         // for a non-resolved console (PS1) - cross-console disabled MUST suppress the match.
@@ -78,14 +76,14 @@ public sealed class BlockC1_CrossConsoleDatPolicyStageGapTests : IDisposable
                 new FileHashService(),
                 new ArchiveHashService(),
                 datIndex,
-                FamilyDatStrategyResolver: new FixedPolicyResolver(new FamilyDatPolicy(
+                FamilyDatStrategyResolver: new FixedFamilyDatPolicyResolver(new FamilyDatPolicy(
                     PreferArchiveInnerHash: true,
                     UseHeaderlessHash: false,
                     UseContainerHash: true,
                     AllowNameOnlyDatMatch: false,
                     RequireStrictNameForNameOnly: false,
                     EnableCrossConsoleLookup: false))),
-            CreateContext(new RunOptions
+            EnrichmentTestHarness.BuildContext(new RunOptions
             {
                 Roots = [_tempDir],
                 Extensions = [".zip"],
@@ -101,7 +99,7 @@ public sealed class BlockC1_CrossConsoleDatPolicyStageGapTests : IDisposable
     }
 
     [Fact]
-    public void C1_02_HeaderlessHashStage_CrossConsoleDisabled_DoesNotMatchOtherConsole()
+    public void EnrichmentPipeline_HeaderlessHashStageWithCrossConsoleDisabled_DoesNotMatchOtherConsole()
     {
         // Resolve console to SNES, but DAT entry for the headerless hash is registered
         // ONLY for NES. With cross-console disabled, no match.
@@ -136,14 +134,14 @@ public sealed class BlockC1_CrossConsoleDatPolicyStageGapTests : IDisposable
                 null,
                 datIndex,
                 HeaderlessHasher: headerless,
-                FamilyDatStrategyResolver: new FixedPolicyResolver(new FamilyDatPolicy(
+                FamilyDatStrategyResolver: new FixedFamilyDatPolicyResolver(new FamilyDatPolicy(
                     PreferArchiveInnerHash: false,
                     UseHeaderlessHash: true,
                     UseContainerHash: false,
                     AllowNameOnlyDatMatch: false,
                     RequireStrictNameForNameOnly: false,
                     EnableCrossConsoleLookup: false))),
-            CreateContext(new RunOptions
+            EnrichmentTestHarness.BuildContext(new RunOptions
             {
                 Roots = [_tempDir],
                 Extensions = [".sfc"],
@@ -158,7 +156,7 @@ public sealed class BlockC1_CrossConsoleDatPolicyStageGapTests : IDisposable
     }
 
     [Fact]
-    public void C1_03_NameOnlyFallbackStage_CrossConsoleDisabled_DoesNotMatchOtherConsole()
+    public void EnrichmentPipeline_NameOnlyFallbackStageWithCrossConsoleDisabled_DoesNotMatchOtherConsole()
     {
         // Unknown console scenario: detector has no signal, name-only fallback would
         // normally match. With cross-console disabled, the unknown-console name-only
@@ -184,14 +182,14 @@ public sealed class BlockC1_CrossConsoleDatPolicyStageGapTests : IDisposable
                 new FileHashService(),
                 null,
                 datIndex,
-                FamilyDatStrategyResolver: new FixedPolicyResolver(new FamilyDatPolicy(
+                FamilyDatStrategyResolver: new FixedFamilyDatPolicyResolver(new FamilyDatPolicy(
                     PreferArchiveInnerHash: false,
                     UseHeaderlessHash: false,
                     UseContainerHash: true,
                     AllowNameOnlyDatMatch: true,
                     RequireStrictNameForNameOnly: false,
                     EnableCrossConsoleLookup: false))),
-            CreateContext(new RunOptions
+            EnrichmentTestHarness.BuildContext(new RunOptions
             {
                 Roots = [_tempDir],
                 Extensions = [".iso"],
@@ -203,25 +201,6 @@ public sealed class BlockC1_CrossConsoleDatPolicyStageGapTests : IDisposable
         var candidate = Assert.Single(result);
         Assert.False(candidate.DatMatch);
         Assert.NotEqual(MatchKind.DatNameOnlyMatch, candidate.PrimaryMatchKind);
-    }
-
-    private static PipelineContext CreateContext(RunOptions options)
-    {
-        var metrics = new PhaseMetricsCollector();
-        metrics.Initialize();
-        return new PipelineContext
-        {
-            Options = options,
-            FileSystem = new FileSystemAdapter(),
-            AuditStore = new AuditCsvStore(),
-            Metrics = metrics
-        };
-    }
-
-    private sealed class FixedPolicyResolver(FamilyDatPolicy policy) : IFamilyDatStrategyResolver
-    {
-        public FamilyDatPolicy ResolvePolicy(PlatformFamily family, string extension, string? hashStrategy)
-            => policy;
     }
 
     private sealed class StubHeaderlessHasher(string hash) : IHeaderlessHasher

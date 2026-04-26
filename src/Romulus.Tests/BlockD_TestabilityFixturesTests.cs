@@ -16,7 +16,8 @@ namespace Romulus.Tests;
 ///
 /// One test per fixture - kept small and focused on the fixture itself,
 /// not on production logic (production logic stays covered by the suites
-/// that will adopt these fixtures, e.g. BlockC1_, BlockC2_, BlockC7_,
+/// that will adopt these fixtures, e.g. CrossConsoleDatPolicyTests,
+/// DecisionReasonParityTests, UnknownReviewBlockedRoutingTests,
 /// AuditABEndToEndRedTests, ...).
 /// </summary>
 public sealed class BlockD_TestabilityFixturesTests : IDisposable

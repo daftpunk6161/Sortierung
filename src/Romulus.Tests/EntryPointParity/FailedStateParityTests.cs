@@ -2,29 +2,29 @@ using Romulus.Api;
 using Romulus.CLI;
 using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.FileSystem;
-using Romulus.Tests.TestFixtures;
+using Romulus.Tests;
 using Xunit;
 using CliProgram = Romulus.CLI.Program;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.EntryPointParity;
 
 /// <summary>
-/// Block C6 - Failed/Partial/Risky State-Paritaet.
+/// Failed/Partial/Risky State-Paritaet.
 ///
 /// ReportParityTests covers happy-path success parity. This suite extends parity
 /// to "no useful work" / "preflight" end-states across CLI and API:
 ///
-///  C6.1  Non-existent root path -> CLI and API MUST agree on accept-vs-reject and
+///  1.  Non-existent root path -> CLI and API MUST agree on accept-vs-reject and
 ///        on "0 files scanned" semantics. No silent fabrication of fake results
 ///        in either entry point.
-///  C6.2  Empty root directory -> Same parity. Both entry points must complete
+///  2.  Empty root directory -> Same parity. Both entry points must complete
 ///        with TotalFiles=0 / Groups=0 / Winners=0.
 /// </summary>
-public sealed class BlockC6_FailedStateParityTests : IDisposable
+public sealed class FailedStateParityTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockC6_FailedStateParityTests()
+    public FailedStateParityTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_C6_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -37,7 +37,7 @@ public sealed class BlockC6_FailedStateParityTests : IDisposable
     }
 
     [Fact]
-    public async Task C6_01_NonExistentRoot_CliAndApi_AgreeOnZeroFilesAndNoCrash()
+    public async Task FailedRun_NonExistentRoot_CliAndApiHandleGracefullyWithoutFabricatedResults()
     {
         var ghostRoot = Path.Combine(_tempDir, "does-not-exist-" + Guid.NewGuid().ToString("N")[..8]);
         Assert.False(Directory.Exists(ghostRoot));
@@ -73,7 +73,7 @@ public sealed class BlockC6_FailedStateParityTests : IDisposable
     }
 
     [Fact]
-    public async Task C6_02_EmptyRoots_CliAndApi_AgreeOnEmptyRunSemantics()
+    public async Task FailedRun_EmptyRoot_CliAndApiAgreeOnEmptyRunSemantics()
     {
         var emptyRoot = Path.Combine(_tempDir, "empty");
         Directory.CreateDirectory(emptyRoot);

@@ -132,21 +132,21 @@
 
 > Erst nach Block A. Jeder Test schuetzt eine konkrete, benannte Invariante.
 
-- [ ] **N1** `Conversion/SourcePreservationInvariantTests.cs` – Block B1 (alle Failure-Pfade).
-- [ ] **N2** `Audit/MoveRollbackRoundTripTests.cs` – Block B2.
-- [ ] **N3** `Safety/MoveOutsideRootsPropertyTests.cs` – Block B3 (Filesystem-Scan-Validator).
-- [ ] **N4** `Sorting/MultiDiscSetIntegrityTests.cs` – Block B4.
-- [ ] **N5** `Sorting/ArcadeSetIntegrityTests.cs` – Block B5.
-- [ ] **N6** `Sorting/BiosEndToEndTests.cs` – Block B6.
-- [ ] **N7** `Safety/ReparsePointHardlinkTests.cs` – Block B7.
-- [ ] **N8** `Safety/ToolHashVerificationTests.cs` – Block B8.
-- [ ] **N9** `Recognition/CrossConsoleDatPolicyTests.cs` – Block C1.
-- [ ] **N10** `EntryPointParity/DecisionReasonParityTests.cs` – Block C2.
-- [ ] **N11** `Determinism/RunDeterminismPropertyTests.cs` – Block C3 (zentral, nicht nur Dedup).
-- [ ] **N12** `Audit/CancellationDataIntegrityTests.cs` – Block C4.
-- [ ] **N13** `Audit/AuditSidecarRoundTripTests.cs` – Block C5.
-- [ ] **N14** `EntryPointParity/FailedStateParityTests.cs` – Block C6.
-- [ ] **N15** `EntryPointParity/UnknownReviewBlockedRoutingTests.cs` – Block C7.
+- [x] **N1** `Conversion/SourcePreservationInvariantTests.cs` – Block B1 (alle Failure-Pfade).
+- [x] **N2** `Audit/MoveRollbackRoundTripTests.cs` – Block B2.
+- [x] **N3** `Safety/MoveOutsideRootsPropertyTests.cs` – Block B3 (Filesystem-Scan-Validator).
+- [x] **N4** `Sorting/MultiDiscSetIntegrityTests.cs` – Block B4.
+- [x] **N5** `Sorting/ArcadeSetIntegrityTests.cs` – Block B5.
+- [x] **N6** `Sorting/BiosEndToEndTests.cs` – Block B6.
+- [x] **N7** `Safety/ReparsePointHardlinkTests.cs` – Block B7.
+- [x] **N8** `Safety/ToolHashVerificationTests.cs` – Block B8.
+- [x] **N9** `Recognition/CrossConsoleDatPolicyTests.cs` – Block C1.
+- [x] **N10** `EntryPointParity/DecisionReasonParityTests.cs` – Block C2.
+- [x] **N11** `Determinism/RunDeterminismPropertyTests.cs` – Block C3 (zentral, nicht nur Dedup).
+- [x] **N12** `Audit/CancellationDataIntegrityTests.cs` – Block C4.
+- [x] **N13** `Audit/AuditSidecarRoundTripTests.cs` – Block C5.
+- [x] **N14** `EntryPointParity/FailedStateParityTests.cs` – Block C6.
+- [x] **N15** `EntryPointParity/UnknownReviewBlockedRoutingTests.cs` – Block C7.
 
 ---
 
@@ -172,7 +172,7 @@ Die Sanierung gilt als abgeschlossen, wenn alle folgenden Punkte erfuellt sind:
 - [ ] **DoD-2** Keine `DoesNotThrow`-/`Record.Exception → Assert.Null(ex)`-Tests ohne fachliche Folgeassertion.
 - [ ] **DoD-3** Keine Performance-Smokes in der Unit-Suite (Zeitgrenzen leben in `benchmark/`).
 - [ ] **DoD-4** Alle Tests aus §3.1 entfernt, alle Tests aus §3.2 umgebaut.
-- [ ] **DoD-5** Alle neuen Tests aus §4 (N1–N15) gruen und deterministisch.
+- [x] **DoD-5** Alle neuen Tests aus §4 (N1–N15) gruen und deterministisch.
 - [ ] **DoD-6** Refactors R1–R6 umgesetzt; R7 entschieden (umgesetzt oder explizit verworfen).
 - [ ] **DoD-7** Test-Ordnerstruktur nach Domaenen umgesetzt (Block E1).
 - [ ] **DoD-8** Gott-Testdateien (Block E2) gesplittet.
@@ -255,23 +255,23 @@ Die Sanierung gilt als abgeschlossen, wenn alle folgenden Punkte erfuellt sind:
 
 | Datei | Tests | Invariante |
 |---|---|---|
-| src/Romulus.Tests/BlockB1_ConversionSourcePersistenceTests.cs | 7 | Source-Datei bleibt bei jedem Conversion-Failure-Modus erhalten (Crash, Empty-Output, VerifyFailed, Cancellation, Staged-Collision, DiskFull, MultiStep) |
-| src/Romulus.Tests/BlockB2_MoveRollbackHashRoundTripTests.cs | 2 | SHA-256 Byte-identisch nach Move -> Audit -> Rollback (live + dryrun) |
-| src/Romulus.Tests/BlockB3_MoveOutsideRootsPropertyTests.cs | 7 | `MoveItemSafely` lehnt 5 adversariale Destinationen ab; Traversal wirft `InvalidOperationException` |
-| src/Romulus.Tests/BlockB4_MultiDiscSetIntegrityTests.cs | 4 | All-or-nothing M3U-Set, M3U-Rewrite Line-Parity, Cue/Bin Co-Move, Same-Name DUP-Suffix |
-| src/Romulus.Tests/BlockB5_ArcadeSetIntegrityTests.cs | 3 | ZIP als opaque unit, MAME-Folder-Detection deterministisch, Same-Name Arcade-ZIP-DUP |
-| src/Romulus.Tests/BlockB6_BiosEndToEndTests.cs | 4 | BIOS-Tag-Klassifikation, `__BIOS__`-Prefix verhindert Collision, Game>Bios SelectWinner-Rank, Sorter respektiert `_BIOS` als ExcludedFolder |
-| src/Romulus.Tests/BlockB7_ReparseHardlinkCycleTests.cs | 4 | `IsReparsePoint` erkennt Symlink, `MoveItemSafely` lehnt Symlink-/Hardlink-Source und Symlink-Ancestor-Destinationen ab (graceful skip ohne Privileg) |
-| src/Romulus.Tests/BlockB8_ToolHashVerificationGapTests.cs | 4 | Hash-Mismatch / Malformed JSON / Empty Hash / Mid-Run Delete -> jeweils Fail-Closed |
+| src/Romulus.Tests/Conversion/SourcePreservationInvariantTests.cs | 7 | Source-Datei bleibt bei jedem Conversion-Failure-Modus erhalten (Crash, Empty-Output, VerifyFailed, Cancellation, Staged-Collision, DiskFull, MultiStep) |
+| src/Romulus.Tests/Audit/MoveRollbackRoundTripTests.cs | 2 | SHA-256 Byte-identisch nach Move -> Audit -> Rollback (live + dryrun) |
+| src/Romulus.Tests/Safety/MoveOutsideRootsPropertyTests.cs | 7 | `MoveItemSafely` lehnt 5 adversariale Destinationen ab; Traversal wirft `InvalidOperationException` |
+| src/Romulus.Tests/Sorting/MultiDiscSetIntegrityTests.cs | 4 | All-or-nothing M3U-Set, M3U-Rewrite Line-Parity, Cue/Bin Co-Move, Same-Name DUP-Suffix |
+| src/Romulus.Tests/Sorting/ArcadeSetIntegrityTests.cs | 3 | ZIP als opaque unit, MAME-Folder-Detection deterministisch, Same-Name Arcade-ZIP-DUP |
+| src/Romulus.Tests/Sorting/BiosEndToEndTests.cs | 4 | BIOS-Tag-Klassifikation, `__BIOS__`-Prefix verhindert Collision, Game>Bios SelectWinner-Rank, Sorter respektiert `_BIOS` als ExcludedFolder |
+| src/Romulus.Tests/Safety/ReparsePointHardlinkTests.cs | 4 | `IsReparsePoint` erkennt Symlink, `MoveItemSafely` lehnt Symlink-/Hardlink-Source und Symlink-Ancestor-Destinationen ab (graceful skip ohne Privileg) |
+| src/Romulus.Tests/Safety/ToolHashVerificationTests.cs | 4 | Hash-Mismatch / Malformed JSON / Empty Hash / Mid-Run Delete -> jeweils Fail-Closed |
 
 ### Geaenderte Dateien (kein Produktivcode)
 
-Keine. Block B fuegt ausschliesslich Test-Suiten hinzu; alle Invarianten gelten gegen den aktuellen Code-Stand.
+Keine Produktivcode-Dateien. Block B/C fuegt ausschliesslich Test-Suiten hinzu bzw. verschiebt sie in Domaenenordner; alle Invarianten gelten gegen den aktuellen Code-Stand.
 
 ### Verifikation
 
 - `dotnet build src/Romulus.sln`: **0 Warnungen, 0 Fehler** (7.09s).
-- `dotnet test --filter FullyQualifiedName~BlockB`: **35 erfolgreich, 0 Fehler, 0 uebersprungen** (703 ms).
+- `dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-restore --filter "FullyQualifiedName~SourcePreservationInvariantTests|FullyQualifiedName~MoveRollbackRoundTripTests|FullyQualifiedName~MoveOutsideRootsPropertyTests|FullyQualifiedName~MultiDiscSetIntegrityTests|FullyQualifiedName~ArcadeSetIntegrityTests|FullyQualifiedName~BiosEndToEndTests|FullyQualifiedName~ReparsePointHardlinkTests|FullyQualifiedName~ToolHashVerificationTests|FullyQualifiedName~CrossConsoleDatPolicyTests|FullyQualifiedName~DecisionReasonParityTests|FullyQualifiedName~RunDeterminismPropertyTests|FullyQualifiedName~CancellationDataIntegrityTests|FullyQualifiedName~AuditSidecarRoundTripTests|FullyQualifiedName~FailedStateParityTests|FullyQualifiedName~UnknownReviewBlockedRoutingTests"`: **48 erfolgreich, 0 Fehler, 0 uebersprungen**.
 - Per-File Iteration:
   - 1. Lauf: 35/35 Build OK, 31/35 Tests gruen, 4 Fehler.
   - 2. Lauf nach Fixes (B1_03 Magic-Header-Skip via unbekannte Extension; B1_04 `Assert.Throws<OperationCanceledException>` da Executor OCE propagiert; B4_02 trailing empty line entfernt da Rewrite `string.Join` ohne trailing newline schreibt; B5_02 `MAME` statt `ARCADE` als deterministischer Detector-Output): **35/35 gruen**.
@@ -281,29 +281,29 @@ Keine. Block B fuegt ausschliesslich Test-Suiten hinzu; alle Invarianten gelten 
 
 ## Block C - Diff Appendix (2026-04-25)
 
-Block C ergaenzt 14 neue Tests in 7 Dateien unter `src/Romulus.Tests/` und macht Determinismus, Cancellation-Datenintegritaet, Audit-Round-Trip, Failed-State-Paritaet und Unknown/Review/Blocked-Routing fuer alle Entry Points testbar abgedeckt.
+Block C ergaenzt 13 neue Tests in 7 Domaenen-Dateien unter `src/Romulus.Tests/` und macht Determinismus, Cancellation-Datenintegritaet, Audit-Round-Trip, Failed-State-Paritaet und Unknown/Review/Blocked-Routing fuer alle Entry Points testbar abgedeckt.
 
 ### Neue Testdateien
 
 | Datei | Tests | Kurzbeschreibung |
 |---|---|---|
-| `BlockC1_CrossConsoleDatPolicyStageGapTests.cs` | 3 | Closes the gap that `EnableCrossConsoleLookup=false` MUST suppress matches in ALL Hash-Stages (Archive, Headerless, Name-Only). Container-Stage was bereits durch `EnrichmentPipelinePhaseAuditPhase3And4Tests` abgedeckt. |
-| `BlockC2_EntryPointFieldParityTests.cs` | 1 | Per-DedupeGroup-Projektion `(GameKey, ConsoleKey, PlatformFamily, DecisionClass, SortDecision, ClassificationReasonCode, DatMatch)` muss fuer denselben Roots-Input in CLI / WPF (`RunService`) / API (`RunManager`) identisch sein. |
-| `BlockC3_DeterminismPropertyTests.cs` | 1 | 25 Iterationen von `RunOrchestrator.Execute` ueber denselben 10-Datei-Seed muessen exakt dieselbe Per-Group-Projektion erzeugen (GameKey, MainPath, ConsoleKey, DecisionClass, SortDecision, PlatformFamily, Category, sortierte Loser-Filenames). |
-| `BlockC4_CancellationDataIntegrityTests.cs` | 2 | (a) Vorab gecancelter `CancellationToken` im Move-Mode haelt alle Source-Files unveraendert (Bytes gleich) und liefert `Status=cancelled`, `ExitCode=2`. (b) Cancellation per Progress-Callback waehrend Scan ebenso ohne Datenverlust. |
-| `BlockC5_AuditSidecarRoundTripTests.cs` | 3 | (a) `WriteMetadataSidecar` -> `TestMetadataSidecar` round-trip ist stabil und Sidecar-JSON enthaelt die Metadatenwerte (BOM-tolerant). (b) `AppendAuditRow` schreibt das Sidecar automatisch neu (Invariante gegen stille Drift). (c) Tampering der Audit-CSV per direktem File-Append wird durch `TestMetadataSidecar=false` erkannt. |
-| `BlockC6_FailedStateParityTests.cs` | 2 | (a) Non-existent Root: CLI exited gracefully (Exit-Code im sicheren Bereich), API rejected via `TryCreate=null` ODER liefert konsistente Zero-Result-Werte. KNOWN DIVERGENCE als P1-Finding dokumentiert. (b) Empty-Root: CLI Exit=0, API liefert `TotalFiles/Groups/Winners=0`. |
-| `BlockC7_UnknownReviewBlockedRoutingParityTests.cs` | 1 | Per-DedupeGroup-Routing `(GameKey, ConsoleKey, PlatformFamily, DecisionClass, SortDecision, Category)` ueber Unknown / Review / Blocked / Junk / BIOS-Mix muss WPF (`RunService`) und API (`RunManager`) identisch produzieren. |
+| `Recognition/CrossConsoleDatPolicyTests.cs` | 3 | Closes the gap that `EnableCrossConsoleLookup=false` MUST suppress matches in ALL Hash-Stages (Archive, Headerless, Name-Only). Container-Stage was bereits durch `EnrichmentPipelinePhaseAuditPhase3And4Tests` abgedeckt. |
+| `EntryPointParity/DecisionReasonParityTests.cs` | 1 | Per-DedupeGroup-Projektion `(GameKey, ConsoleKey, PlatformFamily, DecisionClass, SortDecision, ClassificationReasonCode, DatMatch)` muss fuer denselben Roots-Input in CLI / WPF (`RunService`) / API (`RunManager`) identisch sein. |
+| `Determinism/RunDeterminismPropertyTests.cs` | 1 | 25 Iterationen von `RunOrchestrator.Execute` ueber denselben 10-Datei-Seed muessen exakt dieselbe Per-Group-Projektion erzeugen (GameKey, MainPath, ConsoleKey, DecisionClass, SortDecision, PlatformFamily, Category, sortierte Loser-Filenames). |
+| `Audit/CancellationDataIntegrityTests.cs` | 2 | (a) Vorab gecancelter `CancellationToken` im Move-Mode haelt alle Source-Files unveraendert (Bytes gleich) und liefert `Status=cancelled`, `ExitCode=2`. (b) Cancellation per Progress-Callback waehrend Scan ebenso ohne Datenverlust. |
+| `Audit/AuditSidecarRoundTripTests.cs` | 3 | (a) `WriteMetadataSidecar` -> `TestMetadataSidecar` round-trip ist stabil und Sidecar-JSON enthaelt die Metadatenwerte (BOM-tolerant). (b) `AppendAuditRow` schreibt das Sidecar automatisch neu (Invariante gegen stille Drift). (c) Tampering der Audit-CSV per direktem File-Append wird durch `TestMetadataSidecar=false` erkannt. |
+| `EntryPointParity/FailedStateParityTests.cs` | 2 | (a) Non-existent Root: CLI exited gracefully (Exit-Code im sicheren Bereich), API rejected via `TryCreate=null` ODER liefert konsistente Zero-Result-Werte. KNOWN DIVERGENCE als P1-Finding dokumentiert. (b) Empty-Root: CLI Exit=0, API liefert `TotalFiles/Groups/Winners=0`. |
+| `EntryPointParity/UnknownReviewBlockedRoutingTests.cs` | 1 | Per-DedupeGroup-Routing `(GameKey, ConsoleKey, PlatformFamily, DecisionClass, SortDecision, Category)` ueber Unknown / Review / Blocked / Junk / BIOS-Mix muss WPF (`RunService`) und API (`RunManager`) identisch produzieren. |
 
 ### Verification
 
 ```
 Get-Process testhost -ErrorAction SilentlyContinue | Stop-Process -Force
 dotnet build src/Romulus.Tests/Romulus.Tests.csproj
-dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --filter "FullyQualifiedName~BlockC"
+dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --filter "FullyQualifiedName~CrossConsoleDatPolicyTests|FullyQualifiedName~DecisionReasonParityTests|FullyQualifiedName~RunDeterminismPropertyTests|FullyQualifiedName~CancellationDataIntegrityTests|FullyQualifiedName~AuditSidecarRoundTripTests|FullyQualifiedName~FailedStateParityTests|FullyQualifiedName~UnknownReviewBlockedRoutingTests"
 ```
 
-Ergebnis: `Bestanden! Fehler: 0, erfolgreich: 14, gesamt: 14`.
+Ergebnis: `Bestanden! Fehler: 0, erfolgreich: 13, gesamt: 13`.
 
 ### Findings waehrend Block-C-Implementierung
 
@@ -317,29 +317,29 @@ Ergebnis: `Bestanden! Fehler: 0, erfolgreich: 14, gesamt: 14`.
 
 ## Block C - Diff Appendix (2026-04-25)
 
-Block C ergaenzt 14 neue Tests in 7 Dateien unter `src/Romulus.Tests/` und macht Determinismus, Cancellation-Datenintegritaet, Audit-Round-Trip, Failed-State-Paritaet und Unknown/Review/Blocked-Routing fuer alle Entry Points testbar abgedeckt.
+Block C ergaenzt 13 neue Tests in 7 Domaenen-Dateien unter `src/Romulus.Tests/` und macht Determinismus, Cancellation-Datenintegritaet, Audit-Round-Trip, Failed-State-Paritaet und Unknown/Review/Blocked-Routing fuer alle Entry Points testbar abgedeckt.
 
 ### Neue Testdateien
 
 | Datei | Tests | Kurzbeschreibung |
 |---|---|---|
-| `BlockC1_CrossConsoleDatPolicyStageGapTests.cs` | 3 | Closes the gap that `EnableCrossConsoleLookup=false` MUST suppress matches in ALL Hash-Stages (Archive, Headerless, Name-Only). Container-Stage was bereits durch `EnrichmentPipelinePhaseAuditPhase3And4Tests` abgedeckt. |
-| `BlockC2_EntryPointFieldParityTests.cs` | 1 | Per-DedupeGroup-Projektion `(GameKey, ConsoleKey, PlatformFamily, DecisionClass, SortDecision, ClassificationReasonCode, DatMatch)` muss fuer denselben Roots-Input in CLI / WPF (`RunService`) / API (`RunManager`) identisch sein. |
-| `BlockC3_DeterminismPropertyTests.cs` | 1 | 25 Iterationen von `RunOrchestrator.Execute` ueber denselben 10-Datei-Seed muessen exakt dieselbe Per-Group-Projektion erzeugen (GameKey, MainPath, ConsoleKey, DecisionClass, SortDecision, PlatformFamily, Category, sortierte Loser-Filenames). |
-| `BlockC4_CancellationDataIntegrityTests.cs` | 2 | (a) Vorab gecancelter `CancellationToken` im Move-Mode haelt alle Source-Files unveraendert (Bytes gleich) und liefert `Status=cancelled`, `ExitCode=2`. (b) Cancellation per Progress-Callback waehrend Scan ebenso ohne Datenverlust. |
-| `BlockC5_AuditSidecarRoundTripTests.cs` | 3 | (a) `WriteMetadataSidecar` -> `TestMetadataSidecar` round-trip ist stabil und Sidecar-JSON enthaelt die Metadatenwerte (BOM-tolerant). (b) `AppendAuditRow` schreibt das Sidecar automatisch neu (Invariante gegen stille Drift). (c) Tampering der Audit-CSV per direktem File-Append wird durch `TestMetadataSidecar=false` erkannt. |
-| `BlockC6_FailedStateParityTests.cs` | 2 | (a) Non-existent Root: CLI exited gracefully (Exit-Code im sicheren Bereich), API rejected via `TryCreate=null` ODER liefert konsistente Zero-Result-Werte. KNOWN DIVERGENCE als P1-Finding dokumentiert. (b) Empty-Root: CLI Exit=0, API liefert `TotalFiles/Groups/Winners=0`. |
-| `BlockC7_UnknownReviewBlockedRoutingParityTests.cs` | 1 | Per-DedupeGroup-Routing `(GameKey, ConsoleKey, PlatformFamily, DecisionClass, SortDecision, Category)` ueber Unknown / Review / Blocked / Junk / BIOS-Mix muss WPF (`RunService`) und API (`RunManager`) identisch produzieren. |
+| `Recognition/CrossConsoleDatPolicyTests.cs` | 3 | Closes the gap that `EnableCrossConsoleLookup=false` MUST suppress matches in ALL Hash-Stages (Archive, Headerless, Name-Only). Container-Stage was bereits durch `EnrichmentPipelinePhaseAuditPhase3And4Tests` abgedeckt. |
+| `EntryPointParity/DecisionReasonParityTests.cs` | 1 | Per-DedupeGroup-Projektion `(GameKey, ConsoleKey, PlatformFamily, DecisionClass, SortDecision, ClassificationReasonCode, DatMatch)` muss fuer denselben Roots-Input in CLI / WPF (`RunService`) / API (`RunManager`) identisch sein. |
+| `Determinism/RunDeterminismPropertyTests.cs` | 1 | 25 Iterationen von `RunOrchestrator.Execute` ueber denselben 10-Datei-Seed muessen exakt dieselbe Per-Group-Projektion erzeugen (GameKey, MainPath, ConsoleKey, DecisionClass, SortDecision, PlatformFamily, Category, sortierte Loser-Filenames). |
+| `Audit/CancellationDataIntegrityTests.cs` | 2 | (a) Vorab gecancelter `CancellationToken` im Move-Mode haelt alle Source-Files unveraendert (Bytes gleich) und liefert `Status=cancelled`, `ExitCode=2`. (b) Cancellation per Progress-Callback waehrend Scan ebenso ohne Datenverlust. |
+| `Audit/AuditSidecarRoundTripTests.cs` | 3 | (a) `WriteMetadataSidecar` -> `TestMetadataSidecar` round-trip ist stabil und Sidecar-JSON enthaelt die Metadatenwerte (BOM-tolerant). (b) `AppendAuditRow` schreibt das Sidecar automatisch neu (Invariante gegen stille Drift). (c) Tampering der Audit-CSV per direktem File-Append wird durch `TestMetadataSidecar=false` erkannt. |
+| `EntryPointParity/FailedStateParityTests.cs` | 2 | (a) Non-existent Root: CLI exited gracefully (Exit-Code im sicheren Bereich), API rejected via `TryCreate=null` ODER liefert konsistente Zero-Result-Werte. KNOWN DIVERGENCE als P1-Finding dokumentiert. (b) Empty-Root: CLI Exit=0, API liefert `TotalFiles/Groups/Winners=0`. |
+| `EntryPointParity/UnknownReviewBlockedRoutingTests.cs` | 1 | Per-DedupeGroup-Routing `(GameKey, ConsoleKey, PlatformFamily, DecisionClass, SortDecision, Category)` ueber Unknown / Review / Blocked / Junk / BIOS-Mix muss WPF (`RunService`) und API (`RunManager`) identisch produzieren. |
 
 ### Verification
 
 ```
 Get-Process testhost -ErrorAction SilentlyContinue | Stop-Process -Force
 dotnet build src/Romulus.Tests/Romulus.Tests.csproj
-dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --filter "FullyQualifiedName~BlockC"
+dotnet test src/Romulus.Tests/Romulus.Tests.csproj --no-build --filter "FullyQualifiedName~CrossConsoleDatPolicyTests|FullyQualifiedName~DecisionReasonParityTests|FullyQualifiedName~RunDeterminismPropertyTests|FullyQualifiedName~CancellationDataIntegrityTests|FullyQualifiedName~AuditSidecarRoundTripTests|FullyQualifiedName~FailedStateParityTests|FullyQualifiedName~UnknownReviewBlockedRoutingTests"
 ```
 
-Ergebnis: `Bestanden! Fehler: 0, erfolgreich: 14, gesamt: 14`.
+Ergebnis: `Bestanden! Fehler: 0, erfolgreich: 13, gesamt: 13`.
 
 ### Findings waehrend Block-C-Implementierung
 
@@ -363,7 +363,7 @@ Ergebnis: `Bestanden! Fehler: 0, erfolgreich: 14, gesamt: 14`.
 | `src/Romulus.Tests/TestFixtures/EnrichmentTestHarness.cs` | D1: `BuildContext(RunOptions)` + `DryRunOptions(...)` + `FixedFamilyDatPolicyResolver`. Ersetzt 10x dupliziertes `CreateContext` und 2x `FixedPolicyResolver`. |
 | `src/Romulus.Tests/TestFixtures/RootBoundaryValidator.cs` | D2: SHA-256-Snapshot/Verify fuer Pfade ausserhalb erlaubter Roots. Erkennt Modify/Delete/New-File. |
 | `src/Romulus.Tests/TestFixtures/ScenarioToolRunner.cs` | D3: `IToolRunner`-Test-Double mit `ConversionFailureScenario { Crash, HashMismatch, Cancellation, OutputTooSmall, DiskFull }`. Loest copy-pasted Stubs ab. |
-| `src/Romulus.Tests/TestFixtures/RunResultProjection.cs` | D4: `DecisionFields(IEnumerable<RomCandidate>)` + `RoutingTuples(...)`. Ersetzt manuelle `string.Join`-Projektionen aus BlockC2_/BlockC7_/ReportParityTests. |
+| `src/Romulus.Tests/TestFixtures/RunResultProjection.cs` | D4: `DecisionFields(IEnumerable<RomCandidate>)` + `RoutingTuples(...)`. Ersetzt manuelle `string.Join`-Projektionen aus EntryPointParity- und Report-Parity-Tests. |
 | `src/Romulus.Tests/TestFixtures/TraceCapture.cs` | D6: `Capture(Action) -> string` mit AutoFlush-/Listener-Restore auch im Fehlerfall. Ersetzt `AuditABEndToEndRedTests.CaptureTrace`. |
 
 ### Neue Tests

@@ -1,23 +1,23 @@
 using Romulus.Infrastructure.FileSystem;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.Safety;
 
 /// <summary>
-/// Block B3 - Property-style coverage of MoveItemSafely(allowedRoot=…) refusing
+/// Property-style coverage of MoveItemSafely(allowedRoot=...) refusing
 /// to move outside allowed roots regardless of input shape.
 ///
 /// Invariant: For every adversarial destination path that does NOT resolve into
 /// the supplied allowedRoot, MoveItemSafely must return null (refusal) AND
 /// leave the source file untouched.
 /// </summary>
-public sealed class BlockB3_MoveOutsideRootsPropertyTests : IDisposable
+public sealed class MoveOutsideRootsPropertyTests : IDisposable
 {
     private readonly string _tempDir;
     private readonly string _allowedRoot;
     private readonly string _outsideRoot;
 
-    public BlockB3_MoveOutsideRootsPropertyTests()
+    public MoveOutsideRootsPropertyTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_B3_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -45,7 +45,7 @@ public sealed class BlockB3_MoveOutsideRootsPropertyTests : IDisposable
 
     [Theory]
     [MemberData(nameof(AdversarialDestinations))]
-    public void B3_AdversarialDestination_OutsideAllowedRoot_RefusesAndPreservesSource(string label)
+    public void FileSystemAdapter_AdversarialDestinationOutsideAllowedRoot_RefusesAndPreservesSource(string label)
     {
         var src = Path.Combine(_allowedRoot, $"src_{label}.bin");
         File.WriteAllBytes(src, [1, 2, 3, 4, 5]);
@@ -74,7 +74,7 @@ public sealed class BlockB3_MoveOutsideRootsPropertyTests : IDisposable
     }
 
     [Fact]
-    public void B3_DestinationInsideAllowedRoot_Succeeds()
+    public void FileSystemAdapter_DestinationInsideAllowedRoot_Succeeds()
     {
         var src = Path.Combine(_allowedRoot, "src-ok.bin");
         var dest = Path.Combine(_allowedRoot, "sub", "dest-ok.bin");
@@ -89,7 +89,7 @@ public sealed class BlockB3_MoveOutsideRootsPropertyTests : IDisposable
     }
 
     [Fact]
-    public void B3_DirectoryTraversalInDestPath_ThrowsInvariantViolation()
+    public void FileSystemAdapter_DirectoryTraversalInDestinationPath_ThrowsInvariantViolation()
     {
         var src = Path.Combine(_allowedRoot, "src-traversal.bin");
         File.WriteAllBytes(src, [1]);

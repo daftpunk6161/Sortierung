@@ -1,27 +1,27 @@
 using Romulus.Infrastructure.Tools;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.Safety;
 
 /// <summary>
-/// Block B8 - Tool-hash verification gap coverage.
+/// Tool-hash verification gap coverage.
 ///
 /// Core hash-allowlist behavior is already covered by ToolRunnerAdapterTests
 /// (missing hash file fail-closed, tool-not-in-allowlist fail-closed,
 /// bypass enable/disable, cancellation).
 ///
 /// This suite adds the gap cases:
-///  B8.1  Hash present in JSON but mismatches the tool's actual SHA-256.
-///  B8.2  Hash file becomes corrupt mid-run (malformed JSON) - fail closed.
-///  B8.3  Empty/whitespace hash entry treated as missing - fail closed.
-///  B8.4  Hash file deleted between two consecutive invocations - second call
+///  1.  Hash present in JSON but mismatches the tool's actual SHA-256.
+///  2.  Hash file becomes corrupt mid-run (malformed JSON) - fail closed.
+///  3.  Empty/whitespace hash entry treated as missing - fail closed.
+///  4.  Hash file deleted between two consecutive invocations - second call
 ///        must fail closed even after a previous successful invocation.
 /// </summary>
-public sealed class BlockB8_ToolHashVerificationGapTests : IDisposable
+public sealed class ToolHashVerificationTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockB8_ToolHashVerificationGapTests()
+    public ToolHashVerificationTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_B8_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -34,7 +34,7 @@ public sealed class BlockB8_ToolHashVerificationGapTests : IDisposable
     }
 
     [Fact]
-    public void B8_01_HashEntryMismatch_FailsClosed()
+    public void ToolRunnerAdapter_HashEntryMismatch_FailsClosed()
     {
         var exe = GetExistingExecutable();
         var hashesPath = Path.Combine(_tempDir, "tool-hashes.json");
@@ -56,7 +56,7 @@ public sealed class BlockB8_ToolHashVerificationGapTests : IDisposable
     }
 
     [Fact]
-    public void B8_02_MalformedJsonHashFile_FailsClosed()
+    public void ToolRunnerAdapter_MalformedHashJson_FailsClosed()
     {
         var exe = GetExistingExecutable();
         var hashesPath = Path.Combine(_tempDir, "tool-hashes.json");
@@ -70,7 +70,7 @@ public sealed class BlockB8_ToolHashVerificationGapTests : IDisposable
     }
 
     [Fact]
-    public void B8_03_EmptyHashEntry_FailsClosed()
+    public void ToolRunnerAdapter_EmptyHashEntry_FailsClosed()
     {
         var exe = GetExistingExecutable();
         var hashesPath = Path.Combine(_tempDir, "tool-hashes.json");
@@ -91,7 +91,7 @@ public sealed class BlockB8_ToolHashVerificationGapTests : IDisposable
     }
 
     [Fact]
-    public void B8_04_HashFileDeletedBetweenInvocations_SecondCallFailsClosed()
+    public void ToolRunnerAdapter_HashFileDeletedBetweenInvocations_SecondCallFailsClosed()
     {
         var exe = GetExistingExecutable();
         var hashesPath = Path.Combine(_tempDir, "tool-hashes.json");

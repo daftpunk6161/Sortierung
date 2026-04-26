@@ -1,29 +1,30 @@
 using Romulus.Core.Classification;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Sorting;
+using Romulus.Tests.TestFixtures;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.Sorting;
 
 /// <summary>
-/// Block B5 - Arcade-set integrity invariants.
+/// Arcade-set integrity invariants.
 ///
 /// Arcade titles are typically distributed as ZIP "set archives". The integrity
 /// contract is therefore narrower than for disc-based sets:
 ///
-/// B5.1  An arcade-keyed ZIP must move to the resolved arcade console folder as
+/// 1.  An arcade-keyed ZIP must move to the resolved arcade console folder as
 ///       a single opaque file - it must NEVER be extracted, decomposed, or have
 ///       inner contents reshuffled by the sorting pipeline.
-/// B5.2  Arcade detection by folder/extension must surface a stable arcade
+/// 2.  Arcade detection by folder/extension must surface a stable arcade
 ///       console key (deterministic input -> deterministic output).
-/// B5.3  Two distinct arcade ZIPs with the same set name (e.g. clone vs parent)
+/// 3.  Two distinct arcade ZIPs with the same set name (e.g. clone vs parent)
 ///       must both be preserved under collision resolution; no silent overwrite.
 /// </summary>
-public sealed class BlockB5_ArcadeSetIntegrityTests : IDisposable
+public sealed class ArcadeSetIntegrityTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockB5_ArcadeSetIntegrityTests()
+    public ArcadeSetIntegrityTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_B5_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -36,7 +37,7 @@ public sealed class BlockB5_ArcadeSetIntegrityTests : IDisposable
     }
 
     [Fact]
-    public void B5_01_ArcadeZip_MovesAsSingleOpaqueUnit_NotExtracted()
+    public void ConsoleSorter_ArcadeZip_MovesAsSingleOpaqueUnitWithoutExtraction()
     {
         var root = Path.Combine(_tempDir, "root");
         var input = Path.Combine(root, "MAME");
@@ -73,7 +74,7 @@ public sealed class BlockB5_ArcadeSetIntegrityTests : IDisposable
     }
 
     [Fact]
-    public void B5_02_ArcadeDetection_ByMameFolder_IsDeterministic()
+    public void ConsoleDetector_MameFolderDetection_IsDeterministic()
     {
         var detector = LoadConsoleDetector();
         var root = Path.Combine(_tempDir, "scan");
@@ -91,7 +92,7 @@ public sealed class BlockB5_ArcadeSetIntegrityTests : IDisposable
     }
 
     [Fact]
-    public void B5_03_TwoArcadeZipsSameName_DifferentContent_BothPreserved()
+    public void ConsoleSorter_SameNamedArcadeZipsWithDifferentContent_PreservesBoth()
     {
         var root = Path.Combine(_tempDir, "root");
         var inputA = Path.Combine(root, "Set1");
@@ -128,11 +129,7 @@ public sealed class BlockB5_ArcadeSetIntegrityTests : IDisposable
 
     private static ConsoleDetector LoadConsoleDetector()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "AGENTS.md")))
-            dir = dir.Parent;
-        var repoRoot = dir?.FullName ?? throw new InvalidOperationException("repo root not found");
-        var consolesPath = Path.Combine(repoRoot, "data", "consoles.json");
+        var consolesPath = RepoPaths.RepoFile("data", "consoles.json");
         return ConsoleDetector.LoadFromJson(File.ReadAllText(consolesPath));
     }
 }

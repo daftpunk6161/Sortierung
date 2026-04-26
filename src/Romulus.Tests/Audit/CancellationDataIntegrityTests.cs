@@ -4,27 +4,27 @@ using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Orchestration;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.Audit;
 
 /// <summary>
-/// Block C4 - Cancellation-Datenintegritaet.
+/// Cancellation-Datenintegritaet.
 ///
-/// Conversion-cancellation cleanup is covered by BlockB1_ConversionSourcePersistenceTests
-/// (B1_04). This suite covers the orchestrator-level Move-mode cancellation contract:
+/// Conversion-cancellation cleanup is covered by SourcePreservationInvariantTests.
+/// This suite covers the orchestrator-level Move-mode cancellation contract:
 ///
-///  C4.1  An immediately cancelled token must yield Status="cancelled" with ExitCode=2
+///  1.  An immediately cancelled token must yield Status="cancelled" with ExitCode=2
 ///        and MUST NOT move any source file.
-///  C4.2  Cancellation triggered during the scan progress callback (mid-run) must
+///  2.  Cancellation triggered during the scan progress callback (mid-run) must
 ///        leave every input file at its original location (no half-move).
 ///
-/// Combined with B1's conversion-cancellation suite, this closes the C4 gap:
+/// Combined with conversion-cancellation coverage, this closes the C4 gap:
 /// "no half-moved files, partial conversion outputs cleaned up after cancel."
 /// </summary>
-public sealed class BlockC4_CancellationDataIntegrityTests : IDisposable
+public sealed class CancellationDataIntegrityTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockC4_CancellationDataIntegrityTests()
+    public CancellationDataIntegrityTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_C4_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -37,7 +37,7 @@ public sealed class BlockC4_CancellationDataIntegrityTests : IDisposable
     }
 
     [Fact]
-    public void C4_01_MoveMode_AlreadyCancelledToken_LeavesAllInputsInPlace()
+    public void RunOrchestrator_MoveModeWithAlreadyCancelledToken_LeavesAllInputsInPlace()
     {
         var root = Path.Combine(_tempDir, "scan");
         Directory.CreateDirectory(root);
@@ -75,7 +75,7 @@ public sealed class BlockC4_CancellationDataIntegrityTests : IDisposable
     }
 
     [Fact]
-    public void C4_02_MoveMode_CancellationDuringScan_LeavesAllInputsInPlace()
+    public void RunOrchestrator_MoveModeWithCancellationDuringScan_LeavesAllInputsInPlace()
     {
         var root = Path.Combine(_tempDir, "scan");
         Directory.CreateDirectory(root);

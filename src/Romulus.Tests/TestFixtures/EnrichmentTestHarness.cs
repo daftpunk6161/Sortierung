@@ -10,7 +10,7 @@ namespace Romulus.Tests.TestFixtures;
 /// <summary>
 /// Block D1 - centralized test harness for <see cref="EnrichmentPipelinePhase"/>.
 /// Replaces previously duplicated <c>CreateContext</c> + <c>FixedPolicyResolver</c>
-/// helpers across multiple test files (BlockC1_, EnrichmentPipelinePhaseAuditPhase3And4Tests,
+/// helpers across multiple test files (CrossConsoleDatPolicyTests, EnrichmentPipelinePhaseAuditPhase3And4Tests,
 /// AuditP0P1FixTests, DatRenamePipelinePhaseIssue9RedTests, ...).
 ///
 /// Goal: enable family x policy-switch testing without reflection or copy-pasted

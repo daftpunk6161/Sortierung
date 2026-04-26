@@ -4,10 +4,10 @@ using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Orchestration;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.Determinism;
 
 /// <summary>
-/// Block C3 - Zentraler Determinismus-Property-Test.
+/// Zentraler Determinismus-Property-Test.
 ///
 /// DeduplicationEngine has SelectWinner_IsStableAcrossPermutationsAndParallelCalls,
 /// but that only covers the dedup core - not the full pipeline.
@@ -23,12 +23,12 @@ namespace Romulus.Tests;
 /// stable across runs - which catches non-determinism inside the pipeline itself
 /// (parallel race conditions, dictionary iteration leaks, time-dependent winners).
 /// </summary>
-public sealed class BlockC3_DeterminismPropertyTests : IDisposable
+public sealed class RunDeterminismPropertyTests : IDisposable
 {
     private const int Iterations = 25;
     private readonly string _tempDir;
 
-    public BlockC3_DeterminismPropertyTests()
+    public RunDeterminismPropertyTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_C3_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -41,7 +41,7 @@ public sealed class BlockC3_DeterminismPropertyTests : IDisposable
     }
 
     [Fact]
-    public void C3_01_RunOrchestratorExecute_IsStableAcross25Iterations()
+    public void RunOrchestratorExecute_SameInputAcrossIterations_ProducesIdenticalProjection()
     {
         var root = Path.Combine(_tempDir, "scan");
         Directory.CreateDirectory(root);

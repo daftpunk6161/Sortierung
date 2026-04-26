@@ -9,10 +9,10 @@ using Romulus.UI.Wpf.ViewModels;
 using Romulus.Tests.TestFixtures;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.EntryPointParity;
 
 /// <summary>
-/// Block C7 - Unknown / Review / Blocked routing parity.
+/// Unknown / Review / Blocked routing parity.
 ///
 /// Aggregate count parity exists (ReportParityTests). What is NOT explicitly
 /// covered is per-DedupeGroup SortDecision/DecisionClass equivalence between
@@ -25,11 +25,11 @@ namespace Romulus.Tests;
 /// group routing tuple (DecisionClass, SortDecision, ConsoleKey, PlatformFamily)
 /// is identical across API and WPF.
 /// </summary>
-public sealed class BlockC7_UnknownReviewBlockedRoutingParityTests : IDisposable
+public sealed class UnknownReviewBlockedRoutingTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockC7_UnknownReviewBlockedRoutingParityTests()
+    public UnknownReviewBlockedRoutingTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_C7_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -42,7 +42,7 @@ public sealed class BlockC7_UnknownReviewBlockedRoutingParityTests : IDisposable
     }
 
     [Fact]
-    public async Task C7_01_PerGroupRouting_IdenticalAcrossWpfAndApi()
+    public async Task RunRouting_ForUnknownReviewBlockedInputs_IsIdenticalAcrossWpfAndApi()
     {
         var root = Path.Combine(_tempDir, "scan");
         Directory.CreateDirectory(root);
@@ -78,28 +78,15 @@ public sealed class BlockC7_UnknownReviewBlockedRoutingParityTests : IDisposable
         var api = manager.Get(apiRun.RunId)!.Result!;
 
         // Project per-group routing tuple
-        var wpfRouting = wpf.Result.DedupeGroups
-            .Select(g => RoutingTuple(g.GameKey, g.Winner))
-            .OrderBy(s => s, StringComparer.Ordinal)
-            .ToArray();
+        var wpfRouting = RunResultProjection.RoutingTuples(
+            wpf.Result.DedupeGroups.Select(g => (g.GameKey, g.Winner)));
 
-        var apiRouting = api.DedupeGroups
-            .Select(g => RoutingTuple(g.GameKey, g.Winner))
-            .OrderBy(s => s, StringComparer.Ordinal)
-            .ToArray();
+        var apiRouting = RunResultProjection.RoutingTuples(
+            api.DedupeGroups.Select(g => (g.GameKey, g.Winner)));
 
-        Assert.True(wpfRouting.Length > 0, "Need at least one group to assert routing parity.");
+        Assert.True(wpfRouting.Count > 0, "Need at least one group to assert routing parity.");
         Assert.Equal(wpfRouting, apiRouting);
     }
-
-    private static string RoutingTuple(string gameKey, RomCandidate w)
-        => string.Join("|",
-            gameKey.ToLowerInvariant(),
-            w.ConsoleKey,
-            w.PlatformFamily,
-            w.DecisionClass,
-            w.SortDecision,
-            w.Category);
 
     private sealed class StubDialogService : IDialogService
     {

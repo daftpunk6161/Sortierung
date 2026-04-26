@@ -3,10 +3,10 @@ using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.FileSystem;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.Audit;
 
 /// <summary>
-/// Block B2 - Move + Rollback hash round-trip invariants.
+/// Move + Rollback hash round-trip invariants.
 ///
 /// Invariant: A file moved into the trash via the safe move + audit pipeline,
 /// then rolled back from the audit, must reappear at its original path with
@@ -15,11 +15,11 @@ namespace Romulus.Tests;
 /// This guards against silent file corruption during the move/rollback cycle
 /// for the data-loss prevention contract.
 /// </summary>
-public sealed class BlockB2_MoveRollbackHashRoundTripTests : IDisposable
+public sealed class MoveRollbackRoundTripTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockB2_MoveRollbackHashRoundTripTests()
+    public MoveRollbackRoundTripTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_B2_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -32,7 +32,7 @@ public sealed class BlockB2_MoveRollbackHashRoundTripTests : IDisposable
     }
 
     [Fact]
-    public void B2_01_MoveToTrashThenRollback_RestoresIdenticalBytesAtOriginalPath()
+    public void AuditRollback_MoveToTrashThenRollback_RestoresIdenticalBytesAtOriginalPath()
     {
         var rootDir = Path.Combine(_tempDir, "root");
         var trashDir = Path.Combine(rootDir, "_TRASH_REGION_DEDUPE");
@@ -87,7 +87,7 @@ public sealed class BlockB2_MoveRollbackHashRoundTripTests : IDisposable
     }
 
     [Fact]
-    public void B2_02_DryRunRollback_DoesNotMutateAnyBytes()
+    public void AuditRollback_DryRun_DoesNotMutateAnyBytes()
     {
         var rootDir = Path.Combine(_tempDir, "root");
         var trashDir = Path.Combine(rootDir, "_TRASH_JUNK");

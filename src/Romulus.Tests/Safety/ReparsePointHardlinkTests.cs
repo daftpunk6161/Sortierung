@@ -2,17 +2,17 @@ using System.Runtime.InteropServices;
 using Romulus.Infrastructure.FileSystem;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.Safety;
 
 /// <summary>
-/// Block B7 - Reparse-point and hard-link safety invariants.
+/// Reparse-point and hard-link safety invariants.
 ///
 /// Invariants:
-///  B7.1  IsReparsePoint correctly identifies a symlink/junction as a reparse point.
-///  B7.2  MoveItemSafely refuses to move a source that is itself a reparse point
+///  1.  IsReparsePoint correctly identifies a symlink/junction as a reparse point.
+///  2.  MoveItemSafely refuses to move a source that is itself a reparse point
 ///        (silent symlink-following would let an attacker redirect a move target
 ///        outside the allowed root).
-///  B7.3  MoveItemSafely refuses to move a source with multiple hard links
+///  3.  MoveItemSafely refuses to move a source with multiple hard links
 ///        (data-loss safety: moving the file would orphan its second name and
 ///        could surprise the user).
 ///
@@ -20,11 +20,11 @@ namespace Romulus.Tests;
 /// Tests gracefully no-op when creation fails.
 /// </summary>
 [Collection("FileSystem")]
-public sealed class BlockB7_ReparseHardlinkCycleTests : IDisposable
+public sealed class ReparsePointHardlinkTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockB7_ReparseHardlinkCycleTests()
+    public ReparsePointHardlinkTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_B7_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -37,7 +37,7 @@ public sealed class BlockB7_ReparseHardlinkCycleTests : IDisposable
     }
 
     [Fact]
-    public void B7_01_IsReparsePoint_DetectsSymlink()
+    public void FileSystemAdapter_IsReparsePoint_DetectsSymlink()
     {
         var target = Path.Combine(_tempDir, "real.bin");
         File.WriteAllBytes(target, [1, 2, 3]);
@@ -52,7 +52,7 @@ public sealed class BlockB7_ReparseHardlinkCycleTests : IDisposable
     }
 
     [Fact]
-    public void B7_02_MoveItemSafely_RejectsReparsePointSource()
+    public void FileSystemAdapter_MoveItemSafely_RejectsReparsePointSource()
     {
         var target = Path.Combine(_tempDir, "real.bin");
         File.WriteAllBytes(target, [1, 2, 3]);
@@ -70,7 +70,7 @@ public sealed class BlockB7_ReparseHardlinkCycleTests : IDisposable
     }
 
     [Fact]
-    public void B7_03_MoveItemSafely_RejectsHardLinkedSource()
+    public void FileSystemAdapter_MoveItemSafely_RejectsHardLinkedSource()
     {
         var first = Path.Combine(_tempDir, "first.bin");
         File.WriteAllBytes(first, [9, 8, 7]);
@@ -88,7 +88,7 @@ public sealed class BlockB7_ReparseHardlinkCycleTests : IDisposable
     }
 
     [Fact]
-    public void B7_04_MoveItemSafely_RejectsDestinationThroughReparsePointAncestor()
+    public void FileSystemAdapter_MoveItemSafely_RejectsDestinationThroughReparsePointAncestor()
     {
         // Build root/realDir + root/linkDir -> realDir, then attempt move into linkDir/x.
         var realDir = Path.Combine(_tempDir, "realDir");

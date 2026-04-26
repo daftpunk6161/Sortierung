@@ -6,16 +6,17 @@ using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Orchestration;
+using Romulus.Tests;
+using Romulus.Tests.TestFixtures;
 using Romulus.UI.Wpf.Services;
 using Romulus.UI.Wpf.ViewModels;
-using Romulus.Tests.TestFixtures;
 using Xunit;
 using CliProgram = Romulus.CLI.Program;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.EntryPointParity;
 
 /// <summary>
-/// Block C2 - EntryPoint Paritaet erweitern.
+/// Entry-point decision-field parity.
 ///
 /// Existing parity tests (ReportParityTests) verify aggregate counts and per-group
 /// (GameKey, Winner, Losers) identity across CLI / API / WPF.
@@ -32,11 +33,11 @@ namespace Romulus.Tests;
 /// Determinism rule: same input dataset MUST yield byte-identical per-group field
 /// projections across all three entry points. Any divergence is a release blocker.
 /// </summary>
-public sealed class BlockC2_EntryPointFieldParityTests : IDisposable
+public sealed class DecisionReasonParityTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockC2_EntryPointFieldParityTests()
+    public DecisionReasonParityTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_C2_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -49,7 +50,7 @@ public sealed class BlockC2_EntryPointFieldParityTests : IDisposable
     }
 
     [Fact]
-    public async Task C2_01_PerDedupeGroup_DecisionFields_AreIdentical_AcrossCliApiWpf()
+    public async Task RunDecisionFields_ForSameInput_AreIdenticalAcrossApiAndWpfWithCliCountGate()
     {
         var root = Path.Combine(_tempDir, "roms");
         Directory.CreateDirectory(root);
@@ -92,30 +93,17 @@ public sealed class BlockC2_EntryPointFieldParityTests : IDisposable
         var api = manager.Get(apiRun.RunId)!.Result!;
 
         // ── Field projections per group ───────────────────────────────
-        var wpfProjection = ProjectFromCandidates(wpf.Result.DedupeGroups.Select(g => g.Winner));
-        var apiProjection = ProjectFromCandidates(api.DedupeGroups.Select(g => g.Winner));
+        var wpfProjection = RunResultProjection.DecisionFields(wpf.Result.DedupeGroups.Select(g => g.Winner));
+        var apiProjection = RunResultProjection.DecisionFields(api.DedupeGroups.Select(g => g.Winner));
 
         Assert.Equal(wpfProjection, apiProjection);
-        Assert.True(wpfProjection.Length > 0, "Need at least one group to assert parity.");
+        Assert.True(wpfProjection.Count > 0, "Need at least one group to assert parity.");
 
         // Sanity: counts match (CLI does not expose per-group decision fields in summary,
         // so we use group count + winners as an additional CLI parity gate).
         Assert.Equal(wpf.Result.GroupCount, cliJson.RootElement.GetProperty("Groups").GetInt32());
         Assert.Equal(wpf.Result.WinnerCount, cliJson.RootElement.GetProperty("Keep").GetInt32());
     }
-
-    private static string[] ProjectFromCandidates(IEnumerable<RomCandidate> winners)
-        => winners
-            .Select(w => string.Join("|",
-                w.GameKey.ToLowerInvariant(),
-                w.ConsoleKey,
-                w.PlatformFamily,
-                w.DecisionClass,
-                w.SortDecision,
-                w.ClassificationReasonCode,
-                w.DatMatch ? "DAT" : "NODAT"))
-            .OrderBy(s => s, StringComparer.Ordinal)
-            .ToArray();
 
     private static (int ExitCode, string Stdout, string Stderr) RunCliWithCapturedConsole(CliRunOptions options)
     {

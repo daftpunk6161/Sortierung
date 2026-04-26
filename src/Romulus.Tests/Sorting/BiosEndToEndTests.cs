@@ -3,30 +3,31 @@ using Romulus.Core.Classification;
 using Romulus.Core.Deduplication;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Sorting;
+using Romulus.Tests.TestFixtures;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.Sorting;
 
 /// <summary>
-/// Block B6 - End-to-end BIOS handling chain.
+/// End-to-end BIOS handling chain.
 ///
 /// The BIOS contract spans four layers; a regression in any single one breaks
 /// data integrity (e.g. a BIOS file getting grouped with a normal game and
 /// later moved to trash as a "duplicate"). This suite enforces the chain end
 /// to end:
 ///
-///  B6.1  FileClassifier.Analyze recognizes "BIOS"-tagged base names.
-///  B6.2  CandidateFactory.Create prefixes BIOS GameKeys with "__BIOS__"
+///  1.  FileClassifier.Analyze recognizes "BIOS"-tagged base names.
+///  2.  CandidateFactory.Create prefixes BIOS GameKeys with "__BIOS__"
 ///        so they cannot share a dedupe group with a regular game.
-///  B6.3  DeduplicationEngine.SelectWinner respects the BIOS category rank
+///  3.  DeduplicationEngine.SelectWinner respects the BIOS category rank
 ///        (BIOS is its own pool; never compared to a Game candidate).
-///  B6.4  ConsoleSorter routes BIOS-keyed files to the well-known _BIOS folder.
+///  4.  ConsoleSorter routes BIOS-keyed files to the well-known _BIOS folder.
 /// </summary>
-public sealed class BlockB6_BiosEndToEndTests : IDisposable
+public sealed class BiosEndToEndTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockB6_BiosEndToEndTests()
+    public BiosEndToEndTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_B6_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -39,7 +40,7 @@ public sealed class BlockB6_BiosEndToEndTests : IDisposable
     }
 
     [Fact]
-    public void B6_01_FileClassifier_RecognizesBiosTag()
+    public void FileClassifier_BiosTaggedBaseName_ReturnsBiosCategory()
     {
         var d = FileClassifier.Analyze("[BIOS] PSX (USA) (v4.4)");
         Assert.Equal(FileCategory.Bios, d.Category);
@@ -47,7 +48,7 @@ public sealed class BlockB6_BiosEndToEndTests : IDisposable
     }
 
     [Fact]
-    public void B6_02_CandidateFactory_BiosGetsBiosPrefix_CannotCollideWithGame()
+    public void CandidateFactory_BiosCandidate_GetsPrefixAndCannotCollideWithGame()
     {
         var bios = CandidateFactory.Create(
             normalizedPath: "scph1001.bin", extension: ".bin", sizeBytes: 524288,
@@ -68,7 +69,7 @@ public sealed class BlockB6_BiosEndToEndTests : IDisposable
     }
 
     [Fact]
-    public void B6_03_DeduplicationEngine_BiosAndGameCandidatesNeverShareWinnerPool()
+    public void DeduplicationEngine_BiosAndGameCandidateInSamePool_PrefersGame()
     {
         // Even when fed into the same SelectWinner call with the same base key,
         // the BIOS prefix forces them into different group pools at the
@@ -97,7 +98,7 @@ public sealed class BlockB6_BiosEndToEndTests : IDisposable
     }
 
     [Fact]
-    public void B6_04_ConsoleSorter_DoesNotReSortFilesAlreadyInBiosFolder()
+    public void ConsoleSorter_BiosFileAlreadyInBiosFolder_DoesNotResortIt()
     {
         var root = Path.Combine(_tempDir, "root");
         var biosFolder = Path.Combine(root, "_BIOS");
@@ -130,11 +131,7 @@ public sealed class BlockB6_BiosEndToEndTests : IDisposable
 
     private static ConsoleDetector LoadConsoleDetector()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "AGENTS.md")))
-            dir = dir.Parent;
-        var repoRoot = dir?.FullName ?? throw new InvalidOperationException("repo root not found");
-        var consolesPath = Path.Combine(repoRoot, "data", "consoles.json");
+        var consolesPath = RepoPaths.RepoFile("data", "consoles.json");
         return ConsoleDetector.LoadFromJson(File.ReadAllText(consolesPath));
     }
 }

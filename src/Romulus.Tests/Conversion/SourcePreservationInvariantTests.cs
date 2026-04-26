@@ -3,10 +3,10 @@ using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Conversion;
 using Xunit;
 
-namespace Romulus.Tests;
+namespace Romulus.Tests.Conversion;
 
 /// <summary>
-/// Block B1 - Conversion-Source-Persistence invariants.
+/// Conversion source-persistence invariants.
 ///
 /// Invariant: After ANY conversion failure mode, the source file MUST still exist
 /// at its original path. Intermediate artifacts produced by step N must be cleaned up.
@@ -15,11 +15,11 @@ namespace Romulus.Tests;
 /// guards that contract: the executor must never touch the source file regardless of
 /// outcome (success, error, blocked, cancellation).
 /// </summary>
-public sealed class BlockB1_ConversionSourcePersistenceTests : IDisposable
+public sealed class SourcePreservationInvariantTests : IDisposable
 {
     private readonly string _tempDir;
 
-    public BlockB1_ConversionSourcePersistenceTests()
+    public SourcePreservationInvariantTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_B1_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
@@ -35,7 +35,7 @@ public sealed class BlockB1_ConversionSourcePersistenceTests : IDisposable
     // B1.1  Tool crash (ExitCode != 0) -> source preserved, no target left
     // -----------------------------------------------------------------
     [Fact]
-    public void B1_01_ToolCrash_NonZeroExit_SourcePreserved_NoIntermediates()
+    public void ConversionExecutor_ToolCrashNonZeroExit_PreservesSourceAndLeavesNoIntermediates()
     {
         var src = WriteSource("crash.cso", payload: "SRC-CRASH");
         var plan = SingleStepPlan(src, ".cso", ".chd", "tool-crash");
@@ -53,7 +53,7 @@ public sealed class BlockB1_ConversionSourcePersistenceTests : IDisposable
     // B1.2  Output too small / empty -> source preserved
     // -----------------------------------------------------------------
     [Fact]
-    public void B1_02_OutputEmpty_SourcePreserved_EmptyOutputCleaned()
+    public void ConversionExecutor_EmptyOutput_PreservesSourceAndCleansEmptyOutput()
     {
         var src = WriteSource("empty.iso", payload: "SRC-EMPTY");
         var plan = SingleStepPlan(src, ".iso", ".chd", "tool-empty");
@@ -75,7 +75,7 @@ public sealed class BlockB1_ConversionSourcePersistenceTests : IDisposable
     //       remain untouched.
     // -----------------------------------------------------------------
     [Fact]
-    public void B1_03_VerificationFailed_SourcePreserved_TargetCleaned()
+    public void ConversionExecutor_VerificationFailed_PreservesSourceAndCleansTarget()
     {
         var src = WriteSource("verify.xyz", payload: "SRC-VERIFY");
         var plan = SingleStepPlan(src, ".xyz", ".zzz", "tool-verify");
@@ -95,7 +95,7 @@ public sealed class BlockB1_ConversionSourcePersistenceTests : IDisposable
     //       intermediate artifacts removed.
     // -----------------------------------------------------------------
     [Fact]
-    public void B1_04_CancellationMidConversion_SourcePreserved_IntermediatesCleaned()
+    public void ConversionExecutor_CancellationMidConversion_PreservesSourceAndCleansIntermediates()
     {
         var src = WriteSource("cancel.cso", payload: "SRC-CANCEL");
         var plan = TwoStepPlan(src, ".cso", ".iso", ".chd", "tool-step1", "tool-cancel");
@@ -117,7 +117,7 @@ public sealed class BlockB1_ConversionSourcePersistenceTests : IDisposable
     //       source preserved, staged temp file cleaned.
     // -----------------------------------------------------------------
     [Fact]
-    public void B1_05_StagedFinalCollision_SourcePreserved()
+    public void ConversionExecutor_StagedFinalCollision_PreservesSource()
     {
         var src = WriteSource("collide.iso", payload: "SRC-COLLIDE");
 
@@ -143,7 +143,7 @@ public sealed class BlockB1_ConversionSourcePersistenceTests : IDisposable
     //       source preserved, no partial output retained.
     // -----------------------------------------------------------------
     [Fact]
-    public void B1_06_DiskFullSimulation_SourcePreserved()
+    public void ConversionExecutor_DiskFullSimulation_PreservesSource()
     {
         var src = WriteSource("diskfull.iso", payload: "SRC-DISKFULL");
         var plan = SingleStepPlan(src, ".iso", ".chd", "tool-diskfull");
@@ -162,7 +162,7 @@ public sealed class BlockB1_ConversionSourcePersistenceTests : IDisposable
     //       step-1 intermediate artifact cleaned up.
     // -----------------------------------------------------------------
     [Fact]
-    public void B1_07_MultiStepFailureInStepTwo_SourceAndAllIntermediatesHandled()
+    public void ConversionExecutor_MultiStepFailureInStepTwo_PreservesSourceAndHandlesIntermediates()
     {
         var src = WriteSource("multistep.cso", payload: "SRC-MULTI");
         var plan = TwoStepPlan(src, ".cso", ".iso", ".chd", "tool-ok", "tool-fail");

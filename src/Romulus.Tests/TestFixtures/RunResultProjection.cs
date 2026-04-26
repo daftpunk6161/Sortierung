@@ -5,7 +5,7 @@ namespace Romulus.Tests.TestFixtures;
 /// <summary>
 /// Block D4 - centralized projection helpers for RunResult parity assertions
 /// across CLI / WPF / API entry points. Replaces ad-hoc <c>ProjectFromCandidates</c>
-/// / <c>RoutingTuple</c> closures previously duplicated in BlockC2_, BlockC7_,
+/// / <c>RoutingTuple</c> closures previously duplicated in entry-point parity tests,
 /// ReportParityTests etc.
 ///
 /// Each helper returns an <see cref="IReadOnlyList{T}"/> of stable, ordinal-sorted
