@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Romulus.Contracts.Ports;
 using Romulus.Core.Caching;
 using Romulus.Infrastructure.FileSystem;
+using Romulus.Infrastructure.Safety;
 
 namespace Romulus.Infrastructure.Hashing;
 
@@ -16,7 +17,30 @@ namespace Romulus.Infrastructure.Hashing;
 public sealed class ArchiveHashService
 {
     private static readonly Romulus.Contracts.Models.ToolRequirement SevenZipRequirement = new() { ToolName = "7z" };
-    private const long MaxSevenZipExtractedTotalBytes = 10L * 1024 * 1024 * 1024;
+    /// <summary>
+    /// Hard cap for the cumulative uncompressed payload that ArchiveHashService will hash
+    /// (sum across all entries inside a single archive). Mirrors the 7z extraction cap so
+    /// that the ZIP path enforces the same zipbomb protection (F-DAT-16).
+    /// </summary>
+    internal const long MaxArchiveCumulativeUncompressedBytes = 10L * 1024 * 1024 * 1024;
+    private const long MaxSevenZipExtractedTotalBytes = MaxArchiveCumulativeUncompressedBytes;
+
+    /// <summary>
+    /// Reasons why ArchiveHashService skipped or aborted hashing for an archive entry.
+    /// Used for structured logging only — the public hash methods continue to return
+    /// <c>string[]</c> for backwards compatibility (F-DAT-15).
+    /// </summary>
+    internal enum ArchiveHashFailureReason
+    {
+        None = 0,
+        ArchiveTooLarge,
+        CumulativeBytesExceeded,
+        Corrupt,
+        ToolMissing,
+        AccessDenied,
+        IoError,
+        SecurityBlocked,
+    }
 
     private static readonly Regex RxPathEntry = new(@"^Path = (.+)$",
         RegexOptions.Compiled | RegexOptions.Multiline,
@@ -28,17 +52,25 @@ public sealed class ArchiveHashService
     private readonly LruCache<string, ArchiveCacheEntry> _cache;
     private readonly IToolRunner? _toolRunner;
     private readonly long _maxArchiveSizeBytes;
+    private readonly long _maxCumulativeUncompressedBytes;
+    private readonly Action<string>? _log;
 
     /// <param name="toolRunner">Required for .7z archives (delegates to 7z.exe).</param>
     /// <param name="maxEntries">LRU cache max entries.</param>
     /// <param name="maxArchiveSizeBytes">Archives larger than this skip hashing (default 500 MB).</param>
+    /// <param name="maxCumulativeUncompressedBytes">Per-archive cumulative uncompressed cap (default 10 GB; F-DAT-16 zipbomb cap).</param>
+    /// <param name="log">Optional structured-skip logger (F-DAT-15).</param>
     public ArchiveHashService(
         IToolRunner? toolRunner = null,
         int maxEntries = 5000,
-        long maxArchiveSizeBytes = 500 * 1024 * 1024)
+        long maxArchiveSizeBytes = 500 * 1024 * 1024,
+        long? maxCumulativeUncompressedBytes = null,
+        Action<string>? log = null)
     {
         _toolRunner = toolRunner;
         _maxArchiveSizeBytes = maxArchiveSizeBytes;
+        _maxCumulativeUncompressedBytes = maxCumulativeUncompressedBytes ?? MaxArchiveCumulativeUncompressedBytes;
+        _log = log;
         _cache = new LruCache<string, ArchiveCacheEntry>(maxEntries, StringComparer.OrdinalIgnoreCase);
         CleanupStaleTempDirs();
     }
@@ -183,7 +215,7 @@ public sealed class ArchiveHashService
 
     // ── ZIP: in-memory stream hashing ──
 
-    private static string[] HashZipEntries(string zipPath, string hashType,
+    private string[] HashZipEntries(string zipPath, string hashType,
         CancellationToken ct = default)
     {
         var hashes = new List<string>();
@@ -193,10 +225,41 @@ public sealed class ArchiveHashService
             .OrderBy(e => e.FullName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        // F-DAT-16: cumulative uncompressed-byte counter mirrors the 7z extraction cap so a
+        // ZIP that declares >10 GB of payload (or a single oversized entry) is rejected before
+        // any data flows through the hash algorithm. We rely on the declared
+        // <see cref="ZipArchiveEntry.Length"/> for the budget check; the actual stream copy
+        // still runs entry-by-entry.
+        long cumulativeUncompressed = 0;
         foreach (var entry in sortedEntries)
         {
             ct.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(entry.Name)) continue;
+
+            if (entry.Length < 0)
+            {
+                LogSkip(zipPath, ArchiveHashFailureReason.Corrupt, $"entry '{entry.FullName}' reports negative length");
+                return Array.Empty<string>();
+            }
+
+            checked
+            {
+                try { cumulativeUncompressed += entry.Length; }
+                catch (OverflowException)
+                {
+                    LogSkip(zipPath, ArchiveHashFailureReason.CumulativeBytesExceeded, "uncompressed-byte counter overflow");
+                    return Array.Empty<string>();
+                }
+            }
+
+            if (cumulativeUncompressed > _maxCumulativeUncompressedBytes)
+            {
+                LogSkip(
+                    zipPath,
+                    ArchiveHashFailureReason.CumulativeBytesExceeded,
+                    $"cumulative uncompressed payload {cumulativeUncompressed:N0} bytes exceeds cap {_maxCumulativeUncompressedBytes:N0} bytes (zipbomb-Schutz)");
+                return Array.Empty<string>();
+            }
 
             try
             {
@@ -210,6 +273,13 @@ public sealed class ArchiveHashService
         }
 
         return hashes.ToArray();
+    }
+
+    private void LogSkip(string archivePath, ArchiveHashFailureReason reason, string detail)
+    {
+        if (_log is null) return;
+        try { _log.Invoke($"[ArchiveHashService] skip archive='{Path.GetFileName(archivePath)}' reason={reason} detail={detail}"); }
+        catch { /* logger must never break hashing */ }
     }
 
     // ── 7z: temp extraction + file hashing ──
@@ -250,7 +320,7 @@ public sealed class ArchiveHashService
 
         try
         {
-            if (!HasAvailableTempSpace(tempDir, declaredTotalSize))
+            if (!FileSystemSafetyHelpers.HasAvailableTempSpace(tempDir, declaredTotalSize))
                 return Array.Empty<string>();
 
             var outArg = $"-o{tempDir}";
@@ -272,7 +342,7 @@ public sealed class ArchiveHashService
 
             // Check directories for junctions/reparse points
             var dirIndex = 0;
-            foreach (var dir in EnumerateDirectoriesWithoutFollowingReparsePoints(tempDir))
+            foreach (var dir in FileSystemSafetyHelpers.EnumerateDirectoriesWithoutFollowingReparsePoints(tempDir))
             {
                 if (++dirIndex % 100 == 0) ct.ThrowIfCancellationRequested();
                 var dirInfo = new DirectoryInfo(dir);
@@ -412,43 +482,6 @@ public sealed class ArchiveHashService
         return true;
     }
 
-    private static IEnumerable<string> EnumerateDirectoriesWithoutFollowingReparsePoints(string root)
-    {
-        var stack = new Stack<string>();
-        stack.Push(root);
-        while (stack.Count > 0)
-        {
-            var current = stack.Pop();
-            string[] children;
-            try
-            {
-                children = Directory.GetDirectories(current);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                yield break;
-            }
-
-            Array.Sort(children, StringComparer.OrdinalIgnoreCase);
-            foreach (var child in children)
-            {
-                yield return child;
-                FileAttributes attrs;
-                try
-                {
-                    attrs = File.GetAttributes(child);
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    continue;
-                }
-
-                if ((attrs & FileAttributes.ReparsePoint) == 0)
-                    stack.Push(child);
-            }
-        }
-    }
-
     private static string? HashStream(Stream stream, string hashType)
     {
         var type = hashType.ToUpperInvariant();
@@ -465,26 +498,6 @@ public sealed class ArchiveHashService
 
         var bytes = algo.ComputeHash(stream);
         return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
-
-    private static bool HasAvailableTempSpace(string tempDir, long requiredBytes)
-    {
-        if (requiredBytes <= 0)
-            return true;
-
-        try
-        {
-            var root = Path.GetPathRoot(Path.GetFullPath(tempDir));
-            if (string.IsNullOrWhiteSpace(root))
-                return false;
-
-            var drive = new DriveInfo(root);
-            return drive.AvailableFreeSpace > requiredBytes;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
-        {
-            return false;
-        }
     }
 
     private sealed record SevenZipEntryInfo(string Path, long Size);

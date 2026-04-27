@@ -209,7 +209,6 @@ public sealed class PureMethodsCoverageTests
     [InlineData(MatchKind.DiscHeaderSignature, EvidenceTier.Tier1_Structural)]
     [InlineData(MatchKind.CartridgeHeaderMagic, EvidenceTier.Tier1_Structural)]
     [InlineData(MatchKind.SerialNumberMatch, EvidenceTier.Tier1_Structural)]
-    [InlineData(MatchKind.ChdMetadataTag, EvidenceTier.Tier1_Structural)]
     [InlineData(MatchKind.UniqueExtensionMatch, EvidenceTier.Tier2_StrongHeuristic)]
     [InlineData(MatchKind.ArchiveContentExtension, EvidenceTier.Tier2_StrongHeuristic)]
     [InlineData(MatchKind.DatNameOnlyMatch, EvidenceTier.Tier2_StrongHeuristic)]

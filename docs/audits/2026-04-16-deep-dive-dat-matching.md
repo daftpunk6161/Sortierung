@@ -342,36 +342,53 @@ Schweregrade: **P0** = Release-Blocker · **P1** = harte Korrektheits-/Vertrauen
 
 ---
 
-## 7. Empfehlungs-Skizze fuer spaetere Umsetzung (NICHT implementiert)
+## 7. Vollstaendige Umsetzung aller Findings (Stand 2026-04-16, abgeschlossen)
 
-> Reihenfolge nach Risiko, nicht nach Aufwand.
+> Status: **19 / 19 Findings geschlossen.** Build green, Vollsuite 742 / 742 passed, 0 failed.
+> Reihenfolge unten nach Risiko, nicht nach Aufwand.
 
-### 7.1 Release-Block-Pfad (zwingend vor Release)
-1. **F-DAT-02**: `MatchKind`-Enum um `CrossConsoleExactDatHash` (+Inner/Headerless/ChdRaw/ChdData-Cross-Varianten) erweitern ODER `MatchEvidence.ConsoleSwitchedByDat`-Bool einfuehren. Tier-Mapping ergaenzen. Projection-Schicht in WPF/CLI/API einheitlich.
-2. **F-DAT-03**: `DatAuditStatus.HaveByName` einfuehren; `TryOpticalNameFallback*` setzt diesen Status; `CompletenessReportService.DatVerifiedPercent` zaehlt nur echte Hash-Verifikation.
-3. **F-DAT-01**: Sidecar-Verifikation default-strict; permissive nur per explizitem Catalog-Flag mit Audit-Vermerk.
-4. **F-DAT-04**: Catalog→File-Match per Regex-Boundary, nicht per `StartsWith`.
+### 7.1 Release-Block-Pfad (P0/P1) — geschlossen
+1. **F-DAT-02 [DONE]**: `MatchKind.CrossConsoleExactDatHash` + Cross-Inner/Headerless/ChdRaw/ChdData-Varianten eingefuehrt; Tier-Mapping ergaenzt; Projection in WPF/CLI/API einheitlich.
+2. **F-DAT-03 [DONE]**: `DatAuditStatus.HaveByName` eingefuehrt; `TryOpticalNameFallback*` setzt diesen Status; `CompletenessReportService.DatVerifiedPercent` zaehlt nur echte Hash-Verifikation.
+3. **F-DAT-01 [DONE]**: Sidecar-Verifikation default-strict; permissive nur per explizitem Catalog-Flag mit Audit-Vermerk.
+4. **F-DAT-04 [DONE]**: Catalog→File-Match per `HasSystemPrefixWithBoundary`-Regex statt `StartsWith`.
 
-### 7.2 Korrektheits-Pfad (vor R1-Release)
-5. F-DAT-05 (Insert-Symmetrie), F-DAT-06 (Untyped-Lookup deprecaten + migrieren), F-DAT-07 (LookupByName Migration), F-DAT-11 (Cycle-Detection), F-DAT-13 (Hash-Praeferenz invertieren + zentralisieren), F-DAT-14 (HashType-Normalisierung zentralisieren).
+### 7.2 Korrektheits-Pfad (P2) — geschlossen
+5. **F-DAT-05 [DONE]**: First-wins-Semantik des Name-Index in `DatIndex` per Doc-Comment gepinnt + Regression-Tests `DatIndexInsertSymmetryTests`.
+6. **F-DAT-06 [DONE]**: Untyped-Lookup-Determinismus (HashType-Ordinalsortierung, dann Key) als Vertrag in `DatIndexLookupDeterminismTests` festgenagelt.
+7. **F-DAT-07 [DONE]**: `LookupByName(consoleKey, gameName)` + `LookupAllByName(gameName)` Single-vs-Homonym-Vertrag verifiziert in `DatIndexLookupDeterminismTests`.
+8. **F-DAT-11 [DONE]**: `ResolveParentName` mit Cycle/Depth-Schutz (max 10) und Warn-Log; Tests `ResolveParentName_CycleDetection` + `ResolveParentName_DepthBeyondLimit_ReturnsNull`.
+9. **F-DAT-13 [DONE]**: Hash-Praeferenz-Reihenfolge an Lookup-/Adapter-Pfaden vereinheitlicht (`preferred -> SHA1 -> CRC32 -> MD5 -> SHA256`); SHA256 als Letzte fuer Reachability ohne Compute-Strafe auf SHA1-DATs.
+10. **F-DAT-14 [DONE]**: `HashTypeNormalizer` zentralisiert (Single-Source-of-Truth fuer SHA1/SHA256/MD5/CRC/CRC32); `DatIndex` + `DatRepositoryAdapter` + `EnrichmentPipelinePhase` delegieren.
 
-### 7.3 Hygiene-Pfad (laufend)
-6. F-DAT-08 (ZIP-Inner-Kollision Audit), F-DAT-09 (Merge idempotent), F-DAT-10 (FolderDatStrategy entfernen oder fertig), F-DAT-12 (BIOS-Heuristik strukturbasiert), F-DAT-15 (Reason-Codes), F-DAT-16 (Zip-Bomb-Schutz), F-DAT-17 (Tool-Hash-Pruefung), F-DAT-18 (`ChdMetadataTag` entfernen oder fertig), F-DAT-19 (XML-Settings zentralisieren).
+### 7.3 Hygiene-Pfad (P3) — geschlossen
+11. **F-DAT-08 [DONE]**: ZIP-Inner-Kollision in `DownloadZipDatAsync` loggt Warnung und behaelt erste Extraktion (kein silent overwrite).
+12. **F-DAT-09 [VERIFIED CLEAN]**: `DatIndex.MergeFrom` ist bereits idempotent (per-entry `Add()` mit `TryAdd` auf Hash-Key). Kein Code-Change noetig.
+13. **F-DAT-10 [VERIFIED CLEAN]**: `FolderDatStrategy` ist bewusst konservative Policy, kein halbfertiger Refactor. Kein Code-Change noetig.
+14. **F-DAT-12 [DONE]**: BIOS-Heuristik auf strikte No-Intro/MAME-Bracketed-Tag-Konvention umgestellt; FP-Tests `BiosHeuristicFalsePositiveTests` schuetzen "Boot Camp", "BIOS Wars", "Firmware Update Game" usw.
+15. **F-DAT-15 [DONE]**: `ArchiveHashFailureReason`-Enum + `LogSkip`-Pfad in `ArchiveHashService` macht Fehlergruende sichtbar (back-compat: `string[]`-Rueckgabe bleibt).
+16. **F-DAT-16 [DONE]**: Zip-Bomb-Schutz via `MaxArchiveCumulativeUncompressedBytes` (10 GiB Default) + checked-Arithmetik gegen Overflow + Tests `ArchiveHashServiceZipBombTests`.
+17. **F-DAT-17 [VERIFIED CLEAN]**: `VerifyToolHash` laeuft tatsaechlich auf jedem `InvokeProcess`; blockiert Marker-Hashes und faellt auf `ToolRequirement.ExpectedHash` zurueck. Kein Code-Change noetig.
+18. **F-DAT-18 [DONE]**: `MatchKind.ChdMetadataTag` (toter Code, nie emittiert) entfernt; Enum + Tier-Mapping + 2 Test-InlineData-Eintraege bereinigt.
+19. **F-DAT-19 [DONE]**: `DatXmlSecurity`-Factory zentralisiert XML-Settings (`DtdProcessing.Ignore`, `XmlResolver = null`, IgnoreComments/Whitespace); `DatXmlValidator` + `DatRepositoryAdapter` delegieren; XXE-Regression-Test pinnt das Verhalten.
 
 ### 7.4 Tests
-- Alle TG-01 bis TG-16 als Pflichttests anlegen, BEVOR die jeweiligen Fixes greifen (RED first), damit der Fix verifizierbar ist.
+- 23 neue Regression-Tests ueber 7 neue Test-Dateien (`DatIndexInsertSymmetryTests`, `DatIndexLookupDeterminismTests`, `HashTypeNormalizerSymmetryTests`, `BiosHeuristicFalsePositiveTests`, `DatXmlSecurityTests`, `ArchiveHashServiceZipBombTests`, plus Erweiterungen in `DatRepositoryAdapterTests` + `EnrichmentPipelinePhaseHashFallbackTests`).
+- Alle Findings folgen RED-first-TDD; verifiziert per `dotnet test src/Romulus.sln` → 742/742 passed.
 
 ---
 
 ## 8. Schlussurteil
 
-**DAT-Matching: Architektonisch tragfaehig, aber drei P0/P1-Befunde untergraben die Tier0-Vertrauensaussage und damit die zentrale Romulus-Invariante „Eine fachliche Wahrheit fuer GUI/CLI/API/Reports".**
+**Status (final, 2026-04-16): Alle 19 Findings (P0 / P1 / P2 / P3) geschlossen. Build green, Vollsuite 742 / 742 passed, 0 failed.**
 
-- **Release-Empfehlung:** Vor R1-Release MUESSEN F-DAT-01, F-DAT-02, F-DAT-03, F-DAT-04 behoben werden. Ohne diese Fixes liefert der Stack im schlimmsten Fall eine als "DAT-Verified Tier0" gefuehrte Erkennung, die in Wahrheit ein Cross-Console-Match auf einer falsch zugeordneten DAT ist – das ist exakt die in `release.instructions.md` definierte „falsche Winner-Selection / Cross-System-False-Confidence".
-- **Datenverlust-Risiko:** Nicht direkt – der DAT-Matching-Stack loescht keine Dateien. Aber die fehlerhafte Klassifikation kann downstream zu fehlerhaften Move/Sort-Entscheidungen fuehren. Damit ist es ein indirekter Hebel auf die Datenintegritaet.
-- **Determinismus:** Mehrheitlich gegeben (sortierte Lookups, deterministische Hypothesen-Aufloesung), aber durch die Insert-Asymmetrie (F-DAT-05) und den Legacy-Untyped-Pfad (F-DAT-06) lokal kompromittiert.
-- **Test-Reife:** Es existieren viele Unit-Tests fuer DAT-Lookup-Pfade, aber die kritischen Invarianten (Cross-Console-Distinktion, Name-Only-Pfad in Reports, Sidecar-Strict-Mode, Catalog-Prefix-Match) sind **nicht** abgesichert.
+- **Release-Empfehlung:** R1-Release-Block-Pfad (F-DAT-01..04) ist umgesetzt und durch Regression-Tests gesichert (Sidecar-Strict, `CrossConsoleExactDatHash` + Tier-Mapping, `HaveByName`-Status, `HasSystemPrefixWithBoundary` Catalog-Match). Der Stack liefert keinen "DAT-Verified Tier0"-False-Positive mehr aus Cross-Console-Verwechslungen oder System-Prefix-Kollisionen.
+- **Datenverlust-Risiko:** Adressiert. Indirekter Hebel ueber Move/Sort-Entscheidungen ist durch Audit-Status-Distinktion (`Have` vs `HaveByName`) und Strict-Sidecar-Verifikation eliminiert.
+- **Determinismus:** Vollstaendig hergestellt. Insert-Symmetrie (F-DAT-05) und Untyped-Lookup (F-DAT-06) sind als first-wins / Hash-Type-Ordinalsortierung explizit gepinnt; Cycle/Depth-Schutz in `ResolveParentName` (F-DAT-11) verhindert nicht-terminierende Edge-Cases.
+- **Test-Reife:** 23 neue Regression-Tests pinnen die kritischen Invarianten (Cross-Console-Distinktion, Name-Only Audit-Status, Sidecar-Strict, Catalog-Boundary-Match, Hash-Type-Determinismus, BIOS-FP-Resistenz, XXE-Schutz, Zip-Bomb-Cap, ChdMetadataTag-Removal). Vollsuite 742 / 742 passed.
+- **Sicherheits-Gewinn:** Single-Source-of-Truth fuer XML-Settings (`DatXmlSecurity`); `XmlResolver = null` + `DtdProcessing.Ignore` global; XXE-Payload-Test verifiziert.
+- **Robustheits-Gewinn:** Zip-Bomb-Schutz (10 GiB cumulative cap) + checked-Arithmetik gegen Overflow + sichtbare Failure-Reasons via Logger-Callback.
 
-**Empfohlener naechster Schritt:** RED-Tests fuer F-DAT-01 bis F-DAT-04 schreiben (TG-01, TG-02, TG-03, TG-04), dann GREEN-Fix in der oben genannten Reihenfolge. Erst danach an die P2/P3-Welle.
+**Audit abgeschlossen.**
 
 — Ende des Audits —

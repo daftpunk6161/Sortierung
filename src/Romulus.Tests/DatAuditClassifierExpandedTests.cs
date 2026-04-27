@@ -334,7 +334,7 @@ public sealed class DatAuditClassifierExpandedTests
             consoleKey: "PSP",
             datIndex: index);
 
-        Assert.Equal(DatAuditStatus.Have, result.Status);
+        Assert.Equal(DatAuditStatus.HaveByName, result.Status);
         Assert.Equal("PSP", result.ResolvedConsoleKey);
         Assert.Equal("Ace Combat X", result.DatGameName);
     }
@@ -352,7 +352,8 @@ public sealed class DatAuditClassifierExpandedTests
             consoleKey: "UNKNOWN",
             datIndex: index);
 
-        Assert.Equal(DatAuditStatus.Have, result.Status);
+        // F-DAT-03: cross-console optical name fallback is name-only (no hash verification).
+        Assert.Equal(DatAuditStatus.HaveByName, result.Status);
         Assert.Equal("PSP", result.ResolvedConsoleKey);
         Assert.Equal("Lumines", result.DatGameName);
     }

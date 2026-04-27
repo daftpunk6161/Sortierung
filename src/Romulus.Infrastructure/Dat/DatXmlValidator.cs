@@ -63,12 +63,8 @@ public static class DatXmlValidator
            || string.Equals(localName, "machine", StringComparison.OrdinalIgnoreCase)
            || string.Equals(localName, "software", StringComparison.OrdinalIgnoreCase);
 
+    // F-DAT-19: settings sourced from the central DatXmlSecurity factory so the
+    // validator and the repository adapter can never drift on DTD policy.
     private static XmlReaderSettings CreateSecureXmlSettings()
-        => new()
-        {
-            DtdProcessing = DtdProcessing.Ignore,
-            XmlResolver = null,
-            IgnoreComments = true,
-            IgnoreWhitespace = true
-        };
+        => DatXmlSecurity.CreateSecureSettings();
 }

@@ -58,6 +58,18 @@ public sealed class RunResultBuilder
     /// <summary>R4-023: Indicates partial completion (cancel/error mid-pipeline).</summary>
     public bool IsPartial { get; set; }
 
+    /// <summary>
+    /// Deep-dive audit (Orchestration) F5: name of the phase that failed.
+    /// Set from <see cref="PipelineState.FailedPhaseName"/> in the partial paths
+    /// so GUI / CLI / API / Reports surface one fachliche Wahrheit.
+    /// </summary>
+    public string? FailedPhaseName { get; set; }
+
+    /// <summary>
+    /// Deep-dive audit (Orchestration) F5: status string of the failed phase.
+    /// </summary>
+    public string? FailedPhaseStatus { get; set; }
+
     public RunResultBuilder AddWarning(string warning)
     {
         if (!string.IsNullOrWhiteSpace(warning))
@@ -114,7 +126,9 @@ public sealed class RunResultBuilder
         DedupeGroups = DedupeGroups,
         PhaseMetrics = PhaseMetrics,
         Warnings = Warnings.Count > 0 ? Warnings.ToArray() : Array.Empty<string>(),
-        IsPartial = IsPartial
+        IsPartial = IsPartial,
+        FailedPhaseName = FailedPhaseName,
+        FailedPhaseStatus = FailedPhaseStatus
         };
 
         // Defensive invariant check keeps report/output channels aligned.

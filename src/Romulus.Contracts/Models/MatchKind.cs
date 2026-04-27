@@ -58,8 +58,10 @@ public enum MatchKind
     /// <summary>Serial number extracted from filename or header (SLUS-xxxxx, etc.).</summary>
     SerialNumberMatch,
 
-    /// <summary>CHD metadata tag identifies platform (CHGD = Dreamcast GD-ROM).</summary>
-    ChdMetadataTag,
+    // F-DAT-18: MatchKind.ChdMetadataTag was removed because no producer ever emitted it.
+    // CHD platform identification flows through ChdDataSha1DatHash (Tier 0) plus the
+    // CHD-aware structural fallbacks. Re-introducing a CHD-metadata heuristic must come
+    // with a real producer in EnrichmentPipelinePhase.
 
     // --- Tier 2: Strong Heuristic ---
 
@@ -114,7 +116,6 @@ public static class MatchKindExtensions
         MatchKind.DiscHeaderSignature => EvidenceTier.Tier1_Structural,
         MatchKind.CartridgeHeaderMagic => EvidenceTier.Tier1_Structural,
         MatchKind.SerialNumberMatch => EvidenceTier.Tier1_Structural,
-        MatchKind.ChdMetadataTag => EvidenceTier.Tier1_Structural,
 
         MatchKind.UniqueExtensionMatch => EvidenceTier.Tier2_StrongHeuristic,
         MatchKind.ArchiveContentExtension => EvidenceTier.Tier2_StrongHeuristic,

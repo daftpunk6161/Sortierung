@@ -62,7 +62,9 @@ public class DatSourceServiceTests : IDisposable
         var path = Path.Combine(_tempDir, "test.dat");
         File.WriteAllText(path, "data");
 
-        using var svc = new DatSourceService(_tempDir);
+        // F-DAT-01: this test asserts the legacy permissive behaviour, so it must
+        // explicitly opt out of the strict sidecar validation default.
+        using var svc = new DatSourceService(_tempDir, strictSidecarValidation: false);
         // No expected hash, empty URL -> allow (HTTPS provides integrity)
         Assert.True(await svc.VerifyDatSignatureAsync(path, "", null));
     }
@@ -670,7 +672,8 @@ public class DatSourceServiceTests : IDisposable
         var content = "<?xml version=\"1.0\"?><datafile/>";
         var handler = new ContentTypeHandler(content, "text/plain");
         using var httpClient = new HttpClient(handler);
-        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+        // F-DAT-01: this test focuses on Content-Type handling, not sidecar verification.
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient, strictSidecarValidation: false);
 
         var result = await svc.DownloadDatAsync("https://example.invalid/test.dat", "github-raw.dat");
         Assert.NotNull(result);
@@ -683,7 +686,8 @@ public class DatSourceServiceTests : IDisposable
         var content = "<?xml version=\"1.0\"?><datafile/>";
         var handler = new ContentTypeHandler(content, "text/xml");
         using var httpClient = new HttpClient(handler);
-        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+        // F-DAT-01: this test focuses on Content-Type handling, not sidecar verification.
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient, strictSidecarValidation: false);
 
         var result = await svc.DownloadDatAsync("https://example.invalid/test.dat", "xml-dat.dat");
         Assert.NotNull(result);

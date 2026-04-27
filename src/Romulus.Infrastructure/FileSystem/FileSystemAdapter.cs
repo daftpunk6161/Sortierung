@@ -422,6 +422,13 @@ public sealed class FileSystemAdapter : IFileSystem
         if (HasMultipleHardLinks(fullSource))
             throw new InvalidOperationException("Blocked: Source has multiple hard links.");
 
+        // F-S1/F-S2: Source-Ancestry symmetrisch zur Dest-Ancestry pruefen.
+        // Verhindert, dass ein in der Pfad-Ancestry liegender Junction/Symlink
+        // eine Rename-Operation auf ein anderes Volume bzw. ausserhalb der vom
+        // Aufrufer intendierten Root umlenkt.
+        if (HasReparsePointInAncestryToDriveRoot(fullSource))
+            throw new InvalidOperationException("Blocked: Source path targets a reparse-point directory in its ancestry.");
+
         var sourceDir = Path.GetDirectoryName(fullSource)
                         ?? throw new InvalidOperationException("Blocked: Source has no parent directory.");
 
@@ -650,6 +657,13 @@ public sealed class FileSystemAdapter : IFileSystem
         if ((sourceInfo.Attributes & FileAttributes.ReparsePoint) != 0)
             throw new InvalidOperationException("Blocked: Source directory is a reparse point.");
 
+        // F-S1: Source-Ancestry symmetrisch zur Dest-Ancestry pruefen.
+        // Verhindert, dass ein in der Pfad-Ancestry liegender Junction/Symlink
+        // eine Directory-Move auf ein anderes Volume bzw. ausserhalb der vom
+        // Aufrufer intendierten Root umlenkt.
+        if (HasReparsePointInAncestryToDriveRoot(fullSource))
+            throw new InvalidOperationException("Blocked: Source directory targets a reparse-point directory in its ancestry.");
+
         // SEC-MOVE-02: Block reparse points in full destination ancestry
         var destRoot = Path.GetPathRoot(fullDest) ?? Path.GetDirectoryName(fullDest) ?? fullDest;
         if (HasReparsePointInAncestry(fullDest, destRoot))
@@ -770,28 +784,12 @@ public sealed class FileSystemAdapter : IFileSystem
     /// SEC-PATH-03: Check if a filename (without extension) matches a Windows reserved device name.
     /// Reserved names: CON, PRN, AUX, NUL, COM0-COM9, LPT0-LPT9.
     /// These are reserved regardless of extension (e.g., "NUL.txt" is still reserved).
+    ///
+    /// Delegiert an <see cref="Romulus.Core.Safety.WindowsFileNameRules.IsReservedDeviceName"/>
+    /// (Single Source of Truth, konsolidiert per Deep Dive Audit Safety/FileSystem/Security).
     /// </summary>
     internal static bool IsWindowsReservedDeviceName(string segment)
-    {
-        if (string.IsNullOrEmpty(segment))
-            return false;
-
-        // Strip extension if present (e.g., "NUL.txt" → "NUL")
-        var dotIndex = segment.IndexOf('.');
-        var nameOnly = dotIndex >= 0 ? segment[..dotIndex] : segment;
-
-        return nameOnly.Length switch
-        {
-            3 => nameOnly.Equals("CON", StringComparison.OrdinalIgnoreCase)
-              || nameOnly.Equals("PRN", StringComparison.OrdinalIgnoreCase)
-              || nameOnly.Equals("AUX", StringComparison.OrdinalIgnoreCase)
-              || nameOnly.Equals("NUL", StringComparison.OrdinalIgnoreCase),
-            4 => (nameOnly.StartsWith("COM", StringComparison.OrdinalIgnoreCase)
-                  || nameOnly.StartsWith("LPT", StringComparison.OrdinalIgnoreCase))
-                 && char.IsAsciiDigit(nameOnly[3]),
-            _ => false
-        };
-    }
+        => Romulus.Core.Safety.WindowsFileNameRules.IsReservedDeviceName(segment);
 
     private static bool HasAlternateDataStreamReference(string path)
     {
@@ -807,6 +805,58 @@ public sealed class FileSystemAdapter : IFileSystem
             return false;
 
         return fileName.Contains(':');
+    }
+
+    /// <summary>
+    /// F-S1: Walks from <paramref name="path"/> upward to its drive root, checking each
+    /// ancestor directory for the reparse-point attribute. Used as defense-in-depth on
+    /// source-side directory and rename operations where no caller-supplied root is
+    /// available. Returns true if any ancestor up to (and including) the drive root is a
+    /// reparse point. Returns false on inaccessible paths (fail-open is acceptable here
+    /// because the leaf-level reparse check already protects the immediate target).
+    /// </summary>
+    private static bool HasReparsePointInAncestryToDriveRoot(string path)
+    {
+        string? full;
+        try { full = Path.GetFullPath(path); }
+        catch (Exception ex) when (ex is ArgumentException or PathTooLongException or NotSupportedException or System.Security.SecurityException)
+        {
+            return false;
+        }
+
+        var driveRoot = Path.GetPathRoot(full);
+        if (string.IsNullOrEmpty(driveRoot))
+            return false;
+
+        var current = Path.GetDirectoryName(full);
+        var normalizedDriveRoot = driveRoot.TrimEnd(Path.DirectorySeparatorChar);
+
+        while (!string.IsNullOrEmpty(current))
+        {
+            try
+            {
+                if (Directory.Exists(current))
+                {
+                    var di = new DirectoryInfo(current);
+                    if ((di.Attributes & FileAttributes.ReparsePoint) != 0)
+                        return true;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Inaccessible ancestor: do not mistake for reparse point.
+            }
+
+            if (string.Equals(current.TrimEnd(Path.DirectorySeparatorChar), normalizedDriveRoot, StringComparison.OrdinalIgnoreCase))
+                break;
+
+            var parent = Path.GetDirectoryName(current);
+            if (string.Equals(parent, current, StringComparison.OrdinalIgnoreCase))
+                break;
+            current = parent;
+        }
+
+        return false;
     }
 
     private static bool HasReparsePointInAncestry(string path, string stopAtRoot)

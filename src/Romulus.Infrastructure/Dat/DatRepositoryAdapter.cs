@@ -5,6 +5,7 @@ using Romulus.Contracts.Hashing;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.FileSystem;
+using Romulus.Infrastructure.Safety;
 
 namespace Romulus.Infrastructure.Dat;
 
@@ -446,7 +447,7 @@ public sealed class DatRepositoryAdapter
             || localName.Equals("chd", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsLikelyBiosGameName(string gameName, string? romFileName)
+    internal static bool IsLikelyBiosGameName(string gameName, string? romFileName)
     {
         if (ContainsBiosToken(gameName))
             return true;
@@ -477,12 +478,33 @@ public sealed class DatRepositoryAdapter
         if (string.IsNullOrWhiteSpace(value))
             return false;
 
-        return value.Contains("bios", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("firmware", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("boot rom", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("bootrom", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("sysrom", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("ipl", StringComparison.OrdinalIgnoreCase);
+        // F-DAT-12: avoid false positives on game titles that incidentally contain
+        // BIOS-like substrings (e.g. "Boot Camp", "Firmware Update Game",
+        // "BIOS Wars", "IPL Demo"). The structural <isbios>/<isdevice>/bios=
+        // attribute remains the primary signal (see IsDatBiosOrDevice).
+        // For DATs without those attributes (most No-Intro publications), the
+        // "[BIOS]" / "(BIOS)" suffix convention is the only safe heuristic.
+        return ContainsBracketedBiosTag(value);
+    }
+
+    private static readonly string[] BracketedBiosTags =
+    [
+        "[bios]", "(bios)",
+        "[boot rom]", "(boot rom)",
+        "[bootrom]", "(bootrom)",
+        "[firmware]", "(firmware)",
+        "[sysrom]", "(sysrom)",
+        "[ipl]", "(ipl)"
+    ];
+
+    private static bool ContainsBracketedBiosTag(string value)
+    {
+        foreach (var tag in BracketedBiosTags)
+        {
+            if (value.Contains(tag, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -491,32 +513,19 @@ public sealed class DatRepositoryAdapter
     /// XmlResolver=null prevents external resource resolution (SSRF protection).
     /// Callers should catch XmlException and retry with CreateFallbackXmlSettings
     /// for real DATs (No-Intro, Redump) that contain DOCTYPE declarations.
+    /// F-DAT-19: factories now route through DatXmlSecurity so the validator and
+    /// the adapter share a single, audited XML-policy implementation.
     /// </summary>
     private static XmlReaderSettings CreateSecureXmlSettings()
-    {
-        return new XmlReaderSettings
-        {
-            DtdProcessing = DtdProcessing.Prohibit,
-            XmlResolver = null,
-            IgnoreComments = true,
-            IgnoreWhitespace = true
-        };
-    }
+        => DatXmlSecurity.CreateProbeSettings();
 
     /// <summary>
     /// Fallback settings for DATs with DOCTYPE declarations.
     /// DtdProcessing.Ignore skips DTD without entity expansion.
+    /// F-DAT-19: routes through DatXmlSecurity so the policy stays single-sourced.
     /// </summary>
     private static XmlReaderSettings CreateFallbackXmlSettings()
-    {
-        return new XmlReaderSettings
-        {
-            DtdProcessing = DtdProcessing.Ignore,
-            XmlResolver = null,
-            IgnoreComments = true,
-            IgnoreWhitespace = true
-        };
-    }
+        => DatXmlSecurity.CreateSecureSettings();
 
     /// <summary>Detects 7z magic bytes at file start.</summary>
     private static bool Is7zFile(string filePath)
@@ -572,7 +581,7 @@ public sealed class DatRepositoryAdapter
 
         try
         {
-            if (!HasAvailableTempSpace(tempDir, totalDeclaredBytes))
+            if (!FileSystemSafetyHelpers.HasAvailableTempSpace(tempDir, totalDeclaredBytes))
             {
                 _log?.Invoke($"[Warning] 7z DAT '{archivePath}' rejected: not enough temporary disk space.");
                 return empty;
@@ -781,7 +790,7 @@ public sealed class DatRepositoryAdapter
 
     private static bool ValidateExtractedTree(string tempDir, string normalizedTemp)
     {
-        foreach (var dir in EnumerateDirectoriesWithoutFollowingReparsePoints(tempDir))
+        foreach (var dir in FileSystemSafetyHelpers.EnumerateDirectoriesWithoutFollowingReparsePoints(tempDir))
         {
             if (!Path.GetFullPath(dir).StartsWith(normalizedTemp, StringComparison.OrdinalIgnoreCase))
                 return false;
@@ -800,63 +809,6 @@ public sealed class DatRepositoryAdapter
         }
 
         return true;
-    }
-
-    private static IEnumerable<string> EnumerateDirectoriesWithoutFollowingReparsePoints(string root)
-    {
-        var stack = new Stack<string>();
-        stack.Push(root);
-        while (stack.Count > 0)
-        {
-            var current = stack.Pop();
-            string[] children;
-            try
-            {
-                children = Directory.GetDirectories(current);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                yield break;
-            }
-
-            Array.Sort(children, StringComparer.OrdinalIgnoreCase);
-            foreach (var child in children)
-            {
-                yield return child;
-                FileAttributes attrs;
-                try
-                {
-                    attrs = File.GetAttributes(child);
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    continue;
-                }
-
-                if ((attrs & FileAttributes.ReparsePoint) == 0)
-                    stack.Push(child);
-            }
-        }
-    }
-
-    private static bool HasAvailableTempSpace(string tempDir, long requiredBytes)
-    {
-        if (requiredBytes <= 0)
-            return true;
-
-        try
-        {
-            var root = Path.GetPathRoot(Path.GetFullPath(tempDir));
-            if (string.IsNullOrWhiteSpace(root))
-                return false;
-
-            var drive = new DriveInfo(root);
-            return drive.AvailableFreeSpace > requiredBytes;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
-        {
-            return false;
-        }
     }
 
     private sealed record SevenZipEntryInfo(string Path, long Size);

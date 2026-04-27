@@ -257,7 +257,7 @@ public sealed class PhasePlanBuilder : IPhasePlanBuilder
         if (options.SortConsole)
             phases.Add(new ActionPhaseStep("ConsoleSort", actions.ConsoleSort));
 
-        if (options.ConvertFormat is not null)
+        if (options.ConvertFormat is not null && options.Mode == RunConstants.ModeMove)
             phases.Add(new ActionPhaseStep("WinnerConversion", actions.WinnerConversion));
 
         return phases;

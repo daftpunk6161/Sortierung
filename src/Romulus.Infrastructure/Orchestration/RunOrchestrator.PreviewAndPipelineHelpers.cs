@@ -102,10 +102,16 @@ public sealed partial class RunOrchestrator
                 "Audit.SidecarWriteFailed",
                 ex.GetType().Name,
                 ex.Message));
+            // Deep-dive audit (Orchestration) F4: surface seal failures on RunResult
+            // so GUI/CLI/API/Reports see the broken sidecar instead of treating the
+            // run as fully audit-complete. Without this warning, runs that were
+            // already CompletedWithErrors silently swallowed seal failures.
+            result.AddWarning($"Audit sidecar seal failed: {ex.GetType().Name}: {ex.Message}");
             if (runOutcome == RunOutcome.Ok)
             {
-                result.Status = RunOutcome.CompletedWithErrors.ToStatusString();
-                result.ExitCode = RunOutcome.CompletedWithErrors.ToExitCode();
+                runOutcome = RunOutcome.CompletedWithErrors;
+                result.Status = runOutcome.ToStatusString();
+                result.ExitCode = runOutcome.ToExitCode();
             }
         }
 
@@ -221,7 +227,7 @@ public sealed partial class RunOrchestrator
         return hasErrors ? RunOutcome.CompletedWithErrors : RunOutcome.Ok;
     }
 
-    private void WriteCompletedAuditSidecar(RunOptions options, RunResultBuilder result, long elapsedMs, RunOutcome? outcome = null)
+    private void WriteCompletedAuditSidecar(RunOptions options, RunResultBuilder result, long elapsedMs, RunOutcome outcome)
     {
         _onProgress?.Invoke(RunProgressLocalization.Format(
             "Audit.WriteSidecar"));
@@ -230,12 +236,16 @@ public sealed partial class RunOrchestrator
 
         var auditLines = File.ReadAllLines(options.AuditPath);
         var rowCount = Math.Max(0, auditLines.Length - 1);
-        _audit.WriteMetadataSidecar(options.AuditPath, Romulus.Infrastructure.Audit.AuditRollbackRootMetadata.WithAllowedRoots(options, new Dictionary<string, object>
+        var metadata = new Dictionary<string, object>
         {
             ["RowCount"] = rowCount,
             ["Mode"] = options.Mode,
             // TASK-145: Reflect actual RunOutcome instead of always completed.
-            ["Status"] = outcome?.ToStatusString() ?? RunConstants.StatusCompleted,
+            // Deep-dive audit (Orchestration) F6: required parameter; the previous
+            // `?? RunConstants.StatusCompleted` fallback emitted an API-lifecycle
+            // vocabulary that the orchestrator never produces and was unreachable
+            // in practice — removed to prevent future vocabulary drift.
+            ["Status"] = outcome.ToStatusString(),
             ["TotalFilesScanned"] = result.TotalFilesScanned,
             ["GroupCount"] = result.GroupCount,
             ["WinnerCount"] = result.WinnerCount,
@@ -249,7 +259,14 @@ public sealed partial class RunOrchestrator
             ["ConsoleSortMoved"] = result.ConsoleSortResult?.Moved ?? 0,
             ["ConsoleSortFailed"] = result.ConsoleSortResult?.Failed ?? 0,
             ["DurationMs"] = elapsedMs
-        }));
+        };
+        // Deep-dive audit (Orchestration) F5: surface failed-phase metadata when set.
+        if (!string.IsNullOrEmpty(result.FailedPhaseName))
+        {
+            metadata["FailedPhaseName"] = result.FailedPhaseName!;
+            metadata["FailedPhaseStatus"] = result.FailedPhaseStatus ?? string.Empty;
+        }
+        _audit.WriteMetadataSidecar(options.AuditPath, Romulus.Infrastructure.Audit.AuditRollbackRootMetadata.WithAllowedRoots(options, metadata));
     }
 
     private void WritePartialAuditSidecar(
@@ -265,8 +282,10 @@ public sealed partial class RunOrchestrator
         var rowCount = 0;
         if (File.Exists(options.AuditPath))
         {
-            var auditLines = File.ReadAllLines(options.AuditPath);
-            rowCount = Math.Max(0, auditLines.Length - 1);
+            // Use AuditCsvStore.CountAuditRows so the partial sidecar's RowCount agrees
+            // with the row count produced by the regular append path. File.ReadAllLines
+            // double-counts rows whose Reason field contains a quoted newline.
+            rowCount = Romulus.Infrastructure.Audit.AuditCsvStore.CountAuditRows(options.AuditPath);
         }
         else
         {
@@ -278,7 +297,7 @@ public sealed partial class RunOrchestrator
                 "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp\n",
                 System.Text.Encoding.UTF8);
         }
-        _audit.WriteMetadataSidecar(options.AuditPath, Romulus.Infrastructure.Audit.AuditRollbackRootMetadata.WithAllowedRoots(options, new Dictionary<string, object>
+        var partialMetadata = new Dictionary<string, object>
         {
             ["RowCount"] = rowCount,
             ["Mode"] = options.Mode,
@@ -293,7 +312,14 @@ public sealed partial class RunOrchestrator
             ["ConvertedCount"] = result.ConvertedCount,
             ["ConvertErrorCount"] = result.ConvertErrorCount,
             ["DurationMs"] = elapsedMs
-        }));
+        };
+        // Deep-dive audit (Orchestration) F5: surface failed-phase metadata when set.
+        if (!string.IsNullOrEmpty(result.FailedPhaseName))
+        {
+            partialMetadata["FailedPhaseName"] = result.FailedPhaseName!;
+            partialMetadata["FailedPhaseStatus"] = result.FailedPhaseStatus ?? string.Empty;
+        }
+        _audit.WriteMetadataSidecar(options.AuditPath, Romulus.Infrastructure.Audit.AuditRollbackRootMetadata.WithAllowedRoots(options, partialMetadata));
     }
 
     private void ExecuteFolderDedupePreview(

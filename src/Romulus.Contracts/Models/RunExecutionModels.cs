@@ -147,6 +147,22 @@ public sealed class RunResult
 
     /// <summary>R4-023: Indicates partial completion (cancel/error mid-pipeline).</summary>
     public bool IsPartial { get; init; }
+
+    /// <summary>
+    /// Deep-dive audit (Orchestration) F5: phase that caused the run to fail
+    /// or be aborted (Scan, Deduplicate, Move, ...). Null on success / clean
+    /// cancel paths where no specific phase reported failure. Mirrors
+    /// <see cref="PipelineState.FailedPhaseName"/> so GUI / CLI / API / Reports
+    /// share one fachliche Wahrheit instead of recomputing locally.
+    /// </summary>
+    public string? FailedPhaseName { get; init; }
+
+    /// <summary>
+    /// Deep-dive audit (Orchestration) F5: status string of the failed phase
+    /// (typically <see cref="RunConstants.StatusFailed"/>). Null when no phase
+    /// reported failure.
+    /// </summary>
+    public string? FailedPhaseStatus { get; init; }
 }
 
 public static class RunResultValidator

@@ -86,7 +86,11 @@ public sealed class DatIndex
         if (hashMap.TryAdd(typedHashKey, newEntry))
             Interlocked.Increment(ref _totalEntries);
 
-        // Also index by game name (first entry per game wins — sufficient for name-based lookup)
+        // F-DAT-05 (regression-pinned): name index uses deterministic first-wins.
+        // A single DAT game frequently contains multiple ROM tracks/files (cue/bin, multi-track CHD)
+        // each with its own hash. Every distinct hash is added to hashMap above; the name index
+        // intentionally keeps only the first observation per gameName so name-based lookup stays
+        // O(1) and deterministic. See DatIndexInsertSymmetryTests for the contract.
         nameMap.TryAdd(gameName, newEntry);
     }
 

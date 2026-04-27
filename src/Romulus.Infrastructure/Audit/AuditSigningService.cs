@@ -456,8 +456,52 @@ public sealed class AuditSigningService
 
             var metaPath = auditCsvPath + ".meta.json";
             var json = JsonSerializer.Serialize(auditMetadata, new JsonSerializerOptions { WriteIndented = true });
+
+            // Sidecar+ledger must form an atomic pair. If the ledger append fails after the
+            // sidecar was already written, every subsequent VerifyMetadataSidecar throws
+            // "sidecar not present in the append-only ledger" and rollback is permanently
+            // blocked with AUDIT_INTEGRITY_BROKEN even though the audit CSV is intact.
+            // Snapshot any pre-existing sidecar so we can restore it on failure instead of
+            // leaving a phantom file that does not match the ledger.
+            byte[]? previousSidecarBytes = null;
+            if (File.Exists(metaPath))
+            {
+                try { previousSidecarBytes = File.ReadAllBytes(metaPath); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    previousSidecarBytes = null;
+                }
+            }
+
             AtomicFileWriter.WriteAllText(metaPath, json, Encoding.UTF8);
-            AppendLedgerEntry(auditPathSha256, hmac, previousSidecarHmac, keyId, createdUtc);
+
+            try
+            {
+                AppendLedgerEntry(auditPathSha256, hmac, previousSidecarHmac, keyId, createdUtc);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+            {
+                _log?.Invoke($"Audit ledger append failed; reverting sidecar to keep integrity chain consistent: {ex.Message}");
+
+                try
+                {
+                    if (previousSidecarBytes is not null)
+                    {
+                        // Restore previous good sidecar so the ledger's last entry still matches.
+                        AtomicFileWriter.WriteAllText(metaPath, Encoding.UTF8.GetString(previousSidecarBytes), Encoding.UTF8);
+                    }
+                    else if (File.Exists(metaPath))
+                    {
+                        File.Delete(metaPath);
+                    }
+                }
+                catch (Exception cleanupEx) when (cleanupEx is IOException or UnauthorizedAccessException)
+                {
+                    _log?.Invoke($"Failed to revert phantom sidecar after ledger failure: {cleanupEx.Message}");
+                }
+
+                return null;
+            }
 
             _log?.Invoke($"Audit sidecar written: {metaPath}");
             return metaPath;

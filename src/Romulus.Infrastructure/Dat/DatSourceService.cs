@@ -232,11 +232,22 @@ public sealed class DatSourceService : IDisposable
                     // Do not overwrite extracted files to avoid ambiguous archive collisions.
                     // R5-009 FIX: Handle IOException for already-existing files gracefully
                     // instead of crashing the entire extraction loop.
+                    // F-DAT-08: a duplicate inner entry is a real audit signal — surface it
+                    // through the logger instead of swallowing it silently. We still skip the
+                    // collision (do not overwrite) so behaviour stays fail-safe.
                     try
                     {
                         entry.ExtractToFile(destPath, overwrite: false);
                     }
-                    catch (IOException) { /* File exists — skip silently for collision safety. */ }
+                    catch (IOException ex) when (File.Exists(destPath))
+                    {
+                        _logger?.LogWarning(
+                            "ZIP inner collision: entry '{Entry}' from '{Url}' already extracted; keeping first occurrence (audit). Detail: {Detail}",
+                            entry.FullName,
+                            url,
+                            ex.Message);
+                    }
+                    catch (IOException) { /* unrelated I/O failure on this entry — skip silently for collision safety. */ }
                 }
             }
 

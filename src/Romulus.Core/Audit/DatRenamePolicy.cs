@@ -1,4 +1,5 @@
 using Romulus.Contracts.Models;
+using Romulus.Core.Safety;
 
 namespace Romulus.Core.Audit;
 
@@ -83,27 +84,9 @@ public static class DatRenamePolicy
         if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             return false;
 
-        if (IsWindowsReservedDeviceName(fileName))
+        if (WindowsFileNameRules.IsReservedDeviceName(fileName))
             return false;
 
         return true;
-    }
-
-    private static bool IsWindowsReservedDeviceName(string segment)
-    {
-        var dotIndex = segment.IndexOf('.');
-        var nameOnly = dotIndex >= 0 ? segment[..dotIndex] : segment;
-
-        return nameOnly.Length switch
-        {
-            3 => nameOnly.Equals("CON", StringComparison.OrdinalIgnoreCase)
-              || nameOnly.Equals("PRN", StringComparison.OrdinalIgnoreCase)
-              || nameOnly.Equals("AUX", StringComparison.OrdinalIgnoreCase)
-              || nameOnly.Equals("NUL", StringComparison.OrdinalIgnoreCase),
-            4 => (nameOnly.StartsWith("COM", StringComparison.OrdinalIgnoreCase)
-                  || nameOnly.StartsWith("LPT", StringComparison.OrdinalIgnoreCase))
-                 && char.IsAsciiDigit(nameOnly[3]),
-            _ => false
-        };
     }
 }

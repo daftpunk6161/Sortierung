@@ -275,9 +275,16 @@ public sealed class DatCatalogStateService
     }
 
     // F-DAT-04: Token-boundary aware prefix match. The local file stem must either equal
-    // the system name exactly, or continue with a non-alphanumeric separator so that
+    // the system name exactly, or continue with a recognised separator so that
     // longer system names (e.g. "Sega - Mega Drive 32X") cannot be silently swallowed
     // by shorter prefixes (e.g. "Sega - Mega Drive").
+    //
+    // Recognised separators after the prefix:
+    //   '-', '_', '.', '(', '['            -- direct boundary
+    //   ' ' followed (after any spaces) by one of the above
+    //
+    // Plain alphanumeric continuation (with or without an intervening space) is
+    // rejected, since "Sega - Mega Drive 32X (...)" denotes a different system.
     internal static bool HasSystemPrefixWithBoundary(string stem, string system)
     {
         if (string.IsNullOrEmpty(stem) || string.IsNullOrEmpty(system))
@@ -289,9 +296,16 @@ public sealed class DatCatalogStateService
         if (stem.Length == system.Length)
             return true;
 
-        var next = stem[system.Length];
-        // Allowed boundary characters used by Redump / No-Intro filename conventions.
-        return next is ' ' or '-' or '_' or '.' or '(' or '[';
+        var i = system.Length;
+        // Skip leading whitespace after the prefix (e.g. "Sega - Mega Drive (2024)").
+        while (i < stem.Length && stem[i] == ' ')
+            i++;
+
+        if (i >= stem.Length)
+            return true; // trailing whitespace only
+
+        var next = stem[i];
+        return next is '-' or '_' or '.' or '(' or '[';
     }
 
     /// <summary>

@@ -256,7 +256,23 @@ public sealed partial class RunOrchestrator : IDisposable
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var scanResult = await RunScanAndPrepareStateAsync(options, result, metrics, pipelineState, cancellationToken);
+        ScanPhaseResult scanResult;
+        try
+        {
+            scanResult = await RunScanAndPrepareStateAsync(options, result, metrics, pipelineState, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // Deep-dive audit (Orchestration) F5: tag the scan phase so
+            // RunResult.FailedPhaseName surfaces "Scan" in GUI / CLI / API / Reports.
+            // Mirrors PhasePlanExecutor's tag-then-rethrow contract.
+            pipelineState.SetFailedPhase("Scan", RunConstants.StatusFailed);
+            throw;
+        }
         var candidates = scanResult.AllCandidates;
         var processingCandidates = scanResult.ProcessingCandidates;
 
@@ -354,6 +370,9 @@ public sealed partial class RunOrchestrator : IDisposable
             result.ExitCode = RunOutcome.Failed.ToExitCode();
             result.DurationMs = sw.ElapsedMilliseconds;
             result.PhaseMetrics = metrics.GetMetrics();
+            // Deep-dive audit (Orchestration) F2: failed runs carry partial data,
+            // so projections must surface the "vorläufig" marker — parity with cancel.
+            result.IsPartial = true;
 
             // Keep best-effort partial data for diagnostics and UI continuity after failures.
             ApplyPartialPipelineState(pipelineState, result);
@@ -374,6 +393,11 @@ public sealed partial class RunOrchestrator : IDisposable
             {
                 _onProgress?.Invoke($"[Audit] Partial sidecar write failed after pipeline error: {sidecarEx.GetType().Name}: {sidecarEx.Message}");
             }
+
+            // Deep-dive audit (Orchestration) F1/F3: emit best-effort partial DAT audit
+            // and partial report so GUI/CLI/API surfaces are aligned with the cancel path.
+            TryGeneratePartialDatAudit(result, options, RunConstants.StatusFailed);
+            TryGeneratePartialReport(result, options, RunConstants.StatusFailed);
 
             return result.Build();
         }
@@ -412,6 +436,14 @@ public sealed partial class RunOrchestrator : IDisposable
 
     private static void ApplyPartialPipelineState(PipelineState pipelineState, RunResultBuilder result)
     {
+        // Deep-dive audit (Orchestration) F5: surface failed-phase metadata into
+        // the RunResult so GUI / CLI / API / Reports share one fachliche Wahrheit.
+        if (pipelineState.FailedPhaseName is { } failedPhase && result.FailedPhaseName is null)
+        {
+            result.FailedPhaseName = failedPhase;
+            result.FailedPhaseStatus = pipelineState.FailedPhaseStatus;
+        }
+
         if (pipelineState.AllCandidates is { } allCandidates)
         {
             result.AllCandidates = allCandidates;
