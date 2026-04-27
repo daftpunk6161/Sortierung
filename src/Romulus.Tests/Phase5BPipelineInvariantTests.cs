@@ -216,8 +216,11 @@ public class Phase5BPipelineInvariantTests
     }
 
     [Fact]
-    public void PhasePlanBuilder_DryRunMode_ExcludesMoveAndConvert_ButKeepsConsoleSortForParity()
+    public void PhasePlanBuilder_DryRunMode_ExcludesMoveAndDatRename_ButKeepsConsoleSortAndWinnerConversionForParity()
     {
+        // WinnerConversion participates in DryRun to produce a planned conversion report
+        // (see PreviewExecuteParityTests.DryRunWithConvertFormat_ReportsConversionPlanWithoutExecutingConverter).
+        // DatRename and Move remain gated to Move mode (no destructive ops in DryRun).
         var builder = new PhasePlanBuilder();
         var options = new RunOptions
         {
@@ -233,9 +236,9 @@ public class Phase5BPipelineInvariantTests
 
         var names = phases.Select(p => p.Name).ToArray();
 
-        Assert.Equal(["DatAudit", "Deduplicate", "JunkRemoval", "ConsoleSort"], names);
+        Assert.Equal(["DatAudit", "Deduplicate", "JunkRemoval", "ConsoleSort", "WinnerConversion"], names);
         Assert.DoesNotContain("Move", names);
-        Assert.DoesNotContain("WinnerConversion", names);
+        Assert.DoesNotContain("DatRename", names);
     }
 
     [Fact]

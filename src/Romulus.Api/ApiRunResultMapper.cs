@@ -57,6 +57,10 @@ internal static class ApiRunResultMapper
             SavedBytes = projection.SavedBytes,
             DurationMs = projection.DurationMs,
             PreflightWarnings = result.Preflight?.Warnings?.ToArray() ?? Array.Empty<string>(),
+            // Deep-dive audit (Orchestration, R2-F9): propagate failed-phase tag so API
+            // surfaces match Sidecar / RunResult / RunProjection (one fachliche Wahrheit).
+            FailedPhaseName = projection.FailedPhaseName,
+            FailedPhaseStatus = projection.FailedPhaseStatus,
             PhaseMetrics = BuildPhaseMetricsPayload(result.PhaseMetrics),
             DedupeGroups = BuildDedupeGroupsPayload(projectedArtifacts.DedupeGroups),
             ConversionPlans = BuildConversionPlansPayload(result.ConversionReport),

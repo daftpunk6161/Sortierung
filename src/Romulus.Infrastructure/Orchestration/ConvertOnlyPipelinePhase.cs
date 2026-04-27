@@ -22,7 +22,10 @@ public sealed class ConvertOnlyPipelinePhase : IPipelinePhase<ConvertOnlyPhaseIn
                 Index: index,
                 FilePath: candidate.MainPath,
                 ConsoleKey: candidate.ConsoleKey ?? string.Empty,
-                TrackSetMembers: true,
+                // R4-009: ConvertOnly mode must NOT track set members to avoid orphaned
+                // .bin siblings when only the .cue is converted. Set tracking is bound
+                // to dedupe/move flow which is absent in ConvertOnly.
+                TrackSetMembers: false,
                 SkipBeforeConversion: !context.FileSystem.FileExists(candidate.MainPath)))
             .ToArray();
 

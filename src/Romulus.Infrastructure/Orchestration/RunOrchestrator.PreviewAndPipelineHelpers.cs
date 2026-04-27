@@ -217,12 +217,19 @@ public sealed partial class RunOrchestrator
 
     internal static RunOutcome ResolveRunOutcome(RunResultBuilder result)
     {
+        // Deep-dive audit (Orchestration, R2-F11): escalate when a phase tagged itself
+        // as failed even if the per-counter heuristics are still zero. Without this,
+        // a phase that returns PhaseStepResult.Status="failed" without throwing causes
+        // PhasePlanExecutor to break out of the loop, but FinalizeCompletedRun would
+        // silently finalize as Ok because no counter was incremented. The phase tag is
+        // the authoritative signal that a failure occurred — counters are diagnostics.
         var hasErrors = result.ConvertErrorCount > 0
                         || result.ConvertVerifyFailedCount > 0
                         || (result.MoveResult is { FailCount: > 0 })
                         || (result.JunkMoveResult is { FailCount: > 0 })
                         || result.DatRenameFailedCount > 0
-                        || (result.ConsoleSortResult is { Failed: > 0 });
+                        || (result.ConsoleSortResult is { Failed: > 0 })
+                        || !string.IsNullOrEmpty(result.FailedPhaseName);
 
         return hasErrors ? RunOutcome.CompletedWithErrors : RunOutcome.Ok;
     }
@@ -273,7 +280,8 @@ public sealed partial class RunOrchestrator
         RunOptions options,
         RunResultBuilder result,
         PhaseMetricsCollector metrics,
-        long elapsedMs)
+        long elapsedMs,
+        RunOutcome outcome)
     {
         if (string.IsNullOrEmpty(options.AuditPath))
             return;
@@ -301,7 +309,14 @@ public sealed partial class RunOrchestrator
         {
             ["RowCount"] = rowCount,
             ["Mode"] = options.Mode,
-            ["Status"] = "partial",
+            // Deep-dive audit (Orchestration, R2-F7): emit the orchestrator's RunOutcome
+            // vocabulary instead of the literal "partial". The previous hardcoded value
+            // collided with RunResult.Status ("cancelled" / "failed") and made cancel-vs-fail
+            // indistinguishable in the sidecar — a forensic gap for rollback consumers.
+            // IsPartial=true is preserved as an orthogonal marker so downstream readers
+            // can still detect partial-vs-completed without re-parsing the status enum.
+            ["Status"] = outcome.ToStatusString(),
+            ["IsPartial"] = true,
             ["CancelledAtUtc"] = DateTime.UtcNow.ToString("o"),
             ["LastPhase"] = metrics.GetCurrentPhaseName() ?? "unknown",
             ["PhaseProgressPct"] = result.PhaseMetrics?.Phases.LastOrDefault()?.PercentOfTotal ?? 0,

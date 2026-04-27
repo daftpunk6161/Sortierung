@@ -115,9 +115,12 @@ public class DatRepositoryAdapterTests : IDisposable
         [Fact]
         public void GetDatIndex_BiosGameName_SetsIsBiosFlag()
         {
+                // F-DAT-12: BIOS-by-name detection is intentionally limited to bracketed
+                // tags ([BIOS] / (BIOS) / [Firmware] / ...) to avoid false positives on
+                // titles like "BIOS Wars". The canonical No-Intro convention uses (BIOS).
                 var datContent = @"<?xml version=""1.0""?>
 <datafile>
-    <game name=""PlayStation BIOS"">
+    <game name=""PlayStation (BIOS)"">
         <rom name=""SCPH1001.BIN"" size=""524288"" sha1=""bioshash1"" />
     </game>
 </datafile>";

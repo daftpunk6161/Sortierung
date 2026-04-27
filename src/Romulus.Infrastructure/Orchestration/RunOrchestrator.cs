@@ -346,7 +346,7 @@ public sealed partial class RunOrchestrator : IDisposable
             try
             {
                 TryFlushHashCache();
-                WritePartialAuditSidecar(options, result, metrics, sw.ElapsedMilliseconds);
+                WritePartialAuditSidecar(options, result, metrics, sw.ElapsedMilliseconds, RunOutcome.Cancelled);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
@@ -355,8 +355,10 @@ public sealed partial class RunOrchestrator : IDisposable
 
             // On cancellation, still emit a best-effort partial report so already scanned
             // candidates remain visible in GUI/CLI/API report flows.
-            TryGeneratePartialDatAudit(result, options, "cancelled");
-            TryGeneratePartialReport(result, options, "cancelled");
+            // Deep-dive audit (Orchestration, R2-F8): use the shared RunConstants vocabulary
+            // instead of a literal so future status renames cannot drift one branch silently.
+            TryGeneratePartialDatAudit(result, options, RunConstants.StatusCancelled);
+            TryGeneratePartialReport(result, options, RunConstants.StatusCancelled);
 
             return result.Build();
         }
@@ -387,7 +389,7 @@ public sealed partial class RunOrchestrator : IDisposable
             try
             {
                 TryFlushHashCache();
-                WritePartialAuditSidecar(options, result, metrics, sw.ElapsedMilliseconds);
+                WritePartialAuditSidecar(options, result, metrics, sw.ElapsedMilliseconds, RunOutcome.Failed);
             }
             catch (Exception sidecarEx) when (sidecarEx is IOException or UnauthorizedAccessException or InvalidOperationException)
             {

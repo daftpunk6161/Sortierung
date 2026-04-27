@@ -51,7 +51,13 @@ public sealed record RunProjection(
     int FailCount,
     long SavedBytes,
     long DurationMs,
-    int HealthScore);
+    int HealthScore,
+    // Deep-dive audit (Orchestration, R2-F9): surface the failed-phase tag through
+    // the channel-neutral projection so GUI / CLI / API / Reports share one fachliche
+    // Wahrheit. Without these fields the F5 metadata stayed trapped on RunResult and
+    // the sidecar; downstream adapters could not display "which phase aborted".
+    string? FailedPhaseName = null,
+    string? FailedPhaseStatus = null);
 
 public static class RunProjectionFactory
 {
@@ -158,7 +164,9 @@ public static class RunProjectionFactory
             FailCount: failCount,
             SavedBytes: savedBytes,
             DurationMs: result.DurationMs,
-            HealthScore: health);
+            HealthScore: health,
+            FailedPhaseName: result.FailedPhaseName,
+            FailedPhaseStatus: result.FailedPhaseStatus);
     }
 
     private static int CountKeptGames(

@@ -543,6 +543,18 @@ public sealed class ApiRunResult
     public long SavedBytes { get; init; }
     public long DurationMs { get; init; }
     public string[] PreflightWarnings { get; init; } = Array.Empty<string>();
+    /// <summary>
+    /// Deep-dive audit (Orchestration, R2-F9): name of the phase that aborted the run
+    /// (Scan, Deduplicate, Move, ...). Null on success / clean cancel paths. Mirrors
+    /// <see cref="Romulus.Contracts.Models.RunResult.FailedPhaseName"/> so API consumers
+    /// share the same fachliche Wahrheit as Sidecar / RunProjection / Dashboard.
+    /// </summary>
+    public string? FailedPhaseName { get; init; }
+    /// <summary>
+    /// Deep-dive audit (Orchestration, R2-F9): status string of the failed phase
+    /// (typically "failed"). Null when no phase reported failure.
+    /// </summary>
+    public string? FailedPhaseStatus { get; init; }
     public ApiPhaseMetrics PhaseMetrics { get; init; } = new() { Phases = Array.Empty<ApiPhaseMetric>() };
     public ApiDedupeGroup[] DedupeGroups { get; init; } = Array.Empty<ApiDedupeGroup>();
     public ApiConversionPlan[] ConversionPlans { get; init; } = Array.Empty<ApiConversionPlan>();

@@ -200,6 +200,115 @@ public sealed class RunOrchestratorFailedPathTests : IDisposable
     }
 
     /// <summary>
+    /// R2-F7: <c>WritePartialAuditSidecar</c> previously hardcoded
+    /// <c>Status="partial"</c>, colliding with <c>RunResult.Status</c>
+    /// (\"cancelled\" / \"failed\"). The fix routes the orchestrator's RunOutcome
+    /// vocabulary into the sidecar so cancel-vs-fail stays distinguishable for
+    /// rollback and forensic consumers, and adds an orthogonal IsPartial=true
+    /// marker for downstream readers.
+    /// </summary>
+    [Fact]
+    public void Execute_PipelineThrows_PartialSidecarStatusIsFailedNotPartial()
+    {
+        var auditPath = Path.Combine(_tempDir, "audit.csv");
+        var sidecarPath = auditPath + ".meta.json";
+
+        var orch = new RunOrchestrator(
+            new ScanThrowingFileSystem(),
+            new Infrastructure.Audit.AuditCsvStore(new Infrastructure.FileSystem.FileSystemAdapter()));
+
+        var result = orch.Execute(new RunOptions
+        {
+            Roots = [_runRoot],
+            Extensions = [".zip"],
+            Mode = RunConstants.ModeDryRun,
+            AuditPath = auditPath
+        });
+
+        Assert.Equal(RunConstants.StatusFailed, result.Status);
+        Assert.True(File.Exists(sidecarPath), $"Sidecar must exist at {sidecarPath}.");
+        var compact = System.Text.RegularExpressions.Regex.Replace(
+            File.ReadAllText(sidecarPath), @"\s+", string.Empty);
+        Assert.Contains("\"Status\":\"failed\"", compact);
+        Assert.DoesNotContain("\"Status\":\"partial\"", compact);
+        Assert.Contains("\"IsPartial\":true", compact);
+    }
+
+    /// <summary>
+    /// R2-F11: <c>ResolveRunOutcome</c> previously inspected only counter fields.
+    /// A phase that reports <c>PhaseStepResult.Status="failed"</c> without throwing
+    /// (currently dormant but contractually allowed) would tag
+    /// <c>PipelineState.FailedPhaseName</c>, break out of <c>PhasePlanExecutor</c>
+    /// without rethrow, and silently finalize as Ok if no per-phase counter ticked.
+    /// The fix makes <c>FailedPhaseName</c> an authoritative error signal.
+    /// </summary>
+    [Fact]
+    public void ResolveRunOutcome_FailedPhaseNameSetWithZeroCounters_ReturnsCompletedWithErrors()
+    {
+        var builder = new RunResultBuilder
+        {
+            FailedPhaseName = "Move",
+            FailedPhaseStatus = RunConstants.StatusFailed
+        };
+
+        var outcome = RunOrchestrator.ResolveRunOutcome(builder);
+
+        Assert.Equal(RunOutcome.CompletedWithErrors, outcome);
+    }
+
+    [Fact]
+    public void ResolveRunOutcome_NoErrorsAndNoFailedPhase_ReturnsOk()
+    {
+        var builder = new RunResultBuilder();
+
+        var outcome = RunOrchestrator.ResolveRunOutcome(builder);
+
+        Assert.Equal(RunOutcome.Ok, outcome);
+    }
+
+    /// <summary>
+    /// R2-F9: After F5 the failed-phase tag lived on RunResult and the sidecar,
+    /// but <c>RunProjection</c> and <c>ApiRunResult</c> silently dropped it. GUI
+    /// dashboard, API clients and downstream projections therefore could not see
+    /// which phase aborted. The fix mirrors the field through the channel-neutral
+    /// projection and the API mapper.
+    /// </summary>
+    [Fact]
+    public void RunProjection_PreservesFailedPhaseNameFromResult()
+    {
+        var result = new RunResult
+        {
+            Status = RunConstants.StatusFailed,
+            ExitCode = 1,
+            FailedPhaseName = "Scan",
+            FailedPhaseStatus = RunConstants.StatusFailed
+        };
+
+        var projection = RunProjectionFactory.Create(result);
+
+        Assert.Equal("Scan", projection.FailedPhaseName);
+        Assert.Equal(RunConstants.StatusFailed, projection.FailedPhaseStatus);
+    }
+
+    [Fact]
+    public void ApiRunResultMapper_PreservesFailedPhaseName()
+    {
+        var result = new RunResult
+        {
+            Status = RunConstants.StatusFailed,
+            ExitCode = 1,
+            FailedPhaseName = "Move",
+            FailedPhaseStatus = RunConstants.StatusFailed
+        };
+        var projection = RunProjectionFactory.Create(result);
+
+        var apiResult = Romulus.Api.ApiRunResultMapper.Map(result, projection);
+
+        Assert.Equal("Move", apiResult.FailedPhaseName);
+        Assert.Equal(RunConstants.StatusFailed, apiResult.FailedPhaseStatus);
+    }
+
+    /// <summary>
     /// IFileSystem fake: passes preflight checks but throws during scan so the
     /// orchestrator hits the non-OperationCanceledException catch branch.
     /// </summary>

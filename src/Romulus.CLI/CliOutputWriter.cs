@@ -81,6 +81,8 @@ internal static class CliOutputWriter
             FailCount = projection.FailCount,
             SavedBytes = projection.SavedBytes,
             DurationMs = projection.DurationMs,
+            FailedPhaseName = projection.FailedPhaseName,
+            FailedPhaseStatus = projection.FailedPhaseStatus,
             PreflightWarnings = preflightWarnings?.ToArray() ?? Array.Empty<string>(),
             Results = groups.Select(r => new CliDedupeGroup
             {
@@ -309,6 +311,8 @@ internal sealed class CliDryRunOutput
     public int FailCount { get; init; }
     public long SavedBytes { get; init; }
     public long DurationMs { get; init; }
+    public string? FailedPhaseName { get; init; }
+    public string? FailedPhaseStatus { get; init; }
     public string[] PreflightWarnings { get; init; } = Array.Empty<string>();
     public CliDedupeGroup[] Results { get; init; } = Array.Empty<CliDedupeGroup>();
     public CliConversionPlan[] ConversionPlans { get; init; } = Array.Empty<CliConversionPlan>();

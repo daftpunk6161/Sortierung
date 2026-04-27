@@ -169,7 +169,9 @@ public class Phase6QualityAssuranceTests
     [Fact]
     public void PhasePlanBuilder_DatRenameInDryRun_Excluded()
     {
-        // DatRename only runs in Move mode
+        // DatRename and Move only run in Move mode.
+        // WinnerConversion participates in DryRun to emit a planned conversion report
+        // without invoking the actual converter (handled inside the conversion step itself).
         var builder = new PhasePlanBuilder();
         var options = new RunOptions
         {
@@ -186,7 +188,7 @@ public class Phase6QualityAssuranceTests
         Assert.DoesNotContain("DatRename", names);
         Assert.DoesNotContain("Move", names);
         Assert.Contains("ConsoleSort", names);
-        Assert.DoesNotContain("WinnerConversion", names);
+        Assert.Contains("WinnerConversion", names);
     }
 
     [Fact]
@@ -206,8 +208,11 @@ public class Phase6QualityAssuranceTests
     }
 
     [Fact]
-    public void PhasePlanBuilder_ConvertWithoutMove_Excluded()
+    public void PhasePlanBuilder_ConvertWithoutMove_PlannedForReport()
     {
+        // DryRun with ConvertFormat must include WinnerConversion so the conversion step
+        // can emit a planned report (Outcome=Skipped, Reason="dry-run-planned").
+        // The converter itself is not invoked in DryRun.
         var builder = new PhasePlanBuilder();
         var options = new RunOptions
         {
@@ -218,7 +223,9 @@ public class Phase6QualityAssuranceTests
         var phases = builder.Build(options, CreateNoOpActions());
         var names = phases.Select(p => p.Name).ToArray();
 
-        Assert.DoesNotContain("WinnerConversion", names);
+        Assert.Contains("WinnerConversion", names);
+        Assert.DoesNotContain("Move", names);
+        Assert.DoesNotContain("DatRename", names);
     }
 
     [Fact]

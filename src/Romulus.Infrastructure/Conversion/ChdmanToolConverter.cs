@@ -3,6 +3,7 @@ using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.FileSystem;
+using Romulus.Infrastructure.Safety;
 
 namespace Romulus.Infrastructure.Conversion;
 
@@ -344,7 +345,7 @@ internal sealed class ChdmanToolConverter
     {
         var normalizedBase = Path.GetFullPath(extractDir) + Path.DirectorySeparatorChar;
 
-        foreach (var dir in EnumerateDirectoriesWithoutFollowingReparsePoints(extractDir))
+        foreach (var dir in FileSystemSafetyHelpers.EnumerateDirectoriesWithoutFollowingReparsePoints(extractDir))
         {
             if (!Path.GetFullPath(dir).StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase))
                 return false;
@@ -363,43 +364,6 @@ internal sealed class ChdmanToolConverter
         }
 
         return true;
-    }
-
-    private static IEnumerable<string> EnumerateDirectoriesWithoutFollowingReparsePoints(string root)
-    {
-        var stack = new Stack<string>();
-        stack.Push(root);
-        while (stack.Count > 0)
-        {
-            var current = stack.Pop();
-            string[] children;
-            try
-            {
-                children = Directory.GetDirectories(current);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                yield break;
-            }
-
-            Array.Sort(children, StringComparer.OrdinalIgnoreCase);
-            foreach (var child in children)
-            {
-                yield return child;
-                FileAttributes attrs;
-                try
-                {
-                    attrs = File.GetAttributes(child);
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    continue;
-                }
-
-                if ((attrs & FileAttributes.ReparsePoint) == 0)
-                    stack.Push(child);
-            }
-        }
     }
 
     internal static void CleanupPartialOutput(string path)
