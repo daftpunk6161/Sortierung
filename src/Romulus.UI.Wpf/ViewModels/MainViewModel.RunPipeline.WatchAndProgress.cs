@@ -63,11 +63,20 @@ public sealed partial class MainViewModel
         }
     }
 
-    private void OnWatchRunTriggered()
+    private async void OnWatchRunTriggered()
     {
         if (Roots.Count > 0)
         {
-            _ = EmitCollectionHealthMonitorHintsAsync();
+            // F-12: emit hints synchronously before the run starts so the log keeps a
+            // deterministic order (Health hints precede the watch-trigger entry).
+            try
+            {
+                await EmitCollectionHealthMonitorHintsAsync().ConfigureAwait(true);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)
+            {
+                AddLog($"[Health] Hinweis-Erzeugung fehlgeschlagen: {ex.Message}", "WARN");
+            }
             AddLog(_loc["Log.WatchTriggered"], "INFO");
             DryRun = true;
             RunCommand.Execute(null);
@@ -76,11 +85,18 @@ public sealed partial class MainViewModel
 
     private void OnScheduledRunTriggered()
     {
-        _syncContext?.Post(_ =>
+        _syncContext?.Post(async _ =>
         {
             if (!IsBusy && Roots.Count > 0)
             {
-                _ = EmitCollectionHealthMonitorHintsAsync();
+                try
+                {
+                    await EmitCollectionHealthMonitorHintsAsync().ConfigureAwait(true);
+                }
+                catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)
+                {
+                    AddLog($"[Health] Hinweis-Erzeugung fehlgeschlagen: {ex.Message}", "WARN");
+                }
                 AddLog(_loc["Log.ScheduledRunStarted"], "INFO");
                 DryRun = true;
                 RunCommand.Execute(null);
@@ -504,18 +520,5 @@ public sealed partial class MainViewModel
                 _ => phaseKey
             }
             : phaseKey;
-    }
-
-    private static int GetConsoleSortFailureCount(object sortResult)
-    {
-        var type = sortResult.GetType();
-
-        if (type.GetProperty("Failed")?.GetValue(sortResult) is int failed)
-            return failed;
-
-        if (type.GetProperty("FailCount")?.GetValue(sortResult) is int failCount)
-            return failCount;
-
-        return 0;
     }
 }

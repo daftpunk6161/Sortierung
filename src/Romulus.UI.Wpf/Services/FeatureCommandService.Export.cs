@@ -25,27 +25,14 @@ public sealed partial class FeatureCommandService
         var path = _dialog.SaveFile("HTML-Report speichern", "HTML (*.html)|*.html", "report.html");
         if (!TryResolveSafeOutputPath(path, "HTML-Report", out var safePath)) return;
 
-        var mode = _vm.CurrentRunState == Romulus.UI.Wpf.Models.RunState.CompletedDryRun
-            ? RunConstants.ModeDryRun
-            : RunConstants.ModeMove;
         try
         {
-            if (_vm.LastRunResult is not null)
-            {
-                RunReportWriter.WriteReport(safePath, _vm.LastRunResult, mode);
-            }
-            else
-            {
-                var (summary, entries) = FeatureService.BuildHtmlReportData(
-                    _vm.LastCandidates.ToArray(),
-                    _vm.LastDedupeGroups.ToArray(),
-                    runResult: null,
-                    dryRun: string.Equals(mode, RunConstants.ModeDryRun, StringComparison.OrdinalIgnoreCase));
-                ReportGenerator.WriteHtmlToFile(safePath, Path.GetDirectoryName(safePath) ?? ".", summary, entries);
-            }
+            // Wave-2 F-07: report writing centralised in IResultExportService.
+            var result = _resultExport.WriteHtmlReport(safePath, _vm);
+            if (!result.Success) return;
 
-            _vm.AddLog($"Report erstellt: {safePath} (Im Browser drucken → PDF)", "INFO");
-            TryOpenWithShell(safePath, "Report");
+            _vm.AddLog($"Report erstellt: {result.Path} (Im Browser drucken → PDF) [{result.ChannelUsed}]", "INFO");
+            TryOpenWithShell(result.Path, "Report");
         }
         catch (Exception ex) { LogError("GUI-REPORT", $"Report-Fehler: {ex.Message}"); }
     }

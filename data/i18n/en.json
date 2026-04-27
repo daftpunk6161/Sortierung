@@ -311,6 +311,7 @@
   "Result.SectionErrors": "ERROR SUMMARY",
   "Result.ErrorSummaryLabel": "Error summary",
   "Result.ReportPreviewLabel": "HTML report preview",
+  "Result.ReportPreviewFallback": "WebView2 runtime not installed. Use 'Open Report' to view the report in your browser.",
   "Result.ReportPreviewHelp": "Shows the generated HTML report as a preview.",
 
   "Result.NavCategories": "Result categories",
@@ -993,6 +994,14 @@
   "Dialog.ConvertOnly.ConfirmMessage": "This action starts the conversion pipeline and writes result files to the target folders. After successful verification, source files are moved to the conversion trash (rollback via _TRASH_CONVERTED is possible). Continue?",
   "Dialog.ConvertOnly.ConfirmText": "CONVERT",
   "Dialog.ConvertOnly.ConfirmButton": "Start conversion",
+
+  "Dialog.Move.ConfirmTitle": "Confirm move",
+  "Dialog.Move.ConfirmMessage": "This action moves files into the target path.\n\nType MOVE to confirm.",
+  "Dialog.Move.ConfirmText": "MOVE",
+  "Dialog.Move.ConfirmButton": "Run move",
+  "Log.MoveCancelled": "Move cancelled via safety dialog.",
+  "Dialog.DangerConfirm.HintFormat": "Type \"{0}\" to continue:",
+  "Dialog.DangerConfirm.DefaultButtonLabel": "Confirm",
 
   "Dialog.MoveReviewGate.BlockedTitle": "Move despite blocked items?",
   "Dialog.MoveReviewGate.BlockedMessage": "The last run flagged {0} item(s) as BLOCKED. They will be skipped or left untouched during the move. Continue anyway?",

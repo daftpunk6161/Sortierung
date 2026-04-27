@@ -1,8 +1,6 @@
 using System.IO;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using Romulus.UI.Wpf.ViewModels;
 
 namespace Romulus.UI.Wpf.Views;
@@ -68,6 +66,12 @@ public partial class LibraryReportView : UserControl
         }
     }
 
+    /// <summary>
+    /// Wave-2 F-08: pure presentation toggle. The fallback TextBlock now lives in XAML
+    /// (<see cref="webView2Fallback"/>); we only swap visibilities and dispose the
+    /// failed WebView2 host. Previous code-behind allocated the TextBlock from C#,
+    /// which mixed view construction with state handling.
+    /// </summary>
     private void ActivateWebViewFallback()
     {
         if (_webViewFallbackActivated)
@@ -75,6 +79,7 @@ public partial class LibraryReportView : UserControl
 
         _webViewFallbackActivated = true;
         webReportPreview.Visibility = Visibility.Collapsed;
+        webView2Fallback.Visibility = Visibility.Visible;
 
         if (webReportPreview is IDisposable disposable)
         {
@@ -87,24 +92,5 @@ public partial class LibraryReportView : UserControl
                 // best effort: fallback mode remains active even if disposal fails
             }
         }
-
-        if (webReportPreview.Parent is not Panel panel)
-            return;
-
-        if (panel.Children.OfType<TextBlock>().Any(tb => tb.Name == "webView2Fallback"))
-            return;
-
-        panel.Children.Remove(webReportPreview);
-        var fallback = new TextBlock
-        {
-            Text = "WebView2-Runtime nicht installiert.\nBericht kann über 'Bericht öffnen' im Browser angezeigt werden.",
-            TextWrapping = TextWrapping.Wrap,
-            Foreground = (Brush)FindResource("BrushWarning"),
-            FontSize = 12,
-            Margin = new Thickness(8),
-            Name = "webView2Fallback",
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        panel.Children.Add(fallback);
     }
 }

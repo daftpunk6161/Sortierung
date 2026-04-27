@@ -132,6 +132,67 @@ public sealed class RunViewModel : ObservableObject
     private string _dedupeRate = "–";
     public string DedupeRate { get => _dedupeRate; set => SetProperty(ref _dedupeRate, value); }
 
+    /// <summary>
+    /// Wave-2 F-01: applies a fully computed <see cref="DashboardProjection"/> in one
+    /// atomic call. Replaces the previous 21-line fan-out scattered across the
+    /// MainViewModel and ensures every channel that displays dashboard counters
+    /// reads them from the same canonical projection. New display fields added to
+    /// <see cref="DashboardProjection"/> only need to be wired here once.
+    /// </summary>
+    public void ApplyDashboard(DashboardProjection dashboard)
+    {
+        ArgumentNullException.ThrowIfNull(dashboard);
+        DashWinners = dashboard.Winners;
+        DashDupes = dashboard.Dupes;
+        DashJunk = dashboard.Junk;
+        DashDuration = dashboard.Duration;
+        HealthScore = dashboard.HealthScore;
+        DashGames = dashboard.Games;
+        DashDatHits = dashboard.DatHits;
+        DashDatHave = dashboard.DatHaveDisplay;
+        DashDatWrongName = dashboard.DatWrongNameDisplay;
+        DashDatMiss = dashboard.DatMissDisplay;
+        DashDatUnknown = dashboard.DatUnknownDisplay;
+        DashDatAmbiguous = dashboard.DatAmbiguousDisplay;
+        DashDatRenameProposed = dashboard.DatRenameProposedDisplay;
+        DashDatRenameExecuted = dashboard.DatRenameExecutedDisplay;
+        DashDatRenameFailed = dashboard.DatRenameFailedDisplay;
+        DashConverted = dashboard.ConvertedDisplay;
+        DashConvertBlocked = dashboard.ConvertBlockedDisplay;
+        DashConvertReview = dashboard.ConvertReviewDisplay;
+        DashConvertSaved = dashboard.ConvertSavedBytesDisplay;
+        DedupeRate = dashboard.DedupeRate;
+    }
+
+    /// <summary>
+    /// Wave-2 F-01: resets every dashboard counter to its idle placeholder. Replaces
+    /// the previous 21-line "–" reset block in MainViewModel.ResetDashboardForNewRun
+    /// so a future field is reset automatically once it lives on this view-model.
+    /// </summary>
+    public void ResetDashboard()
+    {
+        DashWinners = "–";
+        DashDupes = "–";
+        DashJunk = "–";
+        DashDuration = "00:00";
+        HealthScore = "–";
+        DashGames = "–";
+        DashDatHits = "–";
+        DashDatHave = "–";
+        DashDatWrongName = "–";
+        DashDatMiss = "–";
+        DashDatUnknown = "–";
+        DashDatAmbiguous = "–";
+        DashDatRenameProposed = "–";
+        DashDatRenameExecuted = "–";
+        DashDatRenameFailed = "–";
+        DashConverted = "–";
+        DashConvertBlocked = "–";
+        DashConvertReview = "–";
+        DashConvertSaved = "–";
+        DedupeRate = "–";
+    }
+
     // ═══ RAW CHART DATA (int values for charts, unaffected by display formatting) ═
     public int GamesRaw { get; set; }
     public int DupesRaw { get; set; }

@@ -582,7 +582,6 @@ public sealed partial class MainViewModel
         if (e.PropertyName is nameof(ShellViewModel.SelectedNavTag) or nameof(ShellViewModel.SelectedSubTab))
         {
             OnPropertyChanged(nameof(ShowSmartActionBar));
-            OnPropertyChanged(nameof(ShowResultMoveButton));
             OnPropertyChanged(nameof(ShowActionBarMoveButton));
         }
 

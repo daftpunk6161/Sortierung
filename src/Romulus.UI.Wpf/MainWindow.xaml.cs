@@ -22,25 +22,24 @@ public partial class MainWindow : Window, IWindowHost
     private readonly ISettingsService _settings;
     private readonly IDialogService _dialog;
     private readonly FeatureCommandService _featureCommands;
+    private readonly IApiProcessHost _apiProcessHost;
     private readonly System.Threading.Timer _settingsTimer;
     private Task? _activeRunTask;
     // System tray service
     private TrayService? _trayService;
 
-    // Detached API process from Mobile Web UI
-    private Process? _apiProcess;
-    private IDisposable? _apiProcessTrackingLease;
     // Guard against recursive OnClosing calls
     private bool _isClosing;
     // Explicit app-exit intent (e.g. tray 'Beenden') should bypass minimize-to-tray interception.
     private bool _forceExitRequested;
 
-    public MainWindow(MainViewModel vm, ISettingsService settings, IDialogService dialog, FeatureCommandService featureCommands)
+    public MainWindow(MainViewModel vm, ISettingsService settings, IDialogService dialog, FeatureCommandService featureCommands, IApiProcessHost apiProcessHost)
     {
         _vm = vm;
         _settings = settings;
         _dialog = dialog;
         _featureCommands = featureCommands;
+        _apiProcessHost = apiProcessHost;
         DataContext = _vm;
 
         InitializeComponent();
@@ -57,8 +56,7 @@ public partial class MainWindow : Window, IWindowHost
         SizeChanged += OnWindowSizeChanged;
         Closing += OnClosing;
 
-        // React to ContextWing toggle from ViewModel
-        _vm.PropertyChanged += OnVmPropertyChanged;
+        // React to ContextWing toggle from ViewModel (Shell layer)
         _vm.Shell.PropertyChanged += OnShellPropertyChanged;
 
         // Wire orchestration events
@@ -207,7 +205,6 @@ public partial class MainWindow : Window, IWindowHost
 
         // GUI-115: Unsubscribe all VM events to prevent leaks
         _vm.RunRequested -= OnRunRequested;
-        _vm.PropertyChanged -= OnVmPropertyChanged;
         _vm.Shell.PropertyChanged -= OnShellPropertyChanged;
         Loaded -= OnLoaded;
         SizeChanged -= OnWindowSizeChanged;
@@ -218,7 +215,7 @@ public partial class MainWindow : Window, IWindowHost
         _trayService = null;
 
         // Kill detached API process if running
-        SafeKillApiProcess();
+        _apiProcessHost.Stop();
 
         // Final safety net: terminate any remaining tracked child processes.
         ExternalProcessGuard.KillAllTrackedProcesses("app-shutdown", msg => _vm.AddLog(msg, "WARN"));
@@ -228,11 +225,6 @@ public partial class MainWindow : Window, IWindowHost
 
         // Force application exit so no zombie .NET Host processes remain
         Application.Current?.Shutdown();
-    }
-
-    private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        // ShowContextWing now lives on Shell — handled in OnShellPropertyChanged
     }
 
     private void OnShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -313,67 +305,13 @@ public partial class MainWindow : Window, IWindowHost
 
     void IWindowHost.StartApiProcess(string projectPath)
     {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"run --project \"{projectPath}\"",
-            UseShellExecute = false,
-            CreateNoWindow = false,
-        };
-        SafeKillApiProcess();
-        _apiProcess = Process.Start(psi);
-        if (_apiProcess is null)
-        {
-            _vm.AddLog("REST API Start fehlgeschlagen: Prozess konnte nicht gestartet werden.", "WARN");
-            return;
-        }
-        _apiProcessTrackingLease?.Dispose();
-        _apiProcessTrackingLease = ExternalProcessGuard.Track(_apiProcess, "api-process", msg => _vm.AddLog(msg, "WARN"));
-        _vm.AddLog("REST API gestartet: http://127.0.0.1:5000", "INFO");
-        _ = Task.Delay(2000).ContinueWith(_ =>
-        {
-            var d = Application.Current?.Dispatcher;
-            if (d is null) return;
-            d.InvokeAsync(() =>
-            {
-                try { Process.Start(new ProcessStartInfo("http://127.0.0.1:5000/health") { UseShellExecute = true }); }
-                catch { /* browser launch failed */ }
-            });
-        });
+        // Wave-2 F-06: lifecycle delegated to IApiProcessHost.
+        _apiProcessHost.Start(projectPath);
     }
 
     void IWindowHost.StopApiProcess()
     {
-        SafeKillApiProcess();
-    }
-
-    /// <summary>
-    /// Safely kill and dispose the detached API process.
-    /// Logs failures instead of swallowing them silently to prevent invisible zombie processes.
-    /// </summary>
-    private void SafeKillApiProcess()
-    {
-        var proc = _apiProcess;
-        _apiProcess = null;
-        _apiProcessTrackingLease?.Dispose();
-        _apiProcessTrackingLease = null;
-        if (proc is null) return;
-
-        try
-        {
-            if (!proc.HasExited)
-            {
-                proc.Kill(entireProcessTree: true);
-                // Wait for process tree to actually terminate (max 5 s)
-                if (!proc.WaitForExit(5000))
-                    _vm.AddLog("API process did not exit within 5 s after kill", "WARN");
-            }
-        }
-        catch (InvalidOperationException) { /* process already exited between check and kill */ }
-        catch (System.ComponentModel.Win32Exception ex) { _vm.AddLog($"API process kill failed: {ex.Message}", "WARN"); }
-
-        try { proc.Dispose(); }
-        catch (InvalidOperationException) { /* already disposed */ }
+        _apiProcessHost.Stop();
     }
 
 }

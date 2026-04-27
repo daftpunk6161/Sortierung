@@ -189,10 +189,6 @@ public sealed partial class MainViewModel
 
     public bool ShowStartMoveButton => CanStartMoveWithCurrentPreview;
 
-    // Retained for backward-compatibility with older bindings; move action is now
-    // rendered exclusively in SmartActionBar.
-    public bool ShowResultMoveButton => false;
-
     public bool ShowActionBarMoveButton => ShowStartMoveButton;
 
     public bool CanExecuteInlineStartMove =>
@@ -280,7 +276,6 @@ public sealed partial class MainViewModel
 
             OnPropertyChanged(nameof(RunStateDisplayText));
             OnPropertyChanged(nameof(ShowStartMoveButton));
-            OnPropertyChanged(nameof(ShowResultMoveButton));
             OnPropertyChanged(nameof(ShowActionBarMoveButton));
             OnPropertyChanged(nameof(ShowSmartActionBar));
             OnPropertyChanged(nameof(CanStartCurrentRun));
@@ -292,55 +287,24 @@ public sealed partial class MainViewModel
         if (e.PropertyName is nameof(IsBusy) or nameof(IsIdle))
         {
             OnPropertyChanged(nameof(ShowSmartActionBar));
-            OnPropertyChanged(nameof(ShowResultMoveButton));
             OnPropertyChanged(nameof(ShowActionBarMoveButton));
         }
     }
 
     private void RefreshSafetyListsFromCandidates()
     {
+        // Wave-2 F-10: routing rules live in SafetyLaneProjection so GUI/Reports/tests
+        // share the same safety-lane truth. This method only adopts the projection.
+        var lanes = Romulus.UI.Wpf.Services.SafetyLaneProjection.Project(Run.LastCandidates);
+
         SafetyBlockedItems.Clear();
+        foreach (var item in lanes.Blocked) SafetyBlockedItems.Add(item);
+
         SafetyReviewItems.Clear();
+        foreach (var item in lanes.Review) SafetyReviewItems.Add(item);
+
         SafetyUnknownItems.Clear();
-
-        foreach (var candidate in Run.LastCandidates)
-        {
-            var reason = !string.IsNullOrWhiteSpace(candidate.MatchEvidence.Reasoning)
-                ? candidate.MatchEvidence.Reasoning
-                : candidate.ClassificationReasonCode;
-
-            var item = new SafetyListItem(
-                Path.GetFileName(candidate.MainPath),
-                candidate.ConsoleKey,
-                candidate.MatchEvidence.Level.ToString(),
-                reason);
-            var hasUnknownConsole = string.IsNullOrWhiteSpace(candidate.ConsoleKey)
-                || candidate.ConsoleKey.Equals("UNKNOWN", StringComparison.OrdinalIgnoreCase);
-            var routedToSafetyLane = false;
-
-            switch (candidate.SortDecision)
-            {
-                case SortDecision.Blocked:
-                    SafetyBlockedItems.Add(item);
-                    routedToSafetyLane = true;
-                    break;
-                case SortDecision.Review:
-                    SafetyReviewItems.Add(item);
-                    routedToSafetyLane = true;
-                    break;
-                case SortDecision.Unknown:
-                    SafetyUnknownItems.Add(item);
-                    routedToSafetyLane = true;
-                    break;
-            }
-
-            // Defensive fallback: if a candidate escaped the expected safety lanes but still
-            // has no usable console key, keep it visible in "Unbekannt" without double-counting.
-            if (!routedToSafetyLane && hasUnknownConsole)
-            {
-                SafetyUnknownItems.Add(item);
-            }
-        }
+        foreach (var item in lanes.Unknown) SafetyUnknownItems.Add(item);
 
         OnPropertyChanged(nameof(SafetyBlockedCount));
         OnPropertyChanged(nameof(SafetyReviewCount));
@@ -1404,26 +1368,8 @@ public sealed partial class MainViewModel
         var hasCandidates = projectedArtifacts.AllCandidates.Count > 0;
         var dashboard = DashboardProjection.From(projection, result, isConvertOnlyRun, isDryRun);
 
-        DashWinners = dashboard.Winners;
-        DashDupes = dashboard.Dupes;
-        DashJunk = dashboard.Junk;
-        DashDuration = dashboard.Duration;
-        HealthScore = dashboard.HealthScore;
-        DashGames = dashboard.Games;
-        DashDatHits = dashboard.DatHits;
-        DashDatHave = dashboard.DatHaveDisplay;
-        DashDatWrongName = dashboard.DatWrongNameDisplay;
-        DashDatMiss = dashboard.DatMissDisplay;
-        DashDatUnknown = dashboard.DatUnknownDisplay;
-        DashDatAmbiguous = dashboard.DatAmbiguousDisplay;
-        DashDatRenameProposed = dashboard.DatRenameProposedDisplay;
-        DashDatRenameExecuted = dashboard.DatRenameExecutedDisplay;
-        DashDatRenameFailed = dashboard.DatRenameFailedDisplay;
-        DashConverted = dashboard.ConvertedDisplay;
-        DashConvertBlocked = dashboard.ConvertBlockedDisplay;
-        DashConvertReview = dashboard.ConvertReviewDisplay;
-        DashConvertSaved = dashboard.ConvertSavedBytesDisplay;
-        DedupeRate = dashboard.DedupeRate;
+        // Wave-2 F-01: single canonical dashboard write replaces the prior 21-property fan-out.
+        Run.ApplyDashboard(dashboard);
         IsConvertOnlyDashboard = isConvertOnlyRun;
 
         if (isConvertOnlyRun)
@@ -1487,7 +1433,7 @@ public sealed partial class MainViewModel
                 AddLog(_loc.Format("Log.MoveCount", mv.MoveCount, mv.FailCount), mv.FailCount > 0 ? "WARN" : "INFO");
             if (result.ConsoleSortResult is { } sort)
             {
-                var sortFailures = GetConsoleSortFailureCount(sort);
+                var sortFailures = sort.Failed;
                 AddLog(_loc.Format("Log.SortCount", sort.Moved, sortFailures, sort.Unknown), sortFailures > 0 ? "WARN" : "INFO");
             }
             if (result.ConvertedCount > 0)
@@ -1556,7 +1502,6 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(IsConvertPhaseApplicable));
             OnPropertyChanged(nameof(ShowSkippedPhaseInfo));
             OnPropertyChanged(nameof(SkippedPhaseInfoText));
-            OnPropertyChanged(nameof(ShowResultMoveButton));
             OnPropertyChanged(nameof(ShowActionBarMoveButton));
         }
 
@@ -1566,32 +1511,17 @@ public sealed partial class MainViewModel
 
     private string BuildPreviewConfigurationFingerprint()
     {
-        var builder = new StringBuilder();
-        builder.Append("roots=").AppendJoin(";", Roots).Append('|');
-        builder.Append("regions=").AppendJoin(";", GetPreferredRegions()).Append('|');
-        builder.Append("extensions=").AppendJoin(";", GetSelectedExtensions()).Append('|');
-        builder.Append("removeJunk=").Append(RemoveJunk).Append('|');
-        builder.Append("onlyGames=").Append(OnlyGames).Append('|');
-        builder.Append("keepUnknownWhenOnlyGames=").Append(KeepUnknownWhenOnlyGames).Append('|');
-        builder.Append("sortConsole=").Append(SortConsole).Append('|');
-        builder.Append("aliasKeying=").Append(AliasKeying).Append('|');
-        builder.Append("aggressiveJunk=").Append(AggressiveJunk).Append('|');
-        builder.Append("useDat=").Append(UseDat).Append('|');
-        builder.Append("enableDatRename=").Append(EnableDatRename).Append('|');
-        builder.Append("approveReviews=").Append(ApproveReviews).Append('|');
-        builder.Append("approveConversionReview=").Append(ApproveConversionReview).Append('|');
-        builder.Append("datRoot=").Append(DatRoot).Append('|');
-        builder.Append("datHashType=").Append(DatHashType).Append('|');
-        builder.Append("convertEnabled=").Append(ConvertEnabled).Append('|');
-        builder.Append("trashRoot=").Append(TrashRoot).Append('|');
-        builder.Append("auditRoot=").Append(AuditRoot).Append('|');
-        builder.Append("toolChdman=").Append(ToolChdman).Append('|');
-        builder.Append("toolDolphin=").Append(ToolDolphin).Append('|');
-        builder.Append("tool7z=").Append(Tool7z).Append('|');
-        builder.Append("toolPsxtract=").Append(ToolPsxtract).Append('|');
-        builder.Append("toolCiso=").Append(ToolCiso).Append('|');
-        builder.Append("conflictPolicy=").Append(ConflictPolicy);
-        return builder.ToString();
+        // Drift-safe: derive the fingerprint from the same draft that the run will
+        // actually consume (RunConfigurationMaterializer -> RunOptionsFactory).
+        // Any new property added to RunConfigurationDraft is automatically picked up
+        // by Services.RunConfigurationDraftFingerprint.Compute, which serializes the
+        // full draft surface and SHA-256 hashes it.
+        //
+        // includeSelections: false matches the materializer's effective-draft view —
+        // workflow/profile selections only steer defaults; the resolved draft is what
+        // determines run behavior. The fingerprint must reflect the resolved truth.
+        var draft = BuildCurrentRunConfigurationDraft(includeSelections: false);
+        return Services.RunConfigurationDraftFingerprint.Compute(draft);
     }
 
     private void ResetDashboardForNewRun()
@@ -1603,26 +1533,8 @@ public sealed partial class MainViewModel
         ConsoleDistribution.Clear();
         DedupeGroupItems.Clear();
 
-        DashWinners = "–";
-        DashDupes = "–";
-        DashJunk = "–";
-        DashDuration = "00:00";
-        HealthScore = "–";
-        DashGames = "–";
-        DashDatHits = "–";
-        DashDatHave = "–";
-        DashDatWrongName = "–";
-        DashDatMiss = "–";
-        DashDatUnknown = "–";
-        DashDatAmbiguous = "–";
-        DashDatRenameProposed = "–";
-        DashDatRenameExecuted = "–";
-        DashDatRenameFailed = "–";
-        DashConverted = "–";
-        DashConvertBlocked = "–";
-        DashConvertReview = "–";
-        DashConvertSaved = "–";
-        DedupeRate = "–";
+        // Wave-2 F-01: single canonical reset replaces the prior 21-line "–" fan-out.
+        Run.ResetDashboard();
         IsConvertOnlyDashboard = false;
         DashboardContextHint = string.Empty;
         DashboardContextSeverity = UiErrorSeverity.Info;
@@ -1644,7 +1556,6 @@ public sealed partial class MainViewModel
 
         OnPropertyChanged(nameof(CanStartMoveWithCurrentPreview));
         OnPropertyChanged(nameof(ShowStartMoveButton));
-        OnPropertyChanged(nameof(ShowResultMoveButton));
         OnPropertyChanged(nameof(ShowActionBarMoveButton));
         OnPropertyChanged(nameof(ShowSmartActionBar));
         OnPropertyChanged(nameof(MoveApplyGateText));

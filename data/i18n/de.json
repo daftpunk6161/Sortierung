@@ -313,6 +313,7 @@
   "Result.SectionErrors": "FEHLER-SUMMARY",
   "Result.ErrorSummaryLabel": "Fehler-Summary",
   "Result.ReportPreviewLabel": "HTML-Berichtsvorschau",
+  "Result.ReportPreviewFallback": "WebView2-Runtime nicht installiert. Bericht kann über 'Bericht öffnen' im Browser angezeigt werden.",
   "Result.ReportPreviewHelp": "Zeigt den generierten HTML-Report als Vorschau an.",
 
   "Result.NavCategories": "Ergebniskategorien",
@@ -994,6 +995,14 @@
   "Dialog.ConvertOnly.ConfirmMessage": "Diese Aktion startet die Konvertierungs-Pipeline und schreibt Ergebnis-Dateien in die Zielordner. Nach erfolgreicher Verifizierung werden Quell-Dateien in den Konvertierungs-Trash verschoben (Rollback per _TRASH_CONVERTED moeglich). Wirklich fortfahren?",
   "Dialog.ConvertOnly.ConfirmText": "CONVERT",
   "Dialog.ConvertOnly.ConfirmButton": "Konvertierung starten",
+
+  "Dialog.Move.ConfirmTitle": "Move bestätigen",
+  "Dialog.Move.ConfirmMessage": "Diese Aktion verschiebt Dateien in den Zielpfad.\n\nTippe MOVE zur Bestätigung.",
+  "Dialog.Move.ConfirmText": "MOVE",
+  "Dialog.Move.ConfirmButton": "Move ausführen",
+  "Log.MoveCancelled": "Move durch Sicherheitsdialog abgebrochen.",
+  "Dialog.DangerConfirm.HintFormat": "Gib \"{0}\" ein um fortzufahren:",
+  "Dialog.DangerConfirm.DefaultButtonLabel": "Bestätigen",
 
   "Dialog.MoveReviewGate.BlockedTitle": "Move trotz blockierter Items?",
   "Dialog.MoveReviewGate.BlockedMessage": "Im letzten Lauf wurden {0} Item(s) als BLOCKIERT markiert. Diese werden beim Move ignoriert oder unbearbeitet zurückgelassen. Wirklich fortfahren?",

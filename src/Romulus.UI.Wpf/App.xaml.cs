@@ -96,7 +96,23 @@ public partial class App : Application
 
         // Feature domain services
         services.AddSingleton<IRunService, RunService>();
+        services.AddSingleton<IResultExportService, ResultExportService>();
         services.AddSingleton<FeatureCommandService>();
+
+        // Wave-2 F-06: API process lifecycle
+        services.AddSingleton<IProcessLauncher, DefaultProcessLauncher>();
+        services.AddSingleton<IApiProcessHost>(sp =>
+        {
+            var launcher = sp.GetRequiredService<IProcessLauncher>();
+            // ViewModel logging is wired up after VM construction; capture lazily.
+            MainViewModel? vm = null;
+            void Log(string msg, string level)
+            {
+                vm ??= sp.GetService<MainViewModel>();
+                vm?.AddLog(msg, level);
+            }
+            return new ApiProcessHost(launcher, Log);
+        });
 
         // Child ViewModels (TASK-050: DI composition)
         services.AddSingleton<ShellViewModel>(sp =>
@@ -140,9 +156,37 @@ public partial class App : Application
             var logDir = AppStoragePathResolver.ResolveRoamingAppDirectory();
             Directory.CreateDirectory(logDir);
             var logPath = Path.Combine(logDir, "crash.log");
+            RotateCrashLogIfTooLarge(logPath);
             AtomicFileWriter.AppendText(logPath, $"[{DateTime.UtcNow:O}] {ex}\n\n");
         }
         catch { /* best effort — don't throw during crash handling */ }
+    }
+
+    /// <summary>
+    /// F-16: Rotate <c>crash.log</c> when it exceeds 1 MB. Keeps the most recent
+    /// rotated copy as <c>crash.log.1</c>. Older rotations are discarded so the
+    /// crash-log directory stays bounded on machines with chronic startup failures.
+    /// </summary>
+    internal const long CrashLogMaxBytes = 1L * 1024 * 1024;
+
+    internal static void RotateCrashLogIfTooLarge(string logPath)
+    {
+        try
+        {
+            var fi = new FileInfo(logPath);
+            if (!fi.Exists || fi.Length < CrashLogMaxBytes)
+                return;
+
+            var rotated = logPath + ".1";
+            if (File.Exists(rotated))
+                File.Delete(rotated);
+            File.Move(logPath, rotated);
+        }
+        catch (Exception rotEx) when (rotEx is IOException or UnauthorizedAccessException)
+        {
+            // Rotation is best-effort. Failing to rotate must not prevent the next
+            // crash entry from being written.
+        }
     }
 
     // ─── Single-Instance: bestehendes Romulus-Fenster aktivieren ───

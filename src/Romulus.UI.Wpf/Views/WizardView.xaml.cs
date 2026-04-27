@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Windows;
-using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -46,29 +45,39 @@ public partial class WizardView : UserControl
             ReattachBindings(VisualTreeHelper.GetChild(root, i));
     }
 
-    private static readonly DependencyProperty[] _commonBindableProps =
-    {
-        TextBlock.TextProperty,
-        ContentControl.ContentProperty,
-        UIElement.VisibilityProperty,
-        UIElement.IsEnabledProperty,
-        ButtonBase_CommandProperty(),
-        AutomationProperties.NameProperty,
-    };
-
-    private static DependencyProperty ButtonBase_CommandProperty()
-        => System.Windows.Controls.Primitives.ButtonBase.CommandProperty;
-
+    /// <summary>
+    /// Walks every locally-set DependencyProperty on the element. Any property whose
+    /// local value is an unattached binding expression (single, multi, or priority)
+    /// is cleared and re-bound so WPF picks up the now-available DataContext.
+    ///
+    /// Wave-2 F-09: replaces the previous curated DependencyProperty whitelist with a
+    /// reflective scan. The whitelist missed bindings on properties such as
+    /// ToggleButton.IsChecked, Selector.SelectedValue, ItemsControl.ItemsSource,
+    /// MultiBinding-bound TextBlock.Text, etc. The reflective scan covers any future
+    /// XAML additions without requiring this list to be maintained.
+    /// </summary>
     private static void ReattachBindingsOn(FrameworkElement fe)
     {
-        foreach (var dp in _commonBindableProps)
+        // Snapshot first because we mutate bindings during the walk.
+        var staleBindings = new List<(DependencyProperty Dp, BindingBase Binding)>();
+        var enumerator = fe.GetLocalValueEnumerator();
+        while (enumerator.MoveNext())
         {
-            var be = BindingOperations.GetBindingExpression(fe, dp);
-            if (be is null || be.Status == BindingStatus.Active)
+            var entry = enumerator.Current;
+            if (BindingOperations.GetBindingBase(fe, entry.Property) is not { } binding)
                 continue;
-            var binding = be.ParentBinding;
+
+            var expr = BindingOperations.GetBindingExpressionBase(fe, entry.Property);
+            if (expr is null || expr.Status == BindingStatus.Active)
+                continue;
+
+            staleBindings.Add((entry.Property, binding));
+        }
+
+        foreach (var (dp, binding) in staleBindings)
+        {
             BindingOperations.ClearBinding(fe, dp);
-            fe.SetBinding(dp, binding);
+            BindingOperations.SetBinding(fe, dp, binding);
         }
 
         // Style DataTriggers (e.g. WizardStepXPanelStyle) are evaluated against

@@ -58,6 +58,21 @@ public sealed class ToolRunnerAdapter : IToolRunner
 
     private readonly Action<string>? _log;
 
+    // Wave-2 F-11: thread-safe cache for FindTool results. The previous implementation
+    // recomputed candidate paths and ran File.Exists on dozens of locations on every
+    // invocation (FormatScore, ConversionPlanner, ToolsViewModel each call this in
+    // tight loops). The cache stores the resolved path (or null) keyed by lowercased
+    // tool name and self-invalidates when the cached executable no longer exists,
+    // so disk-side changes (e.g. tool installation) eventually heal automatically.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string?> _findToolCache
+        = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Wave-2 F-11: clears the FindTool resolution cache. Call after the user
+    /// installs/removes a conversion tool to force the next FindTool to re-scan.
+    /// </summary>
+    public void InvalidateToolCache() => _findToolCache.Clear();
+
     public string? FindTool(string toolName)
     {
         if (string.IsNullOrWhiteSpace(toolName))
@@ -65,6 +80,25 @@ public sealed class ToolRunnerAdapter : IToolRunner
 
         var name = toolName.ToLowerInvariant();
 
+        // Cache fast-path: only trust the cached hit if the file still exists.
+        // null entries are kept to avoid re-scanning for tools that aren't installed
+        // (which is the more common case during typical sessions).
+        if (_findToolCache.TryGetValue(name, out var cached))
+        {
+            if (cached is null) return null;
+            if (File.Exists(cached) && IsSafeToolExecutablePath(cached))
+                return cached;
+            // Stale entry: a previously found tool has been moved/removed.
+            _findToolCache.TryRemove(name, out _);
+        }
+
+        var resolved = ResolveToolUncached(name);
+        _findToolCache[name] = resolved;
+        return resolved;
+    }
+
+    private string? ResolveToolUncached(string name)
+    {
         // 1. Search known safe locations first (never user-writable) to prevent
         //    tool-hijacking via PATH poisoning with a rogue executable.
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);

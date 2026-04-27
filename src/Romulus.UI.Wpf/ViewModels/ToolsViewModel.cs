@@ -23,6 +23,13 @@ public sealed class ToolsViewModel : ObservableObject
     private const string SectionRecent = "Zuletzt verwendet";
     private const string SectionAll = "Alle Werkzeuge";
 
+    /// <summary>
+    /// F-17: Single source of truth for the experimental roadmap doc anchor.
+    /// Update here when the roadmap markdown moves; build verifies the anchor
+    /// in <c>docs/ux/UI_UX_REDESIGN_PROPOSAL.md</c> via roadmap link tests.
+    /// </summary>
+    internal const string ExperimentalRoadmapAnchor = "docs/ux/UI_UX_REDESIGN_PROPOSAL.md#phase-4-polish--delight-ongoing";
+
     private readonly ILocalizationService _loc;
     private readonly Dictionary<string, IRelayCommand> _toolLaunchCommands = new(StringComparer.Ordinal);
     private ToolContextSnapshot _lastContext = new(
@@ -312,7 +319,7 @@ public sealed class ToolsViewModel : ObservableObject
                 IsUnavailable = true,
                 IsPlanned = entry.Maturity == ToolMaturity.Experimental,
                 RoadmapLink = entry.Maturity == ToolMaturity.Experimental
-                    ? "docs/ux/UI_UX_REDESIGN_PROPOSAL.md#phase-4-polish--delight-ongoing"
+                    ? ExperimentalRoadmapAnchor
                     : string.Empty
             };
             ToolItems.Add(item);
@@ -415,7 +422,7 @@ public sealed class ToolsViewModel : ObservableObject
             new(FeatureCommandKeys.StorageTiering, "Infra", "\xE7F8", true, false, ToolMaturity.Production),
             new(FeatureCommandKeys.NasOptimization, "Infra", "\xE839", false, false, ToolMaturity.Guided),
             new(FeatureCommandKeys.PortableMode, "Infra", "\xE8B7", false, false, ToolMaturity.Guided),
-            new(FeatureCommandKeys.ApiServer, "Infra", "\xE774", false, false, ToolMaturity.Production),
+            new(FeatureCommandKeys.ApiServer, "Infra", "\xE774", false, false, ToolMaturity.Guided),
             new(FeatureCommandKeys.HardlinkMode, "Infra", "\xE71B", true, false, ToolMaturity.Guided),
             new(FeatureCommandKeys.Accessibility, "Infra", "\xE7F8", false, false, ToolMaturity.Guided)
         ];

@@ -37,6 +37,7 @@ public sealed partial class FeatureCommandService
     private readonly IFileSystem _fileSystem;
     private readonly IAuditStore _auditStore;
     private readonly IHeaderRepairService _headerRepairService;
+    private readonly IResultExportService _resultExport;
     private IWindowHost? _windowHost;
     private volatile bool _datUpdateRunning;
 
@@ -46,7 +47,8 @@ public sealed partial class FeatureCommandService
         IDialogService dialog,
         IFileSystem fileSystem,
         IAuditStore auditStore,
-        IHeaderRepairService headerRepairService)
+        IHeaderRepairService headerRepairService,
+        IResultExportService? resultExport = null)
     {
         _vm = vm;
         _settings = settings;
@@ -54,6 +56,7 @@ public sealed partial class FeatureCommandService
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
         _auditStore = auditStore ?? throw new ArgumentNullException(nameof(auditStore));
         _headerRepairService = headerRepairService ?? throw new ArgumentNullException(nameof(headerRepairService));
+        _resultExport = resultExport ?? new ResultExportService();
     }
 
     public void AttachWindowHost(IWindowHost windowHost)

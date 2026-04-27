@@ -15,8 +15,9 @@ public partial class DangerConfirmDialog : Window
     /// <summary>
     /// GUI-054: Danger-Confirm dialog. User must type confirmText to enable the confirm button.
     /// Returns true only if the user confirmed.
+    /// F-03: hint and default button label are localized via FeatureService.
     /// </summary>
-    public static bool Show(string title, string message, string confirmText, string buttonLabel = "Bestätigen", Window? owner = null)
+    public static bool Show(string title, string message, string confirmText, string buttonLabel = "", Window? owner = null)
     {
         // Guard: don't set Owner if the window is closing or not visible
         if (owner is not null && (!owner.IsLoaded || !owner.IsVisible))
@@ -30,8 +31,16 @@ public partial class DangerConfirmDialog : Window
         dlg._confirmText = confirmText;
         dlg.txtTitle.Text = title;
         dlg.txtMessage.Text = message;
-        dlg.txtConfirmHint.Text = $"Gib \"{confirmText}\" ein um fortzufahren:";
-        dlg.txtBtnLabel.Text = buttonLabel;
+
+        var hintFormat = Services.FeatureService.GetLocalizedString(
+            "Dialog.DangerConfirm.HintFormat",
+            "Gib \"{0}\" ein um fortzufahren:");
+        dlg.txtConfirmHint.Text = string.Format(System.Globalization.CultureInfo.CurrentCulture, hintFormat, confirmText);
+
+        var resolvedButtonLabel = string.IsNullOrWhiteSpace(buttonLabel)
+            ? Services.FeatureService.GetLocalizedString("Dialog.DangerConfirm.DefaultButtonLabel", "Bestätigen")
+            : buttonLabel;
+        dlg.txtBtnLabel.Text = resolvedButtonLabel;
 
         return dlg.ShowDialog() == true;
     }

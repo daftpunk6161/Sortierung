@@ -61,6 +61,14 @@
       <wv2:WebView2 x:Name="webReportPreview" Margin="20,0,20,16" MinHeight="80"
                    AutomationProperties.Name="{Binding Loc[Result.ReportPreviewLabel]}"
                    AutomationProperties.HelpText="{Binding Loc[Result.ReportPreviewHelp]}"/>
+      <!-- Wave-2 F-08: declarative WebView2 fallback (was code-behind TextBlock). -->
+      <TextBlock x:Name="webView2Fallback" Visibility="Collapsed"
+                 Margin="20,0,20,16"
+                 Foreground="{DynamicResource BrushWarning}" FontSize="12"
+                 TextWrapping="Wrap"
+                 VerticalAlignment="Center"
+                 AutomationProperties.Name="{Binding Loc[Result.ReportPreviewFallback]}"
+                 Text="{Binding Loc[Result.ReportPreviewFallback]}"/>
     </DockPanel>
 
     <!-- Empty state: no report yet -->

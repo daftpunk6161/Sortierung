@@ -223,13 +223,13 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
 
                 const string moveConfirmToken = "MOVE";
                 var moveConfirmAccepted = _dialog.DangerConfirm(
-                    title: "Move bestaetigen",
-                    message: "Diese Aktion verschiebt Dateien in den Zielpfad.\n\nTippe MOVE zur Bestaetigung.",
-                    confirmText: moveConfirmToken,
-                    buttonLabel: "Move ausfuehren");
+                    title: _loc["Dialog.Move.ConfirmTitle"],
+                    message: _loc["Dialog.Move.ConfirmMessage"],
+                    confirmText: _loc["Dialog.Move.ConfirmText"] is { Length: > 0 } t ? t : moveConfirmToken,
+                    buttonLabel: _loc["Dialog.Move.ConfirmButton"]);
                 if (!moveConfirmAccepted)
                 {
-                    AddLog("Move durch Sicherheitsdialog abgebrochen.", "INFO");
+                    AddLog(_loc["Log.MoveCancelled"], "INFO");
                     return;
                 }
 
@@ -273,9 +273,27 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
 
             if (_syncContext is null)
             {
-                OnPropertyChanged(nameof(CanExecuteInlineStartMove));
-                OnPropertyChanged(nameof(InlineMoveConfirmHint));
-                DeferCommandRequery();
+                // Fallback chain: dispatcher -> direct call (test/headless).
+                // Calling OnPropertyChanged directly from a worker thread is unsafe
+                // when WPF subscribers exist; the dispatcher fallback marshals back
+                // to the UI thread when an Application is alive.
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher is not null)
+                {
+                    dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        OnPropertyChanged(nameof(CanExecuteInlineStartMove));
+                        OnPropertyChanged(nameof(InlineMoveConfirmHint));
+                        DeferCommandRequery();
+                    }));
+                }
+                else
+                {
+                    // Pure headless mode (unit tests): no UI subscribers, direct call is safe.
+                    OnPropertyChanged(nameof(CanExecuteInlineStartMove));
+                    OnPropertyChanged(nameof(InlineMoveConfirmHint));
+                    DeferCommandRequery();
+                }
                 return;
             }
 
