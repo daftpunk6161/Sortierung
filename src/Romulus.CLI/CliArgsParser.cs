@@ -581,7 +581,6 @@ internal enum CliCommand
     Rollback,
     UpdateDats,
     Analyze,
-    Export,
     ProfilesList,
     ProfilesShow,
     ProfilesImport,

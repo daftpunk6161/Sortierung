@@ -87,13 +87,6 @@ public static class ApiErrorCodes
 
     public const string IoRootNotFound = "IO-ROOT-NOT-FOUND";
 
-    // ── EXPORT ───────────────────────────────────────────────────────
-
-    public const string ExportFrontendRequired = "EXPORT-FRONTEND-REQUIRED";
-    public const string ExportOutputRequired = "EXPORT-OUTPUT-REQUIRED";
-    public const string ExportRootsRequired = "EXPORT-ROOTS-REQUIRED";
-    public const string ExportNotReady = "EXPORT-NOT-READY";
-
     // ── PROFILE ──────────────────────────────────────────────────────
 
     public const string ProfileNotFound = "PROFILE-NOT-FOUND";

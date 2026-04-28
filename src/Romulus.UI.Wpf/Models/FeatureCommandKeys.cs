@@ -55,9 +55,7 @@ public static class FeatureCommandKeys
 
     // ── Export & Integration ──
     public const string HtmlReport = "HtmlReport";
-    public const string LauncherIntegration = "LauncherIntegration";
     public const string DatImport = "DatImport";
-    public const string ExportCollection = "ExportCollection";
 
     // ── Infrastruktur ──
     public const string StorageTiering = "StorageTiering";

@@ -156,7 +156,6 @@ public sealed class ToolsViewModel : ObservableObject
         FeatureCommandKeys.HealthScore,
         FeatureCommandKeys.DuplicateAnalysis,
         FeatureCommandKeys.RollbackQuick,
-        FeatureCommandKeys.ExportCollection,
         FeatureCommandKeys.DatAutoUpdate,
         FeatureCommandKeys.IntegrityMonitor
     ];
@@ -415,9 +414,7 @@ public sealed class ToolsViewModel : ObservableObject
             new(FeatureCommandKeys.AutoProfile, "Workflow", "\xE713", false, false, ToolMaturity.Experimental),
 
             new(FeatureCommandKeys.HtmlReport, "Export", "\xE774", true, true, ToolMaturity.Production),
-            new(FeatureCommandKeys.LauncherIntegration, "Export", "\xE768", true, false, ToolMaturity.Production),
             new(FeatureCommandKeys.DatImport, "Export", "\xE8B5", false, false, ToolMaturity.Production),
-            new(FeatureCommandKeys.ExportCollection, "Export", "\xE792", true, true, ToolMaturity.Production),
 
             new(FeatureCommandKeys.StorageTiering, "Infra", "\xE7F8", true, false, ToolMaturity.Production),
             new(FeatureCommandKeys.NasOptimization, "Infra", "\xE839", false, false, ToolMaturity.Guided),
@@ -506,8 +503,6 @@ public sealed class ToolsViewModel : ObservableObject
 
             if (snapshot.ConvertEnabled || snapshot.ConvertOnly || snapshot.ConvertedCount > 0)
                 AddRecommendation(FeatureCommandKeys.ConversionVerify, _loc["Tools.Recommend.ConversionCheck"]);
-
-            AddRecommendation(FeatureCommandKeys.ExportCollection, _loc["Tools.Recommend.RunInsight"]);
 
             if (snapshot.CanRollback)
             {

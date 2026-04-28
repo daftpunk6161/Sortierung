@@ -4,7 +4,6 @@ using System.Text.Json;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Analysis;
-using Romulus.Infrastructure.Export;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Profiles;
@@ -215,54 +214,5 @@ public sealed partial class FeatureCommandService
             .ToArray();
 
         return parts.Length == 2 ? parts : [snapshots[0].RunId, snapshots[1].RunId];
-    }
-
-    private async Task<(bool Success, FrontendExportResult? Result)> TryLoadFrontendExportResultAsync(
-        string frontend,
-        string outputPath,
-        string defaultCollectionName)
-    {
-        var (success, materialized, environment) = await TryCreateCurrentRunEnvironmentAsync();
-        if (!success || materialized is null || environment is null)
-            return (false, null);
-
-        using (environment)
-        {
-            try
-            {
-                var result = await FrontendExportService.ExportAsync(
-                    new FrontendExportRequest(
-                        frontend,
-                        outputPath,
-                        defaultCollectionName,
-                        materialized.Options.Roots.ToArray(),
-                        materialized.Options.Extensions.ToArray()),
-                    environment.FileSystem,
-                    environment.CollectionIndex,
-                    environment.EnrichmentFingerprint,
-                    runCandidates: _vm.LastCandidates.Count > 0 ? _vm.LastCandidates.ToArray() : null);
-                return (true, result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                LogWarning("GUI-EXPORT", $"Export konnte nicht erstellt werden: {ex.Message}");
-                return (false, null);
-            }
-        }
-    }
-
-    internal static string FormatFrontendExportSummary(FrontendExportResult exportResult)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"Frontend-Export: {exportResult.Frontend}");
-        sb.AppendLine(new string('=', 50));
-        sb.AppendLine($"Quelle: {exportResult.Source}");
-        sb.AppendLine($"Spiele: {exportResult.GameCount}");
-        sb.AppendLine();
-
-        foreach (var artifact in exportResult.Artifacts)
-            sb.AppendLine($"  {artifact.Label,-24} {artifact.ItemCount,5} -> {artifact.Path}");
-
-        return sb.ToString();
     }
 }

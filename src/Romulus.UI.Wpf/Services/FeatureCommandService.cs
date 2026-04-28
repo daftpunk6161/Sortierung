@@ -201,7 +201,6 @@ public sealed partial class FeatureCommandService
         // ── Konfiguration tab misc ──────────────────────────────────────
         cmds[FeatureCommandKeys.HealthScore] = new RelayCommand(HealthScore);
         cmds[FeatureCommandKeys.DuplicateAnalysis] = new RelayCommand(DuplicateAnalysis);
-        cmds[FeatureCommandKeys.ExportCollection] = new AsyncRelayCommand(ExportCollectionAsync);
         cmds[FeatureCommandKeys.RollbackQuick] = _vm.RollbackCommand;
         cmds[FeatureCommandKeys.RollbackHistoryBack] = new RelayCommand(RollbackHistoryBack);
         cmds[FeatureCommandKeys.RollbackHistoryForward] = new RelayCommand(RollbackHistoryForward);
@@ -254,7 +253,6 @@ public sealed partial class FeatureCommandService
 
         // ── Export & Integration ────────────────────────────────────────
         cmds[FeatureCommandKeys.HtmlReport] = new RelayCommand(HtmlReport);
-        cmds[FeatureCommandKeys.LauncherIntegration] = new AsyncRelayCommand(LauncherIntegrationAsync);
         cmds[FeatureCommandKeys.DatImport] = new RelayCommand(DatImport);
 
         // ── Infrastruktur & Deployment ──────────────────────────────────

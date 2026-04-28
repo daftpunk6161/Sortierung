@@ -84,50 +84,6 @@ internal static partial class Program
         }
     }
 
-    private static async Task<int> SubcommandExportAsync(CliRunOptions opts)
-    {
-        SafeErrorWriteLine($"[Export] Preparing {opts.Roots.Length} root(s)...");
-        var dataDir = RunEnvironmentBuilder.ResolveDataDir();
-        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
-        var (runOptions, mapErrors) = await CliOptionsMapper.MapAsync(opts, settings, dataDir).ConfigureAwait(false);
-        if (runOptions is null)
-        {
-            CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
-            return 3;
-        }
-
-        var serviceProvider = CreateCliServiceProvider(SafeErrorWriteLine);
-        try
-        {
-            var runEnvironmentFactory = serviceProvider.GetRequiredService<IRunEnvironmentFactory>();
-            using var env = runEnvironmentFactory.Create(runOptions, SafeErrorWriteLine);
-            var exportResult = await FrontendExportService.ExportAsync(
-                new FrontendExportRequest(
-                    opts.ExportFormat ?? FrontendExportTargets.Csv,
-                    opts.OutputPath ?? Path.Combine(
-                        ArtifactPathResolver.GetArtifactDirectory(runOptions.Roots, AppIdentity.ArtifactDirectories.Reports),
-                        $"frontend-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}.out"),
-                    string.IsNullOrWhiteSpace(opts.CollectionName) ? "Romulus" : opts.CollectionName.Trim(),
-                    runOptions.Roots,
-                    runOptions.Extensions),
-                env.FileSystem,
-                env.CollectionIndex,
-                env.EnrichmentFingerprint,
-                fallbackCandidateFactory: exportCt => LoadExportCandidatesAsync(runOptions, env, exportCt),
-                ct: CancellationToken.None).ConfigureAwait(false);
-
-            SafeStandardWriteLine(CliOutputWriter.SerializeJson(exportResult));
-            foreach (var artifact in exportResult.Artifacts)
-                SafeErrorWriteLine($"[Export] {artifact.Label}: {artifact.Path} ({artifact.ItemCount} item(s))");
-
-            return 0;
-        }
-        finally
-        {
-            (serviceProvider as IDisposable)?.Dispose();
-        }
-    }
-
     private static int SubcommandDatDiff(CliRunOptions opts)
     {
         if (!File.Exists(opts.DatFileA))
@@ -314,30 +270,5 @@ internal static partial class Program
         {
             (serviceProvider as IDisposable)?.Dispose();
         }
-    }
-
-    private static Task<IReadOnlyList<RomCandidate>> LoadExportCandidatesAsync(
-        RunOptions runOptions,
-        IRunEnvironment env,
-        CancellationToken ct)
-    {
-        using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
-        using var orchestrator = new RunOrchestrator(
-            env.FileSystem,
-            env.AuditStore,
-            env.ConsoleDetector,
-            env.HashService,
-            env.Converter,
-            env.DatIndex,
-                headerlessHasher: env.HeaderlessHasher,
-            onProgress: SafeErrorWriteLine,
-            archiveHashService: env.ArchiveHashService,
-            knownBiosHashes: env.KnownBiosHashes,
-            collectionIndex: env.CollectionIndex,
-            enrichmentFingerprint: env.EnrichmentFingerprint,
-            reviewDecisionService: reviewDecisionService);
-
-        var result = orchestrator.Execute(runOptions, ct);
-        return Task.FromResult<IReadOnlyList<RomCandidate>>(result.AllCandidates);
     }
 }

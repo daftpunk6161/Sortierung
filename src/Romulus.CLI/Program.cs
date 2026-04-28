@@ -80,9 +80,6 @@ internal static partial class Program
                 case CliCommand.Analyze:
                     return await SubcommandAnalyzeAsync(result.Options!).ConfigureAwait(false);
 
-                case CliCommand.Export:
-                    return await SubcommandExportAsync(result.Options!).ConfigureAwait(false);
-
                 case CliCommand.DatDiff:
                     return SubcommandDatDiff(result.Options!);
 

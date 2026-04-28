@@ -19,7 +19,6 @@ internal static partial class CliArgsParser
         return first switch
         {
             "analyze" => ParseSubcommandWithRoots(CliCommand.Analyze, rest),
-            "export" => ParseExportSubcommand(rest),
             "profiles" => ParseProfilesSubcommand(rest),
             "diff" => ParseDiffSubcommand(rest),
             "merge" => ParseMergeSubcommand(rest),
@@ -84,67 +83,6 @@ internal static partial class CliArgsParser
             return CliParseResult.ValidationError([$"[Error] {outputPathError}"]);
 
         return CliParseResult.Subcommand(command, opts);
-    }
-
-    private static CliParseResult ParseExportSubcommand(string[] args)
-    {
-        var opts = new CliRunOptions();
-        var errors = new List<string>();
-        for (int i = 0; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--roots" or "-roots":
-                    if (!TryConsumeValue(args, ref i, "--roots", errors, out var rootsRaw)) break;
-                    if (TryParseRootsArgument(rootsRaw, out var roots, out var rootsErr))
-                        opts.Roots = roots;
-                    else
-                        errors.Add($"[Error] {rootsErr}");
-                    break;
-                case "--format" or "-f":
-                    if (!TryConsumeValue(args, ref i, "--format", errors, out var fmt)) break;
-                    if (!FrontendExportTargets.All.Contains(fmt))
-                    {
-                        errors.Add($"[Error] Invalid export format '{fmt}'. Must be one of: {string.Join(", ", FrontendExportTargets.All.OrderBy(static value => value, StringComparer.OrdinalIgnoreCase))}.");
-                        break;
-                    }
-                    opts.ExportFormat = fmt;
-                    break;
-                case "-o" or "--output":
-                    if (!TryConsumeValue(args, ref i, "--output", errors, out var outVal)) break;
-                    opts.OutputPath = outVal;
-                    break;
-                case "--name":
-                    if (!TryConsumeValue(args, ref i, "--name", errors, out var nameVal)) break;
-                    opts.CollectionName = nameVal;
-                    break;
-                case "--profile":
-                    if (!TryConsumeValue(args, ref i, "--profile", errors, out var profileVal)) break;
-                    opts.ProfileId = profileVal;
-                    break;
-                case "--profile-file":
-                    if (!TryConsumeValue(args, ref i, "--profile-file", errors, out var profileFileVal)) break;
-                    opts.ProfileFilePath = profileFileVal;
-                    break;
-                case "--workflow":
-                    if (!TryConsumeValue(args, ref i, "--workflow", errors, out var workflowVal)) break;
-                    opts.WorkflowScenarioId = workflowVal;
-                    break;
-                default:
-                    if (!args[i].StartsWith("-"))
-                        opts.Roots = new List<string>(opts.Roots) { args[i] }.ToArray();
-                    else
-                        errors.Add($"[Error] Unknown flag '{args[i]}' for export. Use --help for usage.");
-                    break;
-            }
-        }
-        if (errors.Count > 0) return CliParseResult.ValidationError(errors);
-        if (opts.Roots.Length == 0) return CliParseResult.ValidationError(["[Error] --roots is required for 'export'."]);
-        var outputPathError = ValidateOptionalPath(opts.OutputPath, "export output path", allowUnc: false)
-            ?? ValidateOptionalPath(opts.ProfileFilePath, "profile file path", allowUnc: false);
-        if (outputPathError is not null)
-            return CliParseResult.ValidationError([$"[Error] {outputPathError}"]);
-        return CliParseResult.Subcommand(CliCommand.Export, opts);
     }
 
     private static CliParseResult ParseDatSubcommand(string[] args)

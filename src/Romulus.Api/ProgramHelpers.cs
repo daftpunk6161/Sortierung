@@ -843,13 +843,3 @@ public partial class Program
         return (code, message);
     }
 }
-
-internal sealed class ApiFrontendExportRequest
-{
-    public string? Frontend { get; set; }
-    public string? OutputPath { get; set; }
-    public string? CollectionName { get; set; }
-    public string[]? Roots { get; set; }
-    public string[]? Extensions { get; set; }
-    public string? RunId { get; set; }
-}

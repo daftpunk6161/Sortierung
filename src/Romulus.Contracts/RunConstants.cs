@@ -112,9 +112,6 @@ public static class RunConstants
     /// <summary>Schema version for generated run reports.</summary>
     public const string ReportSchemaVersion = "romulus-report-v1";
 
-    /// <summary>Schema version for Romulus-owned frontend export artifacts.</summary>
-    public const string FrontendExportSchemaVersion = "romulus-frontend-export-v1";
-
     /// <summary>Schema version for CLI JSON output artifacts.</summary>
     public const string CliOutputSchemaVersion = "romulus-cli-output-v1";
 
