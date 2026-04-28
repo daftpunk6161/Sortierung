@@ -306,16 +306,6 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
     }
 
     [Fact]
-    public void ExportCollection_DuplicateFormat_CreatesFile()
-    {
-        var path = Path.Combine(_tempDir, "dupes.csv");
-        _dialog.InputBoxResponses = ["3"];
-        _dialog.NextSaveFile = path;
-        ExecCommand("ExportCollection");
-        Assert.True(HasOutput() || File.Exists(path));
-    }
-
-    [Fact]
     public void FormatPriority_ShowsFormatList()
     {
         ExecCommand("FormatPriority");
@@ -329,15 +319,6 @@ public sealed class FcsExecutionAndSettingsTests : IDisposable
         // May not produce output if no convertible files found
     }
 
-    [Fact]
-    public void LauncherIntegration_WithGroups_ExportsPlaylist()
-    {
-        var lplPath = Path.Combine(_tempDir, "playlist.lpl");
-        _dialog.NextSaveFile = lplPath;
-        _dialog.InputBoxResponses = ["MyPlaylist"];
-        ExecCommand("LauncherIntegration");
-        Assert.True(HasOutput() || File.Exists(lplPath));
-    }
 
     // ═══ WORKFLOW COMMANDS ══════════════════════════════════════════════
 

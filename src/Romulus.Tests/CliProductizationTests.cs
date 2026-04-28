@@ -135,25 +135,6 @@ public sealed class CliProductizationTests : IDisposable
         Assert.Equal(outputPath, result.Options.OutputPath);
     }
 
-    [Theory]
-    [InlineData("m3u")]
-    [InlineData("mister")]
-    [InlineData("analoguepocket")]
-    [InlineData("onionos")]
-    public void CliArgsParser_Export_AcceptsAdditionalFrontendFormats(string format)
-    {
-        var result = CliArgsParser.Parse([
-            "export",
-            "--roots", _tempDir,
-            "--format", format
-        ]);
-
-        Assert.Equal(CliCommand.Export, result.Command);
-        Assert.Equal(0, result.ExitCode);
-        Assert.NotNull(result.Options);
-        Assert.Equal(format, result.Options!.ExportFormat, StringComparer.OrdinalIgnoreCase);
-    }
-
     [Fact]
     public void CliArgsParser_DatFixDat_ParsesRootsOutputAndName()
     {

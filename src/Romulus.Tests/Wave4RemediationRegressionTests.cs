@@ -3,7 +3,6 @@ using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Core.Classification;
-using Romulus.Infrastructure.Export;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Logging;
 using Romulus.Infrastructure.Reporting;
@@ -98,88 +97,6 @@ public sealed class Wave4RemediationRegressionTests : IDisposable
         Assert.Equal(Path.GetFullPath(reportPath), written, StringComparer.OrdinalIgnoreCase);
         Assert.True(File.Exists(reportPath));
         Assert.Contains(RunConstants.ReportSchemaVersion, File.ReadAllText(reportPath), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task FrontendExportService_Json_WithFixedTimestamp_IsDeterministicAndSchemaVersioned()
-    {
-        var generatedUtc = new DateTime(2026, 04, 24, 12, 0, 0, DateTimeKind.Utc);
-        var firstPath = Path.Combine(_tempDir, "collection-a.json");
-        var secondPath = Path.Combine(_tempDir, "collection-b.json");
-        var candidates = new[]
-        {
-            new RomCandidate
-            {
-                MainPath = @"C:\roms\snes\Game.zip",
-                GameKey = "game",
-                ConsoleKey = "snes",
-                Region = "EU",
-                Extension = ".zip",
-                Category = FileCategory.Game
-            }
-        };
-
-        await FrontendExportService.ExportAsync(
-            new FrontendExportRequest(FrontendExportTargets.Json, firstPath, "Collection", [@"C:\roms"], [".zip"])
-            {
-                GeneratedUtc = generatedUtc
-            },
-            new FileSystemAdapter(),
-            collectionIndex: null,
-            enrichmentFingerprint: null,
-            runCandidates: candidates);
-
-        await FrontendExportService.ExportAsync(
-            new FrontendExportRequest(FrontendExportTargets.Json, secondPath, "Collection", [@"C:\roms"], [".zip"])
-            {
-                GeneratedUtc = generatedUtc
-            },
-            new FileSystemAdapter(),
-            collectionIndex: null,
-            enrichmentFingerprint: null,
-            runCandidates: candidates);
-
-        var first = await File.ReadAllTextAsync(firstPath);
-        var second = await File.ReadAllTextAsync(secondPath);
-        Assert.Equal(first, second);
-
-        using var json = JsonDocument.Parse(first);
-        Assert.Equal(RunConstants.FrontendExportSchemaVersion, json.RootElement.GetProperty("schemaVersion").GetString());
-        Assert.Single(json.RootElement.GetProperty("games").EnumerateArray());
-    }
-
-    [Fact]
-    public async Task FrontendExportService_DirectoryExport_PromotesFromStagingToFinalRoot()
-    {
-        var outputRoot = Path.Combine(_tempDir, "mister-export");
-        var candidates = new[]
-        {
-            new RomCandidate
-            {
-                MainPath = @"C:\roms\ps1\Chrono Cross.chd",
-                GameKey = "chrono-cross",
-                ConsoleKey = "ps1",
-                Region = "US",
-                Extension = ".chd",
-                Category = FileCategory.Game
-            }
-        };
-
-        var result = await FrontendExportService.ExportAsync(
-            new FrontendExportRequest(FrontendExportTargets.MiSTer, outputRoot, "Collection", [@"C:\roms"], [".chd"])
-            {
-                GeneratedUtc = new DateTime(2026, 04, 24, 12, 0, 0, DateTimeKind.Utc)
-            },
-            new FileSystemAdapter(),
-            collectionIndex: null,
-            enrichmentFingerprint: null,
-            runCandidates: candidates);
-
-        var artifact = Assert.Single(result.Artifacts);
-        Assert.StartsWith(Path.GetFullPath(outputRoot), Path.GetFullPath(artifact.Path), StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("__romulus_staging_", artifact.Path, StringComparison.OrdinalIgnoreCase);
-        Assert.True(File.Exists(artifact.Path));
-        Assert.Empty(Directory.GetDirectories(_tempDir, "__romulus_staging_*"));
     }
 
     [Fact]

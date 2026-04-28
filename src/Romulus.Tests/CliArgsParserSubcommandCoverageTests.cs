@@ -378,66 +378,8 @@ public sealed class CliArgsParserSubcommandCoverageTests : IDisposable
     }
 
     // ──────────────────────────────────────────
-    // export: valid formats, --name, --profile/--profile-file, --workflow
+    // (export tests removed in Wave 1 step A)
     // ──────────────────────────────────────────
-
-    [Theory]
-    [InlineData("csv")]
-    [InlineData("json")]
-    [InlineData("retroarch")]
-    [InlineData("emulationstation")]
-    [InlineData("launchbox")]
-    [InlineData("mister")]
-    [InlineData("onionos")]
-    public void Export_ValidFormat_Accepted(string format)
-    {
-        var result = CliArgsParser.Parse(["export", "--roots", _tempDir, "--format", format]);
-        Assert.Equal(CliCommand.Export, result.Command);
-        Assert.Equal(0, result.ExitCode);
-        Assert.Equal(format, result.Options!.ExportFormat);
-    }
-
-    [Fact]
-    public void Export_WithName_SetsCollectionName()
-    {
-        var result = CliArgsParser.Parse([
-            "export", "--roots", _tempDir, "--format", "csv", "--name", "MyCollection"
-        ]);
-        Assert.Equal(CliCommand.Export, result.Command);
-        Assert.Equal("MyCollection", result.Options!.CollectionName);
-    }
-
-    [Fact]
-    public void Export_WithProfileAndProfileFile_BothParsed()
-    {
-        var pfFile = Path.Combine(_tempDir, "pf.json");
-        File.WriteAllText(pfFile, "{}");
-        var result = CliArgsParser.Parse([
-            "export", "--roots", _tempDir, "--format", "json",
-            "--profile", "default", "--profile-file", pfFile
-        ]);
-        Assert.Equal(CliCommand.Export, result.Command);
-        Assert.Equal("default", result.Options!.ProfileId);
-        Assert.Equal(pfFile, result.Options.ProfileFilePath);
-    }
-
-    [Fact]
-    public void Export_WithWorkflow_SetsWorkflowId()
-    {
-        var result = CliArgsParser.Parse([
-            "export", "--roots", _tempDir, "--format", "csv", "--workflow", "quick-clean"
-        ]);
-        Assert.Equal(CliCommand.Export, result.Command);
-        Assert.Equal("quick-clean", result.Options!.WorkflowScenarioId);
-    }
-
-    [Fact]
-    public void Export_PositionalRootWithFormat_Accepted()
-    {
-        var result = CliArgsParser.Parse(["export", _tempDir, "--format", "json"]);
-        Assert.Equal(CliCommand.Export, result.Command);
-        Assert.Contains(_tempDir, result.Options!.Roots);
-    }
 
     // ──────────────────────────────────────────
     // junk-report and completeness: --aggressive, --output

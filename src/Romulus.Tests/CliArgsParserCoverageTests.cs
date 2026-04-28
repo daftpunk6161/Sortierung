@@ -619,45 +619,6 @@ public sealed class CliArgsParserCoverageTests : IDisposable
     }
 
     [Fact]
-    public void Export_WithAllOptions_ParsesCorrectly()
-    {
-        var outPath = Path.Combine(_tempDir, "export.csv");
-        var result = CliArgsParser.Parse([
-            "export", "--roots", _tempDir,
-            "--format", "csv",
-            "-o", outPath,
-            "--name", "MyCollection",
-            "--profile", "default",
-            "--profile-file", Path.Combine(_tempDir, "p.json"),
-            "--workflow", "quick-scan"
-        ]);
-        Assert.Equal(CliCommand.Export, result.Command);
-        Assert.Equal("csv", result.Options!.ExportFormat);
-        Assert.Equal(outPath, result.Options!.OutputPath);
-        Assert.Equal("MyCollection", result.Options!.CollectionName);
-        Assert.Equal("default", result.Options!.ProfileId);
-    }
-
-    [Fact]
-    public void Export_UnknownFlag_ReturnsError()
-    {
-        var result = CliArgsParser.Parse(["export", "--roots", _tempDir, "--bad"]);
-        Assert.Equal(3, result.ExitCode);
-    }
-
-    [Fact]
-    public void Export_PositionalRoot_Accepted()
-    {
-        var result = CliArgsParser.Parse(["export", _tempDir, "--format", "json"]);
-        Assert.Equal(CliCommand.Export, result.Command);
-        Assert.Contains(_tempDir, result.Options!.Roots);
-    }
-
-    // ──────────────────────────────────────────
-    // history subcommand edge cases
-    // ──────────────────────────────────────────
-
-    [Fact]
     public void History_InvalidLimit_ReturnsError()
     {
         var result = CliArgsParser.Parse(["history", "--limit", "-5"]);

@@ -690,40 +690,6 @@ public sealed class FeatureCommandSecurityCoverageTests
     // ═══ FormatFrontendExportSummary ══════════════════════════════════
 
     [Fact]
-    public void FormatExportSummary_ShowsAllFields()
-    {
-        var result = new FrontendExportResult(
-            "emulationstation",
-            "C:\\Roms",
-            42,
-            [
-                new FrontendExportArtifact("C:\\Out\\gamelist.xml", "GameList", 42),
-                new FrontendExportArtifact("C:\\Out\\media", "Media", 10)
-            ]);
-
-        var text = FeatureCommandService.FormatFrontendExportSummary(result);
-
-        Assert.Contains("emulationstation", text);
-        Assert.Contains("C:\\Roms", text);
-        Assert.Contains("42", text);
-        Assert.Contains("GameList", text);
-        Assert.Contains("Media", text);
-    }
-
-    [Fact]
-    public void FormatExportSummary_EmptyArtifacts()
-    {
-        var result = new FrontendExportResult("mister", "D:\\Games", 0, []);
-
-        var text = FeatureCommandService.FormatFrontendExportSummary(result);
-
-        Assert.Contains("mister", text);
-        Assert.Contains("Spiele: 0", text);
-    }
-
-    // ═══ FormatCollectionMergePlan ════════════════════════════════════
-
-    [Fact]
     public void FormatMergePlan_ShowsSummaryAndEntries()
     {
         var plan = new CollectionMergePlan
