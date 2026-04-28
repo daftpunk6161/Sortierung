@@ -27,11 +27,13 @@ public sealed class DatRepositoryAdapter
 
     private readonly Action<string>? _log;
     private readonly IToolRunner? _toolRunner;
+    private readonly IDatEntryCache? _cache;
 
-    public DatRepositoryAdapter(Action<string>? log = null, IToolRunner? toolRunner = null)
+    public DatRepositoryAdapter(Action<string>? log = null, IToolRunner? toolRunner = null, IDatEntryCache? cache = null)
     {
         _log = log;
         _toolRunner = toolRunner;
+        _cache = cache;
     }
 
     public DatIndex GetDatIndex(string datRoot, IDictionary<string, string> consoleMap,
@@ -51,8 +53,9 @@ public sealed class DatRepositoryAdapter
             if (!File.Exists(datPath))
                 continue;
 
-            var parentMap = GetDatParentCloneIndex(datPath);
-            var games = ParseDatFile(datPath, hashType);
+            var payload = LoadDatPayload(datPath, hashType);
+            var parentMap = payload.ParentMap;
+            var games = payload.Games;
             foreach (var game in games)
             {
                 // game.Key = gameName, game.Value = list of rom entries
@@ -95,6 +98,39 @@ public sealed class DatRepositoryAdapter
     {
         // Normalize: lowercase, trim whitespace
         return $"{console.Trim()}|{gameName.Trim()}".ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Load (parentMap, games) for a single DAT file. Routes through
+    /// <see cref="IDatEntryCache"/> when available, parsing on miss and persisting
+    /// the result. Returns a fresh payload on every call so subsequent index
+    /// builds can mutate freely without sharing state with the cache.
+    /// </summary>
+    public CachedDatPayload LoadDatPayload(string datPath, string hashType = "SHA1")
+    {
+        if (string.IsNullOrWhiteSpace(datPath) || !File.Exists(datPath))
+            return new CachedDatPayload();
+
+        if (_cache is not null && _cache.TryGet(datPath, hashType, out var cached) && cached is not null)
+            return cached;
+
+        var parentMap = GetDatParentCloneIndex(datPath);
+        var games = ParseDatFile(datPath, hashType);
+        var payload = new CachedDatPayload
+        {
+            ParentMap = parentMap is Dictionary<string, string> dict
+                ? dict
+                : new Dictionary<string, string>(parentMap, StringComparer.OrdinalIgnoreCase),
+            Games = games
+        };
+
+        try { _cache?.Set(datPath, hashType, payload); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log?.Invoke($"[DAT-Cache] Cache-Write fehlgeschlagen ({Path.GetFileName(datPath)}): {ex.Message}");
+        }
+
+        return payload;
     }
 
     public IDictionary<string, string> GetDatParentCloneIndex(string datPath)

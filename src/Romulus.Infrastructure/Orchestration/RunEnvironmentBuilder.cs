@@ -602,7 +602,8 @@ public sealed class RunEnvironmentBuilder
 
         if (runOptions.EnableDat && !string.IsNullOrWhiteSpace(effectiveDatRoot) && Directory.Exists(effectiveDatRoot))
         {
-            var datRepo = new DatRepositoryAdapter(toolRunner: toolRunner);
+            var datCache = TryCreateDatEntryCache(onWarning);
+            var datRepo = new DatRepositoryAdapter(toolRunner: toolRunner, cache: datCache);
             datConsoleMap = BuildConsoleMap(dataDir, effectiveDatRoot, out var supplementalDats);
             NormalizeRuntimeDatMappings(
                 datConsoleMap,
@@ -625,21 +626,50 @@ public sealed class RunEnvironmentBuilder
             if (datConsoleMap.Count > 0)
             {
                 var hashType = runOptions.HashType ?? settings.Dat.HashType;
-                datIndex = datRepo.GetDatIndex(effectiveDatRoot, datConsoleMap, hashType);
 
-                // Load supplemental DATs (e.g. FBNeo DATs for consoles already mapped via No-Intro)
-                foreach (var (consoleKey, extraPaths) in supplementalDats)
+                onWarning?.Invoke($"[DAT] Lade Hauptkatalog: {datConsoleMap.Count} Konsolen-DAT(s)...");
+                var mainStartUtc = DateTime.UtcNow;
+                datIndex = datRepo.GetDatIndex(effectiveDatRoot, datConsoleMap, hashType);
+                var mainElapsedSec = (DateTime.UtcNow - mainStartUtc).TotalSeconds;
+                onWarning?.Invoke($"[DAT] Hauptkatalog geladen ({mainElapsedSec:F1}s): {datIndex.TotalEntries} Hashes / {datIndex.ConsoleCount} Konsolen");
+
+                if (supplementalCount > 0)
                 {
-                    foreach (var extraPath in extraPaths)
+                    onWarning?.Invoke($"[DAT] Lade {supplementalCount} ergaenzende DAT(s)...");
+                    var suppStartUtc = DateTime.UtcNow;
+                    int processed = 0;
+                    // Emit progress every 10 DATs (or every 25 if very many) so the UI never appears frozen.
+                    int progressEvery = supplementalCount >= 500 ? 25 : 10;
+                    foreach (var (consoleKey, extraPaths) in supplementalDats)
                     {
-                        var supplementalMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        foreach (var extraPath in extraPaths)
                         {
-                            [consoleKey] = extraPath
-                        };
-                        var extraIndex = datRepo.GetDatIndex(effectiveDatRoot, supplementalMap, hashType);
-                        // Merge entries into main index.
-                        MergeDatIndices(datIndex, extraIndex);
+                            var fileStartUtc = DateTime.UtcNow;
+                            var supplementalMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                            {
+                                [consoleKey] = extraPath
+                            };
+                            var extraIndex = datRepo.GetDatIndex(effectiveDatRoot, supplementalMap, hashType);
+                            // Merge entries into main index.
+                            MergeDatIndices(datIndex, extraIndex);
+                            processed++;
+                            var fileElapsedSec = (DateTime.UtcNow - fileStartUtc).TotalSeconds;
+
+                            // Always announce slow individual DATs so the user sees something is happening
+                            if (fileElapsedSec >= 5.0)
+                            {
+                                onWarning?.Invoke($"[DAT] Langsame DAT verarbeitet ({fileElapsedSec:F1}s): {Path.GetFileName(extraPath)} -> {consoleKey}");
+                            }
+
+                            if (processed == 1 || processed % progressEvery == 0 || processed == supplementalCount)
+                            {
+                                var elapsedSec = (DateTime.UtcNow - suppStartUtc).TotalSeconds;
+                                onWarning?.Invoke($"[DAT] Ergaenzende DATs: {processed}/{supplementalCount} ({elapsedSec:F1}s)");
+                            }
+                        }
                     }
+                    var suppElapsedSec = (DateTime.UtcNow - suppStartUtc).TotalSeconds;
+                    onWarning?.Invoke($"[DAT] Ergaenzende DATs fertig ({suppElapsedSec:F1}s)");
                 }
 
                 onWarning?.Invoke($"[DAT] Loaded {datIndex.TotalEntries} hashes for {datIndex.ConsoleCount} consoles");
@@ -673,6 +703,25 @@ public sealed class RunEnvironmentBuilder
             knownBiosHashes,
             collectionIndex,
             enrichmentFingerprint);
+    }
+
+    /// <summary>
+    /// Build a default disk-backed <see cref="IDatEntryCache"/> rooted under
+    /// <c>%APPDATA%\Romulus\dat-cache</c>. Cache failures are logged but never
+    /// fatal — the adapter falls back to direct parsing on every error.
+    /// </summary>
+    private static IDatEntryCache? TryCreateDatEntryCache(Action<string>? onWarning)
+    {
+        try
+        {
+            var cacheDir = Path.Combine(AppStoragePathResolver.ResolveRoamingAppDirectory(), "dat-cache");
+            return new FileSystemDatEntryCache(cacheDir, onWarning);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            onWarning?.Invoke($"[DAT-Cache] Disk-Cache nicht verfuegbar: {ex.Message}");
+            return null;
+        }
     }
 
     private static IReadOnlySet<string>? LoadKnownBiosHashes(string dataDir, Action<string>? onWarning)

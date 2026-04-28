@@ -20,6 +20,9 @@
     <KeyBinding Key="Escape" Command="{Binding CancelCommand}"/>
     <KeyBinding Key="R" Modifiers="Control" Command="{Binding OpenReportCommand}"/>
     <KeyBinding Key="Z" Modifiers="Control" Command="{Binding RollbackCommand}"/>
+    <!-- Wave-8 F-T01: Rollback history navigation (replaces orphan Undo/Redo aliases) -->
+    <KeyBinding Key="Z" Modifiers="Control+Shift" Command="{Binding FeatureCommands[RollbackHistoryBack]}"/>
+    <KeyBinding Key="Y" Modifiers="Control" Command="{Binding FeatureCommands[RollbackHistoryForward]}"/>
     <KeyBinding Key="O" Modifiers="Control" Command="{Binding AddRootCommand}"/>
     <KeyBinding Key="L" Modifiers="Control" Command="{Binding ClearLogCommand}"/>
     <KeyBinding Key="T" Modifiers="Control" Command="{Binding ThemeToggleCommand}"/>

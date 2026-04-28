@@ -15,6 +15,11 @@ namespace Romulus.UI.Wpf.Services;
 
 public sealed partial class FeatureCommandService
 {
+    // Wave-8 F-T09: named constant replaces the previous magic tab index
+    // used by the CommandPalette "settings" shortcut. Kept private to this
+    // partial because it is the only call site.
+    private const int SettingsTabIndex = 3;
+
     // ═══ INFRASTRUKTUR & DEPLOYMENT ═════════════════════════════════════
 
     private async Task StorageTieringAsync()
@@ -158,7 +163,7 @@ public sealed partial class FeatureCommandService
             case "rollback": _vm.RollbackCommand.Execute(null); break;
             case "theme": _vm.ThemeToggleCommand.Execute(null); break;
             case "clear-log": _vm.ClearLogCommand.Execute(null); break;
-            case "settings": _windowHost?.SelectTab(3); break;
+            case "settings": _windowHost?.SelectTab(SettingsTabIndex); break;
             default: _vm.AddLog(_vm.Loc.Format("Cmd.CommandPalette.UnknownCommand", key), "WARN"); break;
         }
     }

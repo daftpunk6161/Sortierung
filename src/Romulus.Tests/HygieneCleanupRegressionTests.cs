@@ -295,8 +295,12 @@ public sealed class HygieneCleanupRegressionTests
     [Fact]
     public void MainWindow_SafeKillApiProcess_MustCallWaitForExit()
     {
-        var codePath = FindMainWindowCodePath();
-        var code = File.ReadAllText(codePath);
+        // Wave-2 F-06 extracted the API process lifecycle into ApiProcessHost.
+        // The WaitForExit guarantee now lives there; this regression pin
+        // follows the contract to the new owning service.
+        var hostPath = Path.Combine(Path.GetDirectoryName(FindMainWindowCodePath())!, "Services", "ApiProcessHost.cs");
+        Assert.True(File.Exists(hostPath), $"ApiProcessHost.cs not found at {hostPath}");
+        var code = File.ReadAllText(hostPath);
         Assert.Contains("WaitForExit", code, StringComparison.Ordinal);
     }
 

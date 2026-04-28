@@ -384,7 +384,7 @@ public sealed class ToolsViewModel : ObservableObject
             new(FeatureCommandKeys.Completeness, "Analysis", "\xE73E", true, true, ToolMaturity.Production),
             new(FeatureCommandKeys.DryRunCompare, "Analysis", "\xE8F1", false, false, ToolMaturity.Production),
 
-            new(FeatureCommandKeys.ConversionPipeline, "Conversion", "\xE8AB", false, false, ToolMaturity.Guided),
+            new(FeatureCommandKeys.ConversionPipeline, "Conversion", "\xE8AB", false, false, ToolMaturity.Production),
             new(FeatureCommandKeys.ConversionVerify, "Conversion", "\xE73E", false, true, ToolMaturity.Production),
             new(FeatureCommandKeys.FormatPriority, "Conversion", "\xE9D9", false, false, ToolMaturity.Guided),
             new(FeatureCommandKeys.PatchPipeline, "Conversion", "\xE8A5", false, false, ToolMaturity.Guided),
@@ -402,8 +402,8 @@ public sealed class ToolsViewModel : ObservableObject
 
             new(FeatureCommandKeys.IntegrityMonitor, "Security", "\xE72E", true, true, ToolMaturity.Production),
             new(FeatureCommandKeys.BackupManager, "Security", "\xE8F1", true, false, ToolMaturity.Production),
-            new(FeatureCommandKeys.Quarantine, "Security", "\xE7BA", true, true, ToolMaturity.Production),
-            new(FeatureCommandKeys.RuleEngine, "Security", "\xE713", false, false, ToolMaturity.Guided),
+            new(FeatureCommandKeys.Quarantine, "Security", "\xE7BA", true, true, ToolMaturity.Guided),
+            new(FeatureCommandKeys.RuleEngine, "Security", "\xE713", false, false, ToolMaturity.Production),
             new(FeatureCommandKeys.RollbackQuick, "Security", "\xE777", false, true, ToolMaturity.Production),
 
             new(FeatureCommandKeys.CommandPalette, "Workflow", "\xE721", false, true, ToolMaturity.Production),

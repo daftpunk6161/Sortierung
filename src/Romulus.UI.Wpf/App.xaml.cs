@@ -7,6 +7,7 @@ using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure;
+using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Paths;
 using Romulus.Infrastructure.State;
@@ -93,6 +94,23 @@ public partial class App : Application
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IAppState, AppStateStore>();
         services.AddTransient<IDialogService, WpfDialogService>();
+
+        // DAT cache + background prewarm: shared across runs so cached payloads
+        // survive multiple Preview/Execute cycles within one process lifetime.
+        services.AddSingleton<IDatEntryCache>(_ =>
+            new FileSystemDatEntryCache(
+                Path.Combine(AppStoragePathResolver.ResolveRoamingAppDirectory(), "dat-cache")));
+        services.AddSingleton<DatPrewarmService>(sp =>
+        {
+            var cache = sp.GetRequiredService<IDatEntryCache>();
+            MainViewModel? vm = null;
+            void Log(string msg)
+            {
+                vm ??= sp.GetService<MainViewModel>();
+                vm?.AddLog(msg, "INFO");
+            }
+            return new DatPrewarmService(cache, Log);
+        });
 
         // Feature domain services
         services.AddSingleton<IRunService, RunService>();

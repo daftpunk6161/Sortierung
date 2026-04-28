@@ -43,8 +43,6 @@ public static class FeatureCommandKeys
     public const string RollbackQuick = "RollbackQuick";
     public const string RollbackHistoryBack = "RollbackHistoryBack";
     public const string RollbackHistoryForward = "RollbackHistoryForward";
-    public const string RollbackUndo = "RollbackUndo";
-    public const string RollbackRedo = "RollbackRedo";
 
     // ── Workflow & Automatisierung ──
     public const string CommandPalette = "CommandPalette";

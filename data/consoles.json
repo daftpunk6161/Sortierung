@@ -1,8 +1,9 @@
 {
   "_meta": {
     "description": "Single Source of Truth fuer alle Konsolen-Definitionen (REF-10). Alle Maps in Classification.ps1 und console-maps.json werden aus dieser Datei generiert.",
-    "version": "1.1",
-    "updated": "2026-03-21"
+    "version": "1.2",
+    "updated": "2026-04-28",
+    "tierPolicy": "tier=core sind die 30 Mainstream-Konsolen (Top-30) mit garantierter Wartung. tier=best-effort: Wartungslast minimal, kein Garantieversprechen. Siehe docs/plan/strategic-reduction-2026/console-tiering.md."
   },
   "consoles": [
     {
@@ -31,7 +32,8 @@
       "alternativeTargets": [],
       "keywords": [
         "3DO"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "3DS",
@@ -60,7 +62,8 @@
       "keywords": [
         "3DS",
         "Nintendo 3DS"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "32X",
@@ -86,7 +89,8 @@
       "alternativeTargets": [],
       "keywords": [
         "32X"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "A26",
@@ -112,7 +116,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Atari 2600"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "A52",
@@ -137,7 +142,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Atari 5200"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "A78",
@@ -162,7 +168,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Atari 7800"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "A800",
@@ -196,7 +203,8 @@
         "Atari 800",
         "Atari XL",
         "Atari XE"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "AMIGA",
@@ -220,7 +228,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Amiga"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "ARCADE",
@@ -247,7 +256,8 @@
         "MAME",
         "Arcade",
         "FBNeo"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "ATARIST",
@@ -272,7 +282,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Atari ST"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "C64",
@@ -300,7 +311,8 @@
       "keywords": [
         "C64",
         "Commodore 64"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "CD32",
@@ -330,7 +342,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Amiga CD32"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "CDI",
@@ -363,7 +376,8 @@
       "alternativeTargets": [],
       "keywords": [
         "CD-i"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "CHANNELF",
@@ -386,7 +400,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Channel F"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "COLECO",
@@ -410,7 +425,8 @@
       "alternativeTargets": [],
       "keywords": [
         "ColecoVision"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "CPC",
@@ -433,7 +449,8 @@
       "keywords": [
         "Amstrad CPC",
         "CPC"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "DC",
@@ -466,7 +483,8 @@
       "keywords": [
         "DC",
         "Dreamcast"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "DOS",
@@ -492,7 +510,8 @@
       "keywords": [
         "MS-DOS",
         "DOS"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "FMTOWNS",
@@ -523,7 +542,8 @@
       "alternativeTargets": [],
       "keywords": [
         "FM Towns"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "GB",
@@ -549,7 +569,8 @@
       "keywords": [
         "GB",
         "Game Boy"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "GBA",
@@ -575,7 +596,8 @@
       "keywords": [
         "GBA",
         "Game Boy Advance"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "GBC",
@@ -601,7 +623,8 @@
       "keywords": [
         "GBC",
         "Game Boy Color"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "GC",
@@ -639,7 +662,8 @@
       "keywords": [
         "GC",
         "GameCube"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "GG",
@@ -665,7 +689,8 @@
       "keywords": [
         "GG",
         "Game Gear"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "INTV",
@@ -689,7 +714,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Intellivision"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "JAG",
@@ -714,7 +740,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Jaguar"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "JAGCD",
@@ -743,7 +770,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Jaguar CD"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "LYNX",
@@ -767,7 +795,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Lynx"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "MD",
@@ -799,7 +828,8 @@
         "MD",
         "Genesis",
         "Mega Drive"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "MSX",
@@ -824,7 +854,8 @@
       "alternativeTargets": [],
       "keywords": [
         "MSX"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "N64",
@@ -852,7 +883,8 @@
       "keywords": [
         "N64",
         "Nintendo 64"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "NDS",
@@ -880,7 +912,8 @@
       "keywords": [
         "NDS",
         "Nintendo DS"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "NEOCD",
@@ -913,7 +946,8 @@
       "keywords": [
         "Neo Geo CD",
         "NeoGeo CD"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "NEOGEO",
@@ -939,7 +973,8 @@
       "keywords": [
         "Neo Geo",
         "NeoGeo"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "NES",
@@ -966,7 +1001,8 @@
       "keywords": [
         "NES",
         "Famicom"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "NGP",
@@ -991,7 +1027,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Neo Geo Pocket"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "NGPC",
@@ -1014,7 +1051,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Neo Geo Pocket Color"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "ODYSSEY2",
@@ -1039,7 +1077,8 @@
       "keywords": [
         "Odyssey 2",
         "Odyssey2"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "PC98",
@@ -1064,7 +1103,8 @@
       "keywords": [
         "PC-98",
         "PC98"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "PCE",
@@ -1094,7 +1134,8 @@
         "PCE",
         "PC Engine",
         "TurboGrafx"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "PCECD",
@@ -1128,7 +1169,8 @@
       "keywords": [
         "PC Engine CD",
         "TurboGrafx CD"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "PCFX",
@@ -1159,7 +1201,8 @@
       "alternativeTargets": [],
       "keywords": [
         "PC-FX"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "POKEMINI",
@@ -1183,7 +1226,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Pokemon Mini"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "PS1",
@@ -1224,7 +1268,8 @@
         ".ccd",
         ".sub",
         ".pbp"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "PS2",
@@ -1263,7 +1308,8 @@
         ".nrg",
         ".mdf",
         ".mds"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "PS3",
@@ -1293,7 +1339,8 @@
       "keywords": [
         "PS3",
         "PlayStation 3"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "PSP",
@@ -1326,7 +1373,8 @@
       "alternativeTargets": [],
       "keywords": [
         "PSP"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "SAT",
@@ -1358,7 +1406,8 @@
       "keywords": [
         "SAT",
         "Saturn"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "SCD",
@@ -1393,7 +1442,8 @@
         "SCD",
         "Sega CD",
         "Mega CD"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "SG1000",
@@ -1418,7 +1468,8 @@
       "alternativeTargets": [],
       "keywords": [
         "SG-1000"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "SMS",
@@ -1445,7 +1496,8 @@
       "keywords": [
         "SMS",
         "Master System"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "SNES",
@@ -1474,7 +1526,8 @@
         "SNES",
         "Super Nintendo",
         "Super Famicom"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "SUPERVISION",
@@ -1496,7 +1549,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Supervision"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "SWITCH",
@@ -1525,7 +1579,8 @@
       "keywords": [
         "Switch",
         "NSW"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "VB",
@@ -1550,7 +1605,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Virtual Boy"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "VECTREX",
@@ -1573,7 +1629,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Vectrex"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "VITA",
@@ -1602,7 +1659,8 @@
       "keywords": [
         "Vita",
         "PS Vita"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "WII",
@@ -1640,7 +1698,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Wii"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "WIIU",
@@ -1675,7 +1734,8 @@
       "keywords": [
         "Wii U",
         "WiiU"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "WS",
@@ -1701,7 +1761,8 @@
       "alternativeTargets": [],
       "keywords": [
         "WonderSwan"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "WSC",
@@ -1727,7 +1788,8 @@
       "alternativeTargets": [],
       "keywords": [
         "WonderSwan Color"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "X360",
@@ -1759,7 +1821,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Xbox 360"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "X68K",
@@ -1783,7 +1846,8 @@
       "keywords": [
         "X68000",
         "X68K"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "XBOX",
@@ -1813,7 +1877,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Xbox"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "ZX",
@@ -1839,7 +1904,8 @@
       "alternativeTargets": [],
       "keywords": [
         "ZX Spectrum"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "ACD",
@@ -1869,7 +1935,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Archimedes"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "ARCADIA",
@@ -1893,7 +1960,8 @@
       "keywords": [
         "Arcadia 2001",
         "Arcadia"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "AWAVE",
@@ -1916,7 +1984,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Atomiswave"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "BSX",
@@ -1941,7 +2010,8 @@
       "keywords": [
         "Satellaview",
         "BS-X"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "CDTV",
@@ -1970,7 +2040,8 @@
       "alternativeTargets": [],
       "keywords": [
         "CDTV"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "CHI",
@@ -1996,7 +2067,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "CVISION",
@@ -2018,7 +2090,8 @@
       "alternativeTargets": [],
       "keywords": [
         "CreatiVision"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "DAPHNE",
@@ -2038,7 +2111,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "FDS",
@@ -2063,7 +2137,8 @@
       "keywords": [
         "FDS",
         "Famicom Disk System"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "GAMECOM",
@@ -2089,7 +2164,8 @@
       "keywords": [
         "Game.com",
         "Gamecom"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "GMASTER",
@@ -2110,7 +2186,8 @@
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "GP32",
@@ -2133,7 +2210,8 @@
       "alternativeTargets": [],
       "keywords": [
         "GP32"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "GW",
@@ -2160,7 +2238,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "HS",
@@ -2187,7 +2266,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "ITE",
@@ -2214,7 +2294,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "IXL",
@@ -2240,7 +2321,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "KSITE",
@@ -2266,7 +2348,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "LIND",
@@ -2292,7 +2375,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "LOOPY",
@@ -2312,7 +2396,8 @@
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "MAC",
@@ -2341,7 +2426,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "MAME",
@@ -2364,7 +2450,8 @@
       "keywords": [
         "MAME",
         "Arcade"
-      ]
+      ],
+      "tier": "core"
     },
     {
       "key": "N64DD",
@@ -2389,7 +2476,8 @@
       "keywords": [
         "64DD",
         "N64DD"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "NAOMI",
@@ -2417,7 +2505,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Naomi"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "NAO2",
@@ -2446,7 +2535,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Naomi 2"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "NGAGE",
@@ -2474,7 +2564,8 @@
       "keywords": [
         "N-Gage",
         "NGage"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "NUON",
@@ -2502,7 +2593,8 @@
       "alternativeTargets": [],
       "keywords": [
         "NUON"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "PALM",
@@ -2525,7 +2617,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "PC88",
@@ -2551,7 +2644,8 @@
       "keywords": [
         "PC-88",
         "PC88"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "PCD",
@@ -2578,7 +2672,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "PCV2",
@@ -2598,7 +2693,8 @@
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "PICO",
@@ -2620,7 +2716,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Sega Pico"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "PIPPIN",
@@ -2649,7 +2746,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Pippin"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "POCKET",
@@ -2669,7 +2767,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "PPC",
@@ -2689,7 +2788,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "PS4",
@@ -2723,7 +2823,8 @@
       "keywords": [
         "PS4",
         "PlayStation 4"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "PS5",
@@ -2752,7 +2853,8 @@
       "keywords": [
         "PS5",
         "PlayStation 5"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "QUIZ",
@@ -2778,7 +2880,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "RINGEDGE",
@@ -2804,7 +2907,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "RINGEDGE2",
@@ -2831,7 +2935,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "RINGWIDE",
@@ -2857,7 +2962,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "SCV",
@@ -2877,7 +2983,8 @@
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "SGX",
@@ -2902,7 +3009,8 @@
       "alternativeTargets": [],
       "keywords": [
         "SuperGrafx"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "SUFAMI",
@@ -2924,7 +3032,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Sufami Turbo"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "SUPERACAN",
@@ -2944,7 +3053,8 @@
       "conversionPolicy": "ArchiveOnly",
       "preferredConversionTarget": ".zip",
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "TRIFORCE",
@@ -2970,7 +3080,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "VFLASH",
@@ -3000,7 +3111,8 @@
       "alternativeTargets": [],
       "keywords": [
         "V.Flash"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "VIC20",
@@ -3028,7 +3140,8 @@
       "keywords": [
         "VIC-20",
         "VIC20"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "VIS",
@@ -3054,7 +3167,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "AMIGACD",
@@ -3082,7 +3196,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Amiga CD"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "PLAYDIA",
@@ -3110,7 +3225,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Playdia"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "FIREBEAT",
@@ -3136,7 +3252,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "K573",
@@ -3163,7 +3280,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "KGV",
@@ -3190,7 +3308,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "N246",
@@ -3217,7 +3336,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "PRO21",
@@ -3243,7 +3363,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "KISSSITE",
@@ -3270,7 +3391,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "PHOTOPLAY",
@@ -3296,7 +3418,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "EAMUSE",
@@ -3323,7 +3446,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "GSUPD",
@@ -3349,7 +3473,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "MSX2",
@@ -3373,7 +3498,8 @@
       "alternativeTargets": [],
       "keywords": [
         "MSX2"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "MUGEN",
@@ -3394,7 +3520,8 @@
       "keywords": [
         "MUGEN",
         "M.U.G.E.N"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "MEGADUCK",
@@ -3419,7 +3546,8 @@
       "keywords": [
         "Mega Duck",
         "MegaDuck"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "ASTROCADE",
@@ -3442,7 +3570,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Astrocade"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "VSMILE",
@@ -3467,7 +3596,8 @@
       "keywords": [
         "V.Smile",
         "VSmile"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "VC4000",
@@ -3490,7 +3620,8 @@
       "alternativeTargets": [],
       "keywords": [
         "VC 4000"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "STUDIO2",
@@ -3517,7 +3648,8 @@
       "keywords": [
         "Studio II",
         "Studio2"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "VIDEOPAC",
@@ -3541,7 +3673,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Videopac+"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "G7000",
@@ -3566,7 +3699,8 @@
       "keywords": [
         "Videopac G7000",
         "G7000"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "PLUS4",
@@ -3594,7 +3728,8 @@
       "keywords": [
         "Plus/4",
         "Plus4"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "GAMATE",
@@ -3617,7 +3752,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Gamate"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "GAMEPOCKET",
@@ -3639,7 +3775,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "AVISION",
@@ -3661,7 +3798,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "MYVISION",
@@ -3683,7 +3821,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "PV1000",
@@ -3705,7 +3844,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "BEENA",
@@ -3726,7 +3866,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "RX78",
@@ -3748,7 +3889,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "GIZMONDO",
@@ -3772,7 +3914,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Gizmondo"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "GP2X",
@@ -3795,7 +3938,8 @@
       "alternativeTargets": [],
       "keywords": [
         "GP2X"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "APF",
@@ -3817,7 +3961,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "EVERCADE",
@@ -3842,7 +3987,8 @@
       "alternativeTargets": [],
       "keywords": [
         "Evercade"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "VISICOM",
@@ -3863,7 +4009,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "CPS3",
@@ -3890,7 +4037,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "KM2",
@@ -3916,7 +4064,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "KPYTHON2",
@@ -3943,7 +4092,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "ALLS",
@@ -3970,7 +4120,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "NU",
@@ -3997,7 +4148,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "POLYMEGA",
@@ -4023,7 +4175,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "EBOOK",
@@ -4050,7 +4203,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "AUDIOCD",
@@ -4074,7 +4228,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "DVD",
@@ -4098,7 +4253,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "BD",
@@ -4122,7 +4278,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "ION",
@@ -4148,7 +4305,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "ZAURUS",
@@ -4173,7 +4331,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "PSION",
@@ -4198,7 +4357,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "MEGATOUCH",
@@ -4224,7 +4384,8 @@
       "conversionPolicy": "None",
       "preferredConversionTarget": null,
       "alternativeTargets": [],
-      "keywords": []
+      "keywords": [],
+      "tier": "best-effort"
     },
     {
       "key": "NDSI",
@@ -4253,7 +4414,8 @@
       "keywords": [
         "DSi",
         "NDSi"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "NEW3DS",
@@ -4281,7 +4443,8 @@
       "keywords": [
         "New 3DS",
         "New Nintendo 3DS"
-      ]
+      ],
+      "tier": "best-effort"
     },
     {
       "key": "HYPERSCAN",
@@ -4309,7 +4472,8 @@
       "alternativeTargets": [],
       "keywords": [
         "HyperScan"
-      ]
+      ],
+      "tier": "best-effort"
     }
   ]
 }

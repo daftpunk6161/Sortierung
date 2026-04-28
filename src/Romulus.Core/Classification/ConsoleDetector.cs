@@ -176,6 +176,9 @@ public sealed class ConsoleDetector
                 var hashStrategy = item.TryGetProperty("hashStrategy", out var hs)
                     ? hs.GetString()
                     : null;
+                var tier = item.TryGetProperty("tier", out var tr)
+                    ? tr.GetString() ?? "best-effort"
+                    : "best-effort";
 
                 var uniqueExts = ReadStringArray(item, "uniqueExts");
                 var ambigExts = ReadStringArray(item, "ambigExts");
@@ -195,7 +198,8 @@ public sealed class ConsoleDetector
                     keywords,
                     family,
                     hashStrategy,
-                    datSources));
+                    datSources,
+                    tier));
             }
         }
 
@@ -710,7 +714,8 @@ public sealed record ConsoleInfo(
     string[] Keywords = null!,
     PlatformFamily Family = PlatformFamily.Unknown,
     string? HashStrategy = null,
-    string[] DatSources = null!)
+    string[] DatSources = null!,
+    string Tier = "best-effort")
 {
     public string[] Keywords { get; init; } = Keywords ?? Array.Empty<string>();
     public string[] DatSources { get; init; } = DatSources ?? Array.Empty<string>();

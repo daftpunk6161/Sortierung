@@ -1,0 +1,2291 @@
+plan_id: strategic-reduction-2026
+objective: |
+  Romulus auf seine echte Identitaet reduzieren ("Safe ROM Library Cleanup & Verification with Audit Trail")
+  und die in der Critic-Review festgelegte 5-Phasen-Roadmap inklusive Top-20-Empfehlungen
+  ohne Kompromisse und ohne Luecken umsetzen.
+created_at: "2026-04-28"
+created_by: gem-planner
+status: pending_approval
+research_confidence: high
+
+plan_metrics:
+  wave_1_task_count: 6
+  total_dependencies: 41
+  risk_score: high
+
+wave_timing:
+  basis: |
+    Grobe Wochen-Schaetzung mit Unsicherheits-Bandbreite. Kein Commitment auf
+    Tag-genaue Termine. Slip wird in plan.status dokumentiert, nicht still verschoben.
+    "Tag 7 von Welle 3" o.ae. Deadlines werden als Wochen-Tag interpretiert,
+    sobald Welle 3 startet.
+  wave_1: "2-3 Wochen"
+  wave_2: "2 Wochen"
+  wave_3: "3-4 Wochen"
+  wave_4: "3 Wochen"
+  wave_5: "3 Wochen"
+  wave_6: "1-2 Wochen"
+  wave_7: "3 Wochen"
+  wave_8: "2-3 Wochen"
+  wave_9: "2-3 Wochen"
+  wave_10: "2-3 Wochen (nur falls Bonus-Tasks aktiviert)"
+  wave_11: "2 Wochen"
+  caveat: |
+    Wenn eine Welle laut Pre-Mortem-Risiko schleppt, schreibe ein Slip-Note in
+    docs/plan/strategic-reduction-2026/slip-log.md mit Ursache und Folge-Wirkung
+    auf die Beta-Akquise-Deadline.
+
+tldr: |
+  Drei-Akt-Plan ueber 5 Phasen / 11 Wellen.
+  - Akt I (Wellen 1-3, Phase 1): Strategische Reduktion. Eine GUI, ein Workflow, weniger Konsolen,
+    weniger Tools, ehrliche Doku, Audit-Moratorium. Kein neues Feature bevor das nicht steht.
+  - Akt II (Wellen 4-6, Phase 2): Vertrauen sichtbar machen. Decision Explainer, Audit-Viewer
+    First-Class, Before/After Simulator, Conversion Safety Advisor, DAT-first ADR.
+  - Akt III (Wellen 7-11, Phasen 3-5): Workflow-Mehrwert (Set Integrity Guardian, Multi-DAT,
+    Provenance) und kontrollierte Power-Features (Policy Governance, Risk Map, Batch Plan).
+    Keine Plattform-/Marketplace-/Plugin-Themen vor PMF.
+  Jede Welle hat ein hartes Stop-/Go-Gate. Beta-Nutzer-Loop ab Welle 3.
+  Top-20-Empfehlungen sind 1:1 als covers-Tags den Tasks zugeordnet, sodass jede Empfehlung
+  exakt einen Owner-Task hat.
+
+open_questions: []
+
+resolved_decisions:
+  - question: Welche realen Beta-Nutzer starten den Discovery-Loop in Welle 3?
+    decision: |
+      Mindestens 5 Personen, davon mindestens 3 extern. Cohort-Mix:
+      - 2 Power-Archivare (Sammlung > 500 GB, gemischte Konsolen, Vorerfahrung mit
+        RomVault oder clrmamepro), akquiriert aus r/Roms, r/DataHoarder oder dem
+        No-Intro/Redump-Forum.
+      - 1 Nischen-Sammler (z.B. Neo Geo, PC-Engine, MSX) als Belastungsprobe fuer die
+        Best-Effort-Konsolenmarkierung.
+      - 1 frischer Umsteiger ohne Romulus-Vorwissen mit 50-200 GB Sammlung als
+        Onboarding- und Decision-Explainer-Tester.
+      - 1 interner Power-User aus dem Maintainer-Umfeld (NICHT der Hauptentwickler)
+        fuer schnelle Wochen-Iteration.
+      Mitarbeiter, Familie und Hauptentwickler zaehlen explizit nicht.
+      Akquise-Deadline: Tag 7 von Welle 3, sonst Plan-Slip dokumentieren.
+    impact_on_tasks: ["T-W3-BETA-USERS"]
+
+  - question: Wer ist Entscheider fuer die Avalonia-vs-WPF-ADR und bis wann?
+    decision: |
+      ENTSCHEIDUNG GETROFFEN (2026-04-28): WPF behalten, Avalonia archivieren.
+      Owner: Maintainer mit Commit-Recht auf main.
+      Begruendung:
+      - Persona ist Windows-first (Sammler/Archivare auf Windows-Desktop).
+      - Erhebliches investiertes Kapital in WPF: 41 Views, 16 ViewModels,
+        dokumentierte Wave-2-Refactors (RunViewModel.ApplyDashboard, IApiProcessHost,
+        SafetyLaneProjection, RunConfigurationDraftFingerprint), gereifte Bugfixes
+        (WizardView-Binding-Deferral, DatCatalog-Refresh, AuditSigningService-Atomicity),
+        WPF-nahe Tests (HardRegressionInvariantTests, GuiViewModelTests, WpfFingerprintAndI18nTests,
+        Wave2RefactorRegressionTests).
+      - Avalonia ist im Repo erkennbar jung und unvollstaendig; weiterfuehren bedeutet
+        Doppelarbeit oder Feature-Verzoegerung.
+      - Cross-Platform ist nicht durch GUI-Tausch geloest: chdman/dolphintool/7z,
+        WebView2 (LibraryReportView), Reparse Points/Hardlinks im FileSystemAdapter
+        sind Windows-spezifisch.
+      - Wenn Cross-Platform jemals belegt wird, ist der ehrliche Pfad eine Linux/macOS-
+        taugliche CLI (Romulus.CLI), nicht eine zweite GUI.
+      Folgeentscheidung fuer T-W1-AV-ARCHIVE:
+      - src/Romulus.UI.Avalonia wird nach archive/avalonia-spike/ verschoben (nicht hart
+        geloescht), mit Git-Tag avalonia-spike-archived. Spike-Lerneffekt bleibt erhalten,
+        Wartung endet.
+      - Aus src/Romulus.sln entfernen, Tests/CI-Schritte entfernen, README/Doku bereinigen.
+      Reaktivierungs-Bedingung (dokumentiert, nicht offen):
+      - Mindestens 3 belegte Beta-Nutzer mit Linux/macOS-Bedarf UND
+      - Microsoft kuendigt WPF-EOL fuer .NET 11/12 an UND
+      - keine viable CLI-Alternative fuer den belegten Bedarf.
+      Nur dann ADR ueberdenken.
+    impact_on_tasks: ["T-W1-AV-WPF-ADR", "T-W1-AV-ARCHIVE"]
+
+  - question: Welche Top-30-Konsolenliste gilt als Coverage-Schwelle?
+    decision: |
+      Quelle: Annahme jetzt setzen, weil keine Telemetrie existiert. Telemetrie wird
+      in Welle 4 als opt-in / anonymer Hook ergaenzt, ab Welle 6 wird die Liste
+      datengestuetzt nachjustiert. Beta-Nutzer aus Welle 3 liefern erste manuelle
+      Validierung.
+      Initialer Tier=core Set (30):
+      Nintendo: NES, SNES, N64, GameCube, Wii, GB, GBC, GBA, NDS, 3DS.
+      Sega: Master System, Mega Drive/Genesis, Game Gear, Saturn, Dreamcast.
+      Sony: PS1, PS2, PSP, PS3.
+      Microsoft: Xbox, Xbox 360.
+      Atari: 2600, 5200, 7800, Lynx, Jaguar.
+      NEC: PC-Engine/TurboGrafx-16.
+      SNK: Neo Geo Pocket, Neo Geo Pocket Color.
+      3DO, CD-i.
+      Wichtig: Reduktion ist nur Tier-Markierung (core vs best-effort), keine Loeschung.
+      Alle 163 Konsolen bleiben funktional, nur Onboarding-Wizard und Default-Filter
+      zeigen ausschliesslich core. Streit-Energie damit begrenzt.
+    impact_on_tasks: ["T-W1-CONSOLE-COVERAGE"]
+
+  - question: Soll die API in Phase 4 GA-Status bekommen oder experimental bleiben?
+    decision: |
+      Dauerhaft v1-experimental, bis drei externe Nutzer die API produktiv (in Skripten
+      oder CI) nutzen UND zwei aufeinanderfolgende Releases ohne Breaking Changes
+      stabil bleiben UND die Cross-Cutting-Verifikation GUI/CLI/API-Paritaet
+      bestaetigt.
+      Konkret: Pfad-Praefix /v1-experimental/, HTTP-Header
+      X-Romulus-API-Status: experimental, OpenAPI x-stability: experimental,
+      Disclaimer in README. Pin auf konkrete Romulus-Version verbindlich kommuniziert.
+      Sicherheit (Auth, Rate Limit, Token-Pflicht fuer destruktive Calls) ist
+      NICHT experimentell und muss stabil sein.
+      Wenn die drei GA-Bedingungen nie erfuellt sind: API bleibt dauerhaft
+      experimental. Das ist ehrliche Erwartungsverwaltung, kein Versagen.
+    impact_on_tasks: ["T-W9-API-HARDENING"]
+
+pre_mortem:
+  overall_risk_level: high
+  critical_failure_modes:
+    - scenario: |
+        Reduktionswelle wird halbherzig umgesetzt. Code von Frontend-Export, ScreenScraper,
+        RA-Compliance, Patching wird nur "versteckt" statt entfernt -> bleibt Wartungslast,
+        Schattenlogik, irrefuehrende Tests, und das Team baut weiter daran.
+      likelihood: high
+      impact: critical
+      mitigation: |
+        Definition of Done jeder Reduktions-Task: Source geloescht, Tests entfernt oder
+        umgewidmet, i18n-Keys entfernt, Registrierungen entfernt, Doku aktualisiert,
+        keine grep-Treffer mehr in src/ ausser in CHANGELOG. Verifikation durch gem-reviewer.
+    - scenario: |
+        Avalonia-Code wird trotz Archivierung weiter referenziert (Solution-Eintraege,
+        CI-Steps, Doku, csproj-Verweise) -> halbe Archivierung, weiterhin Wartungslast,
+        widerspruechliche Signale fuer Mitwirkende.
+      likelihood: high
+      impact: high
+      mitigation: |
+        T-W1-AV-ARCHIVE-DoD: grep -r 'Romulus.UI.Avalonia' in src/ und tests/ liefert 0
+        Treffer; src/Romulus.sln enthaelt das Projekt nicht; CI-Workflow-Files erwaehnen
+        es nicht; README, docs/architecture und docs/product/competitive-analysis.md
+        bereinigt; Git-Tag avalonia-spike-archived gesetzt. gem-reviewer prueft jeden
+        Punkt einzeln.
+    - scenario: |
+        Audit-Moratorium wird nicht eingehalten - das Team faellt zurueck in die
+        Audit-Schleife und findet keine echten Nutzer.
+      likelihood: medium
+      impact: high
+      mitigation: |
+        Welle 3 enthaelt verbindliche Beta-Nutzer-Akquise mit min. 5 Personen und
+        strukturierten Interviews. Audit-Aktivitaet ist in Wellen 1-3 explizit verboten
+        (Ausnahme: Sicherheits- oder Datenintegritaetsbug mit P1-Klassifizierung).
+    - scenario: |
+        Konsolenreduktion auf Top-30 verliert reale Nutzer-Sammlungen. Power-Sammler
+        mit Nische (z.B. PC-Engine, MSX) werden vergrault.
+      likelihood: medium
+      impact: high
+      mitigation: |
+        Reduktion bedeutet "Best-Effort"-Markierung, nicht Loeschung von Konsolen-Daten.
+        Die Konsolen bleiben in data/consoles.json, werden aber im UI klar markiert
+        ("Best Effort"-Badge) und nicht im Onboarding-Wizard angeboten.
+    - scenario: |
+        Decision Explainer wird gebaut, ohne dass die Scoring-Pfade ihre Begruendungen
+        propagieren. Ergebnis: schoene UI ohne Substanz.
+      likelihood: medium
+      impact: high
+      mitigation: |
+        Decision Explainer Welle ist Wave 4 abhaengig von einer dedizierten Vorbereitung
+        in Wave 2 (Scoring/Dedup-Engine emittiert Reason-Trace im RunResult).
+    - scenario: |
+        Conversion Safety Advisor ist bestehende Conversion-Pipeline kosmetisch ueberlagert,
+        aber Lossy-Pfade bleiben erlaubt. Datenverlust-Risiko bleibt.
+      likelihood: medium
+      impact: critical
+      mitigation: |
+        Lossy-Pfade werden technisch hart geschaltet: erfordern explicit
+        AcceptDataLossToken im RunOptions, sonst InvalidOperationException
+        in ConversionPolicy. RED-Tests erzwingen das.
+    - scenario: |
+        Reduktionsschritte werden technisch korrekt durchgefuehrt, aber die Marketing-Doku
+        (README, competitive-analysis.md) bleibt im alten Ton. Nutzer-Erwartung kollidiert
+        mit Realitaet.
+      likelihood: high
+      impact: medium
+      mitigation: |
+        DoD jeder Reduktions-Task enthaelt ein Doku-Mitziehen. README-Refresh ist eigene
+        Pflicht-Task in Welle 1 mit Reviewer-Sign-off.
+  assumptions:
+    - Romulus bleibt Windows-first. Cross-Platform ist explizit out-of-scope bis Phase 5.
+    - Die bestehende Architektur (Contracts/Core/Infrastructure/Entry-Points) wird nicht angetastet.
+    - Single-Source-of-Truth-Praktiken (RunConfigurationDraftFingerprint, SafetyLaneProjection,
+      RunViewModel.ApplyDashboard) sind erhaltenswert und werden in jeder Welle als
+      Architektur-Invariante geschuetzt.
+    - Es gibt mindestens eine Person, die Beta-Nutzer akquirieren und interviewen kann.
+    - Das Team akzeptiert das Audit-Moratorium fuer 30 Tage.
+    - Lizenz bleibt GPLv3.
+
+implementation_specification:
+  code_structure: |
+    Es entsteht keine neue Architektur-Schicht. Alle Aenderungen laufen innerhalb der
+    bestehenden Schichten. Neue Logik (Decision Explainer, Provenance, Health Score)
+    landet in Romulus.Core (pure) bzw. Romulus.Infrastructure (I/O).
+    Reduktionen entfernen Code. UI-Reduktion verkleinert Romulus.UI.Wpf/Views und
+    Romulus.UI.Wpf/ViewModels. Avalonia-Projekt wird gemaess gefallener Entscheidung
+    nach archive/avalonia-spike/ verschoben (lesbar, nicht gebaut, nicht getestet).
+  affected_areas:
+    - src/Romulus.UI.Wpf (Reduktion: Views, ViewModels, FeatureCommandService.*, Services)
+    - src/Romulus.UI.Avalonia (Verschiebung nach archive/avalonia-spike/)
+    - src/Romulus.Infrastructure/Conversion (Lossy-Token, Safety Advisor)
+    - src/Romulus.Infrastructure/Reporting (Vereinheitlichung HTML/CSV/JSON, Audit-Viewer-Daten)
+    - src/Romulus.Infrastructure/Audit (Audit-Viewer-Backing-API)
+    - src/Romulus.Infrastructure/Dat (DAT-first-Markierung, Multi-DAT-Conflict)
+    - src/Romulus.Infrastructure/Analysis (HealthScore, Provenance)
+    - src/Romulus.Core/Deduplication (Reason-Trace fuer Decision Explainer)
+    - src/Romulus.Core/Scoring (Reason-Trace)
+    - src/Romulus.Contracts/Models (RunResult-Erweiterung um WinnerReasons, ProvenanceTrail)
+    - src/Romulus.CLI, src/Romulus.Api (Paritaet, Lossy-Token, Reduktionen mitziehen)
+    - data/consoles.json (Top-30 + Best-Effort-Markierung)
+    - data/i18n/* (verwaiste Keys entfernen, neue fuer Explainer/Provenance/Health)
+    - docs/architecture, docs/adrs (neue ADRs: AV-WPF, DAT-first, Conversion-Safety)
+    - README.md, docs/product/competitive-analysis.md (Realitaets-Refresh)
+  component_details:
+    - component: WinnerReasonTrace
+      responsibility: |
+        Pure Datenstruktur in Romulus.Contracts.Models, die fuer jede Winner-Selection
+        die angewandten Scoring-/Tiebreaker-/Region-/Format-/Version-Beitraege
+        deterministisch festhaelt. Wird vom RunResult mit ausgeliefert.
+      interfaces:
+        - IReadOnlyList<WinnerReasonTrace> RunResult.WinnerReasons
+    - component: AuditViewerBackingService
+      responsibility: |
+        Liefert eine paginierte, gefilterte Sicht auf Audit-Sidecars und Ledger-Eintraege
+        fuer die GUI. Read-only. Greift auf bestehende AuditCsvStore + AuditSigningService
+        zu, ohne deren Schreibwege zu duplizieren.
+      interfaces:
+        - IAuditViewerBackingService.GetEntries(AuditViewerQuery query, CancellationToken ct)
+        - IAuditViewerBackingService.GetSidecar(string runId)
+    - component: DecisionExplainerProjection
+      responsibility: |
+        Projiziert WinnerReasonTrace + DAT-Match-Status + Region-Score in ein UI-taugliches
+        Erklaerungsmodell. Single Source of Truth zwischen GUI/CLI/API/Reports.
+      interfaces:
+        - DecisionExplainerProjection.Project(RunResult)
+    - component: BeforeAfterCollectionSimulator
+      responsibility: |
+        Erweitert DryRun um eine differenzierende Sicht "Was bleibt / Was geht / Was wird
+        wo abgelegt" pro Konsole und pro Wurzelpfad. Nutzt die bestehende Phase-Plan-Logik
+        ohne neue Wahrheit.
+      interfaces:
+        - IBeforeAfterSimulator.Simulate(RunOptions options)
+    - component: ConversionSafetyAdvisor
+      responsibility: |
+        Klassifiziert geplante Conversions in "Safe", "Risk", "Lossy". Lossy erfordert
+        AcceptDataLossToken in RunOptions; wird sonst hart abgelehnt.
+      interfaces:
+        - ConversionSafetyAdvisor.Classify(ConversionPlan plan, RunOptions options)
+    - component: ReviewInboxProjection
+      responsibility: |
+        Ersetzt verstreute Unknown-/Blocked-/Review-Tabs durch eine einzige Inbox-Projektion.
+        Nutzt SafetyLaneProjection als Quelle, fuegt Aktion-Hinweise und Bulk-Operationen
+        hinzu.
+      interfaces:
+        - ReviewInboxProjection.Build(RunResult, SafetyLaneProjection)
+    - component: SetIntegrityGuardian
+      responsibility: |
+        HealthScore pro Konsole ueber Zeit. Persistiert HealthSnapshots im AppStateStore.
+        Nicht Teil des Run-Flows; wird als Hintergrund-Snapshot beim Run-Abschluss erzeugt.
+      interfaces:
+        - ISetIntegrityGuardian.SnapshotAfterRun(RunResult)
+        - ISetIntegrityGuardian.GetHistory(string consoleKey)
+    - component: ProvenanceTrail
+      responsibility: |
+        Pro ROM eine prueffaehige Liste von Ereignissen (Imported, Verified, Moved,
+        Converted, RolledBack), Hashes und DAT-Match-Belegen.
+      interfaces:
+        - IProvenanceStore.Append(ProvenanceEntry entry)
+        - IProvenanceStore.GetTrail(string romFingerprint)
+    - component: MultiDatConflictResolver
+      responsibility: |
+        Wenn mehrere DATs dieselbe Hash-Identitaet beanspruchen (z.B. No-Intro vs. Redump),
+        liefert deterministische Aufloesung mit Erklaerung.
+      interfaces:
+        - IMultiDatConflictResolver.Resolve(IReadOnlyList<DatMatch> matches)
+    - component: PolicyGovernanceEngine
+      responsibility: |
+        Erlaubt deklarative Sammlungs-Policies (z.B. "EU bevorzugt", "keine Demos",
+        "alle Konsolen ZIP komprimiert"). Validiert Sammlung gegen Policy.
+      interfaces:
+        - IPolicyEngine.Validate(LibrarySnapshot snapshot, Policy policy)
+  dependencies:
+    - component: DecisionExplainerProjection
+      relationship: konsumiert WinnerReasonTrace; wird von GUI/CLI/API/Reports gelesen
+    - component: AuditViewerBackingService
+      relationship: liest AuditCsvStore + AuditSigningService, schreibt nichts
+    - component: BeforeAfterCollectionSimulator
+      relationship: ruft PhasePlanBuilder ohne Execute-Effekte auf
+    - component: ConversionSafetyAdvisor
+      relationship: greift in ConversionPolicy als Pre-Gate ein
+    - component: ReviewInboxProjection
+      relationship: konsumiert SafetyLaneProjection, ergaenzt Aktionen
+    - component: SetIntegrityGuardian
+      relationship: haengt am RunOrchestrator-OnCompleted-Event
+    - component: ProvenanceTrail
+      relationship: wird von Run-Phasen (Verify/Move/Convert/Rollback) befuellt
+    - component: MultiDatConflictResolver
+      relationship: wird von DatRepositoryAdapter konsultiert
+    - component: PolicyGovernanceEngine
+      relationship: liest LibrarySnapshot, schreibt Validation-Report
+  integration_points:
+    - GUI: ein einziger Hauptflow + Audit-Viewer + Review-Inbox + Decision-Explainer-Drawer
+    - CLI: Lossy-Token-Flag, JSON-Output mit WinnerReasons, ProvenanceTrail, HealthScore
+    - API: Read-only Endpunkte fuer Audit-Viewer, HealthScore, Provenance
+    - Reports: Single HTML pro Run, Audit-CSV, Provenance-JSON
+
+contracts:
+  - from_task: T-W1-AV-WPF-ADR
+    to_task: T-W1-UI-REDUCTION
+    interface: ADR-Datei docs/adrs/00XX-gui-platform.md mit Entscheidung "WPF-only" oder "Avalonia-only"
+    format: Markdown ADR (Status accepted, Owner, Datum)
+  - from_task: T-W1-AV-WPF-ADR
+    to_task: T-W1-AV-ARCHIVE
+    interface: ADR-Entscheidung steuert Archivierung
+    format: Markdown ADR
+  - from_task: T-W1-FEATURE-CULL
+    to_task: T-W1-UI-REDUCTION
+    interface: Liste der zu entfernenden Feature-Pfade (Frontend-Export, Scraper, Patching, RA, MAME-Set-Build)
+    format: docs/plan/strategic-reduction-2026/feature-cull-list.md
+  - from_task: T-W1-UI-REDUCTION
+    to_task: T-W1-I18N-ORPHAN-SWEEP
+    interface: Diff der entfernten ViewModels/Views/Commands
+    format: Git-Diff
+  - from_task: T-W1-CONSOLE-COVERAGE
+    to_task: T-W1-UI-REDUCTION
+    interface: Top-30-Konsolenliste + Best-Effort-Markierung in data/consoles.json
+    format: JSON
+  - from_task: T-W2-SCORING-REASON-TRACE
+    to_task: T-W4-DECISION-EXPLAINER
+    interface: WinnerReasonTrace im RunResult
+    format: C#-Datentyp in Romulus.Contracts.Models
+  - from_task: T-W2-AUDIT-VIEWER-API
+    to_task: T-W4-AUDIT-VIEWER-UI
+    interface: IAuditViewerBackingService
+    format: C#-Interface in Romulus.Contracts.Ports
+  - from_task: T-W2-DAT-FIRST-ADR
+    to_task: T-W5-MULTI-DAT-PREP
+    interface: ADR docs/adrs/00XX-dat-first.md (Default DAT-first, Heuristik nur als Best-Effort markiert)
+    format: Markdown ADR
+  - from_task: T-W2-CONVERSION-SAFETY-CONTRACT
+    to_task: T-W5-CONVERSION-SAFETY-ADVISOR
+    interface: AcceptDataLossToken in RunOptions + ConversionPolicy-Pre-Gate
+    format: C#-Contract
+  - from_task: T-W3-BETA-USERS
+    to_task: T-W4-DISCOVERY-LOOP
+    interface: Liste mit min. 5 Beta-Nutzern + Interview-Leitfaden
+    format: docs/plan/strategic-reduction-2026/beta-cohort.md
+  - from_task: T-W4-DECISION-EXPLAINER
+    to_task: T-W7-PROVENANCE-TRAIL
+    interface: DecisionExplainerProjection als Lieferant fuer Provenance-Begruendungen
+    format: C#-API
+  - from_task: T-W7-HEALTH-SCORE
+    to_task: T-W9-POLICY-GOVERNANCE
+    interface: LibrarySnapshot als Input fuer Policy-Validation
+    format: C#-Datentyp
+  - from_task: T-W7-PROVENANCE-TRAIL
+    to_task: T-W9-POLICY-GOVERNANCE
+    interface: ProvenanceTrail-Lookup
+    format: C#-API
+
+tasks:
+
+  # ============================================================
+  # WAVE 1 - Phase 1: Strategische Reduktion (Hard-Gate)
+  # ============================================================
+
+  - id: T-W1-AV-WPF-ADR
+    title: "ADR Avalonia vs WPF dokumentieren (Entscheidung WPF)"
+    description: |
+      Entscheidung ist bereits getroffen (siehe resolved_decisions): WPF behalten,
+      Avalonia archivieren. Diese Task verschriftlicht die Entscheidung als ADR
+      (docs/adrs/00XX-gui-platform.md) mit Status=accepted, Owner, Datum, voller
+      Begruendung und expliziter Reaktivierungs-Bedingung. Keine Diskussion mehr,
+      nur Verschriftlichung.
+      Akzeptanz: ADR-Datei vorhanden, Status=accepted, enthaelt Reaktivierungs-Bedingung.
+    wave: 1
+    agent: gem-planner
+    prototype: false
+    covers: ["TOP-1"]
+    priority: high
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: docs/adrs/
+        description: bestehende ADRs als Vorlage
+      - path: src/Romulus.UI.Avalonia/
+        description: aktueller Avalonia-Stand
+      - path: src/Romulus.UI.Wpf/
+        description: aktueller WPF-Stand
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Hard-Gate fuer alle Folgewellen.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 1
+        estimated_lines: 200
+        focus_area: governance
+        verification:
+          - ADR-Datei existiert mit Status accepted
+          - Owner und Deadline benannt
+          - Begruendung mit Persona-Bezug
+        acceptance_criteria:
+          - Eine GUI-Plattform ist verbindlich festgelegt
+          - Folgeentscheidung (loeschen oder migrieren) ist explizit
+        failure_modes:
+          - scenario: ADR wird auf "spaeter" verschoben
+            likelihood: high
+            impact: critical
+            mitigation: Welle 2 darf nicht starten ohne ADR-Status=accepted
+          - scenario: ADR ist halbherzig ("wir behalten beide")
+            likelihood: medium
+            impact: critical
+            mitigation: Reviewer lehnt ADRs ohne klare Loesch-/Migrations-Anweisung ab
+        requires_review: true
+        review_depth: full
+        review_security_sensitive: false
+
+  - id: T-W1-AV-ARCHIVE
+    title: Avalonia-Projekt nach archive/avalonia-spike/ verschieben
+    description: |
+      Entscheidung steht (WPF behalten). Konkret:
+      - src/Romulus.UI.Avalonia -> archive/avalonia-spike/ verschieben (git mv)
+      - Aus src/Romulus.sln entfernen
+      - Tests/CI-Schritte fuer Avalonia entfernen
+      - README, docs/architecture, docs/product/competitive-analysis.md auf einzige GUI bereinigen
+      - Git-Tag avalonia-spike-archived setzen
+      - Romulus.UI.Avalonia.* Pakete und Project-References in anderen csproj entfernen
+      Spike bleibt im Repo lesbar fuer Lerneffekt, wird aber nicht mehr gebaut/getestet.
+    wave: 1
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-1"]
+    priority: high
+    status: pending
+    dependencies: ["T-W1-AV-WPF-ADR"]
+    conflicts_with: ["T-W1-UI-REDUCTION"]
+    context_files:
+      - path: src/Romulus.sln
+        description: Solution-Referenz
+      - path: src/Romulus.UI.Avalonia/
+        description: zu entfernendes (oder zu erhaltendes) Projekt
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Eliminierung der Doppel-GUI vor allen anderen UI-Aenderungen.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: cleanup
+        verification:
+          - Build gruen
+          - Solution enthaelt nur eine UI
+          - keine Tests/Skripte referenzieren entfernte UI
+        acceptance_criteria:
+          - Eine GUI im Repo
+          - README erwaehnt keine zweite GUI mehr
+        failure_modes:
+          - scenario: Tests referenzieren Avalonia weiter
+            likelihood: medium
+            impact: high
+            mitigation: grep-Sweep auf "Avalonia" in src/ und Tests
+        tech_stack:
+          - C# .NET 10
+        test_coverage: regression-only
+
+  - id: T-W1-FEATURE-CULL
+    title: Feature-Cull-Liste erstellen und einfrieren
+    description: |
+      Erstelle docs/plan/strategic-reduction-2026/feature-cull-list.md mit:
+      - Frontend-Export (alle 11 Frontends)
+      - ScreenScraper / Metadata-Scraping
+      - RetroAchievements-Compliance
+      - ROM-Patching (IPS/BPS/UPS)
+      - MAME-Set-Building (split/merge/etc.)
+      - In-Browser-Play-Reste
+      - Plugin/Marketplace-Vorbereitungen
+      - Sponsor-Beta-Frueh-Zugang
+      Pro Eintrag: betroffene Source-Dateien, Tests, i18n-Keys, Doku-Stellen.
+      Diese Liste ist die Wahrheit fuer alle Reduktions-Tasks der Welle 1.
+    wave: 1
+    agent: gem-researcher
+    prototype: false
+    covers: ["TOP-5"]
+    priority: high
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.UI.Wpf/Services/FeatureCommandService.cs
+        description: Sub-Feature-Registrierungen
+      - path: src/Romulus.UI.Wpf/Views/
+        description: betroffene Views identifizieren
+      - path: data/i18n/
+        description: i18n-Keys
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Saubere Loesch-Vorbereitung verhindert Schattenlogik.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 1
+        estimated_lines: 250
+        focus_area: cleanup
+        verification:
+          - Liste vollstaendig und unter Versionskontrolle
+          - Reviewer freigegeben
+        acceptance_criteria:
+          - Jede gestrichene Funktion hat eine konkrete Datei-/Key-Liste
+        failure_modes:
+          - scenario: Liste ist unvollstaendig, Code bleibt liegen
+            likelihood: high
+            impact: high
+            mitigation: gem-reviewer prueft Vollstaendigkeit gegen tatsaechliche Sourcen
+        requires_review: true
+        review_depth: full
+
+  - id: T-W1-CONSOLE-COVERAGE
+    title: Konsolen-Reduktion auf Top-30 mit Best-Effort-Markierung
+    description: |
+      Markiere in data/consoles.json eine "tier"-Eigenschaft: "core" (Top-30) und
+      "best-effort" (Rest). Onboarding-Wizard und Default-Filter zeigen nur "core".
+      Keine Loeschung der Konsolen-Daten (Wartungslast bleibt klein, aber Erwartungs-
+      verwaltung wird ehrlich).
+      Top-30 ist datenbasiert (Annahme: Mainstream Heim/Handheld bis Wii/PS3) und
+      muss in der Task explizit aufgelistet werden.
+    wave: 1
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-14"]
+    priority: high
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: data/consoles.json
+        description: zu erweitern um tier
+      - path: data/console-maps.json
+        description: konsistent halten
+      - path: src/Romulus.Core/Classification/
+        description: ConsoleDetector liest tier
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Reduzierte Standardabdeckung erleichtert Onboarding und schaerft Versprechen.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 3
+        estimated_lines: 200
+        focus_area: domain
+        verification:
+          - tier-Feld in consoles.json
+          - ConsoleDetector gibt Tier zurueck
+          - Wizard filtert nach core
+        acceptance_criteria:
+          - core und best-effort sind sichtbar getrennt
+          - Keine Konsolendaten verloren
+        failure_modes:
+          - scenario: Tier-Feld wird in einigen Konsumenten ignoriert
+            likelihood: medium
+            impact: medium
+            mitigation: Single-Source-Lookup in ConsoleCatalogService erzwingen
+        tech_stack:
+          - C# .NET 10
+          - JSON
+
+  - id: T-W1-UI-REDUCTION
+    title: GUI auf Kern-Workflow reduzieren (max 18 Views, 6 Hauptaktionen)
+    description: |
+      Auf Basis der Feature-Cull-Liste:
+      - Loesche alle Views/ViewModels/Services, die zu gestrichenen Features gehoeren
+      - Reduziere sichtbare Tool-Karten auf 6: Scan, Verify, Plan, Move, Convert (Warnung), Rollback
+      - Konsolidiere Navigation auf eine Mechanik (NavigationRail bleibt;
+        CommandPalette und SmartActionBar pruefen, mindestens eine entfernen oder hinter
+        Power-Mode verstecken)
+      - Reduziere Anzahl Views auf maximal 18 fuer Kern-Workflow
+      - Reduziere FeatureCommandService.* (9 Partials) auf hoechstens 4
+      - Decision-Drawer/Audit-Viewer/Review-Inbox-Plaetze vorbereiten (leer, kommen in Welle 4)
+      Alles entfernte muss vollstaendig weg sein (Code, Tests, i18n, Doku).
+    wave: 1
+    agent: gem-code-simplifier
+    prototype: false
+    covers: ["TOP-4", "TOP-5", "TOP-12", "TOP-13"]
+    priority: high
+    status: pending
+    dependencies: ["T-W1-AV-WPF-ADR", "T-W1-AV-ARCHIVE", "T-W1-FEATURE-CULL", "T-W1-CONSOLE-COVERAGE"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.UI.Wpf/Views/
+        description: Views-Bestand
+      - path: src/Romulus.UI.Wpf/ViewModels/
+        description: ViewModels-Bestand
+      - path: src/Romulus.UI.Wpf/Services/FeatureCommandService.cs
+        description: Service-Konsolidierung
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Reduktion ist nicht optional, sondern Identitaetsschritt.
+        timestamp: "2026-04-28"
+        estimated_effort: large
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: ui-reduction
+        verification:
+          - Build gruen, Tests gruen
+          - Anzahl Views in src/Romulus.UI.Wpf/Views <= 18
+          - Anzahl FeatureCommandService.*.cs <= 4
+          - Tool-Karten sichtbar = 6
+        acceptance_criteria:
+          - Keine Stub-/Coming-Soon-Karten mehr sichtbar
+          - Keine grep-Treffer fuer entfernte Feature-Namen in src/
+        failure_modes:
+          - scenario: Tests referenzieren entfernte ViewModels
+            likelihood: high
+            impact: high
+            mitigation: TDD - zuerst Tests anpassen/loeschen, dann Code
+          - scenario: i18n-Keys verwaisen
+            likelihood: high
+            impact: medium
+            mitigation: Welle-1-Folge-Task T-W1-I18N-ORPHAN-SWEEP
+        tech_stack:
+          - C# .NET 10
+          - WPF/XAML
+
+  - id: T-W1-I18N-ORPHAN-SWEEP
+    title: Verwaiste i18n-, Command-, Pinned-Key-, Registrierungs-Reste entfernen
+    description: |
+      Nach UI-Reduktion und Feature-Cull: vollstaendiger Sweep durch
+      data/i18n/*.json, FeatureCommandService-Registrierungen, ResourceDictionary,
+      Settings-Defaults, ToolPathValidator-Eintraege, Documentation-Glossar.
+      Jeder entfernte Key/Handler wird im Commit-Body gelistet.
+    wave: 1
+    agent: gem-code-simplifier
+    prototype: false
+    covers: ["TOP-2", "TOP-5"]
+    priority: high
+    status: pending
+    dependencies: ["T-W1-UI-REDUCTION"]
+    conflicts_with: []
+    context_files:
+      - path: data/i18n/
+        description: alle Sprachdateien
+      - path: src/Romulus.UI.Wpf/Services/FeatureCommandService.cs
+        description: Registrierungen
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Verhindert Schattenlogik nach Reduktion.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 250
+        focus_area: cleanup
+        verification:
+          - keine verwaisten i18n-Keys (Test pruft Key-Coverage)
+          - keine toten Registrierungen (Test pruft FeatureCommands-Map)
+        acceptance_criteria:
+          - 0 verwaiste Keys/Handler
+        failure_modes:
+          - scenario: Stille verwaiste Keys ueberleben in selten benutzten Sprachen
+            likelihood: medium
+            impact: low
+            mitigation: Cross-Sprach-Konsistenz-Test
+        tech_stack:
+          - C# .NET 10
+          - JSON
+
+  # ============================================================
+  # WAVE 2 - Phase 1 Abschluss + Vorbereitung Phase 2
+  # ============================================================
+
+  - id: T-W2-README-REFRESH
+    title: README und competitive-analysis.md auf Realitaet zuruecksetzen
+    description: |
+      Marketing-Sprache raus, Realitaetsbezug rein. README beschreibt:
+      - Eine GUI
+      - Eine Persona (Sammler/Archivare mit grossen Sammlungen)
+      - Sechs Hauptaktionen
+      - Drei USPs (Audit, Rollback, deterministisches Cleanup)
+      Streiche "Top-5 USPs"-Stil, "Frontend Export 11 Frontends", Cross-Plattform-
+      Versprechen, etc.
+      competitive-analysis.md wird ehrlich: nicht "Romulus ist besser als RomVault",
+      sondern "Romulus loest ein anderes Problem".
+    wave: 2
+    agent: gem-documentation-writer
+    prototype: false
+    covers: ["TOP-3"]
+    priority: high
+    status: pending
+    dependencies: ["T-W1-UI-REDUCTION", "T-W1-FEATURE-CULL"]
+    conflicts_with: []
+    context_files:
+      - path: README.md
+        description: aktueller Stand
+      - path: docs/product/competitive-analysis.md
+        description: aktueller Stand
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Erwartungsmanagement vor Beta-Nutzern.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 2
+        estimated_lines: 250
+        focus_area: documentation
+        verification:
+          - kein gestrichenes Feature mehr in README
+          - kein Marketing-USP-Stil
+        acceptance_criteria:
+          - Reviewer (gem-critic) bestaetigt Realitaetsbezug
+        failure_modes:
+          - scenario: alte Marketing-Sprache schleicht zurueck
+            likelihood: medium
+            impact: medium
+            mitigation: Reviewer-Sign-off mit explizitem Doppel-Read
+        task_type: update
+        audience: developers
+        coverage_matrix:
+          - README
+          - competitive-analysis
+        requires_review: true
+        review_depth: full
+
+  - id: T-W2-AUDIT-MORATORIUM-DECREE
+    title: 30-Tage-Audit-Moratorium offiziell verkuenden
+    description: |
+      Konsolidiert: KEIN drei-Wege-Update. Eine Quelle: ein Absatz in AGENTS.md mit
+      Geltungszeitraum (Welle 1-3, ~30 Tage), Verbots-Scope (neue Deep-Dive-Audits,
+      neue Findings-Tracker), Erlaubnis-Scope (P1-Sicherheit/Datenintegritaet),
+      Sanktion (PR-Review-Ablehnung), Owner.
+      PR-Template bekommt eine Zeile 'Faellt diese PR unter das Audit-Moratorium?' mit
+      Verweis auf AGENTS.md-Abschnitt. Sonst nichts.
+      KEINE eigene audit-moratorium.md, KEINE neuen .claude/rules-Dateien - das ist
+      genau die Wucherung, die der Plan verhindern soll.
+    wave: 2
+    agent: gem-planner
+    prototype: false
+    covers: ["TOP-2"]
+    priority: high
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: AGENTS.md
+        description: Hauptregel-Datei (einziger Speicherort des Moratoriums)
+      - path: .github/PULL_REQUEST_TEMPLATE.md
+        description: PR-Template-Hinweis
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Disziplin-Mechanismus gegen Audit-Inflation.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 3
+        estimated_lines: 150
+        focus_area: governance
+        verification:
+          - Moratorium-Datei vorhanden
+          - AGENTS.md verweist darauf
+        acceptance_criteria:
+          - Geltungszeitraum, Sanktion, Owner sind benannt
+        failure_modes:
+          - scenario: Team ignoriert Moratorium
+            likelihood: medium
+            impact: high
+            mitigation: PR-Reviewer lehnen Audit-PRs in Geltungszeitraum ab
+        requires_review: true
+        review_depth: standard
+
+  - id: T-W2-SCORING-REASON-TRACE
+    title: WinnerReasonTrace im RunResult einfuehren
+    description: |
+      Erweitere RunResult um WinnerReasons (IReadOnlyList<WinnerReasonTrace>).
+      DeduplicationEngine.SelectWinner und Scoring-Pfade emittieren je Entscheidung
+      einen Trace (Region-, Format-, Version-, Tiebreaker-Beitrag).
+      Pure, deterministisch, in Romulus.Core. Keine I/O.
+      Vorbereitung fuer T-W4-DECISION-EXPLAINER.
+    wave: 2
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-8"]
+    priority: high
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Core/Deduplication/DeduplicationEngine.cs
+        description: SelectWinner
+      - path: src/Romulus.Core/Scoring/
+        description: Scoring-Pfade
+      - path: src/Romulus.Contracts/Models/
+        description: RunResult-Erweiterung
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Substanz-Vorbereitung des Decision Explainers.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: core
+        verification:
+          - WinnerReasons enthalten genau einen Eintrag pro Winner-Entscheidung
+          - Trace-Felder sind deterministisch
+        acceptance_criteria:
+          - DeduplicationEngine.SelectWinner liefert Reason-Trace
+          - RunResult.WinnerReasons befuellt
+          - Determinismus-Test gruen
+        failure_modes:
+          - scenario: Reason-Trace verraet sensitive Details (Pfade) und bricht Reports
+            likelihood: low
+            impact: medium
+            mitigation: Trace enthaelt nur deterministische Identitaeten und Score-Beitraege
+          - scenario: Pure Core wird I/O-abhaengig
+            likelihood: low
+            impact: high
+            mitigation: gem-reviewer prueft auf I/O-Imports in Romulus.Core
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+
+  - id: T-W2-AUDIT-VIEWER-API
+    title: IAuditViewerBackingService einfuehren (read-only)
+    description: |
+      Neuer Port in Romulus.Contracts.Ports + Adapter in Romulus.Infrastructure/Audit/.
+      Read-only Sicht auf Sidecars + Ledger. Pagination, Filter (Run-Id, Datum, Outcome).
+      Greift auf bestehende AuditCsvStore + AuditSigningService zu, dupliziert keine Logik.
+    wave: 2
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-6"]
+    priority: high
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Audit/
+        description: bestehende Audit-Schicht
+      - path: src/Romulus.Contracts/Ports/
+        description: neuer Port
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Voraussetzung fuer den First-Class-Audit-Viewer.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 280
+        focus_area: infrastructure
+        verification:
+          - Port + Adapter existieren
+          - keine Schreiboperationen
+          - Pagination und Filter getestet
+        acceptance_criteria:
+          - GUI/CLI/API koennten Audit lesen ohne Audit-Schreibwege zu kennen
+        failure_modes:
+          - scenario: Adapter dupliziert Sidecar-Lese-Logik
+            likelihood: medium
+            impact: medium
+            mitigation: gemeinsame Helper, gem-reviewer
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+
+  - id: T-W2-DAT-FIRST-ADR
+    title: ADR DAT-first vs Hash-Heuristik
+    description: |
+      docs/adrs/00XX-dat-first.md: Default DAT-first. Heuristik-Pfade nur als
+      explizit aktivierter "Best Effort"-Modus, sichtbar markiert.
+      Code-Wirkung: DatRepositoryAdapter.LookupAny dokumentiert das Verhalten,
+      RunOptions hat Flag AllowHeuristicFallback (Default false),
+      ConsoleDetector liefert "best-effort"-Flag wenn Heuristik genutzt.
+    wave: 2
+    agent: gem-planner
+    prototype: false
+    covers: ["TOP-9"]
+    priority: high
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs
+        description: betroffene Lookup-Pfade
+      - path: docs/adrs/
+        description: ADR-Vorlage
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Aufloesung des DAT-first-vs-Hash-first-Spannungsfeldes.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 2
+        estimated_lines: 200
+        focus_area: governance
+        verification:
+          - ADR accepted
+          - RunOptions-Flag definiert
+        acceptance_criteria:
+          - Default-Verhalten und Opt-In sind eindeutig
+        failure_modes:
+          - scenario: ADR wird nicht durchgesetzt, Heuristik bleibt heimlich Default
+            likelihood: medium
+            impact: high
+            mitigation: Test pruft Default-Wert AllowHeuristicFallback=false
+        requires_review: true
+        review_depth: full
+
+  - id: T-W2-CONVERSION-SAFETY-CONTRACT
+    title: AcceptDataLossToken in RunOptions + ConversionPolicy-Pre-Gate
+    description: |
+      Erweitere RunOptions um AcceptDataLossToken (string).
+      ConversionPolicy lehnt Lossy-Pfade hart ab, wenn Token nicht gesetzt oder ungueltig.
+      Token-Inhalt: deterministischer Hash der Lossy-Plan-Items, vom System emittiert,
+      vom Nutzer bestaetigt.
+      UX-Flow (verbindlich, gilt fuer GUI/CLI/API):
+      - PHASE 1 (plan / preview): ConversionPolicy.ComputeAcceptDataLossToken liefert
+        den Token im RunResult.PendingLossyToken Feld. Token wird NICHT in Logs gedruckt,
+        sondern im strukturierten Output (JSON / GUI-Property).
+      - PHASE 2 (execute / move-convert): Aufrufer muss exakt diesen Token in den
+        RunOptions mitgeben. ConversionPolicy validiert per Ordinal-Vergleich gegen
+        neu berechneten Token aus dem aktuellen Plan. Bei Mismatch: hart abgelehnt.
+      - GUI: Nutzer sieht roten Lossy-Block, klickt 'Akzeptieren', Token wird
+        intern weitergereicht (kein Abtippen). DangerConfirm bleibt zusaetzlich aktiv.
+      - CLI: 'romulus plan' gibt Token in JSON aus. 'romulus execute --accept-data-loss
+        $(romulus plan --json | jq .pendingLossyToken)' ist der dokumentierte Pfad.
+      - API: POST /runs/plan liefert pendingLossyToken; POST /runs/execute akzeptiert
+        es im Body. Kein hash-aus-logs-grepen.
+      Welle 2 implementiert nur die Vertrags-Kante; Welle 5 baut die UI/Beratung darauf.
+    wave: 2
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-10"]
+    priority: high
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Conversion/
+        description: ConversionPolicy/Planner
+      - path: src/Romulus.Contracts/Models/
+        description: RunOptions
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Datenverlust-Risiko technisch hart eindaemmen.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 280
+        focus_area: safety
+        verification:
+          - Lossy-Plan ohne Token wirft InvalidOperationException
+          - Token deterministisch berechnet
+        acceptance_criteria:
+          - Kein Lossy-Pfad ohne expliziten Token
+        failure_modes:
+          - scenario: Token wird hardcoded in Tests/Defaults gesetzt
+            likelihood: medium
+            impact: critical
+            mitigation: Test pruft Token != konstant
+          - scenario: Token enthaelt Zeitstempel und ist nicht reproducible
+            likelihood: low
+            impact: medium
+            mitigation: Determinismus-Test
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+        review_security_sensitive: true
+        requires_review: true
+        review_depth: full
+
+  - id: T-W2-PROVENANCE-AUDIT-ADR
+    title: ADR Provenance vs Audit-Sidecar (Single Source vor W7)
+    description: |
+      docs/adrs/00XX-provenance-vs-audit.md klaert vor T-W7-PROVENANCE-TRAIL,
+      wie Provenance und Audit-Sidecar zueinander stehen, BEVOR Code entsteht.
+      Mindest-Inhalte:
+      - Verantwortungs-Trennung: Audit = jeder Run als Ganzes (Sidecar+Ledger),
+        Provenance = jedes ROM ueber seine Lebenszeit (Append-Only-Trail).
+      - Gemeinsame Helper: Signing/Hash/Atomic-Write-Logik aus AuditSigningService
+        wird wiederverwendet, NICHT dupliziert (Provenance erbt Atomicity-Garantie).
+      - Speicherort: Provenance-Trail je ROM-Fingerprint in eigener Store-Datei,
+        nicht in den Audit-Sidecar reingemischt (Lese-Pfad sonst zu teuer).
+      - Cross-Reference: jeder Provenance-Eintrag verweist auf den Audit-Run-Id,
+        in dem er entstand.
+      - Verbot: kein zweiter Sidecar-Schreibpfad, keine zweite Ledger-Datei,
+        kein paralleles Signing-Verfahren.
+      Ohne diese ADR darf T-W7-PROVENANCE-TRAIL nicht starten.
+    wave: 2
+    agent: gem-planner
+    prototype: false
+    covers: ["TOP-17"]
+    priority: high
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Audit/AuditSigningService.cs
+        description: bestehende Sidecar+Ledger-Atomicity als Vorbild
+      - path: docs/adrs/
+        description: ADR-Vorlage
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Verhindert Parallel-Wahrheit zwischen Audit und Provenance schon vor W7.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 1
+        estimated_lines: 200
+        focus_area: governance
+        verification:
+          - ADR accepted
+          - Helper-Wiederverwendung explizit benannt
+        acceptance_criteria:
+          - Verantwortungs-Trennung und gemeinsame Helper sind festgeschrieben
+        failure_modes:
+          - scenario: Provenance entwickelt eigenen Signing-Pfad
+            likelihood: medium
+            impact: high
+            mitigation: ADR verbietet dies; gem-reviewer prueft W7-Implementierung dagegen
+        requires_review: true
+        review_depth: full
+
+  - id: T-W2-COVERAGE-GAP-CHECK
+    title: Automatischer Top-20-Coverage-Check (CI-Skript)
+    description: |
+      Stellt sicher, dass die "Top-20 1:1"-Behauptung des Plans hart bleibt.
+      CI-Skript (PowerShell oder dotnet-Tool) liest plan.yaml und verifiziert:
+      - jede TOP-1..TOP-20 Empfehlung erscheint in mindestens einem tasks[].covers
+      - jede covers-Eintragung verweist auf existierende TOP-N
+      - jeder Task ohne covers traegt prototype:true ODER ist ausdruecklich BONUS
+        (Title beginnt mit "BONUS" oder Description enthaelt "BONUS-FEATURE")
+      Bricht CI-Build, wenn nicht erfuellt. Top-20-Liste wird im Skript ueber
+      docs/plan/strategic-reduction-2026/top-20.md eingelesen (eigene kleine Datei).
+    wave: 2
+    agent: gem-implementer
+    prototype: false
+    covers: []
+    priority: high
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: docs/plan/strategic-reduction-2026/plan.yaml
+        description: Quelle der Wahrheit
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Hygiene-Schutz - macht die "1:1"-Aussage des Plans verifizierbar.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 2
+        estimated_lines: 200
+        focus_area: governance
+        verification:
+          - CI-Job vorhanden, gruen bei aktuellem Plan
+          - Test schlaegt fehl, wenn ein TOP-N gestrichen wird ohne Update
+        acceptance_criteria:
+          - Plan-Drift wird automatisch erkannt
+        failure_modes:
+          - scenario: Skript wird per --skip umgangen
+            likelihood: medium
+            impact: medium
+            mitigation: kein Skip-Flag im Skript
+
+  - id: T-W2-I18N-ORPHAN-CI-TEST
+    title: Dauerhafter i18n/Command-Orphan-Test (CI)
+    description: |
+      Macht aus T-W1-I18N-ORPHAN-SWEEP einen wiederverwendbaren Schutz.
+      Bestehender Test WpfFingerprintAndI18nTests wird erweitert (oder neuer Test
+      I18nOrphanGuardTests in src/Romulus.Tests):
+      - jeder Key in data/i18n/de.json hat mindestens eine Referenz in src/ (XAML
+        oder C#-Code)
+      - jeder Key in den anderen Sprach-Dateien existiert auch in de.json
+      - jede FeatureCommandService-Registrierung wird tatsaechlich gebunden
+      Bricht Build bei Verstoss. Reine Read-only-Pruefung, keine Auto-Bereinigung.
+    wave: 2
+    agent: gem-implementer
+    prototype: false
+    covers: []
+    priority: high
+    status: pending
+    dependencies: []
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Tests/WpfFingerprintAndI18nTests.cs
+        description: bestehende i18n-Tests als Basis
+      - path: data/i18n/
+        description: zu pruefende Sprach-Dateien
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Verhindert, dass Wuchs nach Welle 1 zurueckkommt - dauerhaft, nicht einmalig.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 2
+        estimated_lines: 250
+        focus_area: cleanup
+        verification:
+          - Test schlaegt fehl bei verwaistem Key oder verwaister Registrierung
+        acceptance_criteria:
+          - 0 verwaiste Keys nach Welle 1
+          - dauerhafter Schutz im CI-Build
+        failure_modes:
+          - scenario: Test wird per [Skip] markiert
+            likelihood: medium
+            impact: high
+            mitigation: gem-reviewer lehnt Skip-Attribute ab; Konsens-Begruendung notwendig
+        tech_stack:
+          - C# .NET 10
+          - xUnit
+        test_coverage: full
+
+  # ============================================================
+  # WAVE 3 - Phase 1 Abschluss: Beta-Nutzer
+  # ============================================================
+
+  - id: T-W3-BETA-USERS
+    title: Min. 5 reale Beta-Nutzer akquirieren und onboarden
+    description: |
+      Akquise von mindestens 5 Personen mit realen, gemischten ROM-Sammlungen.
+      Strukturierter Interview-Leitfaden, Erstkontakt, Onboarding-Anleitung mit der
+      reduzierten GUI, Feedback-Kanal.
+      Owner und Verantwortlicher fuer Discovery-Loop wird benannt.
+    wave: 3
+    agent: gem-researcher
+    prototype: false
+    covers: ["TOP-2"]
+    priority: high
+    status: pending
+    dependencies: ["T-W1-UI-REDUCTION", "T-W2-README-REFRESH"]
+    conflicts_with: []
+    context_files: []
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Echte Nutzer ersetzen Selbst-Audits.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 2
+        estimated_lines: 200
+        focus_area: discovery
+        verification:
+          - Beta-Cohort dokumentiert
+          - Interview-Leitfaden vorhanden
+        acceptance_criteria:
+          - Mindestens 5 echte Nutzer
+          - Owner benannt
+        failure_modes:
+          - scenario: Nur Mitarbeiter und Bekannte als "Beta" gezaehlt
+            likelihood: high
+            impact: high
+            mitigation: mind. 3 von 5 muessen extern sein
+        requires_review: true
+        review_depth: standard
+
+  - id: T-W3-RUN-SMOKE-WITH-USERS
+    title: Vollstaendiger Workflow-Smoke mit Beta-Nutzern
+    description: |
+      Jeder Beta-Nutzer fuehrt mindestens einen kompletten Workflow durch
+      (Add Library -> Scan -> Verify -> Plan -> Confirm -> Execute -> Report -> Rollback-Test)
+      auf seiner eigenen Maschine mit seiner eigenen Sammlung.
+      Strukturierte Beobachtung (Think-Aloud-Protokoll oder Screen-Recording mit
+      Einwilligung), Friktionspunkte dokumentieren mit Severity + Owner.
+      Kein Browser-Automation; echte Nutzer am echten WPF-Client.
+    wave: 3
+    agent: gem-researcher
+    prototype: false
+    covers: ["TOP-2"]
+    priority: high
+    status: pending
+    dependencies: ["T-W3-BETA-USERS"]
+    conflicts_with: []
+    context_files: []
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Beweisbarkeit, dass der reduzierte Workflow tatsaechlich funktioniert.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 1
+        estimated_lines: 200
+        focus_area: validation
+        verification:
+          - Mindestens 5 dokumentierte Workflow-Durchlaeufe
+          - Friktionspunkt-Liste mit Severity
+        acceptance_criteria:
+          - Hauptflow ist von Beta-Nutzern alleine durchfuehrbar
+        failure_modes:
+          - scenario: Friktionspunkte werden gesammelt aber nicht priorisiert
+            likelihood: high
+            impact: medium
+            mitigation: Severity-Pflicht je Punkt + Owner
+        validation_matrix:
+          - scenario: Voller Workflow Add-Library bis Rollback
+            steps:
+              - Library hinzufuegen
+              - Scan durchfuehren
+              - Verify durchfuehren
+              - Plan ansehen
+              - Bestaetigen mit Token
+              - Execute starten
+              - Report ansehen
+              - Rollback testen
+            expected_result: Nutzer schliesst alleine ab und kann den Audit-Eintrag finden
+
+  - id: T-W3-PHASE1-GATE
+    title: Phase-1-Gate-Review (Stop/Go)
+    description: |
+      gem-critic prueft:
+      - Wirklich nur eine GUI?
+      - Tool-Karten reduziert?
+      - Konsolen tier-markiert?
+      - i18n sauber?
+      - README ehrlich?
+      - Beta-Nutzer durchgelaufen?
+      - Top-20-Coverage-CI gruen (T-W2-COVERAGE-GAP-CHECK)?
+      - i18n/Command-Orphan-CI gruen (T-W2-I18N-ORPHAN-CI-TEST)?
+      Bei Nein zu einem Punkt: Phase-1-Folge-Tasks reoeffnen, Welle 4 startet nicht.
+    wave: 3
+    agent: gem-critic
+    prototype: false
+    covers: ["TOP-1", "TOP-3", "TOP-4", "TOP-5", "TOP-14"]
+    priority: high
+    status: pending
+    dependencies: ["T-W3-RUN-SMOKE-WITH-USERS", "T-W1-I18N-ORPHAN-SWEEP", "T-W2-README-REFRESH", "T-W2-AUDIT-MORATORIUM-DECREE", "T-W2-COVERAGE-GAP-CHECK", "T-W2-I18N-ORPHAN-CI-TEST"]
+    conflicts_with: []
+    context_files: []
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Hartes Stop/Go-Gate vor Phase 2.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 1
+        estimated_lines: 150
+        focus_area: review
+        verification:
+          - Gate-Bericht mit Pass/Fail je Kriterium
+        acceptance_criteria:
+          - Alle Phase-1-Kriterien erfuellt
+        failure_modes:
+          - scenario: Gate wird durchgewunken
+            likelihood: medium
+            impact: critical
+            mitigation: Mindestens zwei Reviewer; explicit "needs_revision" erlaubt
+        requires_review: true
+        review_depth: full
+        review_security_sensitive: false
+
+  # ============================================================
+  # WAVE 4 - Phase 2: Vertrauen & Transparenz (1)
+  # ============================================================
+
+  - id: T-W4-DISCOVERY-LOOP
+    title: 30-60-Tage-Discovery-Loop strukturieren
+    description: |
+      Strukturierter Discovery-Loop: woechentliches Interview pro Beta-Nutzer,
+      Issue-Triage, Outcome-KPIs (Aktivierungsrate, vollstaendige Workflow-Quote,
+      Rollback-Nutzung, Vertrauenswert per Selbsteinschaetzung).
+      Loop endet erst, wenn drei aufeinanderfolgende Wochen stabile KPIs zeigen.
+    wave: 4
+    agent: gem-researcher
+    prototype: false
+    covers: ["TOP-2"]
+    priority: high
+    status: pending
+    dependencies: ["T-W3-PHASE1-GATE"]
+    conflicts_with: []
+    context_files: []
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Outcome-KPIs ersetzen Output-KPIs (Critic-Review-Befund warning #6).
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 1
+        estimated_lines: 200
+        focus_area: discovery
+        verification:
+          - KPIs definiert
+          - Wochenrhythmus laeuft
+        acceptance_criteria:
+          - 3 stabile Wochen oder dokumentierte Verlaengerung
+        failure_modes:
+          - scenario: Loop wird abgekuerzt zugunsten neuer Features
+            likelihood: high
+            impact: high
+            mitigation: Phase-2-Gate haengt am Loop-Abschluss
+
+  - id: T-W4-TELEMETRY-OPT-IN
+    title: Opt-in Telemetrie-Hook (anonym, DSGVO-konform)
+    description: |
+      Erfuellt das Versprechen aus resolved_decisions[Top-30]: ab Welle 4 existiert
+      ein anonymer, opt-in Telemetrie-Hook, der Konsolen-Verteilung in Sammlungen
+      misst. Default OFF. Settings-Schalter mit klarem Hinweis. Kein Pfad,
+      kein Hash von Pfaden, kein Hostname, keine Identitaet. Nur:
+      - Anzahl ROMs pro Konsolen-Tier (core/best-effort)
+      - aggregierter Run-Outcome (DryRun/Move/Convert/Rollback Counter)
+      - Romulus-Version
+      Endpoint, Retention-Policy und Aggregations-Frequenz in eigener ADR.
+      Daten landen aggregiert in einem statischen JSON, nicht in Klartext-Logs.
+      Welle 6+ nutzt die Aggregate fuer Top-30-Nachjustierung.
+    wave: 4
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-14"]
+    priority: medium
+    status: pending
+    dependencies: ["T-W3-PHASE1-GATE"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/State/AppStateStore.cs
+        description: Settings-Speicher
+      - path: data/i18n/
+        description: Opt-in-Texte
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Erfuellt resolved_decisions-Versprechen, sonst Schattenpflicht.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 250
+        focus_area: governance
+        verification:
+          - Default OFF
+          - kein Pfad/Hostname im Payload
+          - Settings-Toggle vorhanden
+          - ADR fuer Endpoint und Retention vorhanden
+        acceptance_criteria:
+          - DSGVO-konformes Opt-in
+          - Aggregat-Output reproduzierbar fuer Welle-6-Nachjustierung
+        failure_modes:
+          - scenario: Telemetrie-Default rutscht auf ON
+            likelihood: medium
+            impact: critical
+            mitigation: Test pruft Default == false; CI verbietet Aenderung ohne ADR-Update
+          - scenario: Pfade oder Hostnames leaken
+            likelihood: medium
+            impact: critical
+            mitigation: Allow-List der erlaubten Telemetrie-Felder im Code; Reviewer prueft jede Aenderung
+        tech_stack:
+          - C# .NET 10
+        review_security_sensitive: true
+        requires_review: true
+        review_depth: full
+        test_coverage: full
+
+  - id: T-W4-AUDIT-VIEWER-UI
+    title: Audit-Viewer als First-Class-UI implementieren
+    description: |
+      Neue View AuditViewerView + ViewModel. Liste mit Pagination, Detail mit
+      Sidecar-Anzeige, Ledger-Verifikation sichtbar, Rollback-Button (delegiert
+      an bestehende Rollback-API). Single-Source-of-Truth: liest ueber
+      IAuditViewerBackingService.
+    wave: 4
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-6"]
+    priority: high
+    status: pending
+    dependencies: ["T-W2-AUDIT-VIEWER-API", "T-W3-PHASE1-GATE"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.UI.Wpf/Views/
+        description: neue View
+      - path: src/Romulus.UI.Wpf/ViewModels/
+        description: neues ViewModel
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Sichtbarmachung des USP-Kerns Audit/Rollback.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: ui
+        verification:
+          - Beta-Nutzer findet Audit-Viewer ohne Erklaerung
+          - Sidecar-Verifikation sichtbar
+        acceptance_criteria:
+          - Read-only, kein Write-Pfad in der View
+          - Rollback nur ueber bestaetigten Confirm-Token
+        failure_modes:
+          - scenario: View dupliziert Audit-Lese-Logik
+            likelihood: medium
+            impact: medium
+            mitigation: Nutzung nur ueber Backing-Service
+        tech_stack:
+          - C# .NET 10
+          - WPF/XAML
+        test_coverage: full
+
+  - id: T-W4-DECISION-EXPLAINER
+    title: Decision Explainer (UI + Projection)
+    description: |
+      DecisionExplainerProjection liest WinnerReasons und produziert ein UI-Modell.
+      Neue View "Decision Drawer" oeffnet sich pro Winner-Auswahl. CLI bekommt
+      Subcommand "explain", API einen Endpunkt /runs/{id}/decisions/{key}.
+      Eine Wahrheit, drei Sichten.
+    wave: 4
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-8"]
+    priority: high
+    status: pending
+    dependencies: ["T-W2-SCORING-REASON-TRACE", "T-W3-PHASE1-GATE"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Reporting/
+        description: Projection
+      - path: src/Romulus.UI.Wpf/Views/
+        description: Decision Drawer
+      - path: src/Romulus.CLI/
+        description: explain-Subcommand
+      - path: src/Romulus.Api/
+        description: decisions-Endpunkt
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Erklaerbarkeit als Differenzierungsmerkmal.
+        timestamp: "2026-04-28"
+        estimated_effort: large
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: feature
+        verification:
+          - Explainer liefert deterministische Begruendung
+          - GUI/CLI/API geben identische Begruendung
+        acceptance_criteria:
+          - Beta-Nutzer kann erklaeren, warum ein Spiel gewonnen hat
+        failure_modes:
+          - scenario: GUI hat eigene Berechnung
+            likelihood: medium
+            impact: high
+            mitigation: Projection ist Single Source; Test pruft Identitaet
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+
+  - id: T-W4-REVIEW-INBOX
+    title: Review-Inbox / Quarantine-Workflow als Hauptfluss
+    description: |
+      ReviewInboxProjection ersetzt verstreute Tabs. Eine Inbox mit drei Lanes
+      (Safe / Review / Blocked), Bulk-Aktionen (Approve, Quarantine, Re-scan, Investigate),
+      direkter Sprung zum Decision Explainer.
+      Hinweis: Bewusst nach Welle 5 verschoben (war: Welle 4) damit Welle 4 nicht 4
+      grosse Features parallel traegt. Reihenfolge in W5: Audit-Viewer + Decision-Explainer
+      (W4) sind dann live, Review-Inbox baut darauf auf.
+    wave: 5
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-7"]
+    priority: high
+    status: pending
+    dependencies: ["T-W3-PHASE1-GATE", "T-W2-SCORING-REASON-TRACE", "T-W4-DECISION-EXPLAINER"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.UI.Wpf/Services/SafetyLaneProjection.cs
+        description: Quelle
+      - path: src/Romulus.UI.Wpf/Views/
+        description: neue Inbox-View
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Unbekannte/Blocked werden vom Tab zum Workflow.
+        timestamp: "2026-04-28"
+        estimated_effort: large
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: ui
+        verification:
+          - Inbox vorhanden, drei Lanes
+          - Bulk-Aktionen funktional
+        acceptance_criteria:
+          - Beta-Nutzer behandelt Unknown ohne Erklaerung
+        failure_modes:
+          - scenario: Bulk-Aktionen umgehen DangerConfirm
+            likelihood: medium
+            impact: high
+            mitigation: jede destruktive Bulk-Aktion erfordert Token
+        tech_stack:
+          - C# .NET 10
+          - WPF/XAML
+        test_coverage: full
+
+  # ============================================================
+  # WAVE 5 - Phase 2 fortgesetzt
+  # ============================================================
+
+  - id: T-W5-BEFORE-AFTER-SIMULATOR
+    title: Before/After Collection Simulator (DryRun++)
+    description: |
+      IBeforeAfterSimulator nutzt PhasePlanBuilder, vergleicht IST-Sammlung
+      gegen geplantes Ziel. UI: zwei Listen (vorher/nachher) + Diff-Summary
+      (was bleibt, was geht, was wird neu strukturiert).
+      Single Source of Truth: Plan ist identisch zu Execute.
+    wave: 5
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-11"]
+    priority: high
+    status: pending
+    dependencies: ["T-W4-DISCOVERY-LOOP"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Orchestration/PhasePlanning.cs
+        description: PhasePlanBuilder
+      - path: src/Romulus.UI.Wpf/Views/
+        description: neue Simulator-View
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Vertrauen vor dem Klick.
+        timestamp: "2026-04-28"
+        estimated_effort: large
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: feature
+        verification:
+          - Simulator-Output identisch zu DryRun-Phase-Plan
+        acceptance_criteria:
+          - Beta-Nutzer trifft Move-Entscheidung mit Simulator
+        failure_modes:
+          - scenario: Simulator weicht vom realen Plan ab
+            likelihood: medium
+            impact: high
+            mitigation: Test pruft Simulator vs PhasePlanBuilder Output-Identitaet
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+
+  - id: T-W5-CONVERSION-SAFETY-ADVISOR
+    title: Conversion Safety Advisor + UI-Confirm-Token
+    description: |
+      ConversionSafetyAdvisor klassifiziert Plan-Items in Safe/Risk/Lossy.
+      UI: Lossy-Items rot, Confirm-Dialog mit Token-Eingabe (Token aus
+      AcceptDataLossToken-Vertrag, vom Nutzer abzutippen).
+      CLI: --accept-data-loss=<token>. API: gleiches Feld in Request.
+    wave: 5
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-10"]
+    priority: high
+    status: pending
+    dependencies: ["T-W2-CONVERSION-SAFETY-CONTRACT", "T-W4-DISCOVERY-LOOP"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Conversion/
+        description: ConversionPolicy/Planner
+      - path: src/Romulus.UI.Wpf/Views/
+        description: Confirm-Dialog
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Datenverlust hart eindaemmen + sichtbar machen.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: safety
+        verification:
+          - Lossy-Plan zeigt rote Markierung
+          - Token-Eingabe Pflicht
+        acceptance_criteria:
+          - Kein Lossy-Run ohne Token
+        failure_modes:
+          - scenario: Token-Dialog wird umgangen
+            likelihood: medium
+            impact: critical
+            mitigation: Pre-Gate in ConversionPolicy schlaegt unabhaengig zu
+        tech_stack:
+          - C# .NET 10
+          - WPF/XAML
+        review_security_sensitive: true
+        requires_review: true
+        review_depth: full
+
+  - id: T-W5-MULTI-DAT-PREP
+    title: Multi-DAT-Match-Modell vorbereiten
+    description: |
+      Refactor: DatRepositoryAdapter liefert IReadOnlyList<DatMatch> statt
+      einzelnem Match. Konsumenten erhalten Single-Match-Helper, der
+      MultiDatConflictResolver in Phase 3 nutzt. Default-Verhalten unveraendert.
+    wave: 5
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-18"]
+    priority: medium
+    status: pending
+    dependencies: ["T-W2-DAT-FIRST-ADR", "T-W4-DISCOVERY-LOOP"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs
+        description: API-Aenderung
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Vorbereitung ohne Verhaltensaenderung.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 280
+        focus_area: refactor
+        verification:
+          - bestehende Tests gruen
+          - neue API verfuegbar
+        acceptance_criteria:
+          - keine Verhaltensaenderung in Default-Pfaden
+        failure_modes:
+          - scenario: bestehende Single-Match-Konsumenten brechen
+            likelihood: medium
+            impact: high
+            mitigation: Helper bleibt 1:1
+        tech_stack:
+          - C# .NET 10
+        test_coverage: regression-only
+
+  - id: T-W5-REPORT-UNIFICATION
+    title: HTML/CSV/JSON-Report-Generator vereinheitlichen
+    description: |
+      Eliminiere Fallback-Pfad zwischen RunReportWriter und ReportGenerator
+      (siehe IResultExportService). Eine Wahrheit, ein Pfad. Tests pruefen
+      Bit-Identitaet zwischen GUI/CLI/API-Reports.
+    wave: 5
+    agent: gem-code-simplifier
+    prototype: false
+    covers: ["TOP-15"]
+    priority: high
+    status: pending
+    dependencies: ["T-W4-DISCOVERY-LOOP"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.UI.Wpf/Services/IResultExportService.cs
+        description: Dual-Truth-Stelle
+      - path: src/Romulus.Infrastructure/Reporting/
+        description: Generators
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Beseitigung dokumentierter Dual-Truth.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 280
+        focus_area: cleanup
+        verification:
+          - Identitaetstest GUI/CLI/API-Reports gruen
+        acceptance_criteria:
+          - Kein Fallback-Pfad mehr
+        failure_modes:
+          - scenario: Fallback wird "fuer Sicherheit" beibehalten
+            likelihood: medium
+            impact: medium
+            mitigation: explizit per ADR verbieten
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+
+  # ============================================================
+  # WAVE 6 - Phase 2 Abschluss & Gate
+  # ============================================================
+
+  - id: T-W6-CONSOLIDATE-FEATURE-SERVICES
+    title: FeatureCommandService.* + FeatureService.* konsolidieren
+    description: |
+      Nach den Reduktionen verbleibende Partials zusammenfuehren auf
+      thematisch klare Services (max 4 Partials je Schicht), keine Stub-Methoden.
+      Methoden, die zu gestrichenen Features gehoeren, vollstaendig entfernen.
+    wave: 6
+    agent: gem-code-simplifier
+    prototype: false
+    covers: ["TOP-13"]
+    priority: high
+    status: pending
+    dependencies: ["T-W4-AUDIT-VIEWER-UI", "T-W4-REVIEW-INBOX", "T-W4-DECISION-EXPLAINER", "T-W5-REPORT-UNIFICATION"]
+    # Hinweis: T-W4-REVIEW-INBOX ist trotz id-Praefix in Welle 5 (siehe wave-Feld dort).
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.UI.Wpf/Services/FeatureCommandService.cs
+        description: Partials
+      - path: src/Romulus.UI.Wpf/Services/FeatureService.cs
+        description: Partials
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Konsolidierung erst nach Feature-Abschluss sinnvoll.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: cleanup
+        verification:
+          - <= 4 Partials je Service
+          - keine Stub-Methoden
+        acceptance_criteria:
+          - Build und Tests gruen
+        failure_modes:
+          - scenario: Methoden werden "fuer alle Faelle" stehengelassen
+            likelihood: medium
+            impact: medium
+            mitigation: gem-reviewer prueft jeden Service-Methoden-Bestand
+        tech_stack:
+          - C# .NET 10
+
+  - id: T-W6-PHASE2-GATE
+    title: Phase-2-Gate (Vertrauen sichtbar)
+    description: |
+      gem-critic prueft anhand Outcome-KPIs aus Discovery-Loop:
+      - Audit-Viewer von Beta-Nutzer ohne Erklaerung erreichbar?
+      - Decision-Erklaerung verstaendlich?
+      - Lossy-Conversion blockiert ohne Token?
+      - Simulator wird genutzt?
+      - Reports identisch ueber GUI/CLI/API?
+      Bei Nein: Welle 4-6 Tasks reoeffnen.
+    wave: 6
+    agent: gem-critic
+    prototype: false
+    covers: ["TOP-6", "TOP-8", "TOP-10", "TOP-11", "TOP-15"]
+    priority: high
+    status: pending
+    dependencies: ["T-W6-CONSOLIDATE-FEATURE-SERVICES", "T-W5-CONVERSION-SAFETY-ADVISOR", "T-W5-BEFORE-AFTER-SIMULATOR", "T-W5-MULTI-DAT-PREP"]
+    conflicts_with: []
+    context_files: []
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Stop/Go vor Phase 3.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 1
+        estimated_lines: 150
+        focus_area: review
+        verification:
+          - Gate-Bericht
+        acceptance_criteria:
+          - Alle Phase-2-Kriterien erfuellt
+        failure_modes:
+          - scenario: Gate beschoenigt KPIs
+            likelihood: medium
+            impact: high
+            mitigation: zwei unabhaengige Reviewer
+        requires_review: true
+        review_depth: full
+
+  # ============================================================
+  # WAVE 7 - Phase 3: Workflow-Mehrwert (1)
+  # ============================================================
+
+  - id: T-W7-HEALTH-SCORE
+    title: Set Integrity Guardian (HealthScore pro Konsole, persistiert)
+    description: |
+      ISetIntegrityGuardian wird vom RunOrchestrator-OnCompleted aufgerufen.
+      Persistiert HealthSnapshots im AppStateStore. UI: HealthScore-Trend pro
+      Konsole. CLI: --health-snapshot. API: /collections/{root}/health.
+    wave: 7
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-16"]
+    priority: high
+    status: pending
+    dependencies: ["T-W6-PHASE2-GATE"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Analysis/
+        description: HealthScore-Code
+      - path: src/Romulus.Infrastructure/State/AppStateStore.cs
+        description: Persistenz
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Tracking ueber Zeit als Power-Wert.
+        timestamp: "2026-04-28"
+        estimated_effort: large
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: feature
+        verification:
+          - Snapshot wird nach Run geschrieben
+          - Trend-Abfrage liefert geordnete Liste
+        acceptance_criteria:
+          - HealthScore deterministisch berechnet
+        failure_modes:
+          - scenario: Snapshot blockiert Run-Abschluss
+            likelihood: low
+            impact: medium
+            mitigation: Snapshot ist try/catch und log-only fuer Run-Status
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+
+  - id: T-W7-PROVENANCE-TRAIL
+    title: ROM Provenance / Trust Score
+    description: |
+      IProvenanceStore fuegt pro ROM Eintraege an (Imported, Verified, Moved,
+      Converted, RolledBack) inkl. Hash + DAT-Match-Beleg.
+      UI: Provenance-Drawer im Decision-Explainer. CLI: provenance-Subcommand.
+      API: /roms/{fingerprint}/provenance.
+    wave: 7
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-17"]
+    priority: high
+    status: pending
+    dependencies: ["T-W2-PROVENANCE-AUDIT-ADR", "T-W4-DECISION-EXPLAINER", "T-W6-PHASE2-GATE"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Audit/
+        description: Audit-Schicht als Inspirationsquelle
+      - path: src/Romulus.Infrastructure/Analysis/
+        description: ROM-Identitaet
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Echter Differenzierer.
+        timestamp: "2026-04-28"
+        estimated_effort: large
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: feature
+        verification:
+          - Provenance-Eintraege werden in allen relevanten Phasen geschrieben
+        acceptance_criteria:
+          - Trail ist verifizierbar (Hash-Kette)
+        failure_modes:
+          - scenario: Provenance dupliziert Audit-Logik
+            likelihood: medium
+            impact: medium
+            mitigation: gemeinsame Signing-Helper, kein zweiter Sidecar-Pfad
+        tech_stack:
+          - C# .NET 10
+        review_security_sensitive: true
+        requires_review: true
+        review_depth: full
+        test_coverage: full
+
+  # ============================================================
+  # WAVE 8 - Phase 3 fortgesetzt
+  # ============================================================
+
+  - id: T-W8-MULTI-DAT-RESOLVER
+    title: MultiDatConflictResolver implementieren
+    description: |
+      Deterministische Aufloesung bei mehrfachen DAT-Treffern.
+      Reihenfolge: bevorzugte Quellen-Liste aus Settings, dann hoechster
+      Match-Strength, dann lex. Vergleich. UI zeigt Konflikt + Aufloesung.
+    wave: 8
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-18"]
+    priority: high
+    status: pending
+    dependencies: ["T-W5-MULTI-DAT-PREP", "T-W7-PROVENANCE-TRAIL"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Dat/
+        description: Adapter
+      - path: src/Romulus.UI.Wpf/Views/
+        description: Konflikt-View
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Realer Anwendungsfall fuer Power-Sammler.
+        timestamp: "2026-04-28"
+        estimated_effort: large
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: feature
+        verification:
+          - Konflikt-Aufloesung deterministisch und nachvollziehbar
+        acceptance_criteria:
+          - Konflikte werden im Decision-Explainer erklaert
+        failure_modes:
+          - scenario: Aufloesung zufaellig je nach Lade-Reihenfolge
+            likelihood: medium
+            impact: high
+            mitigation: Determinismus-Test mit gemischter Lade-Reihenfolge
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+
+  - id: T-W8-WATCH-SCHEDULE
+    title: "Watch/Schedule (BONUS, nur bei belegtem Bedarf)"
+    description: |
+      BONUS-FEATURE - kein Top-20-Item. Aktivierung nur, wenn Discovery-Loop
+      (T-W4-DISCOVERY-LOOP) ein klares Bedarfs-Signal liefert (>=2 Beta-Nutzer
+      fragen aktiv nach periodischem Scan).
+      Periodischer Scan + Verify ohne Move. Konfigurierbar (Intervall, Roots).
+      Resultate landen im HealthScore-Trend und in der Review-Inbox.
+      Default off; Tray-Indikator wenn aktiv.
+    wave: 8
+    agent: gem-implementer
+    prototype: false
+    covers: []
+    priority: medium
+    status: pending
+    dependencies: ["T-W7-HEALTH-SCORE"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.UI.Wpf/Services/WatchService.cs
+        description: Vorhandene Skeleton
+      - path: src/Romulus.Infrastructure/Watch/
+        description: Adapter
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Phase-3-Power-Feature, vor PMF nicht vorne.
+        timestamp: "2026-04-28"
+        estimated_effort: large
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: feature
+        verification:
+          - Periodischer Run startet, schreibt Snapshot
+        acceptance_criteria:
+          - Default off
+        failure_modes:
+          - scenario: Watch laeuft im UI-Thread
+            likelihood: medium
+            impact: high
+            mitigation: dedizierter Worker; UI-Updates nur ueber Dispatcher
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+
+  # ============================================================
+  # WAVE 9 - Phase 4: Power-Features (1)
+  # ============================================================
+
+  - id: T-W9-POLICY-GOVERNANCE
+    title: Policy-based Library Governance
+    description: |
+      IPolicyEngine validiert LibrarySnapshot gegen deklarative Policy
+      (YAML/JSON, im Repo gehalten, signierbar). UI: Policy-Editor +
+      Validation-Report. CLI: validate-policy. API: /policies/validate.
+      Beispiel-Policies: "EU bevorzugt", "keine Demos", "alle ZIP".
+    wave: 9
+    agent: gem-implementer
+    prototype: false
+    covers: ["TOP-19"]
+    priority: high
+    status: pending
+    dependencies: ["T-W7-HEALTH-SCORE", "T-W7-PROVENANCE-TRAIL"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Profiles/
+        description: bestehende Profile als Inspiration
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Reproduzierbarkeit als USP fuer Archivare.
+        timestamp: "2026-04-28"
+        estimated_effort: large
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: feature
+        verification:
+          - Policy-Datei wird geladen, validiert, Report generiert
+        acceptance_criteria:
+          - Verstoss-Liste ist sortierbar und exportierbar
+        failure_modes:
+          - scenario: Policy-Engine wird zu Profile-Klon
+            likelihood: medium
+            impact: medium
+            mitigation: klare Trennung; Profile = Run-Defaults, Policy = Soll-Zustand
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+
+  - id: T-W9-API-HARDENING
+    title: API-Haertung (Auth, Rate Limit, Doku) ohne Marketplace/Plugin
+    description: |
+      Bestehende API: Auth ueberprufen (Fixed-Time-Comparison), Rate Limit
+      bestaetigen, OpenAPI-Doku auf reduziertes Feature-Set anpassen,
+      Endpunkte fuer Audit-Viewer/HealthScore/Provenance/Policy ergaenzen.
+      Kein Plugin-System, kein Marketplace.
+    wave: 9
+    agent: gem-implementer
+    prototype: false
+    covers: []
+    priority: medium
+    status: pending
+    dependencies: ["T-W4-AUDIT-VIEWER-UI", "T-W7-HEALTH-SCORE", "T-W7-PROVENANCE-TRAIL"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Api/
+        description: API-Programm
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Power-Persona-Werkzeug; bewusst eng skopiert.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: api
+        verification:
+          - OpenAPI-Doku aktuell
+          - alle neuen Endpunkte read-only (ausser Run-Start)
+        acceptance_criteria:
+          - drei Power-Nutzer nutzen API regelmaessig
+        failure_modes:
+          - scenario: API-Endpunkte umgehen Confirm-Token bei Move/Convert
+            likelihood: medium
+            impact: critical
+            mitigation: Token-Pflicht serverseitig
+        tech_stack:
+          - C# .NET 10 ASP.NET Core
+        review_security_sensitive: true
+        requires_review: true
+        review_depth: full
+
+  # ============================================================
+  # WAVE 10 - Phase 4 fortgesetzt
+  # ============================================================
+
+  - id: T-W10-RISK-MAP
+    title: "Collection Risk Map (BONUS, nur bei belegtem Bedarf)"
+    description: |
+      BONUS-FEATURE - kein Top-20-Item. Aktivierung nur, wenn Discovery-Loop
+      Heatmap-Bedarf belegt.
+      Visualisierung kritischer Stellen einer Sammlung: Lossy-Anteile,
+      ungeloeste Konflikte, Best-Effort-Treffer, blockierte Items, fehlende DATs.
+      UI: Heatmap pro Konsole; Drill-down in Review-Inbox.
+    wave: 10
+    agent: gem-designer
+    prototype: false
+    covers: []
+    priority: medium
+    status: pending
+    dependencies: ["T-W9-POLICY-GOVERNANCE"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.UI.Wpf/Views/
+        description: neue Risk-Map-View
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Power-Feature, optisch und inhaltlich.
+        timestamp: "2026-04-28"
+        estimated_effort: large
+        estimated_files: 3
+        estimated_lines: 300
+        focus_area: feature
+        verification:
+          - Heatmap zeigt deterministische Werte
+        acceptance_criteria:
+          - Drill-down funktioniert
+        failure_modes:
+          - scenario: Heatmap berechnet Werte selbst
+            likelihood: medium
+            impact: medium
+            mitigation: ausschliesslich aus Projection lesen
+
+  - id: T-W10-BATCH-PLAN-SIMULATOR
+    title: "Batch Plan Simulator (BONUS, nur bei belegtem Bedarf)"
+    description: |
+      BONUS-FEATURE - kein Top-20-Item. Aktivierung nur bei Power-Persona-Bedarf
+      aus Discovery-Loop.
+      Mehrere Plaene parallel simulieren und vergleichen. Power-Persona-Werkzeug.
+      Nutzt BeforeAfterSimulator als Bausteine.
+    wave: 10
+    agent: gem-implementer
+    prototype: false
+    covers: []
+    priority: medium
+    status: pending
+    dependencies: ["T-W5-BEFORE-AFTER-SIMULATOR", "T-W9-POLICY-GOVERNANCE"]
+    conflicts_with: []
+    context_files: []
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Optionales Power-Feature.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 3
+        estimated_lines: 280
+        focus_area: feature
+        verification:
+          - Vergleich liefert deterministische Diffs
+        acceptance_criteria:
+          - drei Plaene parallel vergleichbar
+        failure_modes:
+          - scenario: Vergleich verbraucht zu viel Speicher
+            likelihood: medium
+            impact: medium
+            mitigation: Streaming-Vergleich
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+
+  # ============================================================
+  # WAVE 11 - Phase 5: Differenzierung & Cross-Cutting Verifikation
+  # ============================================================
+
+  - id: T-W11-CROSS-PLATFORM-DECISION
+    title: Cross-Platform-Entscheidung (nur falls Bedarf belegt)
+    description: |
+      Rein governance-getrieben. Default-Pfad bei belegtem Bedarf: headless
+      Romulus.CLI in Linux/macOS-Container. Avalonia-Reaktivierung NUR unter den
+      drei in resolved_decisions[Avalonia] gelockten Bedingungen (>=3 belegte
+      Cross-Plattform-Beta-Nutzer UND WPF-EOL-Ankuendigung UND keine viable
+      CLI-Alternative). Ohne diese drei Bedingungen ist Avalonia kein Pfad.
+      Wenn keine Bedarfs-Belege vorliegen: Phase 5 endet ohne Cross-Platform-Initiative.
+    wave: 11
+    agent: gem-planner
+    prototype: false
+    covers: []
+    priority: medium
+    status: pending
+    dependencies: ["T-W10-RISK-MAP", "T-W10-BATCH-PLAN-SIMULATOR"]
+    conflicts_with: []
+    context_files: []
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Erst Bedarf belegen, dann investieren.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 1
+        estimated_lines: 200
+        focus_area: governance
+        verification:
+          - ADR mit Bedarfs-Beleg
+        acceptance_criteria:
+          - Entscheidung mit Daten unterfuettert
+        failure_modes:
+          - scenario: Entscheidung ohne Daten
+            likelihood: medium
+            impact: high
+            mitigation: KPI-Bezug verpflichtend
+        requires_review: true
+        review_depth: full
+
+  - id: T-W11-FRONTEND-EXPORT-FORMAT
+    title: "Selektive Frontend-Export-Formate (BONUS, nur Format-Spezifikation)"
+    description: |
+      BONUS-FEATURE - kein Top-20-Item. Optional und nicht release-kritisch.
+      Wenn umgesetzt: ein einziges, gut spezifiziertes Export-Format, das andere
+      Tools (LaunchBox, RetroBat, ES-DE) lesen koennen. KEIN Frontend-Build,
+      KEIN UI-Wizard. Nur File-Format + Doku.
+    wave: 11
+    agent: gem-implementer
+    prototype: false
+    covers: []
+    priority: low
+    status: pending
+    dependencies: ["T-W11-CROSS-PLATFORM-DECISION"]
+    conflicts_with: []
+    context_files:
+      - path: src/Romulus.Infrastructure/Export/
+        description: existierender Export-Bereich
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Nutzen ohne fremdes Revier zu betreten.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 2
+        estimated_lines: 200
+        focus_area: feature
+        verification:
+          - Format-Spezifikation veroeffentlicht
+        acceptance_criteria:
+          - kein UI-Wizard, kein Mapping-Tool
+        failure_modes:
+          - scenario: Frontend-Export wird wieder Feature-Wuchs
+            likelihood: medium
+            impact: high
+            mitigation: harte Skopierung "nur Format"
+
+  - id: T-W11-CROSS-CUTTING-VERIFICATION
+    title: Cross-Cutting Verifikation gemaess DeepDivePrompts.md Sektion 11
+    description: |
+      Final-Verification-Audit ueber:
+      - Preview/Execute/Report-Paritaet
+      - GUI/CLI/API-Paritaet (auch fuer Decision Explainer, Audit-Viewer,
+        HealthScore, Provenance, Policy)
+      - Single-Source-of-Truth-Wahrung (RunConfigurationDraftFingerprint,
+        SafetyLaneProjection, RunViewModel.ApplyDashboard)
+      - Schattenlogik-Freiheit
+      - Determinismus
+      - Safety/Audit-Atomicity
+      Findings reoeffnen die jeweilige Welle. Gate fuer Release-Tauglichkeit.
+    wave: 11
+    agent: gem-reviewer
+    prototype: false
+    covers: ["TOP-20"]
+    priority: high
+    status: pending
+    dependencies: ["T-W10-RISK-MAP", "T-W10-BATCH-PLAN-SIMULATOR", "T-W9-API-HARDENING", "T-W8-WATCH-SCHEDULE", "T-W8-MULTI-DAT-RESOLVER"]
+    conflicts_with: []
+    context_files: []
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Bereichsuebergreifender Abschluss-Check.
+        timestamp: "2026-04-28"
+        estimated_effort: medium
+        estimated_files: 1
+        estimated_lines: 250
+        focus_area: review
+        verification:
+          - Audit-Bericht ohne neue P1-Findings
+        acceptance_criteria:
+          - alle Pflicht-Invarianten gepruef
+          - jede neue Welle-Implementierung hat Paritaets-Tests
+        failure_modes:
+          - scenario: Audit beschoenigt
+            likelihood: medium
+            impact: critical
+            mitigation: zwei Reviewer + Verifikation gegen Test-Suite
+        requires_review: true
+        review_depth: full
+        review_security_sensitive: true
+
+  - id: T-W11-IDENTITY-GUARDRAIL
+    title: Identitaets-Guardrail fuer alle zukuenftigen Features verankern
+    description: |
+      Dauerhafte Regel in AGENTS.md, .claude/rules/ und PR-Vorlage:
+      "Jedes neue Feature muss die Frage 'Schaerft es die Sichere-Cleanup-Identitaet?'
+      mit Ja beantworten - sonst Ablehnung." Plus harte Streichliste aus
+      Sektion 12 der Critic-Review.
+    wave: 11
+    agent: gem-documentation-writer
+    prototype: false
+    covers: ["TOP-20"]
+    priority: high
+    status: pending
+    dependencies: ["T-W11-CROSS-CUTTING-VERIFICATION"]
+    conflicts_with: []
+    context_files:
+      - path: AGENTS.md
+        description: Hauptregel-Datei
+      - path: .claude/rules/
+        description: Regel-Verzeichnis
+    planning_pass: 1
+    planning_history:
+      - pass: 1
+        reason: Verhindert Rueckfall in Feature-Wuchs.
+        timestamp: "2026-04-28"
+        estimated_effort: small
+        estimated_files: 3
+        estimated_lines: 200
+        focus_area: governance
+        verification:
+          - Regel sichtbar in AGENTS.md und PR-Template
+        acceptance_criteria:
+          - Reviewer wird auf Regel verwiesen
+        failure_modes:
+          - scenario: Regel wird ignoriert
+            likelihood: medium
+            impact: high
+            mitigation: PR-Template zwingt zu Antwort auf Identitaets-Frage
+        task_type: update
+        audience: developers
+        coverage_matrix:
+          - AGENTS.md
+          - .claude/rules
+          - PR-Template
+        requires_review: true
+        review_depth: standard

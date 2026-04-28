@@ -168,6 +168,15 @@ public sealed partial class MainViewModel
                     && System.IO.Directory.Exists(value))
                 {
                     _ = DatCatalog.RefreshCommand.ExecuteAsync(null);
+
+                    // Background prewarm: parse every DAT into the disk cache so the
+                    // next run start is seconds instead of minutes. Fire-and-forget;
+                    // the service cancels prior runs if DatRoot changes again.
+                    if (_datPrewarm is not null)
+                    {
+                        try { _ = _datPrewarm.StartAsync(value); }
+                        catch (Exception ex) { AddLog($"[DAT-Prewarm] Start fehlgeschlagen: {ex.Message}", "WARN"); }
+                    }
                 }
             }
         }

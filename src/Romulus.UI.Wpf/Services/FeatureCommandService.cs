@@ -202,15 +202,11 @@ public sealed partial class FeatureCommandService
         cmds[FeatureCommandKeys.HealthScore] = new RelayCommand(HealthScore);
         cmds[FeatureCommandKeys.DuplicateAnalysis] = new RelayCommand(DuplicateAnalysis);
         cmds[FeatureCommandKeys.ExportCollection] = new AsyncRelayCommand(ExportCollectionAsync);
-        var rollbackHistoryBack = new RelayCommand(RollbackHistoryBack);
-        var rollbackHistoryForward = new RelayCommand(RollbackHistoryForward);
         cmds[FeatureCommandKeys.RollbackQuick] = _vm.RollbackCommand;
-        cmds[FeatureCommandKeys.RollbackHistoryBack] = rollbackHistoryBack;
-        cmds[FeatureCommandKeys.RollbackHistoryForward] = rollbackHistoryForward;
-        cmds[FeatureCommandKeys.RollbackUndo] = rollbackHistoryBack;
-        cmds[FeatureCommandKeys.RollbackRedo] = rollbackHistoryForward;
+        cmds[FeatureCommandKeys.RollbackHistoryBack] = new RelayCommand(RollbackHistoryBack);
+        cmds[FeatureCommandKeys.RollbackHistoryForward] = new RelayCommand(RollbackHistoryForward);
         cmds[FeatureCommandKeys.ApplyLocale] = new RelayCommand(ApplyLocale);
-        cmds[FeatureCommandKeys.AutoProfile] = new RelayCommand(AutoProfile);
+        cmds[FeatureCommandKeys.AutoProfile] = new AsyncRelayCommand(AutoProfileAsync);
 
         // ── Analyse & Berichte ──────────────────────────────────────────
 
@@ -664,26 +660,41 @@ public sealed partial class FeatureCommandService
         // Title update must be done in code-behind (Window property)
     }
 
-    private void AutoProfile()
+    /// <summary>
+    /// Wave-8 F-T03: enumerates each root's files off the UI thread to avoid
+    /// Dispatcher freezes on slow volumes (NAS/USB). Profile decision and
+    /// dialog presentation stay on the calling (UI) context.
+    /// </summary>
+    private async Task AutoProfileAsync()
     {
         if (_vm.Roots.Count == 0)
         { _vm.AddLog(_vm.Loc["Cmd.AutoProfileNoRoots"], "WARN"); return; }
-        var hasDisc = false;
-        var hasCartridge = false;
-        var fileSystem = new FileSystemAdapter();
-        foreach (var root in _vm.Roots)
-        {
-            if (!fileSystem.TestPath(root, "Container")) continue;
-            foreach (var f in fileSystem.GetFilesSafe(root).Take(200))
-            {
-                var ext = Path.GetExtension(f).ToLowerInvariant();
-                if (DiscFormats.IsAutoProfileDiscExtension(ext)) hasDisc = true;
-                if (ext is ".nes" or ".sfc" or ".gba" or ".nds" or ".z64" or ".gb") hasCartridge = true;
-            }
 
-            foreach (var warning in fileSystem.ConsumeScanWarnings())
-                _vm.AddLog(warning, "WARN");
-        }
+        var roots = _vm.Roots.ToArray();
+        var (hasDisc, hasCartridge, warnings) = await Task.Run(() =>
+        {
+            var fileSystem = new FileSystemAdapter();
+            var disc = false;
+            var cart = false;
+            var warns = new List<string>();
+            foreach (var root in roots)
+            {
+                if (!fileSystem.TestPath(root, "Container")) continue;
+                foreach (var f in fileSystem.GetFilesSafe(root).Take(200))
+                {
+                    var ext = Path.GetExtension(f).ToLowerInvariant();
+                    if (DiscFormats.IsAutoProfileDiscExtension(ext)) disc = true;
+                    if (ext is ".nes" or ".sfc" or ".gba" or ".nds" or ".z64" or ".gb") cart = true;
+                }
+
+                warns.AddRange(fileSystem.ConsumeScanWarnings());
+            }
+            return (disc, cart, (IReadOnlyList<string>)warns);
+        }).ConfigureAwait(true);
+
+        foreach (var warning in warnings)
+            _vm.AddLog(warning, "WARN");
+
         var profile = (hasDisc, hasCartridge) switch
         {
             (true, true) => _vm.Loc["Cmd.ProfileMixed"],

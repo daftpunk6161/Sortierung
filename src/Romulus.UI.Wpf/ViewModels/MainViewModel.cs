@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
+using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.Watch;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
@@ -37,6 +38,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     private readonly IRunService _runService;
     private readonly ILocalizationService _loc;
     private readonly ITimeProvider _timeProvider;
+    private readonly DatPrewarmService? _datPrewarm;
     private readonly SynchronizationContext? _syncContext;
     private readonly WatchService _watchService = new();
     private readonly ScheduleService _scheduleService = new();
@@ -87,7 +89,8 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         CommandPaletteViewModel? commandPalette = null,
         DatAuditViewModel? datAudit = null,
         DatCatalogViewModel? datCatalog = null,
-        ConversionPreviewViewModel? conversionPreview = null)
+        ConversionPreviewViewModel? conversionPreview = null,
+        DatPrewarmService? datPrewarm = null)
     {
         _theme = theme;
         _dialog = dialog;
@@ -95,6 +98,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         _runService = runService ?? new RunService();
         _loc = loc ?? new LocalizationService();
         _timeProvider = timeProvider ?? new SystemTimeProvider();
+        _datPrewarm = datPrewarm;
         _syncContext = SynchronizationContext.Current;
 
         // ── Child ViewModels (GUI-021) ────────────────────────────────
@@ -280,7 +284,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
                 var dispatcher = System.Windows.Application.Current?.Dispatcher;
                 if (dispatcher is not null)
                 {
-                    dispatcher.BeginInvoke(new Action(() =>
+                    _ = dispatcher.BeginInvoke(new Action(() =>
                     {
                         OnPropertyChanged(nameof(CanExecuteInlineStartMove));
                         OnPropertyChanged(nameof(InlineMoveConfirmHint));

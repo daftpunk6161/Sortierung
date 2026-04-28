@@ -91,8 +91,6 @@ public sealed class FeatureCommandServiceTests : IDisposable
     [InlineData("RollbackHistoryBack")]
     [InlineData("RollbackHistoryForward")]
     [InlineData("RollbackQuick")]
-    [InlineData("RollbackUndo")]
-    [InlineData("RollbackRedo")]
     [InlineData("ApplyLocale")]
     [InlineData("AutoProfile")]
     [InlineData("JunkReport")]
@@ -1157,7 +1155,8 @@ public sealed class FeatureCommandServiceTests : IDisposable
         var vm = new ToolsViewModel(new LocalizationService());
 
         Assert.Equal(ToolMaturity.Production, vm.ToolItems.Single(item => item.Key == FeatureCommandKeys.HealthScore).Maturity);
-        Assert.Equal(ToolMaturity.Guided, vm.ToolItems.Single(item => item.Key == FeatureCommandKeys.ConversionPipeline).Maturity);
+        // Wave-8 F-T07: ConversionPipeline is fully wired and Production-grade.
+        Assert.Equal(ToolMaturity.Production, vm.ToolItems.Single(item => item.Key == FeatureCommandKeys.ConversionPipeline).Maturity);
         Assert.Equal(ToolMaturity.Experimental, vm.ToolItems.Single(item => item.Key == FeatureCommandKeys.CollectionManager).Maturity);
         Assert.All(vm.ToolItems, item =>
         {
