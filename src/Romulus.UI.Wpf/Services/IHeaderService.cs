@@ -14,7 +14,6 @@ public interface IHeaderService
     string CreateBackup(IReadOnlyList<string> filePaths, string backupRoot, string label);
     string? FindCommonRoot(IReadOnlyList<string> paths);
     int CleanupOldBackups(string backupRoot, int retentionDays, Func<int, bool>? confirmDelete = null);
-    string? DetectPatchFormat(string patchPath);
     bool RepairNesHeader(string path);
     bool RemoveCopierHeader(string path);
 }

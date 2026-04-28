@@ -20,7 +20,6 @@ public static class FeatureCommandKeys
     public const string ConversionPipeline = "ConversionPipeline";
     public const string ConversionVerify = "ConversionVerify";
     public const string FormatPriority = "FormatPriority";
-    public const string PatchPipeline = "PatchPipeline";
 
     // ── DAT & Verifizierung ──
     public const string DatAutoUpdate = "DatAutoUpdate";

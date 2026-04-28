@@ -49,73 +49,6 @@ public sealed partial class FeatureCommandService
         WriteIndented = true
     };
 
-    private void PatchPipeline()
-    {
-        var sourcePath = _dialog.BrowseFile(
-            _vm.Loc["Cmd.PatchPipeline.SourceFileTitle"],
-            _vm.Loc["Cmd.PatchPipeline.SourceFileFilter"]);
-        if (sourcePath is null)
-            return;
-
-        var patchPath = _dialog.BrowseFile(
-            _vm.Loc["Cmd.PatchPipeline.PatchFileTitle"],
-            _vm.Loc["Cmd.PatchPipeline.PatchFileFilter"]);
-        if (patchPath is null)
-            return;
-
-        var patchFormat = ResolvePatchFormatForDialog(patchPath);
-        if (patchFormat is null)
-        {
-            LogWarning("PATCH-FORMAT", _vm.Loc["Cmd.PatchPipeline.UnsupportedPatchFormat"]);
-            return;
-        }
-
-        var sourceExtension = Path.GetExtension(sourcePath);
-        var defaultName = Path.GetFileNameWithoutExtension(sourcePath) + ".patched" + sourceExtension;
-        var outputPath = _dialog.SaveFile(
-            _vm.Loc["Cmd.PatchPipeline.OutputFileTitle"],
-            string.IsNullOrWhiteSpace(sourceExtension)
-                ? _vm.Loc["Cmd.PatchPipeline.AllFilesFilter"]
-                : _vm.Loc.Format("Cmd.PatchPipeline.OutputFileFilter", sourceExtension),
-            defaultName);
-        if (!TryResolveSafeOutputPath(outputPath, _vm.Loc["Cmd.PatchPipeline.Title"], out var safeOutputPath))
-            return;
-
-        try
-        {
-            var result = FeatureService.ApplyPatch(
-                sourcePath,
-                patchPath,
-                safeOutputPath,
-                toolRunner: new ToolRunnerAdapter());
-
-            var toolLine = string.IsNullOrWhiteSpace(result.ToolPath)
-                ? _vm.Loc["Cmd.PatchPipeline.ToolInternal"]
-                : _vm.Loc.Format("Cmd.PatchPipeline.ToolPath", result.ToolPath);
-            _dialog.ShowText(
-                _vm.Loc["Cmd.PatchPipeline.Title"],
-                _vm.Loc.Format(
-                    "Cmd.PatchPipeline.Result",
-                    result.Format,
-                    result.SourcePath,
-                    result.PatchPath,
-                    result.OutputPath,
-                    FeatureService.FormatSize(result.OutputSizeBytes),
-                    result.OutputSha256,
-                    toolLine));
-            _vm.AddLog(_vm.Loc.Format("Cmd.PatchPipeline.Applied", result.Format, Path.GetFileName(result.PatchPath), result.OutputPath), "INFO");
-        }
-        catch (InvalidOperationException ex)
-        {
-            LogWarning("PATCH-APPLY", _vm.Loc.Format("Cmd.PatchPipeline.ApplyFailed", ex.Message));
-            _dialog.Error(_vm.Loc.Format("Cmd.PatchPipeline.ApplyFailedDialog", ex.Message), _vm.Loc["Cmd.PatchPipeline.Title"]);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
-        {
-            LogError("PATCH-APPLY", _vm.Loc.Format("Cmd.PatchPipeline.ExecutionFailed", ex.Message));
-        }
-    }
-
     private async Task IntegrityMonitorAsync()
     {
         if (_vm.LastCandidates.Count == 0)
@@ -602,18 +535,6 @@ public sealed partial class FeatureCommandService
         {
             LogWarning("HEADER-REPAIR-AUDIT", $"Header-Repair-Audit konnte nicht geschrieben werden: {ex.Message}");
         }
-    }
-
-    private static string? ResolvePatchFormatForDialog(string patchPath)
-    {
-        var format = FeatureService.DetectPatchFormat(patchPath);
-        if (!string.IsNullOrWhiteSpace(format))
-            return format;
-
-        var extension = Path.GetExtension(patchPath).ToLowerInvariant();
-        return extension is ".xdelta" or ".xdelta3" or ".vcdiff"
-            ? "XDELTA"
-            : null;
     }
 
 }

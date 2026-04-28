@@ -95,8 +95,6 @@ public sealed class ToolRunnerAdapterCoverageTests : IDisposable
     [InlineData("psxtract", "psxtract.exe")]
     [InlineData("unecm", "unecm.exe")]
     [InlineData("nkit", "NKitProcessingApp.exe")]
-    [InlineData("flips", "flips.exe")]
-    [InlineData("xdelta3", "xdelta3.exe")]
     public void FindTool_ConversionToolsRoot_FindsToolDirectly(string toolName, string exeName)
     {
         var root = Path.Combine(_tempDir, "tools-ct-" + toolName);

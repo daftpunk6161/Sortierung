@@ -53,16 +53,6 @@ public sealed record IntegrityCheckResult(
     IReadOnlyList<string> Changed, IReadOnlyList<string> Missing,
     IReadOnlyList<string> Intact, bool BitRotRisk, string? Message = null);
 
-/// <summary>Result of applying a ROM patch in the smart patch pipeline.</summary>
-public sealed record PatchApplyResult(
-    string Format,
-    string SourcePath,
-    string PatchPath,
-    string OutputPath,
-    long OutputSizeBytes,
-    string OutputSha256,
-    string? ToolPath = null);
-
 /// <summary>Settings diff entry for config comparison.</summary>
 public sealed record ConfigDiffEntry(string Key, string SavedValue, string CurrentValue);
 

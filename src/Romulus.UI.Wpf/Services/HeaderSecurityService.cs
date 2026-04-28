@@ -55,9 +55,6 @@ public sealed class HeaderSecurityService : IHeaderService
     public int CleanupOldBackups(string backupRoot, int retentionDays, Func<int, bool>? confirmDelete = null)
         => FeatureService.CleanupOldBackups(backupRoot, retentionDays, confirmDelete);
 
-    public string? DetectPatchFormat(string patchPath)
-        => FeatureService.DetectPatchFormat(patchPath);
-
     public bool RepairNesHeader(string path)
         => _headerRepairService.RepairNesHeader(path);
 

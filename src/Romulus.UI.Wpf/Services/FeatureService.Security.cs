@@ -93,22 +93,4 @@ public static partial class FeatureService
 
     public static int CleanupOldBackups(string backupRoot, int retentionDays, Func<int, bool>? confirmDelete = null)
         => IntegrityService.CleanupOldBackups(backupRoot, retentionDays, confirmDelete);
-
-
-    // ═══ PATCH ENGINE ═══════════════════════════════════════════════════
-    // Port of PatchEngine.ps1
-
-    public static string? DetectPatchFormat(string patchPath)
-        => IntegrityService.DetectPatchFormat(patchPath);
-
-    public static PatchApplyResult ApplyPatch(
-        string sourceRomPath,
-        string patchPath,
-        string outputPath,
-        IToolRunner? toolRunner = null,
-        string? flipsToolPath = null,
-        string? xdeltaToolPath = null,
-        CancellationToken ct = default)
-        => IntegrityService.ApplyPatch(sourceRomPath, patchPath, outputPath, toolRunner, flipsToolPath, xdeltaToolPath, ct);
-
 }

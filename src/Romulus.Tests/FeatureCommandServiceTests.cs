@@ -101,7 +101,6 @@ public sealed class FeatureCommandServiceTests : IDisposable
     [InlineData("ConversionPipeline")]
     [InlineData("ConversionVerify")]
     [InlineData("FormatPriority")]
-    [InlineData("PatchPipeline")]
     [InlineData("DatAutoUpdate")]
     [InlineData("DatDiffViewer")]
     [InlineData("CustomDatEditor")]
@@ -612,17 +611,6 @@ public sealed class FeatureCommandServiceTests : IDisposable
         Assert.Contains("Einsparung pro Konsole", shown.Content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ps1", shown.Content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("wii", shown.Content, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void PatchPipeline_WhenSourceSelectionCancelled_DoesNothing()
-    {
-        _sut.RegisterCommands();
-        _dialog.BrowseFileResult = null;
-
-        _vm.FeatureCommands["PatchPipeline"].Execute(null);
-
-        Assert.Empty(_dialog.ShowTextCalls);
     }
 
     // ═══ WINDOW HOST COMMANDS ═══════════════════════════════════════════
