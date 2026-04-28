@@ -1520,7 +1520,12 @@ public sealed partial class MainViewModel
         // includeSelections: false matches the materializer's effective-draft view —
         // workflow/profile selections only steer defaults; the resolved draft is what
         // determines run behavior. The fingerprint must reflect the resolved truth.
-        var draft = BuildCurrentRunConfigurationDraft(includeSelections: false);
+        //
+        // Mode is intentionally normalized: the Preview→Move gate exists precisely to
+        // allow DryRun→Move transitions when nothing else changed. Including Mode in
+        // the gate fingerprint would make the gate impossible to pass.
+        var draft = BuildCurrentRunConfigurationDraft(includeSelections: false)
+            with { Mode = Romulus.Contracts.RunConstants.ModeDryRun };
         return Services.RunConfigurationDraftFingerprint.Compute(draft);
     }
 

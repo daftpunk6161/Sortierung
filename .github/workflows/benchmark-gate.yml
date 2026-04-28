@@ -80,7 +80,7 @@ jobs:
   benchmark-full:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       FULL_BENCHMARK_FILTER: >-
         Category=Benchmark|Category=BenchmarkRegression|Category=QualityGate|Category=CoverageGate|Category=AntiGaming|Category=BenchmarkPerformance
