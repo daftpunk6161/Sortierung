@@ -127,4 +127,29 @@ public class ConsoleTierInvariantTests
         Assert.NotNull(fake);
         Assert.Equal("best-effort", fake!.Tier);
     }
+
+    /// <summary>
+    /// Regression pin: T-W1-CONSOLE-COVERAGE added the 'tier' field to data/consoles.json
+    /// but consoles.schema.json was not updated. StartupDataSchemaValidator (which runs on
+    /// every API/CLI/WPF startup) then rejects the file with $.consoles[0].tier is not allowed.
+    /// This test fails fast if the data file ever drifts away from its schema again.
+    /// </summary>
+    [Fact]
+    public void ConsolesJson_ConformsToSchema_IncludingTierField()
+    {
+        var consolesPath = LocateConsolesJson();
+        var schemaPath = Path.Combine(
+            Path.GetDirectoryName(consolesPath)!,
+            "schemas",
+            "consoles.schema.json");
+        Assert.True(File.Exists(schemaPath), $"schema not found at {schemaPath}");
+
+        // Use the same validator the application bootstraps with so the test's
+        // verdict matches production startup behavior.
+        var dataDir = Path.GetDirectoryName(consolesPath)!;
+        var ex = Record.Exception(() =>
+            Romulus.Infrastructure.Configuration.StartupDataSchemaValidator
+                .ValidateRequiredFiles(dataDir));
+        Assert.Null(ex);
+    }
 }

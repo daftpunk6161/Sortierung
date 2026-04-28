@@ -112,6 +112,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "tier": {
+            "type": "string",
+            "enum": ["core", "best-effort"],
+            "description": "Coverage tier introduced by T-W1-CONSOLE-COVERAGE (Strategic Reduction 2026, Wave 1). 'core' = Top-30 mainstream consoles with full validation; 'best-effort' = remaining consoles with reduced guarantees."
           }
         },
         "additionalProperties": false
