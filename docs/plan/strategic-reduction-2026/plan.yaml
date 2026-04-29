@@ -785,7 +785,7 @@ tasks:
     prototype: false
     covers: ["TOP-3"]
     priority: high
-    status: pending
+    status: done
     dependencies: ["T-W1-UI-REDUCTION", "T-W1-FEATURE-CULL"]
     conflicts_with: []
     context_files:
@@ -793,7 +793,7 @@ tasks:
         description: aktueller Stand
       - path: docs/product/competitive-analysis.md
         description: aktueller Stand
-    planning_pass: 1
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Erwartungsmanagement vor Beta-Nutzern.
@@ -819,6 +819,31 @@ tasks:
           - competitive-analysis
         requires_review: true
         review_depth: full
+      - pass: 2
+        reason: |
+          Acceptance gegen Marketing-Drift permanent abgesichert: 6 Pin-Tests in
+          Wave2ReadmeRefreshTests verbieten kuenftig (a) Erwaehnung der gecullten
+          Features (Frontend-Export/ScreenScraper/RetroAchievements/ROM-Patching/
+          MAME-Set-Building/In-Browser-Play/Plugin-Marketplace) ausserhalb des
+          expliziten "Was Romulus bewusst nicht macht"-Abschnitts, (b) Werbung fuer
+          Avalonia/zweite GUI, (c) Top-N-USPs Marketing-Listenstil, (d) Behauptung
+          "Romulus ist besser als X" / "kein anderes Tool" / "einziges". Persona,
+          sechs Hauptaktionen und drei USPs (Audit, Rollback, deterministisches
+          Cleanup) muessen explizit benannt sein.
+        timestamp: "2026-04-29"
+        verification:
+          - Wave2ReadmeRefreshTests (6 Pin-Tests gruen)
+          - Readme_DoesNotMentionCulledFeatures
+          - Readme_DoesNotAdvertiseSecondGui
+          - Readme_NamesPersonaAndSixActionsAndThreeUsps
+          - Readme_DoesNotUseMarketingTopNStyle
+          - CompetitiveAnalysis_DoesNotClaimSuperiority
+          - CompetitiveAnalysis_NamesComplementaryStanceAndCullList
+        acceptance_criteria:
+          - README beschreibt eine GUI, eine Persona, sechs Hauptaktionen, drei USPs
+          - competitive-analysis.md positioniert komplementaer ("anderes Problem")
+          - Cull-Features nur im expliziten Cull-Abschnitt erwaehnt
+          - Avalonia nur als archivierter Spike erwaehnt
 
   - id: T-W2-AUDIT-MORATORIUM-DECREE
     title: 30-Tage-Audit-Moratorium offiziell verkuenden
