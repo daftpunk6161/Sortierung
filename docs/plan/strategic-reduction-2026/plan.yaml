@@ -366,10 +366,8 @@ contracts:
     to_task: T-W5-CONVERSION-SAFETY-ADVISOR
     interface: AcceptDataLossToken in RunOptions + ConversionPolicy-Pre-Gate
     format: C#-Contract
-  - from_task: T-W3-BETA-USERS
-    to_task: T-W4-DISCOVERY-LOOP
-    interface: Liste mit min. 5 Beta-Nutzern + Interview-Leitfaden
-    format: docs/plan/strategic-reduction-2026/beta-cohort.md
+  # Edge T-W3-BETA-USERS -> T-W4-DISCOVERY-LOOP entfernt 2026-04-29 (Option G):
+  # beide Tasks sind wontfix-with-reason; reaktivieren falls beide auf pending.
   - from_task: T-W4-DECISION-EXPLAINER
     to_task: T-W7-PROVENANCE-TRAIL
     interface: DecisionExplainerProjection als Lieferant fuer Provenance-Begruendungen
@@ -1449,11 +1447,23 @@ tasks:
     prototype: false
     covers: ["TOP-2"]
     priority: high
-    status: pending
+    status: wontfix-with-reason
+    status_reason: |
+      Maintainer-Entscheidung 2026-04-29 (Option G der Re-Skopierung):
+      Kein realer Beta-Cohort verfuegbar (Single-Maintainer-Projekt ohne
+      etablierten Akquise-Kanal). Synchrone Real-User-Akquise wuerde den
+      Plan unbestimmt blockieren. Ersatz: T-W3-RUN-SMOKE-SYNTHETIC liefert
+      reproduzierbare End-to-End-Smoke-Skripte gegen benchmark/-Daten als
+      Pass/Fail-Gate. Reaktivierbar wenn ein realer Cohort verfuegbar ist;
+      beta-recruiting-playbook.md bleibt fuer diesen Fall bestehen.
+      Friction-Backlog (friction-backlog.md) wird durch Maintainer-Spot-
+      Checks und Issue-Reports gefuellt statt durch Beta-Cohort.
     dependencies: ["T-W1-UI-REDUCTION", "T-W2-README-REFRESH"]
     conflicts_with: []
-    context_files: []
-    planning_pass: 2
+    context_files:
+      - path: docs/plan/strategic-reduction-2026/beta-recruiting-playbook.md
+        description: Vorbereitungs-Playbook bleibt bestehen fuer kuenftige Reaktivierung
+    planning_pass: 3
     planning_history:
       - pass: 1
         reason: Echte Nutzer ersetzen Selbst-Audits.
@@ -1494,26 +1504,52 @@ tasks:
         acceptance_criteria:
           - Vorbereitung steht; tatsaechliche Akquise ist Maintainer-Pflicht
           - Status done erst nach 5 realen Cohort-Eintraegen (>=3 extern)
+      - pass: 3
+        reason: |
+          Re-Skopierung Option G (2026-04-29): Status flippt auf
+          wontfix-with-reason. Kein realer Beta-Cohort verfuegbar.
+          Ersatz-Task T-W3-RUN-SMOKE-SYNTHETIC liefert das Pass/Fail-Gate.
+          Phase-1-Gate-Kriterium 'Beta-Nutzer durchgelaufen' wird durch
+          'Synthetic-Smoke-Suite gruen' ersetzt (siehe T-W3-PHASE1-GATE
+          pass-3). Reaktivierungspfad: status zurueck auf pending, sobald
+          mindestens 3 externe Cohort-Eintraege im Playbook stehen.
+        timestamp: "2026-04-29"
+        verification:
+          - status_reason dokumentiert Maintainer-Entscheidung
+          - Ersatz-Task T-W3-RUN-SMOKE-SYNTHETIC existiert und ist verdrahtet
+          - Reaktivierungs-Bedingung explizit
+        acceptance_criteria:
+          - Plan dokumentiert wontfix-with-reason ehrlich, nicht als done getarnt
+          - Reaktivierung ist jederzeit moeglich ohne Plan-Strukturaenderung
 
-  - id: T-W3-RUN-SMOKE-WITH-USERS
-    title: Vollstaendiger Workflow-Smoke mit Beta-Nutzern
+  - id: T-W3-RUN-SMOKE-SYNTHETIC
+    title: Synthetische End-to-End-Smoke-Suite gegen benchmark/-Daten
     description: |
-      Jeder Beta-Nutzer fuehrt mindestens einen kompletten Workflow durch
-      (Add Library -> Scan -> Verify -> Plan -> Confirm -> Execute -> Report -> Rollback-Test)
-      auf seiner eigenen Maschine mit seiner eigenen Sammlung.
-      Strukturierte Beobachtung (Think-Aloud-Protokoll oder Screen-Recording mit
-      Einwilligung), Friktionspunkte dokumentieren mit Severity + Owner.
-      Kein Browser-Automation; echte Nutzer am echten WPF-Client.
+      Ersatz fuer T-W3-RUN-SMOKE-WITH-USERS (Option-G-Re-Skopierung 2026-04-29).
+      Drei reproduzierbare End-to-End-Smoke-Skripte gegen das vorhandene
+      benchmark/samples/-Ground-Truth-Set, ausfuehrbar in CI:
+        S-1 Top-Workflow: Scan -> Plan (DryRun) -> Move (mit Token) -> Report -> Rollback
+        S-2 ConvertOnly: Scan -> ConvertOnly (mit AcceptDataLoss-Token) -> Report
+        S-3 DAT-Audit: Scan -> Verify gegen benchmark/dats/ -> Report
+      Jede Smoke produziert deterministisches Pass/Fail anhand erwarteter
+      Plan-Items, erwarteter Audit-Sidecar-Eintraege und Report-Snapshots.
+      Kein Beta-Nutzer noetig; deckt aber genau die in T-W3-RUN-SMOKE-WITH-
+      USERS validation_matrix angefragten 8 Workflow-Schritte ab.
+      Friktionspunkte werden durch Maintainer-Spot-Checks (1x pro Welle) im
+      friction-backlog.md erfasst, nicht durch Beta-Cohort.
+      Implementiert als xUnit-Integration-Tests im Romulus.Tests-Projekt mit
+      [Trait("Category", "Smoke")] - laeuft ausserhalb des Standard-CI-Filters,
+      aber ist im VS Code Task 'tests: e2e' und im benchmark-gate enthalten.
     wave: 3
-    agent: gem-researcher
+    agent: gem-implementer
     prototype: false
     covers: ["TOP-2"]
     priority: high
     status: pending
-    dependencies: ["T-W3-BETA-USERS"]
+    dependencies: ["T-W1-UI-REDUCTION", "T-W2-README-REFRESH"]
     conflicts_with: []
     context_files: []
-    planning_pass: 2
+    planning_pass: 3
     planning_history:
       - pass: 1
         reason: Beweisbarkeit, dass der reduzierte Workflow tatsaechlich funktioniert.
@@ -1545,27 +1581,48 @@ tasks:
           Status BLEIBT pending - Wechsel auf done erst, wenn der runs-Block
           im Protokoll 5 reale Eintraege enthaelt. Coding-Agent kann
           reale Workflow-Smokes nicht ersetzen.
+      - pass: 3
+        reason: |
+          Re-Skopierung Option G (2026-04-29): Task umgewidmet auf synthetische
+          Smokes. Begruendung: T-W3-BETA-USERS auf wontfix-with-reason gesetzt,
+          weil kein Cohort verfuegbar ist; ohne Beta-User koennen reale Workflow-
+          Smokes nicht durchgefuehrt werden. Ersatz: drei xUnit-Integration-
+          Smoke-Tests gegen benchmark/samples/. Title, description, agent
+          (gem-researcher -> gem-implementer) und dependencies (BETA-USERS
+          entfernt) angepasst. beta-smoke-protocol.md bleibt als Dokumentation
+          fuer kuenftige Real-User-Smokes erhalten und kann bei Cohort-Reaktivierung
+          parallel zur Synthetic-Suite verwendet werden.
+          Done-Kriterium: alle 3 Smokes (S-1/S-2/S-3) gruen in CI; jede Smoke
+          deckt mindestens 6 der 8 ehemals manuellen Workflow-Schritte ab;
+          Snapshot-Artefakte unter benchmark/smokes/ checked-in.
         timestamp: "2026-04-29"
+        estimated_effort: medium
+        estimated_files: 4
+        estimated_lines: 350
+        focus_area: validation
         verification:
-          - docs/plan/strategic-reduction-2026/beta-smoke-protocol.md vorhanden
-          - 8-Schritte-Skript mit Beobachtungspunkten je Schritt
-          - Severity-Skala P1/P2/P3 mit Reaktions-Pflicht
-          - Beobachterregeln (no coaching, no live-fix) explizit
+          - 3 Smoke-Tests existieren und sind grueb in tests:e2e
+          - Snapshot-Vergleich pro Smoke deterministisch
+          - benchmark/smokes/ enthaelt erwartete Plan-/Report-/Audit-Snapshots
         acceptance_criteria:
-          - Vorbereitung steht; reale Smoke-Durchfuehrung ist Maintainer-Pflicht
-          - Status done erst nach 5 realen Run-Eintraegen mit Friktionsblock
-        validation_matrix:
-          - scenario: Voller Workflow Add-Library bis Rollback
-            steps:
-              - Library hinzufuegen
-              - Scan durchfuehren
-              - Verify durchfuehren
-              - Plan ansehen
-              - Bestaetigen mit Token
-              - Execute starten
-              - Report ansehen
-              - Rollback testen
-            expected_result: Nutzer schliesst alleine ab und kann den Audit-Eintrag finden
+          - Smokes sind reproduzierbar ausserhalb des Maintainer-Setups (CI gruen)
+          - Friktionsfaelle aus Smokes landen im friction-backlog.md
+        failure_modes:
+          - scenario: Synthetische Daten decken Beta-Edge-Cases nicht ab
+            likelihood: high
+            impact: medium
+            mitigation: explizit dokumentiert; Reaktivierungspfad fuer reale
+              Beta-Smokes bleibt offen; Maintainer fuegt eigene ROM-Edge-Cases
+              schrittweise zu benchmark/samples/ hinzu
+          - scenario: Smokes werden gruen geflickt statt Bugs zu finden
+            likelihood: medium
+            impact: high
+            mitigation: Snapshots werden bei jeder Aenderung manuell reviewt;
+              Snapshot-Update-Commits brauchen explizite Begruendung im Body
+        tech_stack:
+          - C# .NET 10
+          - xUnit
+        test_coverage: full
 
   - id: T-W3-PHASE1-GATE
     title: Phase-1-Gate-Review (Stop/Go)
@@ -1576,7 +1633,9 @@ tasks:
       - Konsolen tier-markiert?
       - i18n sauber?
       - README ehrlich?
-      - Beta-Nutzer durchgelaufen?
+      - Synthetic-Smoke-Suite gruen (T-W3-RUN-SMOKE-SYNTHETIC)?
+        (Ersatz fuer ehemaliges Kriterium 'Beta-Nutzer durchgelaufen' nach
+        Option-G-Re-Skopierung 2026-04-29; T-W3-BETA-USERS ist wontfix-with-reason)
       - Top-20-Coverage-CI gruen (T-W2-COVERAGE-GAP-CHECK)?
       - i18n/Command-Orphan-CI gruen (T-W2-I18N-ORPHAN-CI-TEST)?
       Bei Nein zu einem Punkt: Phase-1-Folge-Tasks reoeffnen, Welle 4 startet nicht.
@@ -1586,12 +1645,12 @@ tasks:
     covers: ["TOP-1", "TOP-3", "TOP-4", "TOP-5", "TOP-14"]
     priority: high
     status: pending
-    dependencies: ["T-W3-RUN-SMOKE-WITH-USERS", "T-W1-I18N-ORPHAN-SWEEP", "T-W2-README-REFRESH", "T-W2-AUDIT-MORATORIUM-DECREE", "T-W2-COVERAGE-GAP-CHECK", "T-W2-I18N-ORPHAN-CI-TEST"]
+    dependencies: ["T-W3-RUN-SMOKE-SYNTHETIC", "T-W1-I18N-ORPHAN-SWEEP", "T-W2-README-REFRESH", "T-W2-AUDIT-MORATORIUM-DECREE", "T-W2-COVERAGE-GAP-CHECK", "T-W2-I18N-ORPHAN-CI-TEST"]
     conflicts_with: []
     context_files:
       - path: docs/plan/strategic-reduction-2026/phase1-gate-report.md
         description: Erste Gate-Bewertung (Verdict BLOCKED, 6/8 PASS, 2/8 BLOCKED)
-    planning_pass: 2
+    planning_pass: 3
     planning_history:
       - pass: 1
         reason: Hartes Stop/Go-Gate vor Phase 2.
@@ -1623,6 +1682,10 @@ tasks:
           Vorbereitungs-Playbooks liegen, ausgefuellte Cohort-Tabelle und
           Beobachtungsboegen fehlen. Status der Gate-Task BLEIBT pending.
           Welle 4 darf NICHT starten.
+          ANMERKUNG NACH Re-Skopierung 2026-04-29 (siehe pass-3): Beide
+          Blocker-Kriterien wurden durch das neue T-W3-RUN-SMOKE-SYNTHETIC-
+          Kriterium ersetzt; T-W3-BETA-USERS auf wontfix-with-reason. Re-Eval
+          erfolgt durch pass-3-gem-critic-Runde sobald Smoke-Suite gruen ist.
         timestamp: "2026-04-29"
         estimated_effort: small
         estimated_files: 2
@@ -1645,6 +1708,38 @@ tasks:
         requires_review: true
         review_depth: full
         review_security_sensitive: false
+      - pass: 3
+        reason: |
+          Re-Skopierung Option G (2026-04-29): Gate-Kriterium 'Beta-Nutzer
+          durchgelaufen' ersetzt durch 'Synthetic-Smoke-Suite gruen'.
+          Verdict bleibt BLOCKED, da T-W3-RUN-SMOKE-SYNTHETIC noch pending
+          ist (Implementierung steht aus). Sobald die 3 Smokes gruen sind,
+          kann gem-critic eine pass-4-Re-Evaluation durchfuehren und das
+          Gate auf done flippen. Kein stiller Flip; Re-Eval ist explizit.
+          Welle 4 (TELEMETRY-OPT-IN, AUDIT-VIEWER-UI, DECISION-EXPLAINER)
+          startet erst nach pass-4. Welle 5 ist von T-W4-DISCOVERY-LOOP
+          entkoppelt (siehe dort).
+        timestamp: "2026-04-29"
+        estimated_effort: small
+        estimated_files: 1
+        estimated_lines: 50
+        focus_area: review
+        verification:
+          - description-Block enthaelt SYNTHETIC-Kriterium statt Beta-Kriterium
+          - dependencies enthalten T-W3-RUN-SMOKE-SYNTHETIC statt -WITH-USERS
+          - pass-4-Re-Eval-Pfad explizit dokumentiert
+        acceptance_criteria:
+          - Gate-Bedingungen entsprechen den real erreichbaren Belegen
+          - Verdict bleibt ehrlich BLOCKED bis Smoke-Suite gruen
+        failure_modes:
+          - scenario: Smoke-Suite wird durchgewunken ohne echte Coverage
+            likelihood: medium
+            impact: high
+            mitigation: gem-critic prueft pro Smoke die Snapshot-Aussagekraft
+              und nicht nur den Pass-Status
+        requires_review: true
+        review_depth: full
+        review_security_sensitive: false
 
   # ============================================================
   # WAVE 4 - Phase 2: Vertrauen & Transparenz (1)
@@ -1662,13 +1757,23 @@ tasks:
     prototype: false
     covers: ["TOP-2"]
     priority: high
-    status: pending
+    status: wontfix-with-reason
+    status_reason: |
+      Maintainer-Entscheidung 2026-04-29 (Option G der Re-Skopierung):
+      Discovery-Loop setzt einen Beta-Cohort voraus (woechentliche Interviews,
+      n>=5 fuer KPI-Aussagekraft). Da T-W3-BETA-USERS auf wontfix-with-reason
+      steht, kann der Loop nicht real laufen. Ersatz: Maintainer-Spot-Checks
+      gegen friction-backlog.md (1x pro Welle, ausgeloest durch reale
+      Issue-Reports oder Synthetic-Smoke-Findings). Discovery-Playbook bleibt
+      bestehen fuer kuenftige Cohort-Reaktivierung.
+      Reaktivierungspfad: Sobald T-W3-BETA-USERS reaktiviert wird (>=3 externe
+      Eintraege), kann diese Task auf pending zurueckflippen.
     dependencies: ["T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
       - path: docs/plan/strategic-reduction-2026/discovery-loop-playbook.md
         description: Outcome-KPI-Definitionen, Wochenrhythmus, Tracker-Schema, Annahme-Kriterium
-    planning_pass: 2
+    planning_pass: 3
     planning_history:
       - pass: 1
         reason: Outcome-KPIs ersetzen Output-KPIs (Critic-Review-Befund warning #6).
@@ -1720,6 +1825,25 @@ tasks:
             impact: high
             mitigation: Schwellen sind im Playbook fixiert; Senkung erfordert
               expliziten pass-3-Eintrag mit Begruendung
+      - pass: 3
+        reason: |
+          Re-Skopierung Option G (2026-04-29): Status flippt auf
+          wontfix-with-reason. Discovery-Loop ist ohne Beta-Cohort nicht
+          ehrlich durchfuehrbar (siehe T-W3-BETA-USERS pass-3). Ersatz:
+          Maintainer-Spot-Checks gegen friction-backlog.md.
+          Konsequenz fuer Welle 5: Tasks T-W5-BEFORE-AFTER-SIMULATOR,
+          T-W5-CONVERSION-SAFETY-ADVISOR, T-W5-MULTI-DAT-PREP, T-W5-REPORT-
+          UNIFICATION werden von dieser Dependency entkoppelt (jeweils
+          dependencies aktualisiert) und haengen stattdessen direkt am
+          T-W3-PHASE1-GATE pass-4-Done-Flip.
+        timestamp: "2026-04-29"
+        verification:
+          - status_reason dokumentiert Maintainer-Entscheidung
+          - W5-Tasks haben T-W4-DISCOVERY-LOOP nicht mehr als dependency
+          - discovery-loop-playbook.md bleibt fuer Reaktivierung erhalten
+        acceptance_criteria:
+          - Plan dokumentiert wontfix-with-reason ehrlich
+          - W5-Bloecke sind nicht mehr durch diese Task gebloeckt
 
   - id: T-W4-TELEMETRY-OPT-IN
     title: Opt-in Telemetrie-Hook (anonym, DSGVO-konform)
@@ -1935,7 +2059,7 @@ tasks:
     covers: ["TOP-11"]
     priority: high
     status: pending
-    dependencies: ["T-W4-DISCOVERY-LOOP"]
+    dependencies: ["T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
       - path: src/Romulus.Infrastructure/Orchestration/PhasePlanning.cs
@@ -1977,7 +2101,7 @@ tasks:
     covers: ["TOP-10"]
     priority: high
     status: pending
-    dependencies: ["T-W2-CONVERSION-SAFETY-CONTRACT", "T-W4-DISCOVERY-LOOP"]
+    dependencies: ["T-W2-CONVERSION-SAFETY-CONTRACT", "T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
       - path: src/Romulus.Infrastructure/Conversion/
@@ -2022,7 +2146,7 @@ tasks:
     covers: ["TOP-18"]
     priority: medium
     status: pending
-    dependencies: ["T-W2-DAT-FIRST-ADR", "T-W4-DISCOVERY-LOOP"]
+    dependencies: ["T-W2-DAT-FIRST-ADR", "T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
       - path: src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs
@@ -2062,7 +2186,7 @@ tasks:
     covers: ["TOP-15"]
     priority: high
     status: pending
-    dependencies: ["T-W4-DISCOVERY-LOOP"]
+    dependencies: ["T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
       - path: src/Romulus.UI.Wpf/Services/IResultExportService.cs
