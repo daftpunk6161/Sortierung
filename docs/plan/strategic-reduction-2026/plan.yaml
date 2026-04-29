@@ -403,7 +403,7 @@ tasks:
     prototype: false
     covers: ["TOP-1"]
     priority: high
-    status: pending
+    status: done
     dependencies: []
     conflicts_with: []
     context_files:
@@ -458,7 +458,7 @@ tasks:
     prototype: false
     covers: ["TOP-1"]
     priority: high
-    status: pending
+    status: done
     dependencies: ["T-W1-AV-WPF-ADR"]
     conflicts_with: ["T-W1-UI-REDUCTION"]
     context_files:
@@ -510,7 +510,7 @@ tasks:
     prototype: false
     covers: ["TOP-5"]
     priority: high
-    status: pending
+    status: done
     dependencies: []
     conflicts_with: []
     context_files:

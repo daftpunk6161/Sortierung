@@ -652,10 +652,19 @@ public sealed partial class MainViewModel
                 return;
 
             var advisor = FeatureService.GetConversionAdvisor(analysis.Candidates);
-            var topConsoles = analysis.ConsoleCounts
-                .OrderByDescending(static kv => kv.Value)
-                .ThenBy(static kv => kv.Key, StringComparer.OrdinalIgnoreCase)
-                .Take(5)
+
+            // T-W1-CONSOLE-COVERAGE: Default-Filter zeigt nur core-Konsolen,
+            // mit Fallback auf alle Detections falls keine core-Konsole erkannt
+            // wurde. Single-Source-Lookup ueber ConsoleDetector.FilterTopByTier.
+            var (coreCounts, fellBackToBestEffort) = detector is not null
+                ? ConsoleDetector.FilterTopByTier(analysis.ConsoleCounts, detector, tier: "core", take: 5)
+                : (analysis.ConsoleCounts
+                    .OrderByDescending(static kv => kv.Value)
+                    .ThenBy(static kv => kv.Key, StringComparer.Ordinal)
+                    .Take(5)
+                    .ToList(), true);
+
+            var topConsoles = coreCounts
                 .Select(static kv => $"{kv.Key} ({kv.Value})")
                 .ToArray();
 
@@ -678,6 +687,12 @@ public sealed partial class MainViewModel
 
             WizardRecommendationSummary =
                 $"Empfohlen: {(workflow?.Name ?? recommendedWorkflowId)} | Top-Systeme: {(topConsoles.Length > 0 ? string.Join(", ", topConsoles) : "keine")}";
+
+            if (fellBackToBestEffort && topConsoles.Length > 0)
+            {
+                WizardRecommendationSummary +=
+                    " | Hinweis: nur Best-Effort-Konsolen erkannt (Tier=core nicht gefunden).";
+            }
 
             if (analysis.CandidateLimitReached)
             {

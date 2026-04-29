@@ -647,6 +647,51 @@ public sealed class ConsoleDetector
     /// </summary>
     public IReadOnlyCollection<string> AllConsoleKeys => _consoles.Keys;
 
+    /// <summary>
+    /// Filters and orders detected console counts by the configured
+    /// <c>tier</c> (Single Source of Truth: <c>data/consoles.json</c>) for the
+    /// Onboarding-Wizard / Default-Filter (Wave 1 — T-W1-CONSOLE-COVERAGE).
+    /// </summary>
+    /// <remarks>
+    /// Returns up to <paramref name="take"/> entries whose console
+    /// has <c>Tier == tier</c>, ordered by count descending (with deterministic
+    /// ordinal tie-breaker). When no detection matches the requested tier the
+    /// method falls back to returning the top entries from <em>all</em>
+    /// detections so the wizard never shows an empty list when the user's
+    /// library contains only best-effort consoles. The boolean
+    /// <c>fellBack</c> in the result reports whether the fallback was used.
+    /// </remarks>
+    public static (IReadOnlyList<KeyValuePair<string, int>> Filtered, bool FellBack) FilterTopByTier(
+        IReadOnlyDictionary<string, int> consoleCounts,
+        ConsoleDetector detector,
+        string tier,
+        int take)
+    {
+        if (consoleCounts is null) throw new ArgumentNullException(nameof(consoleCounts));
+        if (detector is null) throw new ArgumentNullException(nameof(detector));
+        if (string.IsNullOrWhiteSpace(tier)) throw new ArgumentException("tier must not be empty", nameof(tier));
+
+        static IReadOnlyList<KeyValuePair<string, int>> OrderAndTake(
+            IEnumerable<KeyValuePair<string, int>> source, int t) =>
+            source
+                .OrderByDescending(kv => kv.Value)
+                .ThenBy(kv => kv.Key, StringComparer.Ordinal)
+                .Take(t)
+                .ToList();
+
+        var matched = consoleCounts.Where(kv =>
+        {
+            var info = detector.GetConsole(kv.Key);
+            return info is not null
+                   && string.Equals(info.Tier, tier, StringComparison.OrdinalIgnoreCase);
+        }).ToList();
+
+        if (matched.Count > 0)
+            return (OrderAndTake(matched, take), FellBack: false);
+
+        return (OrderAndTake(consoleCounts, take), FellBack: true);
+    }
+
     private static string GetRelativePath(string fullPath, string rootPath)
     {
         try
