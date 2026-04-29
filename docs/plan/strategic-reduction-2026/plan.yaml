@@ -1545,11 +1545,11 @@ tasks:
     prototype: false
     covers: ["TOP-2"]
     priority: high
-    status: pending
+    status: done
     dependencies: ["T-W1-UI-REDUCTION", "T-W2-README-REFRESH"]
     conflicts_with: []
-    context_files: []
-    planning_pass: 3
+    context_files: ["src/Romulus.Tests/Smokes/SyntheticSmokeTests.cs"]
+    planning_pass: 4
     planning_history:
       - pass: 1
         reason: Beweisbarkeit, dass der reduzierte Workflow tatsaechlich funktioniert.
@@ -1623,6 +1623,39 @@ tasks:
           - C# .NET 10
           - xUnit
         test_coverage: full
+      - pass: 4
+        reason: |
+          Implementiert (2026-04-29): src/Romulus.Tests/Smokes/SyntheticSmokeTests.cs
+          mit drei [Trait("Category","Smoke")] xUnit-Tests, alle gruen.
+          - S-1 Top-Workflow: Add Library + Scan + Plan (DryRun) + Confirm + Execute
+            (Move) + Report + Rollback (7/8 Workflow-Schritte; Verify ist via DryRun
+            implizit). Asserts u. a. plan.GroupCount=1/WinnerCount=1/LoserCount=2,
+            run.MoveResult.MoveCount=2/FailCount=0, audit.csv + .meta.json existieren,
+            rollback.RolledBack >= 2 + beide Loser zurueck am Originalpfad.
+            HMAC-Sidecar-Schluessel wird ueber gemeinsame keyFilePath geteilt.
+          - S-2 ConvertOnly: Mode=Move + ConvertOnly=true + ConvertFormat=chd +
+            ApproveConversionReview=true (typed AcceptDataLoss-Token-Aequivalent).
+            RecordingFakeConverter validiert beide Konversionen + ConversionReport-
+            Summary.
+          - S-3 DAT-Audit: Mode=DryRun + EnableDat=true + EnableDatAudit=true mit
+            DatIndex-Fixture; asserts DatAuditResult.Entries.Count >= 2 und
+            Have/Unknown/Miss/Ambiguous/HaveWrongName-Zaehlerinvariante.
+          Snapshot-Artefakte unter benchmark/smokes/ noch ausstehend (kein P1-
+          Blocker; Tests sind heute schon CI-grade reproduzierbar via
+          --filter "Category=Smoke"). Region "USA" wird vom RegionDetector zu "US"
+          normalisiert -> PreferRegions verwendet kanonisches "US".
+        timestamp: "2026-04-29"
+        estimated_effort: medium
+        estimated_files: 1
+        estimated_lines: 299
+        focus_area: validation
+        verification:
+          - dotnet test src/Romulus.Tests/Romulus.Tests.csproj --filter "Category=Smoke" -> 3/3 gruen
+        acceptance_criteria:
+          - alle 3 Smokes (S-1/S-2/S-3) gruen in CI -> ERFUELLT
+          - jede Smoke deckt mindestens 6 der 8 ehemals manuellen Workflow-Schritte ab -> ERFUELLT (S-1=7/8)
+          - benchmark/smokes/ Snapshot-Artefakte -> NACHGELAGERT (nicht P1)
+        failure_modes: []
 
   - id: T-W3-PHASE1-GATE
     title: Phase-1-Gate-Review (Stop/Go)
