@@ -2176,7 +2176,7 @@ tasks:
     prototype: false
     covers: ["TOP-10"]
     priority: high
-    status: pending
+    status: in_progress
     dependencies: ["T-W2-CONVERSION-SAFETY-CONTRACT", "T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
@@ -2184,7 +2184,7 @@ tasks:
         description: ConversionPolicy/Planner
       - path: src/Romulus.UI.Wpf/Views/
         description: Confirm-Dialog
-    planning_pass: 1
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Datenverlust hart eindaemmen + sichtbar machen.
@@ -2203,6 +2203,50 @@ tasks:
             likelihood: medium
             impact: critical
             mitigation: Pre-Gate in ConversionPolicy schlaegt unabhaengig zu
+        tech_stack:
+          - C# .NET 10
+          - WPF/XAML
+        review_security_sensitive: true
+        requires_review: true
+        review_depth: full
+      - pass: 2
+        reason: |
+          Pass 1 (production gate enforcement): wires the existing Wave 2
+          ConversionLossyTokenPolicy into the running pipeline. Closes the gap
+          where ValidateAcceptDataLossToken was defined but never invoked.
+          - ConversionLossyBatchGate (Infrastructure/Conversion): single
+            chokepoint that delegates to ConversionLossyTokenPolicy +
+            CollectLossyFromResults / CollectLossyFromPlans projections.
+          - ConversionPhaseHelper.ExecuteBatch: pre-flight gate when
+            Mode != DryRun and converter is FormatConverterAdapter; throws
+            InvalidOperationException before any tool runs when the planned
+            lossy items lack a matching AcceptDataLossToken. DryRun parity
+            preserved (no execution, only PendingLossyToken surfacing).
+          - RunOrchestrator.ApplyConversionReport: populates
+            RunResult.PendingLossyToken from lossy ConversionResults, so an
+            execute pass can echo it via RunOptions.AcceptDataLossToken.
+          - Surface plumbing across CLI ('--accept-data-loss <token>' on Run,
+            Convert, Watch), RunRequest.AcceptDataLossToken, RunRecord field
+            (with [JsonIgnore]), RunConfigurationDraft + Explicitness,
+            IRunOptionsSource + EffectiveRunOptionsSource +
+            RunRecordOptionsSource, ApiRunConfigurationMapper draft +
+            presence + canonical + RunRequestPropertyPresence record,
+            ApiAutomationService.CloneRequest, RunLifecycleManager fingerprint
+            payload. Token deliberately NOT exposed via RunStatusDto
+            (sensitive). RunResultBuilder.PendingLossyToken added with Build()
+            propagation.
+          Pass 2 will add the GUI confirm-dialog with typed token entry
+          (mirroring the ConvertOnly DangerConfirm pattern) and i18n keys.
+        timestamp: "2026-04-28"
+        estimated_effort: low
+        estimated_files: 1
+        estimated_lines: 80
+        focus_area: gui
+        verification:
+          - Token-Dialog blockiert Apply ohne korrekt eingegebenen Token
+          - Lossy-Items in Preview rot markiert
+        acceptance_criteria:
+          - GUI requires typed token before lossy execute
         tech_stack:
           - C# .NET 10
           - WPF/XAML
