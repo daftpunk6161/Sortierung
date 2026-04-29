@@ -2265,13 +2265,13 @@ tasks:
     prototype: false
     covers: ["TOP-18"]
     priority: medium
-    status: pending
+    status: completed
     dependencies: ["T-W2-DAT-FIRST-ADR", "T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
       - path: src/Romulus.Infrastructure/Dat/DatRepositoryAdapter.cs
         description: API-Aenderung
-    planning_pass: 1
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Vorbereitung ohne Verhaltensaenderung.
@@ -2290,6 +2290,48 @@ tasks:
             likelihood: medium
             impact: high
             mitigation: Helper bleibt 1:1
+        tech_stack:
+          - C# .NET 10
+        test_coverage: regression-only
+      - pass: 2
+        reason: |
+          Implementation landed. Strict prep-only step (no consumer changes,
+          no behavior change). Surface added so the Phase 3
+          MultiDatConflictResolver can plug in without re-touching every call
+          site:
+          - DatMatch (Romulus.Contracts.Models): canonical record with
+            ConsoleKey, GameName, RomFileName, IsBios, ParentGameName,
+            HashType.
+          - DatRepositoryAdapter.LookupByHash(DatIndex, hash) and overload
+            (DatIndex, hashType, hash): IReadOnlyList<DatMatch> in
+            deterministic console-key order, internally projecting
+            DatIndex.LookupAllByHash. Defensive null/whitespace guards return
+            Array.Empty<DatMatch>.
+          - DatMatchSelector.SelectSingle (Romulus.Infrastructure.Dat):
+            legacy single-match helper picking the deterministic first
+            element; mirrors existing DatIndex.LookupAny semantics for
+            callers that intentionally collapse ambiguous matches.
+          No existing DatIndex / DatRepositoryAdapter member touched. No
+          consumer (RunOrchestrator, EnrichmentPipelinePhase, Reporting,
+          GUI, CLI, API) modified. 13 new pin tests in MultiDatPrepTests
+          (canonical property drift guard, single/multi/empty/typed/null
+          matrices, IsBios+Parent propagation, helper determinism). Targeted
+          regression batch (DatIndex + DatRepository + DatNameMatch +
+          DatAuditPhase + Enrichment + Wave6Data + new pins): 190/190 green.
+        timestamp: "2026-04-29"
+        estimated_effort: low
+        estimated_files: 3
+        estimated_lines: 308
+        focus_area: refactor
+        verification:
+          - 13 neue MultiDatPrepTests gruen
+          - 190/190 DAT-Regression-Batch gruen
+          - keine bestehenden Konsumenten geaendert
+        acceptance_criteria:
+          - Default-Verhalten unveraendert (DatIndex.LookupAny / .Lookup
+            stable)
+          - neue LookupByHash gibt deterministisch sortierte Liste
+          - DatMatchSelector.SelectSingle bewahrt Single-Match-Semantik
         tech_stack:
           - C# .NET 10
         test_coverage: regression-only
