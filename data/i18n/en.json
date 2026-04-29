@@ -997,6 +997,11 @@
   "Dialog.MoveReviewGate.ReviewTitle": "Move despite review items?",
   "Dialog.MoveReviewGate.ReviewMessage": "The last run flagged {0} item(s) for review. These should be inspected before a real move. Continue anyway?",
 
+  "Dialog.LossyConvert.ConfirmTitle": "Confirm lossy conversion",
+  "Dialog.LossyConvert.ConfirmMessage": "The planned run includes conversions that irreversibly modify original data (e.g. CHD CD streams).\n\nType the exact token from the preview report:\n\n{0}",
+  "Dialog.LossyConvert.ConfirmButton": "Accept data loss",
+  "Log.LossyConvertCancelled": "Run aborted: data-loss token not confirmed.",
+
   "Log.MoveReviewGate.Cancelled": "Move cancelled: review gate not confirmed.",
 
   "Log.ConversionCancelled": "Conversion cancelled: ManualOnly/Risky review not confirmed.",

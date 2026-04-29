@@ -92,6 +92,7 @@ public sealed class WpfFingerprintAndI18nTests
         var props = typeof(RunConfigurationDraft)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanRead && p.CanWrite)
+            .Where(p => !FingerprintExcludedProperties.Contains(p.Name)) // see below
             .ToArray();
 
         Assert.NotEmpty(props);
@@ -106,6 +107,35 @@ public sealed class WpfFingerprintAndI18nTests
                 "Add the property to RunConfigurationDraftFingerprint.Compute's canonical projection.");
         }
     }
+
+    /// <summary>
+    /// T-W5-CONVERSION-SAFETY-ADVISOR pass 2: <see cref="RunConfigurationDraft.AcceptDataLossToken"/>
+    /// is an authorization, NOT a configuration property. Including it in the fingerprint
+    /// would make the Preview→Move gate self-locking (Preview produces no token, Execute
+    /// adds the token, fingerprints differ → gate refuses to unlock). Pin that the
+    /// fingerprint stays stable across token mutation.
+    /// </summary>
+    [Fact]
+    public void Compute_AcceptDataLossToken_ExcludedFromHash()
+    {
+        var baseFp = RunConfigurationDraftFingerprint.Compute(NewDraft());
+        var withToken = NewDraft() with { AcceptDataLossToken = "lossy-tok-XYZ" };
+        var withDifferentToken = NewDraft() with { AcceptDataLossToken = "different-token" };
+
+        Assert.Equal(baseFp, RunConfigurationDraftFingerprint.Compute(withToken));
+        Assert.Equal(baseFp, RunConfigurationDraftFingerprint.Compute(withDifferentToken));
+    }
+
+    /// <summary>
+    /// Properties intentionally excluded from the fingerprint. Each entry must
+    /// have a documented reason and a corresponding pin test (see e.g.
+    /// <see cref="Compute_AcceptDataLossToken_ExcludedFromHash"/>).
+    /// </summary>
+    private static readonly HashSet<string> FingerprintExcludedProperties = new(StringComparer.Ordinal)
+    {
+        // Authorization, not configuration. See Compute_AcceptDataLossToken_ExcludedFromHash.
+        nameof(RunConfigurationDraft.AcceptDataLossToken),
+    };
 
     private static RunConfigurationDraft MutateProperty(RunConfigurationDraft d, PropertyInfo p)
     {

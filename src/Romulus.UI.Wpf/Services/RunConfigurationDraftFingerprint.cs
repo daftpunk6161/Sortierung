@@ -41,6 +41,15 @@ internal static class RunConfigurationDraftFingerprint
         // Canonical projection: collections normalized to ordered, lower-cased lists
         // so semantically equivalent drafts (e.g. region order tie-breaker) produce
         // the same fingerprint without losing genuine differences.
+        //
+        // EXCLUSIONS (must stay synchronized with WpfFingerprintAndI18nTests
+        // .FingerprintExcludedProperties):
+        //   - AcceptDataLossToken: T-W5-CONVERSION-SAFETY-ADVISOR pass 2.
+        //     Authorization for a lossy plan, not a configuration property.
+        //     Including it would make the Preview→Move gate self-locking
+        //     (preview produces no token, execute adds the token, fingerprints
+        //     diverge → gate refuses to unlock the very flow that produced the
+        //     token). Pinned by Compute_AcceptDataLossToken_ExcludedFromHash.
         var canonical = new
         {
             draft.Roots, // Roots are order-significant in normalization (RunOptionsBuilder); keep as-is.
@@ -65,6 +74,7 @@ internal static class RunConfigurationDraftFingerprint
             draft.ApproveConversionReview,
             draft.ConflictPolicy,
             draft.TrashRoot
+            // AcceptDataLossToken intentionally omitted (see EXCLUSIONS above).
         };
 
         var json = JsonSerializer.Serialize(canonical, SerializerOptions);

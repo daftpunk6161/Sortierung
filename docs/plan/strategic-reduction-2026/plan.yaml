@@ -2176,7 +2176,7 @@ tasks:
     prototype: false
     covers: ["TOP-10"]
     priority: high
-    status: in_progress
+    status: completed
     dependencies: ["T-W2-CONVERSION-SAFETY-CONTRACT", "T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
@@ -2184,7 +2184,7 @@ tasks:
         description: ConversionPolicy/Planner
       - path: src/Romulus.UI.Wpf/Views/
         description: Confirm-Dialog
-    planning_pass: 2
+    planning_pass: 3
     planning_history:
       - pass: 1
         reason: Datenverlust hart eindaemmen + sichtbar machen.
@@ -2247,6 +2247,80 @@ tasks:
           - Lossy-Items in Preview rot markiert
         acceptance_criteria:
           - GUI requires typed token before lossy execute
+        tech_stack:
+          - C# .NET 10
+          - WPF/XAML
+        review_security_sensitive: true
+        requires_review: true
+        review_depth: full
+      - pass: 3
+        reason: |
+          Pass 3 (GUI lossy-token DangerConfirm gate): closes the deferred
+          GUI-side enforcement from pass 2.
+          - New ConversionLossyGuiGate static helper
+            (src/Romulus.UI.Wpf/Services/ConversionLossyGuiGate.cs):
+            single-source-of-truth for the lossy DangerConfirm flow.
+            Returns null (no PendingLossyToken => no gate), the typed token
+            (user accepted), or string.Empty (declined sentinel). Calls
+            IDialogService.DangerConfirm with the token itself as the
+            confirmText (NOT a constant like "MOVE"/"CONVERT"), so the user
+            must reproduce the report-side token verbatim. Logs
+            Log.LossyConvertCancelled on decline.
+          - MainViewModel wiring: StartMoveCommand and OnConvertOnlyRequested
+            now invoke ConversionLossyGuiGate.Evaluate after their existing
+            confirm flows (MoveReviewGate / ConvertOnly DangerConfirm). On
+            decline they abort silently. On accept they store the token in
+            new internal field _acceptedLossyDataLossToken (exposed as
+            internal AcceptedLossyDataLossToken for test pinning).
+          - BuildCurrentRunConfigurationDraft propagates the field via
+            RunConfigurationDraft.AcceptDataLossToken so the pipeline-side
+            ConversionLossyBatchGate (pass 2) can authorize the lossy plan.
+          - Token lifecycle: cleared on every terminal RunState transition
+            (Completed, CompletedDryRun, Failed, Cancelled, Idle) inside
+            OnRunPropertyChanged - NOT in ResetDashboardForNewRun, because
+            ResetDashboardForNewRun runs synchronously inside OnRun before
+            BuildCurrentRunConfigurationDraft consumes the token. This means
+            a stale acceptance never leaks into a later run, and a fresh
+            preview cycle re-asks the user.
+          - Fingerprint exclusion: AcceptDataLossToken is intentionally
+            EXCLUDED from RunConfigurationDraftFingerprint.Compute's canonical
+            projection. It is authorization, not configuration. Including it
+            would self-lock the Preview->Move gate (preview produces no
+            token, execute adds the token, fingerprints diverge). Documented
+            in EXCLUSIONS comment block. Drift-guard test
+            Compute_EveryDraftPropertyChangesFingerprint relaxed via new
+            FingerprintExcludedProperties HashSet; new pin
+            Compute_AcceptDataLossToken_ExcludedFromHash asserts the
+            exclusion stays in place.
+          - i18n keys (Dialog.LossyConvert.ConfirmTitle/Message/Button +
+            Log.LossyConvertCancelled) added to de.json/en.json/fr.json. The
+            ConfirmMessage carries a {0} placeholder for the token value.
+          - StubDialogService extended with DangerConfirmResponses queue and
+            DangerConfirmInvocations payload list so tests can sequence
+            multiple DangerConfirms (ConvertOnly + Lossy) and assert the
+            exact confirmText passed to each.
+          Tests added (15 green): 12 ConversionLossyGuiGateTests covering
+          helper edge cases (null result, empty token, accepted token,
+          declined sentinel, confirmText payload, message contains token,
+          null arg validation) plus MainViewModel integration tests
+          (chained DangerConfirms, decline aborts, no extra dialog when
+          PendingLossyToken absent, draft propagation via reflection).
+          Plus 1 fingerprint exclusion pin (Compute_AcceptDataLossToken_
+          ExcludedFromHash) plus 1 relaxed drift-guard
+          (Compute_EveryDraftPropertyChangesFingerprint).
+        timestamp: "2026-04-28"
+        estimated_effort: low
+        estimated_files: 9
+        estimated_lines: 350
+        focus_area: gui
+        verification:
+          - dotnet build src/Romulus.sln -> 0 Fehler
+          - dotnet test --filter "FullyQualifiedName~ConversionLossyGuiGate|FullyQualifiedName~Compute_AcceptDataLossToken|FullyQualifiedName~Compute_EveryDraftPropertyChangesFingerprint" -> 15/15
+        acceptance_criteria:
+          - GUI requires typed token before lossy execute -> ERFUELLT
+          - Token leaks blocked across runs (terminal-state cleanup) -> ERFUELLT
+          - Fingerprint stays stable so Preview->Move gate doesn't self-lock -> ERFUELLT
+        failure_modes: []
         tech_stack:
           - C# .NET 10
           - WPF/XAML

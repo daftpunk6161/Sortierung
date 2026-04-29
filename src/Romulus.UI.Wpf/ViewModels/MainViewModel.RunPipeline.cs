@@ -248,6 +248,19 @@ public sealed partial class MainViewModel
             if (Run.CurrentRunState == RunState.Preflight)
                 ResetDashboardForNewRun();
 
+            // T-W5-CONVERSION-SAFETY-ADVISOR pass 2: clear the lossy-token
+            // acceptance once the executing run terminates so the next preview→move
+            // cycle re-asks the user. Cleared on every terminal state including
+            // CompletedDryRun (a fresh dry run invalidates the previous acceptance).
+            if (Run.CurrentRunState is RunState.Completed
+                or RunState.CompletedDryRun
+                or RunState.Failed
+                or RunState.Cancelled
+                or RunState.Idle)
+            {
+                _acceptedLossyDataLossToken = null;
+            }
+
             OnPropertyChanged(nameof(RunStateDisplayText));
             OnPropertyChanged(nameof(ShowStartMoveButton));
             OnPropertyChanged(nameof(ShowActionBarMoveButton));
@@ -1505,6 +1518,14 @@ public sealed partial class MainViewModel
         LastRunResult = null;
         LastCandidates = [];
         LastDedupeGroups = [];
+        // T-W5-CONVERSION-SAFETY-ADVISOR pass 2: token is intentionally NOT cleared
+        // here. ResetDashboardForNewRun also runs synchronously inside OnRun and on
+        // every Preflight transition, including the very run that needs to consume
+        // the token via RunConfigurationDraft.AcceptDataLossToken. The token is
+        // cleared on terminal state transitions instead (see OnRunPropertyChanged
+        // below). A new preview cycle re-evaluates ConversionLossyGuiGate against the
+        // new RunResult.PendingLossyToken, so a stale acceptance cannot leak across
+        // runs.
         ErrorSummaryItems.Clear();
         ConsoleDistribution.Clear();
         DedupeGroupItems.Clear();

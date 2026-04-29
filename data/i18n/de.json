@@ -998,6 +998,11 @@
   "Dialog.MoveReviewGate.ReviewTitle": "Move trotz Review-Items?",
   "Dialog.MoveReviewGate.ReviewMessage": "Im letzten Lauf wurden {0} Item(s) zur Review markiert. Diese sollten vor einem realen Move geprüft werden. Trotzdem fortfahren?",
 
+  "Dialog.LossyConvert.ConfirmTitle": "Verlustbehaftete Konvertierung bestätigen",
+  "Dialog.LossyConvert.ConfirmMessage": "Der geplante Lauf enthält Konvertierungen, die Originaldaten unwiederbringlich verändern (z. B. CHD-CD-Streams).\n\nTippe den genauen Token aus dem Preview-Report:\n\n{0}",
+  "Dialog.LossyConvert.ConfirmButton": "Datenverlust akzeptieren",
+  "Log.LossyConvertCancelled": "Lauf abgebrochen: Datenverlust-Token nicht bestätigt.",
+
   "Log.ConversionCancelled": "Konvertierung abgebrochen: ManualOnly/Risky-Review nicht bestätigt.",
   "Log.ConvertOnlyCancelled": "Konvertierung abgebrochen: Bestätigung nicht erteilt.",
   "Log.MoveReviewGate.Cancelled": "Move abgebrochen: Review-Gate nicht bestätigt.",

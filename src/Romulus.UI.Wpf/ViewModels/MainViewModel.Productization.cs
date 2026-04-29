@@ -230,7 +230,13 @@ public sealed partial class MainViewModel
             ApproveReviews = ApproveReviews,
             ApproveConversionReview = ApproveConversionReview,
             ConflictPolicy = ConflictPolicy.ToString(),
-            TrashRoot = string.IsNullOrWhiteSpace(TrashRoot) ? null : TrashRoot
+            TrashRoot = string.IsNullOrWhiteSpace(TrashRoot) ? null : TrashRoot,
+            // T-W5-CONVERSION-SAFETY-ADVISOR pass 2: token captured by the
+            // ConversionLossyGuiGate; null when no lossy plan was authorized.
+            // EXCLUDED from RunConfigurationDraftFingerprint by design — this is
+            // an authorization, not a configuration property (the Preview→Move
+            // gate would otherwise lock itself out the moment the token appears).
+            AcceptDataLossToken = _acceptedLossyDataLossToken
         };
     }
 

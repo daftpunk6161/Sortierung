@@ -945,6 +945,11 @@
   "Dialog.MoveReviewGate.ReviewTitle": "Déplacer malgré les éléments à revoir ?",
   "Dialog.MoveReviewGate.ReviewMessage": "Le dernier run a marqué {0} élément(s) pour revue. Ils devraient être inspectés avant un déplacement réel. Continuer quand même ?",
 
+  "Dialog.LossyConvert.ConfirmTitle": "Confirmer la conversion avec perte",
+  "Dialog.LossyConvert.ConfirmMessage": "Le run prévu inclut des conversions qui modifient irréversiblement les données originales (par ex. flux CHD CD).\n\nSaisissez le jeton exact du rapport de prévisualisation :\n\n{0}",
+  "Dialog.LossyConvert.ConfirmButton": "Accepter la perte de données",
+  "Log.LossyConvertCancelled": "Run interrompu : jeton de perte de données non confirmé.",
+
   "Log.MoveReviewGate.Cancelled": "Déplacement annulé : porte de revue non confirmée.",
   "Log.ConversionCancelled": "Conversion cancelled: ManualOnly/Risky review not confirmed.",
   "Log.ConvertOnlyCancelled": "Conversion cancelled: confirmation not granted.",

@@ -48,6 +48,19 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     private static readonly TimeSpan InlineMoveConfirmDebounceDelay = TimeSpan.FromMilliseconds(1500);
     private DateTime _inlineMoveUnlockAtUtc = DateTime.MinValue;
     private int _inlineMoveConfirmDebounceToken;
+
+    /// <summary>
+    /// T-W5-CONVERSION-SAFETY-ADVISOR pass 2: token typed by the user in the
+    /// lossy DangerConfirm gate. Propagated into the next run's
+    /// <see cref="RunConfigurationDraft.AcceptDataLossToken"/> so the pipeline-side
+    /// <c>ConversionLossyBatchGate</c> can authorize the lossy plan. Cleared on every
+    /// terminal state transition so a stale acceptance never silently leaks into a
+    /// later run. Internal so tests can pin propagation without round-tripping
+    /// through the full async run path.
+    /// </summary>
+    internal string? AcceptedLossyDataLossToken => _acceptedLossyDataLossToken;
+
+    private string? _acceptedLossyDataLossToken;
     private const string NavTagMissionControl = "MissionControl";
     private const string NavTagLibrary = "Library";
     private const string NavTagConfig = "Config";
@@ -225,6 +238,18 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
                     return;
                 }
 
+                // T-W5-CONVERSION-SAFETY-ADVISOR pass 2: lossy-token gate.
+                // If the previous DryRun reported PendingLossyToken, the user must
+                // type that exact token here; otherwise the converter would abort
+                // mid-run via ConversionLossyBatchGate.
+                var moveLossyToken = Services.ConversionLossyGuiGate.Evaluate(
+                    LastRunResult, _dialog, key => _loc[key], AddLog);
+                if (moveLossyToken is { Length: 0 })
+                {
+                    return; // user declined typed-token confirm; DryRun preserved
+                }
+                _acceptedLossyDataLossToken = moveLossyToken;
+
                 const string moveConfirmToken = "MOVE";
                 var moveConfirmAccepted = _dialog.DangerConfirm(
                     title: _loc["Dialog.Move.ConfirmTitle"],
@@ -340,6 +365,16 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
             AddLog(_loc["Log.ConvertOnlyCancelled"], "INFO");
             return;
         }
+
+        // T-W5-CONVERSION-SAFETY-ADVISOR pass 2: chained lossy-token gate.
+        // Single source of truth shared with the StartMove path; see ConversionLossyGuiGate.
+        var lossyToken = Services.ConversionLossyGuiGate.Evaluate(
+            LastRunResult, _dialog, key => _loc[key], AddLog);
+        if (lossyToken is { Length: 0 })
+        {
+            return; // user declined typed-token confirm
+        }
+        _acceptedLossyDataLossToken = lossyToken; // null when no lossy plan; non-empty token otherwise
 
         ConvertOnly = true;
         DryRun = false;
