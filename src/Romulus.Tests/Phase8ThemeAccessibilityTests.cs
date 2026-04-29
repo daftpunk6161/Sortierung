@@ -85,7 +85,6 @@ public class Phase8ThemeAccessibilityTests
     }
 
     [Theory]
-    [InlineData("SmartActionBar.xaml")]
     [InlineData("CommandBar.xaml")]
     [InlineData("WizardView.xaml")]
     public void Task128_Views_UseDynamicResource_ForColors(string viewFile)
@@ -186,7 +185,6 @@ public class Phase8ThemeAccessibilityTests
     [Theory]
     [InlineData("CommandBar.xaml")]
     [InlineData("WizardView.xaml")]
-    [InlineData("SmartActionBar.xaml")]
     [InlineData("SystemAppearanceView.xaml")]
     public void Task131_Views_HaveAutomationProperties(string viewFile)
     {
@@ -220,12 +218,12 @@ public class Phase8ThemeAccessibilityTests
     }
 
     [Fact]
-    public void Task131_SmartActionBar_RunButton_HasAutomationName()
+    public void Task131_SmartActionBar_Removed_InWave1()
     {
+        // T-W1-UI-REDUCTION: SmartActionBar wurde aus dem Shell-Layout entfernt.
+        // CommandPalette uebernimmt die Power-User-Aktionen.
         var path = FindUiFile("Views", "SmartActionBar.xaml");
-        var xaml = File.ReadAllText(path);
-
-        Assert.Contains("AutomationProperties.Name", xaml);
+        Assert.False(File.Exists(path));
     }
 
     // ═══ TASK-132: WCAG AA Contrast (4.5:1) ════════════════════════════
@@ -382,6 +380,13 @@ public class Phase8ThemeAccessibilityTests
         {
             var candidate = Path.Combine(dir, "src", "Romulus.UI.Wpf", subPath);
             if (File.Exists(candidate)) return candidate;
+            // Wave 1: Sub-Controls/Dialogs leben jetzt unter Views/Controls bzw. Views/Dialogs.
+            var folderRoot = Path.Combine(dir, "src", "Romulus.UI.Wpf", folder);
+            if (Directory.Exists(folderRoot))
+            {
+                var match = Directory.GetFiles(folderRoot, fileName, SearchOption.AllDirectories).FirstOrDefault();
+                if (match is not null) return match;
+            }
             dir = Path.GetDirectoryName(dir);
         }
         var repoRoot = Path.GetDirectoryName(Path.GetDirectoryName(

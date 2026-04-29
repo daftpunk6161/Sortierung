@@ -105,9 +105,10 @@ public sealed class Phase4FixTests
     [Fact]
     public void R3_017_FeatureCommandService_DatUpdateRunningUsedAsGuard()
     {
-        var path = Path.Combine(FindSrcDir(), "Romulus.UI.Wpf", "Services", "FeatureCommandService.Dat.cs");
+        // Wave 1 (T-W1-UI-REDUCTION): FeatureCommandService.Dat.cs wurde in
+        // FeatureCommandService.Data.cs konsolidiert. Der Guard muss erhalten bleiben.
+        var path = Path.Combine(FindSrcDir(), "Romulus.UI.Wpf", "Services", "FeatureCommandService.Data.cs");
         var source = File.ReadAllText(path);
-        // Must use _datUpdateRunning in a try/finally pattern (guard + reset)
         Assert.Contains("_datUpdateRunning = true", source);
         Assert.Contains("_datUpdateRunning = false", source);
         Assert.Contains("finally", source);

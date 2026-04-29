@@ -31,10 +31,9 @@ public sealed class Phase6CoreIoAndI18nRedTests
     }
 
     [Theory]
-    [InlineData("src/Romulus.UI.Wpf/Services/FeatureCommandService.Infra.cs")]
     [InlineData("src/Romulus.UI.Wpf/Services/FeatureCommandService.Security.cs")]
     [InlineData("src/Romulus.UI.Wpf/Services/FeatureService.Export.cs")]
-    [InlineData("src/Romulus.UI.Wpf/Services/FeatureCommandService.Dat.cs")]
+    [InlineData("src/Romulus.UI.Wpf/Services/FeatureCommandService.Data.cs")]
     [InlineData("src/Romulus.UI.Wpf/Services/FeatureCommandService.Workflow.cs")]
     public void WpfFeatureFiles_MustNotContainTrackedGermanLiterals(string relativePath)
     {

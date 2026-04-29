@@ -1836,47 +1836,10 @@ public partial class GuiViewModelTests
         Assert.Contains(nameof(vm.RunStateDisplayText), changed);
     }
 
-    [Fact]
-    public void SmartActionBarXaml_HasRunStateBindings()
-    {
-        var xaml = File.ReadAllText(FindUiFile("Views", "SmartActionBar.xaml"));
-        // RunState-derived visibility bindings must still drive action bar controls.
-        Assert.Contains("IsIdle", xaml);
-        Assert.Contains("IsBusy", xaml);
-        Assert.DoesNotContain("RunStateDisplayText", xaml);
-    }
-
-    [Fact]
-    public void SmartActionBarXaml_RunButton_HiddenViaTriggerWhenBusy()
-    {
-        var xaml = File.ReadAllText(FindUiFile("Views", "SmartActionBar.xaml"));
-        // Run button uses IsIdle binding to hide when pipeline is running
-        Assert.Contains("RunCommand", xaml);
-        Assert.Matches(@"(?s)RunCommand.*IsIdle", xaml);
-    }
-
-    [Fact]
-    public void SmartActionBarXaml_CancelButton_HasRunStateTrigger()
-    {
-        var xaml = File.ReadAllText(FindUiFile("Views", "SmartActionBar.xaml"));
-        // Cancel button has x:Name and IsBusy-based visibility
-        Assert.Matches(@"x:Name=""CancelButton""", xaml);
-        Assert.Contains("CancelCommand", xaml);
-    }
-
-    [Fact]
-    public void SmartActionBarXaml_ProgressPanel_HasRunStateTrigger()
-    {
-        var xaml = File.ReadAllText(FindUiFile("Views", "SmartActionBar.xaml"));
-        Assert.Matches(@"x:Name=""ProgressPanel""", xaml);
-    }
-
-    [Fact]
-    public void SmartActionBarXaml_DoesNotDuplicateCommandBarStatusLabel()
-    {
-        var xaml = File.ReadAllText(FindUiFile("Views", "SmartActionBar.xaml"));
-        Assert.DoesNotContain("RunStateDisplayText", xaml);
-    }
+    // Wave 1 (T-W1-UI-REDUCTION): SmartActionBar.xaml wurde entfernt; der ehemalige
+    // Block aus 5 Pin-Tests (HasRunStateBindings / RunButton_HiddenViaTriggerWhenBusy /
+    // CancelButton_HasRunStateTrigger / ProgressPanel_HasRunStateTrigger /
+    // DoesNotDuplicateCommandBarStatusLabel) ist obsolet und wurde geloescht.
 
     [Theory]
     [InlineData(RunState.Idle, true)]
@@ -2175,40 +2138,23 @@ public partial class GuiViewModelTests
     }
 
     [Fact]
-    public void MainViewModel_ShowSmartActionBar_HidesOnPrimaryContentSurfaces()
+    public void MainViewModel_SmartActionBar_RemovedInWave1()
     {
+        // T-W1-UI-REDUCTION: SmartActionBar wurde aus dem Shell-Layout entfernt.
+        // CommandPalette (Ctrl+P) bleibt als Power-User-Oberflaeche; ShowSmartActionBar
+        // existiert nicht mehr und MainWindow.xaml referenziert keine ActionRail.
         var vm = new MainViewModel();
-
-        vm.Shell.SelectedNavTag = "MissionControl";
-        vm.Shell.SelectedSubTab = "Dashboard";
-        Assert.False(vm.ShowSmartActionBar);
-
-        vm.Shell.SelectedNavTag = "Library";
-        vm.Shell.SelectedSubTab = "Results";
-        Assert.False(vm.ShowSmartActionBar);
-
-        // Tools tab (Werkzeuge/DAT-Verwaltung/Toolchain) has its own per-tool actions;
-        // the global SmartActionBar must not show as orphan mini-buttons.
-        vm.Shell.SelectedNavTag = "Tools";
-        vm.Shell.SelectedSubTab = "Features";
-        Assert.False(vm.ShowSmartActionBar);
-
-        vm.Shell.SelectedNavTag = "Tools";
-        vm.Shell.SelectedSubTab = "DatManagement";
-        Assert.False(vm.ShowSmartActionBar);
-
-        vm.Shell.SelectedNavTag = "Config";
-        vm.Shell.SelectedSubTab = "Options";
-        Assert.True(vm.ShowSmartActionBar);
+        Assert.Null(typeof(MainViewModel).GetProperty("ShowSmartActionBar"));
     }
 
     [Fact]
-    public void MainWindowXaml_Title_IsRomulus_AndActionRailIsBindable()
+    public void MainWindowXaml_Title_IsRomulus_AndActionRailRemoved()
     {
         var xaml = File.ReadAllText(FindUiFile("", "MainWindow.xaml"));
 
         Assert.Contains("Title=\"Romulus\"", xaml);
-        Assert.Contains("ShowSmartActionBar", xaml);
+        Assert.DoesNotContain("ShowSmartActionBar", xaml);
+        Assert.DoesNotContain("SmartActionBar", xaml);
     }
 
     [Fact]
@@ -2284,6 +2230,13 @@ public partial class GuiViewModelTests
         {
             var candidate = Path.Combine(dir, "src", "Romulus.UI.Wpf", folder, fileName);
             if (File.Exists(candidate)) return candidate;
+            // Wave 1: Sub-Controls/Dialogs leben jetzt unter Views/Controls bzw. Views/Dialogs.
+            var folderRoot = Path.Combine(dir, "src", "Romulus.UI.Wpf", folder);
+            if (Directory.Exists(folderRoot))
+            {
+                var match = Directory.GetFiles(folderRoot, fileName, SearchOption.AllDirectories).FirstOrDefault();
+                if (match is not null) return match;
+            }
             dir = Path.GetDirectoryName(dir);
         }
         // Fallback: try repo root from CallerFilePath context

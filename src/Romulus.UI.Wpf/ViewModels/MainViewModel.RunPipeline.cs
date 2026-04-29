@@ -201,38 +201,12 @@ public sealed partial class MainViewModel
                 ? _loc["Result.InlineConfirmReady"]
                 : _loc["Result.InlineConfirmWaiting"];
 
-    public bool ShowSmartActionBar
-    {
-        get
-        {
-            if (IsBusy || ShowStartMoveButton)
-                return true;
-
-            // Tools tab (Werkzeuge / DAT-Verwaltung / Toolchain) has its own per-tool actions;
-            // the global Run/Cancel/Convert/Move/Rollback bar would only show as orphan
-            // mini-buttons in the bottom-left corner.
-            if (string.Equals(Shell.SelectedNavTag, NavTagTools, StringComparison.Ordinal))
-                return false;
-
-            // Mission Control: hide on primary content surfaces (Dashboard / RecentRuns).
-            if (string.Equals(Shell.SelectedNavTag, NavTagMissionControl, StringComparison.Ordinal))
-            {
-                return !(string.Equals(Shell.SelectedSubTab, "Dashboard", StringComparison.Ordinal)
-                      || string.Equals(Shell.SelectedSubTab, "RecentRuns", StringComparison.Ordinal));
-            }
-
-            // Library: hide on Results (which has its own inline action panel).
-            return !(string.Equals(Shell.SelectedNavTag, NavTagLibrary, StringComparison.Ordinal)
-                  && string.Equals(Shell.SelectedSubTab, "Results", StringComparison.Ordinal));
-        }
-    }
-
     public bool HasRunResult =>
         Run.HasRunResult ||
         (Run.CurrentRunState is RunState.Cancelled or RunState.Failed
          && (LastRunResult?.TotalFilesScanned ?? 0) > 0);
 
-    /// <summary>TASK-115: Localized display text for the current RunState (SmartActionBar status).</summary>
+    /// <summary>TASK-115: Localized display text for the current RunState (status caption in ProgressView).</summary>
     public string RunStateDisplayText => Run.CurrentRunState switch
     {
         RunState.Idle           => _loc["State.Idle"],
@@ -277,7 +251,6 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(RunStateDisplayText));
             OnPropertyChanged(nameof(ShowStartMoveButton));
             OnPropertyChanged(nameof(ShowActionBarMoveButton));
-            OnPropertyChanged(nameof(ShowSmartActionBar));
             OnPropertyChanged(nameof(CanStartCurrentRun));
             OnPropertyChanged(nameof(CanStartMoveWithCurrentPreview));
             RefreshToolSurfaceState();
@@ -286,7 +259,6 @@ public sealed partial class MainViewModel
 
         if (e.PropertyName is nameof(IsBusy) or nameof(IsIdle))
         {
-            OnPropertyChanged(nameof(ShowSmartActionBar));
             OnPropertyChanged(nameof(ShowActionBarMoveButton));
         }
     }
@@ -422,7 +394,6 @@ public sealed partial class MainViewModel
         set
         {
             SetProperty(ref _canRollback, value);
-            OnPropertyChanged(nameof(ShowSmartActionBar));
             RefreshToolSurfaceState();
             DeferCommandRequery();
         }
@@ -1562,7 +1533,6 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(CanStartMoveWithCurrentPreview));
         OnPropertyChanged(nameof(ShowStartMoveButton));
         OnPropertyChanged(nameof(ShowActionBarMoveButton));
-        OnPropertyChanged(nameof(ShowSmartActionBar));
         OnPropertyChanged(nameof(MoveApplyGateText));
         OnPropertyChanged(nameof(ShowConfigChangedBanner));
         OnPropertyChanged(nameof(RollbackActionHint));

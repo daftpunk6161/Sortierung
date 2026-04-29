@@ -444,7 +444,16 @@ public class Phase5CEntryPointParityTests
     private static string FindUiFile(string folder, string fileName, [System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
     {
         var repoRoot = FindRepoRoot(callerPath);
-        return Path.Combine(repoRoot, "src", "Romulus.UI.Wpf", folder, fileName);
+        var direct = Path.Combine(repoRoot, "src", "Romulus.UI.Wpf", folder, fileName);
+        if (File.Exists(direct)) return direct;
+        // Wave 1: Sub-Controls/Dialogs leben jetzt unter Views/Controls bzw. Views/Dialogs.
+        var folderRoot = Path.Combine(repoRoot, "src", "Romulus.UI.Wpf", folder);
+        if (Directory.Exists(folderRoot))
+        {
+            var match = Directory.GetFiles(folderRoot, fileName, SearchOption.AllDirectories).FirstOrDefault();
+            if (match is not null) return match;
+        }
+        return direct;
     }
 
     private static string FindRepoRoot(string? callerPath)

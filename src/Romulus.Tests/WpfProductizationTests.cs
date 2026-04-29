@@ -690,27 +690,16 @@ public sealed class WpfProductizationTests : IDisposable
     }
 
     [Fact]
-    public void C3_ConfigChangedBanner_SingleSourceOfTruth()
+    public void C3_ConfigChangedBanner_NoLongerInSmartActionBar()
     {
-        // The visible config-changed banner must exist exactly once across all views.
-        // (Source of truth: SmartActionBar, bound to ShowConfigChangedBanner.)
-        var viewsDir = Path.GetDirectoryName(FindUiFile("Views", "SmartActionBar.xaml"))!;
-        var xamlFiles = Directory.GetFiles(viewsDir, "*.xaml", SearchOption.AllDirectories);
-
-        int bindingCount = 0;
-        string? owner = null;
-        foreach (var file in xamlFiles)
-        {
-            var text = File.ReadAllText(file);
-            if (text.Contains("ShowConfigChangedBanner", StringComparison.Ordinal))
-            {
-                bindingCount++;
-                owner = Path.GetFileName(file);
-            }
-        }
-
-        Assert.Equal(1, bindingCount);
-        Assert.Equal("SmartActionBar.xaml", owner);
+        // Wave 1 (T-W1-UI-REDUCTION): SmartActionBar wurde entfernt; ShowConfigChangedBanner
+        // wird ggf. spaeter in CommandBar oder ResultView neu verdrahtet. Der Pin-Test sichert,
+        // dass die alte SmartActionBar.xaml nicht zurueckkehrt.
+        var viewsDir = Path.GetDirectoryName(FindUiFile("Views", "ResultView.xaml"))!;
+        // Walk up from Controls/Dialogs subfolder if needed.
+        if (!Directory.Exists(Path.Combine(viewsDir, "Controls")))
+            viewsDir = Path.GetDirectoryName(viewsDir)!;
+        Assert.False(File.Exists(Path.Combine(viewsDir, "SmartActionBar.xaml")));
     }
 
     [Fact]
@@ -921,14 +910,13 @@ public sealed class WpfProductizationTests : IDisposable
     }
 
     [Fact]
-    public void OpenItem_MoveAction_IsRenderedOnlyInSmartActionBar()
+    public void OpenItem_MoveAction_ResultViewDoesNotShowMoveButton()
     {
-        var smartActionBarXaml = File.ReadAllText(FindUiFile("Views", "SmartActionBar.xaml"));
+        // Wave 1 (T-W1-UI-REDUCTION): SmartActionBar wurde entfernt. Der Move-Button
+        // wird ueber CommandBar / ResultView-Inline-Confirm ausgeloest, ResultView selbst
+        // darf weiterhin keinen Move-Button rendern (Single Source: CommandBar).
         var resultViewXaml = File.ReadAllText(FindUiFile("Views", "ResultView.xaml"));
-
-        Assert.Contains("ShowActionBarMoveButton", smartActionBarXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ShowResultMoveButton", resultViewXaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("RequestStartMoveCommand", smartActionBarXaml, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1017,7 +1005,16 @@ public sealed class WpfProductizationTests : IDisposable
     private static string FindUiFile(string folder, string fileName, [System.Runtime.CompilerServices.CallerFilePath] string? callerPath = null)
     {
         var repoRoot = FindRepoRoot(callerPath);
-        return Path.Combine(repoRoot, "src", "Romulus.UI.Wpf", folder, fileName);
+        var direct = Path.Combine(repoRoot, "src", "Romulus.UI.Wpf", folder, fileName);
+        if (File.Exists(direct)) return direct;
+        // Wave 1: Sub-Controls/Dialogs leben jetzt unter Views/Controls bzw. Views/Dialogs.
+        var folderRoot = Path.Combine(repoRoot, "src", "Romulus.UI.Wpf", folder);
+        if (Directory.Exists(folderRoot))
+        {
+            var match = Directory.GetFiles(folderRoot, fileName, SearchOption.AllDirectories).FirstOrDefault();
+            if (match is not null) return match;
+        }
+        return direct;
     }
 
     private static string FindRepoRoot(string? callerPath)
