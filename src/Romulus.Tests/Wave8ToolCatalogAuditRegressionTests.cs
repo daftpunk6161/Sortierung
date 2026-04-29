@@ -146,8 +146,7 @@ public sealed class Wave8ToolCatalogAuditRegressionTests : IDisposable
     [Fact]
     public void FT09_CommandPalette_SettingsFallback_DoesNotUseMagicNumber()
     {
-        // Wave 1 (T-W1-UI-REDUCTION): Infra-Partial wurde in Security konsolidiert.
-        var sourcePath = LocateRepoFile("src/Romulus.UI.Wpf/Services/FeatureCommandService.Security.cs");
+        var sourcePath = LocateRepoFile("src/Romulus.UI.Wpf/Services/FeatureCommandService.Infra.cs");
         var source = File.ReadAllText(sourcePath);
 
         Assert.DoesNotContain("SelectTab(3)", source);

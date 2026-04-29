@@ -124,6 +124,7 @@ public sealed class RunResultBuilder
         ReportPath = ReportPath,
         AllCandidates = AllCandidates,
         DedupeGroups = DedupeGroups,
+        WinnerReasons = Romulus.Core.Deduplication.DeduplicationEngine.BuildWinnerReasons(DedupeGroups),
         PhaseMetrics = PhaseMetrics,
         Warnings = Warnings.Count > 0 ? Warnings.ToArray() : Array.Empty<string>(),
         IsPartial = IsPartial,

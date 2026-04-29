@@ -20,6 +20,7 @@ public static class FeatureCommandKeys
     public const string ConversionPipeline = "ConversionPipeline";
     public const string ConversionVerify = "ConversionVerify";
     public const string FormatPriority = "FormatPriority";
+    public const string PatchPipeline = "PatchPipeline";
 
     // ── DAT & Verifizierung ──
     public const string DatAutoUpdate = "DatAutoUpdate";
@@ -54,7 +55,9 @@ public static class FeatureCommandKeys
 
     // ── Export & Integration ──
     public const string HtmlReport = "HtmlReport";
+    public const string LauncherIntegration = "LauncherIntegration";
     public const string DatImport = "DatImport";
+    public const string ExportCollection = "ExportCollection";
 
     // ── Infrastruktur ──
     public const string StorageTiering = "StorageTiering";

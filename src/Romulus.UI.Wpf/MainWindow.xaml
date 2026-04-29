@@ -75,6 +75,7 @@
         <RowDefinition Height="Auto"/> <!-- Row 0: CommandBar -->
         <RowDefinition Height="*"/>    <!-- Row 1: Main content -->
         <RowDefinition Height="Auto"/> <!-- Row 2: Detail Drawer (collapsible) -->
+        <RowDefinition Height="Auto"/> <!-- Row 3: ActionRail -->
       </Grid.RowDefinitions>
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="Auto"/>  <!-- Col 0: NavigationRail -->
@@ -251,7 +252,10 @@
         </Grid>
       </Border>
 
-      <!-- ═══ ROW 3 (ActionRail / SmartActionBar) entfernt in Wave 1 — CommandPalette ist die Power-User-Oberflaeche. -->
+      <!-- ═══ ROW 3: ACTION RAIL (spans all columns) ═════════════════════ -->
+      <views:SmartActionBar Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
+                            Visibility="{Binding ShowSmartActionBar, Converter={StaticResource BoolToVis}}"
+                            TabIndex="56"/>
 
       <!-- ═══ TOAST / NOTIFICATION OVERLAY ════════════════════════════════ -->
       <ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Shell.Notifications}"
@@ -288,12 +292,12 @@
       </ItemsControl>
 
       <!-- ═══ FIRST-RUN-WIZARD OVERLAY ════════════════════════════════════ -->
-      <views:WizardView Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="3"
+      <views:WizardView Grid.Row="0" Grid.RowSpan="4" Grid.Column="0" Grid.ColumnSpan="3"
                         Visibility="{Binding Shell.ShowFirstRunWizard, Converter={StaticResource BoolToVis}}"
                         AutomationProperties.Name="{Binding Loc[Wizard.Title]}"/>
 
       <!-- ═══ SHORTCUT CHEATSHEET OVERLAY ═════════════════════════════════ -->
-      <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="3"
+      <Border Grid.Row="0" Grid.RowSpan="4" Grid.Column="0" Grid.ColumnSpan="3"
               Background="{DynamicResource BrushScrimOverlay}" IsHitTestVisible="True"
               Visibility="{Binding Shell.ShowShortcutSheet, Converter={StaticResource BoolToVis}}"
               Style="{StaticResource OverlayFadeIn}">
@@ -356,7 +360,7 @@
       </Border>
 
       <!-- ═══ COMMAND PALETTE OVERLAY (Ctrl+K) ════════════════════════════ -->
-      <views:CommandPaletteView Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="3"
+      <views:CommandPaletteView Grid.Row="0" Grid.RowSpan="4" Grid.Column="0" Grid.ColumnSpan="3"
               Visibility="{Binding CommandPalette.IsOpen, Converter={StaticResource BoolToVis}}"
               AutomationProperties.Name="Command Palette"/>
     </Grid>

@@ -927,7 +927,7 @@ tasks:
     prototype: false
     covers: ["TOP-8"]
     priority: high
-    status: pending
+    status: done
     dependencies: []
     conflicts_with: []
     context_files:
@@ -937,7 +937,7 @@ tasks:
         description: Scoring-Pfade
       - path: src/Romulus.Contracts/Models/
         description: RunResult-Erweiterung
-    planning_pass: 1
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Substanz-Vorbereitung des Decision Explainers.
@@ -965,6 +965,31 @@ tasks:
         tech_stack:
           - C# .NET 10
         test_coverage: full
+
+      - pass: 2
+        reason: |
+          Acceptance pin-test-gesichert. Implementierung: WinnerReasonTrace
+          (Romulus.Contracts.Models) als pure record, DeduplicationEngine.
+          BuildWinnerReasons liefert genau eine Trace pro DedupeGroup,
+          RunResultBuilder verdrahtet WinnerReasons aus DedupeGroups.
+          Privacy-Schutz: Trace enthaelt nur den Dateinamen, niemals den
+          vollstaendigen Pfad. Tiebreaker-Reihenfolge ist Single-Source-of-
+          Truth via WinnerReasonTrace.TiebreakerOrder.
+        timestamp: "2026-04-29"
+        verification:
+          - Wave2ScoringReasonTraceTests (7 Pin-Tests gruen)
+          - RunResult_WinnerReasons_DefaultsToEmpty
+          - BuildWinnerReasons_OneTracePerGroup
+          - BuildWinnerReasons_IsDeterministic
+          - BuildWinnerReason_DoesNotLeakFullPath
+          - BuildWinnerReason_CapturesAllScoringAxes
+          - TiebreakerOrder_IsSingleSourceOfTruth
+          - BuildWinnerReasons_EmptyInput_ReturnsEmpty
+        acceptance_criteria:
+          - RunResult.WinnerReasons existiert (Default leer)
+          - eine Trace pro DedupeGroup
+          - deterministisch und path-leak-frei
+          - Tiebreaker-Reihenfolge zentral exponiert
 
   - id: T-W2-AUDIT-VIEWER-API
     title: IAuditViewerBackingService einfuehren (read-only)

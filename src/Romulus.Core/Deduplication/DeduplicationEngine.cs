@@ -193,4 +193,79 @@ public static class DeduplicationEngine
 
         return normalized.ToUpperInvariant();
     }
+
+    /// <summary>
+    /// T-W2-SCORING-REASON-TRACE: produces one
+    /// <see cref="WinnerReasonTrace"/> per <see cref="DedupeGroup"/>. Pure
+    /// and deterministic — depends only on the data already inside the
+    /// groups (no I/O, no time, no environment). Trace order matches the
+    /// input order of <paramref name="groups"/> (which itself is sorted by
+    /// <see cref="DeduplicateWithDiagnostics"/>) so GUI/CLI/API/Reports
+    /// share one fachliche Wahrheit and never re-derive the order.
+    ///
+    /// <para>
+    /// Vorbereitung fuer T-W4-DECISION-EXPLAINER. The trace deliberately
+    /// uses the file name only, never the full path, so reports cannot leak
+    /// root information beyond what <see cref="DedupeGroup"/> already
+    /// exposes.
+    /// </para>
+    /// </summary>
+    public static IReadOnlyList<WinnerReasonTrace> BuildWinnerReasons(
+        IReadOnlyList<DedupeGroup> groups)
+    {
+        ArgumentNullException.ThrowIfNull(groups);
+
+        if (groups.Count == 0)
+            return Array.Empty<WinnerReasonTrace>();
+
+        var traces = new List<WinnerReasonTrace>(groups.Count);
+        foreach (var group in groups)
+        {
+            traces.Add(BuildWinnerReason(group));
+        }
+        return traces;
+    }
+
+    /// <summary>
+    /// Builds a single <see cref="WinnerReasonTrace"/> for the given group.
+    /// Public for surgical callers (e.g. tests, the upcoming Decision
+    /// Explainer view-model) that already have the group at hand.
+    /// </summary>
+    public static WinnerReasonTrace BuildWinnerReason(DedupeGroup group)
+    {
+        ArgumentNullException.ThrowIfNull(group);
+        var winner = group.Winner;
+
+        var fileName = string.IsNullOrEmpty(winner.MainPath)
+            ? string.Empty
+            : System.IO.Path.GetFileName(winner.MainPath);
+
+        var summary = string.Join(
+            " > ",
+            $"Cat={winner.Category}",
+            $"Compl={winner.CompletenessScore}",
+            $"Dat={(winner.DatMatch ? 1 : 0)}",
+            $"Reg={winner.RegionScore}",
+            $"Hdr={winner.HeaderScore}",
+            $"Ver={winner.VersionScore}",
+            $"Fmt={winner.FormatScore}",
+            $"SizeTb={winner.SizeTieBreakScore}");
+
+        return new WinnerReasonTrace(
+            ConsoleKey: NormalizeConsoleKey(winner.ConsoleKey),
+            GameKey: group.GameKey ?? winner.GameKey ?? string.Empty,
+            WinnerFileName: fileName ?? string.Empty,
+            WinnerExtension: winner.Extension ?? string.Empty,
+            WinnerRegion: winner.Region ?? string.Empty,
+            RegionScore: winner.RegionScore,
+            FormatScore: winner.FormatScore,
+            VersionScore: winner.VersionScore,
+            HeaderScore: winner.HeaderScore,
+            CompletenessScore: winner.CompletenessScore,
+            DatMatch: winner.DatMatch,
+            SizeTieBreakScore: winner.SizeTieBreakScore,
+            WinnerCategory: winner.Category.ToString(),
+            LoserCount: group.Losers.Count,
+            TiebreakerSummary: summary);
+    }
 }

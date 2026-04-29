@@ -156,6 +156,7 @@ public sealed class ToolsViewModel : ObservableObject
         FeatureCommandKeys.HealthScore,
         FeatureCommandKeys.DuplicateAnalysis,
         FeatureCommandKeys.RollbackQuick,
+        FeatureCommandKeys.ExportCollection,
         FeatureCommandKeys.DatAutoUpdate,
         FeatureCommandKeys.IntegrityMonitor
     ];
@@ -386,6 +387,7 @@ public sealed class ToolsViewModel : ObservableObject
             new(FeatureCommandKeys.ConversionPipeline, "Conversion", "\xE8AB", false, false, ToolMaturity.Production),
             new(FeatureCommandKeys.ConversionVerify, "Conversion", "\xE73E", false, true, ToolMaturity.Production),
             new(FeatureCommandKeys.FormatPriority, "Conversion", "\xE9D9", false, false, ToolMaturity.Guided),
+            new(FeatureCommandKeys.PatchPipeline, "Conversion", "\xE8A5", false, false, ToolMaturity.Guided),
             new(FeatureCommandKeys.HeaderRepair, "Conversion", "\xE90F", false, true, ToolMaturity.Production),
 
             new(FeatureCommandKeys.DatAutoUpdate, "DatVerify", "\xE895", false, true, ToolMaturity.Production),
@@ -413,7 +415,9 @@ public sealed class ToolsViewModel : ObservableObject
             new(FeatureCommandKeys.AutoProfile, "Workflow", "\xE713", false, false, ToolMaturity.Experimental),
 
             new(FeatureCommandKeys.HtmlReport, "Export", "\xE774", true, true, ToolMaturity.Production),
+            new(FeatureCommandKeys.LauncherIntegration, "Export", "\xE768", true, false, ToolMaturity.Production),
             new(FeatureCommandKeys.DatImport, "Export", "\xE8B5", false, false, ToolMaturity.Production),
+            new(FeatureCommandKeys.ExportCollection, "Export", "\xE792", true, true, ToolMaturity.Production),
 
             new(FeatureCommandKeys.StorageTiering, "Infra", "\xE7F8", true, false, ToolMaturity.Production),
             new(FeatureCommandKeys.NasOptimization, "Infra", "\xE839", false, false, ToolMaturity.Guided),
@@ -474,6 +478,7 @@ public sealed class ToolsViewModel : ObservableObject
             {
                 AddRecommendation(FeatureCommandKeys.FormatPriority, _loc["Tools.Recommend.ConversionPlan"]);
                 AddRecommendation(FeatureCommandKeys.ConversionVerify, _loc["Tools.Recommend.ConversionCheck"]);
+                AddRecommendation(FeatureCommandKeys.PatchPipeline, _loc["Tools.Recommend.ConversionPlan"]);
             }
 
             if (snapshot.RootCount > 1)
@@ -501,6 +506,8 @@ public sealed class ToolsViewModel : ObservableObject
 
             if (snapshot.ConvertEnabled || snapshot.ConvertOnly || snapshot.ConvertedCount > 0)
                 AddRecommendation(FeatureCommandKeys.ConversionVerify, _loc["Tools.Recommend.ConversionCheck"]);
+
+            AddRecommendation(FeatureCommandKeys.ExportCollection, _loc["Tools.Recommend.RunInsight"]);
 
             if (snapshot.CanRollback)
             {

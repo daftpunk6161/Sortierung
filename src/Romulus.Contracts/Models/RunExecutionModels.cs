@@ -148,6 +148,15 @@ public sealed class RunResult
     public IReadOnlyList<DedupeGroup> DedupeGroups { get; init; } = Array.Empty<DedupeGroup>();
 
     /// <summary>
+    /// T-W2-SCORING-REASON-TRACE: One <see cref="WinnerReasonTrace"/> per
+    /// winner-selection decision. Pure projection of <see cref="DedupeGroups"/>;
+    /// used by the upcoming GUI/CLI/API Decision Explainer
+    /// (T-W4-DECISION-EXPLAINER) to explain WHY a candidate won. Deterministic
+    /// — same inputs produce the same trace order.
+    /// </summary>
+    public IReadOnlyList<WinnerReasonTrace> WinnerReasons { get; init; } = Array.Empty<WinnerReasonTrace>();
+
+    /// <summary>
     /// Structured phase timing metrics.
     /// </summary>
     public PhaseMetricsResult? PhaseMetrics { get; init; }
