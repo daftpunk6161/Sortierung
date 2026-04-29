@@ -2091,15 +2091,23 @@ tasks:
     prototype: false
     covers: ["TOP-11"]
     priority: high
-    status: pending
+    status: in_progress
     dependencies: ["T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
+      - path: src/Romulus.Contracts/Ports/IBeforeAfterSimulator.cs
+        description: Port (Wave 5 pass 2)
+      - path: src/Romulus.Contracts/Models/BeforeAfterSimulationModels.cs
+        description: Models (Wave 5 pass 2)
+      - path: src/Romulus.Infrastructure/Analysis/BeforeAfterSimulator.cs
+        description: Default impl (Wave 5 pass 2)
+      - path: src/Romulus.Tests/BeforeAfterSimulatorTests.cs
+        description: 5 pin tests (Wave 5 pass 2)
       - path: src/Romulus.Infrastructure/Orchestration/PhasePlanning.cs
-        description: PhasePlanBuilder
+        description: PhasePlanBuilder (used via RunOrchestrator)
       - path: src/Romulus.UI.Wpf/Views/
-        description: neue Simulator-View
-    planning_pass: 1
+        description: noch ausstehende Simulator-View (pass 3)
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Vertrauen vor dem Klick.
@@ -2120,6 +2128,41 @@ tasks:
         tech_stack:
           - C# .NET 10
         test_coverage: full
+      - pass: 2
+        reason: |
+          Core-Contract + Service implementiert (2026-04-29). Status bleibt
+          in_progress, da die WPF-Simulator-View (zwei Listen + Diff-Summary)
+          noch fehlt; CLI/API-Wiring ebenfalls offen. Geliefert:
+          - src/Romulus.Contracts/Ports/IBeforeAfterSimulator.cs (Port)
+          - src/Romulus.Contracts/Models/BeforeAfterSimulationModels.cs
+            (BeforeAfterAction enum {Keep,Remove,Convert,Rename}, Entry, Summary,
+            Result mit UnderlyingPlan-Feld fuer SoT-Verifikation)
+          - src/Romulus.Infrastructure/Analysis/BeforeAfterSimulator.cs
+            (wraps RunOrchestrator in DryRun; ForceDryRun ist single chokepoint
+            der Mode-Override; projiziert DedupeGroups -> Keep/Remove,
+            ConversionReport.Results -> Convert, DatRenamePathMutations -> Rename)
+          - src/Romulus.Tests/BeforeAfterSimulatorTests.cs (5 pin tests):
+            * Simulate_PlanMatchesDirectDryRun_SingleSourceOfTruth - SoT-Invariante
+            * Simulate_ForcesDryRunEvenWhenCallerPassesMoveMode - Chokepoint
+            * Simulate_DedupeGroup_ProjectsKeepAndRemoveEntries - Projektion
+            * Simulate_EmptyLibrary_ReturnsEmptyProjection - Edge-Case
+            * ForceDryRun_CopiesEveryRunOptionsProperty - Reflection-Drift-Guard
+          Tests: 5/5 + 79 verwandte Regression-Tests gruen.
+          Done-Kriterium pass 3: WPF-Simulator-View + CLI `simulate`-Subcommand
+          oder GUI-Integration in MainViewModel/Plan-Tab.
+        timestamp: "2026-04-29"
+        estimated_effort: small
+        estimated_files: 4
+        estimated_lines: 479
+        focus_area: feature
+        verification:
+          - 5/5 BeforeAfterSimulatorTests gruen
+          - dotnet test --filter "FullyQualifiedName~BeforeAfter|Smoke|Phase5B|Phase6|Parity" -> 84/84
+        acceptance_criteria:
+          - Core-Contract verfuegbar -> ERFUELLT
+          - Single-Source-of-Truth-Invariante per Test abgesichert -> ERFUELLT
+          - WPF/CLI/API-Wiring -> NACHGELAGERT (pass 3)
+        failure_modes: []
 
   - id: T-W5-CONVERSION-SAFETY-ADVISOR
     title: Conversion Safety Advisor + UI-Confirm-Token
