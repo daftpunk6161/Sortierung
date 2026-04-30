@@ -20,6 +20,7 @@ public interface IRunEnvironment : IDisposable
     IReadOnlySet<string>? KnownBiosHashes { get; }
     ICollectionIndex? CollectionIndex { get; }
     string? EnrichmentFingerprint { get; }
+    IProvenanceStore? ProvenanceStore { get; }
 }
 
 public interface IRunEnvironmentFactory

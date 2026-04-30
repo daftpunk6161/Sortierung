@@ -691,6 +691,8 @@ public sealed class RunEnvironmentBuilder
             datConsoleMap,
             knownBiosHashes);
 
+        var provenanceStore = TryCreateProvenanceStore(audit, onWarning);
+
         return new RunEnvironment(
             fs,
             audit,
@@ -702,7 +704,29 @@ public sealed class RunEnvironmentBuilder
             archiveHashService,
             knownBiosHashes,
             collectionIndex,
-            enrichmentFingerprint);
+            enrichmentFingerprint,
+            provenanceStore);
+    }
+
+    /// <summary>
+    /// Wave 7 — best-effort construction of the per-ROM provenance store
+    /// (ADR-0024). Reuses the existing audit-signing key so we never
+    /// introduce a second HMAC initialization path. Failure is non-fatal.
+    /// </summary>
+    private static IProvenanceStore? TryCreateProvenanceStore(AuditCsvStore audit, Action<string>? onWarning)
+    {
+        try
+        {
+            var signing = new AuditSigningService(new FileSystemAdapter(), keyFilePath: AuditSecurityPaths.GetDefaultSigningKeyPath());
+            return new Provenance.JsonlProvenanceStore(
+                AuditSecurityPaths.GetDefaultProvenanceRoot(),
+                signing);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            onWarning?.Invoke($"[Provenance] Store nicht verfuegbar: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>
@@ -1645,6 +1669,7 @@ public sealed class RunEnvironment
     public IReadOnlySet<string>? KnownBiosHashes { get; }
     public ICollectionIndex? CollectionIndex { get; }
     public string? EnrichmentFingerprint { get; }
+    public IProvenanceStore? ProvenanceStore { get; }
 
     public RunEnvironment(FileSystemAdapter fileSystem, AuditCsvStore audit,
         ConsoleDetector? consoleDetector, FileHashService? hashService,
@@ -1653,7 +1678,8 @@ public sealed class RunEnvironment
         ArchiveHashService? archiveHashService = null,
         IReadOnlySet<string>? knownBiosHashes = null,
         ICollectionIndex? collectionIndex = null,
-        string? enrichmentFingerprint = null)
+        string? enrichmentFingerprint = null,
+        IProvenanceStore? provenanceStore = null)
     {
         FileSystem = fileSystem;
         AuditStore = audit;
@@ -1666,6 +1692,7 @@ public sealed class RunEnvironment
         KnownBiosHashes = knownBiosHashes;
         CollectionIndex = collectionIndex;
         EnrichmentFingerprint = enrichmentFingerprint;
+        ProvenanceStore = provenanceStore;
     }
 
     public void Dispose()

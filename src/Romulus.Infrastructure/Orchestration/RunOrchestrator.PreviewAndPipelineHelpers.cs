@@ -96,6 +96,11 @@ public sealed partial class RunOrchestrator
         {
             new AuditSealPhaseStep(() => WriteCompletedAuditSidecar(options, result, sw.ElapsedMilliseconds, runOutcome))
                 .Execute(pipelineState, cancellationToken);
+
+            // ADR-0024 §5: provenance writes happen only AFTER the audit sidecar
+            // commit succeeded. If seal throws, we skip provenance entirely so the
+            // Trail never references a run that has no auditable sidecar+ledger.
+            TryAppendProvenanceTrail(options, result);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
@@ -276,6 +281,39 @@ public sealed partial class RunOrchestrator
         }
         _audit.WriteMetadataSidecar(options.AuditPath, Romulus.Infrastructure.Audit.AuditRollbackRootMetadata.WithAllowedRoots(options, metadata));
     }
+
+    /// <summary>
+    /// ADR-0024 §5: append per-ROM provenance events AFTER the audit sidecar
+    /// commit succeeded. Best-effort — never throw, never fail the run if the
+    /// provenance store is unreachable; emit a warning instead so GUI/CLI/API
+    /// surface the gap. Uses <see cref="ProvenancePipelineProjection"/> as the
+    /// single source of truth (no per-entry-point recomputation).
+    /// </summary>
+    private void TryAppendProvenanceTrail(RunOptions options, RunResultBuilder result)
+    {
+        if (_provenanceStore is null) return;
+        if (string.IsNullOrEmpty(options.AuditPath)) return;
+        var auditRunId = Path.GetFileNameWithoutExtension(options.AuditPath);
+        if (string.IsNullOrWhiteSpace(auditRunId)) return;
+
+        try
+        {
+            var snapshot = result.Build();
+            var ts = DateTime.UtcNow.ToString("o");
+            var events = Romulus.Infrastructure.Provenance.ProvenancePipelineProjection
+                .ProjectEvents(snapshot, auditRunId, ts);
+            foreach (var ev in events)
+            {
+                _provenanceStore.Append(ev);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            _onProgress?.Invoke($"[Provenance] Trail append skipped: {ex.GetType().Name}: {ex.Message}");
+            result.AddWarning($"Provenance trail append failed: {ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
 
     private void WritePartialAuditSidecar(
         RunOptions options,

@@ -41,6 +41,7 @@ public sealed partial class RunOrchestrator : IDisposable
     private readonly IFamilyDatStrategyResolver? _familyDatStrategyResolver;
     private readonly IFamilyPipelineSelector? _familyPipelineSelector;
     private readonly IPhasePlanExecutor _phasePlanExecutor;
+    private readonly Romulus.Contracts.Ports.IProvenanceStore? _provenanceStore;
     private bool _disposed;
 
     public RunOrchestrator(
@@ -60,7 +61,8 @@ public sealed partial class RunOrchestrator : IDisposable
         PersistedReviewDecisionService? reviewDecisionService = null,
         IFamilyDatStrategyResolver? familyDatStrategyResolver = null,
         IFamilyPipelineSelector? familyPipelineSelector = null,
-        IPhasePlanExecutor? phasePlanExecutor = null)
+        IPhasePlanExecutor? phasePlanExecutor = null,
+        Romulus.Contracts.Ports.IProvenanceStore? provenanceStore = null)
     {
         _fs = fs;
         _audit = audit;
@@ -79,6 +81,7 @@ public sealed partial class RunOrchestrator : IDisposable
         _familyDatStrategyResolver = familyDatStrategyResolver;
         _familyPipelineSelector = familyPipelineSelector;
         _phasePlanExecutor = phasePlanExecutor ?? new PhasePlanExecutor(onProgress);
+        _provenanceStore = provenanceStore;
     }
 
     /// <summary>

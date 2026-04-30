@@ -137,7 +137,8 @@ public sealed class RunManager : IDisposable, IAsyncDisposable
             knownBiosHashes: env.KnownBiosHashes,
             collectionIndex: env.CollectionIndex,
             enrichmentFingerprint: env.EnrichmentFingerprint,
-            reviewDecisionService: _reviewDecisionService);
+            reviewDecisionService: _reviewDecisionService,
+            provenanceStore: env.ProvenanceStore);
 
         var runStartedUtc = _timeProvider.UtcNow.UtcDateTime;
         var result = orchestrator.Execute(options, ct);

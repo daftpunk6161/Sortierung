@@ -352,7 +352,8 @@ internal static partial class Program
                     knownBiosHashes: env.KnownBiosHashes,
                     collectionIndex: env.CollectionIndex,
                     enrichmentFingerprint: env.EnrichmentFingerprint,
-                    reviewDecisionService: reviewDecisionService);
+                    reviewDecisionService: reviewDecisionService,
+                    provenanceStore: env.ProvenanceStore);
 
                 var runStartedUtc = TimeProvider.UtcNow.UtcDateTime;
                 var result = orchestrator.Execute(runOptions, cts.Token);

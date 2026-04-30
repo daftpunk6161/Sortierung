@@ -113,7 +113,8 @@ public sealed class RunService : IRunService
             knownBiosHashes: env.KnownBiosHashes,
             collectionIndex: env.CollectionIndex,
             enrichmentFingerprint: env.EnrichmentFingerprint,
-            reviewDecisionService: reviewDecisionService);
+            reviewDecisionService: reviewDecisionService,
+            provenanceStore: env.ProvenanceStore);
 
         _appState.SetValue("run.build.completedUtc", DateTime.UtcNow);
         _appState.SetValue("run.auditPath", auditPath);
