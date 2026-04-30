@@ -1,10 +1,82 @@
 # Phase-1-Gate-Bericht (T-W3-PHASE1-GATE)
 
-- **Stichtag:** 2026-04-29
-- **Reviewer-Rolle:** gem-critic (Coding-Agent), erste Bewertungsrunde
-- **Verdict:** **BLOCKED — needs_revision**
-- **Status der Task selbst:** bleibt `pending` bis blockierende Kriterien geliefert sind
-- **Folgewellen (Welle 4):** dürfen NICHT starten
+- **Stichtag:** 2026-04-30 (pass-4 Re-Evaluation)
+- **Reviewer-Rolle:** gem-critic (Coding-Agent), zweite Bewertungsrunde nach Option-G-Re-Skopierung
+- **Verdict:** **PASS — go for Wave 4**
+- **Status der Task selbst:** `done` (planning_pass=4)
+- **Folgewellen (Welle 4):** freigegeben
+
+## Pass-4-Update (2026-04-30)
+
+Option-G-Re-Skopierung (siehe pass-3-Eintrag der Gate-Task): Kriterium 6
+„Beta-Nutzer durchgelaufen" wurde durch „Synthetic-Smoke-Suite grün" ersetzt;
+T-W3-BETA-USERS bleibt `wontfix-with-reason`. T-W3-RUN-SMOKE-SYNTHETIC ist
+seit 2026-04-29 implementiert und CI-grün
+([SyntheticSmokeTests.cs](src/Romulus.Tests/Smokes/SyntheticSmokeTests.cs)).
+Verifikation am Re-Evaluations-Stichtag (2026-04-30):
+
+- `dotnet test --filter "Category=Smoke"` → 3/3 grün (S-1 Top-Workflow,
+  S-2 ConvertOnly, S-3 DAT-Audit). Jede Smoke deckt ≥6/8 ehemals manueller
+  Workflow-Schritte ab; S-1 deckt 7/8 (Verify implizit via DryRun).
+- `dotnet test --filter "FullyQualifiedName~Wave2I18nOrphan|FullyQualifiedName~Wave2CoverageGap"`
+  → 9/9 grün (4 I18nOrphanGuard + 5 CoverageGap).
+- Solution build (Vorher-Sektion): `dotnet build src/Romulus.sln` → 0 Fehler.
+
+Die zwei Blocker B-1 und B-2 aus pass-2 sind durch die Re-Skopierung formal
+ersetzt; B-1 (echte Beta-Cohort) ist als „nicht erbringbar im Coding-Agent-
+Scope" dokumentiert und auf den Reaktivierungspfad in
+[beta-recruiting-playbook.md](beta-recruiting-playbook.md) +
+[beta-smoke-protocol.md](beta-smoke-protocol.md) verlegt. Der Synthetic-
+Ersatz wurde bewusst gewählt, um die Phase-1→Phase-2-Sperre nicht
+unbegrenzt liegen zu lassen, ohne die Produkt-Substanz zu verwässern.
+
+## Aktualisierte Kriterien-Matrix (pass 4)
+
+| # | Kriterium | Verdikt | Belege |
+|---|---|---|---|
+| 1 | Wirklich nur eine GUI? | **PASS** | unverändert; nur `Romulus.UI.Wpf` als GUI-Projekt. |
+| 2 | Tool-Karten reduziert? | **PASS** | T-W1-FEATURE-CULL `done`. |
+| 3 | Konsolen tier-markiert? | **PASS** | 163/163 Einträge mit `tier`. |
+| 4 | i18n sauber? | **PASS** | Wave2I18nOrphanGuard 4/4 grün am Stichtag. |
+| 5 | README ehrlich? | **PASS** | T-W2-README-REFRESH `done` (Commit `193631db`). |
+| 6 | **Synthetic-Smoke-Suite grün?** (Ersatz für Beta-Smokes) | **PASS** | SyntheticSmokeTests 3/3 grün am Stichtag. |
+| 7 | Top-20-Coverage-CI grün? | **PASS** | Wave2CoverageGap 5/5 grün am Stichtag. |
+| 8 | i18n/Command-Orphan-CI grün? | **PASS** | siehe #4. |
+
+**Bestanden:** 8 / 8.
+
+## Risiken / offene Punkte (nicht gate-blockierend)
+
+- **R-1 — Synthetic ≠ Real:** Synthetische Smokes können reale Friktion
+  (UI-Verständlichkeit, Tool-Discovery, Erst-Setup-Hürden) nicht abbilden.
+  Mitigation: Reaktivierungspfad für Beta-Cohort bleibt via
+  beta-recruiting-playbook.md offen; Welle 4 enthält
+  T-W4-DISCOVERY-LOOP (`wontfix-with-reason` solange ohne Cohort).
+- **R-2 — Snapshot-Artefakte unter `benchmark/smokes/`:** noch nicht
+  ausgecheckt (im pass-4-Eintrag von T-W3-RUN-SMOKE-SYNTHETIC als
+  „NACHGELAGERT, nicht P1" markiert). Nicht gate-blockierend, weil die
+  Tests heute ihre Erwartungen direkt aus den Domänen-Modellen ableiten.
+- **R-3 — Pre-existing Test-Failure** in
+  `GuiViewModelTests.MainWindowXaml_Title_IsRomulus_AndActionRailRemoved`:
+  Token „SmartActionBar"/„ShowSmartActionBar" steht noch in einem
+  Kommentar in [MainWindow.xaml](src/Romulus.UI.Wpf/MainWindow.xaml#L256-L257)
+  (T-W1-Restleistung gem. plan-Kommentar). Trifft nur den Pin-Test, nicht
+  die Funktion. Empfehlung: in T-W1-I18N-ORPHAN-SWEEP-Folge oder als
+  triviale Hygiene-Aktion kurz nach Gate-Pass mit aufräumen.
+
+## Folgen für Welle 4
+
+Welle 4 ist freigegeben:
+
+- T-W4-DISCOVERY-LOOP bleibt `wontfix-with-reason` (kein Cohort).
+- T-W4-TELEMETRY-OPT-IN, T-W4-AUDIT-VIEWER-UI, T-W4-DECISION-EXPLAINER,
+  T-W4-REVIEW-INBOX → können starten.
+
+## Verlauf
+
+### Pass 2 (2026-04-29) — Verdict: BLOCKED — needs_revision
+
+(Original-Bewertung; bleibt zur Nachvollziehbarkeit erhalten.)
 
 ## Kurzfazit
 

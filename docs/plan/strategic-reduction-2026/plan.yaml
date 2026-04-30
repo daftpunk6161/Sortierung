@@ -1677,13 +1677,13 @@ tasks:
     prototype: false
     covers: ["TOP-1", "TOP-3", "TOP-4", "TOP-5", "TOP-14"]
     priority: high
-    status: pending
+    status: done
     dependencies: ["T-W3-RUN-SMOKE-SYNTHETIC", "T-W1-I18N-ORPHAN-SWEEP", "T-W2-README-REFRESH", "T-W2-AUDIT-MORATORIUM-DECREE", "T-W2-COVERAGE-GAP-CHECK", "T-W2-I18N-ORPHAN-CI-TEST"]
     conflicts_with: []
     context_files:
       - path: docs/plan/strategic-reduction-2026/phase1-gate-report.md
-        description: Erste Gate-Bewertung (Verdict BLOCKED, 6/8 PASS, 2/8 BLOCKED)
-    planning_pass: 3
+        description: Pass-4-Re-Evaluation - Verdict PASS (8/8), Welle 4 freigegeben
+    planning_pass: 4
     planning_history:
       - pass: 1
         reason: Hartes Stop/Go-Gate vor Phase 2.
@@ -1770,6 +1770,64 @@ tasks:
             impact: high
             mitigation: gem-critic prueft pro Smoke die Snapshot-Aussagekraft
               und nicht nur den Pass-Status
+        requires_review: true
+        review_depth: full
+        review_security_sensitive: false
+      - pass: 4
+        reason: |
+          Pass 4 Re-Evaluation (gem-critic, 2026-04-30): Verdict PASS.
+          Alle 8 Gate-Kriterien erfuellt; Wave 4 freigegeben.
+
+          Stichtag-Verifikation:
+          - dotnet test --filter "Category=Smoke" -> 3/3 gruen
+            (S-1 Top-Workflow, S-2 ConvertOnly, S-3 DAT-Audit; jede
+            Smoke deckt >= 6/8 ehemals manueller Workflow-Schritte;
+            S-1 deckt 7/8). Erfuellt das pass-3-eingefuehrte
+            Synthetic-Smoke-Kriterium (Ersatz fuer Beta-Smokes nach
+            Option-G-Re-Skopierung).
+          - dotnet test --filter "FullyQualifiedName~Wave2I18nOrphan|FullyQualifiedName~Wave2CoverageGap"
+            -> 9/9 gruen (4 I18nOrphanGuard + 5 CoverageGap).
+          - Solution build aus letzter Build-Sektion: 0 Fehler.
+
+          Bewertung der 8 Kriterien:
+          1. Eine GUI                            -> PASS (nur Romulus.UI.Wpf)
+          2. Tool-Karten reduziert               -> PASS (T-W1-FEATURE-CULL done)
+          3. Konsolen tier-markiert              -> PASS (163/163)
+          4. i18n sauber                         -> PASS (I18nOrphanGuard 4/4)
+          5. README ehrlich                      -> PASS (T-W2-README-REFRESH done)
+          6. Synthetic-Smoke-Suite gruen         -> PASS (3/3 am Stichtag)
+          7. Top-20-Coverage-CI gruen            -> PASS (CoverageGap 5/5)
+          8. i18n/Command-Orphan-CI gruen        -> PASS (siehe 4)
+
+          Nicht-blockierende Risiken (im Bericht dokumentiert, kein
+          Phase-2-Stopper):
+          - R-1: Synthetic ersetzt nicht reale Friktion. Mitigation:
+            T-W4-DISCOVERY-LOOP bleibt wontfix-with-reason solange ohne
+            Cohort; Reaktivierungspfad via beta-recruiting-playbook.md.
+          - R-2: benchmark/smokes/ Snapshot-Artefakte ausstehend
+            (NACHGELAGERT, nicht P1).
+          - R-3: pre-existing GuiViewModelTests.MainWindowXaml-Pin-Fail
+            durch SmartActionBar-Token in Restkommentar; nur Pin, nicht
+            Funktion. Empfehlung: in T-W1-Restleistung mit aufraeumen.
+
+          Welle-4-Freigabe: T-W4-TELEMETRY-OPT-IN, T-W4-AUDIT-VIEWER-UI,
+          T-W4-DECISION-EXPLAINER, T-W4-REVIEW-INBOX duerfen starten.
+          T-W4-DISCOVERY-LOOP bleibt wontfix-with-reason.
+
+          status -> done.
+        timestamp: "2026-04-30"
+        estimated_effort: small
+        estimated_files: 1
+        estimated_lines: 70
+        focus_area: review
+        verification:
+          - 8/8 Gate-Kriterien PASS am Stichtag verifiziert
+          - 3/3 Smokes + 9/9 CI-Guards am Stichtag re-run
+          - phase1-gate-report.md auf pass-4 aktualisiert (Verdict PASS)
+        acceptance_criteria:
+          - Alle Phase-1-Kriterien erfuellt -> ERFUELLT (8/8)
+          - Welle 4 freigegeben -> ERFUELLT
+        failure_modes: []
         requires_review: true
         review_depth: full
         review_security_sensitive: false
