@@ -133,7 +133,7 @@ public sealed class CliSimulateSubcommandTests : IDisposable
                 Mode = "DryRun",
             };
             return await Romulus.CLI.Program.SubcommandSimulateAsync(opts).ConfigureAwait(false);
-        }).ConfigureAwait(false);
+        });
 
         Assert.Equal(0, exit);
         Assert.False(string.IsNullOrWhiteSpace(stdout), "simulate must emit JSON to stdout");
@@ -181,7 +181,7 @@ public sealed class CliSimulateSubcommandTests : IDisposable
                 Yes = true, // would normally be required for Move; simulate must ignore Mode
             };
             return await Romulus.CLI.Program.SubcommandSimulateAsync(opts).ConfigureAwait(false);
-        }).ConfigureAwait(false);
+        });
 
         Assert.Equal(0, exit);
         Assert.True(File.Exists(rom), "simulate must never delete or move source files");
