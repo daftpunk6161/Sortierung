@@ -41,6 +41,12 @@ public static class SharedServiceRegistration
                 sp.GetRequiredService<IFileSystem>(),
                 _ => { },
                 AuditSecurityPaths.GetDefaultSigningKeyPath()));
+        // Wave 7 — T-W7-PROVENANCE-TRAIL: per-ROM Trail teilt sich den HMAC-Schluessel
+        // mit dem Audit-Sidecar (ADR-0024 §2/§5: kein zweiter Signing-Pfad).
+        services.AddSingleton<IProvenanceStore>(sp =>
+            new Provenance.JsonlProvenanceStore(
+                AuditSecurityPaths.GetDefaultProvenanceRoot(),
+                sp.GetRequiredService<AuditSigningService>()));
         services.AddSingleton<IHeaderRepairService, HeaderRepairService>();
         services.AddSingleton<ICollectionIndex>(sp =>
             new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDatabasePath(

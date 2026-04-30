@@ -21,4 +21,14 @@ public static class AuditSecurityPaths
     {
         return AppStoragePathResolver.ResolveRoamingPath("reports");
     }
+
+    /// <summary>
+    /// Wave 7 — T-W7-PROVENANCE-TRAIL. Standard-Wurzel des per-ROM Provenance-Trails.
+    /// Liegt unter %APPDATA%\Romulus\provenance, damit der Trail Run-uebergreifend
+    /// persistiert. Layout pro Datei wird in <see cref="Provenance.JsonlProvenanceStore"/> gehalten.
+    /// </summary>
+    public static string GetDefaultProvenanceRoot()
+    {
+        return AppStoragePathResolver.ResolveRoamingPath("provenance");
+    }
 }
