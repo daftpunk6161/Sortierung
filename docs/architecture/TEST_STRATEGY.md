@@ -26,7 +26,7 @@ Die folgende Übersicht ist thematisch gruppiert; Datei- und Fallzahlen ändern 
 
 ### 2.0 Foundation-, Productization-, Reach- und Diff/Merge-Matrix 2026-04-01
 
-Die Foundation-, Productization-, Reach- und Diff/Merge-Erweiterungen fuer Collection-Index, Guided Workflows, Frontend-Export, Profile, Trend-/Diff-Pfade, Headless-Betrieb, Reach-Conversion und Multi-Collection-Merge werden zusaetzlich gezielt ueber folgende Schwerpunktdateien abgesichert:
+Die Foundation-, Productization-, Reach- und Diff/Merge-Erweiterungen fuer Collection-Index, Guided Workflows, Profile, Trend-/Diff-Pfade, Headless-Betrieb, Reach-Conversion und Multi-Collection-Merge werden zusaetzlich gezielt ueber folgende Schwerpunktdateien abgesichert:
 
 | Datei | Zweck |
 |---|---|
@@ -36,11 +36,10 @@ Die Foundation-, Productization-, Reach- und Diff/Merge-Erweiterungen fuer Colle
 | `PersistedReviewDecisionServiceTests.cs` | Persistierte Review-Approvals, Reapply, idempotentes Schreiben |
 | `AutomationAndTrendServiceTests.cs` | Watch-/Schedule-Services, Trend-Berechnung aus Snapshot-Historie |
 | `RunConfigurationResolverRegressionTests.cs` | Workflow-/Profil-Aufloesung, Override-Prioritaet, Wizard-/Expert-Paritaet |
-| `FrontendExportRegressionTests.cs` | Frontend-Export-Haertung, XML-/CSV-Schutz, Root-Containment |
-| `ApiProductizationIntegrationTests.cs` | `/profiles`, `/workflows`, workflow-/profilbasierte Runs, Watch-Automation, `/export/frontend` |
+| `ApiProductizationIntegrationTests.cs` | `/profiles`, `/workflows`, workflow-/profilbasierte Runs, Watch-Automation |
 | `WpfProductizationTests.cs` | WPF-Kataloge, gemeinsame Materialisierung, Profil Save/Load, Wizard-Bindings |
 | `CliProductizationTests.cs` | CLI-Usage und Produktisierungs-Subcommands |
-| `OpenApiProductizationTests.cs` | OpenAPI-Vertrag fuer Profile, Workflows, Compare/Trends und Frontend-Export |
+| `OpenApiProductizationTests.cs` | OpenAPI-Vertrag fuer Profile, Workflows und Compare/Trends |
 | `ApiReachIntegrationTests.cs` | Dashboard-Bootstrap, AllowedRoots, Remote-Startup-Regeln und Headless-API-Flows |
 | `OpenApiReachTests.cs` | OpenAPI-Vertrag fuer Dashboard-/Reach-Endpunkte |
 | `ReachConversionTests.cs` | Compound-NKit-Planung und Review-Gating in der Conversion-Pipeline |

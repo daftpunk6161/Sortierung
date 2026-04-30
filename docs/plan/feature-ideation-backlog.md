@@ -18,23 +18,23 @@ Die **groessten Produktluecken** liegen nicht in fehlender Kernfunktionalitaet, 
 
 1. **Kein Metadata-/Artwork-Enrichment** — Romulus weiss alles ueber Datei-Integritaet, aber nichts ueber das Spiel selbst (Cover, Beschreibung, Genre, Screenshots)
 2. **Keine Echtzeit-Sammlungsgesundheit** — nach einem Run ist die Information statisch; es fehlt ein "Living Dashboard" das die Sammlung kontinuierlich ueberwacht
-3. **Kein IPS/BPS/UPS Patching** — ROM-Patching ist ein taeglicher Community-Workflow, der komplett fehlt
-4. **Keine Multi-Device/Frontend-Sync** — die Bruecke zwischen "Sammlung bereinigt" und "laeuft auf meinem RetroArch/MiSTer/Handheld" ist manuell
-5. **Keine Collection-Diff/Merge** — wenn man 2 Sammlungen zusammenfuehren oder vergleichen will, fehlt das komplett
+3. **Keine Collection-Diff/Merge** — wenn man 2 Sammlungen zusammenfuehren oder vergleichen will, fehlt das komplett
+
+> **Hinweis (Strategic-Reduction-2026, Welle 1):** Die frueher gelisteten Luecken "Kein IPS/BPS/UPS Patching" und "Keine Multi-Device/Frontend-Sync" sind aus dem Produktscope entfernt worden (siehe FEAT-002, FEAT-003 weiter unten und `docs/plan/strategic-reduction-2026/plan.yaml`).
 
 ### Top-5 spannendste neue Ideen
 
 | # | Idee | Warum spannend |
 |---|------|----------------|
 | 1 | **Collection Health Monitor** | Kein anderes Tool ueberwacht eine Sammlung kontinuierlich nach DAT-Updates, neuen Dumps, Format-Verbesserungen |
-| 2 | **Smart Patch Pipeline** | IPS/BPS/UPS-Patching integriert in den Run-Flow mit DAT-Verifikation des Patch-Outputs — existiert nirgends so |
-| 3 | **Frontend Sync Engine** | One-Click-Export fuer RetroArch/ES/LaunchBox/MiSTer/Analogue Pocket mit Playlists, Artwork-Pfaden, Core-Mapping |
-| 4 | **Collection Diff & Merge** | Zwei Sammlungen vergleichen, Luecken zeigen, intelligent zusammenfuehren — kein Desktop-Tool kann das |
-| 5 | **Metadata Enrichment via IGDB/ScreenScraper** | Genre, Spielzeit, Rating, Beschreibung zu jedem Match — macht die Sammlung lebendig |
+| 2 | **Collection Diff & Merge** | Zwei Sammlungen vergleichen, Luecken zeigen, intelligent zusammenfuehren — kein Desktop-Tool kann das |
+| 3 | **Metadata Enrichment via IGDB/ScreenScraper** | Genre, Spielzeit, Rating, Beschreibung zu jedem Match — macht die Sammlung lebendig |
+| 4 | **Completionist Tracker / Missing ROM Dashboard** | Klare Zielsetzung fuer Sammler: was fehlt, was ist MIA, was ist optional |
+| 5 | **Multi-Disc Playlist Generator** | Automatischer M3U-Writer im Run-Flow — schliesst die Luecke zwischen Set-Erkennung und Run-Output |
 
 ### Community-Mehrwert
 
-Die Features mit dem hoechsten Community-Impact sind: Smart Patch Pipeline (taeglich gebraucht), Collection Health Monitor (spart staendig manuelle DAT-Arbeit), Frontend Sync Engine (schliesst die letzte Meile), und Missing/Wishlist-Tracker (gibt Sammlern ein klares Ziel).
+Die Features mit dem hoechsten Community-Impact sind: Collection Health Monitor (spart staendig manuelle DAT-Arbeit), Collection Diff & Merge (Sammlungs-Konsolidierung), und Missing/Wishlist-Tracker (gibt Sammlern ein klares Ziel).
 
 ---
 
@@ -103,7 +103,9 @@ Die Features mit dem hoechsten Community-Impact sind: Smart Patch Pipeline (taeg
 
 ---
 
-### FEAT-002: Smart Patch Pipeline (IPS/BPS/UPS/xdelta)
+### FEAT-002: Smart Patch Pipeline (IPS/BPS/UPS/xdelta) — GESTRICHEN
+
+> **Status (Strategic-Reduction-2026, Welle 1):** Aus dem Produktscope entfernt. Patch-Pipeline-Code, Tests, Tool-Hash-Eintraege fuer Flips/xdelta wurden im Rahmen von T-W1-FRONTEND-CULL/Patch-Cull abgebaut. Der Abschnitt bleibt nur als historische Ideation-Referenz erhalten.
 
 **Kurzbeschreibung:** Romulus erkennt Patch-Dateien neben ROMs (oder in einem Patch-Ordner), wendet sie automatisch an, verifiziert das Ergebnis gegen eine DAT (falls vorhanden) und sortiert das gepatcht ROM korrekt ein. Unterstuetzt IPS, BPS, UPS und xdelta. Reversibel durch Audit-Trail.
 
@@ -125,7 +127,9 @@ Die Features mit dem hoechsten Community-Impact sind: Smart Patch Pipeline (taeg
 
 ---
 
-### FEAT-003: Frontend Sync Engine
+### FEAT-003: Frontend Sync Engine — GESTRICHEN
+
+> **Status (Strategic-Reduction-2026, Welle 1):** Aus dem Produktscope entfernt. Export-Pfade fuer RetroArch/LaunchBox/EmulationStation/Playnite/MiSTer/Analogue Pocket/OnionOS/CSV/JSON/Excel wurden im Rahmen von T-W1-FRONTEND-CULL abgebaut (siehe Commit-Historie und `docs/plan/strategic-reduction-2026/plan.yaml`). Der Abschnitt bleibt nur als historische Ideation-Referenz erhalten.
 
 **Kurzbeschreibung:** Nach einem Run oder Conversion kann der User per Knopfdruck Export-Pakete fuer spezifische Frontends/Devices generieren: RetroArch (.lpl), EmulationStation (gamelist.xml), LaunchBox (launchbox.xml), MiSTer FPGA (korrekte Ordnerstruktur + core-mapping), Analogue Pocket (Assets/), Batocera, OnionOS etc. Inklusive Playlists fuer Multi-Disc-Games.
 
@@ -669,8 +673,8 @@ Die Features mit dem hoechsten Community-Impact sind: Smart Patch Pipeline (taeg
 | Track | ID | Titel | Prio | Ist-Status | Detailstand (kurz) | Naechster Schritt |
 |------|----|-------|------|------------|--------------------|-------------------|
 | [ ] | FEAT-001 | Collection Health Monitor | P2 | Teilweise | Watch/Scheduler + Health-Hints vorhanden; kein persistentes Always-On Monitoring mit Alert-Regeln | Persistente Baselines + regelbasierte Warnungen (Schwellwerte) einfuehren |
-| [x] | FEAT-002 | Smart Patch Pipeline | P1 | Implementiert | IPS/BPS/UPS/xdelta ueber zentrale Patch-Pipeline inkl. Verify/Tool-Absicherung | CLI/API-Pfad fuer Patch-Flow angleichen und End-to-End-Tests erweitern |
-| [x] | FEAT-003 | Frontend Sync Engine | P1 | Implementiert | Export fuer RetroArch/LaunchBox/EmulationStation/Playnite/MiSTer/Analogue Pocket/OnionOS + CSV/JSON/Excel verdrahtet | Multi-Disc-Playlist-Generierung aus FEAT-007 anbinden |
+| [-] | FEAT-002 | Smart Patch Pipeline | P1 | Gestrichen | Aus Strategic-Reduction-2026 (Welle 1, T-W1-FRONTEND-CULL/Patch-Cull) entfernt; IPS/BPS/UPS/xdelta-Pfad nicht mehr im Produktscope | Keine Wiederaufnahme ohne neue Roadmap-Entscheidung |
+| [-] | FEAT-003 | Frontend Sync Engine | P1 | Gestrichen | Aus Strategic-Reduction-2026 (Welle 1, T-W1-FRONTEND-CULL) entfernt; RetroArch/LaunchBox/EmulationStation/Playnite/MiSTer/Analogue/OnionOS/CSV/JSON/Excel-Export nicht mehr im Produktscope | Keine Wiederaufnahme ohne neue Roadmap-Entscheidung |
 | [x] | FEAT-004 | Collection Diff & Merge | P2 | Implementiert | Vergleich + Merge-Plan + Apply inkl. Audit/Review-Entscheidungen vorhanden | Konflikt-UX weiter schaerfen (gezielte Review-Reason Codes) |
 | [ ] | FEAT-005 | Completionist Tracker / Missing ROM Dashboard | P1 | Teilweise | Vollstaendigkeits- und Missing-Reports vorhanden, aber ohne ausgebaute Wunschlisten-/MIA-Workflows | Wishlist-Export + MIA-/Filtermodell ergaenzen |
 | [ ] | FEAT-006 | Metadata Enrichment | P2 | Offen | Keine produktive Provider-Integration (IGDB/ScreenScraper/MobyGames) im aktiven Codepfad | Provider-Port definieren, API-Limits/Cache-Strategie umsetzen |

@@ -707,10 +707,11 @@ public sealed partial class FeatureCommandService
         _dialog.Info(_vm.Loc.Format("Cmd.AutoProfileDialog", profile), _vm.Loc["Cmd.AutoProfileTitle"]);
     }
 
-    // Wave-1-Cull leftovers: registrations still bound to the command
-    // dictionary above; the underlying features were removed in T-W1-FEATURE-CULL.
-    // These no-op stubs keep the build green until T-W1-I18N-ORPHAN-SWEEP follow-up
-    // removes the registrations entirely. They intentionally do nothing.
+    // Generic Collection-Export (CSV / Excel-XML / Duplicates-CSV).
+    // Bleibt nach T-W1-FRONTEND-CULL bewusst erhalten: das ist der neutrale
+    // Tabellen-Export der bereinigten Sammlung, nicht der gestrichene
+    // Frontend-Export (RetroArch/LaunchBox/EmulationStation/Playnite/MiSTer/
+    // Analogue Pocket/OnionOS), der vollstaendig entfernt wurde.
     private System.Threading.Tasks.Task ExportCollectionAsync()
     {
         var formatChoice = _dialog.ShowInputBox(
