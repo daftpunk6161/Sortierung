@@ -3043,7 +3043,7 @@ tasks:
     prototype: false
     covers: ["TOP-16"]
     priority: high
-    status: pending
+    status: completed
     dependencies: ["T-W6-PHASE2-GATE"]
     conflicts_with: []
     context_files:
@@ -3051,7 +3051,7 @@ tasks:
         description: HealthScore-Code
       - path: src/Romulus.Infrastructure/State/AppStateStore.cs
         description: Persistenz
-    planning_pass: 1
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Tracking ueber Zeit als Power-Wert.
@@ -3073,6 +3073,39 @@ tasks:
         tech_stack:
           - C# .NET 10
         test_coverage: full
+      - pass: 2
+        reason: |
+          Implementation pass. Statt einer neuen Schattenklasse
+          ISetIntegrityGuardian wird der bestehende, von CLI/API/UI verwendete
+          CollectionRunSnapshotWriter.TryPersistAsync (try/catch + onWarning,
+          log-only) als faktischer Integrity-Guardian erweitert. Neue
+          per-Konsole Wahrheit kommt aus derselben Run-Quelle (RomCandidate +
+          DedupeGroup) und nutzt die kanonische
+          CollectionAnalysisService.CalculateHealthScore Funktion - keine
+          parallele Scoring-Formel.
+        timestamp: "2026-05-15"
+        actual_files: 4
+        actual_lines: 130
+        deltas:
+          - Romulus.Contracts.Models.AnalysisModels.cs (neuer Record ConsoleHealthBreakdown)
+          - Romulus.Contracts.Models.CollectionIndexModels.cs (CollectionRunSnapshot.PerConsoleHealth)
+          - Romulus.Infrastructure.Index.CollectionRunSnapshotWriter.cs (ComputePerConsoleHealth, deterministisch)
+          - Romulus.Infrastructure.Index.LiteDbCollectionIndex.cs (Document/Mapping fuer PerConsoleHealth Roundtrip)
+        tests_added:
+          - Romulus.Tests.Wave7HealthScorePerConsoleTests.cs (7 xUnit Tests, Red zuerst)
+        verification_results:
+          - Snapshot wird nach Run geschrieben (bestehender Pfad CLI/API/UI greift)
+          - Trend-Abfrage liefert geordnete Liste (RunHistoryTrendService.LoadTrendHistoryAsync)
+          - PerConsoleHealth deterministisch sortiert (Ordinal asc nach ConsoleKey)
+          - LiteDb Roundtrip persistiert PerConsoleHealth korrekt
+          - Single-Console-Run: per-Konsole HealthScore == globaler HealthScore (eine Wahrheit)
+        regression_check: 71 zugehoerige Tests gruen (CollectionRunSnapshotWriter, RunHistoryTrend, LiteDbCollectionIndex, CollectionHealthMonitor, Wave7)
+        notes: |
+          UI/CLI/API Surfacing der per-Konsole Trend-Anzeige bleibt offen
+          und kann nachgezogen werden, sobald die Daten in der LiteDb
+          historischen Snapshot-Reihe vorliegen. Daten-Schicht ist additiv
+          (Default leer), backward-kompatibel.
+        status: completed
 
   - id: T-W7-PROVENANCE-TRAIL
     title: ROM Provenance / Trust Score

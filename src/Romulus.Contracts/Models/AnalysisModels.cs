@@ -42,6 +42,23 @@ public sealed record ConversionAdvisorResult(
 public sealed record TrendSnapshot(
     DateTime Timestamp, int TotalFiles, long SizeBytes, int Verified, int Dupes, int Junk, int QualityScore);
 
+/// <summary>
+/// T-W7-HEALTH-SCORE: Per-console HealthScore breakdown for a single run.
+/// Deterministic projection of the run truth (RomCandidate + DedupeGroup);
+/// no parallel scoring source. Persisted as part of <c>CollectionRunSnapshot</c>
+/// and consumed by GUI/CLI/API trend surfaces.
+/// </summary>
+public sealed record ConsoleHealthBreakdown
+{
+    public string ConsoleKey { get; init; } = "UNKNOWN";
+    public int TotalFiles { get; init; }
+    public int Games { get; init; }
+    public int Dupes { get; init; }
+    public int Junk { get; init; }
+    public int DatMatches { get; init; }
+    public int HealthScore { get; init; }
+}
+
 /// <summary>Integrity baseline entry for a single file.</summary>
 public sealed record IntegrityEntry(string Hash, long Size, DateTime LastModified);
 

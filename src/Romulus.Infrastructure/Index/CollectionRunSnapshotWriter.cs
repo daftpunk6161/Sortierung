@@ -1,5 +1,7 @@
+using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
+using Romulus.Infrastructure.Analysis;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
 
@@ -79,9 +81,67 @@ public static class CollectionRunSnapshotWriter
             FailCount = projection.FailCount,
             SavedBytes = projection.SavedBytes,
             ConvertSavedBytes = projection.ConvertSavedBytes,
-            HealthScore = projection.HealthScore
+            HealthScore = projection.HealthScore,
+            PerConsoleHealth = ComputePerConsoleHealth(result)
         };
     }
+
+    /// <summary>
+    /// T-W7-HEALTH-SCORE: Per-console HealthScore breakdown derived from the
+    /// same run truth (RomCandidate + DedupeGroup) used by the global score.
+    /// Deterministic order (ConsoleKey Ordinal asc). HealthScore reuses
+    /// <see cref="CollectionAnalysisService.CalculateHealthScore"/> so there is
+    /// only one fachliche Wahrheit for the score.
+    /// </summary>
+    internal static IReadOnlyList<ConsoleHealthBreakdown> ComputePerConsoleHealth(RunResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        if (result.AllCandidates.Count == 0)
+            return Array.Empty<ConsoleHealthBreakdown>();
+
+        var dupesByConsole = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var group in result.DedupeGroups)
+        {
+            foreach (var loser in group.Losers)
+            {
+                var key = NormalizeConsoleKey(loser.ConsoleKey);
+                dupesByConsole.TryGetValue(key, out var count);
+                dupesByConsole[key] = count + 1;
+            }
+        }
+
+        return result.AllCandidates
+            .GroupBy(candidate => NormalizeConsoleKey(candidate.ConsoleKey), StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group =>
+            {
+                var totalFiles = group.Count();
+                var games = group.Count(c => c.Category == FileCategory.Game);
+                var junk = group.Count(c => c.Category == FileCategory.Junk);
+                var datMatches = group.Count(c => c.DatMatch);
+                dupesByConsole.TryGetValue(group.Key, out var dupes);
+                var healthScore = CollectionAnalysisService.CalculateHealthScore(
+                    totalFiles: totalFiles,
+                    dupes: dupes,
+                    junk: junk,
+                    verified: datMatches);
+                return new ConsoleHealthBreakdown
+                {
+                    ConsoleKey = group.Key,
+                    TotalFiles = totalFiles,
+                    Games = games,
+                    Dupes = dupes,
+                    Junk = junk,
+                    DatMatches = datMatches,
+                    HealthScore = healthScore
+                };
+            })
+            .ToArray();
+    }
+
+    private static string NormalizeConsoleKey(string? consoleKey)
+        => string.IsNullOrWhiteSpace(consoleKey) ? "UNKNOWN" : consoleKey.Trim();
 
     private static string ResolveRunId(RunResult result, RunOptions options, string rootFingerprint, DateTime completedUtc)
     {

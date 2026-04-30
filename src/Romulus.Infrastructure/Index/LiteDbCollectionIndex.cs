@@ -812,7 +812,19 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             FailCount = snapshot.FailCount,
             SavedBytes = snapshot.SavedBytes,
             ConvertSavedBytes = snapshot.ConvertSavedBytes,
-            HealthScore = snapshot.HealthScore
+            HealthScore = snapshot.HealthScore,
+            PerConsoleHealth = snapshot.PerConsoleHealth
+                .Select(static entry => new ConsoleHealthBreakdownDocument
+                {
+                    ConsoleKey = entry.ConsoleKey ?? "UNKNOWN",
+                    TotalFiles = entry.TotalFiles,
+                    Games = entry.Games,
+                    Dupes = entry.Dupes,
+                    Junk = entry.Junk,
+                    DatMatches = entry.DatMatches,
+                    HealthScore = entry.HealthScore
+                })
+                .ToList()
         };
 
     private static CollectionRunSnapshot ToContract(CollectionRunSnapshotDocument document)
@@ -837,7 +849,19 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
             FailCount = document.FailCount,
             SavedBytes = document.SavedBytes,
             ConvertSavedBytes = document.ConvertSavedBytes,
-            HealthScore = document.HealthScore
+            HealthScore = document.HealthScore,
+            PerConsoleHealth = (document.PerConsoleHealth ?? new List<ConsoleHealthBreakdownDocument>())
+                .Select(static doc => new ConsoleHealthBreakdown
+                {
+                    ConsoleKey = doc.ConsoleKey ?? "UNKNOWN",
+                    TotalFiles = doc.TotalFiles,
+                    Games = doc.Games,
+                    Dupes = doc.Dupes,
+                    Junk = doc.Junk,
+                    DatMatches = doc.DatMatches,
+                    HealthScore = doc.HealthScore
+                })
+                .ToArray()
         };
 
     private sealed class MetadataDocument
@@ -928,6 +952,18 @@ public sealed class LiteDbCollectionIndex : ICollectionIndex, IDisposable
         public int FailCount { get; set; }
         public long SavedBytes { get; set; }
         public long ConvertSavedBytes { get; set; }
+        public int HealthScore { get; set; }
+        public List<ConsoleHealthBreakdownDocument> PerConsoleHealth { get; set; } = new();
+    }
+
+    private sealed class ConsoleHealthBreakdownDocument
+    {
+        public string ConsoleKey { get; set; } = "UNKNOWN";
+        public int TotalFiles { get; set; }
+        public int Games { get; set; }
+        public int Dupes { get; set; }
+        public int Junk { get; set; }
+        public int DatMatches { get; set; }
         public int HealthScore { get; set; }
     }
 }

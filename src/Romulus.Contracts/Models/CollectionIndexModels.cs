@@ -231,4 +231,13 @@ public sealed record CollectionRunSnapshot
 
     /// <summary>Computed collection health score for the run.</summary>
     public int HealthScore { get; init; }
+
+    /// <summary>
+    /// T-W7-HEALTH-SCORE: Per-console HealthScore breakdown derived from the
+    /// same run truth as <see cref="HealthScore"/>. Sorted deterministically by
+    /// <c>ConsoleKey</c> (Ordinal asc). Empty when no candidates were scanned.
+    /// Used by GUI/CLI/API trend views to surface a per-console history without
+    /// a parallel persistence path.
+    /// </summary>
+    public IReadOnlyList<ConsoleHealthBreakdown> PerConsoleHealth { get; init; } = Array.Empty<ConsoleHealthBreakdown>();
 }
