@@ -83,16 +83,20 @@ Wichtig fuer Plan-Maxime "eine fachliche Wahrheit":
   `beta-recruiting-playbook.md` + `beta-smoke-protocol.md`. Mitigation:
   Welle-2-Hygiene-Wachen sind seitdem gewachsen (Wave4* + ReportUnification +
   ConversionLossyGuiGate), die strukturell Drift verhindern.
-- **R-2 — CLI-Simulate-Subcommand E2E-Tests** (`CliSimulateSubcommandTests`)
-  laufen lokal in einen testhost-OOM (~3 min, ~2.9 GB RAM, dokumentiert in
-  Repo-Memory `cli-test-isolation-fix2-and-pipeline-hang`). **NICHT
-  gate-blockierend**, weil:
-  - der Simulator-Pfad selbst durch `WpfSimulatorViewModel`- und
-    `BeforeAfterSimulator`-Tests (10 Tests) abgedeckt ist,
-  - die CLI-Subcommand-Verdrahtung durch andere CLI-Subcommand-Tests
-    (`CliProductizationTests`) gepruefte Strukturpfade nutzt.
-  - Empfehlung: separates P2-Backlog-Item "CLI-Sim-Hang"
-    (Test-Isolation/Memory-Tuning), nicht im Gate-Kritischen Pfad.
+- **R-2 — CLI-Simulate-Subcommand E2E-Tests** (`CliSimulateSubcommandTests`):
+  Am 2026-04-30 nochmals re-evaluiert. Der zuvor in der Repo-Memory
+  `cli-test-isolation-fix2-and-pipeline-hang` dokumentierte testhost-OOM-Hang
+  ist **nicht mehr reproduzierbar**:
+  - `dotnet test --filter "FullyQualifiedName~CliSimulateSubcommandTests"`
+    -> 8/8 gruen in **4.5 s**.
+  - Breiterer CLI-Sweep `--filter "FullyQualifiedName~Cli"`
+    -> 585/585 gruen in **21 s**.
+  - Ursache der Behebung: Test-Isolation-Fix #2 (commit `b9a85a21`) — die
+    `CliPathOverrides` (CollectionDbPath + AuditSigningKeyPath) und das
+    Sibling-State-Verzeichnis verhindern, dass jeder Test die reale
+    `%APPDATA%\Romulus\collection.db` (LiteDB exclusive lock) oeffnet.
+  - Status: **kein offener Punkt mehr**. Risikoeintrag bleibt zur
+    Nachvollziehbarkeit erhalten, aber gate-relevant ist nichts.
 - **R-3 — T-W3-BETA-USERS / T-W3-RUN-SMOKE-WITH-USERS** bleiben analog
   Phase-1 Pass-4 `wontfix-with-reason`. Bewertung in Phase-3 erneut
   oeffnen, wenn Maintainer Cohort akquiriert.
