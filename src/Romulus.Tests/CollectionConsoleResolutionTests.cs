@@ -77,27 +77,6 @@ public sealed class CollectionConsoleResolutionTests
     }
 
     [Fact]
-    public void ExportRetroArchPlaylist_PrefersCandidateConsoleKey_ForCoreLookup()
-    {
-        var json = CollectionAnalysisService.ExportRetroArchPlaylist(
-        [
-            new RomCandidate
-            {
-                MainPath = @"D:\Roms\Misc\game.sfc",
-                ConsoleKey = "snes",
-                Region = "EU",
-                Extension = ".sfc",
-                SizeBytes = 1024
-            }
-        ], "MyList");
-
-        using var document = JsonDocument.Parse(json);
-        var item = document.RootElement.GetProperty("items")[0];
-
-        Assert.Equal("snes9x_libretro", item.GetProperty("core_path").GetString());
-    }
-
-    [Fact]
     public void FeatureService_ResolveField_Console_PrefersCandidateConsoleKey_WhenPathDiffers()
     {
         var candidate = new RomCandidate

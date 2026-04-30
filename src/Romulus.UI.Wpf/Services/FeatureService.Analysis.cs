@@ -108,25 +108,6 @@ public static partial class FeatureService
     }
 
 
-    // ═══ RETROARCH PLAYLIST EXPORT (used by tests / future use) ═════════
-
-    private static Dictionary<string, string> CoreMapping =>
-        UiLookupData.Instance.CoreMapping.Count > 0 ? UiLookupData.Instance.CoreMapping
-        : new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["nes"] = "mesen_libretro", ["snes"] = "snes9x_libretro", ["n64"] = "mupen64plus_next_libretro",
-        ["gb"] = "gambatte_libretro", ["gbc"] = "gambatte_libretro", ["gba"] = "mgba_libretro",
-        ["nds"] = "melonds_libretro", ["ps1"] = "mednafen_psx_hw_libretro", ["ps2"] = "pcsx2_libretro",
-        ["psp"] = "ppsspp_libretro", ["gc"] = "dolphin_libretro", ["wii"] = "dolphin_libretro",
-        ["genesis"] = "genesis_plus_gx_libretro", ["arcade"] = "fbneo_libretro",
-        ["dreamcast"] = "flycast_libretro", ["saturn"] = "mednafen_saturn_libretro"
-    };
-
-
-    public static string ExportRetroArchPlaylist(IReadOnlyList<RomCandidate> winners, string playlistName)
-        => CollectionAnalysisService.ExportRetroArchPlaylist(winners, playlistName, CoreMapping);
-
-
     /// <summary>Build command palette results report.</summary>
     public static string BuildCommandPaletteReport(string input,
         IReadOnlyList<(string key, string name, string shortcut, int score)> results)

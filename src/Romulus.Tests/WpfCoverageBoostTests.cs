@@ -120,35 +120,6 @@ public sealed class WpfCoverageBoostTests : IDisposable
         Assert.Equal("HealthScore", result[0].key);
     }
 
-    // ═══ ANALYSIS: ExportRetroArchPlaylist ═══════════════════════════════
-
-    [Fact]
-    public void ExportRetroArchPlaylist_ProducesValidJson()
-    {
-        var winners = new[] {
-            new RomCandidate { MainPath = @"D:\Roms\SNES\game.sfc", GameKey = "Game", Region = "EU",
-                Extension = ".sfc", SizeBytes = 1024, Category = FileCategory.Game },
-            new RomCandidate { MainPath = @"D:\Roms\NES\mario.nes", GameKey = "Mario", Region = "US",
-                Extension = ".nes", SizeBytes = 512, Category = FileCategory.Game }
-        };
-
-        var json = FeatureService.ExportRetroArchPlaylist(winners, "MyROMs");
-        Assert.Contains("1.5", json);
-        Assert.Contains("game", json);
-        Assert.Contains("mario", json);
-        // Validate it's valid JSON
-        var doc = JsonDocument.Parse(json);
-        Assert.Equal("1.5", doc.RootElement.GetProperty("version").GetString());
-    }
-
-    [Fact]
-    public void ExportRetroArchPlaylist_EmptyList_ProducesValidJson()
-    {
-        var json = FeatureService.ExportRetroArchPlaylist([], "Empty");
-        var doc = JsonDocument.Parse(json);
-        Assert.Equal(0, doc.RootElement.GetProperty("items").GetArrayLength());
-    }
-
     // ═══ ANALYSIS: BuildCloneTree ═══════════════════════════════════════
 
     [Fact]
@@ -558,10 +529,11 @@ public sealed class WpfCoverageBoostTests : IDisposable
     public void GetSortTemplates_ReturnsNonEmptyDictionary()
     {
         var templates = FeatureService.GetSortTemplates();
-        // TASK-028: upgraded — verify known templates are present
-        Assert.True(templates.ContainsKey("RetroArch"), "Must contain RetroArch template");
-        Assert.True(templates.ContainsKey("EmulationStation"), "Must contain EmulationStation template");
-        Assert.True(templates.ContainsKey("LaunchBox"), "Must contain LaunchBox template");
+        // T-W1-FRONTEND-EXPORT-CULL pass 2: assert neutral (non-frontend-branded) template keys
+        Assert.True(templates.Count >= 3);
+        Assert.True(templates.ContainsKey("Standard"), "Must contain Standard template");
+        Assert.True(templates.ContainsKey("Lowercase"), "Must contain Lowercase template");
+        Assert.True(templates.ContainsKey("Capitalized"), "Must contain Capitalized template");
     }
 
     // ═══ WORKFLOW: TestCronMatch ═════════════════════════════════════════

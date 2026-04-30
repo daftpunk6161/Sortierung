@@ -143,7 +143,7 @@ Usage:
 Subcommands:
   romulus analyze --roots <path>              Collection health score and heatmap
   romulus simulate --roots <path> [-o <file>] Before/After projection (DryRun)
-    romulus export --roots <path> [--format csv|json|excel|retroarch|m3u|launchbox|emulationstation|playnite|mister|analoguepocket|onionos] [-o <file>]
+    romulus export --roots <path> [--format csv|json|excel|m3u] [-o <file>]
   romulus profiles list
   romulus profiles show --id <profile-id>
   romulus profiles import --input <file>

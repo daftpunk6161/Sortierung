@@ -734,8 +734,9 @@ public sealed class FeatureServiceTests : IDisposable
     public void GetSortTemplates_ReturnsKnownTemplates()
     {
         var templates = FeatureService.GetSortTemplates();
+        // T-W1-FRONTEND-EXPORT-CULL pass 2: neutral template keys (no frontend brand names)
         Assert.True(templates.Count >= 3);
-        Assert.True(templates.ContainsKey("RetroArch"));
+        Assert.True(templates.ContainsKey("Standard"));
     }
 
     // ═══ ExportCollectionCsv ════════════════════════════════════════════

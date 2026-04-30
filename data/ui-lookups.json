@@ -53,27 +53,11 @@
     { "keyword": "pinball", "genre": "Arcade" },
     { "keyword": "pong", "genre": "Arcade" }
   ],
-  "coreMapping": {
-    "nes": "mesen_libretro",
-    "snes": "snes9x_libretro",
-    "n64": "mupen64plus_next_libretro",
-    "gb": "gambatte_libretro",
-    "gbc": "gambatte_libretro",
-    "gba": "mgba_libretro",
-    "nds": "melonds_libretro",
-    "ps1": "mednafen_psx_hw_libretro",
-    "ps2": "pcsx2_libretro",
-    "psp": "ppsspp_libretro",
-    "gc": "dolphin_libretro",
-    "wii": "dolphin_libretro",
-    "genesis": "genesis_plus_gx_libretro",
-    "arcade": "fbneo_libretro"
-  },
   "sortTemplates": {
-    "RetroArch": "{console}/{filename}",
-    "EmulationStation": "roms/{console_lower}/{filename}",
-    "LaunchBox": "Games/{console}/{filename}",
-    "Batocera": "share/roms/{console_lower}/{filename}",
+    "Standard": "{console}/{filename}",
+    "Lowercase": "roms/{console_lower}/{filename}",
+    "Capitalized": "Games/{console}/{filename}",
+    "LowercasePath": "share/roms/{console_lower}/{filename}",
     "Flat": "{filename}"
   },
   "extensionTargetFormats": {

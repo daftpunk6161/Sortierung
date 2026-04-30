@@ -26,10 +26,10 @@ public static partial class FeatureService
         if (ext.Count > 0) return new(ext);
         return new()
         {
-            ["RetroArch"] = "{console}/{filename}",
-            ["EmulationStation"] = "roms/{console_lower}/{filename}",
-            ["LaunchBox"] = "Games/{console}/{filename}",
-            ["Batocera"] = "share/roms/{console_lower}/{filename}",
+            ["Standard"] = "{console}/{filename}",
+            ["Lowercase"] = "roms/{console_lower}/{filename}",
+            ["Capitalized"] = "Games/{console}/{filename}",
+            ["LowercasePath"] = "share/roms/{console_lower}/{filename}",
             ["Flat"] = "{filename}"
         };
     }

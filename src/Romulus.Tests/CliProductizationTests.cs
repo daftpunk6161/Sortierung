@@ -44,7 +44,13 @@ public sealed class CliProductizationTests : IDisposable
         Assert.Contains("--workflow <id>", text, StringComparison.Ordinal);
         Assert.Contains("--profile <id>", text, StringComparison.Ordinal);
         Assert.Contains("--profile-file <file>", text, StringComparison.Ordinal);
-        Assert.Contains("m3u|launchbox|emulationstation|playnite|mister|analoguepocket|onionos", text, StringComparison.Ordinal);
+        // T-W1-FRONTEND-EXPORT-CULL pass 2: stale frontend formats (retroarch/launchbox/emulationstation/
+        // playnite/mister/analoguepocket/onionos) wurden aus der CLI-Hilfe entfernt. Tatsaechlich
+        // unterstuetzt sind nur csv|json|excel|m3u (Program.cs Subcommand-Export-Branch).
+        Assert.Contains("--format csv|json|excel|m3u", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("retroarch", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("launchbox", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("emulationstation", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

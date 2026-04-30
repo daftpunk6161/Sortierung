@@ -5,7 +5,6 @@
   "required": [
     "consoleFormatPriority",
     "genreKeywords",
-    "coreMapping",
     "sortTemplates",
     "extensionTargetFormats"
   ],
@@ -31,10 +30,6 @@
         },
         "additionalProperties": false
       }
-    },
-    "coreMapping": {
-      "type": "object",
-      "additionalProperties": true
     },
     "sortTemplates": {
       "type": "object",

@@ -252,44 +252,6 @@ public static class CollectionAnalysisService
             materialized.Source);
     }
 
-    public static string ExportRetroArchPlaylist(IReadOnlyList<RomCandidate> winners, string playlistName,
-        IReadOnlyDictionary<string, string>? coreMapping = null)
-    {
-        coreMapping ??= DefaultCoreMapping;
-        var entries = new List<object>();
-        foreach (var w in winners)
-        {
-            var console = ResolveConsoleLabel(w).ToLowerInvariant();
-            var core = coreMapping.GetValueOrDefault(console, "");
-            entries.Add(new
-            {
-                path = w.MainPath.Replace('\\', '/'),
-                label = Path.GetFileNameWithoutExtension(w.MainPath),
-                core_path = core,
-                core_name = core.Replace("_libretro", ""),
-                db_name = playlistName + ".lpl"
-            });
-        }
-        return System.Text.Json.JsonSerializer.Serialize(new
-        {
-            version = "1.5",
-            default_core_path = "",
-            default_core_name = "",
-            items = entries
-        }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-    }
-
-    internal static readonly IReadOnlyDictionary<string, string> DefaultCoreMapping =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["nes"] = "mesen_libretro", ["snes"] = "snes9x_libretro", ["n64"] = "mupen64plus_next_libretro",
-            ["gb"] = "gambatte_libretro", ["gbc"] = "gambatte_libretro", ["gba"] = "mgba_libretro",
-            ["nds"] = "melonds_libretro", ["ps1"] = "mednafen_psx_hw_libretro", ["ps2"] = "pcsx2_libretro",
-            ["psp"] = "ppsspp_libretro", ["gc"] = "dolphin_libretro", ["wii"] = "dolphin_libretro",
-            ["genesis"] = "genesis_plus_gx_libretro", ["arcade"] = "fbneo_libretro",
-            ["dreamcast"] = "flycast_libretro", ["saturn"] = "mednafen_saturn_libretro"
-        };
-
     // --- Shared helpers ---
 
     public static string ToCategoryLabel(FileCategory category) => category switch
