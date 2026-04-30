@@ -1954,7 +1954,7 @@ tasks:
     prototype: false
     covers: ["TOP-14"]
     priority: medium
-    status: pending
+    status: completed
     dependencies: ["T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
@@ -1962,7 +1962,19 @@ tasks:
         description: Settings-Speicher
       - path: data/i18n/
         description: Opt-in-Texte
-    planning_pass: 1
+      - path: src/Romulus.Contracts/Ports/ITelemetryService.cs
+        description: Port (pass 2)
+      - path: src/Romulus.Contracts/Models/TelemetryEvent.cs
+        description: Aggregate-Event-Modell (pass 2)
+      - path: src/Romulus.Infrastructure/Telemetry/TelemetryService.cs
+        description: Local-only Adapter, default OFF (pass 2)
+      - path: src/Romulus.Infrastructure/Telemetry/TelemetryEventAllowList.cs
+        description: PII-Allow-List (pass 2)
+      - path: src/Romulus.Tests/Wave4TelemetryOptInTests.cs
+        description: 8 Pin-Tests (pass 2)
+      - path: docs/adrs/ADR-0030-telemetry-opt-in.md
+        description: ADR Endpoint + Retention (pass 2)
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Erfuellt resolved_decisions-Versprechen, sonst Schattenpflicht.
@@ -1993,6 +2005,50 @@ tasks:
         review_security_sensitive: true
         requires_review: true
         review_depth: full
+        test_coverage: full
+
+      - pass: 2
+        reason: |
+          Implementierung Acceptance-Pin-test-gesichert.
+          Deliverables:
+            * `Romulus.Contracts.Ports.ITelemetryService` + `TelemetryEvent` Record.
+            * `Romulus.Infrastructure.Telemetry.TelemetryService` mit
+              `DefaultEnabled = false` (Source-Pin) und persistierter Toggle-State
+              in `%APPDATA%/Romulus/telemetry.json`.
+            * `TelemetryEventAllowList.AllowedFields` enthaelt nur Counts/Dauern/
+              Outcome-Strings/ConsoleKey; Reflection-Pin verbietet Felder mit
+              `path|host|user|ip` im Namen.
+            * `Record(...)` filtert unbekannte Felder still raus -> failure_mode
+              "Pfade oder Hostnames leaken" am Recording-Boundary blockiert.
+            * Kein Netzwerk-Code in dieser Iteration; ADR-0030 dokumentiert
+              Endpoint + Retention fuer kuenftige Welle.
+          Acceptance-Mapping:
+            * Default OFF -> `Default_IsDisabled_OptIn`,
+              `Source_DefaultEnabledLiteral_IsFalse`.
+            * Kein Pfad/Hostname im Payload -> `Record_ForbiddenFields_AreStrippedSilently`,
+              `AllowList_DoesNotPermitPathOrIdentityKeys`.
+            * Settings-Toggle vorhanden -> `State_IsPersisted_AcrossInstances`.
+            * ADR Endpoint + Retention -> `Adr_TelemetryOptIn_ExistsInRepo`
+              + `docs/adrs/ADR-0030-telemetry-opt-in.md`.
+          Verification:
+            * `dotnet build src/Romulus.sln` -> 0 Fehler.
+            * `dotnet test src/Romulus.Tests/Romulus.Tests.csproj
+              --filter "FullyQualifiedName~Wave4TelemetryOptIn"` -> 8/8 gruen.
+        timestamp: "2026-04-30"
+        estimated_effort: medium
+        estimated_files: 6
+        estimated_lines: 320
+        focus_area: governance
+        verification:
+          - Default OFF (Source- + Runtime-Pin)
+          - kein Pfad/Hostname im Payload (Allow-List + Filter-Pin)
+          - Settings-Toggle vorhanden (Persistenz-Pin)
+          - ADR fuer Endpoint und Retention vorhanden (Repo-Pin)
+        acceptance_criteria:
+          - DSGVO-konformes Opt-in
+          - Aggregat-Output reproduzierbar fuer Welle-6-Nachjustierung
+        tech_stack:
+          - C# .NET 10
         test_coverage: full
 
   - id: T-W4-AUDIT-VIEWER-UI
