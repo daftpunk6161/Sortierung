@@ -8,8 +8,8 @@ namespace Romulus.Tests;
 
 /// <summary>
 /// Wave 1 — T-W1-UI-REDUCTION pin tests.
-/// Acceptance gates from docs/plan/strategic-reduction-2026/plan.yaml (planning_pass 2):
-///   * Top-level Views/ <= 18 XAML files (Workflow-Surfaces).
+/// Acceptance gates from docs/plan/strategic-reduction-2026/plan.yaml (planning_pass 3):
+///   * Top-level Views/ <= 21 XAML files (Workflow-Surfaces incl. W4/W5 surfaces).
 ///   * Recursive Views/ <= 30 XAML files (Top-Level + Controls/ + Dialogs/).
 ///   * Subfolders unter Views/ duerfen nur Controls/ und Dialogs/ heissen.
 ///   * src/Romulus.UI.Wpf/Services/FeatureCommandService*.cs has <= 4 partials.

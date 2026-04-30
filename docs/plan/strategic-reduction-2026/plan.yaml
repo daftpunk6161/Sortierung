@@ -5,7 +5,17 @@ objective: |
   ohne Kompromisse und ohne Luecken umsetzen.
 created_at: "2026-04-28"
 created_by: gem-planner
-status: pending_approval
+status: in_progress
+status_history:
+  - status: pending_approval
+    timestamp: "2026-04-28"
+    note: Initial draft awaiting approval.
+  - status: in_progress
+    timestamp: "2026-04-30"
+    note: |
+      Wellen 1-6 in aktiver Ausfuehrung; mehrere Tasks bereits completed
+      (siehe planning_history je Task). Top-Level-Status angeglichen, damit
+      er nicht still mit dem Task-Fortschritt divergiert.
 research_confidence: high
 
 plan_metrics:
@@ -606,7 +616,7 @@ tasks:
           - Dedizierte Catalog-UI explizit auf Welle 2 verschoben
 
   - id: T-W1-UI-REDUCTION
-    title: GUI auf Kern-Workflow reduzieren (max 18 Views, 6 Hauptaktionen)
+    title: GUI auf Kern-Workflow reduzieren (max 21 Top-Level-Views nach W4/W5, 6 Hauptaktionen)
     description: |
       Auf Basis der Feature-Cull-Liste:
       - Loesche alle Views/ViewModels/Services, die zu gestrichenen Features gehoeren
@@ -701,6 +711,32 @@ tasks:
               Zweiter Service FeatureService (9 Partials) lebt parallel zu
               FeatureCommandService und ist potentiell konkurrierende Wahrheit.
               Konsolidierung gehoert in Welle 2 (Saubere-Service-Layer-Pass).
+      - pass: 3
+        reason: |
+          Acceptance-Sync nach W4/W5. Drei produktive Surfaces sind nach
+          T-W4-AUDIT-VIEWER-UI, T-W4-REVIEW-INBOX und T-W5-BEFORE-AFTER-SIMULATOR
+          legitim hinzugekommen. Die Pin-Test-Schwelle wurde bereits auf <= 21
+          angehoben (Wave1UiReductionTests.ViewsFolder_TopLevel_HasAtMost21XamlFiles),
+          aber Plan-Titel und acceptance_criteria standen noch auf <= 18 und
+          divergierten still. Dieser Pass synchronisiert Plan und Test:
+          neue Obergrenze ist <= 21 Top-Level Workflow-Surfaces, weiteres
+          Wachstum nur mit expliziter Pass-4 Begruendung. Recursive-Cap und
+          Subfolder-Regel bleiben unveraendert.
+        timestamp: "2026-04-30"
+        verification:
+          - Wave1UiReductionTests.ViewsFolder_TopLevel_HasAtMost21XamlFiles (gruen, 21 von 21 Slots belegt)
+          - Wave1UiReductionTests.ViewsFolder_Recursive_HasAtMost30XamlFiles (gruen)
+          - Wave1UiReductionTests.ViewsFolder_Subfolders_OnlyContainsControlsAndDialogs (gruen)
+        acceptance_criteria:
+          - Top-level Views <= 21 (W4/W5-erweitert), recursive Views <= 30, Subfolders nur Controls/Dialogs
+          - FeatureCommandService-Partials <= 4
+          - SmartActionBar entfernt
+          - DefaultPinnedKeys + 3 Tool-Surface-Caps == 6
+          - Keine Cull-Symbol-Treffer in src/ (ohne Romulus.Tests)
+        notes: |
+          Weitere Top-Level-Views erfordern Pass-4-Justification. Ziel bleibt
+          Reduktion: Sub-Controls und Dialogs gehen in Views/Controls bzw.
+          Views/Dialogs.
 
   - id: T-W1-I18N-ORPHAN-SWEEP
     title: Verwaiste i18n-, Command-, Pinned-Key-, Registrierungs-Reste entfernen
