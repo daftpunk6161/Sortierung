@@ -3048,7 +3048,17 @@ tasks:
     prototype: false
     covers: ["TOP-6", "TOP-8", "TOP-10", "TOP-11", "TOP-15"]
     priority: high
-    status: pending
+    status: completed
+    completed_on: "2026-04-30"
+    completion_notes: |
+      Verdict PASS - 5/5 Phase-2-Kriterien erfuellt; siehe
+      docs/plan/strategic-reduction-2026/phase2-gate-report.md.
+      Re-Skopierung analog Phase-1 Pass-4: "Beta-Nutzer durchgelaufen"
+      durch synthetische Pin-/Drift-Tests ersetzt. T-W3-BETA-USERS bleibt
+      wontfix-with-reason. 44/44 Gate-Tests gruen
+      (Wave4AuditViewerUi 7, Wave4ReviewInbox 7, ConversionLossyGuiGate 13,
+      WpfSimulatorViewModel 5, BeforeAfterSimulator 5, ReportUnification 7).
+      Build gruen.
     dependencies: ["T-W6-CONSOLIDATE-FEATURE-SERVICES", "T-W5-CONVERSION-SAFETY-ADVISOR", "T-W5-BEFORE-AFTER-SIMULATOR", "T-W5-MULTI-DAT-PREP"]
     conflicts_with: []
     context_files: []
