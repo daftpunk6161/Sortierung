@@ -3266,7 +3266,14 @@ tasks:
     prototype: false
     covers: []
     priority: medium
-    status: pending
+    status: wontfix-with-reason
+    closed_on: "2026-04-30"
+    closure_reason: |
+      Discovery-Loop (T-W4-DISCOVERY-LOOP) ist als wontfix-with-reason
+      geschlossen (keine Beta-Cohort, kein belegtes Bedarfs-Signal). Damit ist
+      die einzige Aktivierungsbedingung dieses BONUS-Features nicht erfuellt.
+      Implementierung waere genau das Anti-Pattern aus AGENTS.md ("keine
+      future-proof Abstraktionen ohne aktuellen Bedarf").
     dependencies: ["T-W7-HEALTH-SCORE"]
     conflicts_with: []
     context_files:
@@ -3401,7 +3408,13 @@ tasks:
     prototype: false
     covers: []
     priority: medium
-    status: pending
+    status: wontfix-with-reason
+    closed_on: "2026-04-30"
+    closure_reason: |
+      Discovery-Loop (T-W4-DISCOVERY-LOOP) ist als wontfix-with-reason
+      geschlossen. Heatmap-Bedarf nicht belegt. Aktivierungsbedingung damit
+      nicht erfuellt. Bereits vorhandene Review-Inbox + DAT-Audit-View decken
+      die kritischen Drill-down-Pfade ab.
     dependencies: ["T-W9-POLICY-GOVERNANCE"]
     conflicts_with: []
     context_files:
@@ -3438,7 +3451,13 @@ tasks:
     prototype: false
     covers: []
     priority: medium
-    status: pending
+    status: wontfix-with-reason
+    closed_on: "2026-04-30"
+    closure_reason: |
+      Discovery-Loop (T-W4-DISCOVERY-LOOP) ist als wontfix-with-reason
+      geschlossen, Power-Persona-Bedarf nicht belegt. BeforeAfterSimulator
+      (T-W5) deckt den 1-Plan-Vergleichsfall bereits ab; Multi-Plan-Variante
+      ohne Bedarf waere Feature-Hype.
     dependencies: ["T-W5-BEFORE-AFTER-SIMULATOR", "T-W9-POLICY-GOVERNANCE"]
     conflicts_with: []
     context_files: []
@@ -3520,7 +3539,15 @@ tasks:
     prototype: false
     covers: []
     priority: low
-    status: pending
+    status: wontfix-with-reason
+    closed_on: "2026-04-30"
+    closure_reason: |
+      Direkter Widerspruch zu T-W1-FRONTEND-CULL (Wave 1, completed): die
+      Frontend-Export-Funktionen (RetroArch/EmulationStation/LaunchBox) wurden
+      bewusst aus Code, Daten und Tests entfernt, weil sie ausserhalb der
+      Sichere-Cleanup-Identitaet liegen. Discovery-Loop ist wontfix, kein
+      belegter externer Bedarf. Identitaets-Guardrail (T-W11-IDENTITY-GUARDRAIL)
+      schliesst dieses Feature explizit aus.
     dependencies: ["T-W11-CROSS-PLATFORM-DECISION"]
     conflicts_with: []
     context_files:
