@@ -431,6 +431,7 @@ app.MapPost("/collections/merge/rollback", async (
     .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound);
 
 MapRunWatchEndpoints(app, trustForwardedFor, timeProvider, sseTimeoutSeconds, sseHeartbeatSeconds);
+MapDecisionExplainerEndpoints(app, trustForwardedFor);
 
 // --- DAT Management Endpoints (B2) ---
 

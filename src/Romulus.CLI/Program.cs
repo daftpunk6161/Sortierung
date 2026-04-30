@@ -82,6 +82,9 @@ internal static partial class Program
                 case CliCommand.Simulate:
                     return await SubcommandSimulateAsync(result.Options!).ConfigureAwait(false);
 
+                case CliCommand.Explain:
+                    return await SubcommandExplainAsync(result.Options!).ConfigureAwait(false);
+
                 case CliCommand.DatDiff:
                     return SubcommandDatDiff(result.Options!);
 

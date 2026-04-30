@@ -175,6 +175,115 @@ internal static partial class Program
         }
     }
 
+    /// <summary>
+    /// Wave 4 — T-W4-DECISION-EXPLAINER. Headless equivalent of the GUI
+    /// Decision-Drawer. Runs a DryRun analysis through the canonical
+    /// <see cref="RunOrchestrator"/>, projects <see cref="RunResult.WinnerReasons"/>
+    /// through <see cref="Romulus.Infrastructure.Reporting.DecisionExplainerProjection"/>
+    /// and emits the result as a JSON envelope.
+    ///
+    /// <para>
+    /// Single Source of Truth: GUI / CLI / API all consume the same
+    /// projection. Filtering by <c>--console-key</c> + <c>--game-key</c>
+    /// uses <see cref="Romulus.Infrastructure.Reporting.DecisionExplainerProjection.Find"/>.
+    /// </para>
+    /// </summary>
+    internal static async Task<int> SubcommandExplainAsync(CliRunOptions opts)
+    {
+        SafeErrorWriteLine($"[Explain] Projecting decisions for {opts.Roots.Length} root(s)...");
+        var dataDir = RunEnvironmentBuilder.ResolveDataDir();
+        var settings = RunEnvironmentBuilder.LoadSettings(dataDir);
+        var (runOptions, mapErrors) = await CliOptionsMapper.MapAsync(opts, settings, dataDir).ConfigureAwait(false);
+        if (runOptions is null)
+        {
+            CliOutputWriter.WriteErrors(GetStderr(), mapErrors!);
+            return 3;
+        }
+
+        // Note: explain stays read-only because CliOptionsMapper defaults to DryRun
+        // when the CLI never set --apply-move; we deliberately do not allow Move
+        // here (no flag binds to it).
+
+        var serviceProvider = CreateCliServiceProvider(SafeErrorWriteLine);
+        try
+        {
+            var runEnvironmentFactory = serviceProvider.GetRequiredService<IRunEnvironmentFactory>();
+            using var env = runEnvironmentFactory.Create(runOptions, SafeErrorWriteLine);
+            using var reviewDecisionService = CreateReviewDecisionService(SafeErrorWriteLine);
+            using var orchestrator = new RunOrchestrator(
+                env.FileSystem,
+                env.AuditStore,
+                env.ConsoleDetector,
+                env.HashService,
+                env.Converter,
+                env.DatIndex,
+                headerlessHasher: env.HeaderlessHasher,
+                onProgress: SafeErrorWriteLine,
+                archiveHashService: env.ArchiveHashService,
+                knownBiosHashes: env.KnownBiosHashes,
+                collectionIndex: env.CollectionIndex,
+                enrichmentFingerprint: env.EnrichmentFingerprint,
+                reviewDecisionService: reviewDecisionService);
+
+            var result = orchestrator.Execute(runOptions);
+            IReadOnlyList<DecisionExplanation> explanations =
+                Romulus.Infrastructure.Reporting.DecisionExplainerProjection.Project(result);
+
+            // Optional filters
+            if (!string.IsNullOrWhiteSpace(opts.ConsoleKey) && !string.IsNullOrWhiteSpace(opts.GameKey))
+            {
+                var hit = Romulus.Infrastructure.Reporting.DecisionExplainerProjection.Find(
+                    explanations, opts.ConsoleKey!, opts.GameKey!);
+                explanations = hit is null
+                    ? Array.Empty<DecisionExplanation>()
+                    : new[] { hit };
+            }
+            else if (!string.IsNullOrWhiteSpace(opts.ConsoleKey))
+            {
+                var key = opts.ConsoleKey!;
+                explanations = explanations
+                    .Where(e => string.Equals(e.ConsoleKey, key, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            var output = new
+            {
+                count = explanations.Count,
+                explanations = explanations.Select(e => new
+                {
+                    consoleKey = e.ConsoleKey,
+                    gameKey = e.GameKey,
+                    winnerFileName = e.WinnerFileName,
+                    winnerExtension = e.WinnerExtension,
+                    winnerCategory = e.WinnerCategory,
+                    winnerRegion = e.WinnerRegion,
+                    datMatch = e.DatMatch,
+                    loserCount = e.LoserCount,
+                    scores = e.Scores.Select(s => new { axis = s.Axis, value = s.Value }).ToArray(),
+                    tiebreakerOrder = e.TiebreakerOrder,
+                    summary = e.Summary,
+                }).ToArray(),
+            };
+
+            var json = CliOutputWriter.SerializeJson(output);
+            if (!string.IsNullOrEmpty(opts.OutputPath))
+            {
+                File.WriteAllText(opts.OutputPath, json);
+                SafeErrorWriteLine($"[Explain] Wrote {explanations.Count} explanation(s) to {opts.OutputPath}");
+            }
+            else
+            {
+                SafeStandardWriteLine(json);
+            }
+
+            return 0;
+        }
+        finally
+        {
+            (serviceProvider as IDisposable)?.Dispose();
+        }
+    }
+
     private static int SubcommandDatDiff(CliRunOptions opts)
     {
         if (!File.Exists(opts.DatFileA))

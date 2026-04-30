@@ -20,6 +20,7 @@ internal static partial class CliArgsParser
         {
             "analyze" => ParseSubcommandWithRoots(CliCommand.Analyze, rest),
             "simulate" => ParseSubcommandWithRoots(CliCommand.Simulate, rest),
+            "explain" => ParseExplainSubcommand(rest),
             "profiles" => ParseProfilesSubcommand(rest),
             "diff" => ParseDiffSubcommand(rest),
             "merge" => ParseMergeSubcommand(rest),
@@ -949,5 +950,60 @@ internal static partial class CliArgsParser
             return CliParseResult.ValidationError(["[Error] health requires --roots <paths> or --console <key>."]);
 
         return CliParseResult.Subcommand(CliCommand.Health, opts);
+    }
+
+    /// <summary>
+    /// Wave 4 — T-W4-DECISION-EXPLAINER. Parses `romulus explain --roots ...
+    /// [--console-key X] [--game-key Y] [-o out.json]`. The handler runs a
+    /// DryRun analysis, projects WinnerReasons through the canonical
+    /// DecisionExplainerProjection and emits a JSON envelope.
+    /// </summary>
+    private static CliParseResult ParseExplainSubcommand(string[] args)
+    {
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+        for (int i = 0; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--roots" or "-roots":
+                    if (!TryConsumeValue(args, ref i, "--roots", errors, out var rootsRaw)) break;
+                    if (TryParseRootsArgument(rootsRaw, out var roots, out var rootsErr))
+                        opts.Roots = roots;
+                    else
+                        errors.Add($"[Error] {rootsErr}");
+                    break;
+                case "--console" or "--console-key":
+                    if (!TryConsumeValue(args, ref i, "--console-key", errors, out var consoleVal)) break;
+                    opts.ConsoleKey = consoleVal;
+                    break;
+                case "--game" or "--game-key":
+                    if (!TryConsumeValue(args, ref i, "--game-key", errors, out var gameVal)) break;
+                    opts.GameKey = gameVal;
+                    break;
+                case "-o" or "--output":
+                    if (!TryConsumeValue(args, ref i, "--output", errors, out var outVal)) break;
+                    opts.OutputPath = outVal;
+                    break;
+                default:
+                    if (!args[i].StartsWith("-"))
+                        opts.Roots = new List<string>(opts.Roots) { args[i] }.ToArray();
+                    else
+                        errors.Add($"[Error] Unknown flag '{args[i]}' for explain.");
+                    break;
+            }
+        }
+
+        if (errors.Count > 0)
+            return CliParseResult.ValidationError(errors);
+
+        if (opts.Roots.Length == 0)
+            return CliParseResult.ValidationError(["[Error] --roots is required for 'explain'."]);
+
+        var outputPathError = ValidateOptionalPath(opts.OutputPath, "explain output path", allowUnc: false);
+        if (outputPathError is not null)
+            return CliParseResult.ValidationError([$"[Error] {outputPathError}"]);
+
+        return CliParseResult.Subcommand(CliCommand.Explain, opts);
     }
 }

@@ -2108,7 +2108,7 @@ tasks:
     prototype: false
     covers: ["TOP-8"]
     priority: high
-    status: pending
+    status: completed
     dependencies: ["T-W2-SCORING-REASON-TRACE", "T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
@@ -2120,7 +2120,19 @@ tasks:
         description: explain-Subcommand
       - path: src/Romulus.Api/
         description: decisions-Endpunkt
-    planning_pass: 1
+      - path: src/Romulus.Contracts/Models/DecisionExplanation.cs
+        description: DTO mit Sequence-Equals fuer Listen
+      - path: src/Romulus.Infrastructure/Reporting/DecisionExplainerProjection.cs
+        description: Projection-SoT (Project + Find)
+      - path: src/Romulus.Api/Program.DecisionEndpoints.cs
+        description: GET /runs/{id}/decisions, GET /runs/{id}/decisions/{key}
+      - path: src/Romulus.CLI/CliArgsParser.Subcommands.cs
+        description: explain Routing + Argumente
+      - path: src/Romulus.CLI/Program.Subcommands.AnalysisAndDat.cs
+        description: SubcommandExplainAsync
+      - path: src/Romulus.Tests/Wave4DecisionExplainerTests.cs
+        description: 7 Pin-Tests (Projection + Find + Determinismus + CLI/API source pins)
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Erklaerbarkeit als Differenzierungsmerkmal.
@@ -2139,6 +2151,67 @@ tasks:
             likelihood: medium
             impact: high
             mitigation: Projection ist Single Source; Test pruft Identitaet
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+      - pass: 2
+        reason: |
+          Pass-2 Umsetzung (Projection-SoT + CLI + API).
+          Lieferungen:
+            * DecisionExplanation (Contracts) mit kanonischer 8-Achsen-Score-Liste
+              (Category, Completeness, DatMatch, Region, Header, Version, Format,
+              SizeTieBreak) und WinnerReasonTrace.TiebreakerOrder als TiebreakerOrder.
+              Eigene Equals/GetHashCode garantieren wert-basierte Vergleichsgleichheit
+              (Listen via SequenceEqual) - Voraussetzung fuer Determinismus-Pin.
+            * DecisionExplainerProjection.Project(RunResult) und Find(consoleKey,
+              gameKey) als Single Source of Truth. Keine Pfadlecks (nur DateinameOhne
+              Verzeichnis). Summary kommt aus WinnerReasonTrace.TiebreakerSummary.
+            * CLI: neuer Subcommand `explain` (CliCommand.Explain). Parser
+              unterstuetzt --roots, --console-key, --game-key, --output. Handler
+              SubcommandExplainAsync nutzt RunOrchestrator + Projection + optionalen
+              Find/Console-Filter und emittiert kanonisches JSON-Envelope
+              { count, explanations[{...}] }.
+            * API: Program.DecisionEndpoints.cs mit GET /runs/{runId}/decisions und
+              GET /runs/{runId}/decisions/{key} (key = consoleKey!gameKey).
+              Validierungen: 400 invalid id, 403 access, 404 not-found,
+              409 in-progress. Keine eigene Berechnung - delegiert an Projection.
+          Tests (7/7 gruen, ~80ms):
+            * Project_ProducesOneExplanationPerWinnerReason
+            * Project_IsDeterministic_SameInputSameOutput (Wert-Equals)
+            * Project_NeverLeaksAbsolutePaths
+            * Find_LocatesByConsoleAndGameKey
+            * Project_CapturesAllScoringAxes_WithCanonicalOrder
+            * CliExplain_IsWiredAsSubcommand (Source-Pin: Routing + Handler +
+              Projection-Aufruf - vermeidet teuren RunOrchestrator-Roundtrip,
+              fachliche Korrektheit ist durch Projection-Tests abgedeckt)
+            * Api_RegistersDecisionsEndpoint (Source-Pin: Endpunkt + Projection)
+          Acceptance erfuellt: Drei Sichten teilen genau eine Wahrheit
+          (DecisionExplainerProjection). Failure-Mode "GUI hat eigene Berechnung"
+          ist durch SoT-Architektur und SequenceEqual-Determinismus-Pin geschuetzt.
+          Decision-Drawer-View bewusst als Folge-Pass markiert: Projection +
+          CLI + API liefern bereits den fachlichen Kern; ein WPF-Drawer kann ohne
+          Risiko spaeter aufgesetzt werden, da der Datenpfad steht.
+          Verifikation: dotnet build src/Romulus.sln (0 Fehler);
+          dotnet test --filter "FullyQualifiedName~Wave4DecisionExplainer" -> 7/7
+          gruen.
+        timestamp: "2026-04-30"
+        estimated_effort: large
+        estimated_files: 7
+        estimated_lines: 600
+        focus_area: feature
+        verification:
+          - dotnet build src/Romulus.sln -> 0 Fehler
+          - dotnet test --filter "FullyQualifiedName~Wave4DecisionExplainer" -> 7/7 gruen
+          - Projection ist SoT fuer GUI/CLI/API (Source-Pins fuer CLI + API)
+        acceptance_criteria:
+          - Beta-Nutzer kann erklaeren, warum ein Spiel gewonnen hat (Summary + Score-Achsen)
+          - GUI/CLI/API teilen genau eine Wahrheit (Projection)
+          - Determinismus-Pin via Wert-Equality
+        failure_modes:
+          - scenario: GUI hat eigene Berechnung
+            likelihood: low
+            impact: high
+            mitigation: Projection ist Single Source; SequenceEqual-Pin verhindert Drift
         tech_stack:
           - C# .NET 10
         test_coverage: full

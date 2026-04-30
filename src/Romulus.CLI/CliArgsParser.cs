@@ -609,7 +609,8 @@ internal enum CliCommand
     JunkReport,
     Completeness,
     Health,
-    Simulate
+    Simulate,
+    Explain
 }
 
 /// <summary>
@@ -698,6 +699,8 @@ internal sealed class CliRunOptions
     public int? CollectionLimit { get; set; }
     public string? RunId { get; set; }
     public string? CompareToRunId { get; set; }
+    /// <summary>Wave 4 — T-W4-DECISION-EXPLAINER: optional GameKey filter for `romulus explain`.</summary>
+    public string? GameKey { get; set; }
     public int? HistoryLimit { get; set; }
     public int HistoryOffset { get; set; }
     public int WatchDebounceSeconds { get; set; } = 5;
