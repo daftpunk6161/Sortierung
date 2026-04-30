@@ -200,6 +200,17 @@ public sealed class StringNotEqualsToVisibilityConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
+/// <summary>Visible wenn der gebundene String nicht null/leer/whitespace ist.
+/// Genutzt z.B. von AuditViewerView.LastError, um Fehlerzeile nur bei tatsaechlichem Fehler zu zeigen.</summary>
+public sealed class StringNotEmptyToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => string.IsNullOrWhiteSpace(value as string) ? Visibility.Collapsed : Visibility.Visible;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 /// <summary>RD-006: Converts string value equality to bool. For RadioButton IsChecked binding with ConverterParameter.</summary>
 public sealed class StringEqualsToBoolConverter : IValueConverter
 {

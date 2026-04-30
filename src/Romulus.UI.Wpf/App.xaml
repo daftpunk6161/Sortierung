@@ -21,6 +21,7 @@
       <conv:PipelinePhaseBrushConverter x:Key="PhaseBrush"/>
       <conv:StringEqualsToVisibilityConverter x:Key="StrEqualsToVis"/>
       <conv:StringNotEqualsToVisibilityConverter x:Key="StrNotEqualsToVis"/>
+      <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility"/>
       <conv:StringEqualsToBoolConverter x:Key="StrEqualsToBool"/>
       <conv:PhaseDetailConverter x:Key="PhaseDetail"/>
       <conv:FractionToWidthConverter x:Key="FractionToWidth"/>
