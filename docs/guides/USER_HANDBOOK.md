@@ -47,7 +47,7 @@ API läuft auf `http://127.0.0.1:7878` (nur loopback).
 
 ## 3. GUI-Übersicht
 
-Die Standard-GUI basiert auf Avalonia und folgt dem gleichen DryRun-/Summary-Workflow. Die WPF-GUI bleibt als Legacy-Pfad verfügbar.
+Die GUI basiert auf WPF/XAML (siehe ADR-0022, Welle 1 der Strategic Reduction 2026) und folgt dem Standard-Workflow DryRun → Summary → Bestätigen → Move/Convert → Report/Undo. Der frühere Avalonia-Prototyp ist nach `archive/avalonia-spike/` archiviert und wird nicht mehr ausgeliefert.
 
 | Tab | Inhalt |
 |-----|--------|
