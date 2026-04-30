@@ -77,8 +77,10 @@ public sealed class FreshAuditRound9RedTests
     [Fact]
     public void F3_FeatureServiceInfra_HighContrast_MustNotSilentlySwallow()
     {
+        // FeatureService.Infra.cs wurde mit T-W6-CONSOLIDATE-FEATURE-SERVICES
+        // in FeatureService.Reporting.cs konsolidiert (max. 4 Partials je Service).
         var source = File.ReadAllText(FindRepoFile("src", "Romulus.UI.Wpf",
-            "Services", "FeatureService.Infra.cs"));
+            "Services", "FeatureService.Reporting.cs"));
 
         // Bare catch { return false; } swallows registry errors silently
         Assert.DoesNotContain("catch { return false; }", source, StringComparison.Ordinal);

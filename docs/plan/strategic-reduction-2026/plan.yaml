@@ -2993,7 +2993,16 @@ tasks:
     prototype: false
     covers: ["TOP-13"]
     priority: high
-    status: pending
+    status: completed
+    completed_on: "2026-04-30"
+    completion_notes: |
+      FeatureService.* von 9 Partials auf 4 reduziert (FeatureService.cs +
+      Analysis + Conversion + Reporting). Collection -> Analysis,
+      Dat -> Conversion, Export+Security+Workflow+Infra -> Reporting.
+      FeatureCommandService.* war bereits 4 Partials, unveraendert.
+      Keine Stub-Methoden, alle gestrichenen Frontend-/Sort-Helfer waren
+      schon in Wave 1A entfernt (T-W1-FRONTEND-CULL).
+      Build gruen, 869 WPF-Tests gruen.
     dependencies: ["T-W4-AUDIT-VIEWER-UI", "T-W4-REVIEW-INBOX", "T-W4-DECISION-EXPLAINER", "T-W5-REPORT-UNIFICATION"]
     # Hinweis: T-W4-REVIEW-INBOX ist trotz id-Praefix in Welle 5 (siehe wave-Feld dort).
     conflicts_with: []

@@ -32,7 +32,9 @@ public sealed class Phase6CoreIoAndI18nRedTests
 
     [Theory]
     [InlineData("src/Romulus.UI.Wpf/Services/FeatureCommandService.Security.cs")]
-    [InlineData("src/Romulus.UI.Wpf/Services/FeatureService.Export.cs")]
+    // FeatureService.Export.cs wurde mit T-W6-CONSOLIDATE-FEATURE-SERVICES nach
+    // FeatureService.Reporting.cs konsolidiert (max. 4 Partials je Service).
+    [InlineData("src/Romulus.UI.Wpf/Services/FeatureService.Reporting.cs")]
     [InlineData("src/Romulus.UI.Wpf/Services/FeatureCommandService.Data.cs")]
     [InlineData("src/Romulus.UI.Wpf/Services/FeatureCommandService.Workflow.cs")]
     public void WpfFeatureFiles_MustNotContainTrackedGermanLiterals(string relativePath)
