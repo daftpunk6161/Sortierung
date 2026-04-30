@@ -83,6 +83,8 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     public DatCatalogViewModel DatCatalog { get; }
     /// <summary>TASK-125: Conversion preview before execution.</summary>
     public ConversionPreviewViewModel ConversionPreview { get; }
+    /// <summary>T-W5-BEFORE-AFTER-SIMULATOR pass 4: WPF Simulator-View VM (two-list before/after diff).</summary>
+    public SimulatorViewModel Simulator { get; }
 
     public MainViewModel() : this(new ThemeService(), new WpfDialogService()) { }
 
@@ -103,7 +105,8 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         DatAuditViewModel? datAudit = null,
         DatCatalogViewModel? datCatalog = null,
         ConversionPreviewViewModel? conversionPreview = null,
-        DatPrewarmService? datPrewarm = null)
+        DatPrewarmService? datPrewarm = null,
+        IBeforeAfterSimulator? beforeAfterSimulator = null)
     {
         _theme = theme;
         _dialog = dialog;
@@ -132,6 +135,14 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         DatCatalog = datCatalog ?? MainViewModelChildFactory.CreateDatCatalog(_loc, _dialog, () => DatRoot, AddLog);
         DatCatalog.ConfigureContext(() => DatRoot, AddLog);
         ConversionPreview = conversionPreview ?? MainViewModelChildFactory.CreateConversionPreview(_loc);
+        Simulator = MainViewModelChildFactory.CreateSimulator(
+            beforeAfterSimulator ?? new Romulus.Infrastructure.Analysis.BeforeAfterSimulator((opts, ct) =>
+            {
+                using var orch = new Romulus.Infrastructure.Orchestration.RunOrchestrator(
+                    new Romulus.Infrastructure.FileSystem.FileSystemAdapter(),
+                    new Romulus.Infrastructure.Audit.AuditCsvStore(new Romulus.Infrastructure.FileSystem.FileSystemAdapter()));
+                return orch.Execute(opts, ct);
+            }));
         InitializeRunConfigurationServices(runProfileService, runConfigurationMaterializer);
 
         // Wire child VM events

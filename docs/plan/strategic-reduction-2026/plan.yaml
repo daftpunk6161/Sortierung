@@ -2091,7 +2091,7 @@ tasks:
     prototype: false
     covers: ["TOP-11"]
     priority: high
-    status: in_progress
+    status: completed
     dependencies: ["T-W3-PHASE1-GATE"]
     conflicts_with: []
     context_files:
@@ -2107,11 +2107,15 @@ tasks:
         description: 8 CLI pin tests (Wave 5 pass 3)
       - path: src/Romulus.CLI/Program.Subcommands.AnalysisAndDat.cs
         description: SubcommandSimulateAsync handler (Wave 5 pass 3)
+      - path: src/Romulus.UI.Wpf/ViewModels/SimulatorViewModel.cs
+        description: WPF child VM (Wave 5 pass 4)
+      - path: src/Romulus.UI.Wpf/Views/SimulatorView.xaml
+        description: WPF two-list before/after view (Wave 5 pass 4)
+      - path: src/Romulus.Tests/WpfSimulatorViewModelTests.cs
+        description: 5 WPF pin tests (Wave 5 pass 4)
       - path: src/Romulus.Infrastructure/Orchestration/PhasePlanning.cs
         description: PhasePlanBuilder (used via RunOrchestrator)
-      - path: src/Romulus.UI.Wpf/Views/
-        description: noch ausstehende Simulator-View (pass 4)
-    planning_pass: 3
+    planning_pass: 4
     planning_history:
       - pass: 1
         reason: Vertrauen vor dem Klick.
@@ -2225,6 +2229,92 @@ tasks:
           - Side-Effect-Free auch bei Mode=Move -> ERFUELLT (ForceDryRun-Pin)
           - JSON-Projektion deterministisch + dokumentiert -> ERFUELLT
           - WPF-Simulator-View -> NACHGELAGERT (pass 4)
+        failure_modes: []
+        tech_stack:
+          - C# .NET 10
+        test_coverage: full
+      - pass: 4
+        reason: |
+          Pass 4 (WPF Simulator-View): die GUI-Integration des
+          BeforeAfterSimulator als zwei-Listen-Vorher/Nachher-Diff plus
+          Summary-Header. Damit ist T-W5-BEFORE-AFTER-SIMULATOR ueber
+          alle drei Entry Points (Core/Service, CLI, WPF) konsistent
+          verdrahtet und der Task wird auf status=completed gesetzt.
+
+          Geliefert:
+          - src/Romulus.UI.Wpf/ViewModels/SimulatorViewModel.cs:
+            Neuer Child-VM. Konsumiert IBeforeAfterSimulator als single
+            source of truth (kein paralleles Recompute). Public surface:
+              * BeforeItems, AfterItems (ObservableCollection<BeforeAfterEntry>)
+              * Summary (BeforeAfterSummary - direkt aus Simulator-Result)
+              * HasResult, LastError
+              * Refresh(RunOptions, CancellationToken), Reset()
+            BeforeItems = alle Entries; AfterItems = Entries ohne Action=Remove
+            (das ist die einzige Diff-Projektion; Summary kommt 1:1 vom
+            Simulator). Optionen werden VERBATIM weitergereicht; der
+            ForceDryRun-Chokepoint liegt im BeforeAfterSimulator selbst,
+            nicht im VM.
+          - src/Romulus.UI.Wpf/Views/SimulatorView.xaml + .xaml.cs:
+            Header-Card mit allen sieben Summary-Chips
+            (Vorher/Nachher/Bleiben/Entfernt/Konvertiert/Umbenannt/SavedBytes),
+            Empty-State (Segoe MDL2 Glyph) und Grid mit zwei ListBox-
+            Spalten (Vorher = SourcePath; Nachher = TargetPath). Beide
+            Listen virtualisiert (IsVirtualizing + Recycling). Code-Behind
+            enthaelt nur InitializeComponent() (Projekt-Regel: keine
+            Businesslogik im Code-Behind).
+          - src/Romulus.UI.Wpf/App.xaml.cs:
+            DI-Registrierung von IBeforeAfterSimulator als Singleton.
+            Plan-Executor kapselt RunOrchestrator-Aufruf so, dass der
+            Orchestrator pro Simulate-Aufruf frisch konstruiert + disposed
+            wird (kein langlebiger Pin auf den Pipeline-Graph).
+            SimulatorViewModel ebenfalls als Singleton registriert.
+          - src/Romulus.UI.Wpf/ViewModels/MainViewModel.cs +
+            MainViewModelChildFactory.cs: neue Public-Property
+            `Simulator` (analog zu `ConversionPreview`). Konstruktor
+            akzeptiert optionalen IBeforeAfterSimulator (Default fuer
+            ctor-less Test-Pfad: lokale Default-Adapter).
+          - src/Romulus.Tests/WpfSimulatorViewModelTests.cs (5 Pin-Tests):
+            * Refresh_EmptySimulatorResult_KeepsBeforeAndAfterListsEmpty
+            * Refresh_TwoListProjection_BeforeContainsAllAfterExcludesRemoved
+              -- pin der Diff-Projektion (Remove faellt aus AfterItems raus,
+              alle anderen Aktionen bleiben).
+            * Refresh_SummaryComesFromSimulator_NoParallelRecalculation
+              -- bewusst inkonsistente Stub-Summary; pin dass das VM die
+              Zahlen NICHT lokal nachrechnet (Schutz gegen "konkurrierende
+              Wahrheit").
+            * Refresh_ForwardsOptionsVerbatim_DoesNotPreMutateMode
+              -- pin: der ForceDryRun-Chokepoint gehoert dem Simulator,
+              nicht dem VM. VM darf Mode=Move NICHT vorab umbiegen.
+            * Refresh_TwoConsecutiveCalls_ReplacesPreviousProjection
+              -- pin gegen Stale-State-Leak zwischen Simulationen.
+
+          Verifikation:
+          - dotnet build src/Romulus.sln -> 0 Fehler.
+          - WpfSimulator-Tests: 5/5 gruen.
+          - Filter "Wpf|Gui|Wave2|BeforeAfter|CliSimulate|MainViewModel":
+            1027/1028 gruen. Der einzige Fail
+            (GuiViewModelTests.MainWindowXaml_Title_IsRomulus_AndActionRailRemoved)
+            ist VORHER-existent: MainWindow.xaml enthaelt einen Kommentar
+            mit dem Text "ShowSmartActionBar" (Zeilen 256-257 sind eine
+            T-W1-UI-REDUCTION-Anmerkung), und der Test
+            DoesNotContain("ShowSmartActionBar") greift nicht zwischen
+            Code und Kommentar. Mein Diff hat MainWindow.xaml NICHT
+            beruehrt; das ist ein orthogonales Pin-Test-Bug.
+
+          status -> completed (alle drei Entry Points wired).
+        timestamp: "2026-04-30"
+        estimated_effort: small
+        estimated_files: 7
+        estimated_lines: 360
+        focus_area: feature
+        verification:
+          - 5/5 WpfSimulatorViewModelTests gruen
+          - 1027/1028 in Filter Wpf|Gui|Wave2|BeforeAfter|CliSimulate|MainViewModel (1 pre-existing MainWindow-Comment-Failure)
+        acceptance_criteria:
+          - WPF-Simulator-View verfuegbar (zwei Listen + Diff-Summary) -> ERFUELLT
+          - Single source of truth: VM konsumiert IBeforeAfterSimulator -> ERFUELLT (Pin-Test)
+          - Side-Effect-Free auch bei Mode=Move -> ERFUELLT (Chokepoint im Simulator, VM forwarded verbatim)
+          - status -> completed
         failure_modes: []
         tech_stack:
           - C# .NET 10

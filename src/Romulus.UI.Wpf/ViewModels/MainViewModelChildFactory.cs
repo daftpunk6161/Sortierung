@@ -36,4 +36,7 @@ internal static class MainViewModelChildFactory
 
     public static ConversionPreviewViewModel CreateConversionPreview(ILocalizationService localizationService)
         => new(localizationService);
+
+    public static SimulatorViewModel CreateSimulator(IBeforeAfterSimulator simulator)
+        => new(simulator);
 }

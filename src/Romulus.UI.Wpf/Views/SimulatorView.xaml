@@ -1,0 +1,135 @@
+<UserControl x:Class="Romulus.UI.Wpf.Views.SimulatorView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- T-W5-BEFORE-AFTER-SIMULATOR pass 4: zwei Listen + Diff-Summary.
+       Datenquelle: MainViewModel.Simulator (SimulatorViewModel) — die VM
+       konsumiert IBeforeAfterSimulator als Single Source of Truth.
+       Diese View berechnet NICHTS selbst; sie ist reine Projektion. -->
+  <DockPanel LastChildFill="True">
+    <!-- Header + Summary -->
+    <Border DockPanel.Dock="Top" Style="{StaticResource SectionCard}" Margin="20,16,20,8">
+      <StackPanel>
+        <TextBlock Text="Before / After Simulator" Style="{StaticResource SectionHeader}"/>
+        <TextBlock Text="Vorher = aktuelle Sammlung. Nachher = projizierter Zustand nach Plan-Anwendung (DryRun-Chokepoint, side-effect-free)."
+                   Style="{StaticResource CaptionText}" Margin="0,4,0,12" TextWrapping="Wrap"/>
+        <WrapPanel>
+          <Border Style="{StaticResource HeaderChip}" Margin="0,0,8,8">
+            <TextBlock>
+              <Run Text="Vorher: " Foreground="{DynamicResource BrushTextMuted}"/>
+              <Run Text="{Binding Simulator.Summary.TotalBefore, Mode=OneWay}" FontWeight="SemiBold"/>
+            </TextBlock>
+          </Border>
+          <Border Style="{StaticResource HeaderChip}" Margin="0,0,8,8">
+            <TextBlock>
+              <Run Text="Nachher: " Foreground="{DynamicResource BrushTextMuted}"/>
+              <Run Text="{Binding Simulator.Summary.TotalAfter, Mode=OneWay}" FontWeight="SemiBold"/>
+            </TextBlock>
+          </Border>
+          <Border Style="{StaticResource HeaderChip}" Margin="0,0,8,8">
+            <TextBlock>
+              <Run Text="Bleiben: " Foreground="{DynamicResource BrushTextMuted}"/>
+              <Run Text="{Binding Simulator.Summary.Kept, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccess}"/>
+            </TextBlock>
+          </Border>
+          <Border Style="{StaticResource HeaderChip}" Margin="0,0,8,8">
+            <TextBlock>
+              <Run Text="Entfernt: " Foreground="{DynamicResource BrushTextMuted}"/>
+              <Run Text="{Binding Simulator.Summary.Removed, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}"/>
+            </TextBlock>
+          </Border>
+          <Border Style="{StaticResource HeaderChip}" Margin="0,0,8,8">
+            <TextBlock>
+              <Run Text="Konvertiert: " Foreground="{DynamicResource BrushTextMuted}"/>
+              <Run Text="{Binding Simulator.Summary.Converted, Mode=OneWay}" FontWeight="SemiBold"/>
+            </TextBlock>
+          </Border>
+          <Border Style="{StaticResource HeaderChip}" Margin="0,0,8,8">
+            <TextBlock>
+              <Run Text="Umbenannt: " Foreground="{DynamicResource BrushTextMuted}"/>
+              <Run Text="{Binding Simulator.Summary.Renamed, Mode=OneWay}" FontWeight="SemiBold"/>
+            </TextBlock>
+          </Border>
+          <Border Style="{StaticResource HeaderChip}" Margin="0,0,8,8">
+            <TextBlock>
+              <Run Text="Eingespart (Bytes): " Foreground="{DynamicResource BrushTextMuted}"/>
+              <Run Text="{Binding Simulator.Summary.PotentialSavedBytes, Mode=OneWay}" FontWeight="SemiBold"/>
+            </TextBlock>
+          </Border>
+        </WrapPanel>
+        <TextBlock Text="{Binding Simulator.LastError}"
+                   Foreground="{DynamicResource BrushDanger}" FontSize="12" Margin="0,4,0,0"/>
+      </StackPanel>
+    </Border>
+
+    <!-- Empty-State -->
+    <StackPanel Visibility="{Binding Simulator.HasResult, Converter={StaticResource InverseBoolToVis}}"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+      <TextBlock Text="&#xE9D5;" FontFamily="Segoe MDL2 Assets" FontSize="48"
+                 Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+      <TextBlock Text="Noch keine Simulation"
+                 FontSize="16" FontWeight="SemiBold"
+                 Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+      <TextBlock Text="Starte zuerst eine Vorschau (F5), dann erscheint hier der Vorher/Nachher-Vergleich."
+                 Foreground="{DynamicResource BrushTextMuted}" FontSize="12" HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="420"/>
+    </StackPanel>
+
+    <!-- Two-list before/after diff -->
+    <Grid Visibility="{Binding Simulator.HasResult, Converter={StaticResource BoolToVis}}"
+          Margin="20,0,20,16">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- BEFORE -->
+      <Border Grid.Column="0" Style="{StaticResource SectionCard}" Margin="0,0,8,0">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="Vorher (aktuelle Sammlung)"
+                     FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"
+                     Foreground="{DynamicResource BrushTextPrimary}"/>
+          <ListBox ItemsSource="{Binding Simulator.BeforeItems}"
+                   BorderThickness="0" Background="Transparent"
+                   AutomationProperties.Name="Simulator BeforeItems"
+                   VirtualizingPanel.IsVirtualizing="True"
+                   VirtualizingPanel.VirtualizationMode="Recycling"
+                   ScrollViewer.CanContentScroll="True">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Orientation="Horizontal" Margin="0,2">
+                  <TextBlock Text="{Binding Action}" FontSize="11" Margin="0,0,8,0"
+                             Foreground="{DynamicResource BrushTextMuted}"/>
+                  <TextBlock Text="{Binding SourcePath}" Foreground="{DynamicResource BrushTextPrimary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </Border>
+
+      <!-- AFTER -->
+      <Border Grid.Column="1" Style="{StaticResource SectionCard}" Margin="8,0,0,0">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="Nachher (nach Plan-Anwendung)"
+                     FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"
+                     Foreground="{DynamicResource BrushTextPrimary}"/>
+          <ListBox ItemsSource="{Binding Simulator.AfterItems}"
+                   BorderThickness="0" Background="Transparent"
+                   AutomationProperties.Name="Simulator AfterItems"
+                   VirtualizingPanel.IsVirtualizing="True"
+                   VirtualizingPanel.VirtualizationMode="Recycling"
+                   ScrollViewer.CanContentScroll="True">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Orientation="Horizontal" Margin="0,2">
+                  <TextBlock Text="{Binding Action}" FontSize="11" Margin="0,0,8,0"
+                             Foreground="{DynamicResource BrushTextMuted}"/>
+                  <TextBlock Text="{Binding TargetPath}" Foreground="{DynamicResource BrushTextPrimary}" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</UserControl>

@@ -143,6 +143,22 @@ public partial class App : Application
         services.AddSingleton<DatCatalogViewModel>();
         services.AddSingleton<ConversionPreviewViewModel>();
 
+        // T-W5-BEFORE-AFTER-SIMULATOR pass 4: WPF Simulator-View VM.
+        // The simulator wraps RunOrchestrator via BeforeAfterSimulator (single
+        // source of truth — ForceDryRun chokepoint). Plan executor is captured
+        // lazily so we don't pin a long-lived orchestrator instance.
+        services.AddSingleton<IBeforeAfterSimulator>(sp =>
+        {
+            var fs = sp.GetRequiredService<Romulus.Contracts.Ports.IFileSystem>();
+            var auditStore = sp.GetRequiredService<Romulus.Contracts.Ports.IAuditStore>();
+            return new Romulus.Infrastructure.Analysis.BeforeAfterSimulator((opts, ct) =>
+            {
+                using var orch = new Romulus.Infrastructure.Orchestration.RunOrchestrator(fs, auditStore);
+                return orch.Execute(opts, ct);
+            });
+        });
+        services.AddSingleton<SimulatorViewModel>();
+
         // ViewModel
         services.AddSingleton<MainViewModel>();
 
