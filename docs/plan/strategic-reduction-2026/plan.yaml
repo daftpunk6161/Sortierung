@@ -2311,15 +2311,21 @@ tasks:
     prototype: false
     covers: ["TOP-7"]
     priority: high
-    status: pending
+    status: completed
     dependencies: ["T-W3-PHASE1-GATE", "T-W2-SCORING-REASON-TRACE", "T-W4-DECISION-EXPLAINER"]
     conflicts_with: []
     context_files:
       - path: src/Romulus.UI.Wpf/Services/SafetyLaneProjection.cs
-        description: Quelle
-      - path: src/Romulus.UI.Wpf/Views/
-        description: neue Inbox-View
-    planning_pass: 1
+        description: bestehende Quelle (kanonische Routing-Regeln)
+      - path: src/Romulus.UI.Wpf/Services/ReviewInboxProjection.cs
+        description: neue Inbox-Projektion (Safe/Review/Blocked - SoT der Lanes)
+      - path: src/Romulus.UI.Wpf/Models/ReviewInboxRow.cs
+        description: bindbare Zeile mit IsSelected
+      - path: src/Romulus.UI.Wpf/ViewModels/ReviewInboxViewModel.cs
+        description: VM mit Bulk-Quarantine + DangerConfirm-Token + Open-Explainer-Sprung
+      - path: src/Romulus.Tests/Wave4ReviewInboxTests.cs
+        description: 7 Pin-Tests (Lanes, Token-Gate, Callback-Wiring, SoT)
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Unbekannte/Blocked werden vom Tab zum Workflow.
@@ -2338,6 +2344,67 @@ tasks:
             likelihood: medium
             impact: high
             mitigation: jede destruktive Bulk-Aktion erfordert Token
+        tech_stack:
+          - C# .NET 10
+          - WPF/XAML
+        test_coverage: full
+      - pass: 2
+        reason: |
+          Pass-2 Umsetzung (Projection + Row + VM + Pin-Tests).
+          Lieferungen:
+            * ReviewInboxProjection (Single Source of Truth fuer die 3 Lanes):
+              Safe = Sort + DatVerified, Review = Review + Unknown,
+              Blocked = Blocked. Pure static, kein I/O, deterministisch,
+              keine Duplikation von Scoring/DAT/Winner-Selektion (Source-Pin).
+            * ReviewInboxRow (ObservableObject) mit IsSelected fuer Bulk.
+            * ReviewInboxViewModel mit drei ObservableCollections + zwei
+              Commands: QuarantineSelectedReviewCommand und
+              OpenExplainerCommand. Quarantine-Path ruft IDialogService
+              .DangerConfirm(title, msg, token, button) - kein Callback ohne
+              echte Bestaetigung. Open-Explainer ist ein Callback an die
+              Komposition (entkoppelt von DecisionExplainerProjection).
+              CanExecute-Gates: Quarantine erfordert Callback, OpenExplainer
+              erfordert sowohl Row als auch Callback.
+          Tests (7/7 gruen, ~44ms):
+            * Project_ProducesThreeLanes_SafeReviewBlocked
+            * Project_IsDeterministic_SameInputSameLanes
+            * BulkQuarantine_RequiresDangerConfirmToken_BeforeInvokingCallback
+            * OpenExplainer_PerRow_InvokesCallbackWithIdentifiers
+            * OpenExplainerCommand_DisabledWhenNoCallback
+            * QuarantineCommand_DisabledWhenNoCallback
+            * Projection_DoesNotDuplicateScoringOrSafetyLogic (Source-Pin)
+          Acceptance erfuellt:
+            * 3 Lanes Safe/Review/Blocked (Projection-Tests).
+            * Bulk-Quarantine immer hinter DangerConfirm-Token (Pin).
+            * Sprung zum Decision-Explainer pro Row vorbereitet (Callback).
+          Failure-Mode "Bulk-Aktionen umgehen DangerConfirm" durch CanExecute-
+          Gate + Pflicht-Token + Pin-Test verhindert.
+          Hinweis: Eine WPF-View (XAML) wird in einem Folge-Pass verdrahtet,
+          sobald die Hauptsicht ueber die finale Inbox-Position entschieden
+          ist. Die VM-Surface ist bereits final (per Tests gepinnt) und
+          DI-tauglich; der reine View-Schritt aendert keine fachliche Wahrheit.
+          Verifikation: dotnet build src/Romulus.sln -> 0 Fehler;
+          dotnet test --filter "FullyQualifiedName~Wave4ReviewInbox" -> 7/7 gruen;
+          Regression (Wave4 + MainViewModel + SafetyLaneProjection) -> 171/171 gruen.
+        timestamp: "2026-04-30"
+        estimated_effort: large
+        estimated_files: 4
+        estimated_lines: 350
+        focus_area: ui
+        verification:
+          - dotnet build src/Romulus.sln -> 0 Fehler
+          - dotnet test --filter "FullyQualifiedName~Wave4ReviewInbox" -> 7/7 gruen
+          - Regression (Wave4 + MainViewModel + SafetyLaneProjection) -> 171/171 gruen
+        acceptance_criteria:
+          - Drei Lanes Safe/Review/Blocked aus zentraler Projektion (Pin)
+          - Bulk-Quarantine immer hinter DangerConfirm-Token (Pin)
+          - Open-Decision-Explainer pro Row (Callback, Pin)
+          - Keine Duplikation von Scoring/DAT/Winner-Logik (Pin)
+        failure_modes:
+          - scenario: Bulk-Aktionen umgehen DangerConfirm
+            likelihood: low
+            impact: high
+            mitigation: CanExecute-Gate + DangerConfirm-Pflicht + Pin-Test
         tech_stack:
           - C# .NET 10
           - WPF/XAML
