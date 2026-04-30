@@ -39,7 +39,59 @@ internal static partial class Program
     private static readonly AsyncLocal<TextWriter?> StderrOverride = new();
     private static readonly AsyncLocal<bool> ConsoleOverrideEnabled = new();
     private static readonly AsyncLocal<bool?> NonInteractiveOverride = new();
+    private static readonly AsyncLocal<CliPathOverrides?> PathOverrides = new();
     private static readonly ITimeProvider TimeProvider = new SystemTimeProvider();
+
+    /// <summary>
+    /// Test-only: install per-async-context path overrides so that
+    /// <see cref="CreateCliServiceProvider"/> bypasses the real user's
+    /// <c>%APPDATA%\Romulus</c> footprint. Returns an <see cref="IDisposable"/>
+    /// that restores the previous overrides when disposed.
+    /// </summary>
+    /// <remarks>
+    /// Production <c>Main</c> never calls this. Overrides are scoped via
+    /// <see cref="AsyncLocal{T}"/> so parallel xUnit fixtures cannot leak
+    /// state between each other.
+    /// </remarks>
+    internal static IDisposable SetTestPathOverrides(CliPathOverrides overrides)
+    {
+        ArgumentNullException.ThrowIfNull(overrides);
+        var previous = PathOverrides.Value;
+        PathOverrides.Value = overrides;
+        return new PathOverrideScope(previous);
+    }
+
+    private sealed class PathOverrideScope : IDisposable
+    {
+        private readonly CliPathOverrides? _previous;
+        private bool _disposed;
+        public PathOverrideScope(CliPathOverrides? previous) => _previous = previous;
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            PathOverrides.Value = _previous;
+        }
+    }
+
+    /// <summary>
+    /// Single resolution helper for the collection LiteDB path so that any
+    /// <see cref="LiteDbCollectionIndex"/> opened from CLI subcommands honours
+    /// <see cref="CliPathOverrides.CollectionDbPath"/> in tests and falls back
+    /// to <see cref="CollectionIndexPaths.ResolveDefaultDatabasePath"/> otherwise.
+    /// </summary>
+    private static string ResolveCollectionDbPath()
+        => PathOverrides.Value?.CollectionDbPath ?? CollectionIndexPaths.ResolveDefaultDatabasePath();
+
+    /// <summary>
+    /// Single resolution helper for the audit HMAC signing-key path so that
+    /// any <see cref="AuditSigningService"/> / <see cref="AuditCsvStore"/>
+    /// constructed from CLI subcommands honours
+    /// <see cref="CliPathOverrides.AuditSigningKeyPath"/> in tests and falls
+    /// back to <see cref="AuditSecurityPaths.GetDefaultSigningKeyPath"/> otherwise.
+    /// </summary>
+    private static string ResolveAuditSigningKeyPath()
+        => PathOverrides.Value?.AuditSigningKeyPath ?? AuditSecurityPaths.GetDefaultSigningKeyPath();
 
     private static async Task<int> Main(string[] args)
     {
@@ -169,7 +221,7 @@ internal static partial class Program
         => ExecuteRunCoreAsync(cliOpts, CancellationToken.None, wireConsoleCancel);
 
     private static PersistedReviewDecisionService? CreateReviewDecisionService(Action<string>? onWarning)
-        => ReviewDecisionServiceFactory.TryCreate(onWarning);
+        => ReviewDecisionServiceFactory.TryCreate(ResolveCollectionDbPath(), onWarning);
 
     private static async Task<int> ExecuteRunCoreAsync(
         CliRunOptions cliOpts,
@@ -311,7 +363,7 @@ internal static partial class Program
                 {
                     try
                     {
-                        using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
+                        using var collectionIndex = new LiteDbCollectionIndex(ResolveCollectionDbPath(), SafeErrorWriteLine);
                         await CollectionRunSnapshotWriter.TryPersistAsync(
                             collectionIndex,
                             runOptions,
@@ -523,7 +575,7 @@ internal static partial class Program
         try
         {
             var fs = serviceProvider.GetRequiredService<IFileSystem>();
-            var keyPath = AuditSecurityPaths.GetDefaultSigningKeyPath();
+            var keyPath = ResolveAuditSigningKeyPath();
             var signing = new AuditSigningService(fs, keyFilePath: keyPath);
 
             // Derive allowed roots from audit CSV — same roots that were used in the original run
@@ -638,7 +690,7 @@ internal static partial class Program
 
     private static async Task<int> SubcommandHistoryAsync(CliRunOptions opts)
     {
-        using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
+        using var collectionIndex = new LiteDbCollectionIndex(ResolveCollectionDbPath(), SafeErrorWriteLine);
         return await WriteHistoryAsync(collectionIndex, opts).ConfigureAwait(false);
     }
 
@@ -747,7 +799,7 @@ internal static partial class Program
 
     private static async Task<int> SubcommandDiffAsync(CliRunOptions opts)
     {
-        using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
+        using var collectionIndex = new LiteDbCollectionIndex(ResolveCollectionDbPath(), SafeErrorWriteLine);
         return await WriteCollectionDiffAsync(opts, collectionIndex, new FileSystemAdapter()).ConfigureAwait(false);
     }
 
@@ -792,9 +844,9 @@ internal static partial class Program
             return 3;
         }
 
-        using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
+        using var collectionIndex = new LiteDbCollectionIndex(ResolveCollectionDbPath(), SafeErrorWriteLine);
         var fileSystem = new FileSystemAdapter();
-        var auditStore = new AuditCsvStore(fileSystem, SafeErrorWriteLine, AuditSecurityPaths.GetDefaultSigningKeyPath());
+        var auditStore = new AuditCsvStore(fileSystem, SafeErrorWriteLine, ResolveAuditSigningKeyPath());
         return await WriteCollectionMergeAsync(opts, collectionIndex, fileSystem, auditStore).ConfigureAwait(false);
     }
 
@@ -869,7 +921,7 @@ internal static partial class Program
 
     private static async Task<int> SubcommandCompareAsync(CliRunOptions opts)
     {
-        using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
+        using var collectionIndex = new LiteDbCollectionIndex(ResolveCollectionDbPath(), SafeErrorWriteLine);
         var comparison = await RunHistoryInsightsService.CompareAsync(collectionIndex, opts.RunId!, opts.CompareToRunId!)
             .ConfigureAwait(false);
         if (comparison is null)
@@ -893,7 +945,7 @@ internal static partial class Program
 
     private static async Task<int> SubcommandTrendsAsync(CliRunOptions opts)
     {
-        using var collectionIndex = new LiteDbCollectionIndex(CollectionIndexPaths.ResolveDefaultDatabasePath(), SafeErrorWriteLine);
+        using var collectionIndex = new LiteDbCollectionIndex(ResolveCollectionDbPath(), SafeErrorWriteLine);
         var report = await RunHistoryInsightsService.BuildStorageInsightsAsync(
             collectionIndex,
             opts.HistoryLimit ?? 30).ConfigureAwait(false);
@@ -1439,17 +1491,27 @@ internal static partial class Program
 
     private static IServiceProvider CreateCliServiceProvider(Action<string>? onWarning)
     {
+        var overrides = PathOverrides.Value;
+        var collectionDbOption = overrides?.CollectionDbPath is { } dbPath
+            ? new CollectionIndexPathOptions { DatabasePath = dbPath }
+            : null;
+        var datCatalogOption = overrides?.DatCatalogStatePath is { } dcsPath
+            ? new DatCatalogStatePathOptions { StatePath = dcsPath }
+            : null;
+        var auditKeyPath = ResolveAuditSigningKeyPath();
+
         var services = new ServiceCollection();
         services.AddSingleton<IFileSystem, FileSystemAdapter>();
-        services.AddSingleton<IRunEnvironmentFactory, RunEnvironmentFactory>();
+        services.AddSingleton<IRunEnvironmentFactory>(sp =>
+            new RunEnvironmentFactory(collectionDbOption, datCatalogOption));
         services.AddSingleton<IAuditStore>(sp =>
-            new AuditCsvStore(sp.GetRequiredService<IFileSystem>(), onWarning, AuditSecurityPaths.GetDefaultSigningKeyPath()));
+            new AuditCsvStore(sp.GetRequiredService<IFileSystem>(), onWarning, auditKeyPath));
         return services.BuildServiceProvider();
     }
 
     private static async Task<int> SubcommandHealthAsync(CliRunOptions opts)
     {
-        var dbPath = CollectionIndexPaths.ResolveDatabasePath(null);
+        var dbPath = ResolveCollectionDbPath();
         using var index = new LiteDbCollectionIndex(dbPath);
         var monitor = new CollectionHealthMonitor(index);
 

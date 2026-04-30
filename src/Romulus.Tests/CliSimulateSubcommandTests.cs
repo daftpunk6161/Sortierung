@@ -17,17 +17,41 @@ namespace Romulus.Tests;
 public sealed class CliSimulateSubcommandTests : IDisposable
 {
     private readonly string _tempDir;
+    private readonly string _collectionDbPath;
+    private readonly string _auditKeyPath;
 
     public CliSimulateSubcommandTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "cli-sim-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
+        // Pre-W7 isolation (Fix #2): redirect persistent CLI state into a
+        // sibling state/ subdir so SubcommandSimulateAsync never touches the real
+        // %APPDATA%\Romulus\collection.db (LiteDB exclusive lock + slow open)
+        // or the user's audit-signing key. Sibling dir keeps the override files
+        // out of the scanned ROM root.
+        var stateDir = Path.Combine(_tempDir, "..", "cli-sim-state-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(stateDir);
+        _collectionDbPath = Path.Combine(stateDir, "collection.db");
+        _auditKeyPath = Path.Combine(stateDir, "audit-signing.key");
     }
 
     public void Dispose()
     {
         try { Directory.Delete(_tempDir, recursive: true); } catch { /* best-effort */ }
+        try
+        {
+            var stateDir = Path.GetDirectoryName(_collectionDbPath);
+            if (!string.IsNullOrWhiteSpace(stateDir)) Directory.Delete(stateDir, recursive: true);
+        }
+        catch { /* best-effort */ }
     }
+
+    private IDisposable IsolateCliPaths()
+        => Romulus.CLI.Program.SetTestPathOverrides(new Romulus.CLI.CliPathOverrides
+        {
+            CollectionDbPath = _collectionDbPath,
+            AuditSigningKeyPath = _auditKeyPath,
+        });
 
     // ──────────────────────────────────────────
     // Parser pin tests
@@ -100,6 +124,7 @@ public sealed class CliSimulateSubcommandTests : IDisposable
     [Fact]
     public async Task SimulateSubcommand_EmptyLibrary_EmitsZeroedJsonProjection()
     {
+        using var scope = IsolateCliPaths();
         var (exit, stdout, _) = await ProgramTestRunner.RunSubcommandAsync(async () =>
         {
             var opts = new CliRunOptions
@@ -141,6 +166,7 @@ public sealed class CliSimulateSubcommandTests : IDisposable
     [Fact]
     public async Task SimulateSubcommand_ModeMove_StillSideEffectFree()
     {
+        using var scope = IsolateCliPaths();
         // Drop a file we can later assert was not moved/touched.
         var rom = Path.Combine(_tempDir, "decoy.zip");
         File.WriteAllBytes(rom, new byte[16]);
