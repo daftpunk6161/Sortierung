@@ -14,25 +14,12 @@ public sealed class Phase13RedTests
         Assert.DoesNotContain("ReadAsByteArrayAsync", source, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void TD044_SettingsFileAccess_MustExposeTotalTimeoutParameter()
-    {
-        var sourcePath = ResolveRepoFile("Romulus.Infrastructure", "Configuration", "SettingsFileAccess.cs");
-        Assert.True(File.Exists(sourcePath), $"Missing source file: {sourcePath}");
-
-        var source = File.ReadAllText(sourcePath);
-        Assert.Contains("totalTimeoutMs", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void TD046_StreamingScanPipelinePhase_MustEmitIncompleteScanWarningSummary()
-    {
-        var sourcePath = ResolveRepoFile("Romulus.Infrastructure", "Orchestration", "StreamingScanPipelinePhase.cs");
-        Assert.True(File.Exists(sourcePath), $"Missing source file: {sourcePath}");
-
-        var source = File.ReadAllText(sourcePath);
-        Assert.Contains("Scan.IncompleteWarning", source, StringComparison.Ordinal);
-    }
+    // TD044_SettingsFileAccess_MustExposeTotalTimeoutParameter,
+    // TD046_StreamingScanPipelinePhase_MustEmitIncompleteScanWarningSummary:
+    // removed per testing.instructions.md - both were source-grep alibis pinning
+    // identifier strings ('totalTimeoutMs', 'Scan.IncompleteWarning'). The
+    // timeout parameter is exercised via SettingsFileAccess unit tests; the
+    // incomplete-scan warning is verified by StreamingScanPipelinePhase tests.
 
     private static string ResolveRepoFile(params string[] segments)
     {

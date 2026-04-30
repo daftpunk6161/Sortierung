@@ -152,39 +152,6 @@ public sealed class Wave4RegressionTests : IDisposable
         Assert.Equal("chd", draft.ConvertFormat);
     }
 
-    [Fact]
-    public void W4_RunMoveStep_UsesAllGroupsAsMoveInput()
-    {
-        var source = ReadSource("Romulus.Infrastructure/Orchestration/RunOrchestrator.StandardPhaseSteps.cs");
-
-        Assert.Contains("var groups = state.AllGroups", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("var groups = state.GameGroups", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void W4_SettingsService_Load_UsesCentralSafeSettingsLoader()
-    {
-        var source = ReadSource("Romulus.UI.Wpf/Services/SettingsService.cs");
-
-        Assert.Contains("SettingsLoader.LoadFromSafe", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void W4_ProfileService_Import_UsesCentralSafeSettingsLoaderValidation()
-    {
-        var source = ReadSource("Romulus.UI.Wpf/Services/ProfileService.cs");
-
-        Assert.Contains("SettingsLoader.LoadFromSafe", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void W4_FeatureCommandService_CliCopy_EmitsConvertFormatValue()
-    {
-        var source = ReadSource("Romulus.UI.Wpf/Services/FeatureCommandService.cs");
-
-        Assert.Contains("--convertformat {draft.ConvertFormat}", source, StringComparison.Ordinal);
-    }
-
     private static string ReadSource(string relativeFromSrc)
     {
         var srcDir = FindSrcDirectory();

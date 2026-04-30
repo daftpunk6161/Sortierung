@@ -86,33 +86,13 @@ public sealed class Phase4FixTests
     }
 
     // ═══════════════════════════════════════
-    // R3-009: DashboardDataBuilder null datRoot → false
+    // R3_009 (DashboardDataBuilder null datRoot pin),
+    // R3_017 (FeatureCommandService.Data _datUpdateRunning try/finally pin),
+    // R4_017 (RunOrchestrator TryFlushHashCache signature pin),
+    // R4_023 (RunResultBuilder IsPartial property-name pin):
+    // removed per testing.instructions.md - pure source-string-grep, no
+    // behavioural assertion, broke on any harmless rename or refactor.
     // ═══════════════════════════════════════
-    [Fact]
-    public void R3_009_DashboardDataBuilder_NullDatRootWithinAllowedRootsIsFalse()
-    {
-        var path = Path.Combine(FindSrcDir(), "Romulus.Api", "DashboardDataBuilder.cs");
-        var source = File.ReadAllText(path);
-        // The WithinAllowedRoots assignment for null/empty datRoot must be false, not true
-        // Correct pattern: !string.IsNullOrWhiteSpace(datRoot) && ...
-        // Wrong pattern: string.IsNullOrWhiteSpace(datRoot) || ...
-        Assert.Contains("!string.IsNullOrWhiteSpace(datRoot)", source);
-    }
-
-    // ═══════════════════════════════════════
-    // R3-017: FeatureCommandService _datUpdateRunning guard is properly used
-    // ═══════════════════════════════════════
-    [Fact]
-    public void R3_017_FeatureCommandService_DatUpdateRunningUsedAsGuard()
-    {
-        // Wave 1 (T-W1-UI-REDUCTION): FeatureCommandService.Dat.cs wurde in
-        // FeatureCommandService.Data.cs konsolidiert. Der Guard muss erhalten bleiben.
-        var path = Path.Combine(FindSrcDir(), "Romulus.UI.Wpf", "Services", "FeatureCommandService.Data.cs");
-        var source = File.ReadAllText(path);
-        Assert.Contains("_datUpdateRunning = true", source);
-        Assert.Contains("_datUpdateRunning = false", source);
-        Assert.Contains("finally", source);
-    }
 
     // ═══════════════════════════════════════
     // R3-020: ScheduleService FlushPending IsBusyCheck exception
@@ -162,18 +142,6 @@ public sealed class Phase4FixTests
     }
 
     // ═══════════════════════════════════════
-    // R4-017: TryFlushHashCache returns bool
-    // ═══════════════════════════════════════
-    [Fact]
-    public void R4_017_RunOrchestrator_TryFlushReturnsSuccess()
-    {
-        var path = Path.Combine(FindSrcDir(), "Romulus.Infrastructure", "Orchestration", "RunOrchestrator.cs");
-        var source = File.ReadAllText(path);
-        // TryFlushHashCache should return bool instead of void
-        Assert.Contains("private bool TryFlushHashCache(", source);
-    }
-
-    // ═══════════════════════════════════════
     // R4-021: Extensions normalized to lowercase
     // ═══════════════════════════════════════
     [Fact]
@@ -188,17 +156,6 @@ public sealed class Phase4FixTests
             extArea.Contains("ToLowerInvariant", StringComparison.Ordinal)
             && (extArea.Contains("normalizedExtensions") || extArea.Contains("Extensions")),
             "R4-021: Extensions must be normalized to lowercase in RunOptionsBuilder.Normalize");
-    }
-
-    // ═══════════════════════════════════════
-    // R4-023: RunResultBuilder has IsPartial property
-    // ═══════════════════════════════════════
-    [Fact]
-    public void R4_023_RunResultBuilder_HasIsPartialProperty()
-    {
-        var path = Path.Combine(FindSrcDir(), "Romulus.Infrastructure", "Orchestration", "RunResultBuilder.cs");
-        var source = File.ReadAllText(path);
-        Assert.Contains("IsPartial", source);
     }
 
     // ═══════════════════════════════════════

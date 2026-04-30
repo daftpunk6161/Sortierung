@@ -42,15 +42,9 @@ public sealed class Phase15RedTests
         Assert.DoesNotContain("FileCategory.Bios => 4", source, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void TD039_SafetyValidator_MustCacheProtectedRootsWithLazy()
-    {
-        var sourcePath = ResolveRepoFile("Romulus.Infrastructure", "Safety", "SafetyValidator.cs");
-        Assert.True(File.Exists(sourcePath), $"Missing source file: {sourcePath}");
-
-        var source = File.ReadAllText(sourcePath);
-        Assert.Contains("Lazy<string[]>", source, StringComparison.Ordinal);
-    }
+    // TD039_SafetyValidator_MustCacheProtectedRootsWithLazy: removed per
+    // testing.instructions.md - source-grep pinned the literal 'Lazy<string[]>'
+    // type expression. Caching behaviour belongs in SafetyValidator unit tests.
 
     [Fact]
     public void TD043_DatCatalogSchema_MustExist()

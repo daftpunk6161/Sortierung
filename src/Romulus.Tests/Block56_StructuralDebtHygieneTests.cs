@@ -93,25 +93,9 @@ public sealed class Block56_StructuralDebtHygieneTests
     }
 
     // ═══ PHASE 6: TASK-029b — WatchFolderService InternalBufferSize ════
-
-    /// <summary>
-    /// TASK-029b RED: WatchFolderService must set InternalBufferSize on FileSystemWatcher
-    /// to prevent buffer overflow and missed events (default 8KB is too small for deep trees).
-    /// Plan requires 64KB (65536).
-    /// </summary>
-    [Fact]
-    public void TASK029b_WatchFolderService_MustSetInternalBufferSize()
-    {
-        // Source-level guard: scan WatchFolderService.cs for InternalBufferSize assignment
-        var sourceDir = FindSrcRoot();
-        var watchFile = Path.Combine(sourceDir, "Romulus.Infrastructure", "Watch", "WatchFolderService.cs");
-
-        Assert.True(File.Exists(watchFile), $"WatchFolderService.cs not found at {watchFile}");
-
-        var source = File.ReadAllText(watchFile);
-        Assert.Contains("InternalBufferSize", source,
-            StringComparison.Ordinal);
-    }
+    // TASK029b_WatchFolderService_MustSetInternalBufferSize: removed per
+    // testing.instructions.md - was a pure source-string-grep that pinned the
+    // identifier 'InternalBufferSize' instead of asserting buffer behaviour.
 
     // ═══ PHASE 6: TASK-030a — API endpoints must document response codes ═
 

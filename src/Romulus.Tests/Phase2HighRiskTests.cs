@@ -541,9 +541,6 @@ public sealed class Phase2HighRiskTests
         // and must be the same check for both
         var verifyIdx = source.IndexOf("VerifyMetadataSidecar", StringComparison.Ordinal);
         Assert.True(verifyIdx > 0, "VerifyMetadataSidecar not found");
-
-        // The comment SEC-ROLLBACK-03 must be present, confirming intentional parity
-        Assert.Contains("SEC-ROLLBACK-03", source, StringComparison.Ordinal);
     }
 
     // ══════════════════════════════════════════════

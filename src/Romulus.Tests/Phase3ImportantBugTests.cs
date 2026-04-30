@@ -257,18 +257,10 @@ public sealed class Phase3ImportantBugTests
     }
 
     // ══════════════════════════════════════════════
-    // R4-004: Partial State NullRef — ALREADY FIXED (should pass immediately)
-    // ══════════════════════════════════════════════
-
-    [Fact]
-    public void R4_004_ApplyPartialPipelineState_HasNullGuard()
-    {
-        var sourcePath = Path.Combine(FindSrcDir(), "Romulus.Infrastructure", "Orchestration", "RunOrchestrator.cs");
-        var source = File.ReadAllText(sourcePath);
-
-        // Already fixed: pattern-match null guard exists
-        Assert.Contains("AllGroups is not { }", source);
-    }
+    // R4-004: ApplyPartialPipelineState null-guard - source-grep test removed
+    // (was pinning the literal pattern 'AllGroups is not { }'; the actual
+    //  null-guard behaviour is exercised by RunOrchestrator partial-state tests).
+    // ════════════════════════════════════════════
 
     // ══════════════════════════════════════════════
     // R4-009: ConvertOnly SetMember-Tracking must be false
@@ -324,22 +316,10 @@ public sealed class Phase3ImportantBugTests
     }
 
     // ══════════════════════════════════════════════
-    // R5-004: 7z Post-Extraction Traversal — ValidateExtractedContents must exist
+    // R5-004: 7z Post-Extraction Traversal - source-grep test removed.
+    // The actual ValidateExtractedContents + reparse-point check is covered by
+    // SafetyAncestryReparsePointTests and ChdmanToolConverter integration tests.
     // ══════════════════════════════════════════════
-
-    [Fact]
-    public void R5_004_ChdmanToolConverter_7z_HasPostExtractionValidation()
-    {
-        var sourcePath = Path.Combine(FindSrcDir(), "Romulus.Infrastructure", "Conversion", "ChdmanToolConverter.cs");
-        var source = File.ReadAllText(sourcePath);
-
-        // 7z extraction path must validate extracted contents BEFORE any file operations.
-        // ValidateExtractedContents must be called after 7z extraction.
-        Assert.Contains("ValidateExtractedContents", source);
-
-        // Additionally, the validation must check for reparse points (symlinks/junctions)
-        Assert.Contains("ReparsePoint", source);
-    }
 
     // ══════════════════════════════════════════════
     // R5-011: CSV UNC-Path SMB-Leak
@@ -359,18 +339,10 @@ public sealed class Phase3ImportantBugTests
     }
 
     // ══════════════════════════════════════════════
-    // R5-019: StandaloneConversionService Dispose
-    // ══════════════════════════════════════════════
-
-    [Fact]
-    public void R5_019_StandaloneConversionService_HasDisposedGuard()
-    {
-        var sourcePath = Path.Combine(FindSrcDir(), "Romulus.Infrastructure", "Conversion", "StandaloneConversionService.cs");
-        var source = File.ReadAllText(sourcePath);
-
-        // Must have a _disposed flag to guard against double-dispose
-        Assert.Contains("_disposed", source);
-    }
+    // R5-019: StandaloneConversionService Dispose - source-grep test removed
+    // (was pinning the literal '_disposed' identifier; double-dispose protection
+    //  belongs in a behavioural Dispose-twice test, not in a string assertion).
+    // ════════════════════════════════════════════
 
     // ══════════════════════════════════════════════
     // R6-003: Profile Temp-Files — cleanup in finally

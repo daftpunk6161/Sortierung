@@ -64,26 +64,6 @@ public sealed class Wave5MediumRegressionTests : IDisposable
     }
 
     [Fact]
-    public void W5_AuditCsvStore_UsesCrossProcessMutexLocking()
-    {
-        var source = ReadSource("Romulus.Infrastructure/Audit/AuditCsvStore.cs");
-
-        Assert.Contains("Mutex", source, StringComparison.Ordinal);
-        Assert.Contains("WaitOne", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void W5_ConversionRegistryLoader_UsesTypedRequiredReaders_ForLosslessAndCost()
-    {
-        var source = ReadSource("Romulus.Infrastructure/Conversion/ConversionRegistryLoader.cs");
-
-        Assert.Contains("ReadRequiredBool(item, \"lossless\")", source, StringComparison.Ordinal);
-        Assert.Contains("ReadRequiredInt(item, \"cost\")", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("item.GetProperty(\"lossless\").GetBoolean()", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("item.GetProperty(\"cost\").GetInt32()", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void W5_DatIndex_Add_WhenCapacityReached_TracksDroppedCount()
     {
         var index = new DatIndex
@@ -96,22 +76,6 @@ public sealed class Wave5MediumRegressionTests : IDisposable
 
         Assert.Equal(1, index.TotalEntries);
         Assert.Equal(1, index.DroppedByCapacityLimit);
-    }
-
-    [Fact]
-    public void W5_DatSourceService_VerifyDatSignature_CatchesRegexTimeout()
-    {
-        var source = ReadSource("Romulus.Infrastructure/Dat/DatSourceService.cs");
-
-        Assert.Contains("RegexMatchTimeoutException", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void W5_MainViewModel_RunPipeline_UsesDispatcherFallback_WhenSyncContextMissing()
-    {
-        var source = ReadSource("Romulus.UI.Wpf/ViewModels/MainViewModel.RunPipeline.cs");
-
-        Assert.Contains("Application.Current?.Dispatcher", source, StringComparison.Ordinal);
     }
 
     private static WebApplicationFactory<Program> CreateFactory(

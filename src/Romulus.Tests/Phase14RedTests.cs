@@ -18,21 +18,10 @@ public sealed class Phase14RedTests
         Assert.DoesNotContain("}||{", source, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void TD036_MainViewModel_MustUnsubscribePropertyChangedBeforeCollectionClear()
-    {
-        var sourcePath = ResolveRepoFile("Romulus.UI.Wpf", "ViewModels", "MainViewModel.cs");
-        var runPipelinePath = ResolveRepoFile("Romulus.UI.Wpf", "ViewModels", "MainViewModel.RunPipeline.cs");
-
-        Assert.True(File.Exists(sourcePath), $"Missing source file: {sourcePath}");
-        Assert.True(File.Exists(runPipelinePath), $"Missing source file: {runPipelinePath}");
-
-        var source = File.ReadAllText(sourcePath) + "\n" + File.ReadAllText(runPipelinePath);
-
-        Assert.Contains("-= OnExtensionCheckedChanged", source, StringComparison.Ordinal);
-        Assert.Contains("-= OnConsoleCheckedChanged", source, StringComparison.Ordinal);
-        Assert.Contains("-= OnExtensionFilterChanged", source, StringComparison.Ordinal);
-    }
+    // TD036_MainViewModel_MustUnsubscribePropertyChangedBeforeCollectionClear:
+    // removed per testing.instructions.md - source-grep pinned literal '-= OnX'
+    // unsubscribe lines. The actual leak prevention is exercised by the
+    // MainViewModel collection-rebuild memory tests.
 
     [Fact]
     public void TD041_MainViewModel_MustNotInstantiateChildViewModelsDirectly()

@@ -163,25 +163,10 @@ public sealed class Phase1ReleaseBlockerTests
     // ──────────────────────────────────────────────
     // R1-025: ConversionPlanner must uppercase-normalize console key
     // ──────────────────────────────────────────────
-
-    /// <summary>
-    /// R1-025: ConversionPlanner.Plan must uppercase-normalize the console key so that
-    /// registry lookups work consistently (registry keys are uppercase).
-    /// A lowercase console input must still produce a valid plan (not blocked due to case mismatch).
-    /// </summary>
-    [Fact]
-    public void R1_025_ConversionPlanner_NormalizesConsoleKeyToUppercase()
-    {
-        // Read source to verify ToUpperInvariant is applied to normalizedConsole
-        var sourcePath = Path.Combine(FindSrcDir(), "Romulus.Core", "Conversion", "ConversionPlanner.cs");
-        Assert.True(File.Exists(sourcePath), $"Missing: {sourcePath}");
-
-        var source = File.ReadAllText(sourcePath);
-
-        // The normalized console variable must be uppercased
-        Assert.Contains("ToUpperInvariant()", source,
-            StringComparison.Ordinal);
-    }
+    // R1-025: ConversionPlanner.Plan must uppercase-normalize the console key.
+    // Source-grep test removed per testing.instructions.md - the actual case
+    // normalization behaviour is exercised by ConversionPlanner unit tests.
+    // ──────────────────────────────────────────────
 
     // ──────────────────────────────────────────────
     // R1-017: ConsoleDetector.Detect() must delegate to DetectWithConfidence()

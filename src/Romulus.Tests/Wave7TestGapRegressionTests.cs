@@ -300,40 +300,11 @@ public sealed class Wave7TestGapRegressionTests : IDisposable
         }
     }
 
-    [Fact]
-    public void F018_WatchFolderService_UsesNamedDefaultsAndBufferConstants()
-    {
-        var source = ReadSource("src/Romulus.Infrastructure/Watch/WatchFolderService.cs");
-
-        Assert.Contains("private const int DefaultDebounceSeconds", source, StringComparison.Ordinal);
-        Assert.Contains("private const int DefaultMaxWaitSeconds", source, StringComparison.Ordinal);
-        Assert.Contains("private const int WatcherInternalBufferSizeBytes", source, StringComparison.Ordinal);
-
-        Assert.DoesNotContain("int debounceSeconds = 5", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("int maxWaitSeconds = 30", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("InternalBufferSize = 65536", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void F018_ParallelHasher_UsesNamedThreadAndBatchThresholdConstants()
-    {
-        var source = ReadSource("src/Romulus.Infrastructure/Hashing/ParallelHasher.cs");
-
-        Assert.Contains("private const int DefaultMaxThreads", source, StringComparison.Ordinal);
-        Assert.Contains("private const int SingleThreadBatchThreshold", source, StringComparison.Ordinal);
-
-        Assert.DoesNotContain("int maxThreads = 8", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("files.Count <= 4", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void F018_ScheduleService_UsesNamedDefaultPollIntervalConstant()
-    {
-        var source = ReadSource("src/Romulus.Infrastructure/Watch/ScheduleService.cs");
-
-        Assert.Contains("private const int DefaultPollIntervalSeconds", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("TimeSpan.FromSeconds(15)", source, StringComparison.Ordinal);
-    }
+    // F018_WatchFolderService_UsesNamedDefaultsAndBufferConstants,
+    // F018_ParallelHasher_UsesNamedThreadAndBatchThresholdConstants,
+    // F018_ScheduleService_UsesNamedDefaultPollIntervalConstant: removed
+    // (per testing.instructions.md - pinned literal const-name strings,
+    //  no behavioural assertion, broke on any harmless rename).
 
     [Fact]
     public void F016_ApiRedPhaseTests_UseAdaptivePollingInsteadOfFixed50msSleepLoops()
