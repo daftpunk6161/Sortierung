@@ -9,6 +9,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Romulus.Tests" />
     <InternalsVisibleTo Include="Romulus.Tests.Wpf" />
+    <InternalsVisibleTo Include="Romulus.Tests.Api" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Romulus.Contracts\Romulus.Contracts.csproj" />

@@ -11,3 +11,7 @@ using System.Runtime.CompilerServices;
 // Romulus.Tests fuer Helper wie StubDialogService, OpenApiTestHelper
 // und ApiTestFactory.
 [assembly: InternalsVisibleTo("Romulus.Tests.Wpf")]
+
+// F-1 Project-Split Phase C: Romulus.Tests.Api erbt Cross-Ref auf
+// Romulus.Tests fuer SortTestExtensions (TestHelpers).
+[assembly: InternalsVisibleTo("Romulus.Tests.Api")]

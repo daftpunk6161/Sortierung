@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
+    <TargetFramework>net10.0</TargetFramework>
     <LangVersion>14</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -11,13 +10,6 @@
     <NoWarn>$(NoWarn);NU1701</NoWarn>
     <RestoreNoWarn>$(RestoreNoWarn);NU1701</RestoreNoWarn>
   </PropertyGroup>
-  <ItemGroup>
-    <!-- F-1 Phase B: ImplicitUsings auf net10.0-windows + UseWPF zieht
-         System.IO nicht implizit (System.Windows.* hat eigenes Path).
-         Globales Using fuer Tests, die Path/Directory/File ohne expliziten
-         using nutzen (geerbt aus Romulus.Tests-Konvention). -->
-    <Using Include="System.IO" />
-  </ItemGroup>
   <ItemGroup>
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
     <PackageReference Include="coverlet.collector" Version="8.0.1">
@@ -38,12 +30,10 @@
     <ProjectReference Include="..\Romulus.Infrastructure\Romulus.Infrastructure.csproj" />
     <ProjectReference Include="..\Romulus.Api\Romulus.Api.csproj" />
     <ProjectReference Include="..\Romulus.CLI\Romulus.CLI.csproj" />
-    <ProjectReference Include="..\Romulus.UI.Wpf\Romulus.UI.Wpf.csproj" />
-    <!-- F-1 Phase B/C: ApiTestFactory + OpenApiTestHelper liegen jetzt
-         in Romulus.Tests.Api; SortTestExtensions und einige Test-Doubles
-         in Romulus.Tests. -->
+    <!-- F-1 Phase C: SortTestExtensions (TestHelpers) lebt noch in
+         Romulus.Tests. Phase D wird das ggf. nach einem Test.Common-Helper
+         verlagern. -->
     <ProjectReference Include="..\Romulus.Tests\Romulus.Tests.csproj" />
-    <ProjectReference Include="..\Romulus.Tests.Api\Romulus.Tests.Api.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\data\**\*">

@@ -21,6 +21,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Romulus.Tests" />
     <InternalsVisibleTo Include="Romulus.Tests.Wpf" />
+    <InternalsVisibleTo Include="Romulus.Tests.Api" />
   </ItemGroup>
 
 </Project>
