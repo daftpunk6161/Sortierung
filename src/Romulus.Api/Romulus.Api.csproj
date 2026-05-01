@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Romulus.Tests" />
+    <InternalsVisibleTo Include="Romulus.Tests.Wpf" />
   </ItemGroup>
 
 </Project>

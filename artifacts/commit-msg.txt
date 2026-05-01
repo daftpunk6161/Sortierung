@@ -1,0 +1,30 @@
+fix(dat): MergeDatIndices O(N^2)-Hang behoben + CliSimulate-Test-Isolation
+
+Zwei Bugs gefunden via dotnet-stack-Trace bei haengendem Vollsuite-Lauf:
+
+1) src/Romulus.Infrastructure/Orchestration/RunEnvironmentBuilder.cs
+   MergeDatIndices iterierte GetConsoleEntries(...).Keys (raw hashes)
+   und rief LookupWithFilename mit dem raw-hash an die untyped-Lookup-API.
+   Diese fiel intern auf eine O(N) Linq-Where-Schleife in der
+   ConcurrentDictionary, weil die internen Keys typed sind
+   (Format: "<hashType>\u001F<hash>") und TryGetValue per raw hash
+   MISSED. Ergebnis bei N=1500+ DAT-Eintraegen: ~2.25 Mio Operationen
+   pro Lookup, in einer aeusseren O(N)-Schleife = O(N^2) = mehrere
+   Milliarden Operationen.
+
+   Fix: Delegation an die bereits vorhandene, korrekte API
+   DatIndex.MergeFrom(other), die typed-keys + HashType + Alias-Daten
+   konsistent behandelt.
+
+2) src/Romulus.Tests/CliSimulateSubcommandTests.cs
+   Beide End-to-End-Tests (EmptyLibrary + ModeMove) erbten ueber
+   RunEnvironmentBuilder.LoadSettings den User-DAT-Root aus
+   %APPDATA%\Romulus\settings.json. Mit aktivem User-DatRoot landeten
+   echte 1500+ DATs im Hash-Index und der EmptyLibrary-Test haengte
+   minutenlang in FileSystemDatEntryCache.TryGet.
+
+   Fix: EnableDat=false + EnableDatExplicit=true forcieren, sodass
+   CliOptionsMapper die User-Settings ignoriert. Test ist jetzt
+   maschinen-unabhaengig und laeuft in <1s pro Test.
+
+Verifikation: 8/8 CliSimulateSubcommand-Tests gruen in 3.27s.

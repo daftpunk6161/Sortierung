@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Romulus.UI.Wpf", "Romulus.U
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Romulus.Tests.Benchmark", "Romulus.Tests.Benchmark\Romulus.Tests.Benchmark.csproj", "{5E94064B-2A33-446C-AF51-3FB2B552CCB4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Romulus.Tests.Wpf", "Romulus.Tests.Wpf\Romulus.Tests.Wpf.csproj", "{1EE0ABE4-227A-4364-BCB1-D268391F815F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +127,18 @@ Global
 		{5E94064B-2A33-446C-AF51-3FB2B552CCB4}.Release|x64.Build.0 = Release|Any CPU
 		{5E94064B-2A33-446C-AF51-3FB2B552CCB4}.Release|x86.ActiveCfg = Release|Any CPU
 		{5E94064B-2A33-446C-AF51-3FB2B552CCB4}.Release|x86.Build.0 = Release|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Debug|x64.Build.0 = Debug|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Debug|x86.Build.0 = Debug|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Release|x64.ActiveCfg = Release|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Release|x64.Build.0 = Release|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Release|x86.ActiveCfg = Release|Any CPU
+		{1EE0ABE4-227A-4364-BCB1-D268391F815F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

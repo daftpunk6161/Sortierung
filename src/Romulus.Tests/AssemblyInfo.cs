@@ -6,3 +6,8 @@ using System.Runtime.CompilerServices;
 // Test-Subsystem beschraenkt, ohne sie auf "public" anzuheben (was
 // echte Konsumenten irrefuehren wuerde).
 [assembly: InternalsVisibleTo("Romulus.Tests.Benchmark")]
+
+// F-1 Project-Split Phase B: Romulus.Tests.Wpf erbt Cross-Ref auf
+// Romulus.Tests fuer Helper wie StubDialogService, OpenApiTestHelper
+// und ApiTestFactory.
+[assembly: InternalsVisibleTo("Romulus.Tests.Wpf")]
