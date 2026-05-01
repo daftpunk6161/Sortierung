@@ -131,6 +131,13 @@ public sealed class CliSimulateSubcommandTests : IDisposable
             {
                 Roots = new[] { _tempDir },
                 Mode = "DryRun",
+                // Test-Isolation (T-W7-TEST-STAB): explizit DAT-Verifikation deaktivieren,
+                // damit der Test nicht die User-Settings (%APPDATA%\Romulus\settings.json)
+                // erbt und daraus echte DAT-Roots laedt. Ohne diese Forcierung kann der
+                // Subcommand bei aktivem User-DatRoot tausende DATs in den Hash-Index laden
+                // und der "EmptyLibrary"-Test haengt minutenlang im FileSystemDatEntryCache.
+                EnableDat = false,
+                EnableDatExplicit = true,
             };
             return await Romulus.CLI.Program.SubcommandSimulateAsync(opts).ConfigureAwait(false);
         });
@@ -179,6 +186,9 @@ public sealed class CliSimulateSubcommandTests : IDisposable
                 Roots = new[] { _tempDir },
                 Mode = "Move",
                 Yes = true, // would normally be required for Move; simulate must ignore Mode
+                // Siehe Begruendung im EmptyLibrary-Test: User-Settings-Drift verhindern.
+                EnableDat = false,
+                EnableDatExplicit = true,
             };
             return await Romulus.CLI.Program.SubcommandSimulateAsync(opts).ConfigureAwait(false);
         });

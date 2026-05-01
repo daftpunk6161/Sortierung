@@ -1493,28 +1493,14 @@ public sealed class RunEnvironmentBuilder
         if (target is null || source is null)
             return;
 
-        foreach (var consoleKey in source.ConsoleKeys.OrderBy(static key => key, StringComparer.OrdinalIgnoreCase))
-        {
-            var entries = source.GetConsoleEntries(consoleKey);
-            if (entries is null || entries.Count == 0)
-                continue;
-
-            foreach (var hash in entries.Keys.OrderBy(static value => value, StringComparer.OrdinalIgnoreCase))
-            {
-                var entry = source.LookupWithFilename(consoleKey, hash);
-                if (entry is null)
-                    continue;
-
-                var value = entry.Value;
-                target.Add(
-                    consoleKey,
-                    hash,
-                    value.GameName,
-                    value.RomFileName,
-                    value.IsBios,
-                    value.ParentGameName);
-            }
-        }
+        // Delegate to the canonical DatIndex.MergeFrom API. The previous hand-rolled
+        // loop iterated GetConsoleEntries(...).Keys (raw hashes) and called the
+        // untyped LookupWithFilename for each entry, which fell back to an O(N) Linq
+        // scan inside ConcurrentDictionary on every miss. With 1k+ entries per
+        // console that produced a multi-billion-operation pathological loop and made
+        // CliSimulateSubcommandTests appear to hang for minutes. MergeFrom uses the
+        // typed-key path internally and preserves HashType + alias data correctly.
+        target.MergeFrom(source);
     }
 
     private static string ComputeEnrichmentFingerprint(
