@@ -153,7 +153,7 @@ public sealed class Block56_StructuralDebtHygieneTests
     public void TASK028_WpfCoverageBoostTests_TargetTests_NoGenericCountGuards()
     {
         var sourceDir = FindSrcRoot();
-        var testFile = Path.Combine(sourceDir, "Romulus.Tests", "WpfCoverageBoostTests.cs");
+        var testFile = Path.Combine(sourceDir, "Romulus.Tests.Wpf", "WpfCoverageBoostTests.cs");
 
         Assert.True(File.Exists(testFile));
 

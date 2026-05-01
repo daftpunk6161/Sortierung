@@ -309,7 +309,7 @@ public sealed class Wave7TestGapRegressionTests : IDisposable
     [Fact]
     public void F016_ApiRedPhaseTests_UseAdaptivePollingInsteadOfFixed50msSleepLoops()
     {
-        var source = ReadSource("src/Romulus.Tests/ApiRedPhaseTests.cs");
+        var source = ReadSource("src/Romulus.Tests.Api/ApiRedPhaseTests.cs");
 
         Assert.DoesNotContain("await Task.Delay(50);", source, StringComparison.Ordinal);
     }
@@ -317,9 +317,9 @@ public sealed class Wave7TestGapRegressionTests : IDisposable
     [Fact]
     public void F016_TestSuite_DoesNotUseFixedSleepForRateLimiterAndArchiveTimingChecks()
     {
-        var auditSource = ReadSource("src/Romulus.Tests/AuditFindingsFixTests.cs");
+        var auditSource = ReadSource("src/Romulus.Tests.Api/AuditFindingsFixTests.cs");
         var block4Source = ReadSource("src/Romulus.Tests/Block4_RobustnessTests.cs");
-        var coverageSource = ReadSource("src/Romulus.Tests/ApiCoverageBoostTests.cs");
+        var coverageSource = ReadSource("src/Romulus.Tests.Api/ApiCoverageBoostTests.cs");
 
         Assert.DoesNotContain("Thread.Sleep(100);", auditSource, StringComparison.Ordinal);
         Assert.DoesNotContain("System.Threading.Thread.Sleep(10);", block4Source, StringComparison.Ordinal);
@@ -330,8 +330,8 @@ public sealed class Wave7TestGapRegressionTests : IDisposable
     [Fact]
     public void F016_RunOrderingTests_AvoidFixed25msDelays()
     {
-        var apiIntegrationSource = ReadSource("src/Romulus.Tests/ApiIntegrationTests.cs");
-        var runManagerSource = ReadSource("src/Romulus.Tests/RunManagerTests.cs");
+        var apiIntegrationSource = ReadSource("src/Romulus.Tests.Api/ApiIntegrationTests.cs");
+        var runManagerSource = ReadSource("src/Romulus.Tests.Api/RunManagerTests.cs");
 
         Assert.DoesNotContain("await Task.Delay(25);", apiIntegrationSource, StringComparison.Ordinal);
         Assert.DoesNotContain("await Task.Delay(25);", runManagerSource, StringComparison.Ordinal);

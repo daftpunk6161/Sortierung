@@ -182,8 +182,11 @@ public sealed class Wave1UiReductionTests
         {
             foreach (var file in Directory.EnumerateFiles(srcRoot, ext, SearchOption.AllDirectories))
             {
-                // Test-Assembly ist explizit ausgenommen (siehe Pin-Tests Wave1Removed*).
+                // Alle Test-Assemblies (Romulus.Tests, Romulus.Tests.Api, Romulus.Tests.Wpf,
+                // Romulus.Tests.Benchmark) sind explizit ausgenommen - siehe Pin-Tests Wave1Removed*.
                 if (file.Contains($"{Path.DirectorySeparatorChar}Romulus.Tests{Path.DirectorySeparatorChar}",
+                        System.StringComparison.Ordinal)
+                    || file.Contains($"{Path.DirectorySeparatorChar}Romulus.Tests.",
                         System.StringComparison.Ordinal))
                     continue;
 
