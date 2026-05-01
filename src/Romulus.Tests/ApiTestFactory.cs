@@ -126,6 +126,17 @@ internal static class ApiTestFactory
             {
                 // Best effort cleanup for isolated API factory state.
             }
+
+            // The test project runs ~199 isolated API factory instances sequentially
+            // (xunit.runner.json maxParallelThreads = 1). WebApplicationFactory keeps
+            // a graph of finalizable references (Kestrel TestServer, IServiceProvider,
+            // LiteDB streams, in-memory configuration roots). Without explicit GC the
+            // testhost working set drifts past 8 GB during the full suite and starts
+            // to thrash the page file. A targeted Gen2 collection after each factory
+            // disposal keeps memory bounded without changing test semantics.
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
+            GC.WaitForPendingFinalizers();
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
         }
     }
 }
