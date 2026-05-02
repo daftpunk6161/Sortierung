@@ -7,11 +7,6 @@ namespace Romulus.Infrastructure.Dat;
 /// legacy single-match call sites. Picks the deterministic first element of the list,
 /// matching the historical <see cref="DatIndex.LookupAny(string)"/> contract.
 /// </summary>
-/// <remarks>
-/// In Phase 3 the production <c>MultiDatConflictResolver</c> will replace this helper
-/// for ambiguous matches; until then the helper preserves the single-match invariant
-/// without changing observable behavior.
-/// </remarks>
 public static class DatMatchSelector
 {
     /// <summary>
@@ -20,8 +15,8 @@ public static class DatMatchSelector
     /// </summary>
     public static DatMatch? SelectSingle(IReadOnlyList<DatMatch>? matches)
     {
-        if (matches is null || matches.Count == 0)
-            return null;
-        return matches[0];
+        return new MultiDatConflictResolver()
+            .Resolve(matches, MultiDatResolutionContext.Empty)
+            .SelectedMatch;
     }
 }

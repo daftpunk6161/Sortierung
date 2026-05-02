@@ -209,6 +209,7 @@ internal sealed class RunRecordOptionsSource : IRunOptionsSource
         EnableDatAudit = run.EnableDatAudit;
         EnableDatRename = run.EnableDatRename;
         DatRoot = run.DatRoot;
+        PreferredDatSources = run.PreferredDatSources;
         HashType = run.HashType;
         ConvertFormat = run.ConvertFormat;
         ConvertOnly = run.ConvertOnly;
@@ -232,6 +233,7 @@ internal sealed class RunRecordOptionsSource : IRunOptionsSource
     public bool EnableDatAudit { get; }
     public bool EnableDatRename { get; }
     public string? DatRoot { get; }
+    public IReadOnlyList<string> PreferredDatSources { get; }
     public string HashType { get; }
     public string? ConvertFormat { get; }
     public bool ConvertOnly { get; }
@@ -289,6 +291,7 @@ public sealed class RunRequest
     public bool EnableDatAudit { get; set; }
     public bool EnableDatRename { get; set; }
     public string? DatRoot { get; set; }
+    public string[]? PreferredDatSources { get; set; }
     public bool OnlyGames { get; set; }
     public bool KeepUnknownWhenOnlyGames { get; set; } = true;
     public string? HashType { get; set; }
@@ -343,6 +346,7 @@ public sealed class RunRecord
     public bool EnableDatRename { get; init; }
     [JsonIgnore]
     public string? DatRoot { get; init; }
+    public string[] PreferredDatSources { get; init; } = Array.Empty<string>();
     public bool OnlyGames { get; init; }
     public bool KeepUnknownWhenOnlyGames { get; init; } = true;
     public string HashType { get; init; } = RunConstants.DefaultHashType;

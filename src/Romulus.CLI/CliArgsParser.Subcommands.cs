@@ -21,6 +21,7 @@ internal static partial class CliArgsParser
             "analyze" => ParseSubcommandWithRoots(CliCommand.Analyze, rest),
             "simulate" => ParseSubcommandWithRoots(CliCommand.Simulate, rest),
             "explain" => ParseExplainSubcommand(rest),
+            "provenance" => ParseProvenanceSubcommand(rest),
             "profiles" => ParseProfilesSubcommand(rest),
             "diff" => ParseDiffSubcommand(rest),
             "merge" => ParseMergeSubcommand(rest),
@@ -950,6 +951,43 @@ internal static partial class CliArgsParser
             return CliParseResult.ValidationError(["[Error] health requires --roots <paths> or --console <key>."]);
 
         return CliParseResult.Subcommand(CliCommand.Health, opts);
+    }
+
+    private static CliParseResult ParseProvenanceSubcommand(string[] args)
+    {
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+        for (int i = 0; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--fingerprint" or "--hash" or "-f":
+                    if (!TryConsumeValue(args, ref i, "--fingerprint", errors, out var fingerprint)) break;
+                    opts.Fingerprint = fingerprint;
+                    break;
+                case "-o" or "--output":
+                    if (!TryConsumeValue(args, ref i, "--output", errors, out var outVal)) break;
+                    opts.OutputPath = outVal;
+                    break;
+                default:
+                    if (!args[i].StartsWith("-"))
+                        opts.Fingerprint ??= args[i];
+                    else
+                        errors.Add($"[Error] Unknown flag '{args[i]}' for provenance.");
+                    break;
+            }
+        }
+
+        if (errors.Count > 0)
+            return CliParseResult.ValidationError(errors);
+        if (string.IsNullOrWhiteSpace(opts.Fingerprint))
+            return CliParseResult.ValidationError(["[Error] provenance requires --fingerprint <hex>"]);
+
+        var outputPathError = ValidateOptionalPath(opts.OutputPath, "provenance output path", allowUnc: false);
+        if (outputPathError is not null)
+            return CliParseResult.ValidationError([$"[Error] {outputPathError}"]);
+
+        return CliParseResult.Subcommand(CliCommand.Provenance, opts);
     }
 
     /// <summary>

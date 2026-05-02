@@ -50,6 +50,7 @@ public sealed class RunOptions
     public bool EnableDatAudit { get; init; }
     public bool EnableDatRename { get; init; }
     public string? DatRoot { get; init; }
+    public IReadOnlyList<string> PreferredDatSources { get; init; } = Array.Empty<string>();
     public string HashType { get; init; } = "SHA1";
     public string? ConvertFormat { get; init; }
     public bool ConvertOnly { get; init; }

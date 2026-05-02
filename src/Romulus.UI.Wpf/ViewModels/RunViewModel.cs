@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Windows.Input;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Romulus.Contracts.Models;
 using Romulus.UI.Wpf.Models;
 using RunState = Romulus.UI.Wpf.Models.RunState;
@@ -24,8 +26,13 @@ public sealed class RunViewModel : ObservableObject
     {
         BindingOperations.EnableCollectionSynchronization(ConsoleDistribution, _collectionLock);
         BindingOperations.EnableCollectionSynchronization(DedupeGroupItems, _collectionLock);
+        BindingOperations.EnableCollectionSynchronization(ProvenanceEntries, _collectionLock);
         DedupeGroupItemsView = CollectionViewSource.GetDefaultView(DedupeGroupItems);
         DedupeGroupItemsView.Filter = FilterDedupeGroupItem;
+        OpenProvenanceCommand = new RelayCommand<string?>(
+            fingerprint => _openProvenanceCallback?.Invoke(fingerprint),
+            fingerprint => !string.IsNullOrWhiteSpace(fingerprint));
+        CloseProvenanceCommand = new RelayCommand(() => IsProvenanceDrawerOpen = false);
     }
 
     // ═══ RUN RESULT STATE ═══════════════════════════════════════════════
@@ -270,6 +277,27 @@ public sealed class RunViewModel : ObservableObject
     public ObservableCollection<ConsoleDistributionItem> ConsoleDistribution { get; } = [];
     public ObservableCollection<DedupeGroupItem> DedupeGroupItems { get; } = [];
     public ICollectionView DedupeGroupItemsView { get; }
+    public ObservableCollection<ProvenanceEntryItem> ProvenanceEntries { get; } = [];
+
+    private Action<string?>? _openProvenanceCallback;
+    public ICommand OpenProvenanceCommand { get; }
+    public ICommand CloseProvenanceCommand { get; }
+
+    private bool _isProvenanceDrawerOpen;
+    public bool IsProvenanceDrawerOpen
+    {
+        get => _isProvenanceDrawerOpen;
+        set => SetProperty(ref _isProvenanceDrawerOpen, value);
+    }
+
+    private string _provenanceTitle = "Provenance";
+    public string ProvenanceTitle { get => _provenanceTitle; set => SetProperty(ref _provenanceTitle, value); }
+
+    private string _provenanceStatus = "";
+    public string ProvenanceStatus { get => _provenanceStatus; set => SetProperty(ref _provenanceStatus, value); }
+
+    private int _provenanceTrustScore;
+    public int ProvenanceTrustScore { get => _provenanceTrustScore; set => SetProperty(ref _provenanceTrustScore, value); }
 
     private string _decisionSearchText = "";
     public string DecisionSearchText
@@ -294,5 +322,43 @@ public sealed class RunViewModel : ObservableObject
         return group.GameKey.Contains(term, StringComparison.OrdinalIgnoreCase)
             || group.Winner.FileName.Contains(term, StringComparison.OrdinalIgnoreCase)
             || group.Losers.Any(l => l.FileName.Contains(term, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public void SetOpenProvenanceCallback(Action<string?>? callback)
+        => _openProvenanceCallback = callback;
+
+    public void ApplyProvenanceTrail(ProvenanceTrail trail)
+    {
+        ArgumentNullException.ThrowIfNull(trail);
+
+        ProvenanceEntries.Clear();
+        foreach (var entry in trail.Entries)
+        {
+            ProvenanceEntries.Add(new ProvenanceEntryItem
+            {
+                EventKind = entry.EventKind.ToString(),
+                TimestampUtc = entry.TimestampUtc,
+                AuditRunId = entry.AuditRunId,
+                ConsoleKey = entry.ConsoleKey ?? "",
+                DatMatchId = entry.DatMatchId ?? "",
+                Detail = entry.Detail ?? ""
+            });
+        }
+
+        ProvenanceTitle = $"Provenance {trail.Fingerprint}";
+        ProvenanceTrustScore = trail.TrustScore;
+        ProvenanceStatus = trail.IsValid
+            ? $"Trust {trail.TrustScore}/100 · {trail.Entries.Count} Events"
+            : $"Ungueltig: {trail.FailureReason ?? "unknown"}";
+        IsProvenanceDrawerOpen = true;
+    }
+
+    public void ApplyProvenanceError(string fingerprint, string message)
+    {
+        ProvenanceEntries.Clear();
+        ProvenanceTitle = $"Provenance {fingerprint}";
+        ProvenanceTrustScore = 0;
+        ProvenanceStatus = message;
+        IsProvenanceDrawerOpen = true;
     }
 }

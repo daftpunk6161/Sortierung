@@ -188,6 +188,40 @@ public sealed class Wave7ProvenanceTrailTests : IDisposable
     }
 
     [Fact]
+    public void Project_ValidTrail_ReturnsSharedTrustProjection()
+    {
+        var fp = "1234567890abcdef";
+        _store.Append(MakeEntry(fingerprint: fp, auditRunId: "run-1", kind: ProvenanceEventKind.Imported));
+        _store.Append(MakeEntry(fingerprint: fp, auditRunId: "run-1", kind: ProvenanceEventKind.Verified));
+        _store.Append(MakeEntry(fingerprint: fp, auditRunId: "run-2", kind: ProvenanceEventKind.Moved));
+
+        var trail = ProvenanceTrailProjection.Project(_store, fp.ToUpperInvariant());
+
+        Assert.Equal(fp, trail.Fingerprint);
+        Assert.True(trail.IsValid, trail.FailureReason);
+        Assert.Equal(90, trail.TrustScore);
+        Assert.Equal(3, trail.Entries.Count);
+    }
+
+    [Fact]
+    public void Project_TamperedTrail_ReturnsInvalidZeroTrust()
+    {
+        var fp = "facefacefaceface";
+        _store.Append(MakeEntry(fingerprint: fp, kind: ProvenanceEventKind.Verified));
+
+        var path = Path.Combine(_root, "provenance", "fa", "ce", fp + ".provenance.jsonl");
+        var lines = File.ReadAllLines(path);
+        lines[0] = lines[0].Replace("Nintendo - NES (USA).dat", "Tampered.dat", StringComparison.Ordinal);
+        File.WriteAllLines(path, lines);
+
+        var trail = ProvenanceTrailProjection.Project(_store, fp);
+
+        Assert.False(trail.IsValid);
+        Assert.Equal(0, trail.TrustScore);
+        Assert.Contains("HMAC", trail.FailureReason ?? "", StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Read_NonExistentFingerprint_ReturnsEmpty()
     {
         var entries = _store.Read("0000000000000000");

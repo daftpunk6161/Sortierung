@@ -11,6 +11,7 @@ using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
+using Romulus.Infrastructure.Provenance;
 using Romulus.UI.Wpf.Models;
 using Romulus.UI.Wpf.Services;
 using RunState = Romulus.UI.Wpf.Models.RunState;
@@ -1319,6 +1320,40 @@ public sealed partial class MainViewModel
             ErrorSummaryItems.Add(issue);
 
         RaiseErrorSummaryChanged();
+    }
+
+    private void OpenProvenanceForFingerprint(string? fingerprint)
+    {
+        var displayFingerprint = fingerprint?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(displayFingerprint))
+        {
+            Run.ApplyProvenanceError("", "Kein Fingerprint fuer diesen Eintrag verfuegbar.");
+            return;
+        }
+
+        if (_provenanceStore is null)
+        {
+            Run.ApplyProvenanceError(displayFingerprint, "Provenance-Store ist nicht verfuegbar.");
+            return;
+        }
+
+        try
+        {
+            var trail = ProvenanceTrailProjection.Project(_provenanceStore, displayFingerprint);
+            Run.ApplyProvenanceTrail(trail);
+        }
+        catch (ArgumentException ex)
+        {
+            Run.ApplyProvenanceError(displayFingerprint, ex.Message);
+        }
+        catch (IOException ex)
+        {
+            Run.ApplyProvenanceError(displayFingerprint, $"Provenance konnte nicht gelesen werden: {ex.Message}");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Run.ApplyProvenanceError(displayFingerprint, $"Provenance konnte nicht gelesen werden: {ex.Message}");
+        }
     }
 
     private void RaiseErrorSummaryChanged()

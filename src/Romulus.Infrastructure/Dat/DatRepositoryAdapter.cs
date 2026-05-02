@@ -64,6 +64,7 @@ public sealed class DatRepositoryAdapter
                 continue;
 
             var payload = LoadDatPayload(datPath, hashType);
+            var sourceId = Path.GetFileNameWithoutExtension(datPath);
             var parentMap = payload.ParentMap;
             var games = payload.Games;
             foreach (var game in games)
@@ -95,7 +96,8 @@ public sealed class DatRepositoryAdapter
                             game.Key,
                             romFileName,
                             isBios,
-                            parentGameName);
+                            parentGameName,
+                            sourceId);
                     }
                 }
             }
@@ -155,7 +157,8 @@ public sealed class DatRepositoryAdapter
                 RomFileName: entry.RomFileName,
                 IsBios: entry.IsBios,
                 ParentGameName: entry.ParentGameName,
-                HashType: entry.HashType);
+                HashType: entry.HashType,
+                SourceId: entry.SourceId);
         }
         return projected;
     }

@@ -13,4 +13,5 @@ public sealed record DatMatch(
     string? RomFileName,
     bool IsBios,
     string? ParentGameName,
-    string HashType);
+    string HashType,
+    string? SourceId = null);

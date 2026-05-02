@@ -80,6 +80,15 @@ public sealed class IdempotencyFingerprintTests
         Assert.NotEqual(a, b);
     }
 
+    [Fact]
+    public void DifferentPreferredDatSources_ProducesDifferentFingerprint()
+    {
+        var a = BuildFingerprint(req => req.PreferredDatSources = ["No-Intro", "Redump"]);
+        var b = BuildFingerprint(req => req.PreferredDatSources = ["Redump", "No-Intro"]);
+
+        Assert.NotEqual(a, b);
+    }
+
     private static string BuildFingerprint(Action<RunRequest> configure)
     {
         var request = new RunRequest

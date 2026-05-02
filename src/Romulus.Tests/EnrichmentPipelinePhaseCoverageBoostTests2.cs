@@ -292,8 +292,9 @@ public sealed class EnrichmentPipelinePhaseCoverageBoostTests2 : IDisposable
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatMatch(datIndex, "hash-shared", null);
 
-        // Multiple matches with no detection hypotheses → ambiguous → NoMatch
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("GBA", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
     }
 
     // ══════ Helpers ════════════════════════════════════════════════

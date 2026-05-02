@@ -61,8 +61,15 @@
                  AutomationProperties.Name="Decisions Suche"/>
       </Border>
 
-      <!-- ── DECISION TREE ────────────────────────────────────────── -->
+      <!-- ── DECISION TREE + PROVENANCE DRAWER ────────────────────── -->
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="340"/>
+        </Grid.ColumnDefinitions>
+
       <TreeView x:Name="treeDecisions"
+                Grid.Column="0"
                 ItemsSource="{Binding Run.DedupeGroupItemsView}"
                 BorderThickness="0"
                 Background="Transparent"
@@ -104,6 +111,20 @@
                   <Run Text=" Dupes"/>
                 </TextBlock>
               </Border>
+              <Border Background="{DynamicResource BrushWarning}" CornerRadius="4" Padding="6,2" Margin="6,0,0,0"
+                      Visibility="{Binding Winner.HasDatConflict, Converter={StaticResource BoolToVis}}"
+                      VerticalAlignment="Center">
+                <TextBlock Foreground="{DynamicResource BrushSurface}" FontSize="10">
+                  <Run Text="DAT "/>
+                  <Run Text="{Binding Winner.DatResolutionReason}"/>
+                </TextBlock>
+              </Border>
+              <Button Content="Provenance"
+                      Padding="8,2"
+                      Margin="8,0,0,0"
+                      FontSize="11"
+                      Command="{Binding DataContext.Run.OpenProvenanceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      CommandParameter="{Binding Winner.Fingerprint}"/>
             </StackPanel>
             <HierarchicalDataTemplate.ItemTemplate>
               <DataTemplate>
@@ -133,6 +154,63 @@
           </HierarchicalDataTemplate>
         </TreeView.ItemTemplate>
       </TreeView>
+
+        <Border Grid.Column="1"
+                Margin="12,0,0,0"
+                Padding="14"
+                Background="{DynamicResource BrushSurface}"
+                CornerRadius="{DynamicResource RadiusMD}"
+                Visibility="{Binding Run.IsProvenanceDrawerOpen, Converter={StaticResource BoolToVis}}">
+          <DockPanel>
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock Text="{Binding Run.ProvenanceTitle}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Run.ProvenanceStatus}" FontSize="12"
+                           Foreground="{DynamicResource BrushTextMuted}" Margin="0,3,0,0"/>
+              </StackPanel>
+              <Button Grid.Column="1"
+                      Content="×"
+                      Width="28"
+                      Height="28"
+                      Command="{Binding Run.CloseProvenanceCommand}"/>
+            </Grid>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding Run.ProvenanceEntries}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,0,1" Padding="0,8">
+                      <StackPanel>
+                        <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}">
+                          <Run Text="{Binding EventKind}"/>
+                          <Run Text=" · "/>
+                          <Run Text="{Binding TimestampUtc}"/>
+                        </TextBlock>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource BrushTextMuted}" TextTrimming="CharacterEllipsis">
+                          <Run Text="Audit "/>
+                          <Run Text="{Binding AuditRunId}"/>
+                        </TextBlock>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource BrushTextMuted}" TextTrimming="CharacterEllipsis">
+                          <Run Text="{Binding ConsoleKey}"/>
+                          <Run Text=" "/>
+                          <Run Text="{Binding DatMatchId}"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Detail}" FontSize="12"
+                                   Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+      </Grid>
     </DockPanel>
 
     <!-- ═══ EMPTY STATE ═══════════════════════════════════════════════ -->

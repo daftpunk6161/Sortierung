@@ -22,6 +22,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
     private const int ParallelizationThreshold = 4;
     private static readonly IFamilyDatStrategyResolver DefaultFamilyDatStrategyResolver = new FamilyDatStrategyResolver();
     private static readonly IFamilyPipelineSelector DefaultFamilyPipelineSelector = new FamilyPipelineSelector();
+    private static readonly MultiDatConflictResolver DefaultMultiDatConflictResolver = new();
 
     /// <summary>Generic stems too short or ambiguous to qualify as strict DAT name candidates.</summary>
     private static readonly HashSet<string> GenericDatNameBlocklist = new(StringComparer.OrdinalIgnoreCase)
@@ -411,7 +412,10 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
             matchEvidence: matchEvidence,
             evidenceTier: finalEvidenceTier,
                 primaryMatchKind: finalMatchKind,
-                platformFamily: platformFamily);
+                platformFamily: platformFamily) with
+        {
+            MultiDatResolution = datResult.MultiDatResolution
+        };
     }
 
     private readonly record struct DatLookupResult(
@@ -422,6 +426,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         string? ComputedHash,
         string? ComputedHeaderlessHash,
         string? DatGameName,
+        MultiDatResolution? MultiDatResolution,
         string ConsoleKey,
         /// <summary>True when the DAT lookup switched the console key away from the initial detection result.
         /// Semantically distinct from the detector's own <see cref="ConsoleDetectionResult.HasConflict"/>.
@@ -453,12 +458,13 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         string? computedHash = null;
         string? computedHeaderlessHash = null;
         string? datGameName = null;
+        MultiDatResolution? multiDatResolution = null;
         bool datNameOnlyMatch = false;
         bool datConsoleSwitched = false;
         var datMatchKind = MatchKind.None;
 
         if (datIndex is null || hashService is null)
-            return new DatLookupResult(false, false, false, false, null, null, null, consoleKey, false, MatchKind.None);
+            return new DatLookupResult(false, false, false, false, null, null, null, null, consoleKey, false, MatchKind.None);
 
         if (sizeBytes > 50_000_000)
         {
@@ -481,7 +487,8 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                 computedHash ??= innerHash.Hash;
 
                 var policyResult = TryPolicyAwareDatLookup(datIndex, innerHash, consoleKey, datPolicy,
-                    detectionResult, filePath, consoleDetector, onProgress);
+                    detectionResult, filePath, consoleDetector, context.Options.PreferredDatSources,
+                    MatchKind.ArchiveInnerExactDat, onProgress);
                 if (policyResult.IsMatch)
                 {
                     datMatch = true;
@@ -489,6 +496,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     datMatchedBios = policyResult.IsBios;
                     datResolvedFromAmbiguousCandidates = policyResult.ResolvedFromAmbiguousCandidates;
                     datGameName = policyResult.DatGameName;
+                    multiDatResolution = policyResult.Resolution;
                     var crossConsole = IsCrossConsoleResolution(consoleKey, policyResult.ConsoleKey);
                     datMatchKind = crossConsole
                         ? MatchKind.CrossConsoleArchiveInnerExactDat
@@ -513,13 +521,15 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
             if (computedHeaderlessHash is not null)
             {
                 var policyResult = TryPolicyAwareDatLookup(datIndex, new DatLookupHash(headerlessHashType, computedHeaderlessHash), consoleKey, datPolicy,
-                    detectionResult, filePath, consoleDetector, onProgress);
+                    detectionResult, filePath, consoleDetector, context.Options.PreferredDatSources,
+                    MatchKind.HeaderlessDatHash, onProgress);
                 if (policyResult.IsMatch)
                 {
                     datMatch = true;
                     datMatchedBios = policyResult.IsBios;
                     datResolvedFromAmbiguousCandidates = policyResult.ResolvedFromAmbiguousCandidates;
                     datGameName = policyResult.DatGameName;
+                    multiDatResolution = policyResult.Resolution;
                     var crossConsole = IsCrossConsoleResolution(consoleKey, policyResult.ConsoleKey);
                     datMatchKind = crossConsole
                         ? MatchKind.CrossConsoleHeaderlessDatHash
@@ -541,8 +551,10 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
             {
                 computedHash ??= hash.Hash;
 
+                var lookupKind = lowerExt == ".chd" ? MatchKind.ChdRawDatHash : MatchKind.ExactDatHash;
                 var policyResult = TryPolicyAwareDatLookup(datIndex, hash, consoleKey, datPolicy,
-                    detectionResult, filePath, consoleDetector, onProgress);
+                    detectionResult, filePath, consoleDetector, context.Options.PreferredDatSources,
+                    lookupKind, onProgress);
                 if (policyResult.IsMatch)
                 {
                     datMatch = true;
@@ -550,6 +562,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     datMatchedBios = policyResult.IsBios;
                     datResolvedFromAmbiguousCandidates = policyResult.ResolvedFromAmbiguousCandidates;
                     datGameName = policyResult.DatGameName;
+                    multiDatResolution = policyResult.Resolution;
                     var crossConsole = IsCrossConsoleResolution(consoleKey, policyResult.ConsoleKey);
                     datMatchKind = lowerExt == ".chd"
                         ? (crossConsole ? MatchKind.CrossConsoleChdRawDatHash : MatchKind.ChdRawDatHash)
@@ -579,7 +592,8 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
             if (dataSha1 is not null)
             {
                 var policyResult = TryPolicyAwareDatLookup(datIndex, new DatLookupHash("SHA1", dataSha1), consoleKey, datPolicy,
-                    detectionResult, filePath, consoleDetector, onProgress);
+                    detectionResult, filePath, consoleDetector, context.Options.PreferredDatSources,
+                    MatchKind.ChdDataSha1DatHash, onProgress);
                 if (policyResult.IsMatch)
                 {
                     datMatch = true;
@@ -587,6 +601,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                     datMatchedBios = policyResult.IsBios;
                     datResolvedFromAmbiguousCandidates = policyResult.ResolvedFromAmbiguousCandidates;
                     datGameName = policyResult.DatGameName;
+                    multiDatResolution = policyResult.Resolution;
                     var crossConsole = IsCrossConsoleResolution(consoleKey, policyResult.ConsoleKey);
                     datMatchKind = crossConsole
                         ? MatchKind.CrossConsoleChdDataSha1DatHash
@@ -658,6 +673,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                                         consoleKey = candidateConsole;
                                         datMatchedBios = nameMatches[0].Entry.IsBios;
                                         datGameName = nameMatches[0].Entry.GameName;
+                                        multiDatResolution = BuildSingleResolution(ToDatMatch(nameMatches[0]));
                                         if (!string.IsNullOrEmpty(previousConsole) &&
                                             previousConsole != "UNKNOWN" &&
                                             !string.Equals(previousConsole, consoleKey, StringComparison.OrdinalIgnoreCase))
@@ -671,7 +687,10 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                                 }
                                 else if (nameMatches.Count > 1)
                                 {
-                                    var resolution = ResolveUnknownDatNameMatch(nameMatches, detectionResult);
+                                    var resolution = ResolveUnknownDatNameMatch(
+                                        nameMatches,
+                                        detectionResult,
+                                        context.Options.PreferredDatSources);
                                     if (resolution.IsMatch)
                                     {
                                         // Extension plausibility guard for name-only multi match
@@ -690,6 +709,7 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                                             datMatchedBios = resolution.IsBios;
                                             datResolvedFromAmbiguousCandidates = resolution.ResolvedFromAmbiguousCandidates;
                                             datGameName = resolution.DatGameName;
+                                            multiDatResolution = resolution.Resolution;
                                             var previousConsole = consoleKey;
                                             consoleKey = resolution.ConsoleKey!;
                                             if (!string.IsNullOrEmpty(previousConsole) &&
@@ -716,6 +736,14 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                         datMatch = true;
                         datNameOnlyMatch = true;
                         datGameName = byName.Value.GameName;
+                        multiDatResolution = BuildSingleResolution(new DatMatch(
+                            ConsoleKey: consoleKey,
+                            GameName: byName.Value.GameName,
+                            RomFileName: byName.Value.RomFileName,
+                            IsBios: byName.Value.IsBios,
+                            ParentGameName: byName.Value.ParentGameName,
+                            HashType: byName.Value.HashType,
+                            SourceId: byName.Value.SourceId));
                         datMatchKind = MatchKind.DatNameOnlyMatch;
                         datMatchedBios = byName.Value.IsBios;
                         onProgress?.Invoke(
@@ -726,7 +754,8 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         }
 
         return new DatLookupResult(datMatch, datMatchedBios, datResolvedFromAmbiguousCandidates,
-            datNameOnlyMatch, computedHash, computedHeaderlessHash, datGameName, consoleKey, datConsoleSwitched, datMatchKind);
+            datNameOnlyMatch, computedHash, computedHeaderlessHash, datGameName, multiDatResolution,
+            consoleKey, datConsoleSwitched, datMatchKind);
     }
 
     private static bool IsDatAvailableForConsole(
@@ -765,6 +794,8 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         ConsoleDetectionResult? detectionResult,
         string filePath,
         ConsoleDetector? consoleDetector,
+        IReadOnlyList<string> preferredDatSources,
+        MatchKind lookupMatchKind,
         Action<string>? onProgress)
     {
         if (datPolicy.EnableCrossConsoleLookup)
@@ -776,6 +807,8 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                 detectionResult,
                 filePath,
                 consoleDetector,
+                preferredDatSources,
+                lookupMatchKind,
                 onProgress);
         }
 
@@ -783,7 +816,23 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         {
             var byConsole = datIndex.LookupWithFilename(consoleKey, hash.HashType, hash.Hash);
             if (byConsole is not null)
-                return new DatUnknownResolution(true, consoleKey, byConsole.Value.IsBios, false, byConsole.Value.GameName);
+            {
+                var match = new DatMatch(
+                    ConsoleKey: consoleKey,
+                    GameName: byConsole.Value.GameName,
+                    RomFileName: byConsole.Value.RomFileName,
+                    IsBios: byConsole.Value.IsBios,
+                    ParentGameName: byConsole.Value.ParentGameName,
+                    HashType: byConsole.Value.HashType,
+                    SourceId: byConsole.Value.SourceId);
+                return new DatUnknownResolution(
+                    true,
+                    consoleKey,
+                    byConsole.Value.IsBios,
+                    false,
+                    byConsole.Value.GameName,
+                    BuildSingleResolution(match));
+            }
         }
 
         return DatUnknownResolution.NoMatch;
@@ -903,12 +952,17 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
             detectionResult,
             filePath,
             consoleDetector,
+            Array.Empty<string>(),
+            MatchKind.ExactDatHash,
             onProgress);
 
     internal static DatUnknownResolution TryCrossConsoleDatLookup(
         DatIndex datIndex, DatLookupHash hash, string consoleKey,
         ConsoleDetectionResult? detectionResult, string filePath,
-        ConsoleDetector? consoleDetector, Action<string>? onProgress)
+        ConsoleDetector? consoleDetector,
+        IReadOnlyList<string> preferredDatSources,
+        MatchKind lookupMatchKind,
+        Action<string>? onProgress)
     {
         // Fast path: if consoleKey is known, try that console first
         if (consoleKey is not "UNKNOWN" and not "" and not "AMBIGUOUS")
@@ -916,12 +970,26 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
             var byConsole = datIndex.LookupWithFilename(consoleKey, hash.HashType, hash.Hash);
             if (byConsole is not null)
             {
-                return new DatUnknownResolution(true, consoleKey, byConsole.Value.IsBios, false, byConsole.Value.GameName);
+                var match = new DatMatch(
+                    ConsoleKey: consoleKey,
+                    GameName: byConsole.Value.GameName,
+                    RomFileName: byConsole.Value.RomFileName,
+                    IsBios: byConsole.Value.IsBios,
+                    ParentGameName: byConsole.Value.ParentGameName,
+                    HashType: byConsole.Value.HashType,
+                    SourceId: byConsole.Value.SourceId);
+                return new DatUnknownResolution(
+                    true,
+                    consoleKey,
+                    byConsole.Value.IsBios,
+                    false,
+                    byConsole.Value.GameName,
+                    BuildSingleResolution(match));
             }
         }
 
         // Cross-console lookup: search ALL DATs
-        var resolution = ResolveUnknownDatMatch(datIndex, hash, detectionResult);
+        var resolution = ResolveUnknownDatMatch(datIndex, hash, detectionResult, preferredDatSources, lookupMatchKind);
         if (resolution.IsMatch)
         {
             // Extension plausibility guard: if the file has a unique extension that maps
@@ -1015,6 +1083,19 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         DatIndex datIndex,
         DatLookupHash hash,
         ConsoleDetectionResult? detectionResult)
+        => ResolveUnknownDatMatch(
+            datIndex,
+            hash,
+            detectionResult,
+            Array.Empty<string>(),
+            MatchKind.ExactDatHash);
+
+    internal static DatUnknownResolution ResolveUnknownDatMatch(
+        DatIndex datIndex,
+        DatLookupHash hash,
+        ConsoleDetectionResult? detectionResult,
+        IReadOnlyList<string> preferredDatSources,
+        MatchKind lookupMatchKind)
     {
         var matches = datIndex.LookupAllByHash(hash.HashType, hash.Hash)
             .Where(static match => IsUsableResolvedConsoleKey(match.ConsoleKey))
@@ -1022,42 +1103,26 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         if (matches.Length == 0)
             return DatUnknownResolution.NoMatch;
 
-        if (matches.Length == 1)
-        {
-            var single = matches[0];
-            return new DatUnknownResolution(true, single.ConsoleKey, single.Entry.IsBios, false, single.Entry.GameName);
-        }
-
-        if (detectionResult is null || detectionResult.Hypotheses.Count == 0)
+        var datMatches = matches.Select(ToDatMatch).ToArray();
+        var context = new MultiDatResolutionContext(
+            ExpectedConsoleKey: detectionResult is null || !IsUsableResolvedConsoleKey(detectionResult.ConsoleKey)
+                ? null
+                : detectionResult.ConsoleKey,
+            ConsoleStrengths: BuildConsoleStrengths(detectionResult),
+            PreferredSources: preferredDatSources,
+            MatchKind: lookupMatchKind);
+        var resolution = DefaultMultiDatConflictResolver.Resolve(datMatches, context);
+        if (resolution.SelectedMatch is null)
             return DatUnknownResolution.NoMatch;
 
-        var matchMap = new Dictionary<string, DatIndex.DatIndexEntry>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (consoleKey, entry) in matches)
-        {
-            if (!matchMap.ContainsKey(consoleKey))
-                matchMap[consoleKey] = entry;
-        }
-
-        var rankedHypothesisKeys = detectionResult.Hypotheses
-            .OrderByDescending(h => h.Confidence)
-            .ThenBy(h => h.ConsoleKey, StringComparer.OrdinalIgnoreCase)
-            .Select(h => h.ConsoleKey)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-
-        string? selectedKey = null;
-        foreach (var hypothesisKey in rankedHypothesisKeys)
-        {
-            if (matchMap.ContainsKey(hypothesisKey))
-            {
-                selectedKey = hypothesisKey;
-                break;
-            }
-        }
-
-        if (selectedKey is null)
-            return DatUnknownResolution.NoMatch;
-
-        return new DatUnknownResolution(true, selectedKey, matchMap[selectedKey].IsBios, true, matchMap[selectedKey].GameName);
+        var selected = resolution.SelectedMatch;
+        return new DatUnknownResolution(
+            true,
+            selected.ConsoleKey,
+            selected.IsBios,
+            resolution.IsConflict,
+            selected.GameName,
+            resolution);
     }
 
     internal readonly record struct DatUnknownResolution(
@@ -1065,9 +1130,10 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         string? ConsoleKey,
         bool IsBios,
         bool ResolvedFromAmbiguousCandidates,
-        string? DatGameName)
+        string? DatGameName,
+        MultiDatResolution? Resolution = null)
     {
-        public static DatUnknownResolution NoMatch { get; } = new(false, null, false, false, null);
+        public static DatUnknownResolution NoMatch { get; } = new(false, null, false, false, null, null);
     }
 
     /// <summary>
@@ -1077,6 +1143,12 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
     internal static DatUnknownResolution ResolveUnknownDatNameMatch(
         IReadOnlyList<(string ConsoleKey, DatIndex.DatIndexEntry Entry)> nameMatches,
         ConsoleDetectionResult? detectionResult)
+        => ResolveUnknownDatNameMatch(nameMatches, detectionResult, Array.Empty<string>());
+
+    internal static DatUnknownResolution ResolveUnknownDatNameMatch(
+        IReadOnlyList<(string ConsoleKey, DatIndex.DatIndexEntry Entry)> nameMatches,
+        ConsoleDetectionResult? detectionResult,
+        IReadOnlyList<string> preferredDatSources)
     {
         var filteredMatches = nameMatches
             .Where(static match => IsUsableResolvedConsoleKey(match.ConsoleKey))
@@ -1085,43 +1157,63 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
         if (filteredMatches.Length == 0)
             return DatUnknownResolution.NoMatch;
 
-        if (filteredMatches.Length == 1)
-        {
-            var single = filteredMatches[0];
-            return new DatUnknownResolution(true, single.ConsoleKey, single.Entry.IsBios, false, single.Entry.GameName);
-        }
-
-        if (detectionResult is null || detectionResult.Hypotheses.Count == 0)
+        var datMatches = filteredMatches.Select(ToDatMatch).ToArray();
+        var context = new MultiDatResolutionContext(
+            ExpectedConsoleKey: detectionResult is null || !IsUsableResolvedConsoleKey(detectionResult.ConsoleKey)
+                ? null
+                : detectionResult.ConsoleKey,
+            ConsoleStrengths: BuildConsoleStrengths(detectionResult),
+            PreferredSources: preferredDatSources,
+            MatchKind: MatchKind.DatNameOnlyMatch);
+        var resolution = DefaultMultiDatConflictResolver.Resolve(datMatches, context);
+        if (resolution.SelectedMatch is null)
             return DatUnknownResolution.NoMatch;
 
-        var matchMap = new Dictionary<string, DatIndex.DatIndexEntry>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (consoleKey, entry) in filteredMatches)
-        {
-            if (!matchMap.ContainsKey(consoleKey))
-                matchMap[consoleKey] = entry;
-        }
-
-        var rankedHypothesisKeys = detectionResult.Hypotheses
-            .OrderByDescending(h => h.Confidence)
-            .ThenBy(h => h.ConsoleKey, StringComparer.OrdinalIgnoreCase)
-            .Select(h => h.ConsoleKey)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-
-        string? selectedKey = null;
-        foreach (var hypothesisKey in rankedHypothesisKeys)
-        {
-            if (matchMap.ContainsKey(hypothesisKey))
-            {
-                selectedKey = hypothesisKey;
-                break;
-            }
-        }
-
-        if (selectedKey is null)
-            return DatUnknownResolution.NoMatch;
-
-        return new DatUnknownResolution(true, selectedKey, matchMap[selectedKey].IsBios, true, matchMap[selectedKey].GameName);
+        var selected = resolution.SelectedMatch;
+        return new DatUnknownResolution(
+            true,
+            selected.ConsoleKey,
+            selected.IsBios,
+            resolution.IsConflict,
+            selected.GameName,
+            resolution);
     }
+
+    private static DatMatch ToDatMatch((string ConsoleKey, DatIndex.DatIndexEntry Entry) match)
+        => new(
+            ConsoleKey: match.ConsoleKey,
+            GameName: match.Entry.GameName,
+            RomFileName: match.Entry.RomFileName,
+            IsBios: match.Entry.IsBios,
+            ParentGameName: match.Entry.ParentGameName,
+            HashType: match.Entry.HashType,
+            SourceId: match.Entry.SourceId);
+
+    private static IReadOnlyDictionary<string, int> BuildConsoleStrengths(ConsoleDetectionResult? detectionResult)
+    {
+        if (detectionResult is null || detectionResult.Hypotheses.Count == 0)
+            return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        return detectionResult.Hypotheses
+            .Where(static hypothesis => !string.IsNullOrWhiteSpace(hypothesis.ConsoleKey))
+            .GroupBy(static hypothesis => hypothesis.ConsoleKey, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                static group => group.Key,
+                static group => group.Max(static hypothesis => hypothesis.Confidence),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static MultiDatResolution BuildSingleResolution(DatMatch match)
+        => DefaultMultiDatConflictResolver.Resolve(
+            new[] { match },
+            new MultiDatResolutionContext(
+                ExpectedConsoleKey: match.ConsoleKey,
+                ConsoleStrengths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [match.ConsoleKey] = 100
+                },
+                PreferredSources: Array.Empty<string>(),
+                MatchKind: MatchKind.ExactDatHash));
 
     private static bool IsUsableResolvedConsoleKey(string? consoleKey)
         => !string.IsNullOrWhiteSpace(consoleKey)

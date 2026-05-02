@@ -95,6 +95,12 @@ public static class RunOptionsBuilder
         if (normalizedPreferRegions.Length == 0)
             normalizedPreferRegions = RunConstants.DefaultPreferRegions;
 
+        var normalizedPreferredDatSources = options.PreferredDatSources
+            .Where(static source => !string.IsNullOrWhiteSpace(source))
+            .Select(static source => source.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
         return new RunOptions
         {
             Roots = normalizedRoots,
@@ -119,10 +125,12 @@ public static class RunOptionsBuilder
             EnableDatAudit = options.EnableDatAudit,
             EnableDatRename = options.EnableDatRename,
             DatRoot = options.DatRoot,
+            PreferredDatSources = normalizedPreferredDatSources,
             TrashRoot = options.TrashRoot,
             ReportPath = options.ReportPath,
             AuditPath = options.AuditPath,
-            HashType = string.IsNullOrWhiteSpace(options.HashType) ? "SHA1" : options.HashType
+            HashType = string.IsNullOrWhiteSpace(options.HashType) ? "SHA1" : options.HashType,
+            AcceptDataLossToken = options.AcceptDataLossToken
         };
     }
 
@@ -203,6 +211,7 @@ public static class RunOptionsBuilder
             EnableDatAudit = options.EnableDatAudit,
             EnableDatRename = options.EnableDatRename,
             DatRoot = options.DatRoot,
+            PreferredDatSources = options.PreferredDatSources,
             HashType = options.HashType,
             ConvertFormat = options.ConvertFormat,
             ConvertOnly = options.ConvertOnly,
@@ -211,7 +220,8 @@ public static class RunOptionsBuilder
             TrashRoot = options.TrashRoot,
             AuditPath = options.AuditPath,
             ReportPath = options.ReportPath,
-            ConflictPolicy = options.ConflictPolicy
+            ConflictPolicy = options.ConflictPolicy,
+            AcceptDataLossToken = options.AcceptDataLossToken
         };
     }
 }

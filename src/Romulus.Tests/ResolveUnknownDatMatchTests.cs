@@ -73,7 +73,7 @@ public sealed class ResolveUnknownDatMatchTests
     }
 
     [Fact]
-    public void ResolveUnknownDatMatch_MultipleMatches_NoDetection_ReturnsNoMatch()
+    public void ResolveUnknownDatMatch_MultipleMatches_NoDetection_ResolvesByLexicographicTiebreak()
     {
         var index = new DatIndex();
         index.Add("NES", "sharedHash", "Game A");
@@ -81,11 +81,14 @@ public sealed class ResolveUnknownDatMatchTests
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatMatch(index, "sharedHash", null);
 
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
+        Assert.Equal("lexicographic-tiebreak", result.Resolution?.Reason);
     }
 
     [Fact]
-    public void ResolveUnknownDatMatch_MultipleMatches_EmptyHypotheses_ReturnsNoMatch()
+    public void ResolveUnknownDatMatch_MultipleMatches_EmptyHypotheses_ResolvesByLexicographicTiebreak()
     {
         var index = new DatIndex();
         index.Add("NES", "sharedHash", "Game A");
@@ -95,7 +98,10 @@ public sealed class ResolveUnknownDatMatchTests
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatMatch(index, "sharedHash", detection);
 
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
+        Assert.Equal("lexicographic-tiebreak", result.Resolution?.Reason);
     }
 
     [Fact]
@@ -119,7 +125,7 @@ public sealed class ResolveUnknownDatMatchTests
     }
 
     [Fact]
-    public void ResolveUnknownDatMatch_MultipleMatches_HypothesisNotInCandidates_ReturnsNoMatch()
+    public void ResolveUnknownDatMatch_MultipleMatches_HypothesisNotInCandidates_ResolvesByLexicographicTiebreak()
     {
         var index = new DatIndex();
         index.Add("NES", "sharedHash", "Game A");
@@ -132,7 +138,10 @@ public sealed class ResolveUnknownDatMatchTests
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatMatch(index, "sharedHash", detection);
 
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
+        Assert.Equal("lexicographic-tiebreak", result.Resolution?.Reason);
     }
 
     [Fact]
@@ -197,7 +206,7 @@ public sealed class ResolveUnknownDatMatchTests
     }
 
     [Fact]
-    public void ResolveUnknownDatNameMatch_MultipleMatches_NoDetection_ReturnsNoMatch()
+    public void ResolveUnknownDatNameMatch_MultipleMatches_NoDetection_ResolvesByLexicographicTiebreak()
     {
         var matches = new List<(string ConsoleKey, DatIndex.DatIndexEntry Entry)>
         {
@@ -207,7 +216,10 @@ public sealed class ResolveUnknownDatMatchTests
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatNameMatch(matches, null);
 
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
+        Assert.Equal("lexicographic-tiebreak", result.Resolution?.Reason);
     }
 
     [Fact]
@@ -232,7 +244,7 @@ public sealed class ResolveUnknownDatMatchTests
     }
 
     [Fact]
-    public void ResolveUnknownDatNameMatch_MultipleMatches_NoHypothesisInCandidates_ReturnsNoMatch()
+    public void ResolveUnknownDatNameMatch_MultipleMatches_NoHypothesisInCandidates_ResolvesByLexicographicTiebreak()
     {
         var matches = new List<(string ConsoleKey, DatIndex.DatIndexEntry Entry)>
         {
@@ -247,7 +259,10 @@ public sealed class ResolveUnknownDatMatchTests
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatNameMatch(matches, detection);
 
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
+        Assert.Equal("lexicographic-tiebreak", result.Resolution?.Reason);
     }
 
     // ═══ TryCrossConsoleDatLookup – Extension Plausibility Guard ═══════

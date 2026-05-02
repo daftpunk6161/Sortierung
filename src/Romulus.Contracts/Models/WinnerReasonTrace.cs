@@ -38,6 +38,7 @@ public sealed record WinnerReasonTrace(
     int HeaderScore,
     int CompletenessScore,
     bool DatMatch,
+    MultiDatResolution? MultiDatResolution,
     long SizeTieBreakScore,
     string WinnerCategory,
     int LoserCount,

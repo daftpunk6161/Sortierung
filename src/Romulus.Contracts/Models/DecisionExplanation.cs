@@ -31,6 +31,7 @@ public sealed record DecisionExplanation(
     string WinnerCategory,
     string WinnerRegion,
     bool DatMatch,
+    MultiDatResolution? MultiDatResolution,
     int LoserCount,
     IReadOnlyList<DecisionScoreContribution> Scores,
     IReadOnlyList<string> TiebreakerOrder,
@@ -47,6 +48,7 @@ public sealed record DecisionExplanation(
             && WinnerCategory == other.WinnerCategory
             && WinnerRegion == other.WinnerRegion
             && DatMatch == other.DatMatch
+            && Equals(MultiDatResolution, other.MultiDatResolution)
             && LoserCount == other.LoserCount
             && Summary == other.Summary
             && Scores.SequenceEqual(other.Scores)
@@ -63,6 +65,7 @@ public sealed record DecisionExplanation(
         hash.Add(WinnerCategory);
         hash.Add(WinnerRegion);
         hash.Add(DatMatch);
+        hash.Add(MultiDatResolution);
         hash.Add(LoserCount);
         hash.Add(Summary);
         foreach (var s in Scores) hash.Add(s);

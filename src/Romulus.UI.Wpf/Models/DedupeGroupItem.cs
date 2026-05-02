@@ -20,5 +20,19 @@ public sealed class DedupeEntryItem
     public required string EvidenceTier { get; init; }
     public required string PrimaryMatchKind { get; init; }
     public required string PlatformFamily { get; init; }
+    public string Fingerprint { get; init; } = "";
+    public bool HasDatConflict { get; init; }
+    public string DatResolutionReason { get; init; } = "";
+    public string DatCandidatesSummary { get; init; } = "";
     public required bool IsWinner { get; init; }
+}
+
+public sealed class ProvenanceEntryItem
+{
+    public required string EventKind { get; init; }
+    public required string TimestampUtc { get; init; }
+    public required string AuditRunId { get; init; }
+    public required string ConsoleKey { get; init; }
+    public required string DatMatchId { get; init; }
+    public required string Detail { get; init; }
 }

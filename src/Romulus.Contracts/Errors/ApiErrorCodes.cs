@@ -71,6 +71,10 @@ public static class ApiErrorCodes
     public const string DatImportBlocked = "DAT-IMPORT-BLOCKED";
     public const string DatImportIoError = "DAT-IMPORT-IO-ERROR";
 
+    // ── PROVENANCE ───────────────────────────────────────────────────
+
+    public const string ProvenanceInvalidFingerprint = "PROVENANCE-INVALID-FINGERPRINT";
+
     // ── WATCH ────────────────────────────────────────────────────────
 
     public const string WatchInvalidJson = "WATCH-INVALID-JSON";

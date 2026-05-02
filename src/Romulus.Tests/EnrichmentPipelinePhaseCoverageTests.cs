@@ -62,18 +62,20 @@ public sealed class EnrichmentPipelinePhaseCoverageTests : IDisposable
     }
 
     [Fact]
-    public void ResolveUnknownDatMatch_MultiMatch_NullDetection_NoMatch()
+    public void ResolveUnknownDatMatch_MultiMatch_NullDetection_ResolvesByLexicographicTiebreak()
     {
         var datIndex = new DatIndex();
         datIndex.Add("SNES", "abc123", "Game A", "a.sfc");
         datIndex.Add("NES", "abc123", "Game B", "b.nes");
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatMatch(datIndex, "abc123", null);
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
     }
 
     [Fact]
-    public void ResolveUnknownDatMatch_MultiMatch_DetectionNoHypotheses_NoMatch()
+    public void ResolveUnknownDatMatch_MultiMatch_DetectionNoHypotheses_ResolvesByLexicographicTiebreak()
     {
         var datIndex = new DatIndex();
         datIndex.Add("SNES", "abc123", "Game A", "a.sfc");
@@ -81,7 +83,9 @@ public sealed class EnrichmentPipelinePhaseCoverageTests : IDisposable
 
         var detection = new ConsoleDetectionResult("UNKNOWN", 0, [], HasConflict: false, ConflictDetail: null);
         var result = EnrichmentPipelinePhase.ResolveUnknownDatMatch(datIndex, "abc123", detection);
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
     }
 
     [Fact]
@@ -107,7 +111,7 @@ public sealed class EnrichmentPipelinePhaseCoverageTests : IDisposable
     }
 
     [Fact]
-    public void ResolveUnknownDatMatch_MultiMatch_HypothesisNoIntersection_NoMatch()
+    public void ResolveUnknownDatMatch_MultiMatch_HypothesisNoIntersection_ResolvesByLexicographicTiebreak()
     {
         var datIndex = new DatIndex();
         datIndex.Add("SNES", "abc123", "Game A", "a.sfc");
@@ -119,7 +123,9 @@ public sealed class EnrichmentPipelinePhaseCoverageTests : IDisposable
             HasConflict: false, ConflictDetail: null);
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatMatch(datIndex, "abc123", detection);
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
     }
 
     [Fact]
@@ -160,7 +166,7 @@ public sealed class EnrichmentPipelinePhaseCoverageTests : IDisposable
     }
 
     [Fact]
-    public void ResolveUnknownDatNameMatch_MultiMatch_NullDetection_NoMatch()
+    public void ResolveUnknownDatNameMatch_MultiMatch_NullDetection_ResolvesByLexicographicTiebreak()
     {
         var matches = new List<(string ConsoleKey, DatIndex.DatIndexEntry Entry)>
         {
@@ -169,7 +175,9 @@ public sealed class EnrichmentPipelinePhaseCoverageTests : IDisposable
         };
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatNameMatch(matches, null);
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("PS1", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
     }
 
     [Fact]

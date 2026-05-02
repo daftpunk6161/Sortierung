@@ -18,6 +18,7 @@ using Romulus.Infrastructure.Logging;
 using Romulus.Infrastructure.Monitoring;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
+using Romulus.Infrastructure.Provenance;
 using Romulus.Infrastructure.Profiles;
 using Romulus.Infrastructure.Review;
 using Romulus.Infrastructure.Safety;
@@ -136,6 +137,9 @@ internal static partial class Program
 
                 case CliCommand.Explain:
                     return await SubcommandExplainAsync(result.Options!).ConfigureAwait(false);
+
+                case CliCommand.Provenance:
+                    return SubcommandProvenance(result.Options!);
 
                 case CliCommand.DatDiff:
                     return SubcommandDatDiff(result.Options!);
@@ -1507,6 +1511,12 @@ internal static partial class Program
             new RunEnvironmentFactory(collectionDbOption, datCatalogOption));
         services.AddSingleton<IAuditStore>(sp =>
             new AuditCsvStore(sp.GetRequiredService<IFileSystem>(), onWarning, auditKeyPath));
+        services.AddSingleton(sp =>
+            new AuditSigningService(sp.GetRequiredService<IFileSystem>(), onWarning, auditKeyPath));
+        services.AddSingleton<IProvenanceStore>(sp =>
+            new JsonlProvenanceStore(
+                overrides?.ProvenanceRootPath ?? AuditSecurityPaths.GetDefaultProvenanceRoot(),
+                sp.GetRequiredService<AuditSigningService>()));
         return services.BuildServiceProvider();
     }
 

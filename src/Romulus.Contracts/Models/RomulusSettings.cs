@@ -79,6 +79,9 @@ public sealed class DatSettings
     // when the .sha256 sidecar is missing/unparseable. Users may opt-out via settings.
     [JsonPropertyName("strictSidecarValidation")]
     public bool StrictSidecarValidation { get; set; } = true;
+
+    [JsonPropertyName("preferredSources")]
+    public List<string> PreferredSources { get; set; } = [];
 }
 
 public static class RomulusSettingsValidator
@@ -109,6 +112,12 @@ public static class RomulusSettingsValidator
 
         if (!RunConstants.ValidHashTypes.Contains(settings.Dat.HashType))
             errors.Add($"dat.hashType '{settings.Dat.HashType}' is invalid.");
+
+        foreach (var source in settings.Dat.PreferredSources)
+        {
+            if (string.IsNullOrWhiteSpace(source))
+                errors.Add("dat.preferredSources must not contain empty values.");
+        }
 
         return errors;
     }

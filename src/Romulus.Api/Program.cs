@@ -432,6 +432,7 @@ app.MapPost("/collections/merge/rollback", async (
 
 MapRunWatchEndpoints(app, trustForwardedFor, timeProvider, sseTimeoutSeconds, sseHeartbeatSeconds);
 MapDecisionExplainerEndpoints(app, trustForwardedFor);
+MapProvenanceEndpoints(app);
 
 // --- DAT Management Endpoints (B2) ---
 

@@ -60,6 +60,7 @@ public static class DecisionExplainerProjection
             WinnerCategory: trace.WinnerCategory,
             WinnerRegion: trace.WinnerRegion,
             DatMatch: trace.DatMatch,
+            MultiDatResolution: trace.MultiDatResolution,
             LoserCount: trace.LoserCount,
             Scores: scores,
             TiebreakerOrder: WinnerReasonTrace.TiebreakerOrder,

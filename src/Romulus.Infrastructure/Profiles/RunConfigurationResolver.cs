@@ -43,6 +43,7 @@ public sealed class RunConfigurationResolver
             EnableDatAudit = ResolveValue(draft.EnableDatAudit, explicitness.EnableDatAudit, profileSettings.EnableDatAudit, workflowSettings.EnableDatAudit),
             EnableDatRename = ResolveValue(draft.EnableDatRename, explicitness.EnableDatRename, profileSettings.EnableDatRename, workflowSettings.EnableDatRename),
             DatRoot = ResolveValue(draft.DatRoot, explicitness.DatRoot, profileSettings.DatRoot, workflowSettings.DatRoot),
+            PreferredDatSources = ResolveValue<string[]>(draft.PreferredDatSources, explicitness.PreferredDatSources, null, null),
             HashType = ResolveValue(draft.HashType, explicitness.HashType, profileSettings.HashType, workflowSettings.HashType),
             ConvertFormat = ResolveValue(draft.ConvertFormat, explicitness.ConvertFormat, profileSettings.ConvertFormat, workflowSettings.ConvertFormat),
             ConvertOnly = ResolveValue(draft.ConvertOnly, explicitness.ConvertOnly, profileSettings.ConvertOnly, workflowSettings.ConvertOnly),

@@ -247,6 +247,10 @@ public sealed record DashboardProjection(
                     EvidenceTier = grp.Winner.EvidenceTier.ToString(),
                     PrimaryMatchKind = grp.Winner.PrimaryMatchKind.ToString(),
                     PlatformFamily = grp.Winner.PlatformFamily.ToString(),
+                    Fingerprint = grp.Winner.Hash ?? grp.Winner.HeaderlessHash ?? "",
+                    HasDatConflict = grp.Winner.MultiDatResolution?.IsConflict == true,
+                    DatResolutionReason = grp.Winner.MultiDatResolution?.Reason ?? "",
+                    DatCandidatesSummary = FormatDatCandidates(grp.Winner.MultiDatResolution),
                     IsWinner = true
                 },
                 Losers = grp.Losers.Select(l => new DedupeEntryItem
@@ -260,9 +264,27 @@ public sealed record DashboardProjection(
                     EvidenceTier = l.EvidenceTier.ToString(),
                     PrimaryMatchKind = l.PrimaryMatchKind.ToString(),
                     PlatformFamily = l.PlatformFamily.ToString(),
+                    Fingerprint = l.Hash ?? l.HeaderlessHash ?? "",
+                    HasDatConflict = l.MultiDatResolution?.IsConflict == true,
+                    DatResolutionReason = l.MultiDatResolution?.Reason ?? "",
+                    DatCandidatesSummary = FormatDatCandidates(l.MultiDatResolution),
                     IsWinner = false
                 }).ToList()
             })
             .ToList();
+    }
+
+    private static string FormatDatCandidates(MultiDatResolution? resolution)
+    {
+        if (resolution is null || resolution.Candidates.Count == 0)
+            return "";
+
+        return string.Join(
+            ", ",
+            resolution.Candidates
+                .Take(5)
+                .Select(static match => string.IsNullOrWhiteSpace(match.SourceId)
+                    ? $"{match.ConsoleKey}:{match.GameName}"
+                    : $"{match.ConsoleKey}/{match.SourceId}:{match.GameName}"));
     }
 }

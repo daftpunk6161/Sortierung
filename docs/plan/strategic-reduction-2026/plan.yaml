@@ -3174,7 +3174,14 @@ tasks:
     prototype: false
     covers: ["TOP-17"]
     priority: high
-    status: pending
+    status: completed
+    completed_on: "2026-05-02"
+    completion_notes: |
+      Provenance-Trail ueber alle Entry Points verdrahtet: zentrale
+      ProvenanceTrailProjection als gemeinsame Read-Wahrheit, CLI
+      `provenance` Subcommand, API GET /roms/{fingerprint}/provenance und
+      WPF-Provenance-Drawer in der Decision-Ansicht. Schreibpfad bleibt beim
+      bestehenden JsonlProvenanceStore mit AuditSigningService/HMAC-Kette.
     dependencies: ["T-W2-PROVENANCE-AUDIT-ADR", "T-W4-DECISION-EXPLAINER", "T-W6-PHASE2-GATE"]
     conflicts_with: []
     context_files:
@@ -3182,7 +3189,7 @@ tasks:
         description: Audit-Schicht als Inspirationsquelle
       - path: src/Romulus.Infrastructure/Analysis/
         description: ROM-Identitaet
-    planning_pass: 1
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Echter Differenzierer.
@@ -3206,6 +3213,34 @@ tasks:
         requires_review: true
         review_depth: full
         test_coverage: full
+      - pass: 2
+        reason: |
+          Implementation pass. Bestehenden Append-only Store beibehalten und
+          nur die fehlende zentrale Lese-/Anzeige-Schicht ergaenzt:
+          ProvenanceTrailProjection berechnet Validitaet, FailureReason,
+          TrustScore und Entries einmalig fuer GUI/CLI/API. CLI/API/WPF lesen
+          dieselbe Projektion; keine zweite Audit-/Signing-Logik.
+        timestamp: "2026-05-02"
+        actual_files: 11
+        deltas:
+          - Romulus.Contracts.Models.ProvenanceTrail.cs
+          - Romulus.Infrastructure.Provenance.ProvenanceTrailProjection.cs
+          - Romulus.CLI provenance parser/handler/help wiring
+          - Romulus.Api Program.ProvenanceEndpoints.cs
+          - Romulus.UI.Wpf Decision-Drawer + RunViewModel projection
+        tests_added:
+          - Romulus.Tests.CliProvenanceSubcommandTests.cs
+          - Romulus.Tests.Wpf.Wave7Wave8UiProjectionTests.cs
+          - Wave7ProvenanceTrailTests projection pins
+        verification_results:
+          - dotnet build src/Romulus.sln --nologo -> 0 Fehler
+          - dotnet test Romulus.Tests filter Wave7ProvenanceTrail|CliProvenanceSubcommand -> gruen
+          - dotnet test Romulus.Tests.Wpf filter Wave7Wave8UiProjection -> gruen
+        acceptance_criteria:
+          - Trail ist verifizierbar (bestehende Hash-Ketten-Pins)
+          - GUI/CLI/API lesen denselben ProvenanceTrail
+          - TrustScore wird zentral projiziert
+        status: completed
 
   # ============================================================
   # WAVE 8 - Phase 3 fortgesetzt
@@ -3222,7 +3257,13 @@ tasks:
     prototype: false
     covers: ["TOP-18"]
     priority: high
-    status: pending
+    status: completed
+    completed_on: "2026-05-02"
+    completion_notes: |
+      MultiDatConflictResolver produktiv verdrahtet. Mehrfach-DAT-Treffer
+      werden deterministisch nach preferredSources, Match-Strength und
+      lexikografischem Tiebreak aufgeloest. Die Aufloesung wird in Candidate,
+      WinnerReasonTrace, DecisionExplanation, CLI/API JSON und WPF angezeigt.
     dependencies: ["T-W5-MULTI-DAT-PREP", "T-W7-PROVENANCE-TRAIL"]
     conflicts_with: []
     context_files:
@@ -3230,7 +3271,7 @@ tasks:
         description: Adapter
       - path: src/Romulus.UI.Wpf/Views/
         description: Konflikt-View
-    planning_pass: 1
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Realer Anwendungsfall fuer Power-Sammler.
@@ -3251,6 +3292,40 @@ tasks:
         tech_stack:
           - C# .NET 10
         test_coverage: full
+      - pass: 2
+        reason: |
+          Implementation pass. Die W5-Multi-DAT-Prep-Oberflaeche wurde zur
+          zentralen Resolver-Schicht erweitert: DatMatch fuehrt SourceId,
+          DatIndex/DatRepositoryAdapter propagieren SourceId, RunOptions
+          fuehren PreferredDatSources aus Settings/API, und
+          EnrichmentPipelinePhase nutzt MultiDatConflictResolver fuer Hash- und
+          Name-Matches. Alte First-Match-Semantik bleibt nur als
+          DatMatchSelector-Kompatibilitaetshelper erhalten, intern aber ueber
+          denselben Resolver.
+        timestamp: "2026-05-02"
+        actual_files: 22
+        deltas:
+          - Romulus.Contracts.Models.MultiDatResolution.cs
+          - Romulus.Infrastructure.Dat.MultiDatConflictResolver.cs
+          - Romulus.Infrastructure.Orchestration.EnrichmentPipelinePhase.cs
+          - RunOptions/Settings/API PreferredDatSources
+          - DecisionExplanation/WinnerReasonTrace/DashboardProjection Surfacing
+        tests_added:
+          - Romulus.Tests.MultiDatConflictResolverTests.cs
+          - neue IdempotencyFingerprint PreferredDatSources Pins
+          - ApiRunConfigurationMapper PreferredDatSources Pins
+          - aktualisierte ResolveUnknownDatMatch/NameMatch Determinismus-Pins
+          - WPF Multi-DAT Projection Pin
+        verification_results:
+          - dotnet build src/Romulus.sln --nologo -> 0 Fehler
+          - dotnet test Romulus.Tests filter MultiDatConflictResolver|ResolveUnknownDatMatch|EnrichmentDeterminismInvariant|EnrichmentPipelinePhaseCoverage|DatNameMatch|RunConfigurationResolverRegression -> 132/132 gruen
+          - dotnet test Romulus.Tests.Api filter ApiRunConfigurationMapperPreferredDatSources|IdempotencyFingerprint -> 10/10 gruen
+          - dotnet test Romulus.Tests.Wpf filter Wave7Wave8UiProjection|DashboardProjection -> 27/27 gruen
+        acceptance_criteria:
+          - Konflikt-Aufloesung deterministisch und nachvollziehbar
+          - preferredSources beeinflussen Ergebnis und Run-Fingerprint
+          - UI zeigt Konflikt + Aufloesungsgrund
+        status: completed
 
   - id: T-W8-WATCH-SCHEDULE
     title: "Watch/Schedule (BONUS, nur bei belegtem Bedarf)"

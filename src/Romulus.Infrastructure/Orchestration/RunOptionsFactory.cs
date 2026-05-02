@@ -17,6 +17,7 @@ public interface IRunOptionsSource
     bool EnableDatAudit { get; }
     bool EnableDatRename { get; }
     string? DatRoot { get; }
+    IReadOnlyList<string> PreferredDatSources { get; }
     string HashType { get; }
     string? ConvertFormat { get; }
     bool ConvertOnly { get; }
@@ -53,6 +54,7 @@ public sealed class RunOptionsFactory : IRunOptionsFactory
             EnableDatAudit = source.EnableDatAudit,
             EnableDatRename = source.EnableDatRename,
             DatRoot = source.DatRoot,
+            PreferredDatSources = source.PreferredDatSources,
             HashType = source.HashType,
             ConvertFormat = source.ConvertFormat,
             ConvertOnly = source.ConvertOnly,

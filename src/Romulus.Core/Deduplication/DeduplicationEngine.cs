@@ -263,6 +263,7 @@ public static class DeduplicationEngine
             HeaderScore: winner.HeaderScore,
             CompletenessScore: winner.CompletenessScore,
             DatMatch: winner.DatMatch,
+            MultiDatResolution: winner.MultiDatResolution,
             SizeTieBreakScore: winner.SizeTieBreakScore,
             WinnerCategory: winner.Category.ToString(),
             LoserCount: group.Losers.Count,

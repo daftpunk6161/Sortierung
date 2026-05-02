@@ -124,6 +124,7 @@ public sealed class RunLifecycleManager
                 EnableDatAudit = request.EnableDatAudit,
                 EnableDatRename = request.EnableDatRename,
                 DatRoot = string.IsNullOrWhiteSpace(request.DatRoot) ? null : request.DatRoot.Trim(),
+                PreferredDatSources = NormalizePreferredDatSources(request.PreferredDatSources),
                 OnlyGames = request.OnlyGames,
                 KeepUnknownWhenOnlyGames = request.KeepUnknownWhenOnlyGames,
                 HashType = normalizedHashType,
@@ -163,6 +164,15 @@ public sealed class RunLifecycleManager
             return new RunCreateResult(RunCreateDisposition.Created, record);
         }
     }
+
+    private static string[] NormalizePreferredDatSources(string[]? sources)
+        => sources is { Length: > 0 }
+            ? sources
+                .Where(static source => !string.IsNullOrWhiteSpace(source))
+                .Select(static source => source.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+            : Array.Empty<string>();
 
     public RunRecord? Get(string runId) =>
         _runs.TryGetValue(runId, out var run) ? run : null;
@@ -419,6 +429,9 @@ public sealed class RunLifecycleManager
             ? RunConstants.DefaultPreferRegions
             : requestedRegions;
 
+        var preferredDatSources = NormalizePreferredDatSources(request.PreferredDatSources)
+            .Select(static source => source.ToLowerInvariant());
+
         var payload = string.Join("\n", new[]
         {
             mode.Trim(),
@@ -435,6 +448,7 @@ public sealed class RunLifecycleManager
             request.OnlyGames ? "1" : "0",
             request.KeepUnknownWhenOnlyGames ? "1" : "0",
             string.IsNullOrWhiteSpace(request.DatRoot) ? "" : ArtifactPathResolver.NormalizeRootForIdentity(request.DatRoot),
+            string.Join(",", preferredDatSources),
             string.IsNullOrWhiteSpace(request.HashType) ? "SHA1" : request.HashType.Trim().ToUpperInvariant(),
             string.IsNullOrWhiteSpace(request.ConvertFormat) ? "" : request.ConvertFormat.Trim().ToLowerInvariant(),
             string.IsNullOrWhiteSpace(request.ConflictPolicy) ? "RENAME" : request.ConflictPolicy.Trim().ToUpperInvariant(),

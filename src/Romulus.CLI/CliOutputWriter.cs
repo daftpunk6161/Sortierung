@@ -143,6 +143,8 @@ Usage:
 Subcommands:
   romulus analyze --roots <path>              Collection health score and heatmap
   romulus simulate --roots <path> [-o <file>] Before/After projection (DryRun)
+  romulus explain --roots <path> [--console-key <key>] [--game-key <key>] [-o <file>]
+  romulus provenance --fingerprint <sha256> [-o <file>]
     romulus export --roots <path> [--format csv|json|excel|m3u] [-o <file>]
   romulus profiles list
   romulus profiles show --id <profile-id>

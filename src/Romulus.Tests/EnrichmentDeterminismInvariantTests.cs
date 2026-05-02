@@ -112,9 +112,10 @@ public sealed class EnrichmentDeterminismInvariantTests
     }
 
     [Fact]
-    public void ResolveUnknown_NoHypotheses_MultipleDatMatches_ReturnsNoMatch()
+    public void ResolveUnknown_NoHypotheses_MultipleDatMatches_ResolvesDeterministically()
     {
-        // Multiple DAT matches but no hypotheses to resolve → cannot pick
+        // Multiple DAT matches with no hypotheses still resolve through the
+        // centralized deterministic Multi-DAT resolver.
         var hash = "AABBCCDD11223344";
         var datIndex = new DatIndex();
         datIndex.Add("SNES", hash, "Game SNES", "game.sfc");
@@ -125,7 +126,9 @@ public sealed class EnrichmentDeterminismInvariantTests
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatMatch(datIndex, hash, detection);
 
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
     }
 
     [Fact]
@@ -142,7 +145,7 @@ public sealed class EnrichmentDeterminismInvariantTests
     }
 
     [Fact]
-    public void ResolveUnknown_NullDetection_MultipleDatMatches_ReturnsNoMatch()
+    public void ResolveUnknown_NullDetection_MultipleDatMatches_ResolvesDeterministically()
     {
         var hash = "AABBCCDD11223344";
         var datIndex = new DatIndex();
@@ -151,7 +154,9 @@ public sealed class EnrichmentDeterminismInvariantTests
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatMatch(datIndex, hash, null);
 
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NES", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
     }
 
     [Fact]
@@ -179,7 +184,7 @@ public sealed class EnrichmentDeterminismInvariantTests
     }
 
     [Fact]
-    public void ResolveUnknown_NoHypothesisMatchesDat_ReturnsNoMatch()
+    public void ResolveUnknown_NoHypothesisMatchesDat_ResolvesDeterministically()
     {
         var hash = "AABBCCDD11223344";
         var datIndex = new DatIndex();
@@ -198,7 +203,9 @@ public sealed class EnrichmentDeterminismInvariantTests
 
         var result = EnrichmentPipelinePhase.ResolveUnknownDatMatch(datIndex, hash, detection);
 
-        Assert.False(result.IsMatch); // Neither hypothesis matches DAT consoles
+        Assert.True(result.IsMatch);
+        Assert.Equal("GBA", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
     }
 
     [Fact]

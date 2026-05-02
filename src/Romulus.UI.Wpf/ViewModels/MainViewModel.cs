@@ -16,6 +16,7 @@ using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.Watch;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
+using Romulus.Infrastructure.Provenance;
 using Romulus.Infrastructure.Profiles;
 using Romulus.Infrastructure.Time;
 using Romulus.UI.Wpf.Models;
@@ -38,6 +39,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     private readonly IRunService _runService;
     private readonly ILocalizationService _loc;
     private readonly ITimeProvider _timeProvider;
+    private readonly IProvenanceStore? _provenanceStore;
     private readonly DatPrewarmService? _datPrewarm;
     private readonly SynchronizationContext? _syncContext;
     private readonly WatchService _watchService = new();
@@ -112,6 +114,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         DatPrewarmService? datPrewarm = null,
         IBeforeAfterSimulator? beforeAfterSimulator = null,
         IAuditViewerBackingService? auditViewerBackingService = null,
+        IProvenanceStore? provenanceStore = null,
         Func<string, bool>? auditRollbackCallback = null)
     {
         _theme = theme;
@@ -120,6 +123,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         _runService = runService ?? new RunService();
         _loc = loc ?? new LocalizationService();
         _timeProvider = timeProvider ?? new SystemTimeProvider();
+        _provenanceStore = provenanceStore;
         _datPrewarm = datPrewarm;
         _syncContext = SynchronizationContext.Current;
 
@@ -136,6 +140,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         Tools = tools ?? MainViewModelChildFactory.CreateTools(_loc);
         Tools.SetSimpleMode(_isSimpleMode);
         Run = run ?? MainViewModelChildFactory.CreateRun();
+        Run.SetOpenProvenanceCallback(OpenProvenanceForFingerprint);
         CommandPalette = commandPalette ?? MainViewModelChildFactory.CreateCommandPalette(_loc);
         DatAudit = datAudit ?? MainViewModelChildFactory.CreateDatAudit(_loc, _dialog);
         DatCatalog = datCatalog ?? MainViewModelChildFactory.CreateDatCatalog(_loc, _dialog, () => DatRoot, AddLog);

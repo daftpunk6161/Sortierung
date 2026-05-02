@@ -22,6 +22,7 @@ public sealed record RomCandidate
     public string? Hash { get; init; }
     public string? HeaderlessHash { get; init; }
     public string? DatGameName { get; init; }
+    public MultiDatResolution? MultiDatResolution { get; init; }
     public DatAuditStatus DatAuditStatus { get; init; } = DatAuditStatus.Unknown;
     public FileCategory Category { get; init; } = FileCategory.Game;
     public string ClassificationReasonCode { get; init; } = "game-default";

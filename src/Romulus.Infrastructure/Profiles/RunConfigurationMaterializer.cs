@@ -35,7 +35,7 @@ public sealed class RunConfigurationMaterializer
         ValidateResolvedDraft(resolved.Draft);
 
         var effectiveDraft = BuildEffectiveDraft(resolved.Draft, baselineDraft, settings);
-        var options = _runOptionsFactory.Create(new EffectiveRunOptionsSource(effectiveDraft), auditPath, reportPath);
+        var options = _runOptionsFactory.Create(new EffectiveRunOptionsSource(effectiveDraft, settings), auditPath, reportPath);
 
         return new MaterializedRunConfiguration(
             effectiveDraft,
@@ -99,6 +99,11 @@ public sealed class RunConfigurationMaterializer
             : baselineDraft?.Extensions is { Length: > 0 }
                 ? NormalizeExtensions(baselineDraft.Extensions)
             : ResolveSettingsExtensions(settings);
+        IEnumerable<string> preferredDatSources = settings.Dat.PreferredSources;
+        if (baselineDraft?.PreferredDatSources is not null)
+            preferredDatSources = baselineDraft.PreferredDatSources;
+        if (resolvedDraft.PreferredDatSources is not null)
+            preferredDatSources = resolvedDraft.PreferredDatSources;
 
         return resolvedDraft with
         {
@@ -114,6 +119,7 @@ public sealed class RunConfigurationMaterializer
             EnableDatAudit = resolvedDraft.EnableDatAudit ?? baselineDraft?.EnableDatAudit ?? effectiveEnableDat,
             EnableDatRename = resolvedDraft.EnableDatRename ?? baselineDraft?.EnableDatRename ?? false,
             DatRoot = NormalizeOptionalPath(resolvedDraft.DatRoot ?? baselineDraft?.DatRoot ?? settings.Dat.DatRoot),
+            PreferredDatSources = NormalizePreferredSources(preferredDatSources).ToArray(),
             HashType = NormalizeHashType(resolvedDraft.HashType ?? baselineDraft?.HashType ?? settings.Dat.HashType),
             ConvertFormat = NormalizeConvertFormat(resolvedDraft.ConvertFormat ?? baselineDraft?.ConvertFormat),
             ConvertOnly = resolvedDraft.ConvertOnly ?? baselineDraft?.ConvertOnly ?? false,
@@ -193,7 +199,7 @@ public sealed class RunConfigurationMaterializer
 
     private sealed class EffectiveRunOptionsSource : IRunOptionsSource
     {
-        public EffectiveRunOptionsSource(RunConfigurationDraft effectiveDraft)
+        public EffectiveRunOptionsSource(RunConfigurationDraft effectiveDraft, RomulusSettings settings)
         {
             Roots = effectiveDraft.Roots;
             Mode = effectiveDraft.Mode ?? RunConstants.ModeDryRun;
@@ -208,6 +214,7 @@ public sealed class RunConfigurationMaterializer
             EnableDatAudit = effectiveDraft.EnableDatAudit ?? false;
             EnableDatRename = effectiveDraft.EnableDatRename ?? false;
             DatRoot = effectiveDraft.DatRoot;
+            PreferredDatSources = NormalizePreferredSources(effectiveDraft.PreferredDatSources);
             HashType = effectiveDraft.HashType ?? RunConstants.DefaultHashType;
             ConvertFormat = effectiveDraft.ConvertFormat;
             ConvertOnly = effectiveDraft.ConvertOnly ?? false;
@@ -231,6 +238,7 @@ public sealed class RunConfigurationMaterializer
         public bool EnableDatAudit { get; }
         public bool EnableDatRename { get; }
         public string? DatRoot { get; }
+        public IReadOnlyList<string> PreferredDatSources { get; }
         public string HashType { get; }
         public string? ConvertFormat { get; }
         public bool ConvertOnly { get; }
@@ -240,4 +248,13 @@ public sealed class RunConfigurationMaterializer
         public string? TrashRoot { get; }
         public string ConflictPolicy { get; }
     }
+
+    private static IReadOnlyList<string> NormalizePreferredSources(IEnumerable<string>? sources)
+        => sources is null
+            ? Array.Empty<string>()
+            : sources
+                .Where(static source => !string.IsNullOrWhiteSpace(source))
+                .Select(static source => source.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 }

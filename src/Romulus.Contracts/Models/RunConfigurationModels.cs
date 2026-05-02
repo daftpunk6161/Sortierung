@@ -21,6 +21,7 @@ public sealed record RunConfigurationDraft
     public bool? EnableDatAudit { get; init; }
     public bool? EnableDatRename { get; init; }
     public string? DatRoot { get; init; }
+    public string[]? PreferredDatSources { get; init; }
     public string? HashType { get; init; }
     public string? ConvertFormat { get; init; }
     public bool? ConvertOnly { get; init; }
@@ -51,6 +52,7 @@ public sealed record RunConfigurationExplicitness
     public bool EnableDatAudit { get; init; }
     public bool EnableDatRename { get; init; }
     public bool DatRoot { get; init; }
+    public bool PreferredDatSources { get; init; }
     public bool HashType { get; init; }
     public bool ConvertFormat { get; init; }
     public bool ConvertOnly { get; init; }

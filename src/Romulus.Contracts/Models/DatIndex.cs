@@ -26,7 +26,8 @@ public sealed class DatIndex
         string? RomFileName,
         bool IsBios = false,
         string? ParentGameName = null,
-        string HashType = DefaultHashType)
+        string HashType = DefaultHashType,
+        string? SourceId = null)
     {
         public bool IsClone => !string.IsNullOrWhiteSpace(ParentGameName);
     }
@@ -51,12 +52,13 @@ public sealed class DatIndex
         string? romFileName = null,
         bool isBios = false,
         string? parentGameName = null,
-        string hashType = DefaultHashType)
+        string hashType = DefaultHashType,
+        string? sourceId = null)
     {
         var hashMap = _data.GetOrAdd(consoleKey, _ => new ConcurrentDictionary<string, DatIndexEntry>(StringComparer.OrdinalIgnoreCase));
         var normalizedHashType = NormalizeHashType(hashType);
         var typedHashKey = BuildTypedHashKey(normalizedHashType, hash);
-        var newEntry = new DatIndexEntry(gameName, romFileName, isBios, parentGameName, normalizedHashType);
+        var newEntry = new DatIndexEntry(gameName, romFileName, isBios, parentGameName, normalizedHashType, sourceId);
         var nameMap = _nameIndex.GetOrAdd(consoleKey, _ => new ConcurrentDictionary<string, DatIndexEntry>(StringComparer.OrdinalIgnoreCase));
 
         // Allow updates for existing keys even when at capacity
@@ -107,10 +109,11 @@ public sealed class DatIndex
         string gameName,
         string? romFileName = null,
         bool isBios = false,
-        string? parentGameName = null)
+        string? parentGameName = null,
+        string? sourceId = null)
     {
         var normalizedPrimaryHashType = NormalizeHashType(primaryHashType);
-        Add(consoleKey, primaryHash, gameName, romFileName, isBios, parentGameName, normalizedPrimaryHashType);
+        Add(consoleKey, primaryHash, gameName, romFileName, isBios, parentGameName, normalizedPrimaryHashType, sourceId);
 
         if (aliasHashes is null)
             return;
@@ -133,7 +136,7 @@ public sealed class DatIndex
             if (string.Equals(aliasKey, primaryKey, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            aliasMap[aliasKey] = new DatIndexEntry(gameName, romFileName, isBios, parentGameName, normalizedHashType);
+            aliasMap[aliasKey] = new DatIndexEntry(gameName, romFileName, isBios, parentGameName, normalizedHashType, sourceId);
         }
     }
 
@@ -303,7 +306,7 @@ public sealed class DatIndex
             foreach (var kvp in otherHashMap)
             {
                 Add(consoleKey, ExtractRawHash(kvp.Key), kvp.Value.GameName, kvp.Value.RomFileName,
-                    kvp.Value.IsBios, kvp.Value.ParentGameName, kvp.Value.HashType);
+                    kvp.Value.IsBios, kvp.Value.ParentGameName, kvp.Value.HashType, kvp.Value.SourceId);
             }
 
             if (!other._aliasData.TryGetValue(consoleKey, out var otherAliasMap))

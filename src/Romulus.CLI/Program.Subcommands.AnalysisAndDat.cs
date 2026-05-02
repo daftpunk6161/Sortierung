@@ -7,6 +7,7 @@ using Romulus.Infrastructure.Analysis;
 using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
+using Romulus.Infrastructure.Provenance;
 
 namespace Romulus.CLI;
 
@@ -258,6 +259,7 @@ internal static partial class Program
                     winnerCategory = e.WinnerCategory,
                     winnerRegion = e.WinnerRegion,
                     datMatch = e.DatMatch,
+                    multiDatResolution = e.MultiDatResolution,
                     loserCount = e.LoserCount,
                     scores = e.Scores.Select(s => new { axis = s.Axis, value = s.Value }).ToArray(),
                     tiebreakerOrder = e.TiebreakerOrder,
@@ -277,6 +279,70 @@ internal static partial class Program
             }
 
             return 0;
+        }
+        finally
+        {
+            (serviceProvider as IDisposable)?.Dispose();
+        }
+    }
+
+    internal static int SubcommandProvenance(CliRunOptions opts)
+    {
+        if (string.IsNullOrWhiteSpace(opts.Fingerprint))
+        {
+            SafeErrorWriteLine("[Error] provenance requires --fingerprint <hex>");
+            return 3;
+        }
+
+        var serviceProvider = CreateCliServiceProvider(SafeErrorWriteLine);
+        try
+        {
+            var store = serviceProvider.GetRequiredService<IProvenanceStore>();
+            ProvenanceTrail trail;
+            try
+            {
+                trail = ProvenanceTrailProjection.Project(store, opts.Fingerprint);
+            }
+            catch (ArgumentException ex)
+            {
+                SafeErrorWriteLine($"[Error] Invalid fingerprint: {ex.Message}");
+                return 3;
+            }
+
+            var output = new
+            {
+                fingerprint = trail.Fingerprint,
+                isValid = trail.IsValid,
+                failureReason = trail.FailureReason,
+                trustScore = trail.TrustScore,
+                count = trail.Entries.Count,
+                entries = trail.Entries.Select(entry => new
+                {
+                    eventKind = entry.EventKind.ToString(),
+                    timestampUtc = entry.TimestampUtc,
+                    auditRunId = entry.AuditRunId,
+                    sha256 = entry.Sha256,
+                    consoleKey = entry.ConsoleKey,
+                    datMatchId = entry.DatMatchId,
+                    detail = entry.Detail,
+                    previousEntryHmac = entry.PreviousEntryHmac,
+                    entryHmac = entry.EntryHmac
+                }).ToArray()
+            };
+
+            var json = CliOutputWriter.SerializeJson(output);
+            if (!string.IsNullOrWhiteSpace(opts.OutputPath))
+            {
+                if (!TryWriteSafeOutputFile(opts.OutputPath, json, "provenance JSON", out var safeOutputPath))
+                    return 3;
+                SafeErrorWriteLine($"[Provenance] Wrote {trail.Entries.Count} entries to {safeOutputPath}");
+            }
+            else
+            {
+                SafeStandardWriteLine(json);
+            }
+
+            return trail.IsValid ? 0 : 4;
         }
         finally
         {

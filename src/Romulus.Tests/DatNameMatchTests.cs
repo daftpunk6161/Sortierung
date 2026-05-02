@@ -144,7 +144,7 @@ public sealed class DatNameMatchTests
     }
 
     [Fact]
-    public void ResolveUnknownDatNameMatch_MultiMatch_NoHypotheses_ReturnsNoMatch()
+    public void ResolveUnknownDatNameMatch_MultiMatch_NoHypotheses_ResolvesByLexicographicTiebreak()
     {
         var nameMatches = new List<(string ConsoleKey, DatIndex.DatIndexEntry Entry)>
         {
@@ -155,11 +155,14 @@ public sealed class DatNameMatchTests
         var result = EnrichmentPipelinePhase.ResolveUnknownDatNameMatch(
             nameMatches, detectionResult: null);
 
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NEOCD", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
+        Assert.Equal("lexicographic-tiebreak", result.Resolution?.Reason);
     }
 
     [Fact]
-    public void ResolveUnknownDatNameMatch_MultiMatch_HypothesisNotInMatches_ReturnsNoMatch()
+    public void ResolveUnknownDatNameMatch_MultiMatch_HypothesisNotInMatches_ResolvesByLexicographicTiebreak()
     {
         var nameMatches = new List<(string ConsoleKey, DatIndex.DatIndexEntry Entry)>
         {
@@ -177,7 +180,10 @@ public sealed class DatNameMatchTests
         var result = EnrichmentPipelinePhase.ResolveUnknownDatNameMatch(
             nameMatches, detection);
 
-        Assert.False(result.IsMatch);
+        Assert.True(result.IsMatch);
+        Assert.Equal("NEOCD", result.ConsoleKey);
+        Assert.True(result.ResolvedFromAmbiguousCandidates);
+        Assert.Equal("lexicographic-tiebreak", result.Resolution?.Reason);
     }
 
     [Fact]
