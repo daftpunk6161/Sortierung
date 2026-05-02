@@ -164,6 +164,9 @@ public sealed class CodeReviewFindingsTests : IDisposable
     [Fact]
     public async Task F3_BuildDatStatusAsync_InaccessibleSubdir_ReturnsGracefully()
     {
+        if (!OperatingSystem.IsWindows())
+            return;
+
         // Create a DAT root with an inaccessible subdirectory
         var datRoot = Path.Combine(_tempDir, "dats");
         Directory.CreateDirectory(datRoot);
