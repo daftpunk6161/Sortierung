@@ -7,6 +7,7 @@ using Romulus.Infrastructure.Analysis;
 using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
+using Romulus.Infrastructure.Policy;
 using Romulus.Infrastructure.Provenance;
 
 namespace Romulus.CLI;
@@ -343,6 +344,78 @@ internal static partial class Program
             }
 
             return trail.IsValid ? 0 : 4;
+        }
+        finally
+        {
+            (serviceProvider as IDisposable)?.Dispose();
+        }
+    }
+
+    internal static async Task<int> SubcommandValidatePolicyAsync(CliRunOptions opts)
+    {
+        if (string.IsNullOrWhiteSpace(opts.PolicyPath))
+        {
+            SafeErrorWriteLine("[Error] validate-policy requires --policy <file>.");
+            return 3;
+        }
+
+        if (!File.Exists(opts.PolicyPath))
+        {
+            SafeErrorWriteLine($"[Error] Policy file not found: {opts.PolicyPath}");
+            return 3;
+        }
+
+        if (opts.Roots.Length == 0)
+        {
+            SafeErrorWriteLine("[Error] validate-policy requires --roots <paths>.");
+            return 3;
+        }
+
+        var serviceProvider = CreateCliServiceProvider(SafeErrorWriteLine);
+        try
+        {
+            var policyText = await File.ReadAllTextAsync(opts.PolicyPath).ConfigureAwait(false);
+            LibraryPolicy policy;
+            try
+            {
+                policy = PolicyDocumentLoader.Parse(policyText);
+            }
+            catch (FormatException ex)
+            {
+                SafeErrorWriteLine($"[Error] Invalid policy: {ex.Message}");
+                return 3;
+            }
+
+            var collectionIndex = serviceProvider.GetRequiredService<ICollectionIndex>();
+            var policyEngine = serviceProvider.GetRequiredService<IPolicyEngine>();
+            var entries = await collectionIndex.ListEntriesInScopeAsync(opts.Roots, opts.Extensions).ConfigureAwait(false);
+            var snapshot = LibrarySnapshotProjection.FromCollectionIndex(
+                entries,
+                opts.Roots,
+                TimeProvider.UtcNow.UtcDateTime);
+            var fingerprint = PolicyDocumentLoader.ComputeFingerprint(policyText);
+            var report = policyEngine.Validate(snapshot, policy, fingerprint);
+            var serialized = opts.OutputPath?.EndsWith(".csv", StringComparison.OrdinalIgnoreCase) == true
+                ? PolicyValidationReportExporter.ToCsv(report)
+                : PolicyValidationReportExporter.ToJson(report);
+
+            if (!string.IsNullOrWhiteSpace(opts.OutputPath))
+            {
+                if (!TryWriteSafeOutputFile(opts.OutputPath, serialized, "policy validation report", out var safeOutputPath))
+                    return 3;
+                SafeErrorWriteLine($"[Policy] Wrote {report.Violations.Length} violation(s) to {safeOutputPath}");
+            }
+            else
+            {
+                SafeStandardWriteLine(serialized);
+            }
+
+            return report.IsCompliant ? 0 : 4;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            SafeErrorWriteLine($"[Error] Failed to validate policy: {ex.Message}");
+            return 3;
         }
         finally
         {

@@ -611,7 +611,8 @@ internal enum CliCommand
     Health,
     Simulate,
     Explain,
-    Provenance
+    Provenance,
+    ValidatePolicy
 }
 
 /// <summary>
@@ -703,6 +704,7 @@ internal sealed class CliRunOptions
     /// <summary>Wave 4 — T-W4-DECISION-EXPLAINER: optional GameKey filter for `romulus explain`.</summary>
     public string? GameKey { get; set; }
     public string? Fingerprint { get; set; }
+    public string? PolicyPath { get; set; }
     public int? HistoryLimit { get; set; }
     public int HistoryOffset { get; set; }
     public int WatchDebounceSeconds { get; set; } = 5;

@@ -128,6 +128,7 @@ app.Use(async (ctx, next) =>
     ctx.Response.Headers.Remove("X-Powered-By");
     ctx.Response.Headers["Cache-Control"] = "no-store";
     ctx.Response.Headers["X-Api-Version"] = ApiVersion;
+    ctx.Response.Headers["X-Romulus-API-Status"] = "experimental";
     ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
     ctx.Response.Headers["X-Frame-Options"] = "DENY";
 
@@ -433,6 +434,7 @@ app.MapPost("/collections/merge/rollback", async (
 MapRunWatchEndpoints(app, trustForwardedFor, timeProvider, sseTimeoutSeconds, sseHeartbeatSeconds);
 MapDecisionExplainerEndpoints(app, trustForwardedFor);
 MapProvenanceEndpoints(app);
+MapPolicyEndpoints(app);
 
 // --- DAT Management Endpoints (B2) ---
 

@@ -91,6 +91,8 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     public AuditViewerViewModel AuditViewer { get; }
     /// <summary>T-W4-REVIEW-INBOX (W5): Inbox mit drei Lanes Safe/Review/Blocked + Bulk-Quarantine + Decision-Explainer-Sprung.</summary>
     public ReviewInboxViewModel ReviewInbox { get; }
+    /// <summary>T-W9-POLICY-GOVERNANCE: Policy-Editor und Validation-Report ueber die zentrale PolicyEngine.</summary>
+    public PolicyGovernanceViewModel PolicyGovernance { get; }
 
     public MainViewModel() : this(new ThemeService(), new WpfDialogService()) { }
 
@@ -115,6 +117,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         IBeforeAfterSimulator? beforeAfterSimulator = null,
         IAuditViewerBackingService? auditViewerBackingService = null,
         IProvenanceStore? provenanceStore = null,
+        PolicyGovernanceViewModel? policyGovernance = null,
         Func<string, bool>? auditRollbackCallback = null)
     {
         _theme = theme;
@@ -165,6 +168,7 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
             _loc,
             quarantineCallback: null,
             openExplainerCallback: null);
+        PolicyGovernance = policyGovernance ?? new PolicyGovernanceViewModel(dialog: _dialog, timeProvider: _timeProvider);
         InitializeRunConfigurationServices(runProfileService, runConfigurationMaterializer);
 
         // Wire child VM events

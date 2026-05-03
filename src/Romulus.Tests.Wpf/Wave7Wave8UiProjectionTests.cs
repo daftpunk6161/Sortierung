@@ -1,4 +1,5 @@
 using Romulus.Contracts.Models;
+using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.UI.Wpf.Models;
 using Romulus.UI.Wpf.ViewModels;
@@ -94,5 +95,58 @@ public sealed class Wave7Wave8UiProjectionTests
         var item = Assert.Single(vm.ProvenanceEntries);
         Assert.Equal("Verified", item.EventKind);
         Assert.Equal("Nintendo - NES.dat", item.DatMatchId);
+    }
+
+    [Fact]
+    public async Task PolicyGovernanceViewModel_ValidatesWithSharedPolicyEngine()
+    {
+        var vm = new PolicyGovernanceViewModel(collectionIndex: new FakePolicyCollectionIndex(
+        [
+            new CollectionIndexEntry
+            {
+                Path = @"C:\roms\game.sfc",
+                Root = @"C:\roms",
+                FileName = "game.sfc",
+                Extension = ".sfc",
+                ConsoleKey = "SNES",
+                GameKey = "game",
+                Region = "US"
+            }
+        ]))
+        {
+            RootsText = @"C:\roms",
+            ExtensionsText = ".sfc",
+            PolicyText = """
+                id: all-zip
+                name: Alle ZIP
+                allowedExtensions: [.zip]
+                """
+        };
+
+        await vm.ValidateCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsCompliant);
+        Assert.Equal(1, vm.ViolationCount);
+        Assert.Equal("allowed-extensions", Assert.Single(vm.Violations).RuleId);
+    }
+
+    private sealed class FakePolicyCollectionIndex : ICollectionIndex
+    {
+        private readonly IReadOnlyList<CollectionIndexEntry> _entries;
+
+        public FakePolicyCollectionIndex(IReadOnlyList<CollectionIndexEntry> entries) => _entries = entries;
+        public ValueTask<CollectionIndexMetadata> GetMetadataAsync(CancellationToken ct = default) => new(new CollectionIndexMetadata());
+        public ValueTask<int> CountEntriesAsync(CancellationToken ct = default) => new(_entries.Count);
+        public ValueTask<CollectionIndexEntry?> TryGetByPathAsync(string path, CancellationToken ct = default) => new(_entries.FirstOrDefault(e => string.Equals(e.Path, path, StringComparison.OrdinalIgnoreCase)));
+        public ValueTask<IReadOnlyList<CollectionIndexEntry>> GetByPathsAsync(IReadOnlyList<string> paths, CancellationToken ct = default) => new(_entries.Where(e => paths.Contains(e.Path, StringComparer.OrdinalIgnoreCase)).ToArray());
+        public ValueTask<IReadOnlyList<CollectionIndexEntry>> ListByConsoleAsync(string consoleKey, CancellationToken ct = default) => new(_entries.Where(e => string.Equals(e.ConsoleKey, consoleKey, StringComparison.OrdinalIgnoreCase)).ToArray());
+        public ValueTask<IReadOnlyList<CollectionIndexEntry>> ListEntriesInScopeAsync(IReadOnlyList<string> roots, IReadOnlyCollection<string> extensions, CancellationToken ct = default) => new(_entries);
+        public ValueTask UpsertEntriesAsync(IReadOnlyList<CollectionIndexEntry> entries, CancellationToken ct = default) => default;
+        public ValueTask RemovePathsAsync(IReadOnlyList<string> paths, CancellationToken ct = default) => default;
+        public ValueTask<CollectionHashCacheEntry?> TryGetHashAsync(string path, string algorithm, long sizeBytes, DateTime lastWriteUtc, CancellationToken ct = default) => new((CollectionHashCacheEntry?)null);
+        public ValueTask SetHashAsync(CollectionHashCacheEntry entry, CancellationToken ct = default) => default;
+        public ValueTask AppendRunSnapshotAsync(CollectionRunSnapshot snapshot, CancellationToken ct = default) => default;
+        public ValueTask<int> CountRunSnapshotsAsync(CancellationToken ct = default) => new(0);
+        public ValueTask<IReadOnlyList<CollectionRunSnapshot>> ListRunSnapshotsAsync(int limit = 50, CancellationToken ct = default) => new(Array.Empty<CollectionRunSnapshot>());
     }
 }

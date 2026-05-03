@@ -171,6 +171,8 @@
                   Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Features}"/>
               <views:DatCatalogView DataContext="{Binding DatCatalog}"
                   Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=DatManagement}"/>
+              <views:PolicyGovernanceView
+                  Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Policy}"/>
             </Grid>
 
             <!-- ── System (sub-tab-aware) ──────────────────────── -->

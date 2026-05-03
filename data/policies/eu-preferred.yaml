@@ -1,0 +1,6 @@
+id: eu-preferred
+name: EU bevorzugt
+description: Bevorzugt europaeische ROM-Varianten als Zielzustand.
+preferredRegions:
+  - EU
+  - Europe

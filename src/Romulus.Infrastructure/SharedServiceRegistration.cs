@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Romulus.Core.Policy;
 using Romulus.Contracts.Ports;
 using IO = Romulus.Infrastructure.IO;
 using Romulus.Infrastructure.Audit;
@@ -65,6 +66,7 @@ public static class SharedServiceRegistration
         services.AddSingleton<IPhasePlanBuilder, PhasePlanBuilder>();
         services.AddSingleton<IFamilyDatStrategyResolver, FamilyDatStrategyResolver>();
         services.AddSingleton<IFamilyPipelineSelector, FamilyPipelineSelector>();
+        services.AddSingleton<IPolicyEngine, PolicyEngine>();
 
         // Health monitoring
         services.AddSingleton<Monitoring.CollectionHealthMonitor>();

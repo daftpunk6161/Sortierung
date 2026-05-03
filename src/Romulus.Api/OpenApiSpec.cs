@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
+using Romulus.Contracts.Models;
 
 namespace Romulus.Api;
 
@@ -20,7 +21,7 @@ public static class OpenApiSpec
             {
                 Title = "Romulus API",
                 Version = Program.ApiVersion,
-                Description = "Romulus REST API — Your Collection, Perfected. Region deduplication, junk removal, format conversion."
+                Description = "Romulus REST API — reduced, local-first automation surface for runs, audit viewing, health, provenance, and policy validation. No plugin or marketplace endpoints are exposed."
             };
 
             document.Servers = new List<OpenApiServer>
@@ -110,6 +111,22 @@ public static class OpenApiSpec
                         ["application/json"] = new()
                         {
                             Schema = await context.GetOrCreateSchemaAsync(typeof(ApiReviewApprovalRequest), parameterDescription: null, cancellationToken)
+                        }
+                    }
+                };
+            }
+
+            if (string.Equals(relativePath, "/policies/validate", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(httpMethod, "POST", StringComparison.OrdinalIgnoreCase))
+            {
+                operation.RequestBody = new OpenApiRequestBody
+                {
+                    Required = true,
+                    Content = new Dictionary<string, OpenApiMediaType>
+                    {
+                        ["application/json"] = new()
+                        {
+                            Schema = await context.GetOrCreateSchemaAsync(typeof(PolicyValidationRequest), parameterDescription: null, cancellationToken)
                         }
                     }
                 };

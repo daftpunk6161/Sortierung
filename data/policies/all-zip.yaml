@@ -1,0 +1,5 @@
+id: all-zip
+name: Alle ZIP
+description: Erwartet ZIP-komprimierte ROM-Dateien als Zielzustand.
+allowedExtensions:
+  - .zip

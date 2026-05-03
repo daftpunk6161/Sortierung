@@ -75,6 +75,13 @@ public static class ApiErrorCodes
 
     public const string ProvenanceInvalidFingerprint = "PROVENANCE-INVALID-FINGERPRINT";
 
+    // ── POLICY ───────────────────────────────────────────────────────
+
+    public const string PolicyInvalid = "POLICY-INVALID";
+    public const string PolicyTextRequired = "POLICY-TEXT-REQUIRED";
+    public const string PolicyRootsRequired = "POLICY-ROOTS-REQUIRED";
+    public const string PolicyRootEmpty = "POLICY-ROOT-EMPTY";
+
     // ── WATCH ────────────────────────────────────────────────────────
 
     public const string WatchInvalidJson = "WATCH-INVALID-JSON";

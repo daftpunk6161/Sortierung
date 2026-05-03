@@ -1,0 +1,7 @@
+id: no-demos
+name: Keine Demos
+description: Markiert Demo-, Prototype- und Sample-Titel als Policy-Verstoss.
+deniedTitleTokens:
+  - Demo
+  - Prototype
+  - Sample

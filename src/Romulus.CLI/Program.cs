@@ -7,6 +7,7 @@ using Romulus.Contracts;
 using Romulus.Contracts.Errors;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
+using Romulus.Core.Policy;
 using Romulus.Infrastructure.Analysis;
 using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Configuration;
@@ -18,6 +19,7 @@ using Romulus.Infrastructure.Logging;
 using Romulus.Infrastructure.Monitoring;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
+using Romulus.Infrastructure.Policy;
 using Romulus.Infrastructure.Provenance;
 using Romulus.Infrastructure.Profiles;
 using Romulus.Infrastructure.Review;
@@ -140,6 +142,9 @@ internal static partial class Program
 
                 case CliCommand.Provenance:
                     return SubcommandProvenance(result.Options!);
+
+                case CliCommand.ValidatePolicy:
+                    return await SubcommandValidatePolicyAsync(result.Options!).ConfigureAwait(false);
 
                 case CliCommand.DatDiff:
                     return SubcommandDatDiff(result.Options!);
@@ -1507,6 +1512,8 @@ internal static partial class Program
 
         var services = new ServiceCollection();
         services.AddSingleton<IFileSystem, FileSystemAdapter>();
+        services.AddSingleton<ICollectionIndex>(_ => new LiteDbCollectionIndex(ResolveCollectionDbPath(), onWarning));
+        services.AddSingleton<IPolicyEngine, PolicyEngine>();
         services.AddSingleton<IRunEnvironmentFactory>(sp =>
             new RunEnvironmentFactory(collectionDbOption, datCatalogOption));
         services.AddSingleton<IAuditStore>(sp =>

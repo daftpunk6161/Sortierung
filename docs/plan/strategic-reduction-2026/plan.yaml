@@ -3394,13 +3394,20 @@ tasks:
     prototype: false
     covers: ["TOP-19"]
     priority: high
-    status: pending
+    status: completed
+    completed_on: "2026-05-03"
+    completion_notes: |
+      Policy Governance produktiv umgesetzt: LibraryPolicy/LibrarySnapshot
+      leben in Contracts, PolicyEngine prueft den Soll-Zustand in Core,
+      Infrastructure laedt YAML/JSON und exportiert JSON/CSV-Reports. CLI
+      validate-policy, API /policies/validate und WPF Policy-Editor nutzen
+      dieselbe Engine. Beispiel-Policies liegen unter data/policies/.
     dependencies: ["T-W7-HEALTH-SCORE", "T-W7-PROVENANCE-TRAIL"]
     conflicts_with: []
     context_files:
       - path: src/Romulus.Infrastructure/Profiles/
         description: bestehende Profile als Inspiration
-    planning_pass: 1
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Reproduzierbarkeit als USP fuer Archivare.
@@ -3421,6 +3428,37 @@ tasks:
         tech_stack:
           - C# .NET 10
         test_coverage: full
+      - pass: 2
+        reason: |
+          Implementation pass. Policies bleiben bewusst getrennt von Profilen:
+          Profile setzen Run-Defaults, Policies validieren den Zielzustand
+          einer persistierten LibrarySnapshot-Projektion. Die Verstossliste ist
+          zentral sortiert und per CLI/WPF exportierbar.
+        timestamp: "2026-05-03"
+        actual_files: 18
+        deltas:
+          - Romulus.Contracts.Models.PolicyModels
+          - Romulus.Contracts.Ports.IPolicyEngine
+          - Romulus.Core.Policy.PolicyEngine
+          - Romulus.Infrastructure.Policy PolicyDocumentLoader/Projection/Exporter
+          - CLI validate-policy
+          - API /policies/validate
+          - WPF PolicyGovernanceViewModel + PolicyGovernanceView
+          - data/policies Beispiel-Policies
+        tests_added:
+          - Romulus.Tests.Wave9PolicyGovernanceTests
+          - Romulus.Tests.Api.Wave9ApiPolicyAndHardeningTests
+          - Romulus.Tests.Wpf PolicyGovernanceViewModel pin
+        verification_results:
+          - dotnet build src/Romulus.sln --nologo -> 0 Warnungen, 0 Fehler
+          - dotnet test Romulus.Tests filter Wave9PolicyGovernanceTests -> 5/5 gruen
+          - dotnet test Romulus.Tests.Api filter Wave9ApiPolicyAndHardeningTests|F3_BuildDatStatusAsync_InaccessibleSubdir_ReturnsGracefully -> 4/4 gruen
+          - dotnet test Romulus.Tests.Wpf filter PolicyGovernanceViewModel|Wave7Wave8UiProjectionTests -> 3/3 gruen
+        acceptance_criteria:
+          - Verstoss-Liste ist sortierbar und exportierbar
+          - YAML/JSON-Policies werden geladen und validiert
+          - GUI/CLI/API verwenden dieselbe PolicyEngine
+        status: completed
 
   - id: T-W9-API-HARDENING
     title: API-Haertung (Auth, Rate Limit, Doku) ohne Marketplace/Plugin
@@ -3435,13 +3473,20 @@ tasks:
     prototype: false
     covers: []
     priority: medium
-    status: pending
+    status: completed
+    completed_on: "2026-05-03"
+    completion_notes: |
+      API-Haertung abgeschlossen: bestehende Fixed-Time-API-Key-Pruefung und
+      Rate-Limit bleiben global aktiv, /policies/validate wurde als
+      read-only Validierungsendpoint ergaenzt, OpenAPI dokumentiert Policy,
+      HealthScore und Provenance. Die API weist den reduzierten experimentellen
+      Automations-Scope per Header aus; Plugin/Marketplace-Pfade bleiben absent.
     dependencies: ["T-W4-AUDIT-VIEWER-UI", "T-W7-HEALTH-SCORE", "T-W7-PROVENANCE-TRAIL"]
     conflicts_with: []
     context_files:
       - path: src/Romulus.Api/
         description: API-Programm
-    planning_pass: 1
+    planning_pass: 2
     planning_history:
       - pass: 1
         reason: Power-Persona-Werkzeug; bewusst eng skopiert.
@@ -3465,6 +3510,32 @@ tasks:
         review_security_sensitive: true
         requires_review: true
         review_depth: full
+      - pass: 2
+        reason: |
+          Implementation pass. Keine neue destructive API-Flaeche; Policy ist
+          read-only und liest nur den bestehenden CollectionIndex. OpenAPI wurde
+          auf den reduzierten Power-User-Scope aktualisiert.
+        timestamp: "2026-05-03"
+        actual_files: 8
+        deltas:
+          - Romulus.Api.Program.PolicyEndpoints
+          - Romulus.Api.OpenApiSpec
+          - API Response Header X-Romulus-API-Status
+          - ApiErrorCodes Policy-Codes
+          - CA1416-Warnungen in CodeReviewFindingsTests isoliert
+        tests_added:
+          - Wave9ApiPolicyAndHardeningTests.PolicyValidate_RequiresApiKey
+          - Wave9ApiPolicyAndHardeningTests.PolicyValidate_ReturnsReportFromReadOnlyPersistedIndex
+          - Wave9ApiPolicyAndHardeningTests.OpenApi_DeclaresPolicyHealthAndProvenance_AndNoPluginMarketplaceSurface
+        verification_results:
+          - dotnet build src/Romulus.sln --nologo -> 0 Warnungen, 0 Fehler
+          - dotnet test Romulus.Tests.Api filter Wave9ApiPolicyAndHardeningTests|F3_BuildDatStatusAsync_InaccessibleSubdir_ReturnsGracefully -> 4/4 gruen
+        acceptance_criteria:
+          - OpenAPI-Doku aktuell
+          - neue Policy/Health/Provenance-Endpunkte umgehen keinen Confirm-Token
+          - Policy-Endpunkt ist read-only
+          - kein Plugin-/Marketplace-Surface
+        status: completed
 
   # ============================================================
   # WAVE 10 - Phase 4 fortgesetzt

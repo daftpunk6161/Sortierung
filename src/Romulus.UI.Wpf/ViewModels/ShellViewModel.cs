@@ -158,6 +158,7 @@ public sealed class ShellViewModel : ObservableObject
     public bool ShowToolsExternalToolsTab => true;
     public bool ShowToolsFeaturesTab => true;
     public bool ShowToolsDatManagementTab => true;
+    public bool ShowToolsPolicyTab => !IsSimpleMode;
     public bool ShowToolsConversionTab => false;
     public bool ShowToolsGameKeyLabTab => false;
 
@@ -196,6 +197,7 @@ public sealed class ShellViewModel : ObservableObject
         "ExternalTools" => "Externe Tools",
         "Features" => "Werkzeuge & Features",
         "DatManagement" => "DAT-Verwaltung",
+        "Policy" => "Policy Governance",
         "Conversion" => "Conversion",
         "Sorting" => "Sorting",
         "Batch" => "Batch",
@@ -260,7 +262,7 @@ public sealed class ShellViewModel : ObservableObject
             : false,
         ConfigTag => false,
         ToolsTag => !IsSimpleMode
-            ? subTab is "Features" or "ExternalTools" or "DatManagement"
+            ? subTab is "Features" or "ExternalTools" or "DatManagement" or "Policy"
             : subTab is "Features" or "ExternalTools" or "DatManagement",
         SystemTag => subTab is "Appearance" or "About" or "AuditViewer",
         _ => false
@@ -321,6 +323,7 @@ public sealed class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowToolsExternalToolsTab));
         OnPropertyChanged(nameof(ShowToolsFeaturesTab));
         OnPropertyChanged(nameof(ShowToolsDatManagementTab));
+        OnPropertyChanged(nameof(ShowToolsPolicyTab));
         OnPropertyChanged(nameof(ShowToolsConversionTab));
         OnPropertyChanged(nameof(ShowToolsGameKeyLabTab));
 

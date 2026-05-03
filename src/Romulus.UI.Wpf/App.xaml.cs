@@ -142,6 +142,7 @@ public partial class App : Application
         services.AddSingleton<DatAuditViewModel>();
         services.AddSingleton<DatCatalogViewModel>();
         services.AddSingleton<ConversionPreviewViewModel>();
+        services.AddSingleton<PolicyGovernanceViewModel>();
 
         // T-W5-BEFORE-AFTER-SIMULATOR pass 4: WPF Simulator-View VM.
         // The simulator wraps RunOrchestrator via BeforeAfterSimulator (single

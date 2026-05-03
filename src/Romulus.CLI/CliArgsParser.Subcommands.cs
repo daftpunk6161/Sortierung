@@ -5,6 +5,7 @@ using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
 using Romulus.Infrastructure.Workflow;
 using Romulus.Infrastructure.Safety;
+using Romulus.Infrastructure.Version;
 using Romulus.Infrastructure.Watch;
 
 namespace Romulus.CLI;
@@ -22,6 +23,7 @@ internal static partial class CliArgsParser
             "simulate" => ParseSubcommandWithRoots(CliCommand.Simulate, rest),
             "explain" => ParseExplainSubcommand(rest),
             "provenance" => ParseProvenanceSubcommand(rest),
+            "validate-policy" => ParseValidatePolicySubcommand(rest),
             "profiles" => ParseProfilesSubcommand(rest),
             "diff" => ParseDiffSubcommand(rest),
             "merge" => ParseMergeSubcommand(rest),
@@ -988,6 +990,60 @@ internal static partial class CliArgsParser
             return CliParseResult.ValidationError([$"[Error] {outputPathError}"]);
 
         return CliParseResult.Subcommand(CliCommand.Provenance, opts);
+    }
+
+    private static CliParseResult ParseValidatePolicySubcommand(string[] args)
+    {
+        var opts = new CliRunOptions();
+        var errors = new List<string>();
+        for (int i = 0; i < args.Length; i++)
+        {
+            switch (args[i].ToLowerInvariant())
+            {
+                case "--policy" or "-p":
+                    if (!TryConsumeValue(args, ref i, "--policy", errors, out var policyPath)) break;
+                    opts.PolicyPath = policyPath;
+                    break;
+                case "--roots" or "-roots":
+                    if (!TryConsumeValue(args, ref i, "--roots", errors, out var rootsRaw)) break;
+                    if (TryParseRootsArgument(rootsRaw, out var roots, out var rootsErr))
+                        opts.Roots = roots;
+                    else
+                        errors.Add($"[Error] {rootsErr}");
+                    break;
+                case "--extensions":
+                    if (!TryConsumeValue(args, ref i, "--extensions", errors, out var extsRaw)) break;
+                    opts.Extensions = new HashSet<string>(
+                        VersionHelper.NormalizeExtensionList(extsRaw),
+                        StringComparer.OrdinalIgnoreCase);
+                    opts.ExtensionsExplicit = true;
+                    break;
+                case "-o" or "--output":
+                    if (!TryConsumeValue(args, ref i, "--output", errors, out var outputPath)) break;
+                    opts.OutputPath = outputPath;
+                    break;
+                default:
+                    if (!args[i].StartsWith("-") && string.IsNullOrWhiteSpace(opts.PolicyPath))
+                        opts.PolicyPath = args[i];
+                    else
+                        errors.Add($"[Error] Unknown flag '{args[i]}' for validate-policy.");
+                    break;
+            }
+        }
+
+        if (errors.Count > 0)
+            return CliParseResult.ValidationError(errors);
+        if (string.IsNullOrWhiteSpace(opts.PolicyPath))
+            return CliParseResult.ValidationError(["[Error] validate-policy requires --policy <file>."]);
+        if (opts.Roots.Length == 0)
+            return CliParseResult.ValidationError(["[Error] validate-policy requires --roots <paths>."]);
+
+        var pathError = ValidateOptionalPath(opts.PolicyPath, "policy file path", allowUnc: false)
+            ?? ValidateOptionalPath(opts.OutputPath, "policy validation output path", allowUnc: false);
+        if (pathError is not null)
+            return CliParseResult.ValidationError([$"[Error] {pathError}"]);
+
+        return CliParseResult.Subcommand(CliCommand.ValidatePolicy, opts);
     }
 
     /// <summary>

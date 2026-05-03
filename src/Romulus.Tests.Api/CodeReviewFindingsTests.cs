@@ -1,5 +1,6 @@
 using System.Net;
 using System.Reflection;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Text.Json;
 using Romulus.Api;
@@ -181,8 +182,23 @@ public sealed class CodeReviewFindingsTests : IDisposable
         Directory.CreateDirectory(deniedDir);
         File.WriteAllText(Path.Combine(deniedDir, "secret.dat"), "<xml/>");
 
-        // Deny access
-        var dirInfo = new DirectoryInfo(deniedDir);
+        using var deniedAccess = DenyWindowsDirectoryReadAccess(deniedDir);
+
+        // This should NOT throw – it should handle the error gracefully
+        // Uses the explicit overload (F6 fix: decoupled from static I/O resolution)
+        var policy = new AllowedRootPathPolicy(Array.Empty<string>());
+        var result = await DashboardDataBuilder.BuildDatStatusAsync(
+            datRoot, _tempDir, policy, CancellationToken.None);
+
+        Assert.True(result.Configured);
+        // Should still report files from accessible directories
+        Assert.True(result.TotalFiles >= 1, "Should count files from accessible directories.");
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static WindowsDeniedAccessScope DenyWindowsDirectoryReadAccess(string directoryPath)
+    {
+        var dirInfo = new DirectoryInfo(directoryPath);
         var acl = dirInfo.GetAccessControl();
         var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
         var rule = new System.Security.AccessControl.FileSystemAccessRule(
@@ -193,24 +209,35 @@ public sealed class CodeReviewFindingsTests : IDisposable
             System.Security.AccessControl.AccessControlType.Deny);
         acl.AddAccessRule(rule);
         dirInfo.SetAccessControl(acl);
+        return new WindowsDeniedAccessScope(dirInfo, acl, rule);
+    }
 
-        try
+    [SupportedOSPlatform("windows")]
+    private sealed class WindowsDeniedAccessScope : IDisposable
+    {
+        private readonly DirectoryInfo _directory;
+        private readonly System.Security.AccessControl.DirectorySecurity _acl;
+        private readonly System.Security.AccessControl.FileSystemAccessRule _rule;
+        private bool _disposed;
+
+        public WindowsDeniedAccessScope(
+            DirectoryInfo directory,
+            System.Security.AccessControl.DirectorySecurity acl,
+            System.Security.AccessControl.FileSystemAccessRule rule)
         {
-            // This should NOT throw – it should handle the error gracefully
-            // Uses the explicit overload (F6 fix: decoupled from static I/O resolution)
-            var policy = new AllowedRootPathPolicy(Array.Empty<string>());
-            var result = await DashboardDataBuilder.BuildDatStatusAsync(
-                datRoot, _tempDir, policy, CancellationToken.None);
-
-            Assert.True(result.Configured);
-            // Should still report files from accessible directories
-            Assert.True(result.TotalFiles >= 1, "Should count files from accessible directories.");
+            _directory = directory;
+            _acl = acl;
+            _rule = rule;
         }
-        finally
+
+        public void Dispose()
         {
-            // Restore access for cleanup
-            acl.RemoveAccessRule(rule);
-            dirInfo.SetAccessControl(acl);
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            _acl.RemoveAccessRule(_rule);
+            _directory.SetAccessControl(_acl);
         }
     }
 
