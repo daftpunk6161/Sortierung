@@ -1,0 +1,14 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📖 Dokumentation
+    url: https://github.com/daftpunk6161/Romulus/tree/main/docs
+    about: Lies die vollständige Dokumentation
+  - name: 💬 GitHub Discussions
+    url: https://github.com/daftpunk6161/Romulus/discussions
+    about: Stelle Fragen und diskutiere mit der Community
+  - name: 🔒 Sicherheitsproblem melden
+    url: https://github.com/daftpunk6161/Romulus/security/advisories/new
+    about: Melde Sicherheitslücken privat (NICHT über öffentliche Issues!)
+  - name: 💰 Projekt unterstützen
+    url: https://github.com/sponsors/daftpunk6161
+    about: Unterstütze die Entwicklung von Romulus
