@@ -39,9 +39,10 @@ public sealed class Wave2AuditMoratoriumTests
     {
         var src = ReadAgentsMd();
         Assert.Contains("## Audit-Moratorium", src, System.StringComparison.Ordinal);
-        // Geltungszeitraum
-        Assert.Contains("2026-04-28", src, System.StringComparison.Ordinal);
+        // Geltungszeitraum: urspruenglich befristet bis 2026-05-28, mit Solo-Mode (2026-05-04)
+        // dauerhaft fortgesetzt. Beide Marker muessen sichtbar bleiben.
         Assert.Contains("2026-05-28", src, System.StringComparison.Ordinal);
+        Assert.Contains("2026-05-04", src, System.StringComparison.Ordinal);
         // Scope-Stichworte
         Assert.Contains("Verboten", src, System.StringComparison.Ordinal);
         Assert.Contains("Erlaubt", src, System.StringComparison.Ordinal);

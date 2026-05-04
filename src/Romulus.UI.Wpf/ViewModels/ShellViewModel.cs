@@ -139,9 +139,11 @@ public sealed class ShellViewModel : ObservableObject
     public bool ShowMissionDashboardTab => true;
     public bool ShowMissionQuickStartTab => false;
     public bool ShowMissionRecentRunsTab => true;
-    public bool ShowMissionRegionsTab => true;
-    public bool ShowMissionOptionsTab => true;
-    public bool ShowMissionProfilesTab => !IsSimpleMode;
+    // T-W1-LAYOUT-P3 hygiene (2026-05): Setup-Tabs leben unter System.
+    // Kanonische Wahrheit ist ShowSystemSetup{Regions,Options,Profiles}Tab.
+    public bool ShowSystemSetupRegionsTab => true;
+    public bool ShowSystemSetupOptionsTab => true;
+    public bool ShowSystemSetupProfilesTab => !IsSimpleMode;
 
     public bool ShowLibraryResultsTab => true;
     public bool ShowLibraryDecisionsTab => !IsSimpleMode;
@@ -150,10 +152,7 @@ public sealed class ShellViewModel : ObservableObject
     public bool ShowLibraryReportTab => false;
     public bool ShowLibraryDatAuditTab => !IsSimpleMode;
 
-    public bool ShowConfigRegionsTab => ShowMissionRegionsTab;
     public bool ShowConfigFilteringTab => false;
-    public bool ShowConfigOptionsTab => ShowMissionOptionsTab;
-    public bool ShowConfigProfilesTab => ShowMissionProfilesTab;
 
     public bool ShowToolsExternalToolsTab => true;
     public bool ShowToolsFeaturesTab => true;
@@ -176,7 +175,6 @@ public sealed class ShellViewModel : ObservableObject
         MissionControlTag => "Mission Control",
         LibraryTag => "Library",
         PipelineTag => "Pipeline",
-        ConfigTag => "Mission Control",
         ToolsTag => "Werkzeugkatalog",
         SystemTag => "System",
         _ => "Mission Control"
@@ -235,9 +233,6 @@ public sealed class ShellViewModel : ObservableObject
         MissionControlTag => "Dashboard",
         LibraryTag => "Results",
         PipelineTag => "Conversion",
-        // ConfigTag wird durch NormalizeNavTag bereits in SystemTag aufgeloest;
-        // dieser Arm ist tot, bleibt aber als Doku-Marker stehen.
-        ConfigTag => "Appearance",
         ToolsTag => "Features",
         SystemTag => "Appearance",
         _ => "Dashboard"
@@ -264,7 +259,6 @@ public sealed class ShellViewModel : ObservableObject
         PipelineTag => !IsSimpleMode
             ? subTab is "Conversion" or "Sorting" or "Batch"
             : false,
-        ConfigTag => false,
         ToolsTag => !IsSimpleMode
             ? subTab is "Features" or "ExternalTools" or "DatManagement" or "Policy"
             : subTab is "Features" or "ExternalTools" or "DatManagement",
@@ -280,9 +274,6 @@ public sealed class ShellViewModel : ObservableObject
     {
         var currentNavTag = NormalizeNavTag(SelectedNavTag);
         var coercedNavTag = currentNavTag;
-
-        if (string.Equals(coercedNavTag, ConfigTag, StringComparison.Ordinal))
-            coercedNavTag = SystemTag;
 
         if (IsSimpleMode && string.Equals(coercedNavTag, PipelineTag, StringComparison.Ordinal))
             coercedNavTag = MissionControlTag;
@@ -313,9 +304,9 @@ public sealed class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowMissionDashboardTab));
         OnPropertyChanged(nameof(ShowMissionQuickStartTab));
         OnPropertyChanged(nameof(ShowMissionRecentRunsTab));
-        OnPropertyChanged(nameof(ShowMissionRegionsTab));
-        OnPropertyChanged(nameof(ShowMissionOptionsTab));
-        OnPropertyChanged(nameof(ShowMissionProfilesTab));
+        OnPropertyChanged(nameof(ShowSystemSetupRegionsTab));
+        OnPropertyChanged(nameof(ShowSystemSetupOptionsTab));
+        OnPropertyChanged(nameof(ShowSystemSetupProfilesTab));
 
         OnPropertyChanged(nameof(ShowLibraryResultsTab));
         OnPropertyChanged(nameof(ShowLibraryDecisionsTab));
@@ -323,10 +314,7 @@ public sealed class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowLibraryReportTab));
         OnPropertyChanged(nameof(ShowLibraryDatAuditTab));
 
-        OnPropertyChanged(nameof(ShowConfigRegionsTab));
         OnPropertyChanged(nameof(ShowConfigFilteringTab));
-        OnPropertyChanged(nameof(ShowConfigOptionsTab));
-        OnPropertyChanged(nameof(ShowConfigProfilesTab));
 
         OnPropertyChanged(nameof(ShowToolsExternalToolsTab));
         OnPropertyChanged(nameof(ShowToolsFeaturesTab));
@@ -389,7 +377,6 @@ public sealed class ShellViewModel : ObservableObject
             MissionControlTag => 0,
             LibraryTag => 1,
             PipelineTag => 2,
-            ConfigTag => 0,
             ToolsTag => 3,
             SystemTag => 4,
             _ => 0

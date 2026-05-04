@@ -65,7 +65,6 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     private string? _acceptedLossyDataLossToken;
     private const string NavTagMissionControl = "MissionControl";
     private const string NavTagLibrary = "Library";
-    private const string NavTagConfig = "Config";
     private const string NavTagTools = "Tools";
 
     // ═══ CHILD VIEWMODELS (GUI-021: shell ViewModel pattern) ════════════

@@ -59,11 +59,13 @@ public sealed class Wave1UiReductionTests
         var xamlFiles = Directory.GetFiles(viewsDir, "*.xaml", SearchOption.TopDirectoryOnly);
 
         // Pass 3 (Wave 4/5): drei produktive Workflow-Surfaces sind nach W4-AUDIT-VIEWER-UI,
-        // W4-REVIEW-INBOX und W5-BEFORE-AFTER-SIMULATOR legitim hinzugekommen. Acceptance bleibt
-        // "Reduktion gehalten" — Limit auf 21 angepasst, weitere Erweiterung nur mit Begruendung.
+        // W4-REVIEW-INBOX und W5-BEFORE-AFTER-SIMULATOR legitim hinzugekommen.
+        // Pass 4 (T-W1-LAYOUT-P1): PipelineWorkbenchView konsolidiert mehrere Pipeline-Surfaces
+        // in eine View und ist damit ebenfalls reduktions-konform. Acceptance bleibt
+        // "Reduktion gehalten" — Limit auf 22 angepasst, weitere Erweiterung nur mit Begruendung.
         Assert.True(
-            xamlFiles.Length <= 21,
-            $"Expected <= 21 top-level view XAML files (T-W1-UI-REDUCTION acceptance, planning_pass 3 nach W4/W5-Surfaces), "
+            xamlFiles.Length <= 22,
+            $"Expected <= 22 top-level view XAML files (T-W1-UI-REDUCTION acceptance, planning_pass 4 nach W4/W5-Surfaces + PipelineWorkbench), "
             + $"found {xamlFiles.Length}: " + string.Join(", ", xamlFiles.Select(Path.GetFileName)));
     }
 
@@ -72,12 +74,13 @@ public sealed class Wave1UiReductionTests
     {
         // Acceptance-Klarstellung (planning_pass 2): ehrliche Obergrenze inkl. Subfolders.
         // Verhindert dass "Reduktion" durch beliebige Sub-Verschachtelung umgangen wird.
+        // Pass 4 (T-W1-LAYOUT-P1): +1 fuer PipelineWorkbenchView (siehe Top-Level-Pin oben).
         var viewsDir = Path.Combine(RepoRoot().FullName, "src", "Romulus.UI.Wpf", "Views");
         var xamlFiles = Directory.GetFiles(viewsDir, "*.xaml", SearchOption.AllDirectories);
 
         Assert.True(
-            xamlFiles.Length <= 30,
-            $"Expected <= 30 recursive view XAML files, found {xamlFiles.Length}: "
+            xamlFiles.Length <= 31,
+            $"Expected <= 31 recursive view XAML files, found {xamlFiles.Length}: "
             + string.Join(", ", xamlFiles.Select(p => Path.GetRelativePath(viewsDir, p))));
     }
 

@@ -319,13 +319,13 @@ public sealed class ShellViewModelCoverageTests
         vm.IsSimpleMode = true;
         Assert.False(vm.ShowLibraryDecisionsTab);
         Assert.False(vm.ShowLibraryDatAuditTab);
-        Assert.False(vm.ShowConfigProfilesTab);
+        Assert.False(vm.ShowSystemSetupProfilesTab);
         Assert.False(vm.ShowSystemActivityLogTab);
 
         vm.IsSimpleMode = false;
         Assert.True(vm.ShowLibraryDecisionsTab);
         Assert.True(vm.ShowLibraryDatAuditTab);
-        Assert.True(vm.ShowConfigProfilesTab);
+        Assert.True(vm.ShowSystemSetupProfilesTab);
         Assert.False(vm.ShowSystemActivityLogTab);
     }
 
@@ -340,12 +340,10 @@ public sealed class ShellViewModelCoverageTests
         Assert.True(vm.ShowSystemNav);
         Assert.True(vm.ShowMissionDashboardTab);
         Assert.True(vm.ShowMissionRecentRunsTab);
-        Assert.True(vm.ShowMissionRegionsTab);
-        Assert.True(vm.ShowMissionOptionsTab);
+        Assert.True(vm.ShowSystemSetupRegionsTab);
+        Assert.True(vm.ShowSystemSetupOptionsTab);
         Assert.True(vm.ShowLibraryResultsTab);
         Assert.True(vm.ShowLibrarySafetyTab);
-        Assert.True(vm.ShowConfigRegionsTab);
-        Assert.True(vm.ShowConfigOptionsTab);
         Assert.True(vm.ShowToolsExternalToolsTab);
         Assert.True(vm.ShowToolsFeaturesTab);
         Assert.True(vm.ShowToolsDatManagementTab);
@@ -376,7 +374,7 @@ public sealed class ShellViewModelCoverageTests
         Assert.Contains("IsSimpleMode", changedProps);
         Assert.Contains("IsExpertMode", changedProps);
         Assert.Contains("ShowLibraryDecisionsTab", changedProps);
-        Assert.Contains("ShowConfigProfilesTab", changedProps);
+        Assert.Contains("ShowSystemSetupProfilesTab", changedProps);
         Assert.Contains("ShowSystemActivityLogTab", changedProps);
     }
 

@@ -104,15 +104,15 @@
                          AutomationProperties.Name="Audit Viewer (Read-only)"/>
             <!-- T-W1-LAYOUT-P3: Setup-Tabs (Regions/Options/Profiles) leben hier statt unter MissionControl. -->
             <RadioButton GroupName="SubTab" Content="Regions" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowMissionRegionsTab, Converter={StaticResource BoolToVis}}"
+                         Visibility="{Binding Shell.ShowSystemSetupRegionsTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Regions}"
                          AutomationProperties.Name="Region Priority Configuration"/>
             <RadioButton GroupName="SubTab" Content="Options" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowMissionOptionsTab, Converter={StaticResource BoolToVis}}"
+                         Visibility="{Binding Shell.ShowSystemSetupOptionsTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Options}"
                          AutomationProperties.Name="Run Options Configuration"/>
             <RadioButton GroupName="SubTab" Content="Profiles" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowMissionProfilesTab, Converter={StaticResource BoolToVis}}"
+                         Visibility="{Binding Shell.ShowSystemSetupProfilesTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Profiles}"
                          AutomationProperties.Name="Profile Management"/>
           </StackPanel>

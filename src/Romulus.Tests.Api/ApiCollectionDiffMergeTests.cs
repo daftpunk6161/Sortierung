@@ -153,7 +153,8 @@ public sealed class ApiCollectionDiffMergeTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, rollbackResponse.StatusCode);
         using var doc = JsonDocument.Parse(await rollbackResponse.Content.ReadAsStringAsync());
         var root = doc.RootElement;
-        Assert.Equal(1, root.GetProperty("rolledBack").GetInt32());
+        // Endpoint returns CollectionMergeRollbackEnvelope { provenanceEventsAppended, rollback: AuditRollbackResult }.
+        Assert.Equal(1, root.GetProperty("rollback").GetProperty("rolledBack").GetInt32());
         Assert.True(File.Exists(leftPath));
         Assert.False(File.Exists(Path.Combine(targetRoot, "SNES", "Mario.sfc")));
     }

@@ -41,6 +41,8 @@ public sealed class MultiDatPrepTests
             nameof(DatMatch.IsBios),
             nameof(DatMatch.ParentGameName),
             nameof(DatMatch.RomFileName),
+            // Canonical extension (Multi-DAT provenance, optional).
+            nameof(DatMatch.SourceId),
         }.OrderBy(n => n, StringComparer.Ordinal).ToArray();
 
         Assert.Equal(expected, props);

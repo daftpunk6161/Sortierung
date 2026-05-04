@@ -237,6 +237,25 @@ public sealed partial class EnrichmentPipelinePhase : IPipelinePhase<EnrichmentP
                 if (matchEvidence.PrimaryMatchKind == MatchKind.None)
                     matchEvidence = parityDetection.MatchEvidence ?? matchEvidence;
             }
+
+            // P1 fix: when the DAT-first lookup resolved a multi-console hash collision
+            // without detector hypotheses (lex tiebreak only), re-run the lookup with the
+            // freshly-acquired detection so hypothesis intersection (folder, filename
+            // keyword, etc.) deterministically picks the right console instead of
+            // alphabetical accident. Required by the
+            // "Execute_UnknownConsoleAmbiguousDat_UsesHypothesisIntersectionAndSetsReview"
+            // invariant. Re-runs only when truly ambiguous and detection is usable.
+            if (datResult.MultiDatResolution is { IsConflict: true }
+                && detectionResult is not null
+                && detectionResult.Hypotheses.Count > 0)
+            {
+                var retryFamily = ResolveFamily(consoleDetector, consoleKey, detectionResult);
+                var retryHashStrategy = ResolveHashStrategy(consoleDetector, consoleKey, detectionResult);
+                var retryDatPolicy = familyDatStrategyResolver.ResolvePolicy(retryFamily, ext, retryHashStrategy);
+                datResult = LookupDat(filePath, ext, sizeBytes, consoleKey,
+                    datIndex, hashService, archiveHashService, headerlessHasher, retryDatPolicy,
+                    detectionResult, consoleDetector, context, onProgress, chdTrackHashExtractor, cancellationToken);
+            }
         }
 
         if (!datResult.DatMatch && consoleDetector is not null)

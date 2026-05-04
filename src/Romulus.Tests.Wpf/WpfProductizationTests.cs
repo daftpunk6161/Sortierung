@@ -446,9 +446,9 @@ public sealed class WpfProductizationTests : IDisposable
         var subTabBarXaml = File.ReadAllText(FindUiFile("Views", "SubTabBar.xaml"));
         var navigationRailXaml = File.ReadAllText(FindUiFile("Views", "NavigationRail.xaml"));
 
-        Assert.Contains("Shell.ShowMissionRegionsTab", subTabBarXaml);
-        Assert.Contains("Shell.ShowMissionOptionsTab", subTabBarXaml);
-        Assert.Contains("Shell.ShowMissionProfilesTab", subTabBarXaml);
+        Assert.Contains("Shell.ShowSystemSetupRegionsTab", subTabBarXaml);
+        Assert.Contains("Shell.ShowSystemSetupOptionsTab", subTabBarXaml);
+        Assert.Contains("Shell.ShowSystemSetupProfilesTab", subTabBarXaml);
         Assert.DoesNotContain("Shell.ShowConfigNav", navigationRailXaml);
     }
 
