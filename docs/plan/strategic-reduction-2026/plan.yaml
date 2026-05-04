@@ -30,6 +30,22 @@ status_history:
       T-W11-IDENTITY-GUARDRAIL completed (verankert in AGENTS.md,
       .claude/rules/project.instructions.md, PR-Template).
       Build-Status: dotnet build src/Romulus.sln -> 0 Warnungen, 0 Fehler.
+  - status: completed-engineering-externalization-deferred
+    timestamp: "2026-05-04"
+    note: |
+      Praezisierung des Top-Level-Status nach Maintainer-Entscheidung 2026-05-04:
+      Plan ist engineering-completed, externe Validierung (Beta-Cohort + Discovery-Loop)
+      ist bewusst deferred. Romulus laeuft als Solo-Tool fuer den Maintainer
+      bis ein Externalisierungs-Greenlight gemaess
+      docs/plan/strategic-reduction-2026/discovery-loop-playbook.md (Sektion
+      "Solo-Mode und Externalisierungs-Greenlight") erteilt wird. Die drei
+      Tasks T-W3-BETA-USERS, T-W3-RUN-SMOKE-WITH-USERS und T-W4-DISCOVERY-LOOP
+      bleiben formal wontfix-with-reason, sind aber faktisch
+      deferred-until-maintainer-greenlight (kein won't-fix-permanent).
+      Trigger fuer eine neue Welle 12 (Externalisierungs-Welle) ist die
+      Erfuellung der dort definierten Greenlight-Kriterien. Identitaets-Guardrail
+      und Streichliste bleiben aktiv und gelten im Solo-Mode strenger, nicht
+      lockerer (Scope-Creep ist die Solo-Hauptgefahr).
 research_confidence: high
 
 plan_metrics:

@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
@@ -250,8 +253,26 @@ public sealed class CollectionHealthMonitorTests
     }
 }
 
-public sealed class CliHealthSubcommandTests
+public sealed class CliHealthSubcommandTests : IDisposable
 {
+    private readonly List<string> _tempDirs = new();
+
+    private string CreateTempDir(string prefix)
+    {
+        var path = Path.Combine(Path.GetTempPath(), prefix + "-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        _tempDirs.Add(path);
+        return path;
+    }
+
+    public void Dispose()
+    {
+        foreach (var dir in _tempDirs)
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { }
+        }
+    }
+
     [Fact]
     public void Health_WithConsole_ParsesCorrectly()
     {
@@ -282,20 +303,13 @@ public sealed class CliHealthSubcommandTests
     [Fact]
     public void TopLevelHealthSnapshot_WithRoots_RoutesToHealthCommand()
     {
-        var root = Path.Combine(Path.GetTempPath(), "rom-health-snapshot-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
-        try
-        {
-            var result = CliArgsParser.Parse(["--roots", root, "--health-snapshot"]);
+        var root = CreateTempDir("rom-health-snapshot");
 
-            Assert.Equal(CliCommand.Health, result.Command);
-            Assert.True(result.Options!.HealthSnapshot);
-            Assert.Equal(root, Assert.Single(result.Options.Roots));
-        }
-        finally
-        {
-            try { Directory.Delete(root, recursive: true); } catch { }
-        }
+        var result = CliArgsParser.Parse(["--roots", root, "--health-snapshot"]);
+
+        Assert.Equal(CliCommand.Health, result.Command);
+        Assert.True(result.Options!.HealthSnapshot);
+        Assert.Equal(root, Assert.Single(result.Options.Roots));
     }
 
     [Fact]

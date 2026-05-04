@@ -16,122 +16,82 @@
 			"problemMatcher": "$msCompile"
 		},
 		{
-			"label": "tests: unit",
-			"type": "shell",
-			"command": "pwsh",
-			"args": [
-				"-NoProfile",
-				"-File",
-				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
-				"-Stage",
-				"unit",
-				"-PesterOutput",
-				"None"
-			],
-			"group": "test",
-			"problemMatcher": [],
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated",
-				"showReuseMessage": false,
-				"clear": true,
-				"close": true
-			}
-		},
-		{
-			"label": "tests: integration",
-			"type": "shell",
-			"command": "pwsh",
-			"args": [
-				"-NoProfile",
-				"-File",
-				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
-				"-Stage",
-				"integration",
-				"-PesterOutput",
-				"None"
-			],
-			"group": "test",
-			"problemMatcher": [],
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated",
-				"showReuseMessage": false,
-				"clear": true,
-				"close": true
-			}
-		},
-		{
-			"label": "tests: e2e",
-			"type": "shell",
-			"command": "pwsh",
-			"args": [
-				"-NoProfile",
-				"-File",
-				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
-				"-Stage",
-				"e2e",
-				"-PesterOutput",
-				"None"
-			],
-			"group": "test",
-			"problemMatcher": [],
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated",
-				"showReuseMessage": false,
-				"clear": true,
-				"close": true
-			}
-		},
-		{
 			"label": "tests: all",
-			"type": "shell",
-			"command": "pwsh",
+			"type": "process",
+			"command": "dotnet",
 			"args": [
-				"-NoProfile",
-				"-File",
-				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
-				"-Stage",
-				"all",
-				"-PesterOutput",
-				"None"
+				"test",
+				"${workspaceFolder}/src/Romulus.sln",
+				"--nologo",
+				"--verbosity",
+				"minimal"
 			],
-			"group": "test",
-			"problemMatcher": [],
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			},
+			"problemMatcher": "$msCompile",
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
-				"showReuseMessage": false,
-				"clear": true,
-				"close": true
+				"clear": true
 			}
 		},
 		{
-			"label": "tests: coverage",
-			"type": "shell",
-			"command": "pwsh",
+			"label": "tests: core",
+			"type": "process",
+			"command": "dotnet",
 			"args": [
-				"-NoProfile",
-				"-File",
-				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
-				"-Stage",
-				"all",
-				"-PesterOutput",
-				"None",
-				"-Coverage",
-				"-CoverageTarget",
-				"34"
+				"test",
+				"${workspaceFolder}/src/Romulus.Tests/Romulus.Tests.csproj",
+				"--nologo",
+				"--verbosity",
+				"minimal"
 			],
 			"group": "test",
-			"problemMatcher": [],
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated",
-				"showReuseMessage": false,
-				"clear": true,
-				"close": true
-			}
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "tests: api",
+			"type": "process",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"${workspaceFolder}/src/Romulus.Tests.Api/Romulus.Tests.Api.csproj",
+				"--nologo",
+				"--verbosity",
+				"minimal"
+			],
+			"group": "test",
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "tests: wpf",
+			"type": "process",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"${workspaceFolder}/src/Romulus.Tests.Wpf/Romulus.Tests.Wpf.csproj",
+				"--nologo",
+				"--verbosity",
+				"minimal"
+			],
+			"group": "test",
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "tests: benchmark",
+			"type": "process",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"${workspaceFolder}/src/Romulus.Tests.Benchmark/Romulus.Tests.Benchmark.csproj",
+				"--nologo",
+				"--verbosity",
+				"minimal"
+			],
+			"group": "test",
+			"problemMatcher": "$msCompile"
 		},
 		{
 			"label": "tests: coverage lcov",
@@ -146,89 +106,7 @@
 				"DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=lcov"
 			],
 			"group": "test",
-			"problemMatcher": [],
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated",
-				"showReuseMessage": false,
-				"clear": true,
-				"close": true
-			}
-		},
-		{
-			"label": "tests: benchmark gate",
-			"type": "shell",
-			"command": "pwsh",
-			"args": [
-				"-NoProfile",
-				"-File",
-				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
-				"-Stage",
-				"e2e",
-				"-PesterOutput",
-				"None",
-				"-BenchmarkGate"
-			],
-			"group": "test",
-			"problemMatcher": [],
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated",
-				"showReuseMessage": false,
-				"clear": true,
-				"close": true
-			}
-		},
-		{
-			"label": "tests: benchmark nightly",
-			"type": "shell",
-			"command": "pwsh",
-			"args": [
-				"-NoProfile",
-				"-File",
-				"${workspaceFolder}/archive/powershell/dev/tools/pipeline/Invoke-TestPipeline.ps1",
-				"-Stage",
-				"e2e",
-				"-PesterOutput",
-				"None",
-				"-BenchmarkGateNightly"
-			],
-			"group": "test",
-			"problemMatcher": [],
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated",
-				"showReuseMessage": false,
-				"clear": true,
-				"close": true
-			}
-		},
-		{
-			"label": "tests: smoke-wpf",
-			"type": "shell",
-			"command": "pwsh",
-			"args": [
-				"-NoProfile",
-				"-Command",
-				"Invoke-Pester -Path \"./archive/powershell/dev/tests/integration/WpfSmoke.Tests.ps1\" -Output Detailed"
-			],
-			"group": "test"
-		},
-		{
-			"label": "tests: smoke wpf quick",
-			"type": "shell",
-			"command": "Invoke-Pester -Path \"./archive/powershell/dev/tests/integration/WpfSmoke.Tests.ps1\" -Output Detailed",
-			"group": "test"
-		},
-		{
-			"label": "Build Solution",
-			"type": "shell",
-			"command": "dotnet build src/Romulus.sln",
-			"problemMatcher": [
-				"$msCompile"
-			],
-			"group": "build"
-
+			"problemMatcher": []
 		}
 	]
 }

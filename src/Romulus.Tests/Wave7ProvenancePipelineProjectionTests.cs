@@ -17,10 +17,28 @@ namespace Romulus.Tests;
 /// committetem Audit-Sidecar (ADR-0024 §5 Reihenfolge) auf, dann appendet
 /// jeder produzierte Eintrag in den per-ROM Trail.
 /// </summary>
-public sealed class Wave7ProvenancePipelineProjectionTests
+public sealed class Wave7ProvenancePipelineProjectionTests : IDisposable
 {
     private const string AuditRunId = "audit-20260430-100000";
     private const string Ts = "2026-04-30T10:00:00.0000000Z";
+
+    private readonly List<string> _tempDirs = new();
+
+    private string CreateTempDir(string prefix)
+    {
+        var path = Path.Combine(Path.GetTempPath(), prefix + "-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        _tempDirs.Add(path);
+        return path;
+    }
+
+    public void Dispose()
+    {
+        foreach (var dir in _tempDirs)
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { }
+        }
+    }
 
     private static RomCandidate Cand(string path, string hash, string console = "NES",
         bool dat = false, FileCategory cat = FileCategory.Game)
@@ -191,39 +209,31 @@ public sealed class Wave7ProvenancePipelineProjectionTests
     [Fact]
     public void RollbackProjectEvents_EmitsRolledBack_ForExecutedRestoredPaths()
     {
-        var dir = Path.Combine(Path.GetTempPath(), "rom-w7-rollback-prov-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(dir);
-        try
+        var dir = CreateTempDir("rom-w7-rollback-prov");
+        var restoredPath = Path.Combine(dir, "a.nes");
+        var trashPath = Path.Combine(dir, "trash", "a.nes");
+        var auditPath = Path.Combine(dir, "audit-run.csv");
+        File.WriteAllLines(auditPath,
+        [
+            "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
+            $"C:/r,{restoredPath},{trashPath},Move,Game,aa11,winner,2026-05-01T00:00:00Z"
+        ]);
+
+        var rollback = new AuditRollbackResult
         {
-            var restoredPath = Path.Combine(dir, "a.nes");
-            var trashPath = Path.Combine(dir, "trash", "a.nes");
-            var auditPath = Path.Combine(dir, "audit-run.csv");
-            File.WriteAllLines(auditPath,
-            [
-                "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
-                $"C:/r,{restoredPath},{trashPath},Move,Game,aa11,winner,2026-05-01T00:00:00Z"
-            ]);
+            AuditCsvPath = auditPath,
+            DryRun = false,
+            RolledBack = 1,
+            RollbackAuditPath = Path.Combine(dir, "audit-run.rollback-audit.csv"),
+            RestoredPaths = [restoredPath]
+        };
 
-            var rollback = new AuditRollbackResult
-            {
-                AuditCsvPath = auditPath,
-                DryRun = false,
-                RolledBack = 1,
-                RollbackAuditPath = Path.Combine(dir, "audit-run.rollback-audit.csv"),
-                RestoredPaths = [restoredPath]
-            };
+        var events = ProvenanceRollbackAppender.ProjectEvents(rollback, "audit-run.rollback-audit", Ts);
 
-            var events = ProvenanceRollbackAppender.ProjectEvents(rollback, "audit-run.rollback-audit", Ts);
-
-            var ev = Assert.Single(events);
-            Assert.Equal(ProvenanceEventKind.RolledBack, ev.EventKind);
-            Assert.Equal("aa11", ev.Fingerprint);
-            Assert.Equal("audit-run.rollback-audit", ev.AuditRunId);
-            Assert.DoesNotContain(dir, ev.Detail ?? "", StringComparison.OrdinalIgnoreCase);
-        }
-        finally
-        {
-            try { Directory.Delete(dir, recursive: true); } catch { }
-        }
+        var ev = Assert.Single(events);
+        Assert.Equal(ProvenanceEventKind.RolledBack, ev.EventKind);
+        Assert.Equal("aa11", ev.Fingerprint);
+        Assert.Equal("audit-run.rollback-audit", ev.AuditRunId);
+        Assert.DoesNotContain(dir, ev.Detail ?? "", StringComparison.OrdinalIgnoreCase);
     }
 }

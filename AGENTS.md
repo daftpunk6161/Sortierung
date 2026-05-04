@@ -394,9 +394,31 @@ Wenn Code erzeugt wird, liefere vollstaendige, zusammenhaengende Aenderungen sta
 
 ---
 
-## Audit-Moratorium (Welle 1-3, gueltig bis 2026-05-28)
+## Solo-Mode (aktiv ab 2026-05-04)
 
-Im Geltungszeitraum von **2026-04-28 bis 2026-05-28** (Wellen 1-3 der strategischen Reduktion, siehe `docs/plan/strategic-reduction-2026/plan.yaml`) gilt ein hartes Moratorium gegen weitere Audit-Wucherung.
+Romulus ist ab 2026-05-04 bewusst im **Solo-Mode**: einzige aktive Nutzerin/Nutzer ist der Repo-Maintainer (daftpunk6161). Externalisierung (Beta-Cohort, Discovery-Loop, oeffentlicher Release) ist deferred bis Maintainer-Greenlight gemaess `docs/plan/strategic-reduction-2026/discovery-loop-playbook.md` Sektion "Solo-Mode und Externalisierungs-Greenlight".
+
+Konsequenzen fuer alle Aenderungen:
+- Identitaets-Guardrail (siehe unten) gilt im Solo-Mode **strenger**, nicht lockerer. Scope-Creep ist die Hauptgefahr in dieser Phase.
+- Keine Output-Sprints "weil-ich-Lust-habe". Jede neue Funktion muss die Identitaets-Frage klar mit Ja beantworten.
+- Keine Self-Validierung als Discovery-Loop-Ersatz. Maintainer-Nutzung ist nicht Beta-Validierung.
+- Vor jedem groesseren Feature-Vorschlag pruefen, ob er der Externalisierungs-Greenlight-Kriterien naeher bringt oder nur Komfort fuer Solo-Use.
+
+Sanktion: PRs, die diese Regeln verletzen, werden im Review abgelehnt.
+
+Owner: Repo-Maintainer (daftpunk6161). Aenderung dieser Regel nur per neuem ADR.
+
+---
+
+## Audit-Moratorium (Welle 1-3) — abgeloest durch Solo-Mode
+
+**Status ab 2026-05-04:** abgeloest. Das urspruenglich bis 2026-05-28 befristete Audit-Moratorium ist mit Eintritt in den Solo-Mode (siehe oben) **dauerhaft fortgesetzt**, aber inhaltlich angepasst:
+
+- Solo-Mode bedeutet: nur Maintainer arbeitet aktiv am Repo, daher gibt es keine Audit-Wucherungs-Dynamik mehr durch parallele Subagents.
+- Die Verbots-Liste unten gilt weiter als Default-Haltung (keine Sammel-Audits, keine Findings-Tracker auf Vorrat).
+- Bei Externalisierungs-Greenlight (Welle 12) wird die Moratoriums-Regel neu bewertet, NICHT automatisch reaktiviert.
+
+Urspruengliche Moratoriums-Regel (bleibt als Default-Haltung gueltig):
 
 **Verboten:**
 - neue Deep-Dive-Audits oder Repo-wide Audit-Berichte (`*audit*.md`, `*deep-dive*.md`, `*findings-tracker*.md`)

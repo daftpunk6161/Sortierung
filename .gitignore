@@ -4,6 +4,9 @@
 *.nupkg
 *.snupkg
 
+# ── Publish / Release Outputs (built by .github/workflows/release.yml, never committed) ──
+dist/
+
 # ── Generated Test & Coverage Artifacts ──
 coverage.xml
 test-err.txt
@@ -19,6 +22,19 @@ reports/
 # ── Audit-Logs: runtime-generated, never commit ──
 audit-logs/
 
+# ── Local artifacts / scratch directories (never committed) ──
+artifacts/
+.tmp/
+tools/
+
+# ── Local dev logs at root ──
+*.log
+
+# ── Node leftovers (Romulus uses no Node toolchain) ──
+node_modules/
+package.json
+package-lock.json
+
 # ── Generated docs ──
 docs/openapi.generated.json
 docs/archive/
@@ -32,4 +48,5 @@ Desktop.ini
 .DS_Store
 
 w4de_*.txt
+
 

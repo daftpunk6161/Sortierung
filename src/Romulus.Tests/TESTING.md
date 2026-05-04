@@ -1,8 +1,5 @@
 # Romulus.Tests - Konventionen
 
-> Quelle: Block E5 des Test-Suite-Remediation-Plans 2026-04-25
-> ([../../docs/audits/test-suite-remediation-plan-2026-04-25.md](../../docs/audits/test-suite-remediation-plan-2026-04-25.md))
-
 ## Test-Naming
 
 Schema: `Subject_Scenario_ExpectedBehavior`

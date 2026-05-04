@@ -167,3 +167,73 @@ verboten. Definition ≠ Durchführung.
 - Issue-Triage durch Backlog-Aufstauen ersetzen.
 - Loop verkürzen mit Begründung „Welle 5 wartet". Phase-2-Gate hängt
   am Loop-Abschluss; Verkürzung verletzt Gate-Acceptance.
+
+---
+
+## Solo-Mode und Externalisierungs-Greenlight (ab 2026-05-04)
+
+> **Status:** Solo-Mode aktiv. Discovery-Loop ist deferred (nicht
+> won't-fix-permanent), bis der Maintainer den Externalisierungs-Greenlight
+> erteilt. Siehe auch `AGENTS.md` Sektion „Solo-Mode".
+
+### Warum Solo-Mode
+
+Maintainer-Entscheidung 2026-05-04: Romulus wird vorlaeufig nur vom
+Maintainer selbst genutzt. Externe Validierung (Beta-Cohort, Discovery-Loop,
+Release fuer Dritte) startet erst, wenn die Greenlight-Kriterien unten
+erfuellt sind. Bis dahin gilt:
+
+- Beta-Akquise (T-W3-BETA-USERS) ist NICHT zu starten.
+- Discovery-Loop-Tracker (`discovery-loop-tracker.md`) wird NICHT mit
+  Maintainer-Selbstdaten gefuellt — Selbst-Validierung ist keine
+  Validierung.
+- Identitaets-Guardrail aus AGENTS.md gilt im Solo-Mode strenger als im
+  Team-Mode (Scope-Creep ist die Solo-Hauptgefahr).
+
+### Greenlight-Kriterien (alle muessen erfuellt sein)
+
+Erst wenn ALLE folgenden Punkte vom Maintainer schriftlich bestaetigt
+sind, darf eine Welle 12 (Externalisierungs-Welle) gestartet werden, die
+T-W3-BETA-USERS, T-W3-RUN-SMOKE-WITH-USERS und T-W4-DISCOVERY-LOOP
+reaktiviert:
+
+- [ ] **G-1 — Eigeneinsatz-Reife:** Mindestens 8 aufeinanderfolgende
+  Wochen produktiver Maintainer-Einsatz auf realer eigener Sammlung
+  ohne neuen P1-Bug (Datenverlust, Sicherheits-Issue, falsche
+  Winner-Selection, Preview/Execute-Divergenz).
+- [ ] **G-2 — Workflow-Ehrlichkeit:** Voller Standardablauf
+  (Add Library -> Scan -> Plan -> Confirm -> Execute -> Report -> Rollback)
+  mindestens 5 Mal vollstaendig ohne improvisierte Workarounds
+  durchlaufen. Jede gefundene Reibung ist entweder gefixt oder
+  bewusst als „bleibt im Solo-Mode tolerierbar, fuer Externalisierung
+  zu fixen" notiert.
+- [ ] **G-3 — Doku-Stand-Alone:** Eine fremde Person kann mit
+  README + GUI-Onboarding den Workflow starten, ohne Maintainer-Hilfe.
+  Dieser Punkt wird durch genau eine Trockenlese durch den Maintainer
+  validiert (kein Subagent-Audit).
+- [ ] **G-4 — Vertrauenswert (Selbsteinschaetzung):** Maintainer
+  beantwortet die KPI-4-Frage („Wuerden Sie Romulus auf Ihre echte
+  Hauptsammlung anwenden, ohne vorher eine Test-Kopie zu machen?")
+  ehrlich mit >= 4. Keine 5 ohne dass der Audit-Trail real geprueft
+  wurde.
+- [ ] **G-5 — Externalisierungs-Wille:** Maintainer hat die Kapazitaet
+  und den Willen, den Wochenrhythmus aus Sektion „Wochenrhythmus" oben
+  ueber mindestens 6 Wochen zu betreiben. Kein „start-and-pray".
+
+### Anti-Patterns im Solo-Mode
+
+- Solo-Mode als Begruendung fuer Output-Sprints („nur ich nutze es,
+  also kann ich basteln").
+- KPI-Schwellen aus Sektion „Outcome-KPIs" senken oder loeschen, weil
+  aktuell nicht relevant. Sie sind die Latte fuer spaeter.
+- Eigene Maintainer-Daten in `discovery-loop-tracker.md` eintragen.
+- „Fuer-spaeter"-Features im Solo-Mode bauen ohne Identitaets-Check.
+- Greenlight nachtraeglich aufweichen, weil ein Kriterium unbequem ist.
+
+### Re-Bewertung
+
+Greenlight-Status wird nicht regelmaessig geprueft. Maintainer
+entscheidet aus eigenem Antrieb, wann er die Kriterien fuer erfuellt
+haelt. Wenn der Solo-Mode laenger als 12 Monate ohne Greenlight-Pruefung
+laeuft, ist eine bewusste Sunset-Entscheidung (Tool einfrieren,
+Sicherheits-Patches only) zu pruefen — keine stille Fortsetzung.

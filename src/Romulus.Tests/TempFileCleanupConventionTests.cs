@@ -19,7 +19,6 @@ namespace Romulus.Tests;
 public sealed class TempFileCleanupConventionTests
 {
     // Allowlist: Bestand am 2026-05-01 nach F-2/F-3/F-4 + Hang-Fixes.
-    // Quelle: docs/audits/critic-findings (artifacts/critic-findings.md F-7).
     // Reduktion erlaubt + erwuenscht. Erweiterung durch CI-Roten-Test blockiert.
     private static readonly string[] LegacyAllowlist =
     [

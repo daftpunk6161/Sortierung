@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
-  <rect width="1280" height="720" fill="#0d0d1f"/>
-  <rect x="40" y="40" width="1200" height="160" fill="#13133a" stroke="#2d2d5a"/>
-  <rect x="40" y="220" width="1200" height="460" fill="#0a0a1a" stroke="#2d2d5a"/>
-  <text x="70" y="95" fill="#00f5ff" font-family="Segoe UI" font-size="28">Log & Ergebnis-Dashboard</text>
-  <text x="70" y="260" fill="#e8e8f8" font-family="Consolas" font-size="18">[INFO] Lauf gestartet…</text>
-</svg>

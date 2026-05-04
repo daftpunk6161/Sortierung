@@ -1,6 +1,0 @@
-Advanced.DuplicateInspector
-Advanced.DuplicateExport
-Cmd.PluginNoDir
-Cmd.PluginTitle
-Cmd.PluginHeader
-Cmd.PluginNone
