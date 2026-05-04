@@ -48,7 +48,10 @@ public sealed class ShellViewModel : ObservableObject
         _commandRequery = commandRequery;
     }
 
-    // ═══ NAVIGATION (GUI-061 → Phase 1: 5-area shell) ═══════════════════
+    // ═══ NAVIGATION (T-W1-LAYOUT-P7: 4-area shell) ══════════════════════
+    // 0=MissionControl, 1=Library, 2=Tools, 3=System.
+    // Pipeline ist kein eigener NavTag mehr; lebt als Tools-SubTab "Pipeline"
+    // (PipelineWorkbenchView mit internen Tabs Conversion/Sorting/Batch).
     private int _selectedNavIndex;
     public int SelectedNavIndex
     {
@@ -72,24 +75,28 @@ public sealed class ShellViewModel : ObservableObject
         {
             0 => MissionControlTag,
             1 => LibraryTag,
-            2 => PipelineTag,
-            3 => ToolsTag,
-            4 => SystemTag,
+            2 => ToolsTag,
+            3 => SystemTag,
             _ => MissionControlTag
         };
         set
         {
-            int idx = NormalizeNavTag(value) switch
+            var raw = value;
+            int idx = NormalizeNavTag(raw) switch
             {
                 MissionControlTag => 0,
                 LibraryTag => 1,
-                PipelineTag => 2,
-                ToolsTag => 3,
-                SystemTag => 4,
+                ToolsTag => 2,
+                SystemTag => 3,
+                // PipelineTag wird durch NormalizeNavTag auf ToolsTag gemappt;
                 // ConfigTag entfaellt: NormalizeNavTag mappt es bereits auf SystemTag (T-W1-LAYOUT-P3).
                 _ => 0
             };
             SelectedNavIndex = idx;
+            // Legacy-Migration: Pipeline-NavTag landet auf Tools, soll dort
+            // direkt den Pipeline-SubTab oeffnen statt des Features-Defaults.
+            if (string.Equals(raw, PipelineTag, StringComparison.Ordinal) && !IsSimpleMode)
+                SelectedSubTab = "Pipeline";
         }
     }
 
@@ -131,7 +138,6 @@ public sealed class ShellViewModel : ObservableObject
 
     public bool ShowMissionControlNav => true;
     public bool ShowLibraryNav => true;
-    public bool ShowPipelineNav => !IsSimpleMode;
     public bool ShowConfigNav => false;
     public bool ShowToolsNav => !IsSimpleMode;
     public bool ShowSystemNav => true;
@@ -158,12 +164,10 @@ public sealed class ShellViewModel : ObservableObject
     public bool ShowToolsFeaturesTab => true;
     public bool ShowToolsDatManagementTab => true;
     public bool ShowToolsPolicyTab => !IsSimpleMode;
+    // T-W1-LAYOUT-P7: Pipeline ist jetzt EIN Tools-SubTab (Expert-only).
+    public bool ShowToolsPipelineTab => !IsSimpleMode;
     public bool ShowToolsConversionTab => false;
     public bool ShowToolsGameKeyLabTab => false;
-
-    public bool ShowPipelineConversionTab => true;
-    public bool ShowPipelineSortingTab => true;
-    public bool ShowPipelineBatchTab => !IsSimpleMode;
 
     public bool ShowSystemActivityLogTab => false;
     public bool ShowSystemAppearanceTab => true;
@@ -174,7 +178,6 @@ public sealed class ShellViewModel : ObservableObject
     {
         MissionControlTag => "Mission Control",
         LibraryTag => "Library",
-        PipelineTag => "Pipeline",
         ToolsTag => "Werkzeugkatalog",
         SystemTag => "System",
         _ => "Mission Control"
@@ -196,6 +199,7 @@ public sealed class ShellViewModel : ObservableObject
         "Features" => "Werkzeuge & Features",
         "DatManagement" => "DAT-Verwaltung",
         "Policy" => "Policy Governance",
+        "Pipeline" => "Pipeline",
         "Conversion" => "Conversion",
         "Sorting" => "Sorting",
         "Batch" => "Batch",
@@ -211,7 +215,8 @@ public sealed class ShellViewModel : ObservableObject
     {
         MissionControlTag or "Start" => MissionControlTag,
         LibraryTag or "Analyse" => LibraryTag,
-        PipelineTag => PipelineTag,
+        // T-W1-LAYOUT-P7 (2026-05): Pipeline kollabiert in Tools-SubTab.
+        PipelineTag => ToolsTag,
         // T-W1-LAYOUT-P3 (2026-05): Setup-Tabs (Regions/Options/Profiles) leben
         // jetzt unter System. Legacy-Alias "Config"/"Setup" routet entsprechend mit.
         ConfigTag or "Setup" => SystemTag,
@@ -221,18 +226,12 @@ public sealed class ShellViewModel : ObservableObject
     };
 
     private int CoerceNavIndex(int requestedIndex)
-    {
-        if (!IsSimpleMode)
-            return requestedIndex is >= 0 and <= 4 ? requestedIndex : 0;
-
-        return requestedIndex is >= 0 and <= 4 ? requestedIndex : 0;
-    }
+        => requestedIndex is >= 0 and <= 3 ? requestedIndex : 0;
 
     private string GetDefaultSubTab(string navTag) => NormalizeNavTag(navTag) switch
     {
         MissionControlTag => "Dashboard",
         LibraryTag => "Results",
-        PipelineTag => "Conversion",
         ToolsTag => "Features",
         SystemTag => "Appearance",
         _ => "Dashboard"
@@ -242,6 +241,14 @@ public sealed class ShellViewModel : ObservableObject
     {
         var normalizedNavTag = NormalizeNavTag(navTag);
         var requestedSubTab = subTab ?? string.Empty;
+        // T-W1-LAYOUT-P7: Legacy-Pipeline-SubTab-Namen unter Tools migrieren
+        // verlustfrei auf den neuen Tools/"Pipeline"-Slot, sodass persistierte
+        // Settings keine ungueltigen Tabs hinterlassen.
+        if (string.Equals(normalizedNavTag, ToolsTag, StringComparison.Ordinal)
+            && requestedSubTab is "Conversion" or "Sorting" or "Batch")
+        {
+            return IsSimpleMode ? GetDefaultSubTab(ToolsTag) : "Pipeline";
+        }
         if (IsSubTabAllowed(normalizedNavTag, requestedSubTab))
             return requestedSubTab;
 
@@ -256,11 +263,9 @@ public sealed class ShellViewModel : ObservableObject
         LibraryTag => !IsSimpleMode
             ? subTab is "Results" or "Decisions" or "Safety" or "Inbox" or "DatAudit"
             : subTab is "Results" or "Safety" or "Inbox",
-        PipelineTag => !IsSimpleMode
-            ? subTab is "Conversion" or "Sorting" or "Batch"
-            : false,
+        // T-W1-LAYOUT-P7: "Pipeline" ist Expert-only (PipelineWorkbench enthaelt Batch).
         ToolsTag => !IsSimpleMode
-            ? subTab is "Features" or "ExternalTools" or "DatManagement" or "Policy"
+            ? subTab is "Features" or "ExternalTools" or "DatManagement" or "Policy" or "Pipeline"
             : subTab is "Features" or "ExternalTools" or "DatManagement",
         // T-W1-LAYOUT-P3: Setup-Tabs leben jetzt hier.
         // Profiles bleibt Expert-only (vorher ShowMissionProfilesTab Logik).
@@ -274,9 +279,6 @@ public sealed class ShellViewModel : ObservableObject
     {
         var currentNavTag = NormalizeNavTag(SelectedNavTag);
         var coercedNavTag = currentNavTag;
-
-        if (IsSimpleMode && string.Equals(coercedNavTag, PipelineTag, StringComparison.Ordinal))
-            coercedNavTag = MissionControlTag;
 
         if (IsSimpleMode && string.Equals(coercedNavTag, ToolsTag, StringComparison.Ordinal))
             coercedNavTag = MissionControlTag;
@@ -296,7 +298,6 @@ public sealed class ShellViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ShowMissionControlNav));
         OnPropertyChanged(nameof(ShowLibraryNav));
-        OnPropertyChanged(nameof(ShowPipelineNav));
         OnPropertyChanged(nameof(ShowConfigNav));
         OnPropertyChanged(nameof(ShowToolsNav));
         OnPropertyChanged(nameof(ShowSystemNav));
@@ -320,12 +321,9 @@ public sealed class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowToolsFeaturesTab));
         OnPropertyChanged(nameof(ShowToolsDatManagementTab));
         OnPropertyChanged(nameof(ShowToolsPolicyTab));
+        OnPropertyChanged(nameof(ShowToolsPipelineTab));
         OnPropertyChanged(nameof(ShowToolsConversionTab));
         OnPropertyChanged(nameof(ShowToolsGameKeyLabTab));
-
-        OnPropertyChanged(nameof(ShowPipelineConversionTab));
-        OnPropertyChanged(nameof(ShowPipelineSortingTab));
-        OnPropertyChanged(nameof(ShowPipelineBatchTab));
 
         OnPropertyChanged(nameof(ShowSystemActivityLogTab));
         OnPropertyChanged(nameof(ShowSystemAppearanceTab));
@@ -376,9 +374,8 @@ public sealed class ShellViewModel : ObservableObject
         {
             MissionControlTag => 0,
             LibraryTag => 1,
-            PipelineTag => 2,
-            ToolsTag => 3,
-            SystemTag => 4,
+            ToolsTag => 2,
+            SystemTag => 3,
             _ => 0
         };
 
@@ -390,6 +387,10 @@ public sealed class ShellViewModel : ObservableObject
             _navForward.Clear();
         }
         SelectedNavIndex = newIndex;
+        // Legacy-Migration: Pipeline-NavTag landet auf Tools, soll dort
+        // direkt den Pipeline-SubTab oeffnen (vgl. SelectedNavTag-Setter).
+        if (string.Equals(tag, PipelineTag, StringComparison.Ordinal) && !IsSimpleMode)
+            SelectedSubTab = "Pipeline";
     }
 
     public void NavGoBack()

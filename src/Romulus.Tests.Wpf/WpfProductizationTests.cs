@@ -385,7 +385,11 @@ public sealed class WpfProductizationTests : IDisposable
         Assert.DoesNotContain("ConverterParameter=Filtering", subTabBarXaml);
         Assert.DoesNotContain("ConverterParameter=Report", subTabBarXaml);
         Assert.Contains("ConverterParameter=DatManagement", subTabBarXaml);
-        Assert.Contains("ConverterParameter=Conversion", subTabBarXaml);
+        // T-W1-LAYOUT-P7: Pipeline ist jetzt EIN Tools-SubTab; Conversion/Sorting/Batch leben
+        // intern in PipelineWorkbenchView und tauchen nicht mehr in der SubTabBar auf.
+        Assert.DoesNotContain("ConverterParameter=Conversion", subTabBarXaml);
+        Assert.DoesNotContain("ConverterParameter=Sorting", subTabBarXaml);
+        Assert.DoesNotContain("ConverterParameter=Batch", subTabBarXaml);
         Assert.DoesNotContain("ConverterParameter=GameKeyLab", subTabBarXaml);
         Assert.DoesNotContain("ConfigFiltersView", mainWindowXaml);
         Assert.DoesNotContain("LibraryReportView", mainWindowXaml);
@@ -473,16 +477,16 @@ public sealed class WpfProductizationTests : IDisposable
     [Fact]
     public void Phase3_PipelineArea_IsPresentInNavigationSubTabsAndMainContent()
     {
+        // T-W1-LAYOUT-P7 (2026-05-04): Pipeline kollabiert von eigenem NavTag
+        // zu einem einzelnen Tools-SubTab. NavRail hat 4 Slots, kein Pipeline-Button.
+        // PipelineWorkbenchView lebt jetzt im Tools-Grid, gegated auf SubTab=Pipeline.
         var navigationRailXaml = File.ReadAllText(FindUiFile("Views", "NavigationRail.xaml"));
         var subTabBarXaml = File.ReadAllText(FindUiFile("Views", "SubTabBar.xaml"));
         var mainWindowXaml = File.ReadAllText(FindUiFile("", "MainWindow.xaml"));
 
-        Assert.Contains("Shell.ShowPipelineNav", navigationRailXaml);
-        Assert.Contains("ConverterParameter=Pipeline", navigationRailXaml);
+        Assert.DoesNotContain("Shell.ShowPipelineNav", navigationRailXaml);
+        Assert.DoesNotContain("ConverterParameter=Pipeline", navigationRailXaml);
         Assert.Contains("ConverterParameter=Pipeline", subTabBarXaml);
-        Assert.Contains("ConverterParameter=Conversion", subTabBarXaml);
-        Assert.Contains("ConverterParameter=Sorting", subTabBarXaml);
-        Assert.Contains("ConverterParameter=Batch", subTabBarXaml);
         Assert.Contains("<views:PipelineWorkbenchView", mainWindowXaml, StringComparison.Ordinal);
     }
 

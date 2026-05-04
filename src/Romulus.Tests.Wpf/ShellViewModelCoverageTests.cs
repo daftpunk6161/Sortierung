@@ -6,7 +6,8 @@ namespace Romulus.Tests;
 
 /// <summary>
 /// Coverage tests for ShellViewModel:
-/// Navigation (5-area shell, sub-tabs, history), Simple/Expert mode coercion,
+/// Navigation (4-area shell post T-W1-LAYOUT-P7: MissionControl/Library/Tools/System;
+/// Pipeline kollabiert als Tools-SubTab), sub-tabs, history, Simple/Expert mode coercion,
 /// wizard flow (3 steps), overlay toggles, workspace projections, compact mode.
 /// </summary>
 public sealed class ShellViewModelCoverageTests
@@ -19,9 +20,8 @@ public sealed class ShellViewModelCoverageTests
     [Theory]
     [InlineData(0, "MissionControl")]
     [InlineData(1, "Library")]
-    [InlineData(2, "Pipeline")]
-    [InlineData(3, "Tools")]
-    [InlineData(4, "System")]
+    [InlineData(2, "Tools")]
+    [InlineData(3, "System")]
     public void SelectedNavIndex_MapsToCorrectTag(int index, string expectedTag)
     {
         var vm = Create();
@@ -32,10 +32,10 @@ public sealed class ShellViewModelCoverageTests
     [Theory]
     [InlineData("MissionControl", 0)]
     [InlineData("Library", 1)]
-    // T-W1-LAYOUT-P3: Legacy-Alias "Config" zeigt jetzt auf System, nicht mehr MissionControl.
-    [InlineData("Config", 4)]
-    [InlineData("Tools", 3)]
-    [InlineData("System", 4)]
+    // T-W1-LAYOUT-P3: Legacy-Alias "Config" zeigt jetzt auf System.
+    [InlineData("Config", 3)]
+    [InlineData("Tools", 2)]
+    [InlineData("System", 3)]
     public void SelectedNavTag_SetsCorrectIndex(string tag, int expectedIndex)
     {
         var vm = Create();
@@ -49,6 +49,9 @@ public sealed class ShellViewModelCoverageTests
     // T-W1-LAYOUT-P3: "Setup" zeigt jetzt auf System (Setup-Tabs leben dort).
     [InlineData("Setup", "System")]
     [InlineData("Log", "System")]
+    // T-W1-LAYOUT-P7: Pipeline kollabiert in Tools (4-NavTag-Shell);
+    // "Pipeline" Legacy-Alias routet auf Tools-Bucket, SubTab "Pipeline".
+    [InlineData("Pipeline", "Tools")]
     public void SelectedNavTag_NormalizesLegacyAliases(string alias, string expectedTag)
     {
         var vm = Create();
@@ -251,6 +254,56 @@ public sealed class ShellViewModelCoverageTests
         Assert.Equal("Appearance", vm.SelectedSubTab);
     }
 
+    // ── T-W1-LAYOUT-P7: Pipeline kollabiert in Tools-Bucket ────────────
+    // Pipeline-NavTag ist tot; Pipeline-Funktion lebt als Tools-SubTab "Pipeline"
+    // (gerendert von PipelineWorkbenchView mit eigenen internen Tabs).
+    [Fact]
+    public void Pipeline_LegacyNavTag_RoutesToToolsPipelineSubTab()
+    {
+        var vm = Create();
+        vm.IsSimpleMode = false;
+        vm.SelectedNavTag = "Pipeline";
+        Assert.Equal("Tools", vm.SelectedNavTag);
+        Assert.Equal(2, vm.SelectedNavIndex);
+        Assert.Equal("Pipeline", vm.SelectedSubTab);
+    }
+
+    [Fact]
+    public void Tools_PipelineSubTab_AllowedInExpertMode()
+    {
+        var vm = Create();
+        vm.IsSimpleMode = false;
+        vm.SelectedNavTag = "Tools";
+        vm.SelectedSubTab = "Pipeline";
+        Assert.Equal("Pipeline", vm.SelectedSubTab);
+    }
+
+    [Fact]
+    public void Tools_PipelineSubTab_RejectedInSimpleMode()
+    {
+        var vm = Create();
+        vm.IsSimpleMode = false;
+        vm.SelectedNavTag = "Tools";
+        // SimpleMode aktivieren -> ToolsTag wird auf MissionControl koerziert.
+        vm.IsSimpleMode = true;
+        Assert.Equal("MissionControl", vm.SelectedNavTag);
+    }
+
+    [Theory]
+    [InlineData("Conversion")]
+    [InlineData("Sorting")]
+    [InlineData("Batch")]
+    public void Tools_LegacyPipelineSubTabs_MigrateToPipelineSubTab(string legacySubTab)
+    {
+        var vm = Create();
+        vm.IsSimpleMode = false;
+        vm.SelectedNavTag = "Tools";
+        vm.SelectedSubTab = legacySubTab;
+        // T-W1-LAYOUT-P7: persistierte Settings mit alten Pipeline-SubTab-Namen
+        // müssen verlustfrei auf den neuen Tools/"Pipeline"-Slot mappen.
+        Assert.Equal("Pipeline", vm.SelectedSubTab);
+    }
+
     #endregion
 
     #region Simple / Expert Mode
@@ -400,7 +453,7 @@ public sealed class ShellViewModelCoverageTests
         var vm = Create();
         vm.NavigateTo("Library");
         vm.NavigateTo("Tools");
-        Assert.Equal(3, vm.SelectedNavIndex);
+        Assert.Equal(2, vm.SelectedNavIndex);
 
         vm.NavGoBack();
         Assert.Equal(1, vm.SelectedNavIndex);
@@ -418,7 +471,7 @@ public sealed class ShellViewModelCoverageTests
         Assert.Equal(1, vm.SelectedNavIndex);
 
         vm.NavGoForward();
-        Assert.Equal(3, vm.SelectedNavIndex);
+        Assert.Equal(2, vm.SelectedNavIndex);
         Assert.False(vm.CanNavForward);
     }
 
@@ -477,16 +530,16 @@ public sealed class ShellViewModelCoverageTests
         vm.NavigateTo("System");
 
         vm.NavGoBack();
-        Assert.Equal(3, vm.SelectedNavIndex); // Tools
+        Assert.Equal(2, vm.SelectedNavIndex); // Tools
 
         vm.NavGoBack();
         Assert.Equal(1, vm.SelectedNavIndex); // Library
 
         vm.NavGoForward();
-        Assert.Equal(3, vm.SelectedNavIndex); // Tools
+        Assert.Equal(2, vm.SelectedNavIndex); // Tools
 
         vm.NavGoForward();
-        Assert.Equal(4, vm.SelectedNavIndex); // System
+        Assert.Equal(3, vm.SelectedNavIndex); // System
     }
 
     #endregion
@@ -675,7 +728,8 @@ public sealed class ShellViewModelCoverageTests
     [Theory]
     [InlineData("MissionControl", "Mission Control")]
     [InlineData("Library", "Library")]
-    [InlineData("Pipeline", "Pipeline")]
+    // T-W1-LAYOUT-P7: Pipeline kollabiert in Tools.
+    [InlineData("Pipeline", "Werkzeugkatalog")]
     // T-W1-LAYOUT-P3: "Config" alias zeigt jetzt auf System.
     [InlineData("Config", "System")]
     [InlineData("Tools", "Werkzeugkatalog")]

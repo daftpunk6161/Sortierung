@@ -134,15 +134,14 @@
                   Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=DatAudit}"/>
             </Grid>
 
-                <!-- ── Pipeline (sub-tab-aware) ────────────────────── -->
-                <Grid Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Pipeline}"
-                  KeyboardNavigation.TabIndex="53">
-                  <views:PipelineWorkbenchView/>
-                </Grid>
+                <!-- T-W1-LAYOUT-P7: Pipeline kollabiert in Tools-SubTab; PipelineWorkbenchView
+                     lebt jetzt unten im Tools-Grid, gegated auf SubTab=Pipeline. -->
 
             <!-- ── Tools (sub-tab-aware) ───────────────────────── -->
             <Grid Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}"
                   KeyboardNavigation.TabIndex="54">
+              <views:PipelineWorkbenchView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Pipeline}"/>
               <views:ExternalToolsView
                   Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=ExternalTools}"/>
               <views:ToolsView DataContext="{Binding Tools}"

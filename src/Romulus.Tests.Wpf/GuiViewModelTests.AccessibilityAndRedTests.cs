@@ -2270,7 +2270,10 @@ public partial class GuiViewModelTests
         Assert.DoesNotContain("ConverterParameter=Filtering", content);
         Assert.DoesNotContain("ConverterParameter=Report", content);
         Assert.Contains("ConverterParameter=DatManagement", content);
-        Assert.Contains("ConverterParameter=Conversion", content);
+        // T-W1-LAYOUT-P7: Pipeline ist jetzt EIN Tools-SubTab; Conversion/Sorting/Batch
+        // wurden in PipelineWorkbenchView interniert und sind nicht mehr in der SubTabBar.
+        Assert.DoesNotContain("ConverterParameter=Conversion", content);
+        Assert.Contains("ConverterParameter=Pipeline", content);
         Assert.DoesNotContain("ConverterParameter=GameKeyLab", content);
     }
 
