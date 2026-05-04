@@ -893,6 +893,14 @@
   "Context.SystemHealth": "System Health",
 
   "Drawer.LogStream": "Log Stream",
+  "Inspector.ShowLabel": "Show Inspector (right)",
+  "Inspector.HideLabel": "Hide Inspector (right)",
+  "Inspector.Tooltip": "Toggle right-side Inspector panel (Ctrl+I)",
+  "Drawer.Tooltip": "Toggle bottom Log Stream (Ctrl+J)",
+  "Nav.SubTab.ExternalTools": "External Tools",
+  "Nav.SubTab.Features": "Features",
+  "Nav.SubTab.SystemAbout": "System",
+  "Nav.SubTab.AuditViewer": "Audit",
   "Drawer.Clear": "Clear",
   "Drawer.Close": "Close",
 

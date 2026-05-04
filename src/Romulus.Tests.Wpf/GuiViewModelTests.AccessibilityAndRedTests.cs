@@ -2013,27 +2013,44 @@ public partial class GuiViewModelTests
     }
 
     [Fact]
-    public void MainWindow_ActionRailRow_MatchesDesignToken()
+    public void MainWindow_HasNoActionRailRow_AfterUiReduction()
+    {
+        // T-W1-LAYOUT-C1 (2026-05): Die Row 3 (ActionRail) wurde in T-W1-UI-REDUCTION
+        // bereits funktional entfernt; der leere Placeholder-Grid + RowDefinition Auto
+        // wurden in C1 nachgezogen. Pin verhindert dass jemand den toten Layout-Slot
+        // ohne Auftrag wieder einfuehrt.
+        var windowPath = FindWpfFile("MainWindow.xaml");
+        var content = File.ReadAllText(windowPath);
+
+        Assert.DoesNotContain("Row 3: ActionRail", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("ROW 3: leeres Platzhalter-Grid", content, StringComparison.Ordinal);
+
+        // Genau 3 RowDefinitions im Shell-Grid (Row 0 CommandBar / Row 1 Main / Row 2 Detail Drawer).
+        // Wir matchen den Block direkt nach dem SHELL LAYOUT-Marker, damit verschachtelte
+        // RowDefinitions (z.B. im DetailDrawer-Grid) nicht mitgezaehlt werden.
+        var shellRows = System.Text.RegularExpressions.Regex.Match(
+            content,
+            @"SHELL LAYOUT[^<]*<Grid>\s*<Grid\.RowDefinitions>(?<body>.*?)</Grid\.RowDefinitions>",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        Assert.True(shellRows.Success, "Shell-Grid RowDefinitions block not found");
+        var rowDefs = System.Text.RegularExpressions.Regex.Matches(
+            shellRows.Groups["body"].Value, @"<RowDefinition\s+Height=""[^""]+""\s*/>");
+        Assert.Equal(3, rowDefs.Count);
+    }
+
+    // ═══ Phase 9 / P11: Size-Pin ════════════════════════════════════════
+    // Schuetzt MainWindow Default- und Min-Groesse vor stillen Aenderungen.
+    // Werte stammen aus dem aktuellen UX-Stand (T-W1-UI-REDUCTION) und
+    // sind bewusst hart festgepinnt. Wer das Layout legitim aufmacht,
+    // muss diesen Test bewusst aktualisieren.
+    [Fact]
+    public void MainWindow_HasPinnedDefaultAndMinimumSize()
     {
         var windowPath = FindWpfFile("MainWindow.xaml");
         var content = File.ReadAllText(windowPath);
-        // Row 3 should use a dynamic resource or be at least 84
-        var match = System.Text.RegularExpressions.Regex.Match(
-            content, @"<!-- Row 3: ActionRail -->\s*</RowDefinitions>|Height=""(\d+)""\s*/>\s*<!-- Row 3");
-        // Find the last RowDefinition (Row 3)
-        var rowMatches = System.Text.RegularExpressions.Regex.Matches(
-            content, @"<RowDefinition\s+Height=""(\d+)""/>");
-        // Row 3 is the 4th RowDefinition (index 3) — the one with hardcoded height for ActionRail
-        var rowDefs = System.Text.RegularExpressions.Regex.Matches(
-            content, @"<RowDefinition\s+Height=""([^""]+)""\s*/>");
-        Assert.True(rowDefs.Count >= 4, "Expected at least 4 RowDefinitions in MainWindow.xaml");
-        var row3Height = rowDefs[3].Groups[1].Value;
-        // Should be "84" or a dynamic resource reference
-        if (int.TryParse(row3Height, out var h))
-        {
-            Assert.True(h >= 84,
-                $"MainWindow Row 3 Height is {h}px but must be ≥ 84px to match ActionRailHeight token");
-        }
+
+        Assert.Contains("Width=\"1280\" Height=\"860\"", content, StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"960\" MinHeight=\"720\"", content, StringComparison.Ordinal);
     }
 
     // ═══ BUG-FIX: Theme button shows NEXT theme instead of current ══════
@@ -2134,7 +2151,7 @@ public partial class GuiViewModelTests
         var shell = new ShellViewModel(new LocalizationService());
 
         Assert.False(shell.ShowContextWing);
-        Assert.Equal("Inspector einblenden", shell.ContextToggleLabel);
+        Assert.Equal("Inspector (rechts) ein", shell.ContextToggleLabel);
     }
 
     [Fact]
@@ -2155,6 +2172,88 @@ public partial class GuiViewModelTests
         Assert.Contains("Title=\"Romulus\"", xaml);
         Assert.DoesNotContain("ShowSmartActionBar", xaml);
         Assert.DoesNotContain("SmartActionBar", xaml);
+    }
+
+    // ═══ Phase 7 / P3: MissionControl entmischen ═════════════════════════
+    // Setup-Tabs (Regions/Options/Profiles) leben unter System, nicht mehr
+    // unter MissionControl. StartView braucht keine Negativ-Trigger mehr.
+    [Fact]
+    public void Phase7_P3_SetupViewsLiveUnderSystemNavTag_NotMissionControl()
+    {
+        var windowPath = FindWpfFile("MainWindow.xaml");
+        var content = File.ReadAllText(windowPath);
+
+        // ConfigRegionsView/Options/Profiles muessen im System-Bucket gerendert werden.
+        var systemBucketMatch = System.Text.RegularExpressions.Regex.Match(
+            content,
+            @"ConverterParameter=System.*?(?=ConverterParameter=(?:MissionControl|Library|Pipeline|Tools)|</Grid>)",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        Assert.True(systemBucketMatch.Success, "System-Bucket nicht gefunden");
+
+        Assert.Contains("ConfigRegionsView", systemBucketMatch.Value);
+        Assert.Contains("ConfigOptionsView", systemBucketMatch.Value);
+        Assert.Contains("ConfigProfilesView", systemBucketMatch.Value);
+
+        // MissionControl-Bucket darf die Setup-Views NICHT mehr enthalten.
+        var missionBucketMatch = System.Text.RegularExpressions.Regex.Match(
+            content,
+            @"ConverterParameter=MissionControl.*?(?=ConverterParameter=(?:Library|Pipeline|Tools|System)|</Grid>)",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        Assert.True(missionBucketMatch.Success, "MissionControl-Bucket nicht gefunden");
+
+        Assert.DoesNotContain("ConfigRegionsView", missionBucketMatch.Value);
+        Assert.DoesNotContain("ConfigOptionsView", missionBucketMatch.Value);
+        Assert.DoesNotContain("ConfigProfilesView", missionBucketMatch.Value);
+    }
+
+    [Fact]
+    public void Phase7_P3_StartView_HasNoNegativeSubTabTriggers()
+    {
+        // StartView wurde frueher per drei DataTrigger Visibility=Collapsed
+        // ausgeblendet wenn der SubTab Regions/Options/Profiles war. Nach P3
+        // gehoeren diese SubTabs gar nicht mehr in den MissionControl-Bucket;
+        // die Schattenlogik muss weg.
+        var windowPath = FindWpfFile("MainWindow.xaml");
+        var content = File.ReadAllText(windowPath);
+
+        Assert.DoesNotMatch(
+            new System.Text.RegularExpressions.Regex(
+                @"<DataTrigger\s+Binding=""\{Binding\s+Shell\.SelectedSubTab\}""\s+Value=""(Regions|Options|Profiles)"">"),
+            content);
+    }
+
+    [Fact]
+    public void Phase7_P3_ShellViewModel_MissionControl_RejectsSetupSubTabs()
+    {
+        var vm = new Romulus.UI.Wpf.ViewModels.ShellViewModel(new Romulus.UI.Wpf.Services.LocalizationService());
+        vm.IsSimpleMode = false;
+        vm.SelectedNavTag = "MissionControl";
+
+        vm.SelectedSubTab = "Regions";
+        Assert.Equal("Dashboard", vm.SelectedSubTab);
+
+        vm.SelectedSubTab = "Options";
+        Assert.Equal("Dashboard", vm.SelectedSubTab);
+
+        vm.SelectedSubTab = "Profiles";
+        Assert.Equal("Dashboard", vm.SelectedSubTab);
+    }
+
+    [Fact]
+    public void Phase7_P3_ShellViewModel_System_AcceptsSetupSubTabs()
+    {
+        var vm = new Romulus.UI.Wpf.ViewModels.ShellViewModel(new Romulus.UI.Wpf.Services.LocalizationService());
+        vm.IsSimpleMode = false;
+        vm.SelectedNavTag = "System";
+
+        vm.SelectedSubTab = "Regions";
+        Assert.Equal("Regions", vm.SelectedSubTab);
+
+        vm.SelectedSubTab = "Options";
+        Assert.Equal("Options", vm.SelectedSubTab);
+
+        vm.SelectedSubTab = "Profiles";
+        Assert.Equal("Profiles", vm.SelectedSubTab);
     }
 
     [Fact]

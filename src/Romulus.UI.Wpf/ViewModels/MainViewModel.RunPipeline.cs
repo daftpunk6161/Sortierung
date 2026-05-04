@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows.Input;
 using Romulus.Contracts;
@@ -495,31 +496,88 @@ public sealed partial class MainViewModel
 
     // ═══ STATUS INDICATORS ══════════════════════════════════════════════
     private string _statusRoots = "–";
-    public string StatusRoots { get => _statusRoots; set => SetProperty(ref _statusRoots, value); }
+    public string StatusRoots
+    {
+        get => _statusRoots;
+        set { if (SetProperty(ref _statusRoots, value)) OnPropertyChanged(nameof(AggregateStatusTooltip)); }
+    }
 
     private string _statusTools = "–";
-    public string StatusTools { get => _statusTools; set => SetProperty(ref _statusTools, value); }
+    public string StatusTools
+    {
+        get => _statusTools;
+        set { if (SetProperty(ref _statusTools, value)) OnPropertyChanged(nameof(AggregateStatusTooltip)); }
+    }
 
     private string _statusDat = "–";
-    public string StatusDat { get => _statusDat; set => SetProperty(ref _statusDat, value); }
+    public string StatusDat
+    {
+        get => _statusDat;
+        set { if (SetProperty(ref _statusDat, value)) OnPropertyChanged(nameof(AggregateStatusTooltip)); }
+    }
 
     private string _statusReady = "–";
-    public string StatusReady { get => _statusReady; set => SetProperty(ref _statusReady, value); }
+    public string StatusReady
+    {
+        get => _statusReady;
+        set { if (SetProperty(ref _statusReady, value)) OnPropertyChanged(nameof(AggregateStatusTooltip)); }
+    }
 
     private string _statusRuntime = "–";
     public string StatusRuntime { get => _statusRuntime; set => SetProperty(ref _statusRuntime, value); }
 
     private StatusLevel _rootsStatusLevel = StatusLevel.Missing;
-    public StatusLevel RootsStatusLevel { get => _rootsStatusLevel; set => SetProperty(ref _rootsStatusLevel, value); }
+    public StatusLevel RootsStatusLevel
+    {
+        get => _rootsStatusLevel;
+        set { if (SetProperty(ref _rootsStatusLevel, value)) RaiseAggregateStatusChanged(); }
+    }
 
     private StatusLevel _toolsStatusLevel = StatusLevel.Missing;
-    public StatusLevel ToolsStatusLevel { get => _toolsStatusLevel; set => SetProperty(ref _toolsStatusLevel, value); }
+    public StatusLevel ToolsStatusLevel
+    {
+        get => _toolsStatusLevel;
+        set { if (SetProperty(ref _toolsStatusLevel, value)) RaiseAggregateStatusChanged(); }
+    }
 
     private StatusLevel _datStatusLevel = StatusLevel.Missing;
-    public StatusLevel DatStatusLevel { get => _datStatusLevel; set => SetProperty(ref _datStatusLevel, value); }
+    public StatusLevel DatStatusLevel
+    {
+        get => _datStatusLevel;
+        set { if (SetProperty(ref _datStatusLevel, value)) RaiseAggregateStatusChanged(); }
+    }
 
     private StatusLevel _readyStatusLevel = StatusLevel.Missing;
-    public StatusLevel ReadyStatusLevel { get => _readyStatusLevel; set => SetProperty(ref _readyStatusLevel, value); }
+    public StatusLevel ReadyStatusLevel
+    {
+        get => _readyStatusLevel;
+        set { if (SetProperty(ref _readyStatusLevel, value)) RaiseAggregateStatusChanged(); }
+    }
+
+    // ═══ T-W1-LAYOUT-P5: AGGREGATE STATUS (single-pill projection) ══════
+    // Worst-case Reduktion ueber die vier Einzelstufen — eindeutige Wahrheit
+    // fuer den konsolidierten Status-Pill in der CommandBar. Tooltip nutzt
+    // weiterhin die Detail-Texte (StatusReady/Roots/Tools/Dat).
+    public StatusLevel AggregateStatus
+    {
+        get
+        {
+            var levels = new[] { _readyStatusLevel, _rootsStatusLevel, _toolsStatusLevel, _datStatusLevel };
+            if (levels.Any(l => l == StatusLevel.Blocked)) return StatusLevel.Blocked;
+            if (levels.Any(l => l == StatusLevel.Warning)) return StatusLevel.Warning;
+            if (levels.Any(l => l == StatusLevel.Missing)) return StatusLevel.Missing;
+            return StatusLevel.Ok;
+        }
+    }
+
+    public string AggregateStatusTooltip =>
+        $"{StatusReady}\n{StatusRoots}\n{StatusTools}\n{StatusDat}";
+
+    private void RaiseAggregateStatusChanged()
+    {
+        OnPropertyChanged(nameof(AggregateStatus));
+        OnPropertyChanged(nameof(AggregateStatusTooltip));
+    }
 
     // ═══ TOOL STATUS LABELS (P1-007: VM-bound instead of x:Name TextBlocks) ═══
     private string _chdmanStatusText = "–";

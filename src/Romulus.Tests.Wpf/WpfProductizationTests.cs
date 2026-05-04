@@ -636,6 +636,11 @@ public sealed class WpfProductizationTests : IDisposable
     /// Q4 (Redesign V2): ContextPanel must not duplicate the Roots/Tools/Dat status chips
     /// that CommandBar already renders globally. Only the aggregated Ready chip with Runtime
     /// detail (which CommandBar lacks) may stay. Prevents regression of the chip duplication.
+    ///
+    /// T-W1-LAYOUT-P5 (2026-05): Die vier separaten Status-Chips (Ready/Roots/Tools/Dat) wurden
+    /// in der CommandBar zu einem einzigen <c>AggregateStatus</c>-Pill konsolidiert. Detail-Texte
+    /// erscheinen weiterhin im Tooltip ueber <c>AggregateStatusTooltip</c>, der seinerseits
+    /// StatusReady/Roots/Tools/Dat aggregiert. Single Source of Truth bleibt MainViewModel.
     /// </summary>
     [Fact]
     public void Q4_ContextPanel_DoesNotDuplicateCommandBarStatusChips()
@@ -643,12 +648,11 @@ public sealed class WpfProductizationTests : IDisposable
         var contextPanelXaml = File.ReadAllText(FindUiFile("Views", "ContextPanel.xaml"));
         var commandBarXaml = File.ReadAllText(FindUiFile("Views", "CommandBar.xaml"));
 
-        // CommandBar must keep the chips (single source of truth)
-        Assert.Contains("RootsStatusLevel", commandBarXaml, StringComparison.Ordinal);
-        Assert.Contains("ToolsStatusLevel", commandBarXaml, StringComparison.Ordinal);
-        Assert.Contains("DatStatusLevel", commandBarXaml, StringComparison.Ordinal);
+        // CommandBar fuehrt jetzt einen konsolidierten Aggregate-Pill (single source of truth)
+        Assert.Contains("AggregateStatus", commandBarXaml, StringComparison.Ordinal);
+        Assert.Contains("AggregateStatusTooltip", commandBarXaml, StringComparison.Ordinal);
 
-        // ContextPanel must not re-bind them
+        // ContextPanel must not re-bind the per-source status levels
         Assert.DoesNotContain("RootsStatusLevel", contextPanelXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ToolsStatusLevel", contextPanelXaml, StringComparison.Ordinal);
         Assert.DoesNotContain("DatStatusLevel", contextPanelXaml, StringComparison.Ordinal);

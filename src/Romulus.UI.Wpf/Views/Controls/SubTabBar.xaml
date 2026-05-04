@@ -26,18 +26,6 @@
                          Visibility="{Binding Shell.ShowMissionRecentRunsTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=RecentRuns}"
                          AutomationProperties.Name="Recent Runs"/>
-            <RadioButton GroupName="SubTab" Content="Regions" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowMissionRegionsTab, Converter={StaticResource BoolToVis}}"
-                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Regions}"
-                         AutomationProperties.Name="Region Priority Configuration"/>
-            <RadioButton GroupName="SubTab" Content="Options" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowMissionOptionsTab, Converter={StaticResource BoolToVis}}"
-                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Options}"
-                         AutomationProperties.Name="Run Options Configuration"/>
-            <RadioButton GroupName="SubTab" Content="Profiles" Style="{StaticResource SubTabPill}"
-                         Visibility="{Binding Shell.ShowMissionProfilesTab, Converter={StaticResource BoolToVis}}"
-                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Profiles}"
-                         AutomationProperties.Name="Profile Management"/>
           </StackPanel>
 
           <StackPanel Orientation="Horizontal"
@@ -82,11 +70,11 @@
 
           <StackPanel Orientation="Horizontal"
                       Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Tools}">
-            <RadioButton GroupName="SubTab" Content="Toolchain" Style="{StaticResource SubTabPill}"
+            <RadioButton GroupName="SubTab" Content="Externe Tools" Style="{StaticResource SubTabPill}"
                          Visibility="{Binding Shell.ShowToolsExternalToolsTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=ExternalTools}"
                          AutomationProperties.Name="External Tools"/>
-            <RadioButton GroupName="SubTab" Content="Werkzeuge" Style="{StaticResource SubTabPill}"
+            <RadioButton GroupName="SubTab" Content="Funktionen" Style="{StaticResource SubTabPill}"
                          Visibility="{Binding Shell.ShowToolsFeaturesTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Features}"
                          AutomationProperties.Name="Features"/>
@@ -106,14 +94,27 @@
                          Visibility="{Binding Shell.ShowSystemAppearanceTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Appearance}"
                          AutomationProperties.Name="Appearance Settings"/>
-            <RadioButton GroupName="SubTab" Content="Audit &amp; System" Style="{StaticResource SubTabPill}"
+            <RadioButton GroupName="SubTab" Content="System" Style="{StaticResource SubTabPill}"
                          Visibility="{Binding Shell.ShowSystemAboutTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=About}"
                          AutomationProperties.Name="Audit and System Settings"/>
-            <RadioButton GroupName="SubTab" Content="Audit-Viewer" Style="{StaticResource SubTabPill}"
+            <RadioButton GroupName="SubTab" Content="Audit" Style="{StaticResource SubTabPill}"
                          Visibility="{Binding Shell.ShowSystemAuditViewerTab, Converter={StaticResource BoolToVis}}"
                          IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=AuditViewer}"
                          AutomationProperties.Name="Audit Viewer (Read-only)"/>
+            <!-- T-W1-LAYOUT-P3: Setup-Tabs (Regions/Options/Profiles) leben hier statt unter MissionControl. -->
+            <RadioButton GroupName="SubTab" Content="Regions" Style="{StaticResource SubTabPill}"
+                         Visibility="{Binding Shell.ShowMissionRegionsTab, Converter={StaticResource BoolToVis}}"
+                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Regions}"
+                         AutomationProperties.Name="Region Priority Configuration"/>
+            <RadioButton GroupName="SubTab" Content="Options" Style="{StaticResource SubTabPill}"
+                         Visibility="{Binding Shell.ShowMissionOptionsTab, Converter={StaticResource BoolToVis}}"
+                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Options}"
+                         AutomationProperties.Name="Run Options Configuration"/>
+            <RadioButton GroupName="SubTab" Content="Profiles" Style="{StaticResource SubTabPill}"
+                         Visibility="{Binding Shell.ShowMissionProfilesTab, Converter={StaticResource BoolToVis}}"
+                         IsChecked="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Profiles}"
+                         AutomationProperties.Name="Profile Management"/>
           </StackPanel>
         </StackPanel>
       </ScrollViewer>

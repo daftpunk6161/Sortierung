@@ -84,9 +84,9 @@ public sealed class ShellViewModel : ObservableObject
                 MissionControlTag => 0,
                 LibraryTag => 1,
                 PipelineTag => 2,
-                ConfigTag => 0,
                 ToolsTag => 3,
                 SystemTag => 4,
+                // ConfigTag entfaellt: NormalizeNavTag mappt es bereits auf SystemTag (T-W1-LAYOUT-P3).
                 _ => 0
             };
             SelectedNavIndex = idx;
@@ -214,7 +214,9 @@ public sealed class ShellViewModel : ObservableObject
         MissionControlTag or "Start" => MissionControlTag,
         LibraryTag or "Analyse" => LibraryTag,
         PipelineTag => PipelineTag,
-        ConfigTag or "Setup" => MissionControlTag,
+        // T-W1-LAYOUT-P3 (2026-05): Setup-Tabs (Regions/Options/Profiles) leben
+        // jetzt unter System. Legacy-Alias "Config"/"Setup" routet entsprechend mit.
+        ConfigTag or "Setup" => SystemTag,
         ToolsTag => ToolsTag,
         SystemTag or "Log" => SystemTag,
         _ => MissionControlTag
@@ -233,7 +235,9 @@ public sealed class ShellViewModel : ObservableObject
         MissionControlTag => "Dashboard",
         LibraryTag => "Results",
         PipelineTag => "Conversion",
-        ConfigTag => "Dashboard",
+        // ConfigTag wird durch NormalizeNavTag bereits in SystemTag aufgeloest;
+        // dieser Arm ist tot, bleibt aber als Doku-Marker stehen.
+        ConfigTag => "Appearance",
         ToolsTag => "Features",
         SystemTag => "Appearance",
         _ => "Dashboard"
@@ -251,9 +255,9 @@ public sealed class ShellViewModel : ObservableObject
 
     private bool IsSubTabAllowed(string navTag, string subTab) => NormalizeNavTag(navTag) switch
     {
-        MissionControlTag => !IsSimpleMode
-            ? subTab is "Dashboard" or "RecentRuns" or "Regions" or "Options" or "Profiles"
-            : subTab is "Dashboard" or "RecentRuns" or "Regions" or "Options",
+        // T-W1-LAYOUT-P3: MissionControl ist jetzt nur noch Run-Hauptpfad.
+        // Setup-Tabs sind unter System gewandert.
+        MissionControlTag => subTab is "Dashboard" or "RecentRuns",
         LibraryTag => !IsSimpleMode
             ? subTab is "Results" or "Decisions" or "Safety" or "Inbox" or "DatAudit"
             : subTab is "Results" or "Safety" or "Inbox",
@@ -264,7 +268,11 @@ public sealed class ShellViewModel : ObservableObject
         ToolsTag => !IsSimpleMode
             ? subTab is "Features" or "ExternalTools" or "DatManagement" or "Policy"
             : subTab is "Features" or "ExternalTools" or "DatManagement",
-        SystemTag => subTab is "Appearance" or "About" or "AuditViewer",
+        // T-W1-LAYOUT-P3: Setup-Tabs leben jetzt hier.
+        // Profiles bleibt Expert-only (vorher ShowMissionProfilesTab Logik).
+        SystemTag => !IsSimpleMode
+            ? subTab is "Appearance" or "About" or "AuditViewer" or "Regions" or "Options" or "Profiles"
+            : subTab is "Appearance" or "About" or "AuditViewer" or "Regions" or "Options",
         _ => false
     };
 
@@ -274,7 +282,7 @@ public sealed class ShellViewModel : ObservableObject
         var coercedNavTag = currentNavTag;
 
         if (string.Equals(coercedNavTag, ConfigTag, StringComparison.Ordinal))
-            coercedNavTag = MissionControlTag;
+            coercedNavTag = SystemTag;
 
         if (IsSimpleMode && string.Equals(coercedNavTag, PipelineTag, StringComparison.Ordinal))
             coercedNavTag = MissionControlTag;
@@ -356,7 +364,7 @@ public sealed class ShellViewModel : ObservableObject
         }
     }
 
-    public string ContextToggleLabel => ShowContextWing ? "Inspector ausblenden" : "Inspector einblenden";
+    public string ContextToggleLabel => ShowContextWing ? _loc["Inspector.HideLabel"] : _loc["Inspector.ShowLabel"];
 
     // ═══ NAV COMPACT MODE (TASK-113: responsive breakpoint) ═════════════
     private bool _isCompactNav;
@@ -420,7 +428,11 @@ public sealed class ShellViewModel : ObservableObject
     public bool ShowFirstRunWizard
     {
         get => _showFirstRunWizard;
-        set => SetProperty(ref _showFirstRunWizard, value);
+        set
+        {
+            if (SetProperty(ref _showFirstRunWizard, value) && value)
+                CoordinateModal(ShellModalLayer.FirstRunWizard);
+        }
     }
 
     private int _wizardStep;
@@ -488,7 +500,11 @@ public sealed class ShellViewModel : ObservableObject
     public bool ShowShortcutSheet
     {
         get => _showShortcutSheet;
-        set => SetProperty(ref _showShortcutSheet, value);
+        set
+        {
+            if (SetProperty(ref _showShortcutSheet, value) && value)
+                CoordinateModal(ShellModalLayer.ShortcutSheet);
+        }
     }
 
     private bool _showMoveInlineConfirm;
@@ -559,4 +575,45 @@ public sealed class ShellViewModel : ObservableObject
     }
 
     public bool ReduceMotion => ReduceMotionPreference || !System.Windows.SystemParameters.ClientAreaAnimation;
+
+    // ═══ T-W1-LAYOUT-P10: RETRO FLOURISHES (Watermark) ══════════════════
+    // Default OFF — gui.instructions.md verlangt "luftig, nicht ueberladen".
+    // Wird per Settings (z.B. fuer Retro-Themes) aktiviert.
+    private bool _useRetroFlourishes;
+    public bool UseRetroFlourishes
+    {
+        get => _useRetroFlourishes;
+        set => SetProperty(ref _useRetroFlourishes, value);
+    }
+
+    // ═══ T-W1-LAYOUT-P8: MODAL STACK (single-modal-at-a-time) ═══════════
+    // Eindeutige Wahrheit: nur ein Shell-eigener Modal-Layer (Wizard, Shortcut)
+    // darf gleichzeitig sichtbar sein. CommandPalette wird ueber den
+    // ModalOpening-Hook aus MainViewModel mitkoordiniert.
+    public event Action<ShellModalLayer>? ModalOpening;
+
+    /// <summary>
+    /// Wird aufgerufen, wenn ein Modal sich oeffnet. Schliesst andere Shell-Modals
+    /// und benachrichtigt externe Subscriber (z.B. MainVM fuer CommandPalette).
+    /// </summary>
+    private void CoordinateModal(ShellModalLayer opening)
+    {
+        if (opening != ShellModalLayer.FirstRunWizard && _showFirstRunWizard)
+        {
+            _showFirstRunWizard = false;
+            OnPropertyChanged(nameof(ShowFirstRunWizard));
+        }
+        if (opening != ShellModalLayer.ShortcutSheet && _showShortcutSheet)
+        {
+            _showShortcutSheet = false;
+            OnPropertyChanged(nameof(ShowShortcutSheet));
+        }
+        ModalOpening?.Invoke(opening);
+    }
+
+    /// <summary>
+    /// MainViewModel ruft das auf, wenn die CommandPalette geoeffnet wurde —
+    /// damit Shell-eigene Modals weichen.
+    /// </summary>
+    public void NotifyExternalModalOpening(ShellModalLayer layer) => CoordinateModal(layer);
 }

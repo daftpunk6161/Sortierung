@@ -897,6 +897,16 @@
   "Drawer.Clear": "Leeren",
   "Drawer.Close": "Schließen",
 
+  "Inspector.ShowLabel": "Inspector (rechts) ein",
+  "Inspector.HideLabel": "Inspector (rechts) aus",
+  "Inspector.Tooltip": "Inspector-Seitenleiste rechts ein-/ausblenden (Ctrl+I)",
+  "Drawer.Tooltip": "Log-Stream unten ein-/ausblenden (Ctrl+J)",
+
+  "Nav.SubTab.ExternalTools": "Externe Tools",
+  "Nav.SubTab.Features": "Funktionen",
+  "Nav.SubTab.SystemAbout": "System",
+  "Nav.SubTab.AuditViewer": "Audit",
+
   "Empty.NoAnalysis": "Noch keine Analyse-Daten",
   "Empty.RunPreviewHint": "Starte eine Vorschau mit F5 um die Ergebnisse zu sehen.",
   "Empty.NoReport": "Kein Report verfügbar",

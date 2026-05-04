@@ -32,7 +32,8 @@ public sealed class ShellViewModelCoverageTests
     [Theory]
     [InlineData("MissionControl", 0)]
     [InlineData("Library", 1)]
-    [InlineData("Config", 0)]
+    // T-W1-LAYOUT-P3: Legacy-Alias "Config" zeigt jetzt auf System, nicht mehr MissionControl.
+    [InlineData("Config", 4)]
     [InlineData("Tools", 3)]
     [InlineData("System", 4)]
     public void SelectedNavTag_SetsCorrectIndex(string tag, int expectedIndex)
@@ -45,7 +46,8 @@ public sealed class ShellViewModelCoverageTests
     [Theory]
     [InlineData("Start", "MissionControl")]
     [InlineData("Analyse", "Library")]
-    [InlineData("Setup", "MissionControl")]
+    // T-W1-LAYOUT-P3: "Setup" zeigt jetzt auf System (Setup-Tabs leben dort).
+    [InlineData("Setup", "System")]
     [InlineData("Log", "System")]
     public void SelectedNavTag_NormalizesLegacyAliases(string alias, string expectedTag)
     {
@@ -86,7 +88,8 @@ public sealed class ShellViewModelCoverageTests
     [Theory]
     [InlineData("MissionControl", "Dashboard")]
     [InlineData("Library", "Results")]
-    [InlineData("Config", "Dashboard")]
+    // T-W1-LAYOUT-P3: "Config" routet jetzt zu System; Default-SubTab dort = Appearance.
+    [InlineData("Config", "Appearance")]
     [InlineData("Tools", "Features")]
     public void DefaultSubTab_MatchesNavArea(string navTag, string expectedSubTab)
     {
@@ -169,33 +172,38 @@ public sealed class ShellViewModelCoverageTests
     {
         var vm = Create();
         vm.IsSimpleMode = false;
+        // T-W1-LAYOUT-P3: "Config" alias routet jetzt zu System; Profiles bleibt Expert-only erlaubt.
         vm.SelectedNavTag = "Config";
         vm.SelectedSubTab = "Profiles";
         Assert.Equal("Profiles", vm.SelectedSubTab);
     }
 
     [Fact]
-    public void NavigateTo_Config_RoutesToMissionControlSetup()
+    public void NavigateTo_Config_RoutesToSystemSetup()
     {
         var vm = Create();
+        vm.IsSimpleMode = false;
 
         vm.NavigateTo("Config");
         vm.SelectedSubTab = "Options";
 
-        Assert.Equal("MissionControl", vm.SelectedNavTag);
+        // T-W1-LAYOUT-P3: Setup wohnt jetzt im System-Bucket.
+        Assert.Equal("System", vm.SelectedNavTag);
         Assert.Equal("Options", vm.SelectedSubTab);
     }
 
     [Fact]
-    public void MissionControl_ExpertMode_AllowsProfilesSubTab()
+    public void MissionControl_RejectsProfilesSubTab_AfterP3Cleanup()
     {
+        // T-W1-LAYOUT-P3: MissionControl ist jetzt nur noch Run-Hauptpfad.
+        // Setup-SubTabs (inkl. Profiles) leben unter System.
         var vm = Create();
         vm.IsSimpleMode = false;
         vm.SelectedNavTag = "MissionControl";
 
         vm.SelectedSubTab = "Profiles";
 
-        Assert.Equal("Profiles", vm.SelectedSubTab);
+        Assert.Equal("Dashboard", vm.SelectedSubTab);
     }
 
     [Fact]
@@ -203,9 +211,10 @@ public sealed class ShellViewModelCoverageTests
     {
         var vm = Create();
         vm.IsSimpleMode = true;
+        // "Config" alias → System (P3). Profiles ist Expert-only → Fallback auf System-Default.
         vm.SelectedNavTag = "Config";
         vm.SelectedSubTab = "Profiles";
-        Assert.Equal("Dashboard", vm.SelectedSubTab);
+        Assert.Equal("Appearance", vm.SelectedSubTab);
     }
 
     [Fact]
@@ -282,12 +291,13 @@ public sealed class ShellViewModelCoverageTests
     {
         var vm = Create();
         vm.IsSimpleMode = false;
+        // T-W1-LAYOUT-P3: "Config" → System bucket.
         vm.SelectedNavTag = "Config";
         vm.SelectedSubTab = "Profiles";
         Assert.Equal("Profiles", vm.SelectedSubTab);
 
         vm.IsSimpleMode = true;
-        Assert.Equal("Dashboard", vm.SelectedSubTab);
+        Assert.Equal("Appearance", vm.SelectedSubTab);
     }
 
     [Fact]
@@ -600,11 +610,11 @@ public sealed class ShellViewModelCoverageTests
     {
         var vm = Create();
         Assert.False(vm.ShowContextWing);
-        Assert.Equal("Inspector einblenden", vm.ContextToggleLabel);
+        Assert.Equal("Inspector (rechts) ein", vm.ContextToggleLabel);
 
         vm.ToggleContextWingCommand.Execute(null);
         Assert.True(vm.ShowContextWing);
-        Assert.Equal("Inspector ausblenden", vm.ContextToggleLabel);
+        Assert.Equal("Inspector (rechts) aus", vm.ContextToggleLabel);
 
         vm.ToggleContextWingCommand.Execute(null);
         Assert.False(vm.ShowContextWing);
@@ -667,7 +677,9 @@ public sealed class ShellViewModelCoverageTests
     [Theory]
     [InlineData("MissionControl", "Mission Control")]
     [InlineData("Library", "Library")]
-    [InlineData("Config", "Mission Control")]
+    [InlineData("Pipeline", "Pipeline")]
+    // T-W1-LAYOUT-P3: "Config" alias zeigt jetzt auf System.
+    [InlineData("Config", "System")]
     [InlineData("Tools", "Werkzeugkatalog")]
     [InlineData("System", "System")]
     public void CurrentWorkspaceTitle_MatchesNavArea(string tag, string expectedTitle)
@@ -702,7 +714,8 @@ public sealed class ShellViewModelCoverageTests
         else if (subTab is "Results" or "Decisions" or "Safety" or "DatAudit")
             vm.SelectedNavTag = "Library";
         else if (subTab is "Regions" or "Options" or "Profiles")
-            vm.SelectedNavTag = "MissionControl";
+            // T-W1-LAYOUT-P3: Setup-Tabs leben jetzt unter System.
+            vm.SelectedNavTag = "System";
         else if (subTab is "Features" or "ExternalTools" or "DatManagement")
             vm.SelectedNavTag = "Tools";
         else if (subTab is "Appearance" or "About")

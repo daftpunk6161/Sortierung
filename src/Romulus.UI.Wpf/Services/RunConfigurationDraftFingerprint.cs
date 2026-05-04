@@ -67,6 +67,11 @@ internal static class RunConfigurationDraftFingerprint
             draft.EnableDatAudit,
             draft.EnableDatRename,
             draft.DatRoot,
+            // PreferredDatSources: order-significant (Prio-Reihenfolge ueber DAT-Quellen).
+            // Konsistent zu Romulus.Api.RunLifecycleManager.NormalizePreferredDatSources +
+            // IdempotencyFingerprintTests.DifferentPreferredDatSources_ProducesDifferentFingerprint:
+            // Reihenfolge ist Teil der fachlichen Wahrheit. Nur Whitespace/leer trimmen.
+            PreferredDatSources = NormalizeOrderedStringList(draft.PreferredDatSources),
             draft.HashType,
             draft.ConvertFormat,
             draft.ConvertOnly,
@@ -95,6 +100,21 @@ internal static class RunConfigurationDraftFingerprint
             .Where(static s => !string.IsNullOrWhiteSpace(s))
             .Select(static s => s.Trim())
             .OrderBy(static s => s, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Wie <see cref="NormalizeStringList"/>, aber ohne Sortierung. Fuer
+    /// order-significante Listen wie <c>PreferredDatSources</c>, deren
+    /// Reihenfolge die Prioritaet ausdrueckt.
+    /// </summary>
+    private static string[]? NormalizeOrderedStringList(string[]? values)
+    {
+        if (values is null)
+            return null;
+        return values
+            .Where(static s => !string.IsNullOrWhiteSpace(s))
+            .Select(static s => s.Trim())
             .ToArray();
     }
 }

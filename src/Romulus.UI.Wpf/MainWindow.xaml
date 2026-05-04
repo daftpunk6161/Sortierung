@@ -53,9 +53,10 @@
   </Window.Resources>
 
   <Grid>
-    <!-- Logo-Watermark Hintergrund -->
+    <!-- Logo-Watermark Hintergrund (T-W1-LAYOUT-P10: nur sichtbar mit Retro-Flourishes) -->
     <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
-             Opacity="0.04" IsHitTestVisible="False" MaxWidth="360" MaxHeight="360">
+             Opacity="0.04" IsHitTestVisible="False" MaxWidth="360" MaxHeight="360"
+             Visibility="{Binding Shell.UseRetroFlourishes, Converter={StaticResource BoolToVis}}">
       <Canvas Width="256" Height="256">
         <Path Data="M76,49 L76,199 L96,199 L96,136 L126,136 L160,199 L183,199 L150,132 C173,122 184,100 184,82 C184,60 166,49 136,49 Z M96,67 L132,67 C154,67 162,78 162,84 C162,94 154,110 132,110 L96,110 Z">
           <Path.Fill>
@@ -75,7 +76,6 @@
         <RowDefinition Height="Auto"/> <!-- Row 0: CommandBar -->
         <RowDefinition Height="*"/>    <!-- Row 1: Main content -->
         <RowDefinition Height="Auto"/> <!-- Row 2: Detail Drawer (collapsible) -->
-        <RowDefinition Height="Auto"/> <!-- Row 3: ActionRail -->
       </Grid.RowDefinitions>
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="Auto"/>  <!-- Col 0: NavigationRail -->
@@ -114,31 +114,9 @@
             <!-- ── MissionControl (Dashboard + embedded Setup tabs) ───── -->
             <Grid Visibility="{Binding Shell.SelectedNavTag, Converter={StaticResource StrEqualsToVis}, ConverterParameter=MissionControl}"
                   KeyboardNavigation.TabIndex="51">
-              <views:StartView TabIndex="51">
-                <views:StartView.Style>
-                  <Style TargetType="views:StartView">
-                    <Setter Property="Visibility" Value="Visible"/>
-                    <Style.Triggers>
-                      <DataTrigger Binding="{Binding Shell.SelectedSubTab}" Value="Regions">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                      </DataTrigger>
-                      <DataTrigger Binding="{Binding Shell.SelectedSubTab}" Value="Options">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                      </DataTrigger>
-                      <DataTrigger Binding="{Binding Shell.SelectedSubTab}" Value="Profiles">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                      </DataTrigger>
-                    </Style.Triggers>
-                  </Style>
-                </views:StartView.Style>
-              </views:StartView>
-
-              <views:ConfigRegionsView
-                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Regions}"/>
-              <views:ConfigOptionsView
-                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Options}"/>
-              <views:ConfigProfilesView
-                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Profiles}"/>
+              <!-- T-W1-LAYOUT-P3: Setup-Views (Regions/Options/Profiles) sind in den System-Bucket
+                   gewandert. StartView braucht deshalb keine Negativ-Trigger mehr. -->
+              <views:StartView TabIndex="51"/>
             </Grid>
 
             <!-- ── Library (sub-tab-aware) ─────────────────────── -->
@@ -171,94 +149,9 @@
                   Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Features}"/>
               <views:DatCatalogView DataContext="{Binding DatCatalog}"
                   Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=DatManagement}"/>
-              <DockPanel LastChildFill="True" DataContext="{Binding PolicyGovernance}"
-                  Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Policy}">
-                <Border DockPanel.Dock="Top" Style="{StaticResource SectionCard}" Margin="20,16,20,8">
-                  <Grid>
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="2*"/>
-                      <ColumnDefinition Width="3*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                      <TextBlock Text="Policy Governance" Style="{StaticResource SectionHeader}"/>
-                      <TextBlock Text="{Binding StatusText}" Style="{StaticResource CaptionText}" Margin="0,4,0,12" TextWrapping="Wrap"/>
-
-                      <TextBlock Text="Roots" Style="{StaticResource CaptionText}"/>
-                      <TextBox Text="{Binding RootsText, UpdateSourceTrigger=PropertyChanged}"
-                               Margin="0,4,0,10"
-                               ToolTip="Semikolon-getrennte Root-Pfade"/>
-
-                      <TextBlock Text="Extensions" Style="{StaticResource CaptionText}"/>
-                      <TextBox Text="{Binding ExtensionsText, UpdateSourceTrigger=PropertyChanged}"
-                               Margin="0,4,0,12"/>
-
-                      <WrapPanel>
-                        <Button Content="Laden" Command="{Binding LoadPolicyFileCommand}" Margin="0,0,8,8"/>
-                        <Button Content="EU" Command="{Binding LoadEuPreferredExampleCommand}" Margin="0,0,8,8"/>
-                        <Button Content="Keine Demos" Command="{Binding LoadNoDemosExampleCommand}" Margin="0,0,8,8"/>
-                        <Button Content="Alle ZIP" Command="{Binding LoadAllZipExampleCommand}" Margin="0,0,8,8"/>
-                        <Button Content="Validieren" Command="{Binding ValidateCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8"/>
-                        <Button Content="Export" Command="{Binding ExportReportCommand}" Margin="0,0,8,8"/>
-                      </WrapPanel>
-
-                      <TextBlock Text="{Binding LastError}" Foreground="{DynamicResource BrushDanger}"
-                                 TextWrapping="Wrap" Margin="0,8,0,0"
-                                 Visibility="{Binding LastError, Converter={StaticResource StringNotEmptyToVisibility}}"/>
-                    </StackPanel>
-
-                    <Grid Grid.Column="1">
-                      <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                      </Grid.RowDefinitions>
-                      <TextBlock Text="Policy-Datei" Style="{StaticResource SubsectionHeader}" Margin="0,0,0,8"/>
-                      <TextBox Grid.Row="1"
-                               Text="{Binding PolicyText, UpdateSourceTrigger=PropertyChanged}"
-                               AcceptsReturn="True"
-                               AcceptsTab="True"
-                               VerticalScrollBarVisibility="Auto"
-                               HorizontalScrollBarVisibility="Auto"
-                               MinHeight="160"
-                               FontFamily="Consolas"/>
-                    </Grid>
-                  </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SectionCard}" Margin="20,8,20,16">
-                  <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
-                      <TextBlock Text="Validation-Report" Style="{StaticResource SubsectionHeader}" VerticalAlignment="Center"/>
-                      <TextBlock Text="{Binding ViolationCount, StringFormat='{}{0} Verstoesse'}"
-                                 Foreground="{DynamicResource BrushTextMuted}"
-                                 Margin="12,2,0,0"/>
-                      <TextBlock Text="{Binding PolicyFingerprint}"
-                                 Foreground="{DynamicResource BrushTextMuted}"
-                                 Margin="16,2,0,0"/>
-                    </StackPanel>
-
-                    <DataGrid ItemsSource="{Binding ViolationsView}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              CanUserSortColumns="True"
-                              CanUserAddRows="False"
-                              CanUserDeleteRows="False"
-                              HeadersVisibility="Column"
-                              GridLinesVisibility="None">
-                      <DataGrid.Columns>
-                        <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="Auto"/>
-                        <DataGridTextColumn Header="Rule" Binding="{Binding RuleId}" Width="Auto"/>
-                        <DataGridTextColumn Header="Console" Binding="{Binding ConsoleKey}" Width="Auto"/>
-                        <DataGridTextColumn Header="GameKey" Binding="{Binding GameKey}" Width="*"/>
-                        <DataGridTextColumn Header="Region" Binding="{Binding Region}" Width="Auto"/>
-                        <DataGridTextColumn Header="Ext" Binding="{Binding Extension}" Width="Auto"/>
-                        <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="2*"/>
-                        <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="2*"/>
-                      </DataGrid.Columns>
-                    </DataGrid>
-                  </DockPanel>
-                </Border>
-              </DockPanel>
+              <!-- T-W1-LAYOUT-P1: extracted to views:PolicyGovernanceView (removes ~85 LOC business UI from Shell) -->
+              <views:PolicyGovernanceView DataContext="{Binding PolicyGovernance}"
+                  Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Policy}"/>
             </Grid>
 
             <!-- ── System (sub-tab-aware) ──────────────────────── -->
@@ -270,6 +163,13 @@
                   Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=About}"/>
               <views:AuditViewerView
                   Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=AuditViewer}"/>
+              <!-- T-W1-LAYOUT-P3: Setup-Tabs (Regions/Options/Profiles) wohnen jetzt im System-Bucket. -->
+              <views:ConfigRegionsView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Regions}"/>
+              <views:ConfigOptionsView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Options}"/>
+              <views:ConfigProfilesView
+                  Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Profiles}"/>
             </Grid>
 
           </Grid>
@@ -344,8 +244,7 @@
         </Grid>
       </Border>
 
-      <!-- ═══ ROW 3: leeres Platzhalter-Grid (T-W1-UI-REDUCTION) ═════════ -->
-      <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Height="0"/>
+      <!-- Row 3 (ActionRail) wurde in T-W1-UI-REDUCTION entfernt; Placeholder ebenfalls bereinigt (T-W1-LAYOUT-C1). -->
 
       <!-- ═══ TOAST / NOTIFICATION OVERLAY ════════════════════════════════ -->
       <ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Shell.Notifications}"

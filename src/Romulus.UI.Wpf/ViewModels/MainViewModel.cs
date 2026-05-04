@@ -232,7 +232,19 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         // GUI-101: Shortcut cheatsheet toggle lives on Shell
 
         // GUI-Phase4 4.1: Command Palette toggle (Ctrl+K) — bridges Shell + CommandPalette
-        ToggleCommandPaletteCommand = new RelayCommand(() => CommandPalette.IsOpen = !CommandPalette.IsOpen);
+        // T-W1-LAYOUT-P8: Wenn Palette aufgeht → Shell-Modals schliessen.
+        // Wenn ein Shell-Modal aufgeht → Palette schliessen.
+        ToggleCommandPaletteCommand = new RelayCommand(() =>
+        {
+            var willOpen = !CommandPalette.IsOpen;
+            CommandPalette.IsOpen = willOpen;
+            if (willOpen) Shell.NotifyExternalModalOpening(ShellModalLayer.CommandPalette);
+        });
+        Shell.ModalOpening += layer =>
+        {
+            if (layer != ShellModalLayer.CommandPalette && CommandPalette.IsOpen)
+                CommandPalette.IsOpen = false;
+        };
 
         // GUI-Phase4 4.4: Detail Drawer toggle lives on Shell
 
