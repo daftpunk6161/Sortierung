@@ -1,12 +1,13 @@
 openapi: 3.0.3
+x-stability: experimental
 info:
   title: Romulus API
   version: 1.1.0
-  description: "Romulus REST API — Your Collection, Perfected. Region deduplication, junk removal, format conversion."
+  description: "Romulus REST API — v1-experimental, reduced local-first automation surface for runs, audit viewing, health, provenance and policy validation."
 servers:
   - url: http://127.0.0.1:7878
 paths:
-  /health:
+  /v1-experimental/health:
     get:
       summary: Health check
       responses:
@@ -20,7 +21,7 @@ paths:
                   status:
                     type: string
                     example: ok
-  /runs:
+  /v1-experimental/runs:
     post:
       summary: Create and execute a deduplication run
       parameters:
@@ -77,7 +78,7 @@ paths:
           description: Validation error
         "409":
           description: Run already active
-  /runs/{runId}:
+  /v1-experimental/runs/{runId}:
     get:
       summary: Get run status
       parameters:
@@ -98,7 +99,7 @@ paths:
                     $ref: "#/components/schemas/RunRecord"
         "404":
           description: Run not found
-  /runs/{runId}/result:
+  /v1-experimental/runs/{runId}/result:
     get:
       summary: Get completed run result
       parameters:
@@ -123,7 +124,7 @@ paths:
           description: Run not found
         "409":
           description: Run still in progress
-  /runs/{runId}/cancel:
+  /v1-experimental/runs/{runId}/cancel:
     post:
       summary: Cancel a run idempotently
       parameters:
@@ -150,7 +151,7 @@ paths:
                     description: Whether the run was already in a terminal state
         "404":
           description: Run not found
-  /runs/{runId}/stream:
+  /v1-experimental/runs/{runId}/stream:
     get:
       summary: SSE progress stream
       description: |
@@ -176,6 +177,156 @@ paths:
                 type: string
         "404":
           description: Run not found
+  /v1-experimental/audit/runs:
+    get:
+      summary: List audit runs
+      parameters:
+        - name: auditRoot
+          in: query
+          schema:
+            type: string
+          description: Optional audit root. Defaults to the configured Romulus audit directory.
+      responses:
+        "200":
+          description: Audit run page
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1-experimental/audit/runs/{id}/rows:
+    get:
+      summary: Read audit rows
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: auditRoot
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Audit row page
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1-experimental/audit/runs/{id}/sidecar:
+    get:
+      summary: Read audit sidecar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: auditRoot
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Audit sidecar metadata
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1-experimental/audit/runs/{id}/verification:
+    get:
+      summary: Read audit sidecar verification status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: auditRoot
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Audit verification status
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1-experimental/health/collection:
+    get:
+      summary: Collection health snapshot
+      responses:
+        "200":
+          description: Collection health report
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1-experimental/collections/{root}/health:
+    get:
+      summary: Collection health snapshot for one URL-encoded root
+      parameters:
+        - name: root
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scoped collection health report
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1-experimental/roms/{fingerprint}/provenance:
+    get:
+      summary: Read provenance trail by ROM fingerprint
+      parameters:
+        - name: fingerprint
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Provenance trail
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1-experimental/policies/validate:
+    post:
+      summary: Validate collection index against a target-state policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Policy validation report
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1-experimental/policies/sign:
+    post:
+      summary: Create detached policy signature document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Policy signature document
+          content:
+            application/json:
+              schema:
+                type: object
 components:
   schemas:
     RunRequest:

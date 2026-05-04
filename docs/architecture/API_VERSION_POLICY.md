@@ -1,21 +1,26 @@
 # Romulus — API- und Schema-Versionpolicy
 
-Stand: 2026-03-11
+Stand: 2026-05-03
 
 ## 1) API-Versionierung
 
-- Aktive Hauptversion: `v1`.
+- Aktive Hauptversion: `v1-experimental`.
 - Implementierung: `src/Romulus.Api/Program.cs` (ASP.NET Core Minimal API).
 - Kompatibilität:
-  - Bestehende MVP-Routen bleiben kompatibel (`/health`, `/runs`, ...).
+  - Produktive Consumer verwenden ausschliesslich den Prefix `/v1-experimental/`.
+  - Legacy-Routen bleiben aktuell als technische Kompatibilitaets-Aliase erreichbar, sind aber nicht der dokumentierte Contract.
+- Stabilitaets-Pins:
+  - HTTP-Header `X-Romulus-API-Status: experimental`.
+  - OpenAPI-Dokument und Operationen enthalten `x-stability: experimental`.
+  - Der dokumentierte Pfad-Prefix ist `/v1-experimental/`; OpenAPI `servers[0].url` bleibt die lokale Base-URL `http://127.0.0.1:7878`.
 - Breaking Changes:
   - Nur mit neuer Hauptversion.
-  - `v1` erhält nur additive Felder oder Bugfixes ohne Contract-Bruch.
+  - `v1-experimental` erhält nur additive Felder oder Bugfixes ohne Contract-Bruch, solange der strategische Reduktionsplan diesen Status festlegt.
 
 ## 2) OpenAPI-Contract Governance
 
-- Quelle: `docs/openapi.yaml`.
-- Embedded Spec: `src/Romulus.Api/OpenApiSpec.cs` (JSON, ausgeliefert unter `/openapi`).
+- Quelle: `docs/architecture/openapi.yaml`.
+- Embedded Spec: `src/Romulus.Api/OpenApiSpec.cs` (JSON, dokumentiert unter `/v1-experimental/openapi`; Legacy-Alias `/openapi` bleibt erreichbar).
 - Beide Specs müssen synchron gehalten werden.
 
 ## 3) Config-Schema-Versionen & Migration

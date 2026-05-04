@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 using Romulus.Contracts.Models;
+using System.Text.Json.Nodes;
 
 namespace Romulus.Api;
 
@@ -21,8 +22,10 @@ public static class OpenApiSpec
             {
                 Title = "Romulus API",
                 Version = Program.ApiVersion,
-                Description = "Romulus REST API — reduced, local-first automation surface for runs, audit viewing, health, provenance, and policy validation. No plugin or marketplace endpoints are exposed."
+                Description = "Romulus REST API — v1-experimental, reduced, local-first automation surface for runs, audit viewing, health, provenance, and policy validation. No plugin or marketplace endpoints are exposed."
             };
+            document.Extensions ??= new Dictionary<string, IOpenApiExtension>(StringComparer.Ordinal);
+            document.Extensions["x-stability"] = new JsonNodeExtension(JsonValue.Create("experimental"));
 
             document.Servers = new List<OpenApiServer>
             {
@@ -49,6 +52,8 @@ public static class OpenApiSpec
                 }
             };
 
+            AddExperimentalPathAliases(document);
+
             return Task.CompletedTask;
         });
 
@@ -62,6 +67,8 @@ public static class OpenApiSpec
         {
             var relativePath = NormalizeRelativePath(context.Description.RelativePath);
             var httpMethod = context.Description.HttpMethod;
+            operation.Extensions ??= new Dictionary<string, IOpenApiExtension>(StringComparer.Ordinal);
+            operation.Extensions["x-stability"] = new JsonNodeExtension(JsonValue.Create("experimental"));
 
             if (string.Equals(relativePath, "/healthz", StringComparison.OrdinalIgnoreCase))
             {
@@ -127,6 +134,22 @@ public static class OpenApiSpec
                         ["application/json"] = new()
                         {
                             Schema = await context.GetOrCreateSchemaAsync(typeof(PolicyValidationRequest), parameterDescription: null, cancellationToken)
+                        }
+                    }
+                };
+            }
+
+            if (string.Equals(relativePath, "/policies/sign", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(httpMethod, "POST", StringComparison.OrdinalIgnoreCase))
+            {
+                operation.RequestBody = new OpenApiRequestBody
+                {
+                    Required = true,
+                    Content = new Dictionary<string, OpenApiMediaType>
+                    {
+                        ["application/json"] = new()
+                        {
+                            Schema = await context.GetOrCreateSchemaAsync(typeof(PolicySignRequest), parameterDescription: null, cancellationToken)
                         }
                     }
                 };
@@ -226,5 +249,19 @@ public static class OpenApiSpec
                 Type = JsonSchemaType.String
             }
         });
+    }
+
+    private static void AddExperimentalPathAliases(OpenApiDocument document)
+    {
+        if (document.Paths is null)
+            return;
+
+        foreach (var path in document.Paths.ToArray())
+        {
+            if (path.Key.StartsWith(Program.ExperimentalApiPathPrefix + "/", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            document.Paths.TryAdd(Program.ExperimentalApiPathPrefix + path.Key, path.Value);
+        }
     }
 }

@@ -13,7 +13,7 @@ namespace Romulus.Contracts.Ports;
 ///
 /// <para>
 /// Single source of truth: every consumer (GUI Audit-Viewer in T-W4,
-/// CLI <c>audit list</c>, API <c>GET /audit/runs</c>) reads through this
+/// CLI <c>audit list</c>, API <c>GET /v1-experimental/audit/runs</c>) reads through this
 /// port. Reports project these rows; they do not re-parse CSVs.
 /// </para>
 /// </summary>

@@ -27,6 +27,8 @@ public partial class Program
     internal static readonly string ApiVersion =
         typeof(Program).Assembly.GetName().Version?.ToString(2) ?? "1.0";
 
+    internal const string ExperimentalApiPathPrefix = "/v1-experimental";
+
     internal static string SerializeApiJson<T>(T value)
         => JsonSerializer.Serialize(value, ApiJsonSerializerOptions);
 

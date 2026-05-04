@@ -103,16 +103,28 @@ dotnet run --project src/Romulus.Api
 Die API bindet ausschliesslich an `127.0.0.1:7878` und ist nicht für
 Multi-User- oder Remote-Betrieb gedacht. Authentifizierung über
 `X-Api-Key`-Header, Wert aus der Env-Variable `ROM_CLEANUP_API_KEY`.
+Alle produktiven Routen liegen dauerhaft unter `/v1-experimental/`. Jede
+Antwort trägt `X-Romulus-API-Status: experimental`; die OpenAPI-Spec enthält
+`x-stability: experimental` als Contract-Pin.
 
 | Methode | Pfad | Zweck |
 |---|---|---|
-| `GET` | `/health` | Health-Check |
-| `GET` | `/openapi` | OpenAPI-Spec |
-| `POST` | `/runs` | Run erstellen |
-| `GET` | `/runs/{id}` | Run-Status |
-| `GET` | `/runs/{id}/result` | Vollständiges Ergebnis |
-| `POST` | `/runs/{id}/cancel` | Run abbrechen |
-| `GET` | `/runs/{id}/stream` | SSE-Fortschrittsstream |
+| `GET` | `/v1-experimental/health` | Health-Check |
+| `GET` | `/v1-experimental/openapi` | OpenAPI-Spec |
+| `POST` | `/v1-experimental/runs` | Run erstellen |
+| `GET` | `/v1-experimental/runs/{id}` | Run-Status |
+| `GET` | `/v1-experimental/runs/{id}/result` | Vollständiges Ergebnis |
+| `POST` | `/v1-experimental/runs/{id}/cancel` | Run abbrechen |
+| `GET` | `/v1-experimental/runs/{id}/stream` | SSE-Fortschrittsstream |
+| `GET` | `/v1-experimental/audit/runs` | Audit-Runs listen |
+| `GET` | `/v1-experimental/audit/runs/{id}/rows` | Audit-Zeilen lesen |
+| `GET` | `/v1-experimental/audit/runs/{id}/sidecar` | Audit-Sidecar lesen |
+| `GET` | `/v1-experimental/audit/runs/{id}/verification` | Audit-Sidecar-Verifikation |
+| `GET` | `/v1-experimental/health/collection` | Collection-Health-Snapshot |
+| `GET` | `/v1-experimental/collections/{root}/health` | Health-Snapshot für URL-encodeten Root |
+| `GET` | `/v1-experimental/roms/{fingerprint}/provenance` | Provenance-Trail |
+| `POST` | `/v1-experimental/policies/validate` | Policy gegen Collection-Index validieren |
+| `POST` | `/v1-experimental/policies/sign` | Detached Policy-Signatur erzeugen |
 
 API-Schutz: Rate Limit (120 Req/min, Sliding Window), Body Limit 1 MB,
 CORS standardmässig auf `strict-local`.

@@ -413,3 +413,9 @@ public sealed record CollectionMergeRollbackRequest
     public string AuditPath { get; init; } = string.Empty;
     public bool DryRun { get; init; } = true;
 }
+
+public sealed record CollectionMergeRollbackEnvelope
+{
+    public int ProvenanceEventsAppended { get; init; }
+    public AuditRollbackResult Rollback { get; init; } = new();
+}

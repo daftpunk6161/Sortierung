@@ -21,6 +21,7 @@ using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Profiles;
+using Romulus.Infrastructure.Provenance;
 using Romulus.Infrastructure.Review;
 using Romulus.Infrastructure.Safety;
 using Romulus.Infrastructure.Workflow;
@@ -85,6 +86,8 @@ app.UseExceptionHandler(exceptionApp =>
             ErrorKind.Critical);
     });
 });
+
+app.UsePathBase(ExperimentalApiPathPrefix);
 
 // --- Middleware ---
 var apiKeys = ParseApiKeys(configuredApiKey);
@@ -284,7 +287,7 @@ app.MapGet("/dashboard/summary", async (
     .WithSummary("Dashboard summary read model built from the existing API/domain state")
     .Produces<DashboardSummaryResponse>(StatusCodes.Status200OK);
 
-app.MapGet("/openapi", () => Results.Redirect($"/openapi/{OpenApiSpec.DocumentName}.json", permanent: false))
+app.MapGet("/openapi", (HttpContext ctx) => Results.Redirect($"{ctx.Request.PathBase}/openapi/{OpenApiSpec.DocumentName}.json", permanent: false))
     .ExcludeFromDescription();
 
 app.MapOpenApi()
@@ -392,6 +395,7 @@ app.MapPost("/collections/merge/apply", async (
 app.MapPost("/collections/merge/rollback", async (
     HttpContext ctx,
     AuditSigningService auditSigningService,
+    IProvenanceStore provenanceStore,
     AllowedRootPathPolicy allowedRootPolicy,
     CancellationToken ct) =>
 {
@@ -423,15 +427,25 @@ app.MapPost("/collections/merge/rollback", async (
     }
 
     var rollback = auditSigningService.Rollback(auditPath, rootSet.RestoreRoots, rootSet.CurrentRoots, dryRun: request.DryRun);
-    return Results.Ok(rollback);
+    var provenanceEventsAppended = ProvenanceRollbackAppender.TryAppendRolledBackEvents(
+        provenanceStore,
+        rollback,
+        DateTime.UtcNow.ToString("o"),
+        SafeConsoleWriteLine);
+    return Results.Ok(new CollectionMergeRollbackEnvelope
+    {
+        ProvenanceEventsAppended = provenanceEventsAppended,
+        Rollback = rollback
+    });
 })
     .WithSummary("Rollback a collection merge audit using persisted root metadata")
     .Accepts<CollectionMergeRollbackRequest>("application/json")
-    .Produces<AuditRollbackResult>(StatusCodes.Status200OK)
+    .Produces<CollectionMergeRollbackEnvelope>(StatusCodes.Status200OK)
     .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest)
     .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound);
 
 MapRunWatchEndpoints(app, trustForwardedFor, timeProvider, sseTimeoutSeconds, sseHeartbeatSeconds);
+MapAuditViewerEndpoints(app);
 MapDecisionExplainerEndpoints(app, trustForwardedFor);
 MapProvenanceEndpoints(app);
 MapPolicyEndpoints(app);

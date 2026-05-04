@@ -333,6 +333,28 @@ Wenn Code erzeugt wird, liefere vollstaendige, zusammenhaengende Aenderungen sta
 - `Romulus.Infrastructure/Safety`
 - `Romulus.Infrastructure/Sorting`
 
+## Identitaets-Guardrail (dauerhaft, ab 2026-05-04)
+
+Romulus ist ein **Safe ROM Library Cleanup & Verification Tool mit Audit Trail**. Diese Identitaet ist die Grenze fuer jede neue Funktion.
+
+Pflichtfrage fuer jede neue Funktion / jeden neuen PR:
+
+> Schaerft diese Aenderung die Sichere-Cleanup-Identitaet (Cleanup, Verifikation, Audit, Determinismus, Sicherheit) — oder verschiebt sie Romulus in fremdes Revier?
+
+Ist die Antwort nicht klar Ja, wird die Aenderung im Review abgelehnt.
+
+Harte Streichliste (kein Pfad zurueck ohne ADR):
+- Frontend-Builder / Mapping-Wizards (LaunchBox, RetroBat, EmulationStation, RetroArch)
+- Scraper / ScreenScraper-Integration
+- Patching-Workflows (IPS / BPS / xdelta) als Hauptfunktion
+- MAME-Set-Builder / Rom-Manager-Funktionalitaet
+- Plugin-System / Marketplace
+- Telemetrie ohne explizites Opt-in
+- "Coming Soon"-Features ohne Bedarfs-Beleg
+- BONUS-Tasks ohne erfuellte Aktivierungsbedingung
+
+Verweis: AGENTS.md Abschnitt "Identitaets-Guardrail" und PR-Template Abschnitt "Identitaets-Check".
+
 ## Was du vermeiden musst
 
 - keine stillen Verhaltensaenderungen

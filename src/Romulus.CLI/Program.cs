@@ -613,6 +613,17 @@ internal static partial class Program
             }
 
             var result = signing.Rollback(auditPath, roots, currentRoots.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), dryRun);
+            if (!dryRun && result.RolledBack > 0)
+            {
+                var provenanceStore = serviceProvider.GetService<IProvenanceStore>();
+                var appended = ProvenanceRollbackAppender.TryAppendRolledBackEvents(
+                    provenanceStore,
+                    result,
+                    DateTime.UtcNow.ToString("o"),
+                    SafeErrorWriteLine);
+                if (appended > 0)
+                    SafeErrorWriteLine($"[Provenance] RolledBack events appended: {appended}");
+            }
 
             SafeErrorWriteLine($"[Rollback] Total rows: {result.TotalRows}");
             SafeErrorWriteLine($"[Rollback] Eligible: {result.EligibleRows}");

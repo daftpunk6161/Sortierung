@@ -145,7 +145,8 @@ Subcommands:
   romulus simulate --roots <path> [-o <file>] Before/After projection (DryRun)
   romulus explain --roots <path> [--console-key <key>] [--game-key <key>] [-o <file>]
   romulus provenance --fingerprint <sha256> [-o <file>]
-  romulus validate-policy --policy <file> --roots <path> [--extensions <exts>] [-o <file>]
+  romulus health --roots <path> [--console <key>] [--health-snapshot] [--json] [-o <file>]
+  romulus validate-policy --policy <file> --roots <path> [--extensions <exts>] [--sign] [-o <file>]
     romulus export --roots <path> [--format csv|json|excel|m3u] [-o <file>]
   romulus profiles list
   romulus profiles show --id <profile-id>
@@ -202,6 +203,7 @@ Run Options:
   --yes                  Confirm destructive Move in non-interactive runs
   --report <path>        Output HTML, CSV, or JSON report (.html, .csv, or .json)
   --audit <path>         Write audit CSV log for Move operations
+  --health-snapshot     Emit collection health through the health subcommand path
   --log <path>           Write structured JSONL log file
   --loglevel <level>     Log level: Debug|Info|Warning|Error (default: Info)
   --help                 Show this help

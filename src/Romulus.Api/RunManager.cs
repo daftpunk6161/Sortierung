@@ -694,6 +694,7 @@ public sealed class RunRollbackEnvelope
 {
     public RunStatusDto Run { get; init; } = new();
     public bool DryRun { get; init; }
+    public int ProvenanceEventsAppended { get; init; }
     public AuditRollbackResult Rollback { get; init; } = new();
 }
 

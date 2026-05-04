@@ -417,6 +417,33 @@ Im Geltungszeitraum von **2026-04-28 bis 2026-05-28** (Wellen 1-3 der strategisc
 
 ---
 
+## Identitaets-Guardrail (dauerhaft, ab 2026-05-04)
+
+Romulus ist ein **Safe ROM Library Cleanup & Verification Tool mit Audit Trail**. Diese Identitaet ist die Grenze fuer jede neue Funktion.
+
+**Pflichtfrage fuer jede neue Funktion / jeden neuen PR:**
+
+> Schaerft diese Aenderung die Sichere-Cleanup-Identitaet (Cleanup, Verifikation, Audit, Determinismus, Sicherheit) — oder verschiebt sie Romulus in fremdes Revier?
+
+Ist die Antwort nicht klar **Ja**, wird die Aenderung im Review abgelehnt.
+
+**Harte Streichliste (kein Pfad zurueck ohne ausdruecklichen ADR-Beschluss):**
+
+- Frontend-Builder / Mapping-Wizards fuer LaunchBox / RetroBat / EmulationStation / RetroArch
+- Scraper / ScreenScraper-Integration
+- Patching-Workflows (IPS / BPS / xdelta) als Hauptfunktion
+- MAME-Set-Builder / Rom-Manager-Funktionalitaet
+- Plugin-System / Marketplace
+- Telemetrie ohne explizites Opt-in
+- "Coming Soon"-Features ohne aktiven Bedarfs-Beleg
+- BONUS-Tasks aus `docs/plan/strategic-reduction-2026/plan.yaml`, deren Aktivierungsbedingung nicht erfuellt ist
+
+**PR-Template-Pflicht:** Jede PR beantwortet die Identitaets-Frage explizit (siehe Abschnitt "Identitaets-Check" in `.github/PULL_REQUEST_TEMPLATE.md`). Reviewer pruefen die Antwort.
+
+**Owner:** Repo-Maintainer (daftpunk6161). Aenderung dieser Regel nur per neuem ADR.
+
+---
+
 ## Was du vermeiden musst
 - keine stillen Verhaltensaenderungen
 - keine Logikduplikation zwischen GUI, CLI und API

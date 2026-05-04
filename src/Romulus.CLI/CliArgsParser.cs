@@ -325,6 +325,10 @@ internal static partial class CliArgsParser
                     opts.RollbackDryRun = true;
                     break;
 
+                case "--health-snapshot":
+                    opts.HealthSnapshot = true;
+                    break;
+
                 case "-help" or "--help" or "-h" or "-?":
                     return CliParseResult.Help();
 
@@ -434,6 +438,9 @@ internal static partial class CliArgsParser
 
         if (!opts.OnlyGames && !opts.KeepUnknownWhenOnlyGames)
             return CliParseResult.ValidationError(["[Error] --dropunknown requires --gamesonly."]);
+
+        if (opts.HealthSnapshot)
+            return CliParseResult.Subcommand(CliCommand.Health, opts);
 
         return CliParseResult.Run(opts);
     }
@@ -705,6 +712,8 @@ internal sealed class CliRunOptions
     public string? GameKey { get; set; }
     public string? Fingerprint { get; set; }
     public string? PolicyPath { get; set; }
+    public bool SignPolicy { get; set; }
+    public bool HealthSnapshot { get; set; }
     public int? HistoryLimit { get; set; }
     public int HistoryOffset { get; set; }
     public int WatchDebounceSeconds { get; set; } = 5;

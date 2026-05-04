@@ -410,6 +410,12 @@ public sealed class AuditSigningService
         return Convert.ToHexStringLower(hash);
     }
 
+    public string GetSigningKeyId()
+    {
+        var key = GetSigningKey();
+        return ComputeKeyId(key);
+    }
+
     /// <summary>
     /// Write an audit metadata sidecar (.meta.json) with HMAC signature.
     /// </summary>

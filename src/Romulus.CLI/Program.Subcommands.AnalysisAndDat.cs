@@ -4,6 +4,7 @@ using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Analysis;
+using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Dat;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Paths;
@@ -388,13 +389,31 @@ internal static partial class Program
 
             var collectionIndex = serviceProvider.GetRequiredService<ICollectionIndex>();
             var policyEngine = serviceProvider.GetRequiredService<IPolicyEngine>();
+            var auditSigningService = serviceProvider.GetRequiredService<AuditSigningService>();
+            if (opts.SignPolicy)
+            {
+                var signaturePath = PolicyDocumentLoader.WriteSignatureFile(
+                    opts.PolicyPath,
+                    policyText,
+                    auditSigningService,
+                    TimeProvider.UtcNow.UtcDateTime);
+                SafeErrorWriteLine($"[Policy] Signature written: {signaturePath}");
+            }
+
             var entries = await collectionIndex.ListEntriesInScopeAsync(opts.Roots, opts.Extensions).ConfigureAwait(false);
             var snapshot = LibrarySnapshotProjection.FromCollectionIndex(
                 entries,
                 opts.Roots,
                 TimeProvider.UtcNow.UtcDateTime);
             var fingerprint = PolicyDocumentLoader.ComputeFingerprint(policyText);
-            var report = policyEngine.Validate(snapshot, policy, fingerprint);
+            var signature = PolicyDocumentLoader.VerifySignatureFile(
+                opts.PolicyPath,
+                policyText,
+                auditSigningService);
+            var report = policyEngine.Validate(snapshot, policy, fingerprint) with
+            {
+                Signature = signature
+            };
             var serialized = opts.OutputPath?.EndsWith(".csv", StringComparison.OrdinalIgnoreCase) == true
                 ? PolicyValidationReportExporter.ToCsv(report)
                 : PolicyValidationReportExporter.ToJson(report);

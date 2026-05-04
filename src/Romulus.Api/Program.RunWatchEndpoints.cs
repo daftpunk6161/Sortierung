@@ -11,6 +11,7 @@ using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Profiles;
+using Romulus.Infrastructure.Provenance;
 using Romulus.Infrastructure.Review;
 using Romulus.Infrastructure.Safety;
 
@@ -549,7 +550,7 @@ public partial class Program
             .Produces<OperationErrorResponse>(StatusCodes.Status403Forbidden)
             .Produces<OperationErrorResponse>(StatusCodes.Status404NotFound);
         
-        app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, string? dryRun, RunLifecycleManager mgr, AllowedRootPathPolicy allowedRootPolicy, AuditSigningService auditSigningService) =>
+        app.MapPost("/runs/{runId}/rollback", (string runId, HttpContext ctx, string? dryRun, RunLifecycleManager mgr, AllowedRootPathPolicy allowedRootPolicy, AuditSigningService auditSigningService, IProvenanceStore provenanceStore) =>
         {
             if (!Guid.TryParse(runId, out _))
                 return ApiError(400, ApiErrorCodes.RunInvalidId, "Invalid run ID format.");
@@ -587,14 +588,20 @@ public partial class Program
             {
                 return ApiError(400, SecurityErrorCodes.OutsideAllowedRoots, "Rollback paths are outside configured AllowedRoots.", ErrorKind.Critical, runId: runId);
             }
-        
+
             var rollback = auditSigningService.Rollback(run.AuditPath, restoreRoots, currentRoots, dryRun: isDryRun);
-        
-            return Results.Ok(new
+            var provenanceEventsAppended = ProvenanceRollbackAppender.TryAppendRolledBackEvents(
+                provenanceStore,
+                rollback,
+                DateTime.UtcNow.ToString("o"),
+                SafeConsoleWriteLine);
+
+            return Results.Ok(new RunRollbackEnvelope
             {
-                run = run.ToDto(),
-                dryRun = isDryRun,
-                rollback
+                Run = run.ToDto(),
+                DryRun = isDryRun,
+                ProvenanceEventsAppended = provenanceEventsAppended,
+                Rollback = rollback
             });
         })
             .WithSummary("Preview or execute audit-based rollback for a completed run")

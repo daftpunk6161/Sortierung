@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Romulus.Api;
 using Romulus.Contracts.Ports;
+using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Orchestration;
 using Romulus.Infrastructure.Profiles;
@@ -17,14 +18,16 @@ internal static class ApiTestFactory
     public static WebApplicationFactory<Program> Create(
         IDictionary<string, string?> settings,
         Func<RunRecord, IFileSystem, IAuditStore, CancellationToken, RunExecutionOutcome>? executor = null,
-        ICollectionIndex? collectionIndex = null)
-        => new IsolatedApiFactory(settings, executor, collectionIndex);
+        ICollectionIndex? collectionIndex = null,
+        string? auditSigningKeyPath = null)
+        => new IsolatedApiFactory(settings, executor, collectionIndex, auditSigningKeyPath);
 
     private sealed class IsolatedApiFactory : WebApplicationFactory<Program>
     {
         private readonly IReadOnlyDictionary<string, string?> _settings;
         private readonly Func<RunRecord, IFileSystem, IAuditStore, CancellationToken, RunExecutionOutcome>? _executor;
         private readonly ICollectionIndex? _collectionIndex;
+        private readonly string? _auditSigningKeyPath;
         private readonly string _tempDir;
         private readonly string _databasePath;
         private readonly string _datCatalogStatePath;
@@ -33,11 +36,13 @@ internal static class ApiTestFactory
         public IsolatedApiFactory(
             IDictionary<string, string?> settings,
             Func<RunRecord, IFileSystem, IAuditStore, CancellationToken, RunExecutionOutcome>? executor,
-            ICollectionIndex? collectionIndex)
+            ICollectionIndex? collectionIndex,
+            string? auditSigningKeyPath)
         {
             _settings = new Dictionary<string, string?>(settings, StringComparer.OrdinalIgnoreCase);
             _executor = executor;
             _collectionIndex = collectionIndex;
+            _auditSigningKeyPath = auditSigningKeyPath;
             _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_ApiFactory_" + Guid.NewGuid().ToString("N"));
             _databasePath = Path.Combine(_tempDir, "collection.db");
             _datCatalogStatePath = Path.Combine(_tempDir, "dat-catalog-state.json");
@@ -81,6 +86,29 @@ internal static class ApiTestFactory
                 {
                     services.RemoveAll<ICollectionIndex>();
                     services.AddSingleton<ICollectionIndex>(_ => _collectionIndex);
+                }
+
+                if (!string.IsNullOrWhiteSpace(_auditSigningKeyPath))
+                {
+                    services.RemoveAll<AuditSigningService>();
+                    services.AddSingleton(sp =>
+                        new AuditSigningService(
+                            sp.GetRequiredService<IFileSystem>(),
+                            _ => { },
+                            _auditSigningKeyPath));
+
+                    services.RemoveAll<IAuditStore>();
+                    services.AddSingleton<IAuditStore>(sp =>
+                        new AuditCsvStore(
+                            sp.GetRequiredService<IFileSystem>(),
+                            _ => { },
+                            _auditSigningKeyPath));
+
+                    services.RemoveAll<IAuditViewerBackingService>();
+                    services.AddSingleton<IAuditViewerBackingService>(sp =>
+                        new AuditViewerBackingService(
+                            sp.GetRequiredService<IFileSystem>(),
+                            _auditSigningKeyPath));
                 }
 
                 services.RemoveAll<IReviewDecisionStore>();

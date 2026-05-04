@@ -58,11 +58,33 @@ public sealed record PolicyValidationReport
     public string PolicyId { get; init; } = "";
     public string PolicyName { get; init; } = "";
     public string PolicyFingerprint { get; init; } = "";
+    public PolicySignatureStatus Signature { get; init; } = new();
     public DateTime GeneratedUtc { get; init; }
     public LibrarySnapshotSummary Snapshot { get; init; } = new();
     public PolicyViolationSummary Summary { get; init; } = new();
     public PolicyRuleViolation[] Violations { get; init; } = Array.Empty<PolicyRuleViolation>();
     public bool IsCompliant => Violations.Length == 0;
+}
+
+public sealed record PolicySignatureDocument
+{
+    public string Version { get; init; } = "romulus-policy-signature-v1";
+    public string PolicyFileName { get; init; } = "";
+    public string PolicyFingerprint { get; init; } = "";
+    public string Signer { get; init; } = "local-audit-key";
+    public string KeyId { get; init; } = "";
+    public string CreatedUtc { get; init; } = "";
+    public string HmacSha256 { get; init; } = "";
+}
+
+public sealed record PolicySignatureStatus
+{
+    public bool IsPresent { get; init; }
+    public bool IsValid { get; init; }
+    public string SignaturePath { get; init; } = "";
+    public string Signer { get; init; } = "";
+    public string KeyId { get; init; } = "";
+    public string Error { get; init; } = "";
 }
 
 public sealed record PolicyViolationSummary
@@ -91,6 +113,14 @@ public sealed record PolicyRuleViolation
 public sealed record PolicyValidationRequest
 {
     public string PolicyText { get; init; } = "";
+    public string PolicySignatureText { get; init; } = "";
     public string[] Roots { get; init; } = Array.Empty<string>();
     public string[] Extensions { get; init; } = Array.Empty<string>();
+}
+
+public sealed record PolicySignRequest
+{
+    public string PolicyText { get; init; } = "";
+    public string PolicyFileName { get; init; } = "policy.yaml";
+    public string Signer { get; init; } = "local-audit-key";
 }

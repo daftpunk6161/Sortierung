@@ -171,8 +171,94 @@
                   Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Features}"/>
               <views:DatCatalogView DataContext="{Binding DatCatalog}"
                   Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=DatManagement}"/>
-              <views:PolicyGovernanceView
-                  Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Policy}"/>
+              <DockPanel LastChildFill="True" DataContext="{Binding PolicyGovernance}"
+                  Visibility="{Binding DataContext.Shell.SelectedSubTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Policy}">
+                <Border DockPanel.Dock="Top" Style="{StaticResource SectionCard}" Margin="20,16,20,8">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="2*"/>
+                      <ColumnDefinition Width="3*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                      <TextBlock Text="Policy Governance" Style="{StaticResource SectionHeader}"/>
+                      <TextBlock Text="{Binding StatusText}" Style="{StaticResource CaptionText}" Margin="0,4,0,12" TextWrapping="Wrap"/>
+
+                      <TextBlock Text="Roots" Style="{StaticResource CaptionText}"/>
+                      <TextBox Text="{Binding RootsText, UpdateSourceTrigger=PropertyChanged}"
+                               Margin="0,4,0,10"
+                               ToolTip="Semikolon-getrennte Root-Pfade"/>
+
+                      <TextBlock Text="Extensions" Style="{StaticResource CaptionText}"/>
+                      <TextBox Text="{Binding ExtensionsText, UpdateSourceTrigger=PropertyChanged}"
+                               Margin="0,4,0,12"/>
+
+                      <WrapPanel>
+                        <Button Content="Laden" Command="{Binding LoadPolicyFileCommand}" Margin="0,0,8,8"/>
+                        <Button Content="EU" Command="{Binding LoadEuPreferredExampleCommand}" Margin="0,0,8,8"/>
+                        <Button Content="Keine Demos" Command="{Binding LoadNoDemosExampleCommand}" Margin="0,0,8,8"/>
+                        <Button Content="Alle ZIP" Command="{Binding LoadAllZipExampleCommand}" Margin="0,0,8,8"/>
+                        <Button Content="Validieren" Command="{Binding ValidateCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8"/>
+                        <Button Content="Export" Command="{Binding ExportReportCommand}" Margin="0,0,8,8"/>
+                      </WrapPanel>
+
+                      <TextBlock Text="{Binding LastError}" Foreground="{DynamicResource BrushDanger}"
+                                 TextWrapping="Wrap" Margin="0,8,0,0"
+                                 Visibility="{Binding LastError, Converter={StaticResource StringNotEmptyToVisibility}}"/>
+                    </StackPanel>
+
+                    <Grid Grid.Column="1">
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                      </Grid.RowDefinitions>
+                      <TextBlock Text="Policy-Datei" Style="{StaticResource SubsectionHeader}" Margin="0,0,0,8"/>
+                      <TextBox Grid.Row="1"
+                               Text="{Binding PolicyText, UpdateSourceTrigger=PropertyChanged}"
+                               AcceptsReturn="True"
+                               AcceptsTab="True"
+                               VerticalScrollBarVisibility="Auto"
+                               HorizontalScrollBarVisibility="Auto"
+                               MinHeight="160"
+                               FontFamily="Consolas"/>
+                    </Grid>
+                  </Grid>
+                </Border>
+
+                <Border Style="{StaticResource SectionCard}" Margin="20,8,20,16">
+                  <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                      <TextBlock Text="Validation-Report" Style="{StaticResource SubsectionHeader}" VerticalAlignment="Center"/>
+                      <TextBlock Text="{Binding ViolationCount, StringFormat='{}{0} Verstoesse'}"
+                                 Foreground="{DynamicResource BrushTextMuted}"
+                                 Margin="12,2,0,0"/>
+                      <TextBlock Text="{Binding PolicyFingerprint}"
+                                 Foreground="{DynamicResource BrushTextMuted}"
+                                 Margin="16,2,0,0"/>
+                    </StackPanel>
+
+                    <DataGrid ItemsSource="{Binding ViolationsView}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserSortColumns="True"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              HeadersVisibility="Column"
+                              GridLinesVisibility="None">
+                      <DataGrid.Columns>
+                        <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="Auto"/>
+                        <DataGridTextColumn Header="Rule" Binding="{Binding RuleId}" Width="Auto"/>
+                        <DataGridTextColumn Header="Console" Binding="{Binding ConsoleKey}" Width="Auto"/>
+                        <DataGridTextColumn Header="GameKey" Binding="{Binding GameKey}" Width="*"/>
+                        <DataGridTextColumn Header="Region" Binding="{Binding Region}" Width="Auto"/>
+                        <DataGridTextColumn Header="Ext" Binding="{Binding Extension}" Width="Auto"/>
+                        <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="2*"/>
+                        <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="2*"/>
+                      </DataGrid.Columns>
+                    </DataGrid>
+                  </DockPanel>
+                </Border>
+              </DockPanel>
             </Grid>
 
             <!-- ── System (sub-tab-aware) ──────────────────────── -->

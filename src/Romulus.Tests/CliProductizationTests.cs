@@ -41,9 +41,12 @@ public sealed class CliProductizationTests : IDisposable
         Assert.Contains("romulus compare --run <run-id> --compare-to <run-id>", text, StringComparison.Ordinal);
         Assert.Contains("romulus trends [--limit <n>] [-o <file>]", text, StringComparison.Ordinal);
         Assert.Contains("romulus dat fixdat --roots <path>", text, StringComparison.Ordinal);
+        Assert.Contains("romulus health --roots <path> [--console <key>] [--health-snapshot]", text, StringComparison.Ordinal);
+        Assert.Contains("romulus validate-policy --policy <file> --roots <path> [--extensions <exts>] [--sign]", text, StringComparison.Ordinal);
         Assert.Contains("--workflow <id>", text, StringComparison.Ordinal);
         Assert.Contains("--profile <id>", text, StringComparison.Ordinal);
         Assert.Contains("--profile-file <file>", text, StringComparison.Ordinal);
+        Assert.Contains("--health-snapshot", text, StringComparison.Ordinal);
         // T-W1-FRONTEND-EXPORT-CULL pass 2: stale frontend formats (retroarch/launchbox/emulationstation/
         // playnite/mister/analoguepocket/onionos) wurden aus der CLI-Hilfe entfernt. Tatsaechlich
         // unterstuetzt sind nur csv|json|excel|m3u (Program.cs Subcommand-Export-Branch).

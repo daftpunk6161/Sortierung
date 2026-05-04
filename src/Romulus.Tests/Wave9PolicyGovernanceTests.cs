@@ -2,6 +2,7 @@ using System.Text.Json;
 using Romulus.CLI;
 using Romulus.Contracts.Models;
 using Romulus.Core.Policy;
+using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Index;
 using Romulus.Infrastructure.Policy;
 using Xunit;
@@ -48,6 +49,34 @@ public sealed class Wave9PolicyGovernanceTests : IDisposable
         Assert.Equal(["Demo"], yamlPolicy.DeniedTitleTokens);
         Assert.Equal("all-zip", jsonPolicy.Id);
         Assert.Equal([".zip"], jsonPolicy.AllowedExtensions);
+    }
+
+    [Fact]
+    public void PolicyDocumentLoader_CreatesAndVerifiesDetachedSignature()
+    {
+        var keyPath = Path.Combine(_tempDir, "policy-signing.key");
+        var signing = new AuditSigningService(new Romulus.Infrastructure.FileSystem.FileSystemAdapter(), keyFilePath: keyPath);
+        var policyPath = Path.Combine(_tempDir, "policy.yaml");
+        var policyText = """
+            id: signed
+            name: Signed Policy
+            allowedExtensions: [.zip]
+            """;
+        File.WriteAllText(policyPath, policyText);
+
+        var signaturePath = PolicyDocumentLoader.WriteSignatureFile(
+            policyPath,
+            policyText,
+            signing,
+            new DateTime(2026, 5, 3, 12, 0, 0, DateTimeKind.Utc));
+        var status = PolicyDocumentLoader.VerifySignatureFile(policyPath, policyText, signing);
+        var tampered = PolicyDocumentLoader.VerifySignatureFile(policyPath, policyText + "\n# changed", signing);
+
+        Assert.Equal(policyPath + ".sig.json", signaturePath);
+        Assert.True(status.IsPresent);
+        Assert.True(status.IsValid);
+        Assert.False(tampered.IsValid);
+        Assert.Contains("fingerprint", tampered.Error, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -139,6 +168,15 @@ public sealed class Wave9PolicyGovernanceTests : IDisposable
     }
 
     [Fact]
+    public void ValidatePolicyParser_AcceptsSignPolicyFlag()
+    {
+        var result = CliArgsParser.Parse(["validate-policy", "--policy", Path.Combine(_tempDir, "policy.yaml"), "--roots", _tempDir, "--sign"]);
+
+        Assert.Equal(CliCommand.ValidatePolicy, result.Command);
+        Assert.True(result.Options!.SignPolicy);
+    }
+
+    [Fact]
     public async Task ValidatePolicySubcommand_UsesPersistedCollectionIndex_AndWritesJsonReport()
     {
         var root = Path.Combine(_tempDir, "roms");
@@ -178,14 +216,18 @@ public sealed class Wave9PolicyGovernanceTests : IDisposable
             {
                 PolicyPath = policyPath,
                 Roots = [root],
-                OutputPath = Path.Combine(_tempDir, "report.json")
+                OutputPath = Path.Combine(_tempDir, "report.json"),
+                SignPolicy = true
             }));
 
         Assert.Equal(4, result.ExitCode);
+        Assert.True(File.Exists(policyPath + ".sig.json"));
         var reportPath = Path.Combine(_tempDir, "report.json");
         Assert.True(File.Exists(reportPath));
         using var doc = JsonDocument.Parse(await File.ReadAllTextAsync(reportPath));
         Assert.False(doc.RootElement.GetProperty("isCompliant").GetBoolean());
+        Assert.True(doc.RootElement.GetProperty("signature").GetProperty("isPresent").GetBoolean());
+        Assert.True(doc.RootElement.GetProperty("signature").GetProperty("isValid").GetBoolean());
         Assert.Equal("allowed-extensions", doc.RootElement.GetProperty("violations")[0].GetProperty("ruleId").GetString());
     }
 }

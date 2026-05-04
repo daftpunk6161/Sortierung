@@ -8,6 +8,7 @@ using Romulus.Contracts;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
 using Romulus.Core.Policy;
+using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.FileSystem;
 using Romulus.Infrastructure.Policy;
 using Romulus.Infrastructure.Safety;
@@ -22,18 +23,23 @@ public sealed partial class PolicyGovernanceViewModel : ObservableObject
     private readonly ICollectionIndex? _collectionIndex;
     private readonly IDialogService _dialog;
     private readonly ITimeProvider _timeProvider;
+    private readonly AuditSigningService _auditSigningService;
     private readonly object _violationsLock = new();
+    private string? _loadedPolicyPath;
+    private PolicyValidationReport? _lastReport;
 
     public PolicyGovernanceViewModel(
         IPolicyEngine? policyEngine = null,
         ICollectionIndex? collectionIndex = null,
         IDialogService? dialog = null,
-        ITimeProvider? timeProvider = null)
+        ITimeProvider? timeProvider = null,
+        AuditSigningService? auditSigningService = null)
     {
         _policyEngine = policyEngine ?? new PolicyEngine();
         _collectionIndex = collectionIndex;
         _dialog = dialog ?? new WpfDialogService();
         _timeProvider = timeProvider ?? new SystemTimeProvider();
+        _auditSigningService = auditSigningService ?? new AuditSigningService(new FileSystemAdapter());
 
         BindingOperations.EnableCollectionSynchronization(Violations, _violationsLock);
         ViolationsView = CollectionViewSource.GetDefaultView(Violations);
@@ -82,6 +88,8 @@ public sealed partial class PolicyGovernanceViewModel : ObservableObject
         try
         {
             PolicyText = File.ReadAllText(path);
+            _loadedPolicyPath = path;
+            _lastReport = null;
             LastError = "";
             StatusText = $"Policy geladen: {Path.GetFileName(path)}";
         }
@@ -99,6 +107,8 @@ public sealed partial class PolicyGovernanceViewModel : ObservableObject
             name: EU bevorzugt
             preferredRegions: [EU, Europe]
             """;
+        _loadedPolicyPath = null;
+        _lastReport = null;
         StatusText = "Beispiel geladen: EU bevorzugt";
         LastError = "";
     }
@@ -114,6 +124,8 @@ public sealed partial class PolicyGovernanceViewModel : ObservableObject
               - Prototype
               - Sample
             """;
+        _loadedPolicyPath = null;
+        _lastReport = null;
         StatusText = "Beispiel geladen: Keine Demos";
         LastError = "";
     }
@@ -126,6 +138,8 @@ public sealed partial class PolicyGovernanceViewModel : ObservableObject
             name: Alle ZIP
             allowedExtensions: [.zip]
             """;
+        _loadedPolicyPath = null;
+        _lastReport = null;
         StatusText = "Beispiel geladen: Alle ZIP";
         LastError = "";
     }
@@ -161,7 +175,14 @@ public sealed partial class PolicyGovernanceViewModel : ObservableObject
                 roots,
                 _timeProvider.UtcNow.UtcDateTime);
             var fingerprint = PolicyDocumentLoader.ComputeFingerprint(PolicyText);
-            var report = _policyEngine.Validate(snapshot, policy, fingerprint);
+            var signature = _loadedPolicyPath is null
+                ? new PolicySignatureStatus()
+                : PolicyDocumentLoader.VerifySignatureFile(_loadedPolicyPath, PolicyText, _auditSigningService);
+            var report = _policyEngine.Validate(snapshot, policy, fingerprint) with
+            {
+                Signature = signature
+            };
+            _lastReport = report;
 
             Violations.Clear();
             foreach (var violation in report.Violations)
@@ -170,9 +191,12 @@ public sealed partial class PolicyGovernanceViewModel : ObservableObject
 
             PolicyFingerprint = report.PolicyFingerprint;
             IsCompliant = report.IsCompliant;
+            var signatureText = report.Signature.IsPresent
+                ? report.Signature.IsValid ? " Signatur gueltig." : " Signatur ungueltig."
+                : "";
             StatusText = report.IsCompliant
-                ? $"Policy erfuellt. {snapshot.Summary.TotalEntries} Eintraege geprueft."
-                : $"{report.Violations.Length} Policy-Verstoesse in {snapshot.Summary.TotalEntries} Eintraegen.";
+                ? $"Policy erfuellt. {snapshot.Summary.TotalEntries} Eintraege geprueft.{signatureText}"
+                : $"{report.Violations.Length} Policy-Verstoesse in {snapshot.Summary.TotalEntries} Eintraegen.{signatureText}";
             OnPropertyChanged(nameof(ViolationCount));
         }
         catch (FormatException ex)
@@ -199,20 +223,7 @@ public sealed partial class PolicyGovernanceViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(path))
             return;
 
-        var report = new PolicyValidationReport
-        {
-            PolicyFingerprint = PolicyFingerprint,
-            GeneratedUtc = _timeProvider.UtcNow.UtcDateTime,
-            Summary = new PolicyViolationSummary
-            {
-                Total = Violations.Count,
-                BySeverity = Violations.GroupBy(static v => v.Severity, StringComparer.Ordinal)
-                    .ToDictionary(static g => g.Key, static g => g.Count(), StringComparer.Ordinal),
-                ByRule = Violations.GroupBy(static v => v.RuleId, StringComparer.Ordinal)
-                    .ToDictionary(static g => g.Key, static g => g.Count(), StringComparer.Ordinal)
-            },
-            Violations = Violations.ToArray()
-        };
+        var report = _lastReport ?? BuildFallbackReport();
 
         try
         {
@@ -240,4 +251,37 @@ public sealed partial class PolicyGovernanceViewModel : ObservableObject
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(static value => value, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+    private PolicyValidationReport BuildFallbackReport()
+    {
+        var policyId = "";
+        var policyName = "";
+        try
+        {
+            var policy = PolicyDocumentLoader.Parse(PolicyText);
+            policyId = policy.Id;
+            policyName = policy.Name;
+        }
+        catch (FormatException)
+        {
+            // Export remains possible for the visible validation rows even if the editor changed after validation.
+        }
+
+        return new PolicyValidationReport
+        {
+            PolicyId = policyId,
+            PolicyName = policyName,
+            PolicyFingerprint = PolicyFingerprint,
+            GeneratedUtc = _timeProvider.UtcNow.UtcDateTime,
+            Summary = new PolicyViolationSummary
+            {
+                Total = Violations.Count,
+                BySeverity = Violations.GroupBy(static v => v.Severity, StringComparer.Ordinal)
+                    .ToDictionary(static g => g.Key, static g => g.Count(), StringComparer.Ordinal),
+                ByRule = Violations.GroupBy(static v => v.RuleId, StringComparer.Ordinal)
+                    .ToDictionary(static g => g.Key, static g => g.Count(), StringComparer.Ordinal)
+            },
+            Violations = Violations.ToArray()
+        };
+    }
 }

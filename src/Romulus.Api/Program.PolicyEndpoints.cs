@@ -2,6 +2,7 @@ using Romulus.Contracts;
 using Romulus.Contracts.Errors;
 using Romulus.Contracts.Models;
 using Romulus.Contracts.Ports;
+using Romulus.Infrastructure.Audit;
 using Romulus.Infrastructure.Policy;
 using Romulus.Infrastructure.Safety;
 
@@ -13,6 +14,7 @@ public partial class Program
             HttpContext ctx,
             ICollectionIndex collectionIndex,
             IPolicyEngine policyEngine,
+            AuditSigningService auditSigningService,
             ITimeProvider timeProvider,
             AllowedRootPathPolicy allowedRootPolicy,
             CancellationToken ct) =>
@@ -58,13 +60,57 @@ public partial class Program
                 request.Roots,
                 timeProvider.UtcNow.UtcDateTime);
             var fingerprint = PolicyDocumentLoader.ComputeFingerprint(request.PolicyText);
-            var report = policyEngine.Validate(snapshot, policy, fingerprint);
+            var signature = PolicyDocumentLoader.VerifySignatureText(
+                request.PolicyText,
+                request.PolicySignatureText,
+                auditSigningService);
+            var report = policyEngine.Validate(snapshot, policy, fingerprint) with
+            {
+                Signature = signature
+            };
             return Results.Ok(report);
         })
             .WithSummary("Validate the persisted collection index against a declarative target-state policy")
             .WithTags("Policy")
             .Accepts<PolicyValidationRequest>("application/json")
             .Produces<PolicyValidationReport>(StatusCodes.Status200OK)
+            .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest);
+
+        app.MapPost("/policies/sign", async (
+            HttpContext ctx,
+            AuditSigningService auditSigningService,
+            ITimeProvider timeProvider,
+            CancellationToken ct) =>
+        {
+            var requestRead = await ReadJsonBodyAsync<PolicySignRequest>(ctx, "POLICY-SIGN", ct);
+            if (requestRead.Error is not null)
+                return requestRead.Error;
+
+            var request = requestRead.Value!;
+            if (string.IsNullOrWhiteSpace(request.PolicyText))
+                return ApiError(400, ApiErrorCodes.PolicyTextRequired, "policyText is required.");
+
+            try
+            {
+                PolicyDocumentLoader.Parse(request.PolicyText);
+            }
+            catch (FormatException ex)
+            {
+                return ApiError(400, ApiErrorCodes.PolicyInvalid, ex.Message);
+            }
+
+            var signature = PolicyDocumentLoader.CreateSignature(
+                request.PolicyText,
+                request.PolicyFileName,
+                auditSigningService,
+                timeProvider.UtcNow.UtcDateTime,
+                request.Signer);
+            return Results.Ok(signature);
+        })
+            .WithSummary("Create a detached signature document for a policy text")
+            .WithTags("Policy")
+            .Accepts<PolicySignRequest>("application/json")
+            .Produces<PolicySignatureDocument>(StatusCodes.Status200OK)
             .Produces<OperationErrorResponse>(StatusCodes.Status400BadRequest);
     }
 

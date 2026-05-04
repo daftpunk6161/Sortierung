@@ -187,4 +187,43 @@ public sealed class Wave7ProvenancePipelineProjectionTests
         var events = ProvenancePipelineProjection.ProjectEvents(rr, AuditRunId, Ts);
         Assert.Empty(events);
     }
+
+    [Fact]
+    public void RollbackProjectEvents_EmitsRolledBack_ForExecutedRestoredPaths()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "rom-w7-rollback-prov-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var restoredPath = Path.Combine(dir, "a.nes");
+            var trashPath = Path.Combine(dir, "trash", "a.nes");
+            var auditPath = Path.Combine(dir, "audit-run.csv");
+            File.WriteAllLines(auditPath,
+            [
+                "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
+                $"C:/r,{restoredPath},{trashPath},Move,Game,aa11,winner,2026-05-01T00:00:00Z"
+            ]);
+
+            var rollback = new AuditRollbackResult
+            {
+                AuditCsvPath = auditPath,
+                DryRun = false,
+                RolledBack = 1,
+                RollbackAuditPath = Path.Combine(dir, "audit-run.rollback-audit.csv"),
+                RestoredPaths = [restoredPath]
+            };
+
+            var events = ProvenanceRollbackAppender.ProjectEvents(rollback, "audit-run.rollback-audit", Ts);
+
+            var ev = Assert.Single(events);
+            Assert.Equal(ProvenanceEventKind.RolledBack, ev.EventKind);
+            Assert.Equal("aa11", ev.Fingerprint);
+            Assert.Equal("audit-run.rollback-audit", ev.AuditRunId);
+            Assert.DoesNotContain(dir, ev.Detail ?? "", StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { }
+        }
+    }
 }

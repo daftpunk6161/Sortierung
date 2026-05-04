@@ -248,15 +248,28 @@ dotnet run --project src/Romulus.Api
 
 | Methode | Pfad | Zweck |
 |---------|------|-------|
-| `GET` | `/health` | Health-Check |
-| `GET` | `/openapi` | OpenAPI-Spec |
-| `POST` | `/runs` | Run erstellen |
-| `GET` | `/runs/{id}` | Run-Status |
-| `GET` | `/runs/{id}/result` | Ergebnis |
-| `POST` | `/runs/{id}/cancel` | Abbrechen |
-| `GET` | `/runs/{id}/stream` | SSE-Fortschritt |
+| `GET` | `/v1-experimental/health` | Health-Check |
+| `GET` | `/v1-experimental/openapi` | OpenAPI-Spec |
+| `POST` | `/v1-experimental/runs` | Run erstellen |
+| `GET` | `/v1-experimental/runs/{id}` | Run-Status |
+| `GET` | `/v1-experimental/runs/{id}/result` | Ergebnis |
+| `POST` | `/v1-experimental/runs/{id}/cancel` | Abbrechen |
+| `GET` | `/v1-experimental/runs/{id}/stream` | SSE-Fortschritt |
+| `GET` | `/v1-experimental/audit/runs` | Audit-Runs listen |
+| `GET` | `/v1-experimental/audit/runs/{id}/rows` | Audit-Zeilen lesen |
+| `GET` | `/v1-experimental/audit/runs/{id}/sidecar` | Audit-Sidecar lesen |
+| `GET` | `/v1-experimental/audit/runs/{id}/verification` | Audit-Verifikation |
+| `GET` | `/v1-experimental/health/collection` | Collection-Health-Snapshot |
+| `GET` | `/v1-experimental/collections/{root}/health` | Health-Snapshot für URL-encodeten Root |
+| `GET` | `/v1-experimental/roms/{fingerprint}/provenance` | Provenance-Trail |
+| `POST` | `/v1-experimental/policies/validate` | Policy validieren |
+| `POST` | `/v1-experimental/policies/sign` | Detached Policy-Signatur erzeugen |
 
-**Request-Body für `/runs`:**
+Alle produktiven API-Routen sind `v1-experimental`. Antworten tragen
+`X-Romulus-API-Status: experimental`; die OpenAPI-Ausgabe enthält
+`x-stability: experimental`.
+
+**Request-Body für `/v1-experimental/runs`:**
 ```json
 {
   "roots": ["D:\\ROMs"],

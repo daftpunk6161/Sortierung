@@ -271,6 +271,34 @@ public sealed class CliHealthSubcommandTests
     }
 
     [Fact]
+    public void Health_WithSnapshotFlag_ParsesCorrectly()
+    {
+        var result = CliArgsParser.Parse(["health", "--roots", @"C:\roms\snes", "--health-snapshot"]);
+
+        Assert.Equal(CliCommand.Health, result.Command);
+        Assert.True(result.Options!.HealthSnapshot);
+    }
+
+    [Fact]
+    public void TopLevelHealthSnapshot_WithRoots_RoutesToHealthCommand()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "rom-health-snapshot-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var result = CliArgsParser.Parse(["--roots", root, "--health-snapshot"]);
+
+            Assert.Equal(CliCommand.Health, result.Command);
+            Assert.True(result.Options!.HealthSnapshot);
+            Assert.Equal(root, Assert.Single(result.Options.Roots));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void Health_WithJson_ParsesExportFormat()
     {
         var result = CliArgsParser.Parse(["health", "--console", "snes", "--json"]);

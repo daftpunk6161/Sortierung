@@ -803,6 +803,13 @@ public sealed partial class MainViewModel
             }
 
             var restored = await Task.Run(() => Romulus.Infrastructure.Audit.RollbackService.Execute(auditPathCopy, roots));
+            var provenanceEventsAppended = Romulus.Infrastructure.Provenance.ProvenanceRollbackAppender.TryAppendRolledBackEvents(
+                _provenanceStore,
+                restored,
+                DateTime.UtcNow.ToString("o"),
+                message => AddLog(message, "WARN"));
+            if (provenanceEventsAppended > 0)
+                AddLog($"Provenance RolledBack events appended: {provenanceEventsAppended}", "INFO");
             AddLog(_loc.Format("Log.RollbackDone", restored.RolledBack, restored.SkippedMissingDest, restored.SkippedCollision, restored.Failed),
                 restored.Failed > 0 ? "WARN" : "INFO");
             CanRollback = false;

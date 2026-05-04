@@ -5,7 +5,7 @@ objective: |
   ohne Kompromisse und ohne Luecken umsetzen.
 created_at: "2026-04-28"
 created_by: gem-planner
-status: in_progress
+status: completed
 status_history:
   - status: pending_approval
     timestamp: "2026-04-28"
@@ -16,6 +16,20 @@ status_history:
       Wellen 1-6 in aktiver Ausfuehrung; mehrere Tasks bereits completed
       (siehe planning_history je Task). Top-Level-Status angeglichen, damit
       er nicht still mit dem Task-Fortschritt divergiert.
+  - status: completed
+    timestamp: "2026-05-04"
+    note: |
+      Alle 11 Wellen abgeschlossen. Wellen 1-10 vollstaendig umgesetzt
+      (Pflicht-Tasks completed, BONUS-Tasks und Discovery-Loop-abhaengige
+      Tasks dokumentiert als wontfix-with-reason). Wave 11 final geschlossen:
+      T-W11-CROSS-PLATFORM-DECISION wontfix-with-reason (Bedarfs-Beleg fehlt),
+      T-W11-FRONTEND-EXPORT-FORMAT wontfix-with-reason (Streichliste),
+      T-W11-CROSS-CUTTING-VERIFICATION completed (Bericht
+      docs/plan/strategic-reduction-2026/phase5-cross-cutting-verification.md,
+      Verdict PASS, keine neuen P1-Findings),
+      T-W11-IDENTITY-GUARDRAIL completed (verankert in AGENTS.md,
+      .claude/rules/project.instructions.md, PR-Template).
+      Build-Status: dotnet build src/Romulus.sln -> 0 Warnungen, 0 Fehler.
 research_confidence: high
 
 plan_metrics:
@@ -3648,7 +3662,18 @@ tasks:
     prototype: false
     covers: []
     priority: medium
-    status: pending
+    status: wontfix-with-reason
+    closed_on: "2026-05-04"
+    closure_reason: |
+      Aktivierungsbedingungen nicht erfuellt: T-W3-BETA-USERS und
+      T-W4-DISCOVERY-LOOP sind beide wontfix-with-reason (kein Beta-Cohort,
+      kein belegtes Cross-Platform-Bedarfs-Signal). Avalonia-Reaktivierung
+      bleibt an die drei in resolved_decisions[Avalonia] gelockten Bedingungen
+      gebunden (>=3 Cross-Platform-Beta-Nutzer UND WPF-EOL-Ankuendigung UND
+      keine viable CLI-Alternative); keine davon erfuellt. Default-Pfad gemaess
+      Task-Beschreibung greift: "Phase 5 endet ohne Cross-Platform-Initiative."
+      Reaktivierung nur per neuer ADR, wenn mindestens eine Bedingung erfuellt
+      ist.
     dependencies: ["T-W10-RISK-MAP", "T-W10-BATCH-PLAN-SIMULATOR"]
     conflicts_with: []
     context_files: []
@@ -3736,7 +3761,24 @@ tasks:
     prototype: false
     covers: ["TOP-20"]
     priority: high
-    status: pending
+    status: completed
+    completed_on: "2026-05-04"
+    completion_notes: |
+      Cross-Cutting Audit durchgefuehrt; Verdict PASS, keine neuen P1-Findings.
+      Bericht: docs/plan/strategic-reduction-2026/phase5-cross-cutting-verification.md.
+      Geprueft: Preview/Execute/Report-Paritaet (RunReportWriter als einziger
+      Schreibpfad, ReportUnification 7 Pins), GUI/CLI/API-Paritaet je Feature
+      (Decision Explainer, Audit-Viewer, HealthScore, Provenance, Policy,
+      Multi-DAT, Lossy-Conversion - jeweils eine zentrale Engine, drei
+      Konsumenten), Single-Source-of-Truth (RunConfigurationDraftFingerprint
+      mit Drift-Guard, SafetyLaneProjection, RunViewModel.ApplyDashboard mit
+      Wave2-Pin), Schattenlogik-Freiheit (FeatureCommandService 9->4 Partials,
+      keine Code-Behind-Businesslogik, Frontend-Export vollstaendig entfernt),
+      Determinismus (GameKey/Region/Score/Winner/MultiDatResolver/
+      EnrichmentPipeline-Pins gruen) und Safety/Audit-Atomicity
+      (AllowedRootPathPolicy, JsonlProvenanceStore append-only, ConversionLossy
+      Token-Echo). Build zum Audit-Zeitpunkt: dotnet build src/Romulus.sln ->
+      0 Warnungen, 0 Fehler.
     dependencies: ["T-W10-RISK-MAP", "T-W10-BATCH-PLAN-SIMULATOR", "T-W9-API-HARDENING", "T-W8-WATCH-SCHEDULE", "T-W8-MULTI-DAT-RESOLVER"]
     conflicts_with: []
     context_files: []
@@ -3775,7 +3817,20 @@ tasks:
     prototype: false
     covers: ["TOP-20"]
     priority: high
-    status: pending
+    status: completed
+    completed_on: "2026-05-04"
+    completion_notes: |
+      Identitaets-Guardrail dauerhaft verankert in:
+      - AGENTS.md (neuer Abschnitt "Identitaets-Guardrail (dauerhaft, ab 2026-05-04)"
+        mit Pflichtfrage und harter Streichliste)
+      - .claude/rules/project.instructions.md (analoger Abschnitt mit Verweis
+        auf AGENTS.md und PR-Template)
+      - .github/PULL_REQUEST_TEMPLATE.md (neuer Abschnitt "Identitaets-Check"
+        mit Pflichtfrage und expliziter Streichlisten-Bestaetigung; Reviewer
+        pruefen die Antwort).
+      Streichliste enthaelt: Frontend-Builder/Mapping-Wizards, Scraper,
+      Patching als Hauptfunktion, MAME-Set-Builder, Plugin/Marketplace,
+      Telemetrie ohne Opt-in, Coming-Soon-Stubs, nicht-aktivierte BONUS-Tasks.
     dependencies: ["T-W11-CROSS-CUTTING-VERIFICATION"]
     conflicts_with: []
     context_files:

@@ -2,11 +2,16 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Romulus.Contracts.Models;
+using Romulus.Infrastructure.Audit;
+using Romulus.Infrastructure.FileSystem;
 
 namespace Romulus.Infrastructure.Policy;
 
 public static class PolicyDocumentLoader
 {
+    public const string SignatureFileSuffix = ".sig.json";
+    private const string SignatureVersion = "romulus-policy-signature-v1";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -41,6 +46,142 @@ public static class PolicyDocumentLoader
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
+    public static string GetSignaturePath(string policyPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(policyPath);
+        return policyPath + SignatureFileSuffix;
+    }
+
+    public static PolicySignatureDocument CreateSignature(
+        string policyText,
+        string policyFileName,
+        AuditSigningService signingService,
+        DateTime createdUtc,
+        string signer = "local-audit-key")
+    {
+        ArgumentNullException.ThrowIfNull(signingService);
+        var fingerprint = ComputeFingerprint(policyText);
+        var keyId = signingService.GetSigningKeyId();
+        var created = createdUtc.ToUniversalTime().ToString("o");
+        var normalizedSigner = string.IsNullOrWhiteSpace(signer) ? "local-audit-key" : signer.Trim();
+        var normalizedFileName = string.IsNullOrWhiteSpace(policyFileName) ? "policy.yaml" : Path.GetFileName(policyFileName.Trim());
+        var payload = BuildSignaturePayload(normalizedFileName, fingerprint, created, keyId, normalizedSigner);
+        return new PolicySignatureDocument
+        {
+            Version = SignatureVersion,
+            PolicyFileName = normalizedFileName,
+            PolicyFingerprint = fingerprint,
+            Signer = normalizedSigner,
+            KeyId = keyId,
+            CreatedUtc = created,
+            HmacSha256 = signingService.ComputeHmacSha256(payload)
+        };
+    }
+
+    public static string WriteSignatureFile(
+        string policyPath,
+        string policyText,
+        AuditSigningService signingService,
+        DateTime createdUtc,
+        string signer = "local-audit-key")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(policyPath);
+        var signature = CreateSignature(policyText, Path.GetFileName(policyPath), signingService, createdUtc, signer);
+        var signaturePath = GetSignaturePath(policyPath);
+        var json = JsonSerializer.Serialize(signature, new JsonSerializerOptions { WriteIndented = true });
+        var directory = Path.GetDirectoryName(signaturePath);
+        if (!string.IsNullOrWhiteSpace(directory))
+            Directory.CreateDirectory(directory);
+        AtomicFileWriter.WriteAllText(signaturePath, json, Encoding.UTF8);
+        return signaturePath;
+    }
+
+    public static PolicySignatureStatus VerifySignatureFile(
+        string policyPath,
+        string policyText,
+        AuditSigningService signingService)
+    {
+        var signaturePath = GetSignaturePath(policyPath);
+        if (!File.Exists(signaturePath))
+            return new PolicySignatureStatus { IsPresent = false, SignaturePath = signaturePath };
+
+        try
+        {
+            var signatureText = File.ReadAllText(signaturePath, Encoding.UTF8);
+            return VerifySignatureText(policyText, signatureText, signingService, signaturePath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new PolicySignatureStatus
+            {
+                IsPresent = true,
+                IsValid = false,
+                SignaturePath = signaturePath,
+                Error = ex.GetType().Name
+            };
+        }
+    }
+
+    public static PolicySignatureStatus VerifySignatureText(
+        string policyText,
+        string? signatureText,
+        AuditSigningService signingService,
+        string signaturePath = "")
+    {
+        ArgumentNullException.ThrowIfNull(signingService);
+        if (string.IsNullOrWhiteSpace(signatureText))
+            return new PolicySignatureStatus { IsPresent = false, SignaturePath = signaturePath };
+
+        try
+        {
+            var signature = JsonSerializer.Deserialize<PolicySignatureDocument>(signatureText, JsonOptions);
+            if (signature is null)
+            {
+                return InvalidSignature(signaturePath, "Signature JSON did not contain an object.");
+            }
+
+            if (!string.Equals(signature.Version, SignatureVersion, StringComparison.Ordinal))
+                return InvalidSignature(signaturePath, "Unsupported policy signature version.", signature);
+
+            var fingerprint = ComputeFingerprint(policyText);
+            if (!FixedTimeEquals(fingerprint, signature.PolicyFingerprint))
+                return InvalidSignature(signaturePath, "Policy fingerprint mismatch.", signature);
+
+            var keyId = signingService.GetSigningKeyId();
+            if (!FixedTimeEquals(keyId, signature.KeyId))
+                return InvalidSignature(signaturePath, "Signing key id mismatch.", signature);
+
+            var payload = BuildSignaturePayload(
+                signature.PolicyFileName,
+                signature.PolicyFingerprint,
+                signature.CreatedUtc,
+                signature.KeyId,
+                signature.Signer);
+            var expected = signingService.ComputeHmacSha256(payload);
+            if (!FixedTimeEquals(expected, signature.HmacSha256))
+                return InvalidSignature(signaturePath, "Signature HMAC mismatch.", signature);
+
+            return new PolicySignatureStatus
+            {
+                IsPresent = true,
+                IsValid = true,
+                SignaturePath = signaturePath,
+                Signer = signature.Signer,
+                KeyId = signature.KeyId
+            };
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
+        {
+            return new PolicySignatureStatus
+            {
+                IsPresent = true,
+                IsValid = false,
+                SignaturePath = signaturePath,
+                Error = ex.GetType().Name
+            };
+        }
+    }
+
     private static LibraryPolicy ParseJson(string text)
     {
         try
@@ -52,6 +193,36 @@ public static class PolicyDocumentLoader
         {
             throw new FormatException($"Policy JSON is invalid: {ex.Message}", ex);
         }
+    }
+
+    private static string BuildSignaturePayload(
+        string policyFileName,
+        string policyFingerprint,
+        string createdUtc,
+        string keyId,
+        string signer)
+        => $"{SignatureVersion}|{policyFileName}|{policyFingerprint}|{createdUtc}|{keyId}|{signer}";
+
+    private static PolicySignatureStatus InvalidSignature(
+        string signaturePath,
+        string error,
+        PolicySignatureDocument? signature = null)
+        => new()
+        {
+            IsPresent = true,
+            IsValid = false,
+            SignaturePath = signaturePath,
+            Signer = signature?.Signer ?? "",
+            KeyId = signature?.KeyId ?? "",
+            Error = error
+        };
+
+    private static bool FixedTimeEquals(string expected, string actual)
+    {
+        var expectedBytes = Encoding.UTF8.GetBytes(expected ?? "");
+        var actualBytes = Encoding.UTF8.GetBytes(actual ?? "");
+        return expectedBytes.Length == actualBytes.Length
+               && CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
     }
 
     private static LibraryPolicy ParseYaml(string text)

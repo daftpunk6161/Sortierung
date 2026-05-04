@@ -940,6 +940,9 @@ internal static partial class CliArgsParser
                 case "--json":
                     opts.ExportFormat = "json";
                     break;
+                case "--health-snapshot":
+                    opts.HealthSnapshot = true;
+                    break;
                 default:
                     errors.Add($"[Error] Unknown flag '{args[i]}' for health.");
                     break;
@@ -1021,6 +1024,9 @@ internal static partial class CliArgsParser
                 case "-o" or "--output":
                     if (!TryConsumeValue(args, ref i, "--output", errors, out var outputPath)) break;
                     opts.OutputPath = outputPath;
+                    break;
+                case "--sign" or "--sign-policy":
+                    opts.SignPolicy = true;
                     break;
                 default:
                     if (!args[i].StartsWith("-") && string.IsNullOrWhiteSpace(opts.PolicyPath))
