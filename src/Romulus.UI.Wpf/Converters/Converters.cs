@@ -377,6 +377,69 @@ public sealed class DatAuditStatusToLabelConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
+/// <summary>
+/// Mini-P1 (siehe ADR-0025 Aktivierungsbedingung): liefert pro DAT-Audit-Zeile
+/// einen kontextualisierten Tooltip aus den vorhandenen Entry-Feldern.
+/// Erklaert je Status-Klasse die wahrscheinliche Ursache und die noetige
+/// Folge-Aktion, ohne neue Status-Werte oder neuen Datenfluss einzufuehren.
+/// Hartcodierte deutsche Strings folgen dem Muster der anderen DatAudit-Converter
+/// (siehe <see cref="DatAuditStatusToLabelConverter"/>).
+/// </summary>
+public sealed class DatAuditEntryToTooltipConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is not DatAuditEntry entry)
+            return string.Empty;
+
+        var consoleKey = string.IsNullOrWhiteSpace(entry.ConsoleKey) ? "UNKNOWN" : entry.ConsoleKey;
+        var datGameName = string.IsNullOrWhiteSpace(entry.DatGameName) ? null : entry.DatGameName;
+        var datRomFileName = string.IsNullOrWhiteSpace(entry.DatRomFileName) ? null : entry.DatRomFileName;
+
+        return entry.Status switch
+        {
+            DatAuditStatus.Have =>
+                $"Have: Hash und Datei-Name passen zur DAT (Konsole: {consoleKey})."
+                + (datGameName is null ? string.Empty : $"\nDAT-Spiel: {datGameName}"),
+
+            DatAuditStatus.HaveWrongName =>
+                $"Wrong Name: Hash passt zur DAT (Konsole: {consoleKey}), aber der Datei-Name weicht vom DAT-Eintrag ab."
+                + (datRomFileName is null ? string.Empty : $"\nDAT-Dateiname: {datRomFileName}")
+                + "\nFolge-Aktion: Datei umbenennen, dann ist die Datei DAT-konform.",
+
+            DatAuditStatus.HaveByName =>
+                $"Name Only: Nur der Datei-Name passt zur DAT (Konsole: {consoleKey})."
+                + " Der Hash wurde nicht verifiziert (Tier-3-Fallback)."
+                + (datGameName is null ? string.Empty : $"\nDAT-Spiel: {datGameName}")
+                + "\nMoegliche Ursachen: modifizierte/komprimierte Datei, abweichende Region oder Revision.",
+
+            DatAuditStatus.Miss =>
+                $"Miss: DAT fuer Konsole {consoleKey} ist geladen, dieser Hash ist aber nicht enthalten."
+                + "\nMoegliche Ursachen:"
+                + "\n - komprimierte Variante (z. B. CSO/CHD aus Original-ISO)"
+                + "\n - Region-Variante oder anderer Revisions-Stand"
+                + "\n - Beta, Prototyp, Hack oder unbekannter Dump",
+
+            DatAuditStatus.Unknown when string.Equals(consoleKey, "UNKNOWN", System.StringComparison.OrdinalIgnoreCase) =>
+                "Unknown: Konsole nicht eindeutig erkennbar (z. B. mehrdeutige Endung ohne Folder- oder Header-Hinweis)."
+                + "\nFolge-Aktion: Datei in eine konsolenspezifische Quelle einsortieren oder umbenennen.",
+
+            DatAuditStatus.Unknown =>
+                $"Unknown: Konsole {consoleKey} erkannt, aber keine DAT fuer diese Konsole geladen."
+                + "\nFolge-Aktion: passende DAT (z. B. No-Intro, Redump) ergaenzen und Lauf wiederholen.",
+
+            DatAuditStatus.Ambiguous =>
+                $"Ambiguous: Hash trifft mehrere DAT-Eintraege (Konsole: {consoleKey}); Aufloesung ist nicht eindeutig."
+                + "\nDie Datei wird konservativ blockiert, bis die Mehrdeutigkeit geklaert ist.",
+
+            _ => $"Status: {entry.Status} (Konsole: {consoleKey})."
+        };
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 /// <summary>Converts a double fraction (0.0–1.0) to a star-sized GridLength for stacked bar charts.</summary>
 public sealed class FractionToGridLengthConverter : IValueConverter
 {

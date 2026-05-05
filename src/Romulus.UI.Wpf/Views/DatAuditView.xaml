@@ -8,6 +8,7 @@
     <conv:DatAuditStatusToBrushConverter x:Key="StatusToBrush"/>
     <conv:DatAuditStatusToLabelConverter x:Key="StatusToLabel"/>
     <conv:DatAuditStatusToGlyphConverter x:Key="StatusToGlyph"/>
+    <conv:DatAuditEntryToTooltipConverter x:Key="EntryToTooltip"/>
   </UserControl.Resources>
 
   <Grid Margin="20,16">
@@ -207,7 +208,10 @@
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
               <Border Background="{Binding Status, Converter={StaticResource StatusToBrush}}"
-                      CornerRadius="3" Padding="6,2" HorizontalAlignment="Left" Opacity="0.85">
+                      CornerRadius="3" Padding="6,2" HorizontalAlignment="Left" Opacity="0.85"
+                      ToolTip="{Binding Converter={StaticResource EntryToTooltip}}"
+                      ToolTipService.ShowDuration="20000"
+                      ToolTipService.InitialShowDelay="300">
                 <StackPanel Orientation="Horizontal">
                   <TextBlock Text="{Binding Status, Converter={StaticResource StatusToGlyph}}"
                              FontFamily="Segoe MDL2 Assets" FontSize="11"
