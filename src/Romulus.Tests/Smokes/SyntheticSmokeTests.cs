@@ -241,7 +241,8 @@ public sealed class SyntheticSmokeTests : IDisposable
             result.DatAuditResult.HaveWrongNameCount +
             result.DatAuditResult.MissCount +
             result.DatAuditResult.UnknownCount +
-            result.DatAuditResult.AmbiguousCount;
+            result.DatAuditResult.AmbiguousCount +
+            result.DatAuditResult.HaveByNameCount;
         Assert.Equal(result.DatAuditResult.Entries.Count, totalAudited);
         Assert.True(File.Exists(result.ReportPath!), "DAT-Audit run must produce a report file.");
     }

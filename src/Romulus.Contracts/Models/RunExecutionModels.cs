@@ -226,7 +226,7 @@ public static class RunResultValidator
 
         if (result.DatAuditResult is { } dat)
         {
-            var total = dat.HaveCount + dat.HaveWrongNameCount + dat.MissCount + dat.UnknownCount + dat.AmbiguousCount;
+            var total = dat.HaveCount + dat.HaveWrongNameCount + dat.MissCount + dat.UnknownCount + dat.AmbiguousCount + dat.HaveByNameCount;
             if (total != dat.Entries.Count)
                 errors.Add("DatAuditResult summary counts must equal Entries.Count.");
         }

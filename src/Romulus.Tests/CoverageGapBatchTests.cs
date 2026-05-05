@@ -549,6 +549,27 @@ public class CoverageGapBatchTests
         Assert.Empty(RunResultValidator.Validate(result));
     }
 
+    [Fact]
+    public void RunResultValidator_HaveByNameOnlyDatAudit_NoErrors()
+    {
+        var result = new RunResult
+        {
+            DatAuditResult = new DatAuditResult(
+                Entries: new List<DatAuditEntry>
+                {
+                    new("C:\\roms\\a.rom", "hash-a", DatAuditStatus.HaveByName, "Game A", "game-a.rom", "SNES", 80)
+                },
+                HaveCount: 0,
+                HaveWrongNameCount: 0,
+                MissCount: 0,
+                UnknownCount: 0,
+                AmbiguousCount: 0,
+                HaveByNameCount: 1)
+        };
+
+        Assert.Empty(RunResultValidator.Validate(result));
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     //  SafetyValidator — statics
     // ═══════════════════════════════════════════════════════════════════
