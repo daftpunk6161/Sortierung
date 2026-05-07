@@ -1115,6 +1115,7 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(ThemeToggleText));
             OnPropertyChanged(nameof(CurrentThemeName));
             OnPropertyChanged(nameof(CurrentThemeLabel));
+            OnPropertyChanged(nameof(SelectedTheme));
         }
 
         // E2: Build region priorities from loaded boolean flags
