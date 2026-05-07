@@ -473,3 +473,31 @@ public sealed class InverseIntToVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+
+/// <summary>
+/// Maps an <see cref="AppTheme"/> enum value to a human-friendly display label
+/// (German: "Synthwave", "Clean Dark", "Hoher Kontrast", ...). Single source of
+/// truth shared with <c>MainViewModel.CurrentThemeLabel</c>; used in the theme
+/// dropdown so users do not see raw enum names like "HighContrast". When the
+/// switch lists diverge, update <c>MainViewModel.Settings.cs CurrentThemeLabel</c>,
+/// <c>SetupViewModel.cs ThemeToggleText</c>, and the corresponding pin tests.
+/// </summary>
+public sealed class AppThemeToLabelConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is AppTheme theme ? FormatLabel(theme) : value?.ToString() ?? string.Empty;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+
+    public static string FormatLabel(AppTheme theme) => theme switch
+    {
+        AppTheme.Dark         => "Synthwave",
+        AppTheme.CleanDarkPro => "Clean Dark",
+        AppTheme.RetroCRT     => "Retro CRT",
+        AppTheme.ArcadeNeon   => "Arcade Neon",
+        AppTheme.Light        => "Clean Daylight",
+        AppTheme.HighContrast => "Hoher Kontrast",
+        _                     => theme.ToString(),
+    };
+}

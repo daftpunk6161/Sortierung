@@ -567,6 +567,50 @@
       </Setter>
     </Style>
 
+    <!-- ═══ CARD RADIOBUTTON ══════════════════════════════════════════ -->
+    <!-- Used for "intent card" pickers (StartView Was-möchtest-du-tun).
+         Keeps RadioButton group-selection semantics but renders as a plain
+         clickable card without the radio-circle indicator. The inner Border
+         provided by the consumer (e.g. MetricCard) carries the visual; on
+         IsChecked we highlight via accent border + subtle outline glow so
+         the selected card is still discoverable. -->
+    <Style x:Key="CardRadioButton" TargetType="RadioButton">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="0,0,8,8"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="cardOutline"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="2"
+                    CornerRadius="6"
+                    Padding="0"
+                    SnapsToDevicePixels="True">
+              <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                RecognizesAccessKey="True"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="cardOutline" Property="BorderBrush" Value="{DynamicResource BrushAccentCyan}"/>
+              </Trigger>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="cardOutline" Property="BorderBrush" Value="{DynamicResource BrushAccentCyan}"/>
+                <Setter TargetName="cardOutline" Property="Opacity" Value="0.85"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.4"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
     <!-- ═══ TYPOGRAPHY SCALE ══════════════════════════════════════════ -->
     <Style x:Key="TitleText" TargetType="TextBlock">
       <Setter Property="FontSize" Value="20"/>

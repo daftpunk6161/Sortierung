@@ -29,6 +29,7 @@
       <conv:IntToVisibilityConverter x:Key="IntToVis"/>
       <conv:IntToVisibilityConverter x:Key="CountToVis"/>
       <conv:InverseIntToVisibilityConverter x:Key="CountToInverseVis"/>
+      <conv:AppThemeToLabelConverter x:Key="AppThemeToLabel"/>
 
       <Style x:Key="BaseDialogWindowStyle" TargetType="Window">
         <Setter Property="FontFamily" Value="Segoe UI"/>

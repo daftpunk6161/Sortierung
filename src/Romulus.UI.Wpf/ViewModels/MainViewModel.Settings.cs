@@ -996,7 +996,7 @@ public sealed partial class MainViewModel
         AppTheme.RetroCRT     => "Retro CRT",
         AppTheme.ArcadeNeon   => "Arcade Neon",
         AppTheme.Light        => "Clean Daylight",
-        AppTheme.HighContrast  => "Stark Contrast",
+        AppTheme.HighContrast  => "Hoher Kontrast",
         _                     => _theme.Current.ToString(),
     };
 
@@ -1024,7 +1024,7 @@ public sealed partial class MainViewModel
         AppTheme.CleanDarkPro => "⮞ Retro CRT",
         AppTheme.RetroCRT     => "⮞ Arcade Neon",
         AppTheme.ArcadeNeon   => "⮞ Clean Daylight",
-        AppTheme.Light        => "⮞ Stark Contrast",
+        AppTheme.Light        => "⮞ Hoher Kontrast",
         AppTheme.HighContrast => "⮞ Synthwave",
         _                     => "⮞ Synthwave",
     };

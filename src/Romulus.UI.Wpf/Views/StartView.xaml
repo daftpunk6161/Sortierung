@@ -135,7 +135,7 @@
                 <RadioButton GroupName="Intent" Cursor="Hand"
                              IsChecked="{Binding ActivePreset, Converter={StaticResource StrEqualsToBool}, ConverterParameter=SafeDryRun}"
                              Command="{Binding PresetSafeDryRunCommand}"
-                             Style="{StaticResource {x:Type RadioButton}}"
+                             Style="{StaticResource CardRadioButton}"
                              AutomationProperties.Name="{Binding Loc[Start.IntentClean]}">
                   <Border Style="{StaticResource MetricCard}" Width="220" MinHeight="128">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -154,7 +154,7 @@
                 <RadioButton GroupName="Intent" Cursor="Hand"
                              IsChecked="{Binding ActivePreset, Converter={StaticResource StrEqualsToBool}, ConverterParameter=FullSort}"
                              Command="{Binding PresetFullSortCommand}"
-                             Style="{StaticResource {x:Type RadioButton}}"
+                             Style="{StaticResource CardRadioButton}"
                              AutomationProperties.Name="{Binding Loc[Start.IntentSort]}">
                   <Border Style="{StaticResource MetricCard}" Width="220" MinHeight="128">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -173,7 +173,7 @@
                 <RadioButton GroupName="Intent" Cursor="Hand"
                              IsChecked="{Binding ActivePreset, Converter={StaticResource StrEqualsToBool}, ConverterParameter=Convert}"
                              Command="{Binding PresetConvertCommand}"
-                             Style="{StaticResource {x:Type RadioButton}}"
+                             Style="{StaticResource CardRadioButton}"
                              AutomationProperties.Name="{Binding Loc[Start.IntentConvert]}">
                   <Border Style="{StaticResource MetricCard}" Width="220" MinHeight="128">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">

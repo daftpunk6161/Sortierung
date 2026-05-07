@@ -532,7 +532,7 @@ public sealed class WpfProductizationTests : IDisposable
         var settingsVm = File.ReadAllText(FindUiFile("ViewModels", "MainViewModel.Settings.cs"));
 
         Assert.Contains("CleanDaylight", themeService);
-        Assert.Contains("Stark Contrast", settingsVm);
+        Assert.Contains("Hoher Kontrast", settingsVm);
     }
 
     [Fact]

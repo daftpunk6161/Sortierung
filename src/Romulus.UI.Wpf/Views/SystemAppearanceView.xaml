@@ -47,7 +47,7 @@
               <StackPanel Orientation="Horizontal">
                 <Rectangle x:Name="ThemeColorPreview" Width="16" Height="16" RadiusX="3" RadiusY="3" Margin="0,0,8,0"
                            Fill="{DynamicResource BrushAccentCyan}" Stroke="{DynamicResource BrushBorder}" StrokeThickness="1"/>
-                <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Converter={StaticResource AppThemeToLabel}}" VerticalAlignment="Center"/>
               </StackPanel>
             </DataTemplate>
           </ComboBox.ItemTemplate>

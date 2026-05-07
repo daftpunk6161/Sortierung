@@ -2072,7 +2072,7 @@ public partial class GuiViewModelTests
             [AppTheme.RetroCRT] = "Retro CRT",
             [AppTheme.ArcadeNeon] = "Arcade Neon",
             [AppTheme.Light] = "Clean Daylight",
-            [AppTheme.HighContrast] = "Stark Contrast",
+            [AppTheme.HighContrast] = "Hoher Kontrast",
         };
 
         // Verify ThemeToggleText also covers all themes (complementary)
@@ -2082,7 +2082,7 @@ public partial class GuiViewModelTests
             [AppTheme.CleanDarkPro] = "⮞ Retro CRT",
             [AppTheme.RetroCRT] = "⮞ Arcade Neon",
             [AppTheme.ArcadeNeon] = "⮞ Clean Daylight",
-            [AppTheme.Light] = "⮞ Stark Contrast",
+            [AppTheme.Light] = "⮞ Hoher Kontrast",
             [AppTheme.HighContrast] = "⮞ Synthwave",
         };
 

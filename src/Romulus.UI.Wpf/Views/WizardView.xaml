@@ -268,12 +268,12 @@
             <Button Content="{Binding Loc[Wizard.Back]}" Padding="16,8" MinHeight="44" Margin="0,0,8,0" Cursor="Hand"
                     Command="{Binding Shell.WizardBackCommand}"
                     AutomationProperties.Name="{Binding Loc[Wizard.Back]}"/>
-            <Button Padding="16,8" MinHeight="44" Cursor="Hand" FontWeight="Bold"
+            <Button Padding="16,8" MinHeight="44" MinWidth="110" Cursor="Hand" FontWeight="Bold"
                     Command="{Binding Shell.WizardNextCommand}"
                     IsEnabled="{Binding CanAdvanceWizard}"
-                    Background="{DynamicResource BrushAccentCyan}" Foreground="{DynamicResource BrushBackground}"
+                    Background="{DynamicResource BrushAccentCyan}" Foreground="White"
                     AutomationProperties.Name="{Binding Loc[Wizard.Next]}">
-              <TextBlock Text="{Binding Shell.WizardNextLabel}"/>
+              <TextBlock Text="{Binding Shell.WizardNextLabel}" Foreground="White"/>
             </Button>
           </StackPanel>
         </Grid>

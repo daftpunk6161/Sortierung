@@ -65,7 +65,7 @@
         </Border>
 
         <Border Style="{StaticResource SectionCard}"
-                Visibility="{Binding HasRecommendedTools, Converter={StaticResource BoolToVis}}">
+                Visibility="{Binding RecommendedToolItems.Count, Converter={StaticResource IntToVis}, FallbackValue=Collapsed}">
           <StackPanel>
             <DockPanel Margin="0,0,0,8">
               <Button DockPanel.Dock="Right"
