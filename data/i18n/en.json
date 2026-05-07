@@ -828,6 +828,7 @@
   "Start.Winners": "Keep",
   "Start.Dupes": "Duplicates",
   "Start.OpenReport": "Open Report",
+  "Start.StartMove": "Start sharp run",
   "Start.Undo": "Undo",
   "Start.WatchToggle": "Watch Mode",
   "Start.WatchToggleTip": "Monitor folders \u2013 automatic DryRun on changes (Ctrl+W)",
