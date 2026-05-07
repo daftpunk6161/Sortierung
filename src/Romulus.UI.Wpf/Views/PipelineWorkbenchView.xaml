@@ -7,8 +7,7 @@
       <TextBlock Text="Conversion, Sorting und Batch-Aktionen aus einem Bereich."
                  Style="{StaticResource CaptionText}" Margin="0,0,0,16"/>
 
-      <Border Style="{StaticResource SectionCard}" Margin="0,0,0,12"
-              Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Conversion}">
+      <Border Style="{StaticResource SectionCard}" Margin="0,0,0,12">
         <StackPanel>
           <TextBlock Text="Conversion" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
           <TextBlock Text="Stepper-Flow: Preview -> Review -> Execute" Style="{StaticResource CaptionText}" Margin="0,6,0,12"/>
@@ -72,8 +71,7 @@
         </StackPanel>
       </Border>
 
-      <Border Style="{StaticResource SectionCard}" Margin="0,0,0,12"
-              Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Sorting}">
+      <Border Style="{StaticResource SectionCard}" Margin="0,0,0,12">
         <StackPanel>
           <TextBlock Text="Sorting" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
           <TextBlock Text="Starte geordnete Sortierung mit Preview oder Preset." Style="{StaticResource CaptionText}" Margin="0,6,0,12"/>
@@ -84,8 +82,7 @@
         </StackPanel>
       </Border>
 
-      <Border Style="{StaticResource SectionCard}" Margin="0,0,0,12"
-              Visibility="{Binding Shell.SelectedSubTab, Converter={StaticResource StrEqualsToVis}, ConverterParameter=Batch}">
+      <Border Style="{StaticResource SectionCard}" Margin="0,0,0,12">
         <StackPanel>
           <TextBlock Text="Batch" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
           <TextBlock Text="Fuehre Batch-Lauf aus und oeffne direkt danach die Ergebnisse." Style="{StaticResource CaptionText}" Margin="0,6,0,12"/>
