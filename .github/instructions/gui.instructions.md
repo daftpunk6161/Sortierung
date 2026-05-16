@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "src/Romulus.UI.Wpf/**,src/Romulus.Tests.Wpf/**"
 ---
 
 # Romulus – GUI / WPF Regeln

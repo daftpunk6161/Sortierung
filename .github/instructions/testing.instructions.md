@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "src/Romulus.Tests/**,src/Romulus.Tests.Api/**,src/Romulus.Tests.Wpf/**,src/Romulus.Tests.Benchmark/**,src/**/*Tests.cs"
 ---
 
 # Romulus – Testregeln

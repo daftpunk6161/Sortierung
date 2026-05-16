@@ -14,9 +14,9 @@ Bitte alle Abschnitte ausfuellen oder begruendet streichen.
 
 ## Audit-Moratorium-Check
 
-> Im Geltungszeitraum **2026-04-28 bis 2026-05-28** (Wellen 1-3 der strategischen Reduktion) gilt ein hartes Moratorium gegen neue Audit-Dokumente, Findings-Tracker und Repo-wide Deep-Dives. Details siehe Abschnitt "Audit-Moratorium" in [AGENTS.md](../AGENTS.md).
+> Maßgeblich ist der jeweils aktuelle Stand in [AGENTS.md](../AGENTS.md), Abschnitt "Audit-Moratorium" und "Solo-Mode". Dieses Template enthält bewusst kein Datum, um Drift zu vermeiden.
 
-- [ ] Diese PR fuegt **keine** neuen Audit-/Findings-/Tracker-/Deep-Dive-Dokumente hinzu.
+- [ ] Diese PR fuegt **keine** neuen Audit-/Findings-/Tracker-/Deep-Dive-Dokumente hinzu (gemäß aktuell geltender Moratoriums-Regel in AGENTS.md).
 - [ ] Falls doch: Die PR adressiert einen konkreten **P1-Sicherheits- oder Datenintegritaets-Befund** und liefert direkt den Fix (kein Sammeldokument). Begruendung:
 
 <!-- Falls die zweite Box angekreuzt ist, hier kurz begruenden. Sonst leer lassen. -->

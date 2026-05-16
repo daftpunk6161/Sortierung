@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "src/Romulus.Core/Conversion/**,src/Romulus.Infrastructure/Conversion/**,src/Romulus.Tests/**Conversion**"
 ---
 
 # Romulus – Conversion-Regeln

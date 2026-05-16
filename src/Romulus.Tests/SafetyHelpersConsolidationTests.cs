@@ -13,7 +13,7 @@ namespace Romulus.Tests;
 ///   F1 (P2, Hygiene/Duplication): IsWindowsReservedDeviceName war doppelt definiert
 ///       in FileSystemAdapter (internal) und DatRenamePolicy (private). Doppelte
 ///       Wahrheit fuer Windows-Reservednames-Regel verstoesst gegen "Single Source
-///       of Truth" in project.instructions.md / cleanup.instructions.md.
+///       of Truth" in AGENTS.md / .github/instructions/cleanup.instructions.md.
 ///   F2 (P2, Hygiene/Duplication): EnumerateDirectoriesWithoutFollowingReparsePoints
 ///       war identisch dupliziert in ArchiveHashService und DatRepositoryAdapter.
 ///       Sicherheitsrelevante Helper-Logik darf nur einmal existieren.

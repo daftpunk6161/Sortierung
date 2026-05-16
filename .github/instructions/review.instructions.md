@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "src/**,docs/**"
 ---
 
 # Romulus – Review-Regeln

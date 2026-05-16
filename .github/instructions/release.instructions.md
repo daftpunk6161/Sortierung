@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "src/**,deploy/**,.github/workflows/**"
 ---
 
 # Romulus – Release-Regeln

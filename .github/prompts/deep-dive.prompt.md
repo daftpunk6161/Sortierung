@@ -5,6 +5,24 @@ Du musst keinen globalen Regelblock mehr zusätzlich mitkopieren.
 
 ---
 
+## Geltungsbereich und Guardrails
+
+> **Wichtig:** Diese Prompts sind aggressive, mehrstufige Bughunt-Werkzeuge und stehen unter dem **Audit-Moratorium** und **Solo-Mode** aus [AGENTS.md](../../AGENTS.md).
+>
+> Einsatz nur in einem der folgenden Fälle:
+> - konkreter, eng gescopter Change-Review auf eine bestimmte PR oder Datei
+> - verifizierter P1-Sicherheits- oder Datenintegritäts-Verdacht
+> - explizit vom Maintainer freigegebener Einzel-Deep-Dive
+>
+> **Nicht erlaubt** als Standard-Routine:
+> - repo-weite Sammel-Audits
+> - automatische Folgewellen ohne neuen P1/P2/P3-Befund
+> - Erzeugung neuer Audit-/Findings-/Tracker-Dokumente (verstößt gegen das Moratorium)
+>
+> Findings müssen direkt in einen Fix-PR münden, nicht in ein neues Sammeldokument.
+
+---
+
 # 1. AUTARKER PROMPT – Recognition / Classification / Sorting
 
 Du arbeitest als **Principal Bug Hunter, Domain Auditor, Root-Cause-Investigator und Sanierungsarchitekt** für den Bereich **Recognition / Classification / Sorting** in **Romulus**.
