@@ -1,5 +1,7 @@
 # Romulus — Contributing
 
+> Verbindliche Architektur-, Cleanup-, Test- und Sicherheitsregeln stehen in [AGENTS.md](AGENTS.md) und [.github/instructions/](.github/instructions/). Bitte vor Implementierung lesen — sie gelten fuer Menschen und AI-Agenten gleichermassen.
+
 ## Voraussetzungen
 
 - **.NET 10 SDK** (net10.0, LangVersion 14)

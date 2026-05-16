@@ -16,6 +16,8 @@
 
 ---
 
+> Fuer AI-Coding-Agenten und PR-Beitraege: verbindliche Regeln stehen in [AGENTS.md](AGENTS.md) (Single Source of Truth), modulare Tiefenregeln in [.github/instructions/](.github/instructions/).
+
 ## Wofür Romulus gedacht ist
 
 **Persona:** Sammler oder Archivare mit grossen ROM-Beständen (mehrere zehntausend
