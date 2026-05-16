@@ -2,7 +2,7 @@
 
 Die verbindlichen Regeln liegen in [AGENTS.md](../AGENTS.md) (Single Source of Truth).
 
-Modulare Tiefenregeln (architecture, cleanup, conversion, gui, release, review, testing) liegen in [.github/instructions/](./instructions/) und greifen automatisch via `applyTo: "**"`.
+Modulare Tiefenregeln (architecture, cleanup, conversion, gui, release, review, testing) liegen in [.github/instructions/](./instructions/) und greifen automatisch via `applyTo`-Glob auf die jeweils relevanten Pfade.
 
 ## Copilot-spezifisch
 
