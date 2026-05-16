@@ -39,6 +39,10 @@ package-lock.json
 docs/openapi.generated.json
 docs/archive/
 
+# ── Foreign embedded repos (must never re-appear in Romulus) ──
+vscode-chat-customizations-evaluation/
+.claude/
+
 # ── Editor / OS ──
 .vs/
 *.suo

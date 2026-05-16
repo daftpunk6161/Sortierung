@@ -1,5 +1,5 @@
 ---
-applyTo: "src/**,docs/**,.github/**,.claude/**,scripts/**"
+applyTo: "src/**,docs/**,.github/**,scripts/**"
 ---
 
 # Romulus – Cleanup- und Hygiene-Regeln
