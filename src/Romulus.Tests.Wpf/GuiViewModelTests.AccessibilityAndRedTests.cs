@@ -899,8 +899,6 @@ public partial class GuiViewModelTests
     [InlineData("Result.Context.CancelledNoData")]
     [InlineData("Result.Context.ConvertOnly")]
     [InlineData("Result.Context.MoveCompleted")]
-    [InlineData("Result.InlineConfirmWaiting")]
-    [InlineData("Result.InlineConfirmReady")]
     [InlineData("Phase.Skipped.MoveConvert")]
     [InlineData("Phase.Skipped.MoveOnly")]
     [InlineData("Phase.Skipped.ConvertOnly")]

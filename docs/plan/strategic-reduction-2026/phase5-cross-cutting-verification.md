@@ -98,5 +98,5 @@ Geschuetzt durch bestehende Pins:
 ## Folge-Aktionen
 
 1. T-W11-CROSS-PLATFORM-DECISION: schliessen als `wontfix-with-reason` (Aktivierungsbedingung — Bedarfs-Beleg via T-W3-BETA-USERS / T-W4-DISCOVERY-LOOP — nicht erfuellt; Default-Ausgang im Task selbst dokumentiert).
-2. T-W11-IDENTITY-GUARDRAIL: parallel umgesetzt (siehe `AGENTS.md`, `.claude/rules/project.instructions.md`, `.github/PULL_REQUEST_TEMPLATE.md`).
+2. T-W11-IDENTITY-GUARDRAIL: parallel umgesetzt (siehe `AGENTS.md`, `.github/instructions/` (modulare Tiefenregeln, ehemals `.claude/rules/`), `.github/PULL_REQUEST_TEMPLATE.md`).
 3. Plan-Top-Level-Status auf `completed` setzen.

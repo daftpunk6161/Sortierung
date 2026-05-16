@@ -48,4 +48,4 @@ Liegen unter `TestFixtures/`. Nicht parallel im Test-File reimplementieren.
   fachliche Verhalten testbar ist.
 - Keine doppelten Pfad-/Builder-Helper neben den zentralen Fixtures.
 
-Vergleiche `.claude/rules/testing.instructions.md`.
+Vergleiche `.github/instructions/testing.instructions.md`.

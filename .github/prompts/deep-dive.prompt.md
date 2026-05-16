@@ -48,15 +48,26 @@ Das Ziel ist **nicht** ein freundliches Review, sondern ein echter Deep Dive auf
 - Paritätsrisiken
 
 WICHTIG:
+
+**Prioritaet bei Konflikten zwischen den unten genannten Regeln (hoechste zuerst):**
+1. Sicherheits- und Datenintegritaetsrisiken finden (kritisch)
+2. harte Bugs und Release-Risiken finden
+3. doppelte / Schatten- / konkurrierende Logik finden
+4. Tests, Hygiene, tote Pfade finden
+
+**Stop-Bedingung fuer die naechste Runde:**
+- Eine weitere Runde nur, wenn in der aktuellen Runde mindestens ein Finding aus Prioritaet 1, 2 oder 3 entstanden ist, oder wenn ein bekannter Restbereich nachweislich noch nicht abgedeckt wurde
+- Sobald nur noch Prioritaet-4-Findings (Stil, marginale Hygiene) entstehen und keine Restbereiche offen sind, gilt der Bereich als ausgeschoepft
+
+**Regeln pro Runde:**
 - Suche nicht nur nach offensichtlichen Bugs
 - Suche auch nach stillen Fehlern, schwachen Invarianten, falscher Modellierung, konkurrierenden Wahrheiten, fragilen Fehlerpfaden und falscher Sicherheit
-- Wenn du in einer Runde Findings findest, musst du danach automatisch eine weitere Suchrunde im selben Bereich machen
-- Erst wenn in einer Runde keine neuen relevanten Findings mehr gefunden werden, gilt der Bereich als vorläufig ausgeschöpft
+- Wenn du in einer Runde Findings findest, musst du danach automatisch eine weitere Suchrunde im selben Bereich machen (gemaess Stop-Bedingung oben)
+- Erst wenn in einer Runde keine neuen Findings mehr gefunden werden, die Funktionalität, Sicherheit oder Datenintegrität betreffen, gilt der Bereich als vorläufig ausgeschöpft
 - Jede Runde muss tiefer oder präziser werden, nicht nur Wiederholungen liefern
 - Wenn du selbst Bereiche nennst, die nicht vollständig abgedeckt wurden, dann ist die Auditrunde NICHT abgeschlossen und du musst automatisch in die nächste Runde gehen, bis keine offenen Restbereiche mehr übrig sind
-- Es ist ausdrücklich verboten, offene Restbereiche als „separater Audit sinnvoll“ auszulagern, solange sie logisch noch im Scope des aktuellen Bereichs liegen
-- Erst vollständige Ausschöpfung des aktuellen Bereichs, dann Abschluss
-- Wenn ein Restbereich strukturell in einen anderen Bereich hineinragt, musst du ihn trotzdem im aktuellen Bereich inhaltlich vollständig analysieren und darfst ihn nicht nur verweisen
+- Es ist ausdrücklich verboten, offene Restbereiche als „separater Audit sinnvoll“ auszulagern; sie sind im aktuellen Bereich vollständig zu analysieren — auch dann, wenn sie strukturell in einen anderen Bereich hineinragen. Ein blosser Verweis auf den anderen Bereich ist nicht zulässig
+- Erst alle relevanten Findings im aktuellen Bereich identifizieren und dokumentieren, dann Abschluss
 
 In jeder Runde prüfe explizit:
 1. harte Bugs

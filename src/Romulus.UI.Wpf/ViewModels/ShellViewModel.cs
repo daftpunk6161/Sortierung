@@ -495,17 +495,6 @@ public sealed class ShellViewModel : ObservableObject
         }
     }
 
-    private bool _showMoveInlineConfirm;
-    public bool ShowMoveInlineConfirm
-    {
-        get => _showMoveInlineConfirm;
-        set
-        {
-            if (SetProperty(ref _showMoveInlineConfirm, value))
-                _commandRequery?.Invoke();
-        }
-    }
-
     // ═══ DETAIL DRAWER (Phase 4.4) ═════════════════════════════════════
     private bool _showDetailDrawer;
     public bool ShowDetailDrawer

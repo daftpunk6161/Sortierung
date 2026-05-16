@@ -1,9 +1,13 @@
+---
+applyTo: "**"
+---
+
 # Romulus – Release-Regeln
 
 ## Oberregel
-Release-Faehigkeit geht vor.
+Release-Faehigkeit geht vor (Release-Faehigkeit bedeutet: Stabilitaet, Korrektheit, Sicherheit und Deployment-Reife der naechsten Auslieferung).
 
-Bevorzuge:
+Bevorzuge (gleichwertig, ohne strikte Reihenfolge):
 - Korrektheit
 - Determinismus
 - Sicherheit

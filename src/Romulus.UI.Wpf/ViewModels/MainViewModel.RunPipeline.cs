@@ -189,20 +189,6 @@ public sealed partial class MainViewModel
     public bool IsBusy => Run.IsBusy;
     public bool IsIdle => Run.IsIdle;
 
-    public bool ShowStartMoveButton => CanStartMoveWithCurrentPreview;
-
-    public bool ShowActionBarMoveButton => ShowStartMoveButton;
-
-    public bool CanExecuteInlineStartMove =>
-        Shell.ShowMoveInlineConfirm && _timeProvider.UtcNow.UtcDateTime >= _inlineMoveUnlockAtUtc;
-
-    public string InlineMoveConfirmHint =>
-        !Shell.ShowMoveInlineConfirm
-            ? string.Empty
-            : CanExecuteInlineStartMove
-                ? _loc["Result.InlineConfirmReady"]
-                : _loc["Result.InlineConfirmWaiting"];
-
     public bool HasRunResult =>
         Run.HasRunResult ||
         (Run.CurrentRunState is RunState.Cancelled or RunState.Failed
@@ -264,17 +250,10 @@ public sealed partial class MainViewModel
             }
 
             OnPropertyChanged(nameof(RunStateDisplayText));
-            OnPropertyChanged(nameof(ShowStartMoveButton));
-            OnPropertyChanged(nameof(ShowActionBarMoveButton));
             OnPropertyChanged(nameof(CanStartCurrentRun));
             OnPropertyChanged(nameof(CanStartMoveWithCurrentPreview));
             RefreshToolSurfaceState();
             DeferCommandRequery();
-        }
-
-        if (e.PropertyName is nameof(IsBusy) or nameof(IsIdle))
-        {
-            OnPropertyChanged(nameof(ShowActionBarMoveButton));
         }
     }
 
@@ -803,7 +782,6 @@ public sealed partial class MainViewModel
 
     private void OnCancel()
     {
-        ResetInlineMoveConfirmDebounce();
         // F-02 FIX: Cancel under lock to prevent race with CreateRunCancellation/Dispose
         lock (_ctsLock)
         {
@@ -1003,7 +981,6 @@ public sealed partial class MainViewModel
     /// <summary>Complete a run (call from UI thread when orchestration finishes).</summary>
     public void CompleteRun(bool success, string? reportPath = null, bool cancelled = false, bool completedWithErrors = false)
     {
-        ResetInlineMoveConfirmDebounce();
         BusyHint = "";
         ConvertOnly = false; // Reset transient flag
         var resolvedReportPath = string.IsNullOrWhiteSpace(reportPath) ? null : reportPath;
@@ -1586,7 +1563,6 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(IsConvertPhaseApplicable));
             OnPropertyChanged(nameof(ShowSkippedPhaseInfo));
             OnPropertyChanged(nameof(SkippedPhaseInfoText));
-            OnPropertyChanged(nameof(ShowActionBarMoveButton));
         }
 
         if (e.PropertyName is nameof(AggressiveJunk))
@@ -1652,8 +1628,6 @@ public sealed partial class MainViewModel
             MoveConsequenceText = _loc["Config.Changed.MoveGate"];
 
         OnPropertyChanged(nameof(CanStartMoveWithCurrentPreview));
-        OnPropertyChanged(nameof(ShowStartMoveButton));
-        OnPropertyChanged(nameof(ShowActionBarMoveButton));
         OnPropertyChanged(nameof(MoveApplyGateText));
         OnPropertyChanged(nameof(ShowConfigChangedBanner));
         OnPropertyChanged(nameof(RollbackActionHint));

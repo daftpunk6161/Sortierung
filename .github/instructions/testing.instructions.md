@@ -1,7 +1,11 @@
+---
+applyTo: "**"
+---
+
 # Romulus – Testregeln
 
 ## Ziel
-Tests muessen reale Fehler finden koennen.
+Tests muessen reale Fehler finden koennen (logische Bugs im Code, Verletzungen domaenenspezifischer Regeln, Regressionen oder fehlerhaftes Laufzeitverhalten).
 
 ## Pflicht-Testarten
 - Unit
@@ -41,7 +45,7 @@ Tests muessen absichern, dass:
 - no-crash-only Tests
 - tautologische Assertions
 - Pseudo-Abdeckung ohne echte Aussage
-- Tests, die nur Oberflaeche beruehren, aber keine echte Fachregel pruefen
+- Tests, die nur Oberflaeche (UI- oder API-Layer) beruehren, aber keine echte Fachregel (domaenenspezifische Geschaeftsregel) pruefen
 
 ## Test-Hygiene
 Aktiv bereinigen:

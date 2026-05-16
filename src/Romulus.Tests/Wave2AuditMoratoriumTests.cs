@@ -11,8 +11,8 @@ namespace Romulus.Tests;
 ///     Geltungszeitraum, Verbots-/Erlaubnis-Scope, Sanktion und Owner.
 ///   * PR-Template enthaelt einen sichtbaren Moratorium-Check mit Verweis
 ///     auf den AGENTS.md-Abschnitt.
-///   * Es entstehen KEINE neuen audit-moratorium.md / .claude/rules/
-///     Dateien — die Wucherung, die der Plan verhindern soll.
+///   * Es entstehen KEINE neuen audit-moratorium.md / .github/instructions/
+///     (oder Legacy .claude/rules/) Dateien — die Wucherung, die der Plan verhindern soll.
 /// </summary>
 public sealed class Wave2AuditMoratoriumTests
 {
@@ -70,8 +70,9 @@ public sealed class Wave2AuditMoratoriumTests
     public void NoParallelMoratoriumDocumentExists()
     {
         var root = RepoRoot().FullName;
-        // Wucherungs-Schutz: keine eigene audit-moratorium.md im docs- oder
-        // .claude/rules/-Bereich. Single source of truth ist AGENTS.md.
+        // Wucherungs-Schutz: keine eigene audit-moratorium.md im docs-,
+        // .github/instructions/- oder Legacy .claude/rules/-Bereich.
+        // Single source of truth ist AGENTS.md.
         var forbidden = new[]
         {
             Path.Combine(root, "docs", "audit-moratorium.md"),

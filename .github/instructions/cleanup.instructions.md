@@ -1,3 +1,7 @@
+---
+applyTo: "**"
+---
+
 # Romulus – Cleanup- und Hygiene-Regeln
 
 ## Ziel
@@ -6,7 +10,7 @@ Cleanup bedeutet hier:
 - verwaiste Referenzen bereinigen
 - Duplikate abbauen
 - halbfertige Refactors abschliessen
-- die Codebasis release-sauberer machen
+- die Codebasis release-sauberer machen, d. h. konkret: kein ungenutzter Code, keine verwaisten Referenzen, gruener Build und gruene Tests
 
 Nicht gemeint sind:
 - kosmetische Umbenennungen ohne Nutzen
@@ -35,6 +39,8 @@ Nicht gemeint sind:
 - Keine Altpfade neben neuen Pfaden stehen lassen, wenn sie nur Verwirrung stiften
 
 ## Cleanup-Prioritaet
+Bei Konflikten zwischen mehreren Prioritaeten gilt: in der genannten Reihenfolge abarbeiten. Hoehere Nummer wartet, bis niedrigere Nummer im aktuellen Scope adressiert ist.
+
 1. release-kritische Altlasten
 2. Schattenlogik
 3. verwaiste Registrierungen / Commands / Keys
@@ -46,6 +52,6 @@ Nicht gemeint sind:
 Nach Cleanup muss gelten:
 - Build bleibt gruen
 - Tests bleiben gruen
-- keine sichtbaren Regressionen
+- keine sichtbaren UI-Regressionen und keine funktionalen Regressionen in End-User-Workflows (GUI-Aktionen, CLI-Kommandos, API-Endpunkte, Reports)
 - keine neuen Schattenpfade
 - keine verwaisten Referenzen

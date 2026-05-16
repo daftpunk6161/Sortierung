@@ -194,24 +194,6 @@ public sealed class WpfNewTests : IDisposable
     }
 
     [Fact]
-    public void ShowStartMoveButton_AfterCompletedDryRun_True()
-    {
-        var vm = new MainViewModel();
-        vm.Roots.Add(@"C:\TestRoot");
-        vm.DryRun = true;
-        vm.TransitionTo(RunState.Preflight);
-        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
-        Assert.True(vm.ShowStartMoveButton);
-    }
-
-    [Fact]
-    public void ShowStartMoveButton_Idle_False()
-    {
-        var vm = new MainViewModel();
-        Assert.False(vm.ShowStartMoveButton);
-    }
-
-    [Fact]
     public void HasRunResult_AfterCompleted_True()
     {
         var vm = new MainViewModel();

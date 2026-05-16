@@ -1,8 +1,12 @@
+---
+applyTo: "**"
+---
+
 # Romulus – Architekturregeln
 
 ## Ziel
 Architekturelle Aenderungen muessen die Kernregel respektieren:
-**Stabilitaet, Determinismus und Testbarkeit vor Komfort oder Abstraktionslust.**
+**Stabilitaet, Determinismus und Testbarkeit vor Komfort (z. B. kuerzere Aufrufketten, weniger Boilerplate) oder Abstraktionslust (z. B. neue Interfaces, Generics oder Pattern ohne aktuellen fachlichen Bedarf).**
 
 ## Dependency-Richtung
 **Entry Points -> Infrastructure -> Core -> Contracts**
@@ -62,7 +66,7 @@ Aktiv achten auf:
 - Altpfade neben neuer Architektur
 
 ## Erlaubte Refactors
-Refactors sind nur sinnvoll, wenn sie mindestens einen klaren Nutzen bringen:
+Refactors sind nur sinnvoll, wenn sie mindestens einen der folgenden Nutzen bringen (alle gleichwertig, ein einzelner reicht aus):
 - weniger Duplikation
 - bessere Testbarkeit
 - klarere Verantwortlichkeiten

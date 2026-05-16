@@ -28,7 +28,7 @@ status_history:
       docs/plan/strategic-reduction-2026/phase5-cross-cutting-verification.md,
       Verdict PASS, keine neuen P1-Findings),
       T-W11-IDENTITY-GUARDRAIL completed (verankert in AGENTS.md,
-      .claude/rules/project.instructions.md, PR-Template).
+      .github/instructions/ (modulare Tiefenregeln, ehemals .claude/rules/), PR-Template).
       Build-Status: dotnet build src/Romulus.sln -> 0 Warnungen, 0 Fehler.
   - status: completed-engineering-externalization-deferred
     timestamp: "2026-05-04"
@@ -3824,7 +3824,7 @@ tasks:
   - id: T-W11-IDENTITY-GUARDRAIL
     title: Identitaets-Guardrail fuer alle zukuenftigen Features verankern
     description: |
-      Dauerhafte Regel in AGENTS.md, .claude/rules/ und PR-Vorlage:
+      Dauerhafte Regel in AGENTS.md, .github/instructions/ und PR-Vorlage:
       "Jedes neue Feature muss die Frage 'Schaerft es die Sichere-Cleanup-Identitaet?'
       mit Ja beantworten - sonst Ablehnung." Plus harte Streichliste aus
       Sektion 12 der Critic-Review.
@@ -3839,8 +3839,8 @@ tasks:
       Identitaets-Guardrail dauerhaft verankert in:
       - AGENTS.md (neuer Abschnitt "Identitaets-Guardrail (dauerhaft, ab 2026-05-04)"
         mit Pflichtfrage und harter Streichliste)
-      - .claude/rules/project.instructions.md (analoger Abschnitt mit Verweis
-        auf AGENTS.md und PR-Template)
+      - .github/instructions/ (modulare Tiefenregeln, ehemals .claude/rules/project.instructions.md;
+        Verweis auf AGENTS.md und PR-Template bleibt)
       - .github/PULL_REQUEST_TEMPLATE.md (neuer Abschnitt "Identitaets-Check"
         mit Pflichtfrage und expliziter Streichlisten-Bestaetigung; Reviewer
         pruefen die Antwort).
@@ -3852,8 +3852,8 @@ tasks:
     context_files:
       - path: AGENTS.md
         description: Hauptregel-Datei
-      - path: .claude/rules/
-        description: Regel-Verzeichnis
+      - path: .github/instructions/
+        description: Regel-Verzeichnis (modulare Tiefenregeln, ehemals .claude/rules/)
     planning_pass: 1
     planning_history:
       - pass: 1
@@ -3876,7 +3876,7 @@ tasks:
         audience: developers
         coverage_matrix:
           - AGENTS.md
-          - .claude/rules
+          - .github/instructions
           - PR-Template
         requires_review: true
         review_depth: standard

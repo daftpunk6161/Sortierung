@@ -441,10 +441,12 @@
                       AutomationProperties.Name="{Binding Loc[Start.OpenReport]}">
                 <TextBlock Text="{Binding Loc[Start.OpenReport]}"/>
               </Button>
-              <Button Style="{StaticResource PrimaryButton}"
+              <Button Style="{StaticResource DangerButton}"
                       Command="{Binding StartMoveCommand}" Padding="12,4" Margin="{DynamicResource SpaceRightXS}"
                       Content="{Binding Loc[Start.StartMove]}"
-                      AutomationProperties.Name="{Binding Loc[Start.StartMove]}"/>
+                      ToolTip="{Binding Loc[Start.StartMove], StringFormat='{}{0} (Ctrl+M)'}"
+                      AutomationProperties.Name="{Binding Loc[Start.StartMove]}"
+                      AutomationProperties.HelpText="{Binding Loc[Start.StartMove], StringFormat='{}{0} (Ctrl+M)'}"/>
               <Button Command="{Binding RollbackCommand}" Padding="12,4"
                       Foreground="{DynamicResource BrushAccentPurple}" BorderBrush="{DynamicResource BrushAccentPurple}"
                       AutomationProperties.Name="{Binding Loc[Start.Undo]}">

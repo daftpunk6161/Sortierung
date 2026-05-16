@@ -965,8 +965,6 @@
   "Result.Context.ConvertOnly": "Conversion mode active: dedupe/move KPIs are not applicable; focus is conversion output.",
   "Result.Context.MoveCompleted": "Cleanup completed: KPIs reflect the executed result.",
   "Result.ErrorSummaryHeadline": "Error summary ({0})",
-  "Result.InlineConfirmWaiting": "Safety wait active: \"Run now\" unlocks shortly.",
-  "Result.InlineConfirmReady": "Ready: \"Run now\" is unlocked.",
   "Result.Mode.ConvertOnly": "Conversion",
 
   "Dialog.ConfirmMove.Warning": "This action moves files to the trash folder and can only be undone via rollback.",

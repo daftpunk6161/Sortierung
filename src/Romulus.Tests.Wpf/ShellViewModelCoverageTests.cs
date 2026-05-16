@@ -698,20 +698,6 @@ public sealed class ShellViewModelCoverageTests
     }
 
     [Fact]
-    public void ShowMoveInlineConfirm_TriggersCommandRequery()
-    {
-        var requeriedCount = 0;
-        var vm = Create(() => requeriedCount++);
-
-        vm.ShowMoveInlineConfirm = true;
-        Assert.True(vm.ShowMoveInlineConfirm);
-        Assert.Equal(1, requeriedCount);
-
-        vm.ShowMoveInlineConfirm = false;
-        Assert.Equal(2, requeriedCount);
-    }
-
-    [Fact]
     public void CompactNav_GetSet()
     {
         var vm = Create();

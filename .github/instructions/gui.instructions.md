@@ -1,11 +1,15 @@
+---
+applyTo: "**"
+---
+
 # Romulus – GUI / WPF Regeln
 
 ## Zielbild
 Die GUI muss:
-- verstaendlich
-- luftig
+- verstaendlich (klare Beschriftungen, intuitive Navigation, eindeutige Begriffe)
+- luftig (ausreichend Abstand zwischen Elementen, keine ueberladenen Cluster)
 - robust
-- fehlbedienungssicher
+- fehlbedienungssicher (riskante Aktionen brauchen Bestaetigung und sind nicht versehentlich ausloesbar)
 - nicht ueberladen
 sein.
 
@@ -21,8 +25,8 @@ Davon nicht still abweichen.
 - Keine DoEvents-aehnlichen Muster
 - Styles, Farben und Spacing zentral in `ResourceDictionary`
 - Zwei Bedienmodi ermoeglichen:
-  - einfach
-  - experte
+  - einfach (versteckt fortgeschrittene Optionen, zeigt nur den Standardablauf und die wichtigsten Aktionen)
+  - experte (zeigt alle Konfigurations-, Diagnose- und Power-User-Optionen)
 
 ## Projection-driven UI
 UI-Zustaende, KPI-Anzeigen, Run-Status und Summary-Werte sollen aus klaren ViewModels / Projections kommen.

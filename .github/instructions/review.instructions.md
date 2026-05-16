@@ -1,3 +1,7 @@
+---
+applyTo: "**"
+---
+
 # Romulus – Review-Regeln
 
 ## Ziel
@@ -11,7 +15,7 @@ Reviews sollen Release-Risiken frueh finden und sauber priorisieren.
 - falsche Winner-Selection
 - falsches Grouping / Scoring
 - Preview / Execute / Report Divergenz
-- GUI-Fehlverhalten mit Fehlbedienungsrisiko
+- GUI-Fehlverhalten mit Fehlbedienungsrisiko (fuehrt zu falschen Aktionen oder Datenverlust)
 - Deadlocks, Haenger, nicht abbrechbare Prozesse
 
 ### Prioritaet 2 – Hohe Risiken
@@ -27,7 +31,7 @@ Reviews sollen Release-Risiken frueh finden und sauber priorisieren.
 - unnoetige Komplexitaet
 - Naming- oder Strukturprobleme
 - Erweiterbarkeitsprobleme
-- UI-Unklarheiten ohne unmittelbares Fehlverhalten
+- UI-Unklarheiten ohne unmittelbares Fehlverhalten (geringe Usability-Probleme ohne Risiko falscher Aktionen)
 - Hygiene-Probleme und tote Pfade
 
 ## Review-Format
@@ -43,7 +47,7 @@ Wenn moeglich Findings so liefern:
 
 ## Review-Hinweise
 - Keine Schonung bei Release-Risiken
-- Keine kosmetischen Nebenpunkte vor Korrektheitsproblemen priorisieren
+- Keine rein aesthetischen, nicht-funktionalen Nebenpunkte (z. B. Naming, Formatierung, Layout) vor Korrektheitsproblemen priorisieren
 - Fehlende Testbarkeit ist selbst ein Risiko
 - Fehlende Invarianten sind selbst ein Risiko
 - Schattenlogik immer benennen

@@ -47,9 +47,6 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     private CancellationTokenSource? _cts;
     // V2-THR-H02: Lock for consistent CTS access between OnCancel and CreateRunCancellation
     private readonly object _ctsLock = new();
-    private static readonly TimeSpan InlineMoveConfirmDebounceDelay = TimeSpan.FromMilliseconds(1500);
-    private DateTime _inlineMoveUnlockAtUtc = DateTime.MinValue;
-    private int _inlineMoveConfirmDebounceToken;
 
     /// <summary>
     /// T-W5-CONVERSION-SAFETY-ADVISOR pass 2: token typed by the user in the
@@ -247,17 +244,9 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
 
         // GUI-Phase4 4.4: Detail Drawer toggle lives on Shell
 
-        // Inline confirm commands delegate to Shell.ShowMoveInlineConfirm
-        RequestStartMoveCommand = new RelayCommand(
-            ArmInlineMoveConfirmDebounce,
-            () => ShowStartMoveButton && !Shell.ShowMoveInlineConfirm);
-        CancelStartMoveCommand = new RelayCommand(
-            ResetInlineMoveConfirmDebounce,
-            () => Shell.ShowMoveInlineConfirm);
         StartMoveCommand = new RelayCommand(
             () =>
             {
-                ResetInlineMoveConfirmDebounce();
                 if (HasBlockingValidationErrors)
                 {
                     var blockingValidationMessage = GetBlockingValidationMessage();
@@ -329,68 +318,6 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         _watchService.RunTriggered += OnWatchRunTriggered;
         _watchService.WatcherError += OnWatcherError;
         _scheduleService.Triggered += OnScheduledRunTriggered;
-    }
-
-    private void ArmInlineMoveConfirmDebounce()
-    {
-        Shell.ShowMoveInlineConfirm = true;
-        _inlineMoveUnlockAtUtc = _timeProvider.UtcNow.UtcDateTime.Add(InlineMoveConfirmDebounceDelay);
-        var token = Interlocked.Increment(ref _inlineMoveConfirmDebounceToken);
-
-        OnPropertyChanged(nameof(CanExecuteInlineStartMove));
-        OnPropertyChanged(nameof(InlineMoveConfirmHint));
-        DeferCommandRequery();
-
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(InlineMoveConfirmDebounceDelay).ConfigureAwait(false);
-
-            if (token != _inlineMoveConfirmDebounceToken || !Shell.ShowMoveInlineConfirm)
-                return;
-
-            if (_syncContext is null)
-            {
-                // Fallback chain: dispatcher -> direct call (test/headless).
-                // Calling OnPropertyChanged directly from a worker thread is unsafe
-                // when WPF subscribers exist; the dispatcher fallback marshals back
-                // to the UI thread when an Application is alive.
-                var dispatcher = System.Windows.Application.Current?.Dispatcher;
-                if (dispatcher is not null)
-                {
-                    _ = dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        OnPropertyChanged(nameof(CanExecuteInlineStartMove));
-                        OnPropertyChanged(nameof(InlineMoveConfirmHint));
-                        DeferCommandRequery();
-                    }));
-                }
-                else
-                {
-                    // Pure headless mode (unit tests): no UI subscribers, direct call is safe.
-                    OnPropertyChanged(nameof(CanExecuteInlineStartMove));
-                    OnPropertyChanged(nameof(InlineMoveConfirmHint));
-                    DeferCommandRequery();
-                }
-                return;
-            }
-
-            _syncContext.Post(_ =>
-            {
-                OnPropertyChanged(nameof(CanExecuteInlineStartMove));
-                OnPropertyChanged(nameof(InlineMoveConfirmHint));
-                DeferCommandRequery();
-            }, null);
-        });
-    }
-
-    private void ResetInlineMoveConfirmDebounce()
-    {
-        Interlocked.Increment(ref _inlineMoveConfirmDebounceToken);
-        _inlineMoveUnlockAtUtc = DateTime.MinValue;
-        Shell.ShowMoveInlineConfirm = false;
-        OnPropertyChanged(nameof(CanExecuteInlineStartMove));
-        OnPropertyChanged(nameof(InlineMoveConfirmHint));
-        DeferCommandRequery();
     }
 
     /// <summary>
@@ -984,8 +911,6 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
     public IRelayCommand BrowseFolderPathCommand { get; }
     public IRelayCommand QuickPreviewCommand { get; }
     public IRelayCommand ConvertOnlyCommand { get; }
-    public IRelayCommand RequestStartMoveCommand { get; }
-    public IRelayCommand CancelStartMoveCommand { get; }
     public IRelayCommand StartMoveCommand { get; }
     public IRelayCommand SaveSettingsCommand { get; }
     public IRelayCommand LoadSettingsCommand { get; }
@@ -1120,8 +1045,6 @@ public sealed partial class MainViewModel : ObservableObject, INotifyDataErrorIn
         WatchApplyCommand.NotifyCanExecuteChanged();
         QuickPreviewCommand.NotifyCanExecuteChanged();
         ConvertOnlyCommand.NotifyCanExecuteChanged();
-        RequestStartMoveCommand.NotifyCanExecuteChanged();
-        CancelStartMoveCommand.NotifyCanExecuteChanged();
         StartMoveCommand.NotifyCanExecuteChanged();
     }
 

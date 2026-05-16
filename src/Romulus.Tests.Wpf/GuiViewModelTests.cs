@@ -1004,48 +1004,6 @@ public partial class GuiViewModelTests
         Assert.False(vm.IsBusy);
     }
 
-    [Fact]
-    public void ShowStartMoveButton_True_AfterCompletedDryRun()
-    {
-        var vm = new MainViewModel();
-        vm.Roots.Add(@"C:\TestRoot");
-        vm.DryRun = true;
-        vm.TransitionTo(RunState.Preflight);
-        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
-        Assert.True(vm.ShowStartMoveButton);
-    }
-
-    [Fact]
-    public void ShowStartMoveButton_False_WhenBusy()
-    {
-        var vm = new MainViewModel();
-        SetRunStateViaValidPath(vm, RunState.Scanning);
-        Assert.False(vm.ShowStartMoveButton);
-    }
-
-    [Fact]
-    public void ShowStartMoveButton_False_WhenIdle()
-    {
-        var vm = new MainViewModel();
-        vm.CurrentRunState = RunState.Idle;
-        Assert.False(vm.ShowStartMoveButton);
-    }
-
-    [Fact]
-    public void ShowStartMoveButton_False_WhenPreviewConfigChanged()
-    {
-        var vm = new MainViewModel();
-        vm.Roots.Add(@"C:\TestRoot");
-        vm.DryRun = true;
-        vm.TransitionTo(RunState.Preflight);
-        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
-
-        vm.AggressiveJunk = true;
-
-        Assert.False(vm.ShowStartMoveButton);
-        Assert.False(vm.StartMoveCommand.CanExecute(null));
-    }
-
     // ═══ ExtensionFilters (UX-004) ══════════════════════════════════════
 
     [Fact]
@@ -1678,7 +1636,6 @@ public partial class GuiViewModelTests
         Assert.Equal(RunState.CompletedDryRun, vm.CurrentRunState);
         Assert.True(vm.HasRunResult);
         Assert.False(vm.IsBusy);
-        Assert.True(vm.ShowStartMoveButton); // DryRun shows "Start Move" button
         Assert.Equal("/tmp/report.html", vm.LastReportPath);
     }
 
@@ -1694,7 +1651,6 @@ public partial class GuiViewModelTests
         vm.TransitionTo(RunState.Scanning);
         vm.TransitionTo(RunState.Deduplicating);
         vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
-        Assert.True(vm.ShowStartMoveButton);
 
         // Then: user clicks "Start Move" → goes through phases again
         vm.DryRun = false;
@@ -1708,7 +1664,6 @@ public partial class GuiViewModelTests
         vm.CompleteRun(success: true, reportPath: "/tmp/report2.html");
         Assert.Equal(RunState.Completed, vm.CurrentRunState);
         Assert.True(vm.HasRunResult);
-        Assert.False(vm.ShowStartMoveButton); // Move done, no more "Start Move"
     }
 
     // ═══ RunService tests ═══════════════════════════════════════════════
@@ -2430,24 +2385,6 @@ public partial class GuiViewModelTests
         var vm = new MainViewModel();
         vm.Roots.Add(@"C:\TestRoot");
         Assert.False(vm.StartMoveCommand.CanExecute(null));
-    }
-
-    [Fact]
-    public void RequestStartMoveCommand_ArmsInlineConfirm()
-    {
-        var vm = new MainViewModel();
-        vm.Roots.Add(@"C:\TestRoot");
-        vm.DryRun = true;
-        vm.TransitionTo(RunState.Preflight);
-        vm.CompleteRun(success: true, reportPath: "/tmp/report.html");
-
-        vm.RequestStartMoveCommand.Execute(null);
-
-        Assert.True(vm.Shell.ShowMoveInlineConfirm);
-
-        vm.CancelStartMoveCommand.Execute(null);
-
-        Assert.False(vm.Shell.ShowMoveInlineConfirm);
     }
 
     [Fact]

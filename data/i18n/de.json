@@ -967,8 +967,6 @@
   "Result.Context.ConvertOnly": "Konvertierungsmodus aktiv: Dedupe-/Move-Kennzahlen entfallen, Fokus liegt auf Konvertierung.",
   "Result.Context.MoveCompleted": "Aufräumen abgeschlossen: Kennzahlen zeigen das ausgeführte Ergebnis.",
   "Result.ErrorSummaryHeadline": "Fehler-Summary ({0})",
-  "Result.InlineConfirmWaiting": "Sicherheitswartezeit aktiv: \"Jetzt ausführen\" wird in Kürze freigeschaltet.",
-  "Result.InlineConfirmReady": "Bereit: \"Jetzt ausführen\" ist freigeschaltet.",
   "Result.Mode.ConvertOnly": "Konvertierung",
 
   "Dialog.ConfirmMove.Warning": "Diese Aktion verschiebt Dateien in den Papierkorb-Ordner und ist nur über Rollback rückgängig zu machen.",

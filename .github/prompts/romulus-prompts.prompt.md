@@ -372,7 +372,7 @@ Der Plan soll enthalten:
 7. Tests, die vor und nach dem Refactor laufen muessen
 
 Wichtig:
-- keine neue Schattenlogik
+- keinen undokumentierten Code und kein implizites Verhalten einfuehren, das von der Hauptarchitektur abweicht
 - keine unnoetige Abstraktion
 - bestehende Architekturgrenzen respektieren
 ```
@@ -385,7 +385,7 @@ Setze jetzt den Plan um.
 Wichtig:
 - aendere nur die wirklich betroffenen Dateien
 - liefere vollstaendige, integrierbare Aenderungen
-- keine halben Loesungen
+- keine partiellen Implementierungen oder Fixes, die das Problem nicht vollstaendig loesen
 - keine Pseudocode-Platzhalter
 - ergaenze oder aktualisiere passende Tests
 - nenne zuerst die betroffenen Dateien
@@ -410,8 +410,8 @@ WICHTIG:
 - liefere passende Regressionstests
 - lasse keine halben Fixes stehen
 - wenn etwas blockiert ist, weise es explizit aus
-- keine neue Schattenlogik
-- keine kosmetischen Nebenbaustellen
+- keine neue Schattenlogik (keine versteckten Abhaengigkeiten, undokumentierten Codepfade oder impliziten Verhalten)
+- keine kosmetischen Nebenbaustellen (keine Aenderungen, die nur die Code-Aesthetik betreffen und keine funktionalen Verbesserungen bringen)
 
 Ausgabeformat:
 1. Executive Approach
@@ -487,7 +487,7 @@ WICHTIG:
 - beseitige Schattenlogik
 - verbessere Test-Hygiene
 - keine Kernfunktionalitaet beschaedigen
-- keine kosmetischen Massenrefactors
+- keine grossflaechigen Aenderungen, die nur die Code-Aesthetik betreffen und keine funktionalen Verbesserungen bringen
 
 Ausgabeformat:
 1. Executive Approach
