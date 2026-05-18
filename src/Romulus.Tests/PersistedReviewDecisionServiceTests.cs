@@ -1,4 +1,5 @@
 using Romulus.Contracts.Models;
+using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Review;
 using Xunit;
 
@@ -98,6 +99,107 @@ public sealed class PersistedReviewDecisionServiceTests : IDisposable
         Assert.Contains(warningMessages, message => message.Contains("stale", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task ApplyApprovalsAsync_MissingApprovedFile_DoesNotPromoteCandidate()
+    {
+        var missingPath = Path.Combine(_tempDir, "missing.bin");
+        var warnings = new List<string>();
+        using var service = new PersistedReviewDecisionService(
+            new InMemoryReviewDecisionStore(
+            [
+                new ReviewApprovalEntry
+                {
+                    Path = missingPath,
+                    SortDecision = SortDecision.Review,
+                    MatchLevel = MatchLevel.Exact,
+                    MatchReasoning = "approved before file disappeared",
+                    FileLastWriteUtcTicks = DateTime.UtcNow.Ticks
+                }
+            ]),
+            warnings.Add);
+
+        var updated = await service.ApplyApprovalsAsync(
+        [
+            CreateCandidate(missingPath, SortDecision.Review)
+        ]);
+
+        Assert.Equal(SortDecision.Review, updated[0].SortDecision);
+        Assert.Contains(warnings, message => message.Contains("stale", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task PersistApprovalsAsync_DeduplicatesPathsAndCapturesMissingFileAsNonTimestampedApproval()
+    {
+        var store = new InMemoryReviewDecisionStore();
+        using var service = new PersistedReviewDecisionService(store);
+        var missingPath = Path.Combine(_tempDir, "missing.bin");
+
+        var persistedCount = await service.PersistApprovalsAsync(
+        [
+            CreateCandidate(missingPath, SortDecision.Review, consoleKey: ""),
+            CreateCandidate(missingPath, SortDecision.Review, consoleKey: "NES"),
+            CreateCandidate("   ", SortDecision.Review, consoleKey: "SNES")
+        ], "api");
+
+        Assert.Equal(1, persistedCount);
+        var approval = Assert.Single(store.UpsertedApprovals);
+        Assert.Equal(missingPath, approval.Path);
+        Assert.Equal("UNKNOWN", approval.ConsoleKey);
+        Assert.Equal("api", approval.Source);
+        Assert.Null(approval.FileLastWriteUtcTicks);
+    }
+
+    [Fact]
+    public async Task ReviewStoreFailures_AreWarningsInsteadOfRunBlockers()
+    {
+        var warningMessages = new List<string>();
+        using var service = new PersistedReviewDecisionService(
+            new ThrowingReviewDecisionStore(),
+            warningMessages.Add);
+        var reviewPath = Path.Combine(_tempDir, "review.bin");
+
+        var updated = await service.ApplyApprovalsAsync([CreateCandidate(reviewPath, SortDecision.Review)]);
+        var persistedCount = await service.PersistApprovalsAsync([CreateCandidate(reviewPath, SortDecision.Review)], "api");
+        var approvedPaths = await service.GetApprovedPathSetAsync([reviewPath]);
+
+        Assert.Equal(SortDecision.Review, updated[0].SortDecision);
+        Assert.Equal(0, persistedCount);
+        Assert.Empty(approvedPaths);
+        Assert.Contains(warningMessages, message => message.Contains("reuse skipped", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(warningMessages, message => message.Contains("write skipped", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(warningMessages, message => message.Contains("read skipped", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task LiteDbReviewDecisionStore_CorruptDatabaseIsBackedUpAndRecreated()
+    {
+        var warningMessages = new List<string>();
+        File.WriteAllText(_databasePath, "not a litedb database");
+
+        using var store = new LiteDbReviewDecisionStore(_databasePath, warningMessages.Add);
+        var approvedPath = Path.Combine(_tempDir, "approved.bin");
+        await store.UpsertApprovalsAsync(
+        [
+            new ReviewApprovalEntry
+            {
+                Path = approvedPath,
+                ConsoleKey = "SNES",
+                SortDecision = SortDecision.Review,
+                MatchLevel = MatchLevel.Exact,
+                MatchReasoning = "manual",
+                Source = "api",
+                ApprovedUtc = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc)
+            }
+        ]);
+
+        var approvals = await store.ListApprovalsAsync([approvedPath]);
+
+        var approval = Assert.Single(approvals);
+        Assert.Equal(Path.GetFullPath(approvedPath), approval.Path);
+        Assert.Contains(warningMessages, message => message.Contains("signature validation failure", StringComparison.OrdinalIgnoreCase));
+        Assert.NotEmpty(Directory.EnumerateFiles(_tempDir, "*.review-open-failure.*.bak"));
+    }
+
     private static RomCandidate CreateCandidate(string path, SortDecision sortDecision, string consoleKey = "UNKNOWN")
         => new()
         {
@@ -110,4 +212,45 @@ public sealed class PersistedReviewDecisionServiceTests : IDisposable
                 Reasoning = "test"
             }
         };
+
+    private sealed class InMemoryReviewDecisionStore(
+        IReadOnlyList<ReviewApprovalEntry>? approvals = null) : IReviewDecisionStore
+    {
+        private readonly List<ReviewApprovalEntry> _approvals = approvals?.ToList() ?? new();
+
+        public List<ReviewApprovalEntry> UpsertedApprovals { get; } = new();
+
+        public ValueTask UpsertApprovalsAsync(
+            IReadOnlyList<ReviewApprovalEntry> approvals,
+            CancellationToken ct = default)
+        {
+            UpsertedApprovals.AddRange(approvals);
+            _approvals.RemoveAll(existing => approvals.Any(next => string.Equals(existing.Path, next.Path, StringComparison.OrdinalIgnoreCase)));
+            _approvals.AddRange(approvals);
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask<IReadOnlyList<ReviewApprovalEntry>> ListApprovalsAsync(
+            IReadOnlyList<string> paths,
+            CancellationToken ct = default)
+        {
+            var results = paths
+                .SelectMany(path => _approvals.Where(entry => string.Equals(entry.Path, path, StringComparison.OrdinalIgnoreCase)))
+                .ToArray();
+            return new ValueTask<IReadOnlyList<ReviewApprovalEntry>>(results);
+        }
+    }
+
+    private sealed class ThrowingReviewDecisionStore : IReviewDecisionStore
+    {
+        public ValueTask UpsertApprovalsAsync(
+            IReadOnlyList<ReviewApprovalEntry> approvals,
+            CancellationToken ct = default)
+            => throw new IOException("store write failed");
+
+        public ValueTask<IReadOnlyList<ReviewApprovalEntry>> ListApprovalsAsync(
+            IReadOnlyList<string> paths,
+            CancellationToken ct = default)
+            => throw new IOException("store read failed");
+    }
 }
