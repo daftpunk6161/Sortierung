@@ -19,8 +19,9 @@ internal static class ApiTestFactory
         IDictionary<string, string?> settings,
         Func<RunRecord, IFileSystem, IAuditStore, CancellationToken, RunExecutionOutcome>? executor = null,
         ICollectionIndex? collectionIndex = null,
-        string? auditSigningKeyPath = null)
-        => new IsolatedApiFactory(settings, executor, collectionIndex, auditSigningKeyPath);
+        string? auditSigningKeyPath = null,
+        IProvenanceStore? provenanceStore = null)
+        => new IsolatedApiFactory(settings, executor, collectionIndex, auditSigningKeyPath, provenanceStore);
 
     private sealed class IsolatedApiFactory : WebApplicationFactory<Program>
     {
@@ -28,6 +29,7 @@ internal static class ApiTestFactory
         private readonly Func<RunRecord, IFileSystem, IAuditStore, CancellationToken, RunExecutionOutcome>? _executor;
         private readonly ICollectionIndex? _collectionIndex;
         private readonly string? _auditSigningKeyPath;
+        private readonly IProvenanceStore? _provenanceStore;
         private readonly string _tempDir;
         private readonly string _databasePath;
         private readonly string _datCatalogStatePath;
@@ -37,12 +39,14 @@ internal static class ApiTestFactory
             IDictionary<string, string?> settings,
             Func<RunRecord, IFileSystem, IAuditStore, CancellationToken, RunExecutionOutcome>? executor,
             ICollectionIndex? collectionIndex,
-            string? auditSigningKeyPath)
+            string? auditSigningKeyPath,
+            IProvenanceStore? provenanceStore)
         {
             _settings = new Dictionary<string, string?>(settings, StringComparer.OrdinalIgnoreCase);
             _executor = executor;
             _collectionIndex = collectionIndex;
             _auditSigningKeyPath = auditSigningKeyPath;
+            _provenanceStore = provenanceStore;
             _tempDir = Path.Combine(Path.GetTempPath(), "Romulus_ApiFactory_" + Guid.NewGuid().ToString("N"));
             _databasePath = Path.Combine(_tempDir, "collection.db");
             _datCatalogStatePath = Path.Combine(_tempDir, "dat-catalog-state.json");
@@ -86,6 +90,12 @@ internal static class ApiTestFactory
                 {
                     services.RemoveAll<ICollectionIndex>();
                     services.AddSingleton<ICollectionIndex>(_ => _collectionIndex);
+                }
+
+                if (_provenanceStore is not null)
+                {
+                    services.RemoveAll<IProvenanceStore>();
+                    services.AddSingleton<IProvenanceStore>(_ => _provenanceStore);
                 }
 
                 if (!string.IsNullOrWhiteSpace(_auditSigningKeyPath))
