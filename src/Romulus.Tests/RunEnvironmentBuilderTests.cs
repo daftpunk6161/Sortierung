@@ -428,6 +428,86 @@ public sealed class RunEnvironmentBuilderTests : IDisposable
     }
 
     [Fact]
+    public void ResolveEffectiveDatRoot_SettingsRootWithoutDatFiles_IsKeptWhenNoAutoDetectedRootExists()
+    {
+        var emptySettingsRoot = Path.Combine(_tempDir, "settings-empty-no-auto");
+        Directory.CreateDirectory(emptySettingsRoot);
+
+        var resolution = RunEnvironmentBuilder.ResolveEffectiveDatRoot(
+            runOptionDatRoot: null,
+            settingsDatRoot: emptySettingsRoot,
+            dataDir: _dataDir,
+            statePath: Path.Combine(_tempDir, "missing-state-no-auto.json"));
+
+        Assert.Equal(RunEnvironmentBuilder.DatRootResolutionSource.Settings, resolution.Source);
+        Assert.Equal(Path.GetFullPath(emptySettingsRoot), resolution.Path);
+    }
+
+    [Fact]
+    public void ResolveEffectiveDatRoot_NoConfiguredOrAutoDetectedRoot_ReturnsNone()
+    {
+        var resolution = RunEnvironmentBuilder.ResolveEffectiveDatRoot(
+            runOptionDatRoot: null,
+            settingsDatRoot: null,
+            dataDir: _dataDir,
+            statePath: Path.Combine(_tempDir, "missing-state-none.json"));
+
+        Assert.Equal(RunEnvironmentBuilder.DatRootResolutionSource.None, resolution.Source);
+        Assert.Null(resolution.Path);
+    }
+
+    [Fact]
+    public void ResolveEffectiveDatRoot_CatalogStateMultipleConsoleDirectories_UsesCommonRootDeterministically()
+    {
+        var commonRoot = Path.Combine(_tempDir, "state-common-dats");
+        var snesRoot = Path.Combine(commonRoot, "SNES");
+        var nesRoot = Path.Combine(commonRoot, "NES");
+        Directory.CreateDirectory(snesRoot);
+        Directory.CreateDirectory(nesRoot);
+        var snesDat = Path.Combine(snesRoot, "snes.dat");
+        var nesDat = Path.Combine(nesRoot, "nes.dat");
+        File.WriteAllText(snesDat, "snes");
+        File.WriteAllText(nesDat, "nes");
+
+        var statePath = Path.Combine(_tempDir, "dat-catalog-state-common.json");
+        DatCatalogStateService.SaveState(statePath, new DatCatalogState
+        {
+            Entries = new Dictionary<string, DatLocalInfo>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["snes"] = new DatLocalInfo
+                {
+                    InstalledDate = DateTime.UtcNow,
+                    FileSha256 = "hash-snes",
+                    FileSizeBytes = 4,
+                    LocalPath = snesDat
+                },
+                ["nes"] = new DatLocalInfo
+                {
+                    InstalledDate = DateTime.UtcNow,
+                    FileSha256 = "hash-nes",
+                    FileSizeBytes = 3,
+                    LocalPath = nesDat
+                }
+            }
+        });
+
+        var first = RunEnvironmentBuilder.ResolveEffectiveDatRoot(
+            runOptionDatRoot: null,
+            settingsDatRoot: null,
+            dataDir: _dataDir,
+            statePath: statePath);
+        var second = RunEnvironmentBuilder.ResolveEffectiveDatRoot(
+            runOptionDatRoot: null,
+            settingsDatRoot: null,
+            dataDir: _dataDir,
+            statePath: statePath);
+
+        Assert.Equal(RunEnvironmentBuilder.DatRootResolutionSource.CatalogState, first.Source);
+        Assert.Equal(Path.GetFullPath(commonRoot), first.Path);
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
     public void ResolveEffectiveDatRoot_AutoDetectsFromConventionalDataDirectory()
     {
         var conventionalRoot = Path.Combine(_dataDir, "dats");
