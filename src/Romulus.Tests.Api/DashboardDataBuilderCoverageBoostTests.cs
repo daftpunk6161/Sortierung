@@ -120,6 +120,105 @@ public sealed class DashboardDataBuilderCoverageBoostTests : IDisposable
         // WithinAllowedRoots should be set based on policy
     }
 
+    [Fact]
+    public async Task BuildDatStatus_ExplicitMissingDatRoot_ReturnsNotConfiguredWithRootPolicyResult()
+    {
+        var missingDatRoot = Path.Combine(_root, "missing-dats");
+        var policy = new AllowedRootPathPolicy([_root]);
+
+        var result = await DashboardDataBuilder.BuildDatStatusAsync(
+            missingDatRoot,
+            _root,
+            policy,
+            CancellationToken.None);
+
+        Assert.False(result.Configured);
+        Assert.Equal(missingDatRoot, result.DatRoot);
+        Assert.True(result.WithinAllowedRoots);
+        Assert.Equal(0, result.TotalFiles);
+        Assert.Empty(result.Consoles);
+    }
+
+    [Fact]
+    public async Task BuildDatStatus_ExplicitDatRoot_GroupsConsolesCountsCatalogAndFlagsStaleFiles()
+    {
+        var datRoot = Path.Combine(_root, "dats");
+        var nesRoot = Path.Combine(datRoot, "NES");
+        var dataDir = Path.Combine(_root, "data");
+        Directory.CreateDirectory(nesRoot);
+        Directory.CreateDirectory(dataDir);
+        var rootDat = Path.Combine(datRoot, "root.dat");
+        var nesDat = Path.Combine(nesRoot, "nes.dat");
+        File.WriteAllText(rootDat, "root");
+        File.WriteAllText(nesDat, "nes");
+        File.SetLastWriteTimeUtc(rootDat, DateTime.UtcNow);
+        File.SetLastWriteTimeUtc(nesDat, DateTime.UtcNow.AddDays(-(Romulus.Infrastructure.Dat.DatCatalogStateService.StaleThresholdDays + 2)));
+        File.WriteAllText(Path.Combine(dataDir, "dat-catalog.json"), """
+        [
+          {
+            "Group": "No-Intro",
+            "PackMatch": "Nintendo*",
+            "Url": "https://example.invalid/dat",
+            "System": "Nintendo Entertainment System",
+            "Id": "nointro-nes",
+            "ConsoleKey": "NES",
+            "Format": "zip-dat"
+          }
+        ]
+        """);
+        var policy = new AllowedRootPathPolicy([_root]);
+
+        var result = await DashboardDataBuilder.BuildDatStatusAsync(
+            datRoot,
+            dataDir,
+            policy,
+            CancellationToken.None);
+
+        Assert.True(result.Configured);
+        Assert.Equal(2, result.TotalFiles);
+        Assert.Equal(1, result.OldFileCount);
+        Assert.Equal(1, result.CatalogEntries);
+        Assert.True(result.WithinAllowedRoots);
+        Assert.Contains("older", result.StaleWarning, StringComparison.OrdinalIgnoreCase);
+        Assert.Collection(
+            result.Consoles,
+            nes =>
+            {
+                Assert.Equal("NES", nes.Console);
+                Assert.Equal(1, nes.FileCount);
+                Assert.False(string.IsNullOrWhiteSpace(nes.OldestFileUtc));
+                Assert.False(string.IsNullOrWhiteSpace(nes.NewestFileUtc));
+            },
+            root =>
+            {
+                Assert.Equal("root", root.Console);
+                Assert.Equal(1, root.FileCount);
+            });
+    }
+
+    [Fact]
+    public async Task BuildDatStatus_InvalidCatalogRemainsBestEffort()
+    {
+        var datRoot = Path.Combine(_root, "dats-invalid-catalog");
+        var dataDir = Path.Combine(_root, "data-invalid-catalog");
+        Directory.CreateDirectory(datRoot);
+        Directory.CreateDirectory(dataDir);
+        File.WriteAllText(Path.Combine(datRoot, "nes.dat"), "nes");
+        File.WriteAllText(Path.Combine(dataDir, "dat-catalog.json"), "{not-json");
+        var policy = new AllowedRootPathPolicy([Path.Combine(_root, "other")]);
+
+        var result = await DashboardDataBuilder.BuildDatStatusAsync(
+            datRoot,
+            dataDir,
+            policy,
+            CancellationToken.None);
+
+        Assert.True(result.Configured);
+        Assert.Equal(1, result.TotalFiles);
+        Assert.Equal(0, result.CatalogEntries);
+        Assert.False(result.WithinAllowedRoots);
+    }
+
     // ══════ HeadlessApiOptions edge cases ═════════════════════════
 
     [Fact]
