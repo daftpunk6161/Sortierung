@@ -54,6 +54,37 @@ public sealed class RunProfilePersistenceRegressionTests : IDisposable
     }
 
     [Fact]
+    public async Task JsonRunProfileStore_ListSynchronouslyMatchesAsyncFilteringAndOrdering()
+    {
+        var store = CreateStore();
+        await store.UpsertAsync(Profile("zeta-profile", "Zeta Profile") with { BuiltIn = true });
+        await store.UpsertAsync(Profile("alpha-profile", "Alpha Profile"));
+        await File.WriteAllTextAsync(Path.Combine(_profileDir, "broken.json"), "{ not-json");
+        await File.WriteAllTextAsync(Path.Combine(_profileDir, "invalid.json"), JsonSerializer.Serialize(
+            Profile("invalid-profile", "") with { Name = "" }));
+
+        var asyncProfiles = await store.ListAsync();
+        var syncProfiles = store.ListSynchronously();
+
+        Assert.Equal(["alpha-profile", "zeta-profile"], syncProfiles.Select(static profile => profile.Id).ToArray());
+        Assert.Equal(asyncProfiles.Select(static profile => profile.Id), syncProfiles.Select(static profile => profile.Id));
+        Assert.All(syncProfiles, static profile => Assert.False(profile.BuiltIn));
+    }
+
+    [Fact]
+    public async Task JsonRunProfileStore_MissingDirectoryAndInvalidIdsAreSafeNoOps()
+    {
+        var missingDir = Path.Combine(_tempRoot, "missing-profiles");
+        var store = new JsonRunProfileStore(new RunProfilePathOptions { DirectoryPath = missingDir });
+
+        Assert.Empty(await store.ListAsync());
+        Assert.Empty(store.ListSynchronously());
+        Assert.Null(await store.TryGetAsync("bad id with spaces"));
+        Assert.False(await store.DeleteAsync("bad id with spaces"));
+        Assert.False(Directory.Exists(missingDir));
+    }
+
+    [Fact]
     public async Task RunProfileService_ProtectsBuiltInsAndExportsUserProfiles()
     {
         WriteBuiltInProfiles();
