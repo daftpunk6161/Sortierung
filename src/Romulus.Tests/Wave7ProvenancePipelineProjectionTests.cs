@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Romulus.Contracts.Models;
+using Romulus.Contracts.Ports;
 using Romulus.Infrastructure.Provenance;
 using Xunit;
 
@@ -235,5 +236,125 @@ public sealed class Wave7ProvenancePipelineProjectionTests : IDisposable
         Assert.Equal("aa11", ev.Fingerprint);
         Assert.Equal("audit-run.rollback-audit", ev.AuditRunId);
         Assert.DoesNotContain(dir, ev.Detail ?? "", StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RollbackProjectEvents_ProjectsOnlyMatchedRestoredPathsInReverseAuditOrder()
+    {
+        var dir = CreateTempDir("rom-w7-rollback-prov-filter");
+        var moveRestored = Path.Combine(dir, "restored-move.nes");
+        var moveTrash = Path.Combine(dir, "trash", "restored-move.nes");
+        var copyCreated = Path.Combine(dir, "generated-copy.nes");
+        var copySource = Path.Combine(dir, "source.nes");
+        var ignoredRestored = Path.Combine(dir, "ignored.nes");
+        var ignoredTrash = Path.Combine(dir, "trash", "ignored.nes");
+        var auditPath = Path.Combine(dir, "audit-run.csv");
+        File.WriteAllLines(auditPath,
+        [
+            "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
+            $"C:/r,{moveRestored},{moveTrash},MOVE,Game,aa11,winner,2026-05-01T00:00:00Z",
+            $"C:/r,{copySource},{copyCreated},COPY,Game,bb22,copy,2026-05-01T00:01:00Z",
+            $"C:/r,{ignoredRestored},{ignoredTrash},MOVE,Game,cc33,not-restored,2026-05-01T00:02:00Z",
+            $"C:/r,{Path.Combine(dir, "bad.nes")},{Path.Combine(dir, "trash", "bad.nes")},MOVE,Game,not-hex,bad-hash,2026-05-01T00:03:00Z",
+            "malformed,row"
+        ]);
+
+        var rollback = new AuditRollbackResult
+        {
+            AuditCsvPath = auditPath,
+            RolledBack = 2,
+            RestoredPaths = [moveRestored, copyCreated]
+        };
+
+        var events = ProvenanceRollbackAppender.ProjectEvents(rollback, "rollback-run", Ts);
+
+        Assert.Equal(["bb22", "aa11"], events.Select(e => e.Fingerprint).ToArray());
+        Assert.All(events, e =>
+        {
+            Assert.Equal(ProvenanceEventKind.RolledBack, e.EventKind);
+            Assert.Equal("rollback-run", e.AuditRunId);
+            Assert.DoesNotContain(dir, e.Detail ?? "", StringComparison.OrdinalIgnoreCase);
+        });
+        Assert.StartsWith("removed generated-copy.nes", events[0].Detail, StringComparison.Ordinal);
+        Assert.Contains("restored-move.nes", events[1].Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TryAppendRolledBackEvents_AppendsProjectedEventsWithRollbackAuditRunId()
+    {
+        var dir = CreateTempDir("rom-w7-rollback-prov-append");
+        var restoredPath = Path.Combine(dir, "a.nes");
+        var trashPath = Path.Combine(dir, "trash", "a.nes");
+        var auditPath = Path.Combine(dir, "audit-run.csv");
+        var rollbackAuditPath = Path.Combine(dir, "audit-run.rollback-audit.csv");
+        File.WriteAllLines(auditPath,
+        [
+            "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
+            $"C:/r,{restoredPath},{trashPath},MOVE,Game,aa11,winner,2026-05-01T00:00:00Z"
+        ]);
+        var store = new RecordingProvenanceStore();
+        var rollback = new AuditRollbackResult
+        {
+            AuditCsvPath = auditPath,
+            RollbackAuditPath = rollbackAuditPath,
+            RolledBack = 1,
+            RestoredPaths = [restoredPath]
+        };
+
+        var appended = ProvenanceRollbackAppender.TryAppendRolledBackEvents(store, rollback, Ts);
+
+        Assert.Equal(1, appended);
+        var entry = Assert.Single(store.Entries);
+        Assert.Equal("audit-run.rollback-audit", entry.AuditRunId);
+        Assert.Equal("aa11", entry.Fingerprint);
+    }
+
+    [Fact]
+    public void TryAppendRolledBackEvents_DoesNotLetProvenanceFailureBreakRollback()
+    {
+        var dir = CreateTempDir("rom-w7-rollback-prov-store-fail");
+        var restoredPath = Path.Combine(dir, "a.nes");
+        var trashPath = Path.Combine(dir, "trash", "a.nes");
+        var auditPath = Path.Combine(dir, "audit-run.csv");
+        File.WriteAllLines(auditPath,
+        [
+            "RootPath,OldPath,NewPath,Action,Category,Hash,Reason,Timestamp",
+            $"C:/r,{restoredPath},{trashPath},MOVE,Game,aa11,winner,2026-05-01T00:00:00Z"
+        ]);
+        var logs = new List<string>();
+        var rollback = new AuditRollbackResult
+        {
+            AuditCsvPath = auditPath,
+            RolledBack = 1,
+            RestoredPaths = [restoredPath]
+        };
+
+        var appended = ProvenanceRollbackAppender.TryAppendRolledBackEvents(
+            new RecordingProvenanceStore(throwOnAppend: true),
+            rollback,
+            Ts,
+            logs.Add);
+
+        Assert.Equal(0, appended);
+        Assert.Contains(logs, message => message.Contains("Rollback trail append skipped", StringComparison.Ordinal));
+    }
+
+    private sealed class RecordingProvenanceStore(bool throwOnAppend = false) : IProvenanceStore
+    {
+        public List<ProvenanceEntry> Entries { get; } = new();
+
+        public void Append(ProvenanceEntry entry)
+        {
+            if (throwOnAppend)
+                throw new IOException("append failed");
+
+            Entries.Add(entry);
+        }
+
+        public IReadOnlyList<ProvenanceEntry> Read(string fingerprint)
+            => Entries.Where(e => e.Fingerprint == fingerprint).ToArray();
+
+        public ProvenanceVerifyReport Verify(string fingerprint)
+            => ProvenanceVerifyReport.Ok(Read(fingerprint));
     }
 }
