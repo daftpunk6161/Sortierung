@@ -141,6 +141,112 @@ public sealed class NkitInvokerTests : IDisposable
     }
 
     [Fact]
+    public void Invoke_SuccessWithNkitGczDecOutput_PromotesExpectedExpandedImage()
+    {
+        var sourcePath = Path.Combine(_root, "disc.nkit.gcz");
+        var targetPath = Path.Combine(_root, "out", "disc.iso");
+        File.WriteAllText(sourcePath, "nkit-gcz");
+
+        var runner = new TestToolRunner(new Dictionary<string, string?> { ["nkit"] = _toolPath });
+        runner.Enqueue(new ToolResult(0, "ok", true));
+        runner.OnInvoke = (_, args) =>
+        {
+            var stagingDirectory = args[Array.IndexOf(args, "-out") + 1];
+            Directory.CreateDirectory(stagingDirectory);
+            File.WriteAllText(Path.Combine(stagingDirectory, "disc.dec.iso"), "expanded-dec");
+        };
+
+        var sut = new NkitInvoker(runner);
+
+        var result = sut.Invoke(sourcePath, targetPath, Capability("nkit", ".nkit.gcz"));
+
+        Assert.True(result.Success);
+        Assert.Equal(VerificationStatus.Verified, result.Verification);
+        Assert.Equal("expanded-dec", File.ReadAllText(targetPath));
+    }
+
+    [Fact]
+    public void Invoke_SuccessWithSingleUnexpectedIso_PromotesFallbackOutput()
+    {
+        var sourcePath = Path.Combine(_root, "renamed.nkit.iso");
+        var targetPath = Path.Combine(_root, "out", "renamed.iso");
+        File.WriteAllText(sourcePath, "nkit");
+
+        var runner = new TestToolRunner(new Dictionary<string, string?> { ["nkit"] = _toolPath });
+        runner.Enqueue(new ToolResult(0, "ok", true));
+        runner.OnInvoke = (_, args) =>
+        {
+            var stagingDirectory = args[Array.IndexOf(args, "-out") + 1];
+            Directory.CreateDirectory(stagingDirectory);
+            File.WriteAllText(Path.Combine(stagingDirectory, "tool-selected-name.iso"), "expanded-fallback");
+        };
+
+        var sut = new NkitInvoker(runner);
+
+        var result = sut.Invoke(sourcePath, targetPath, Capability("nkit", ".nkit.iso"));
+
+        Assert.True(result.Success);
+        Assert.Equal("expanded-fallback", File.ReadAllText(targetPath));
+    }
+
+    [Fact]
+    public void Invoke_SuccessWithAmbiguousOutputs_FailsWithoutChoosingArbitrarily()
+    {
+        var sourcePath = Path.Combine(_root, "ambiguous.nkit.iso");
+        var targetPath = Path.Combine(_root, "out", "ambiguous.iso");
+        File.WriteAllText(sourcePath, "nkit");
+
+        string? stagingDirectory = null;
+        var runner = new TestToolRunner(new Dictionary<string, string?> { ["nkit"] = _toolPath });
+        runner.Enqueue(new ToolResult(0, "ok", true));
+        runner.OnInvoke = (_, args) =>
+        {
+            stagingDirectory = args[Array.IndexOf(args, "-out") + 1];
+            Directory.CreateDirectory(stagingDirectory);
+            File.WriteAllText(Path.Combine(stagingDirectory, "ambiguous.iso"), "candidate-1");
+            File.WriteAllText(Path.Combine(stagingDirectory, "ambiguous.dec.iso"), "candidate-2");
+        };
+
+        var sut = new NkitInvoker(runner);
+
+        var result = sut.Invoke(sourcePath, targetPath, Capability("nkit", ".nkit.iso"));
+
+        Assert.False(result.Success);
+        Assert.Equal("nkit-output-ambiguous", result.StdErr);
+        Assert.Equal(VerificationStatus.VerifyFailed, result.Verification);
+        Assert.False(File.Exists(targetPath));
+        Assert.NotNull(stagingDirectory);
+        Assert.False(Directory.Exists(stagingDirectory));
+    }
+
+    [Fact]
+    public void Invoke_TargetAlreadyExists_FailsWithoutOverwritingExistingFile()
+    {
+        var sourcePath = Path.Combine(_root, "existing-target.nkit.iso");
+        var targetPath = Path.Combine(_root, "out", "existing-target.iso");
+        File.WriteAllText(sourcePath, "nkit");
+        Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+        File.WriteAllText(targetPath, "keep");
+
+        var runner = new TestToolRunner(new Dictionary<string, string?> { ["nkit"] = _toolPath });
+        runner.Enqueue(new ToolResult(0, "ok", true));
+        runner.OnInvoke = (_, args) =>
+        {
+            var stagingDirectory = args[Array.IndexOf(args, "-out") + 1];
+            Directory.CreateDirectory(stagingDirectory);
+            File.WriteAllText(Path.Combine(stagingDirectory, "existing-target.iso"), "expanded");
+        };
+
+        var sut = new NkitInvoker(runner);
+
+        var result = sut.Invoke(sourcePath, targetPath, Capability("nkit", ".nkit.iso"));
+
+        Assert.False(result.Success);
+        Assert.Equal("target-exists", result.StdErr);
+        Assert.Equal("keep", File.ReadAllText(targetPath));
+    }
+
+    [Fact]
     public void Invoke_SuccessCleansIsolatedStagingDirectory()
     {
         var sourcePath = Path.Combine(_root, "cleanup.nkit.iso");
@@ -188,6 +294,17 @@ public sealed class NkitInvokerTests : IDisposable
 
         Assert.Equal(VerificationStatus.VerifyFailed, sut.Verify(missingPath, Capability("nkit", ".nkit.iso")));
         Assert.Equal(VerificationStatus.VerifyFailed, sut.Verify(emptyPath, Capability("nkit", ".nkit.iso")));
+    }
+
+    [Fact]
+    public void Verify_OutputWithNkitMarker_ReturnsVerifyFailed()
+    {
+        var targetPath = Path.Combine(_root, "still-nkit.iso");
+        File.WriteAllBytes(targetPath, [(byte)'N', (byte)'K', (byte)'I', (byte)'T', 1, 2, 3, 4]);
+
+        var sut = new NkitInvoker(new TestToolRunner(new Dictionary<string, string?>()));
+
+        Assert.Equal(VerificationStatus.VerifyFailed, sut.Verify(targetPath, Capability("nkit", ".nkit.iso")));
     }
 
     public void Dispose()
