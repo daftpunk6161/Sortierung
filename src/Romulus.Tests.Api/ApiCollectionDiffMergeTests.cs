@@ -197,6 +197,105 @@ public sealed class ApiCollectionDiffMergeTests : IDisposable
         Assert.Contains(SecurityErrorCodes.OutsideAllowedRoots, body);
     }
 
+    [Fact]
+    public async Task CollectionsCompare_InvalidLimitAndRightScope_ReturnStructuredErrors()
+    {
+        var leftRoot = CreateRoot("compare-left");
+        var rightRoot = CreateRoot("compare-right");
+        using var factory = CreateFactory(collectionIndex: new FakeCollectionIndex());
+        using var client = CreateAuthClient(factory);
+
+        using var invalidLimitContent = CreateJsonContent(new CollectionCompareRequest
+        {
+            Left = CreateScope("left", "Left", leftRoot),
+            Right = CreateScope("right", "Right", rightRoot),
+            Limit = 0
+        });
+        var invalidLimit = await client.PostAsync("/collections/compare", invalidLimitContent);
+        await AssertErrorCodeAsync(invalidLimit, HttpStatusCode.BadRequest, ApiErrorCodes.CollectionCompareInvalidLimit);
+
+        using var missingRightContent = CreateJsonContent(new CollectionCompareRequest
+        {
+            Left = CreateScope("left", "Left", leftRoot),
+            Right = new CollectionSourceScope { SourceId = "right", Label = "Right", Roots = [] },
+            Limit = 50
+        });
+        var missingRight = await client.PostAsync("/collections/compare", missingRightContent);
+        await AssertErrorCodeAsync(missingRight, HttpStatusCode.BadRequest, "COLLECTION-RIGHT-ROOTS-REQUIRED");
+    }
+
+    [Fact]
+    public async Task CollectionsMergeApply_AuditPathOutsideAllowedRoots_IsRejectedBeforeApply()
+    {
+        var allowedRoot = CreateRoot("apply-allowed");
+        var outsideRoot = CreateRoot("apply-outside");
+        var leftRoot = Path.Combine(allowedRoot, "left");
+        var rightRoot = Path.Combine(allowedRoot, "right");
+        var targetRoot = Path.Combine(allowedRoot, "target");
+        Directory.CreateDirectory(leftRoot);
+        Directory.CreateDirectory(rightRoot);
+        Directory.CreateDirectory(targetRoot);
+
+        using var factory = CreateFactory(
+            new Dictionary<string, string?>
+            {
+                ["AllowRemoteClients"] = "true",
+                ["PublicBaseUrl"] = "https://romulus.example",
+                ["AllowedRoots:0"] = allowedRoot
+            },
+            collectionIndex: new FakeCollectionIndex());
+        using var client = CreateAuthClient(factory);
+
+        using var content = CreateJsonContent(new CollectionMergeApplyRequest
+        {
+            MergeRequest = new CollectionMergeRequest
+            {
+                CompareRequest = new CollectionCompareRequest
+                {
+                    Left = CreateScope("left", "Left", leftRoot),
+                    Right = CreateScope("right", "Right", rightRoot),
+                    Limit = 50
+                },
+                TargetRoot = targetRoot
+            },
+            AuditPath = Path.Combine(outsideRoot, "merge.csv")
+        });
+
+        var response = await client.PostAsync("/collections/merge/apply", content);
+
+        await AssertErrorCodeAsync(response, HttpStatusCode.BadRequest, SecurityErrorCodes.OutsideAllowedRoots);
+    }
+
+    [Fact]
+    public async Task CollectionsMergeRollback_ValidatesAuditPathBeforeRollback()
+    {
+        var allowedRoot = CreateRoot("rollback-allowed");
+        using var factory = CreateFactory(
+            new Dictionary<string, string?>
+            {
+                ["AllowRemoteClients"] = "true",
+                ["PublicBaseUrl"] = "https://romulus.example",
+                ["AllowedRoots:0"] = allowedRoot
+            });
+        using var client = CreateAuthClient(factory);
+
+        using var missingAuditContent = CreateJsonContent(new CollectionMergeRollbackRequest
+        {
+            AuditPath = "",
+            DryRun = true
+        });
+        var missingAudit = await client.PostAsync("/collections/merge/rollback", missingAuditContent);
+        await AssertErrorCodeAsync(missingAudit, HttpStatusCode.BadRequest, ApiErrorCodes.CollectionMergeRollbackAuditRequired);
+
+        using var notFoundContent = CreateJsonContent(new CollectionMergeRollbackRequest
+        {
+            AuditPath = Path.Combine(allowedRoot, "missing-audit.csv"),
+            DryRun = true
+        });
+        var notFound = await client.PostAsync("/collections/merge/rollback", notFoundContent);
+        await AssertErrorCodeAsync(notFound, HttpStatusCode.NotFound, ApiErrorCodes.CollectionMergeRollbackAuditNotFound);
+    }
+
     private WebApplicationFactory<Program> CreateFactory(
         IDictionary<string, string?>? settings = null,
         ICollectionIndex? collectionIndex = null)
@@ -225,6 +324,13 @@ public sealed class ApiCollectionDiffMergeTests : IDisposable
 
     private static StringContent CreateJsonContent<T>(T value)
         => new(JsonSerializer.Serialize(value), Encoding.UTF8, "application/json");
+
+    private static async Task AssertErrorCodeAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, string expectedCode)
+    {
+        Assert.Equal(expectedStatus, response.StatusCode);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(expectedCode, doc.RootElement.GetProperty("error").GetProperty("code").GetString());
+    }
 
     private string CreateRoot(string name)
     {
