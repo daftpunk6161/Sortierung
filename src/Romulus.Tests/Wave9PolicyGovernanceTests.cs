@@ -80,6 +80,114 @@ public sealed class Wave9PolicyGovernanceTests : IDisposable
     }
 
     [Fact]
+    public void PolicyDocumentLoader_LoadFromFile_ParsesNestedYamlListsAndQuotedComments()
+    {
+        var policyPath = Path.Combine(_tempDir, "nested-policy.yaml");
+        File.WriteAllText(policyPath, """
+            id: nested
+            name: 'Nested Policy'
+            description: "Keeps # inside quotes"
+            preferredRegions:
+              - EU
+            allowedExtensions:
+              - .zip
+            deniedTitleTokens:
+              - 'Demo'
+            requiredExtensionsByConsole:
+              SNES:
+                - .sfc
+                - ".smc"
+              NES: [.nes, .zip, .nes]
+            """);
+
+        var policy = PolicyDocumentLoader.LoadFromFile(policyPath);
+
+        Assert.Equal("nested", policy.Id);
+        Assert.Equal("Nested Policy", policy.Name);
+        Assert.Equal("Keeps # inside quotes", policy.Description);
+        Assert.Equal(["EU"], policy.PreferredRegions);
+        Assert.Equal([".zip"], policy.AllowedExtensions);
+        Assert.Equal(["Demo"], policy.DeniedTitleTokens);
+        Assert.Equal(["NES", "SNES"], policy.RequiredExtensionsByConsole.Keys.ToArray());
+        Assert.Equal([".nes", ".zip"], policy.RequiredExtensionsByConsole["NES"]);
+        Assert.Equal([".sfc", ".smc"], policy.RequiredExtensionsByConsole["SNES"]);
+    }
+
+    [Fact]
+    public void PolicyDocumentLoader_Parse_RejectsMalformedOrIncompletePolicies()
+    {
+        Assert.Throws<ArgumentException>(() => PolicyDocumentLoader.LoadFromFile(" "));
+        Assert.Throws<ArgumentException>(() => PolicyDocumentLoader.GetSignaturePath(" "));
+        Assert.Throws<FormatException>(() => PolicyDocumentLoader.Parse(""));
+        Assert.Throws<FormatException>(() => PolicyDocumentLoader.Parse("{not-json"));
+        Assert.Throws<FormatException>(() => PolicyDocumentLoader.Parse("- orphan"));
+        Assert.Throws<FormatException>(() => PolicyDocumentLoader.Parse("id without separator"));
+        Assert.Throws<FormatException>(() => PolicyDocumentLoader.Parse("id: missing-name\nallowedExtensions: [.zip]"));
+        Assert.Throws<FormatException>(() => PolicyDocumentLoader.Parse("id: no-rules\nname: No Rules"));
+        Assert.Throws<FormatException>(() => PolicyDocumentLoader.Parse("id: x\nname: X\nunknown: y"));
+        Assert.Throws<FormatException>(() => PolicyDocumentLoader.Parse("""
+            id: bad-required-list
+            name: Bad Required List
+            requiredExtensionsByConsole:
+              - .sfc
+            """));
+    }
+
+    [Fact]
+    public void PolicyDocumentLoader_VerifySignatureText_ReportsInvalidSignatureStates()
+    {
+        var keyPath = Path.Combine(_tempDir, "policy-signing-extra.key");
+        var signing = new AuditSigningService(new Romulus.Infrastructure.FileSystem.FileSystemAdapter(), keyFilePath: keyPath);
+        var policyText = "id: signed\nname: Signed\nallowedExtensions: [.zip]\n";
+        var valid = PolicyDocumentLoader.CreateSignature(
+            policyText,
+            " ",
+            signing,
+            new DateTime(2026, 5, 16, 12, 0, 0, DateTimeKind.Utc),
+            signer: " ");
+
+        Assert.Equal("policy.yaml", valid.PolicyFileName);
+        Assert.Equal("local-audit-key", valid.Signer);
+
+        var missingFile = PolicyDocumentLoader.VerifySignatureFile(
+            Path.Combine(_tempDir, "missing-policy.yaml"),
+            policyText,
+            signing);
+        var blank = PolicyDocumentLoader.VerifySignatureText(policyText, " ", signing, "blank.sig.json");
+        var nullJson = PolicyDocumentLoader.VerifySignatureText(policyText, "null", signing, "null.sig.json");
+        var invalidJson = PolicyDocumentLoader.VerifySignatureText(policyText, "{not-json", signing, "bad.sig.json");
+        var badVersion = PolicyDocumentLoader.VerifySignatureText(
+            policyText,
+            JsonSerializer.Serialize(valid with { Version = "other-version" }),
+            signing,
+            "version.sig.json");
+        var badKey = PolicyDocumentLoader.VerifySignatureText(
+            policyText,
+            JsonSerializer.Serialize(valid with { KeyId = "wrong-key" }),
+            signing,
+            "key.sig.json");
+        var badHmac = PolicyDocumentLoader.VerifySignatureText(
+            policyText,
+            JsonSerializer.Serialize(valid with { HmacSha256 = "00" + valid.HmacSha256 }),
+            signing,
+            "hmac.sig.json");
+
+        Assert.False(missingFile.IsPresent);
+        Assert.Equal(Path.Combine(_tempDir, "missing-policy.yaml") + ".sig.json", missingFile.SignaturePath);
+        Assert.False(blank.IsPresent);
+        Assert.False(nullJson.IsValid);
+        Assert.Contains("object", nullJson.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(invalidJson.IsValid);
+        Assert.Equal("JsonException", invalidJson.Error);
+        Assert.False(badVersion.IsValid);
+        Assert.Contains("version", badVersion.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(badKey.IsValid);
+        Assert.Contains("key id", badKey.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(badHmac.IsValid);
+        Assert.Contains("HMAC", badHmac.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void PolicyEngine_ValidatesTargetState_WithDeterministicViolationOrder()
     {
         var snapshot = new LibrarySnapshot

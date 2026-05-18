@@ -292,6 +292,77 @@ public sealed class ApiProductizationIntegrationTests
     }
 
     [Fact]
+    public async Task Runs_Completeness_WithDatRoot_ReportsMissingDatEntries()
+    {
+        using var factory = ApiTestFactory.Create(new Dictionary<string, string?> { ["ApiKey"] = ApiKey });
+        using var client = CreateClientWithApiKey(factory);
+
+        var root = CreateTempRoot();
+        var datRoot = CreateTempRoot();
+
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "Unrelated Candidate (USA).chd"), "rom");
+
+            File.WriteAllText(
+                Path.Combine(datRoot, "psx.dat"),
+                """
+                <?xml version="1.0" encoding="utf-8"?>
+                <datafile>
+                  <header>
+                    <name>PSX DAT</name>
+                  </header>
+                  <game name="Missing Adventure">
+                    <description>Missing Adventure</description>
+                    <rom name="Missing Adventure.chd" sha1="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" size="123" />
+                  </game>
+                </datafile>
+                """);
+
+            var runPayload = JsonSerializer.Serialize(new
+            {
+                roots = new[] { root },
+                mode = "DryRun",
+                enableDat = true,
+                datRoot,
+                extensions = new[] { ".chd" }
+            });
+
+            using var runContent = new StringContent(runPayload, Encoding.UTF8, "application/json");
+            var runResponse = await client.PostAsync("/runs?wait=true", runContent);
+            Assert.Equal(HttpStatusCode.OK, runResponse.StatusCode);
+
+            using var runDoc = JsonDocument.Parse(await runResponse.Content.ReadAsStringAsync());
+            var runId = runDoc.RootElement.GetProperty("run").GetProperty("runId").GetString();
+            Assert.False(string.IsNullOrWhiteSpace(runId));
+
+            var completenessResponse = await client.GetAsync($"/runs/{runId}/completeness");
+            Assert.Equal(HttpStatusCode.OK, completenessResponse.StatusCode);
+
+            using var completenessDoc = JsonDocument.Parse(await completenessResponse.Content.ReadAsStringAsync());
+            var rootElement = completenessDoc.RootElement;
+            Assert.Equal(runId, rootElement.GetProperty("runId").GetString());
+            Assert.Equal(1, rootElement.GetProperty("totalInDat").GetInt32());
+            Assert.Equal(0, rootElement.GetProperty("totalVerified").GetInt32());
+            Assert.Equal(1, rootElement.GetProperty("totalMissing").GetInt32());
+            Assert.Equal(0.0, rootElement.GetProperty("overallPercentage").GetDouble());
+
+            var entry = Assert.Single(rootElement.GetProperty("entries").EnumerateArray());
+            Assert.Equal(1, entry.GetProperty("totalInDat").GetInt32());
+            Assert.Equal(0, entry.GetProperty("verified").GetInt32());
+            Assert.Equal(1, entry.GetProperty("missingCount").GetInt32());
+            Assert.Contains(
+                entry.GetProperty("missingGames").EnumerateArray(),
+                game => game.GetString() == "Missing Adventure");
+        }
+        finally
+        {
+            SafeDeleteDirectory(root);
+            SafeDeleteDirectory(datRoot);
+        }
+    }
+
+    [Fact]
     public async Task Runs_FixDat_WithQueryOutputPath_WritesFixDatFile()
     {
         using var factory = ApiTestFactory.Create(new Dictionary<string, string?> { ["ApiKey"] = ApiKey });
