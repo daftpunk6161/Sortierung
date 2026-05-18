@@ -445,6 +445,99 @@ public class DatSourceServiceTests : IDisposable
         Assert.False(File.Exists(Path.Combine(_tempDir, "huge.dat")));
     }
 
+    [Fact]
+    public async Task DownloadDatAsync_RelativeRedirectWithinAllowedHost_FollowsAndVerifiesDownloadedDat()
+    {
+        var content = "<?xml version=\"1.0\"?><datafile><header><name>Redirect</name></header></datafile>";
+        var expectedSha256 = ComputeSha256(content);
+        var handler = new RedirectHandler((request, _) =>
+        {
+            return request.RequestUri?.AbsolutePath switch
+            {
+                "/start.dat" => Redirect(HttpStatusCode.Found, "/final.dat"),
+                "/final.dat" => XmlResponse(content),
+                _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+            };
+        });
+        using var httpClient = new HttpClient(handler);
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+
+        var result = await svc.DownloadDatAsync(
+            "https://example.invalid/start.dat",
+            "redirect.dat",
+            expectedSha256);
+
+        Assert.Equal(Path.Combine(_tempDir, "redirect.dat"), result);
+        Assert.Equal(content, File.ReadAllText(result!));
+        Assert.Equal(["/start.dat", "/final.dat"], handler.Requests.Select(uri => uri.AbsolutePath));
+    }
+
+    [Fact]
+    public async Task DownloadDatAsync_RedirectToHttpTarget_ReturnsNullWithoutWritingTarget()
+    {
+        var handler = new RedirectHandler((_, _) => Redirect(HttpStatusCode.Found, "http://example.invalid/final.dat"));
+        using var httpClient = new HttpClient(handler);
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+
+        var result = await svc.DownloadDatAsync("https://example.invalid/start.dat", "blocked-http.dat");
+
+        Assert.Null(result);
+        Assert.False(File.Exists(Path.Combine(_tempDir, "blocked-http.dat")));
+        Assert.All(handler.Requests, uri => Assert.Equal("https", uri.Scheme));
+    }
+
+    [Fact]
+    public async Task DownloadDatAsync_RedirectWithoutLocation_ReturnsNullWithoutWritingTarget()
+    {
+        var handler = new RedirectHandler((_, _) => new HttpResponseMessage(HttpStatusCode.Found));
+        using var httpClient = new HttpClient(handler);
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+
+        var result = await svc.DownloadDatAsync("https://example.invalid/start.dat", "missing-location.dat");
+
+        Assert.Null(result);
+        Assert.False(File.Exists(Path.Combine(_tempDir, "missing-location.dat")));
+    }
+
+    [Fact]
+    public async Task DownloadDatAsync_TooManyRedirects_ReturnsNullWithoutWritingTarget()
+    {
+        var handler = new RedirectHandler((request, attempt) =>
+        {
+            var next = (request.RequestUri?.AbsolutePath ?? "/loop0.dat") + "-" + attempt;
+            return Redirect(HttpStatusCode.Found, next);
+        });
+        using var httpClient = new HttpClient(handler);
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient);
+
+        var result = await svc.DownloadDatAsync("https://example.invalid/loop0.dat", "too-many-redirects.dat");
+
+        Assert.Null(result);
+        Assert.False(File.Exists(Path.Combine(_tempDir, "too-many-redirects.dat")));
+        Assert.True(handler.Requests.Count >= 6);
+    }
+
+    [Fact]
+    public async Task VerifyDatSignature_SidecarRedirectToPrivateAddress_FailsClosed()
+    {
+        var path = Path.Combine(_tempDir, "strict-sidecar-redirect.dat");
+        File.WriteAllText(path, "content");
+
+        var handler = new RedirectHandler((request, _) =>
+        {
+            return request.RequestUri?.AbsolutePath.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase) == true
+                ? Redirect(HttpStatusCode.TemporaryRedirect, "https://127.0.0.1/hash.sha256")
+                : new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+        using var httpClient = new HttpClient(handler);
+        using var svc = new DatSourceService(_tempDir, httpClient: httpClient, strictSidecarValidation: true);
+
+        var result = await svc.VerifyDatSignatureAsync(path, "https://example.invalid/test.dat");
+
+        Assert.False(result);
+        Assert.All(handler.Requests, uri => Assert.NotEqual("127.0.0.1", uri.Host));
+    }
+
     private sealed class ContentHandler(string content) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -469,6 +562,41 @@ public class DatSourceServiceTests : IDisposable
             return Task.FromResult(resp);
         }
     }
+
+    private sealed class RedirectHandler(Func<HttpRequestMessage, int, HttpResponseMessage> respond) : HttpMessageHandler
+    {
+        public List<Uri> Requests { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Assert.NotNull(request.RequestUri);
+            Requests.Add(request.RequestUri);
+            return Task.FromResult(respond(request, Requests.Count));
+        }
+    }
+
+    private static HttpResponseMessage Redirect(HttpStatusCode statusCode, string location)
+    {
+        var response = new HttpResponseMessage(statusCode);
+        response.Headers.Location = new Uri(location, UriKind.RelativeOrAbsolute);
+        return response;
+    }
+
+    private static HttpResponseMessage XmlResponse(string content)
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(content))
+        };
+        response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/xml");
+        return response;
+    }
+
+    private static string ComputeSha256(string content)
+        => Convert.ToHexString(
+                System.Security.Cryptography.SHA256.HashData(
+                    System.Text.Encoding.UTF8.GetBytes(content)))
+            .ToLowerInvariant();
 
     // === DownloadDatByFormatAsync (zip-dat) Tests =======================
 
